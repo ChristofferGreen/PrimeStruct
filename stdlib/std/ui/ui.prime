@@ -77,7 +77,9 @@ namespace std {
   namespace CommandList {
     [effects(heap_alloc), return<void>]
     append_word([CommandList mut] self, [i32] value) {
-      push(self.records, value)
+      [vector<i32> mut] records{self.records}
+      push(records, value)
+      assign(self.records, records)
     }
 
     [effects(heap_alloc), return<void>]
@@ -263,7 +265,9 @@ namespace std {
   namespace HtmlCommandList {
     [effects(heap_alloc), return<void>]
     append_word([HtmlCommandList mut] self, [i32] value) {
-      push(self.records, value)
+      [vector<i32> mut] records{self.records}
+      push(records, value)
+      assign(self.records, records)
     }
 
     [effects(heap_alloc), return<void>]
@@ -446,7 +450,9 @@ namespace std {
   namespace UiEventStream {
     [effects(heap_alloc), return<void>]
     append_word([UiEventStream mut] self, [i32] value) {
-      push(self.records, value)
+      [vector<i32> mut] records{self.records}
+      push(records, value)
+      assign(self.records, records)
     }
 
     [effects(heap_alloc), return<void>]
@@ -627,19 +633,43 @@ namespace std {
         [i32] gapPx,
         [i32] minWidth,
         [i32] minHeight) {
-      [i32] nodeId{count(self.kinds)}
-      push(self.kinds, kind)
-      push(self.parentIndices, parentIndex)
-      push(self.paddingPxs, paddingPx)
-      push(self.gapPxs, gapPx)
-      push(self.minWidths, minWidth)
-      push(self.minHeights, minHeight)
-      push(self.measuredWidths, 0i32)
-      push(self.measuredHeights, 0i32)
-      push(self.rectXs, 0i32)
-      push(self.rectYs, 0i32)
-      push(self.rectWidths, 0i32)
-      push(self.rectHeights, 0i32)
+      [vector<i32> mut] kinds{self.kinds}
+      [vector<i32> mut] parentIndices{self.parentIndices}
+      [vector<i32> mut] paddingPxs{self.paddingPxs}
+      [vector<i32> mut] gapPxs{self.gapPxs}
+      [vector<i32> mut] minWidths{self.minWidths}
+      [vector<i32> mut] minHeights{self.minHeights}
+      [vector<i32> mut] measuredWidths{self.measuredWidths}
+      [vector<i32> mut] measuredHeights{self.measuredHeights}
+      [vector<i32> mut] rectXs{self.rectXs}
+      [vector<i32> mut] rectYs{self.rectYs}
+      [vector<i32> mut] rectWidths{self.rectWidths}
+      [vector<i32> mut] rectHeights{self.rectHeights}
+      [i32] nodeId{count(kinds)}
+      push(kinds, kind)
+      push(parentIndices, parentIndex)
+      push(paddingPxs, paddingPx)
+      push(gapPxs, gapPx)
+      push(minWidths, minWidth)
+      push(minHeights, minHeight)
+      push(measuredWidths, 0i32)
+      push(measuredHeights, 0i32)
+      push(rectXs, 0i32)
+      push(rectYs, 0i32)
+      push(rectWidths, 0i32)
+      push(rectHeights, 0i32)
+      assign(self.kinds, kinds)
+      assign(self.parentIndices, parentIndices)
+      assign(self.paddingPxs, paddingPxs)
+      assign(self.gapPxs, gapPxs)
+      assign(self.minWidths, minWidths)
+      assign(self.minHeights, minHeights)
+      assign(self.measuredWidths, measuredWidths)
+      assign(self.measuredHeights, measuredHeights)
+      assign(self.rectXs, rectXs)
+      assign(self.rectYs, rectYs)
+      assign(self.rectWidths, rectWidths)
+      assign(self.rectHeights, rectHeights)
       return(nodeId)
     }
 

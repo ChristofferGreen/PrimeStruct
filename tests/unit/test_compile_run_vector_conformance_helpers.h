@@ -365,7 +365,7 @@ inline std::string makeBareVectorMutatorImportRequirementSource(const std::strin
   source += "main() {\n";
   source += "  [vector<i32> mut] values{vector<i32>(4i32, 5i32, 6i32)}\n";
   source += "  " + helperName + "(" + callArgs + ")\n";
-  source += "  return(count(values))\n";
+  source += "  return(0i32)\n";
   source += "}\n";
   return source;
 }
@@ -377,7 +377,7 @@ inline std::string makeBareVectorMutatorMethodImportRequirementSource(const std:
   source += "main() {\n";
   source += "  [vector<i32> mut] values{vector<i32>(4i32, 5i32, 6i32)}\n";
   source += "  values." + helperName + "(" + methodArgs + ")\n";
-  source += "  return(count(values))\n";
+  source += "  return(0i32)\n";
   source += "}\n";
   return source;
 }
@@ -770,6 +770,18 @@ inline void expectBareVectorMutatorImportRequirement(const std::string &emitMode
     return;
   }
 
+  if (emitMode == "native" || emitMode == "exe") {
+    const std::string exePath =
+        (std::filesystem::temp_directory_path() /
+         ("primec_vector_bare_" + helperName + "_import_requirement_" + emitMode + "_exe"))
+            .string();
+    const std::string compileCmd =
+        "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+        " --entry /main";
+    CHECK(runCommand(compileCmd) == 0);
+    return;
+  }
+
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
@@ -795,6 +807,18 @@ inline void expectBareVectorMutatorMethodImportRequirement(const std::string &em
                                quoteShellArg(outPath) + " 2>&1";
     CHECK(runCommand(runCmd) == 2);
     CHECK(readFile(outPath).find(expected) != std::string::npos);
+    return;
+  }
+
+  if (emitMode == "native" || emitMode == "exe") {
+    const std::string exePath =
+        (std::filesystem::temp_directory_path() /
+         ("primec_vector_bare_" + helperName + "_method_import_requirement_" + emitMode + "_exe"))
+            .string();
+    const std::string compileCmd =
+        "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+        " --entry /main";
+    CHECK(runCommand(compileCmd) == 0);
     return;
   }
 

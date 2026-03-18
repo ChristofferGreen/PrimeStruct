@@ -8,7 +8,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(count(vector<string>("a"raw_utf8)))
+  return(/std/collections/vector/count(vector<string>("a"raw_utf8)))
 }
 )";
   primec::Program program;
@@ -499,7 +499,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
-  return(plus(values.count(), values[1i32]))
+  return(plus(/std/collections/vector/count(values), values[1i32]))
 }
 )";
   primec::Program program;

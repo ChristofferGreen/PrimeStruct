@@ -198,7 +198,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(plus(count(values), capacity(values)))
+  return(plus(vectorCount<i32>(values), vectorCapacity<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_exe_bare_vector_count_capacity_imported.prime", source);
@@ -245,7 +245,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects bare vector mutators without imported helpers in C++ emitter") {
+TEST_CASE("bare vector mutators compile without imported helpers in C++ emitter") {
   expectBareVectorMutatorImportRequirement("exe", "push", "values, 7i32");
   expectBareVectorMutatorImportRequirement("exe", "pop", "values");
   expectBareVectorMutatorImportRequirement("exe", "reserve", "values, 8i32");

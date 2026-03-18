@@ -17,13 +17,6 @@ struct HelperSuffixInfo {
   std::string_view placement;
 };
 
-bool isBuiltinCollectionHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
-         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
-         helperName == "remove_at" || helperName == "remove_swap" || helperName == "to_soa" ||
-         helperName == "to_aos";
-}
-
 bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
          helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||

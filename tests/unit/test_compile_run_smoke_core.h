@@ -2063,7 +2063,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2135,7 +2135,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2202,7 +2202,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   return(0i32)
 }
 )";
@@ -2295,6 +2295,7 @@ TEST_CASE("primec wasm wasi runs ppm write for deterministic rgb outputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, file_write), return<int>]
 main() {
@@ -2344,6 +2345,7 @@ TEST_CASE("primec wasm wasi png write requires heap_alloc for vector literal") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(file_write), return<int>]
 main() {
@@ -2374,6 +2376,7 @@ TEST_CASE("primec wasm wasi runs png write for deterministic rgb outputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, file_write), return<int>]
 main() {
@@ -2427,6 +2430,7 @@ TEST_CASE("primec wasm wasi invalid png write requires heap_alloc for vector lit
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(io_out, file_write), return<int>]
 main() {
@@ -2456,6 +2460,7 @@ TEST_CASE("primec wasm wasi rejects invalid png write inputs deterministically")
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2530,7 +2535,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2594,7 +2599,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2673,7 +2678,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2752,7 +2757,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2816,6 +2821,7 @@ TEST_CASE("primec wasm wasi runs stored paeth-filter rgb png inputs") {
 
   const std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -2831,7 +2837,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -2922,7 +2928,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3008,7 +3014,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3088,7 +3094,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3183,7 +3189,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -3293,7 +3299,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   return(0i32)
 }
 )";

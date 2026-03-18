@@ -3,6 +3,7 @@
 #include "primec/Diagnostics.h"
 
 #include <algorithm>
+#include <ostream>
 
 namespace primec {
 

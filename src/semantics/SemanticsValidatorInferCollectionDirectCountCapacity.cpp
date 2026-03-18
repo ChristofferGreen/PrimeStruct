@@ -7,6 +7,7 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
     const std::string &resolved,
     const BuiltinCollectionDirectCountCapacityContext &context,
     bool &handled) {
+  (void)resolved;
   handled = false;
   if (expr.isMethodCall || expr.args.empty()) {
     return ReturnKind::Unknown;

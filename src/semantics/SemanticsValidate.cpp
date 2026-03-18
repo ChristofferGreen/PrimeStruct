@@ -25,6 +25,8 @@ namespace semantics {
 bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error);
 }
 
+namespace {
+
 bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
   std::unordered_set<std::string> structNames;
   structNames.reserve(program.definitions.size());

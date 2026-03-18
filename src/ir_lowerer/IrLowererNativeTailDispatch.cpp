@@ -5,13 +5,124 @@
 
 namespace primec::ir_lowerer {
 
-bool isVectorBuiltinName(const Expr &expr, const char *name);
-bool isMapBuiltinName(const Expr &expr, const char *name);
+namespace {
+
+bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
+  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
+         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
+         helperName == "remove_at" || helperName == "remove_swap";
+}
+
+bool isExplicitVectorHelperFallbackPath(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
+    return false;
+  }
+  std::string normalizedPath = expr.name;
+  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    if (normalizedPath.rfind("vector/", 0) == 0 || normalizedPath.rfind("std/collections/vector/", 0) == 0) {
+      normalizedPath.insert(normalizedPath.begin(), '/');
+    }
+  }
+  return normalizedPath == "/vector/count" || normalizedPath == "/vector/capacity" || normalizedPath == "/vector/at" ||
+         normalizedPath == "/vector/at_unsafe" || normalizedPath == "/std/collections/vector/count" ||
+         normalizedPath == "/std/collections/vector/capacity" ||
+         normalizedPath == "/std/collections/vector/at" ||
+         normalizedPath == "/std/collections/vector/at_unsafe";
+}
+
+bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  constexpr std::string_view vectorPrefix = "vector/";
+  constexpr std::string_view arrayPrefix = "array/";
+  constexpr std::string_view stdVectorPrefix = "std/collections/vector/";
+  if (normalized.rfind(vectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(vectorPrefix.size());
+    if (helperNameOut == "count" || helperNameOut == "capacity") {
+      return true;
+    }
+    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
+      return false;
+    }
+    return true;
+  }
+  if (normalized.rfind(arrayPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(arrayPrefix.size());
+    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
+      return false;
+    }
+    return true;
+  }
+  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    return true;
+  }
+  return false;
+}
+
+bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  constexpr std::string_view mapPrefix = "map/";
+  constexpr std::string_view stdMapPrefix = "std/collections/map/";
+  if (normalized.rfind(mapPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(mapPrefix.size());
+    return true;
+  }
+  if (normalized.rfind(stdMapPrefix, 0) == 0) {
+    helperNameOut = normalized.substr(stdMapPrefix.size());
+    return true;
+  }
+  return false;
+}
+
+bool isVectorBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+bool isMapBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
+}
+
+bool isExplicitMapHelperFallbackPath(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
+    return false;
+  }
+  std::string normalizedPath = expr.name;
+  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    if (normalizedPath.rfind("map/", 0) == 0 || normalizedPath.rfind("std/collections/map/", 0) == 0) {
+      normalizedPath.insert(normalizedPath.begin(), '/');
+    }
+  }
+  return normalizedPath == "/map/count" || normalizedPath == "/map/at" || normalizedPath == "/map/at_unsafe" ||
+         normalizedPath == "/std/collections/map/count" || normalizedPath == "/std/collections/map/at" ||
+         normalizedPath == "/std/collections/map/at_unsafe";
+}
+
+} // namespace
+
 bool isMapContainsHelperName(const Expr &expr);
 bool isMapTryAtHelperName(const Expr &expr);
 bool isVectorTarget(const Expr &expr, const LocalMap &localsIn);
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
-bool isExplicitMapHelperFallbackPath(const Expr &expr);
 MapAccessLookupEmitResult tryEmitMapContainsLookup(
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -140,7 +251,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     error = "native backend does not support to_aos";
     return NativeCallTailDispatchResult::Error;
   }
-  if (isExplicitMapHelperFallbackPath(expr)) {
+  if (isExplicitVectorHelperFallbackPath(expr) || isExplicitMapHelperFallbackPath(expr)) {
     return NativeCallTailDispatchResult::NotHandled;
   }
 
@@ -158,6 +269,11 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         return resolveArrayVectorAccessTargetInfo(
                    targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo)
             .isArrayOrVectorTarget;
+      },
+      [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+        const auto targetInfo = resolveArrayVectorAccessTargetInfo(
+            targetExpr, targetLocals, resolveCallArrayVectorAccessTargetInfo);
+        return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
       },
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
         const auto targetInfo = resolveArrayVectorAccessTargetInfo(

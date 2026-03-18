@@ -769,7 +769,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # VM compile-run coverage is broader than the current VM runtime surface.
   # Keep the unsupported shards disabled until image IO, GPU dispatch fallback,
   # and the stdlib/experimental map shim paths are implemented for the VM.
-  set(PrimeStructRegisteredSuites ${PrimeStructTestSuites} ${PrimeStructCompileRunSuites})
+  set(PrimeStructRegisteredSuites
+    ${PrimeStructTestSuites}
+    ${PrimeStructParserTestSuites}
+    ${PrimeStructTextFilterTestSuites}
+    ${PrimeStructCompileRunSuites}
+  )
   set(PrimeStructExpectedSuitesFile "${CMAKE_CURRENT_BINARY_DIR}/expected_doctest_suites.txt")
   file(WRITE "${PrimeStructExpectedSuitesFile}" "")
   foreach(suite IN LISTS PrimeStructRegisteredSuites)

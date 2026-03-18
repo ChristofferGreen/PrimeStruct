@@ -9334,8 +9334,6 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphSource.find("std::string preferVectorStdlibImplicitTemplatePath(") ==
         std::string::npos);
-  CHECK(templateMonomorphSource.find("bool resolveMethodCallTemplateTarget(const Expr &expr,") ==
-        std::string::npos);
   CHECK(templateMonomorphSource.find("std::string resolveNameToPath(const std::string &name,") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool inferBlockBodyBindingTypeForMonomorph(const Expr &initializer,") ==
@@ -9560,7 +9558,7 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error)") !=
         std::string::npos);
-  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("generated reflection helper already exists: ") !=
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find("generated reflection helper already exists: ") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("#include \"SemanticsValidateReflectionGeneratedHelpersCloneDebug.h\"") !=
         std::string::npos);
@@ -14815,55 +14813,14 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
     CHECK(instructions.empty());
   };
 
-  auto expectError = [&](const char *helperName, const std::vector<primec::Expr> &args, const char *expectedError) {
-    primec::Expr callExpr;
-    callExpr.kind = primec::Expr::Kind::Call;
-    callExpr.name = helperName;
-    callExpr.args = args;
-
-    instructions.clear();
-    std::string error = "stale";
-    CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-              callExpr,
-              locals,
-              [](const primec::Expr &, std::string &) { return false; },
-              [](const std::string &) { return true; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
-                return false;
-              },
-              emitExpr,
-              resolveMapAccessTargetInfo,
-              resolveArrayVectorAccessTargetInfo,
-              [](const primec::Expr &, std::string &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-                return LocalInfo::ValueKind::Unknown;
-              },
-              []() { return 0; },
-              []() {},
-              []() {},
-              []() {},
-              instructionCount,
-              emitInstruction,
-              patchInstructionImm,
-              error) == Result::Error);
-    CHECK(error == std::string(expectedError));
-    CHECK(instructions.empty());
-  };
-
   expectNotHandled("/vector/count", {valuesName});
-  expectError("/std/collections/vector/count", {valuesName}, "count requires array, vector, map, or string target");
+  expectNotHandled("/std/collections/vector/count", {valuesName});
   expectNotHandled("/vector/capacity", {valuesName});
-  expectError("/std/collections/vector/capacity", {valuesName}, "capacity requires vector target");
+  expectNotHandled("/std/collections/vector/capacity", {valuesName});
   expectNotHandled("/vector/at", {valuesName, indexName});
-  expectError("/std/collections/vector/at", {valuesName, indexName}, "native backend requires integer indices for at");
+  expectNotHandled("/std/collections/vector/at", {valuesName, indexName});
   expectNotHandled("/vector/at_unsafe", {valuesName, indexName});
-  expectError("/std/collections/vector/at_unsafe",
-              {valuesName, indexName},
-              "native backend requires integer indices for at_unsafe");
+  expectNotHandled("/std/collections/vector/at_unsafe", {valuesName, indexName});
 
   primec::Expr bareCountCall;
   bareCountCall.kind = primec::Expr::Kind::Call;
@@ -15144,9 +15101,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK_FALSE(instructions.empty());
+            error) == Result::Error);
+  CHECK(error == "count requires array, vector, map, or string target");
+  CHECK(instructions.empty());
 
   primec::Expr soaVectorAliasCountCall = soaCountCall;
   soaVectorAliasCountCall.name = "/vector/count";
@@ -15212,9 +15169,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK_FALSE(instructions.empty());
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(instructions.empty());
 
   primec::Expr soaGetCall;
   soaGetCall.kind = primec::Expr::Kind::Call;

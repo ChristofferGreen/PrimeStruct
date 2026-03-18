@@ -208,7 +208,7 @@ private:
     std::function<std::string(const std::string &)> preferVectorStdlibHelperPath;
     std::function<bool(const std::string &)> hasDeclaredDefinitionPath;
     std::function<bool(const std::string &, ReturnKind &)> inferResolvedPathReturnKind;
-    std::function<bool(const std::string &, Expr &)> tryRewriteBareMapHelperCall;
+    std::function<bool(const Expr &, Expr &)> tryRewriteBareMapHelperCall;
     std::function<ReturnKind(const Expr &)> inferRewrittenExprReturnKind;
     std::function<bool(const Expr &, std::string &)> resolveArgsPackCountTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;

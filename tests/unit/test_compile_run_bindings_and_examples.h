@@ -298,7 +298,7 @@ main() {
   [map<i32, i32>] pairs{map<i32, i32>{7i32=8i32, 9i32=10i32}}
   list.push(6i32)
   list.reserve(8i32)
-  return(values[1i32] + list.at(2i32) + list.count() + at(pairs, 9i32))
+  return(values[1i32] + list.at(2i32) + values.count() + at(pairs, 9i32))
 }
 )",
        21},
@@ -322,11 +322,12 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
+  [array<i32>] baseline{array<i32>{1, 2, 3}}
   [vector<i32> mut] values{vector<i32>{1, 2}}
   [map<i32, i32>] pairs{map<i32, i32>{7=10}}
   values.push(3)
   values.reserve(8)
-  return(values[0] + values.at(2) + values.count() + at(pairs, 7))
+  return(values[0] + values.at(2) + baseline.count() + at(pairs, 7))
 }
 )",
        17},
@@ -357,7 +358,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("binding initializer requires a value") != std::string::npos);
+  CHECK(readFile(errPath).find("push is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("spinning cube shared source compiles across profile targets") {

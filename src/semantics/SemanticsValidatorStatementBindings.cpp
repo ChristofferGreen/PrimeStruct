@@ -224,6 +224,21 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64;
   };
+  auto isStringExpr = [&](const Expr &candidate,
+                          const std::vector<ParameterInfo> &paramsIn,
+                          const std::unordered_map<std::string, BindingInfo> &localsIn) -> bool {
+    if (candidate.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    if (candidate.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(paramsIn, candidate.name)) {
+        return paramBinding->typeName == "string";
+      }
+      auto it = localsIn.find(candidate.name);
+      return it != localsIn.end() && it->second.typeName == "string";
+    }
+    return inferExprReturnKind(candidate, paramsIn, localsIn) == ReturnKind::String;
+  };
 
   if (!hasExplicitType || explicitAutoType) {
     (void)inferBindingTypeFromInitializer(initializer, params, locals, info);

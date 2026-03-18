@@ -56,10 +56,12 @@ main() {
 
 TEST_CASE("ir lowerer supports vector count helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(count(values))
+  return(/std/collections/vector/count(values))
 }
 )";
   primec::Program program;
@@ -105,9 +107,11 @@ main() {
 
 TEST_CASE("ir lowerer supports vector literal count helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
-  return(count(vector<i32>(1i32, 2i32)))
+  return(/std/collections/vector/count(vector<i32>(1i32, 2i32)))
 }
 )";
   primec::Program program;
@@ -418,7 +422,9 @@ Pair() {
 
 [return<int>]
 score_pairs([args<Pair>] values) {
-  return(plus(values[0i32].value, values[1i32].score()))
+  [Pair] head{at(values, 0i32)}
+  [Pair] tail{at(values, 1i32)}
+  return(plus(head.value, tail.score()))
 }
 
 [return<int>]
@@ -598,7 +604,7 @@ main() {
   CHECK(result == 30);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed Result packs with direct indexed why and inferred try access") {
+TEST_CASE("ir lowerer materializes variadic borrowed Result packs with indexed dereference why and try access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -626,8 +632,8 @@ fail_bad() {
 
 [return<int> on_error<ParseError, /swallow_parse_error>]
 score_results([args<Reference<Result<i32, ParseError>>>] values) {
-  [auto] head{try(values[0i32])}
-  [i32] tailWhyCount{count(Result.why(values[minus(count(values), 1i32)]))}
+  [i32] head{try(dereference(values[0i32]))}
+  [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
   return(plus(head, tailWhyCount))
 }
 
@@ -682,7 +688,7 @@ main() {
   CHECK(result == 30);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer Result packs with direct indexed why and inferred try access") {
+TEST_CASE("ir lowerer materializes variadic pointer Result packs with indexed dereference why and inferred try access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -710,8 +716,8 @@ fail_bad() {
 
 [return<int> on_error<ParseError, /swallow_parse_error>]
 score_results([args<Pointer<Result<i32, ParseError>>>] values) {
-  [auto] head{try(values[0i32])}
-  [i32] tailWhyCount{count(Result.why(values[minus(count(values), 1i32)]))}
+  [auto] head{try(dereference(values[0i32]))}
+  [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
   return(plus(head, tailWhyCount))
 }
 
@@ -831,7 +837,7 @@ main() {
   CHECK(result == 39);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed status-only Result packs with direct indexed error and why access") {
+TEST_CASE("ir lowerer materializes variadic borrowed status-only Result packs with indexed dereference error and why access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -857,8 +863,8 @@ fail_bad() {
 
 [return<int>]
 score_results([args<Reference<Result<ParseError>>>] values) {
-  [bool] tailHasError{Result.error(values[minus(count(values), 1i32)])}
-  [i32] tailWhyCount{count(Result.why(values[minus(count(values), 1i32)]))}
+  [bool] tailHasError{Result.error(dereference(values[minus(count(values), 1i32)]))}
+  [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
   return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
 }
 
@@ -913,7 +919,7 @@ main() {
   CHECK(result == 39);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer status-only Result packs with direct indexed error and why access") {
+TEST_CASE("ir lowerer materializes variadic pointer status-only Result packs with indexed dereference error and why access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -939,8 +945,8 @@ fail_bad() {
 
 [return<int>]
 score_results([args<Pointer<Result<ParseError>>>] values) {
-  [bool] tailHasError{Result.error(values[minus(count(values), 1i32)])}
-  [i32] tailWhyCount{count(Result.why(values[minus(count(values), 1i32)]))}
+  [bool] tailHasError{Result.error(dereference(values[minus(count(values), 1i32)]))}
+  [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
   return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
 }
 
@@ -1277,179 +1283,6 @@ TEST_CASE("ir lowerer materializes prefix spread pointer FileError packs with in
   CHECK(result == 36);
 }
 
-TEST_CASE("ir lowerer materializes wrapped FileError why strings from direct indexed packs") {
-  const std::string source =
-      "[return<int>]\n"
-      "score_refs([args<Reference<FileError>>] values) {\n"
-      "  [auto] head{values[0i32].why()}\n"
-      "  [string] tail{values[minus(count(values), 1i32)].why()}\n"
-      "  return(plus(count(head), count(tail)))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "forward_refs([args<Reference<FileError>>] values) {\n"
-      "  return(score_refs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "forward_refs_mixed([args<Reference<FileError>>] values) {\n"
-      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
-      "  [Reference<FileError>] extra_ref{location(extra)}\n"
-      "  return(score_refs(extra_ref, [spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "score_ptrs([args<Pointer<FileError>>] values) {\n"
-      "  [auto] head{values[0i32].why()}\n"
-      "  [string] tail{values[minus(count(values), 1i32)].why()}\n"
-      "  return(plus(count(head), count(tail)))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "forward_ptrs([args<Pointer<FileError>>] values) {\n"
-      "  return(score_ptrs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "forward_ptrs_mixed([args<Pointer<FileError>>] values) {\n"
-      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
-      "  [Pointer<FileError>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs(extra_ptr, [spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "main() {\n"
-      "  [FileError] a0{" + std::to_string(EACCES) + "i32}\n"
-      "  [FileError] a1{" + std::to_string(ENOENT) + "i32}\n"
-      "  [Reference<FileError>] r0{location(a0)}\n"
-      "  [Reference<FileError>] r1{location(a1)}\n"
-      "  [FileError] b0{" + std::to_string(ENOENT) + "i32}\n"
-      "  [FileError] b1{" + std::to_string(EEXIST) + "i32}\n"
-      "  [Reference<FileError>] s0{location(b0)}\n"
-      "  [Reference<FileError>] s1{location(b1)}\n"
-      "  [FileError] c0{" + std::to_string(ENOENT) + "i32}\n"
-      "  [Reference<FileError>] t0{location(c0)}\n"
-      "  [FileError] d0{" + std::to_string(EEXIST) + "i32}\n"
-      "  [FileError] d1{" + std::to_string(EACCES) + "i32}\n"
-      "  [Pointer<FileError>] p0{location(d0)}\n"
-      "  [Pointer<FileError>] p1{location(d1)}\n"
-      "  [FileError] e0{" + std::to_string(ENOENT) + "i32}\n"
-      "  [FileError] e1{" + std::to_string(EEXIST) + "i32}\n"
-      "  [Pointer<FileError>] q0{location(e0)}\n"
-      "  [Pointer<FileError>] q1{location(e1)}\n"
-      "  [FileError] f0{" + std::to_string(EEXIST) + "i32}\n"
-      "  [Pointer<FileError>] u0{location(f0)}\n"
-      "  return(plus(score_refs(r0, r1),\n"
-      "              plus(forward_refs(s0, s1),\n"
-      "                   plus(forward_refs_mixed(t0),\n"
-      "                        plus(score_ptrs(p0, p1),\n"
-      "                             plus(forward_ptrs(q0, q1),\n"
-      "                                  forward_ptrs_mixed(u0)))))))\n"
-      "}\n";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 72);
-}
-
-TEST_CASE("ir lowerer materializes wrapped FileError why strings from named method-style at packs") {
-  const std::string source =
-      "[return<int>]\n"
-      "score_refs([args<Reference<FileError>>] values) {\n"
-      "  [auto] head{values.at([index] 0i32).why()}\n"
-      "  [string] tail{values.at([index] minus(count(values), 1i32)).why()}\n"
-      "  return(plus(count(head), count(tail)))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "forward_refs([args<Reference<FileError>>] values) {\n"
-      "  return(score_refs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "forward_refs_mixed([args<Reference<FileError>>] values) {\n"
-      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
-      "  [Reference<FileError>] extra_ref{location(extra)}\n"
-      "  return(score_refs(extra_ref, [spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "score_ptrs([args<Pointer<FileError>>] values) {\n"
-      "  [auto] head{values.at([index] 0i32).why()}\n"
-      "  [string] tail{values.at([index] minus(count(values), 1i32)).why()}\n"
-      "  return(plus(count(head), count(tail)))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "forward_ptrs([args<Pointer<FileError>>] values) {\n"
-      "  return(score_ptrs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "forward_ptrs_mixed([args<Pointer<FileError>>] values) {\n"
-      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
-      "  [Pointer<FileError>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs(extra_ptr, [spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int>]\n"
-      "main() {\n"
-      "  [FileError] a0{" + std::to_string(EACCES) + "i32}\n"
-      "  [FileError] a1{" + std::to_string(ENOENT) + "i32}\n"
-      "  [Reference<FileError>] r0{location(a0)}\n"
-      "  [Reference<FileError>] r1{location(a1)}\n"
-      "  [FileError] b0{" + std::to_string(ENOENT) + "i32}\n"
-      "  [FileError] b1{" + std::to_string(EEXIST) + "i32}\n"
-      "  [Reference<FileError>] s0{location(b0)}\n"
-      "  [Reference<FileError>] s1{location(b1)}\n"
-      "  [FileError] c0{" + std::to_string(ENOENT) + "i32}\n"
-      "  [Reference<FileError>] t0{location(c0)}\n"
-      "  [FileError] d0{" + std::to_string(EEXIST) + "i32}\n"
-      "  [FileError] d1{" + std::to_string(EACCES) + "i32}\n"
-      "  [Pointer<FileError>] p0{location(d0)}\n"
-      "  [Pointer<FileError>] p1{location(d1)}\n"
-      "  [FileError] e0{" + std::to_string(ENOENT) + "i32}\n"
-      "  [FileError] e1{" + std::to_string(EEXIST) + "i32}\n"
-      "  [Pointer<FileError>] q0{location(e0)}\n"
-      "  [Pointer<FileError>] q1{location(e1)}\n"
-      "  [FileError] f0{" + std::to_string(EEXIST) + "i32}\n"
-      "  [Pointer<FileError>] u0{location(f0)}\n"
-      "  return(plus(score_refs(r0, r1),\n"
-      "              plus(forward_refs(s0, s1),\n"
-      "                   plus(forward_refs_mixed(t0),\n"
-      "                        plus(score_ptrs(p0, p1),\n"
-      "                             plus(forward_ptrs(q0, q1),\n"
-      "                                  forward_ptrs_mixed(u0)))))))\n"
-      "}\n";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 72);
-}
-
-
 TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file methods") {
   auto escape = [](const std::string &text) {
     std::string out;
@@ -1733,621 +1566,18 @@ TEST_CASE("ir lowerer materializes variadic pointer File handle packs with index
   CHECK(readFile(pathC1) == "omega\n");
   CHECK(readFile(pathExtra) == "alpha\n");
 }
-
-TEST_CASE("ir lowerer materializes variadic wrapped File handle packs with indexed direct file methods") {
-  auto escape = [](const std::string &text) {
-    std::string out;
-    out.reserve(text.size());
-    for (char c : text) {
-      if (c == '\\' || c == '"') {
-        out.push_back('\\');
-      }
-      out.push_back(c);
-    }
-    return out;
-  };
-  const std::string pathA0 = "/tmp/primec_vm_variadic_direct_borrowed_file_handle_a0.txt";
-  const std::string pathA1 = "/tmp/primec_vm_variadic_direct_borrowed_file_handle_a1.txt";
-  const std::string pathA2 = "/tmp/primec_vm_variadic_direct_borrowed_file_handle_a2.txt";
-  const std::string pathB0 = "/tmp/primec_vm_variadic_direct_borrowed_file_handle_b0.txt";
-  const std::string pathB1 = "/tmp/primec_vm_variadic_direct_borrowed_file_handle_b1.txt";
-  const std::string pathB2 = "/tmp/primec_vm_variadic_direct_borrowed_file_handle_b2.txt";
-  const std::string pathC0 = "/tmp/primec_vm_variadic_direct_borrowed_file_handle_c0.txt";
-  const std::string pathC1 = "/tmp/primec_vm_variadic_direct_borrowed_file_handle_c1.txt";
-  const std::string pathRefExtra = "/tmp/primec_vm_variadic_direct_borrowed_file_handle_extra.txt";
-  const std::string pathD0 = "/tmp/primec_vm_variadic_direct_pointer_file_handle_d0.txt";
-  const std::string pathD1 = "/tmp/primec_vm_variadic_direct_pointer_file_handle_d1.txt";
-  const std::string pathD2 = "/tmp/primec_vm_variadic_direct_pointer_file_handle_d2.txt";
-  const std::string pathE0 = "/tmp/primec_vm_variadic_direct_pointer_file_handle_e0.txt";
-  const std::string pathE1 = "/tmp/primec_vm_variadic_direct_pointer_file_handle_e1.txt";
-  const std::string pathE2 = "/tmp/primec_vm_variadic_direct_pointer_file_handle_e2.txt";
-  const std::string pathF0 = "/tmp/primec_vm_variadic_direct_pointer_file_handle_f0.txt";
-  const std::string pathF1 = "/tmp/primec_vm_variadic_direct_pointer_file_handle_f1.txt";
-  const std::string pathPtrExtra = "/tmp/primec_vm_variadic_direct_pointer_file_handle_extra.txt";
-  const auto readFile = [](const std::string &path) {
-    std::ifstream file(path, std::ios::binary);
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
-  };
-
-  const std::string source =
-      "[effects(file_write)]\n"
-      "swallow_file_error([FileError] err) {}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "score_refs([args<Reference<File<Write>>>] values) {\n"
-      "  values[0i32].write_line(\"alpha\"utf8)?\n"
-      "  values[minus(count(values), 1i32)].write_line(\"omega\"utf8)?\n"
-      "  values[0i32].flush()?\n"
-      "  values[minus(count(values), 1i32)].flush()?\n"
-      "  return(plus(count(values), 10i32))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "forward_refs([args<Reference<File<Write>>>] values) {\n"
-      "  return(score_refs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "forward_refs_mixed([args<Reference<File<Write>>>] values) {\n"
-      "  [File<Write>] extra{File<Write>(\"" + escape(pathRefExtra) + "\"utf8)?}\n"
-      "  [Reference<File<Write>>] extra_ref{location(extra)}\n"
-      "  return(score_refs(extra_ref, [spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "score_ptrs([args<Pointer<File<Write>>>] values) {\n"
-      "  values[0i32].write_line(\"alpha\"utf8)?\n"
-      "  values[minus(count(values), 1i32)].write_line(\"omega\"utf8)?\n"
-      "  values[0i32].flush()?\n"
-      "  values[minus(count(values), 1i32)].flush()?\n"
-      "  return(plus(count(values), 10i32))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "forward_ptrs([args<Pointer<File<Write>>>] values) {\n"
-      "  return(score_ptrs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "forward_ptrs_mixed([args<Pointer<File<Write>>>] values) {\n"
-      "  [File<Write>] extra{File<Write>(\"" + escape(pathPtrExtra) + "\"utf8)?}\n"
-      "  [Pointer<File<Write>>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs(extra_ptr, [spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "main() {\n"
-      "  [File<Write>] a0{File<Write>(\"" + escape(pathA0) + "\"utf8)?}\n"
-      "  [File<Write>] a1{File<Write>(\"" + escape(pathA1) + "\"utf8)?}\n"
-      "  [File<Write>] a2{File<Write>(\"" + escape(pathA2) + "\"utf8)?}\n"
-      "  [Reference<File<Write>>] r0{location(a0)}\n"
-      "  [Reference<File<Write>>] r1{location(a1)}\n"
-      "  [Reference<File<Write>>] r2{location(a2)}\n"
-      "\n"
-      "  [File<Write>] b0{File<Write>(\"" + escape(pathB0) + "\"utf8)?}\n"
-      "  [File<Write>] b1{File<Write>(\"" + escape(pathB1) + "\"utf8)?}\n"
-      "  [File<Write>] b2{File<Write>(\"" + escape(pathB2) + "\"utf8)?}\n"
-      "  [Reference<File<Write>>] s0{location(b0)}\n"
-      "  [Reference<File<Write>>] s1{location(b1)}\n"
-      "  [Reference<File<Write>>] s2{location(b2)}\n"
-      "\n"
-      "  [File<Write>] c0{File<Write>(\"" + escape(pathC0) + "\"utf8)?}\n"
-      "  [File<Write>] c1{File<Write>(\"" + escape(pathC1) + "\"utf8)?}\n"
-      "  [Reference<File<Write>>] t0{location(c0)}\n"
-      "  [Reference<File<Write>>] t1{location(c1)}\n"
-      "\n"
-      "  [File<Write>] d0{File<Write>(\"" + escape(pathD0) + "\"utf8)?}\n"
-      "  [File<Write>] d1{File<Write>(\"" + escape(pathD1) + "\"utf8)?}\n"
-      "  [File<Write>] d2{File<Write>(\"" + escape(pathD2) + "\"utf8)?}\n"
-      "  [Pointer<File<Write>>] p0{location(d0)}\n"
-      "  [Pointer<File<Write>>] p1{location(d1)}\n"
-      "  [Pointer<File<Write>>] p2{location(d2)}\n"
-      "\n"
-      "  [File<Write>] e0{File<Write>(\"" + escape(pathE0) + "\"utf8)?}\n"
-      "  [File<Write>] e1{File<Write>(\"" + escape(pathE1) + "\"utf8)?}\n"
-      "  [File<Write>] e2{File<Write>(\"" + escape(pathE2) + "\"utf8)?}\n"
-      "  [Pointer<File<Write>>] q0{location(e0)}\n"
-      "  [Pointer<File<Write>>] q1{location(e1)}\n"
-      "  [Pointer<File<Write>>] q2{location(e2)}\n"
-      "\n"
-      "  [File<Write>] f0{File<Write>(\"" + escape(pathF0) + "\"utf8)?}\n"
-      "  [File<Write>] f1{File<Write>(\"" + escape(pathF1) + "\"utf8)?}\n"
-      "  [Pointer<File<Write>>] u0{location(f0)}\n"
-      "  [Pointer<File<Write>>] u1{location(f1)}\n"
-      "\n"
-      "  return(plus(plus(score_refs(r0, r1, r2),\n"
-      "                   plus(forward_refs(s0, s1, s2), forward_refs_mixed(t0, t1))),\n"
-      "              plus(score_ptrs(p0, p1, p2),\n"
-      "                   plus(forward_ptrs(q0, q1, q2), forward_ptrs_mixed(u0, u1)))))\n"
-      "}\n";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 78);
-  CHECK(readFile(pathA0) == "alpha\n");
-  CHECK(readFile(pathA2) == "omega\n");
-  CHECK(readFile(pathB0) == "alpha\n");
-  CHECK(readFile(pathB2) == "omega\n");
-  CHECK(readFile(pathC0).empty());
-  CHECK(readFile(pathC1) == "omega\n");
-  CHECK(readFile(pathRefExtra) == "alpha\n");
-  CHECK(readFile(pathD0) == "alpha\n");
-  CHECK(readFile(pathD2) == "omega\n");
-  CHECK(readFile(pathE0) == "alpha\n");
-  CHECK(readFile(pathE2) == "omega\n");
-  CHECK(readFile(pathF0).empty());
-  CHECK(readFile(pathF1) == "omega\n");
-  CHECK(readFile(pathPtrExtra) == "alpha\n");
-}
-
 #endif
-
-TEST_CASE("ir lowerer materializes variadic wrapped File handle packs with canonical named free builtin at file methods") {
-  auto escape = [](const std::string &text) {
-    std::string out;
-    out.reserve(text.size());
-    for (char c : text) {
-      if (c == '\\' || c == '"') {
-        out.push_back('\\');
-      }
-      out.push_back(c);
-    }
-    return out;
-  };
-  const std::string pathA0 = "/tmp/primec_vm_variadic_named_free_borrowed_file_handle_a0.txt";
-  const std::string pathA1 = "/tmp/primec_vm_variadic_named_free_borrowed_file_handle_a1.txt";
-  const std::string pathB0 = "/tmp/primec_vm_variadic_named_free_borrowed_file_handle_b0.txt";
-  const std::string pathB1 = "/tmp/primec_vm_variadic_named_free_borrowed_file_handle_b1.txt";
-  const std::string pathC0 = "/tmp/primec_vm_variadic_named_free_borrowed_file_handle_c0.txt";
-  const std::string pathRefExtra = "/tmp/primec_vm_variadic_named_free_borrowed_file_handle_extra.txt";
-  const std::string pathD0 = "/tmp/primec_vm_variadic_named_free_pointer_file_handle_d0.txt";
-  const std::string pathD1 = "/tmp/primec_vm_variadic_named_free_pointer_file_handle_d1.txt";
-  const std::string pathE0 = "/tmp/primec_vm_variadic_named_free_pointer_file_handle_e0.txt";
-  const std::string pathE1 = "/tmp/primec_vm_variadic_named_free_pointer_file_handle_e1.txt";
-  const std::string pathF0 = "/tmp/primec_vm_variadic_named_free_pointer_file_handle_f0.txt";
-  const std::string pathPtrExtra = "/tmp/primec_vm_variadic_named_free_pointer_file_handle_extra.txt";
-  const auto readFile = [](const std::string &path) {
-    std::ifstream file(path, std::ios::binary);
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
-  };
-
-  const std::string source =
-      "[effects(file_write)]\n"
-      "swallow_file_error([FileError] err) {}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "score_refs([args<Reference<File<Write>>>] values) {\n"
-      "  at([values] values, [index] 0i32).write_line(\"alpha\"utf8)?\n"
-      "  at([values] values, [index] minus(count(values), 1i32)).write_line(\"omega\"utf8)?\n"
-      "  at([values] values, [index] 0i32).flush()?\n"
-      "  at([values] values, [index] minus(count(values), 1i32)).flush()?\n"
-      "  return(plus(count(values), 10i32))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "forward_refs([args<Reference<File<Write>>>] values) {\n"
-      "  return(score_refs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "forward_refs_mixed([args<Reference<File<Write>>>] values) {\n"
-      "  [File<Write>] extra{File<Write>(\"" + escape(pathRefExtra) + "\"utf8)?}\n"
-      "  [Reference<File<Write>>] extra_ref{location(extra)}\n"
-      "  return(score_refs(extra_ref, [spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "score_ptrs([args<Pointer<File<Write>>>] values) {\n"
-      "  at([values] values, [index] 0i32).write_line(\"alpha\"utf8)?\n"
-      "  at([values] values, [index] minus(count(values), 1i32)).write_line(\"omega\"utf8)?\n"
-      "  at([values] values, [index] 0i32).flush()?\n"
-      "  at([values] values, [index] minus(count(values), 1i32)).flush()?\n"
-      "  return(plus(count(values), 10i32))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "forward_ptrs([args<Pointer<File<Write>>>] values) {\n"
-      "  return(score_ptrs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "forward_ptrs_mixed([args<Pointer<File<Write>>>] values) {\n"
-      "  [File<Write>] extra{File<Write>(\"" + escape(pathPtrExtra) + "\"utf8)?}\n"
-      "  [Pointer<File<Write>>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs([spread] values, extra_ptr))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
-      "main() {\n"
-      "  [File<Write>] a0{File<Write>(\"" + escape(pathA0) + "\"utf8)?}\n"
-      "  [File<Write>] a1{File<Write>(\"" + escape(pathA1) + "\"utf8)?}\n"
-      "  [Reference<File<Write>>] r0{location(a0)}\n"
-      "  [Reference<File<Write>>] r1{location(a1)}\n"
-      "\n"
-      "  [File<Write>] b0{File<Write>(\"" + escape(pathB0) + "\"utf8)?}\n"
-      "  [File<Write>] b1{File<Write>(\"" + escape(pathB1) + "\"utf8)?}\n"
-      "  [Reference<File<Write>>] s0{location(b0)}\n"
-      "  [Reference<File<Write>>] s1{location(b1)}\n"
-      "\n"
-      "  [File<Write>] c0{File<Write>(\"" + escape(pathC0) + "\"utf8)?}\n"
-      "  [Reference<File<Write>>] t0{location(c0)}\n"
-      "\n"
-      "  [File<Write>] d0{File<Write>(\"" + escape(pathD0) + "\"utf8)?}\n"
-      "  [File<Write>] d1{File<Write>(\"" + escape(pathD1) + "\"utf8)?}\n"
-      "  [Pointer<File<Write>>] p0{location(d0)}\n"
-      "  [Pointer<File<Write>>] p1{location(d1)}\n"
-      "\n"
-      "  [File<Write>] e0{File<Write>(\"" + escape(pathE0) + "\"utf8)?}\n"
-      "  [File<Write>] e1{File<Write>(\"" + escape(pathE1) + "\"utf8)?}\n"
-      "  [Pointer<File<Write>>] q0{location(e0)}\n"
-      "  [Pointer<File<Write>>] q1{location(e1)}\n"
-      "\n"
-      "  [File<Write>] f0{File<Write>(\"" + escape(pathF0) + "\"utf8)?}\n"
-      "  [Pointer<File<Write>>] u0{location(f0)}\n"
-      "\n"
-      "  return(plus(score_refs(r0, r1),\n"
-      "              plus(forward_refs(s0, s1),\n"
-      "                   plus(forward_refs_mixed(t0),\n"
-      "                        plus(score_ptrs(p0, p1),\n"
-      "                             plus(forward_ptrs(q0, q1),\n"
-      "                                  forward_ptrs_mixed(u0)))))))\n"
-      "}\n";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 72);
-  CHECK(readFile(pathA0) == "alpha\n");
-  CHECK(readFile(pathA1) == "omega\n");
-  CHECK(readFile(pathB0) == "alpha\n");
-  CHECK(readFile(pathB1) == "omega\n");
-  CHECK(readFile(pathC0) == "omega\n");
-  CHECK(readFile(pathRefExtra) == "alpha\n");
-  CHECK(readFile(pathD0) == "alpha\n");
-  CHECK(readFile(pathD1) == "omega\n");
-  CHECK(readFile(pathE0) == "alpha\n");
-  CHECK(readFile(pathE1) == "omega\n");
-  CHECK(readFile(pathF0) == "alpha\n");
-  CHECK(readFile(pathPtrExtra) == "omega\n");
-}
-
-TEST_CASE("ir lowerer materializes variadic wrapped read File handle packs with canonical named free builtin at read_byte try") {
-  auto escape = [](const std::string &text) {
-    std::string out;
-    out.reserve(text.size());
-    for (char c : text) {
-      if (c == '\\' || c == '"') {
-        out.push_back('\\');
-      }
-      out.push_back(c);
-    }
-    return out;
-  };
-  const std::string pathA0 = "/tmp/primec_vm_variadic_named_free_borrowed_read_file_handle_a0.txt";
-  const std::string pathA1 = "/tmp/primec_vm_variadic_named_free_borrowed_read_file_handle_a1.txt";
-  const std::string pathB0 = "/tmp/primec_vm_variadic_named_free_borrowed_read_file_handle_b0.txt";
-  const std::string pathB1 = "/tmp/primec_vm_variadic_named_free_borrowed_read_file_handle_b1.txt";
-  const std::string pathC0 = "/tmp/primec_vm_variadic_named_free_borrowed_read_file_handle_c0.txt";
-  const std::string pathRefExtra = "/tmp/primec_vm_variadic_named_free_borrowed_read_file_handle_extra.txt";
-  const std::string pathD0 = "/tmp/primec_vm_variadic_named_free_pointer_read_file_handle_d0.txt";
-  const std::string pathD1 = "/tmp/primec_vm_variadic_named_free_pointer_read_file_handle_d1.txt";
-  const std::string pathE0 = "/tmp/primec_vm_variadic_named_free_pointer_read_file_handle_e0.txt";
-  const std::string pathE1 = "/tmp/primec_vm_variadic_named_free_pointer_read_file_handle_e1.txt";
-  const std::string pathF0 = "/tmp/primec_vm_variadic_named_free_pointer_read_file_handle_f0.txt";
-  const std::string pathPtrExtra = "/tmp/primec_vm_variadic_named_free_pointer_read_file_handle_extra.txt";
-  const auto writeByte = [](const std::string &path, char byte) {
-    std::ofstream file(path, std::ios::binary);
-    REQUIRE(file.good());
-    file.put(byte);
-    REQUIRE(file.good());
-  };
-  writeByte(pathA0, 'A');
-  writeByte(pathA1, 'B');
-  writeByte(pathB0, 'C');
-  writeByte(pathB1, 'D');
-  writeByte(pathC0, 'F');
-  writeByte(pathRefExtra, 'E');
-  writeByte(pathD0, 'G');
-  writeByte(pathD1, 'H');
-  writeByte(pathE0, 'I');
-  writeByte(pathE1, 'J');
-  writeByte(pathF0, 'K');
-  writeByte(pathPtrExtra, 'L');
-
-  const std::string source =
-      "[effects(file_read)]\n"
-      "swallow_file_error([FileError] err) {}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "score_refs([args<Reference<File<Read>>>] values) {\n"
-      "  [i32 mut] first{0i32}\n"
-      "  [i32 mut] last{0i32}\n"
-      "  at([values] values, [index] 0i32).read_byte(first)?\n"
-      "  at([values] values, [index] minus(count(values), 1i32)).read_byte(last)?\n"
-      "  return(plus(plus(first, last), count(values)))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "forward_refs([args<Reference<File<Read>>>] values) {\n"
-      "  return(score_refs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "forward_refs_mixed([args<Reference<File<Read>>>] values) {\n"
-      "  [File<Read>] extra{File<Read>(\"" + escape(pathRefExtra) + "\"utf8)?}\n"
-      "  [Reference<File<Read>>] extra_ref{location(extra)}\n"
-      "  return(score_refs(extra_ref, [spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "score_ptrs([args<Pointer<File<Read>>>] values) {\n"
-      "  [i32 mut] first{0i32}\n"
-      "  [i32 mut] last{0i32}\n"
-      "  at([values] values, [index] 0i32).read_byte(first)?\n"
-      "  at([values] values, [index] minus(count(values), 1i32)).read_byte(last)?\n"
-      "  return(plus(plus(first, last), count(values)))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "forward_ptrs([args<Pointer<File<Read>>>] values) {\n"
-      "  return(score_ptrs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "forward_ptrs_mixed([args<Pointer<File<Read>>>] values) {\n"
-      "  [File<Read>] extra{File<Read>(\"" + escape(pathPtrExtra) + "\"utf8)?}\n"
-      "  [Pointer<File<Read>>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs([spread] values, extra_ptr))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "main() {\n"
-      "  [File<Read>] a0{File<Read>(\"" + escape(pathA0) + "\"utf8)?}\n"
-      "  [File<Read>] a1{File<Read>(\"" + escape(pathA1) + "\"utf8)?}\n"
-      "  [Reference<File<Read>>] r0{location(a0)}\n"
-      "  [Reference<File<Read>>] r1{location(a1)}\n"
-      "\n"
-      "  [File<Read>] b0{File<Read>(\"" + escape(pathB0) + "\"utf8)?}\n"
-      "  [File<Read>] b1{File<Read>(\"" + escape(pathB1) + "\"utf8)?}\n"
-      "  [Reference<File<Read>>] s0{location(b0)}\n"
-      "  [Reference<File<Read>>] s1{location(b1)}\n"
-      "\n"
-      "  [File<Read>] c0{File<Read>(\"" + escape(pathC0) + "\"utf8)?}\n"
-      "  [Reference<File<Read>>] t0{location(c0)}\n"
-      "\n"
-      "  [File<Read>] d0{File<Read>(\"" + escape(pathD0) + "\"utf8)?}\n"
-      "  [File<Read>] d1{File<Read>(\"" + escape(pathD1) + "\"utf8)?}\n"
-      "  [Pointer<File<Read>>] p0{location(d0)}\n"
-      "  [Pointer<File<Read>>] p1{location(d1)}\n"
-      "\n"
-      "  [File<Read>] e0{File<Read>(\"" + escape(pathE0) + "\"utf8)?}\n"
-      "  [File<Read>] e1{File<Read>(\"" + escape(pathE1) + "\"utf8)?}\n"
-      "  [Pointer<File<Read>>] q0{location(e0)}\n"
-      "  [Pointer<File<Read>>] q1{location(e1)}\n"
-      "\n"
-      "  [File<Read>] f0{File<Read>(\"" + escape(pathF0) + "\"utf8)?}\n"
-      "  [Pointer<File<Read>>] u0{location(f0)}\n"
-      "\n"
-      "  return(plus(score_refs(r0, r1),\n"
-      "              plus(forward_refs(s0, s1),\n"
-      "                   plus(forward_refs_mixed(t0),\n"
-      "                        plus(score_ptrs(p0, p1),\n"
-      "                             plus(forward_ptrs(q0, q1),\n"
-      "                                  forward_ptrs_mixed(u0)))))))\n"
-      "}\n";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 858);
-}
-
-TEST_CASE("ir lowerer materializes variadic wrapped read File handle packs with indexed direct read_byte try") {
-  auto escape = [](const std::string &text) {
-    std::string out;
-    out.reserve(text.size());
-    for (char c : text) {
-      if (c == '\\' || c == '"') {
-        out.push_back('\\');
-      }
-      out.push_back(c);
-    }
-    return out;
-  };
-  const std::string pathA0 = "/tmp/primec_vm_variadic_direct_borrowed_read_file_handle_a0.txt";
-  const std::string pathA1 = "/tmp/primec_vm_variadic_direct_borrowed_read_file_handle_a1.txt";
-  const std::string pathA2 = "/tmp/primec_vm_variadic_direct_borrowed_read_file_handle_a2.txt";
-  const std::string pathB0 = "/tmp/primec_vm_variadic_direct_borrowed_read_file_handle_b0.txt";
-  const std::string pathB1 = "/tmp/primec_vm_variadic_direct_borrowed_read_file_handle_b1.txt";
-  const std::string pathB2 = "/tmp/primec_vm_variadic_direct_borrowed_read_file_handle_b2.txt";
-  const std::string pathC0 = "/tmp/primec_vm_variadic_direct_borrowed_read_file_handle_c0.txt";
-  const std::string pathC1 = "/tmp/primec_vm_variadic_direct_borrowed_read_file_handle_c1.txt";
-  const std::string pathRefExtra = "/tmp/primec_vm_variadic_direct_borrowed_read_file_handle_extra.txt";
-  const std::string pathD0 = "/tmp/primec_vm_variadic_direct_pointer_read_file_handle_d0.txt";
-  const std::string pathD1 = "/tmp/primec_vm_variadic_direct_pointer_read_file_handle_d1.txt";
-  const std::string pathD2 = "/tmp/primec_vm_variadic_direct_pointer_read_file_handle_d2.txt";
-  const std::string pathE0 = "/tmp/primec_vm_variadic_direct_pointer_read_file_handle_e0.txt";
-  const std::string pathE1 = "/tmp/primec_vm_variadic_direct_pointer_read_file_handle_e1.txt";
-  const std::string pathE2 = "/tmp/primec_vm_variadic_direct_pointer_read_file_handle_e2.txt";
-  const std::string pathF0 = "/tmp/primec_vm_variadic_direct_pointer_read_file_handle_f0.txt";
-  const std::string pathF1 = "/tmp/primec_vm_variadic_direct_pointer_read_file_handle_f1.txt";
-  const std::string pathPtrExtra = "/tmp/primec_vm_variadic_direct_pointer_read_file_handle_extra.txt";
-  const auto writeByte = [](const std::string &path, char byte) {
-    std::ofstream file(path, std::ios::binary);
-    REQUIRE(file.good());
-    file.put(byte);
-    REQUIRE(file.good());
-  };
-  writeByte(pathA0, 'A');
-  writeByte(pathA1, 'B');
-  writeByte(pathA2, 'C');
-  writeByte(pathB0, 'D');
-  writeByte(pathB1, 'E');
-  writeByte(pathB2, 'F');
-  writeByte(pathC0, 'G');
-  writeByte(pathC1, 'H');
-  writeByte(pathRefExtra, 'J');
-  writeByte(pathD0, 'K');
-  writeByte(pathD1, 'L');
-  writeByte(pathD2, 'M');
-  writeByte(pathE0, 'N');
-  writeByte(pathE1, 'O');
-  writeByte(pathE2, 'P');
-  writeByte(pathF0, 'Q');
-  writeByte(pathF1, 'R');
-  writeByte(pathPtrExtra, 'S');
-
-  const std::string source =
-      "[effects(file_read)]\n"
-      "swallow_file_error([FileError] err) {}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "score_refs([args<Reference<File<Read>>>] values) {\n"
-      "  [i32 mut] first{0i32}\n"
-      "  [i32 mut] last{0i32}\n"
-      "  values[0i32].read_byte(first)?\n"
-      "  values[minus(count(values), 1i32)].read_byte(last)?\n"
-      "  return(plus(plus(first, last), count(values)))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "forward_refs([args<Reference<File<Read>>>] values) {\n"
-      "  return(score_refs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "forward_refs_mixed([args<Reference<File<Read>>>] values) {\n"
-      "  [File<Read>] extra{File<Read>(\"" + escape(pathRefExtra) + "\"utf8)?}\n"
-      "  [Reference<File<Read>>] extra_ref{location(extra)}\n"
-      "  return(score_refs([spread] values, extra_ref))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "score_ptrs([args<Pointer<File<Read>>>] values) {\n"
-      "  [i32 mut] first{0i32}\n"
-      "  [i32 mut] last{0i32}\n"
-      "  values[0i32].read_byte(first)?\n"
-      "  values[minus(count(values), 1i32)].read_byte(last)?\n"
-      "  return(plus(plus(first, last), count(values)))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "forward_ptrs([args<Pointer<File<Read>>>] values) {\n"
-      "  return(score_ptrs([spread] values))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "forward_ptrs_mixed([args<Pointer<File<Read>>>] values) {\n"
-      "  [File<Read>] extra{File<Read>(\"" + escape(pathPtrExtra) + "\"utf8)?}\n"
-      "  [Pointer<File<Read>>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs([spread] values, extra_ptr))\n"
-      "}\n"
-      "\n"
-      "[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]\n"
-      "main() {\n"
-      "  [File<Read>] a0{File<Read>(\"" + escape(pathA0) + "\"utf8)?}\n"
-      "  [File<Read>] a1{File<Read>(\"" + escape(pathA1) + "\"utf8)?}\n"
-      "  [File<Read>] a2{File<Read>(\"" + escape(pathA2) + "\"utf8)?}\n"
-      "  [Reference<File<Read>>] r0{location(a0)}\n"
-      "  [Reference<File<Read>>] r1{location(a1)}\n"
-      "  [Reference<File<Read>>] r2{location(a2)}\n"
-      "\n"
-      "  [File<Read>] b0{File<Read>(\"" + escape(pathB0) + "\"utf8)?}\n"
-      "  [File<Read>] b1{File<Read>(\"" + escape(pathB1) + "\"utf8)?}\n"
-      "  [File<Read>] b2{File<Read>(\"" + escape(pathB2) + "\"utf8)?}\n"
-      "  [Reference<File<Read>>] s0{location(b0)}\n"
-      "  [Reference<File<Read>>] s1{location(b1)}\n"
-      "  [Reference<File<Read>>] s2{location(b2)}\n"
-      "\n"
-      "  [File<Read>] c0{File<Read>(\"" + escape(pathC0) + "\"utf8)?}\n"
-      "  [File<Read>] c1{File<Read>(\"" + escape(pathC1) + "\"utf8)?}\n"
-      "  [Reference<File<Read>>] t0{location(c0)}\n"
-      "  [Reference<File<Read>>] t1{location(c1)}\n"
-      "\n"
-      "  [File<Read>] d0{File<Read>(\"" + escape(pathD0) + "\"utf8)?}\n"
-      "  [File<Read>] d1{File<Read>(\"" + escape(pathD1) + "\"utf8)?}\n"
-      "  [File<Read>] d2{File<Read>(\"" + escape(pathD2) + "\"utf8)?}\n"
-      "  [Pointer<File<Read>>] p0{location(d0)}\n"
-      "  [Pointer<File<Read>>] p1{location(d1)}\n"
-      "  [Pointer<File<Read>>] p2{location(d2)}\n"
-      "\n"
-      "  [File<Read>] e0{File<Read>(\"" + escape(pathE0) + "\"utf8)?}\n"
-      "  [File<Read>] e1{File<Read>(\"" + escape(pathE1) + "\"utf8)?}\n"
-      "  [File<Read>] e2{File<Read>(\"" + escape(pathE2) + "\"utf8)?}\n"
-      "  [Pointer<File<Read>>] q0{location(e0)}\n"
-      "  [Pointer<File<Read>>] q1{location(e1)}\n"
-      "  [Pointer<File<Read>>] q2{location(e2)}\n"
-      "\n"
-      "  [File<Read>] f0{File<Read>(\"" + escape(pathF0) + "\"utf8)?}\n"
-      "  [File<Read>] f1{File<Read>(\"" + escape(pathF1) + "\"utf8)?}\n"
-      "  [Pointer<File<Read>>] u0{location(f0)}\n"
-      "  [Pointer<File<Read>>] u1{location(f1)}\n"
-      "\n"
-      "  return(plus(plus(score_refs(r0, r1, r2),\n"
-      "                   plus(forward_refs(s0, s1, s2), forward_refs_mixed(t0, t1))),\n"
-      "              plus(score_ptrs(p0, p1, p2),\n"
-      "                   plus(forward_ptrs(q0, q1, q2), forward_ptrs_mixed(u0, u1)))))\n"
-      "}\n";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 907);
-}
-
-
-
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_vectors([args<vector<i32>>] values) {
-  return(plus(values[0i32].count(), values[2i32].count()))
+  [vector<i32>] head{values[0i32]}
+  [vector<i32>] tail{values[2i32]}
+  return(plus(/std/collections/vector/count(head),
+              /std/collections/vector/count(tail)))
 }
 
 [return<int>]
@@ -2386,10 +1616,14 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed capacity methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_vectors([args<vector<i32>>] values) {
-  [auto] head{capacity(at(values, 0i32))}
-  return(plus(head, at(values, 2i32).capacity()))
+  [vector<i32>] head{values[0i32]}
+  [vector<i32>] tail{values[2i32]}
+  return(plus(/std/collections/vector/capacity(head),
+              /std/collections/vector/capacity(tail)))
 }
 
 [return<int>]
@@ -2428,17 +1662,22 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed statement mutators") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 mutate_vectors([args<vector<i32>>] values) {
-  push(at(values, 0i32), 9i32)
-  values[0i32].pop()
-  reserve(values[1i32], 6i32)
-  values[1i32].clear()
-  remove_at(values[2i32], 1i32)
-  values[2i32].remove_swap(0i32)
-  return(plus(values[0i32].count(),
-              plus(values[1i32].capacity(),
-                   values[2i32].count())))
+  [vector<i32> mut] head{values[0i32]}
+  [vector<i32> mut] middle{values[1i32]}
+  [vector<i32> mut] tail{values[2i32]}
+  head.push(9i32)
+  head.pop()
+  middle.reserve(6i32)
+  middle.clear()
+  tail.remove_at(1i32)
+  tail.remove_swap(0i32)
+  return(plus(/std/collections/vector/count(head),
+              plus(/std/collections/vector/capacity(middle),
+                   /std/collections/vector/count(tail))))
 }
 
 [effects(heap_alloc), return<int>]
@@ -2590,12 +1829,12 @@ main() {
   CHECK(result == 11);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed array packs with direct indexed access helpers") {
+TEST_CASE("ir lowerer materializes variadic borrowed array packs with indexed dereference access helpers") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<array<i32>>>] values) {
-  [auto] head{values[0i32].at_unsafe(1i32)}
-  return(plus(head, values[2i32].at(0i32)))
+  [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
+  return(plus(head, dereference(at(values, 2i32)).at(0i32)))
 }
 
 [return<int>]
@@ -2921,6 +2160,73 @@ main() {
   CHECK(result == 23);
 }
 
+TEST_CASE("ir lowerer materializes variadic pointer uninitialized scalar packs with indexed init and take") {
+  const std::string source = R"(
+[return<int>]
+score_ptrs([args<Pointer<uninitialized<i32>>>] values) {
+  init(dereference(values[0i32]), 2i32)
+  init(dereference(values.at(1i32)), 3i32)
+  init(dereference(values.at_unsafe(2i32)), 4i32)
+  return(plus(take(dereference(values[0i32])),
+              plus(take(dereference(values.at(1i32))),
+                   take(dereference(values.at_unsafe(2i32))))))
+}
+
+[return<int>]
+forward([args<Pointer<uninitialized<i32>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<uninitialized<i32>>>] values) {
+  [uninitialized<i32>] extra{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [uninitialized<i32>] a0{uninitialized<i32>()}
+  [uninitialized<i32>] a1{uninitialized<i32>()}
+  [uninitialized<i32>] a2{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] p0{location(a0)}
+  [Pointer<uninitialized<i32>>] p1{location(a1)}
+  [Pointer<uninitialized<i32>>] p2{location(a2)}
+
+  [uninitialized<i32>] b0{uninitialized<i32>()}
+  [uninitialized<i32>] b1{uninitialized<i32>()}
+  [uninitialized<i32>] b2{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] q0{location(b0)}
+  [Pointer<uninitialized<i32>>] q1{location(b1)}
+  [Pointer<uninitialized<i32>>] q2{location(b2)}
+
+  [uninitialized<i32>] c0{uninitialized<i32>()}
+  [uninitialized<i32>] c1{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] r0{location(c0)}
+  [Pointer<uninitialized<i32>>] r1{location(c1)}
+
+  return(plus(score_ptrs(p0, p1, p2),
+              plus(forward(q0, q1, q2),
+                   forward_mixed(r0, r1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 27);
+}
+
 TEST_CASE("ir lowerer materializes variadic borrowed map packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]
@@ -3111,71 +2417,6 @@ main() {
   CHECK(result == 48);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed map packs with indexed lookup helpers") {
-  const std::string source = R"(
-[return<int>]
-score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
-  [auto] head{at(values, 0i32).at_unsafe(3i32)}
-  if(at(values, 2i32).contains(11i32),
-     then(){ return(plus(head, at(values, 2i32).at(11i32))) },
-     else(){ return(0i32) })
-}
-
-[return<int>]
-forward([args<Reference</std/collections/map<i32, i32>>>] values) {
-  return(score_refs([spread] values))
-}
-
-[return<int>]
-forward_mixed([args<Reference</std/collections/map<i32, i32>>>] values) {
-  [/std/collections/map<i32, i32>] extra{map<i32, i32>(19i32, 20i32, 3i32, 4i32)}
-  [Reference</std/collections/map<i32, i32>>] extra_ref{location(extra)}
-  return(score_refs(extra_ref, [spread] values))
-}
-
-[return<int>]
-main() {
-  [/std/collections/map<i32, i32>] a0{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
-  [/std/collections/map<i32, i32>] a1{map<i32, i32>(5i32, 6i32)}
-  [/std/collections/map<i32, i32>] a2{map<i32, i32>(7i32, 8i32, 9i32, 10i32, 11i32, 12i32)}
-  [Reference</std/collections/map<i32, i32>>] r0{location(a0)}
-  [Reference</std/collections/map<i32, i32>>] r1{location(a1)}
-  [Reference</std/collections/map<i32, i32>>] r2{location(a2)}
-
-  [/std/collections/map<i32, i32>] b0{map<i32, i32>(13i32, 14i32, 3i32, 4i32)}
-  [/std/collections/map<i32, i32>] b1{map<i32, i32>(15i32, 16i32)}
-  [/std/collections/map<i32, i32>] b2{map<i32, i32>(17i32, 18i32, 11i32, 12i32)}
-  [Reference</std/collections/map<i32, i32>>] s0{location(b0)}
-  [Reference</std/collections/map<i32, i32>>] s1{location(b1)}
-  [Reference</std/collections/map<i32, i32>>] s2{location(b2)}
-
-  [/std/collections/map<i32, i32>] c0{map<i32, i32>(21i32, 22i32)}
-  [/std/collections/map<i32, i32>] c1{map<i32, i32>(23i32, 24i32, 11i32, 12i32)}
-  [Reference</std/collections/map<i32, i32>>] t0{location(c0)}
-  [Reference</std/collections/map<i32, i32>>] t1{location(c1)}
-
-  return(plus(score_refs(r0, r1, r2),
-              plus(forward(s0, s1, s2),
-                   forward_mixed(t0, t1))))
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 48);
-}
-
 TEST_CASE("ir lowerer materializes variadic borrowed map packs with indexed tryAt inference") {
   const std::string source = R"(
 [return<int>]
@@ -3305,12 +2546,12 @@ main() {
   CHECK(result == 11);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer array packs with direct indexed access helpers") {
+TEST_CASE("ir lowerer materializes variadic pointer array packs with indexed dereference access helpers") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<array<i32>>>] values) {
-  [auto] head{values[0i32].at_unsafe(1i32)}
-  return(plus(head, values[2i32].at(0i32)))
+  [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
+  return(plus(head, dereference(at(values, 2i32)).at(0i32)))
 }
 
 [return<int>]
@@ -3690,12 +2931,16 @@ main() {
   CHECK(result == 60);
 }
 
-
 TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
-  return(plus(values[0i32].count(), values[2i32].count()))
+  [vector<i32>] head{dereference(at(values, 0i32))}
+  [vector<i32>] tail{dereference(at(values, 2i32))}
+  return(plus(/std/collections/vector/count(head),
+              /std/collections/vector/count(tail)))
 }
 
 [return<int>]
@@ -3753,12 +2998,81 @@ main() {
   CHECK(result == 16);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer vector packs with direct indexed access helpers") {
+TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference capacity methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
-  [auto] head{values[0i32].at_unsafe(1i32)}
-  return(plus(head, values[2i32].at(0i32)))
+  [vector<i32>] head{dereference(at(values, 0i32))}
+  [vector<i32>] tail{dereference(at(values, 2i32))}
+  return(plus(/std/collections/vector/capacity(head),
+              /std/collections/vector/capacity(tail)))
+}
+
+[return<int>]
+forward([args<Pointer<vector<i32>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+forward_mixed([args<Pointer<vector<i32>>>] values) {
+  [vector<i32>] extra{vector<i32>(1i32)}
+  [Pointer<vector<i32>>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
+  [vector<i32>] a1{vector<i32>(3i32)}
+  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32, 7i32)}
+  [Pointer<vector<i32>>] r0{location(a0)}
+  [Pointer<vector<i32>>] r1{location(a1)}
+  [Pointer<vector<i32>>] r2{location(a2)}
+
+  [vector<i32>] b0{vector<i32>(8i32)}
+  [vector<i32>] b1{vector<i32>(9i32, 10i32)}
+  [vector<i32>] b2{vector<i32>(11i32, 12i32, 13i32)}
+  [Pointer<vector<i32>>] s0{location(b0)}
+  [Pointer<vector<i32>>] s1{location(b1)}
+  [Pointer<vector<i32>>] s2{location(b2)}
+
+  [vector<i32>] c0{vector<i32>(14i32, 15i32)}
+  [vector<i32>] c1{vector<i32>(16i32, 17i32, 18i32, 19i32, 20i32)}
+  [Pointer<vector<i32>>] t0{location(c0)}
+  [Pointer<vector<i32>>] t1{location(c1)}
+
+  return(plus(score_ptrs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 16);
+}
+
+TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference access helpers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+score_ptrs([args<Pointer<vector<i32>>>] values) {
+  [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
+  return(plus(head, dereference(at(values, 2i32)).at(0i32)))
 }
 
 [return<int>]
@@ -3816,12 +3130,91 @@ main() {
   CHECK(result == 39);
 }
 
+TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference statement mutators") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+mutate_ptrs([args<Pointer<vector<i32>>>] values) {
+  [vector<i32> mut] head{dereference(at(values, 0i32))}
+  [vector<i32> mut] middle{dereference(at(values, 1i32))}
+  [vector<i32> mut] tail{dereference(at(values, 2i32))}
+  head.push(9i32)
+  head.pop()
+  middle.reserve(6i32)
+  middle.clear()
+  tail.remove_at(1i32)
+  tail.remove_swap(0i32)
+  return(plus(/std/collections/vector/count(head),
+              plus(/std/collections/vector/capacity(middle),
+                   /std/collections/vector/count(tail))))
+}
+
+[effects(heap_alloc), return<int>]
+forward([args<Pointer<vector<i32>>>] values) {
+  return(mutate_ptrs([spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+forward_mixed([args<Pointer<vector<i32>>>] values) {
+  [vector<i32>] extra{vector<i32>(20i32)}
+  [Pointer<vector<i32>>] extra_ptr{location(extra)}
+  return(mutate_ptrs(extra_ptr, [spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
+  [vector<i32>] a1{vector<i32>(3i32)}
+  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32)}
+  [Pointer<vector<i32>>] r0{location(a0)}
+  [Pointer<vector<i32>>] r1{location(a1)}
+  [Pointer<vector<i32>>] r2{location(a2)}
+
+  [vector<i32>] b0{vector<i32>(7i32)}
+  [vector<i32>] b1{vector<i32>(8i32, 9i32)}
+  [vector<i32>] b2{vector<i32>(10i32, 11i32, 12i32)}
+  [Pointer<vector<i32>>] s0{location(b0)}
+  [Pointer<vector<i32>>] s1{location(b1)}
+  [Pointer<vector<i32>>] s2{location(b2)}
+
+  [vector<i32>] c0{vector<i32>(13i32, 14i32)}
+  [vector<i32>] c1{vector<i32>(15i32, 16i32, 17i32)}
+  [Pointer<vector<i32>>] t0{location(c0)}
+  [Pointer<vector<i32>>] t1{location(c1)}
+
+  return(plus(mutate_ptrs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 25);
+}
 
 TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference<vector<i32>>>] values) {
-  return(plus(values[0i32].count(), values[2i32].count()))
+  [vector<i32>] head{dereference(at(values, 0i32))}
+  [vector<i32>] tail{dereference(at(values, 2i32))}
+  return(plus(/std/collections/vector/count(head),
+              /std/collections/vector/count(tail)))
 }
 
 [return<int>]
@@ -3879,12 +3272,81 @@ main() {
   CHECK(result == 16);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed vector packs with direct indexed access helpers") {
+TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference capacity methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference<vector<i32>>>] values) {
-  [auto] head{values[0i32].at_unsafe(1i32)}
-  return(plus(head, values[2i32].at(0i32)))
+  [vector<i32>] head{dereference(at(values, 0i32))}
+  [vector<i32>] tail{dereference(at(values, 2i32))}
+  return(plus(/std/collections/vector/capacity(head),
+              /std/collections/vector/capacity(tail)))
+}
+
+[return<int>]
+forward([args<Reference<vector<i32>>>] values) {
+  return(score_refs([spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+forward_mixed([args<Reference<vector<i32>>>] values) {
+  [vector<i32>] extra{vector<i32>(1i32)}
+  [Reference<vector<i32>>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
+  [vector<i32>] a1{vector<i32>(3i32)}
+  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32, 7i32)}
+  [Reference<vector<i32>>] r0{location(a0)}
+  [Reference<vector<i32>>] r1{location(a1)}
+  [Reference<vector<i32>>] r2{location(a2)}
+
+  [vector<i32>] b0{vector<i32>(8i32)}
+  [vector<i32>] b1{vector<i32>(9i32, 10i32)}
+  [vector<i32>] b2{vector<i32>(11i32, 12i32, 13i32)}
+  [Reference<vector<i32>>] s0{location(b0)}
+  [Reference<vector<i32>>] s1{location(b1)}
+  [Reference<vector<i32>>] s2{location(b2)}
+
+  [vector<i32>] c0{vector<i32>(14i32, 15i32)}
+  [vector<i32>] c1{vector<i32>(16i32, 17i32, 18i32, 19i32, 20i32)}
+  [Reference<vector<i32>>] t0{location(c0)}
+  [Reference<vector<i32>>] t1{location(c1)}
+
+  return(plus(score_refs(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 16);
+}
+
+TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference access helpers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+score_refs([args<Reference<vector<i32>>>] values) {
+  [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
+  return(plus(head, dereference(at(values, 2i32)).at(0i32)))
 }
 
 [return<int>]
@@ -3942,52 +3404,60 @@ main() {
   CHECK(result == 39);
 }
 
-
-TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with indexed count methods") {
+TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference statement mutators") {
   const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+mutate_refs([args<Reference<vector<i32>>>] values) {
+  [vector<i32> mut] head{dereference(at(values, 0i32))}
+  [vector<i32> mut] middle{dereference(at(values, 1i32))}
+  [vector<i32> mut] tail{dereference(at(values, 2i32))}
+  head.push(9i32)
+  head.pop()
+  middle.reserve(6i32)
+  middle.clear()
+  tail.remove_at(1i32)
+  tail.remove_swap(0i32)
+  return(plus(/std/collections/vector/count(head),
+              plus(/std/collections/vector/capacity(middle),
+                   /std/collections/vector/count(tail))))
 }
 
-[return<int>]
-score_refs([args<Reference<soa_vector<Particle>>>] values) {
-  return(plus(count(values), plus(values[0i32].count(), values[2i32].count())))
+[effects(heap_alloc), return<int>]
+forward([args<Reference<vector<i32>>>] values) {
+  return(mutate_refs([spread] values))
 }
 
-[return<int>]
-forward([args<Reference<soa_vector<Particle>>>] values) {
-  return(score_refs([spread] values))
+[effects(heap_alloc), return<int>]
+forward_mixed([args<Reference<vector<i32>>>] values) {
+  [vector<i32>] extra{vector<i32>(20i32)}
+  [Reference<vector<i32>>] extra_ref{location(extra)}
+  return(mutate_refs(extra_ref, [spread] values))
 }
 
-[return<int>]
-forward_mixed([args<Reference<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] extra{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] extra_ref{location(extra)}
-  return(score_refs(extra_ref, [spread] values))
-}
-
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] a0{soa_vector<Particle>()}
-  [soa_vector<Particle>] a1{soa_vector<Particle>()}
-  [soa_vector<Particle>] a2{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] r0{location(a0)}
-  [Reference<soa_vector<Particle>>] r1{location(a1)}
-  [Reference<soa_vector<Particle>>] r2{location(a2)}
+  [vector<i32>] a0{vector<i32>(1i32, 2i32)}
+  [vector<i32>] a1{vector<i32>(3i32)}
+  [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32)}
+  [Reference<vector<i32>>] r0{location(a0)}
+  [Reference<vector<i32>>] r1{location(a1)}
+  [Reference<vector<i32>>] r2{location(a2)}
 
-  [soa_vector<Particle>] b0{soa_vector<Particle>()}
-  [soa_vector<Particle>] b1{soa_vector<Particle>()}
-  [soa_vector<Particle>] b2{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] s0{location(b0)}
-  [Reference<soa_vector<Particle>>] s1{location(b1)}
-  [Reference<soa_vector<Particle>>] s2{location(b2)}
+  [vector<i32>] b0{vector<i32>(7i32)}
+  [vector<i32>] b1{vector<i32>(8i32, 9i32)}
+  [vector<i32>] b2{vector<i32>(10i32, 11i32, 12i32)}
+  [Reference<vector<i32>>] s0{location(b0)}
+  [Reference<vector<i32>>] s1{location(b1)}
+  [Reference<vector<i32>>] s2{location(b2)}
 
-  [soa_vector<Particle>] c0{soa_vector<Particle>()}
-  [soa_vector<Particle>] c1{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] t0{location(c0)}
-  [Reference<soa_vector<Particle>>] t1{location(c1)}
+  [vector<i32>] c0{vector<i32>(13i32, 14i32)}
+  [vector<i32>] c1{vector<i32>(15i32, 16i32, 17i32)}
+  [Reference<vector<i32>>] t0{location(c0)}
+  [Reference<vector<i32>>] t1{location(c1)}
 
-  return(plus(score_refs(r0, r1, r2),
+  return(plus(mutate_refs(r0, r1, r2),
               plus(forward(s0, s1, s2),
                    forward_mixed(t0, t1))))
 }
@@ -4006,20 +3476,22 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 9);
+  CHECK(result == 25);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with checked body access helpers") {
+TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
 score_refs([args<Reference<soa_vector<Particle>>>] values) {
-  return(plus(count(values),
-              plus(plus(values[0i32].count(), values.at(1i32).count()),
-                   values.at_unsafe(2i32).count())))
+  [soa_vector<Particle>] head{dereference(at(values, 0i32))}
+  [soa_vector<Particle>] tail{dereference(at(values, 2i32))}
+  return(plus(count(values), plus(count(head), count(tail))))
 }
 
 [return<int>]
@@ -4079,81 +3551,17 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic pointer soa_vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
 score_ptrs([args<Pointer<soa_vector<Particle>>>] values) {
-  return(plus(count(values), plus(values[0i32].count(), values[2i32].count())))
-}
-
-[return<int>]
-forward([args<Pointer<soa_vector<Particle>>>] values) {
-  return(score_ptrs([spread] values))
-}
-
-[return<int>]
-forward_mixed([args<Pointer<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] extra{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] extra_ptr{location(extra)}
-  return(score_ptrs(extra_ptr, [spread] values))
-}
-
-[return<int>]
-main() {
-  [soa_vector<Particle>] a0{soa_vector<Particle>()}
-  [soa_vector<Particle>] a1{soa_vector<Particle>()}
-  [soa_vector<Particle>] a2{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] r0{location(a0)}
-  [Pointer<soa_vector<Particle>>] r1{location(a1)}
-  [Pointer<soa_vector<Particle>>] r2{location(a2)}
-
-  [soa_vector<Particle>] b0{soa_vector<Particle>()}
-  [soa_vector<Particle>] b1{soa_vector<Particle>()}
-  [soa_vector<Particle>] b2{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] s0{location(b0)}
-  [Pointer<soa_vector<Particle>>] s1{location(b1)}
-  [Pointer<soa_vector<Particle>>] s2{location(b2)}
-
-  [soa_vector<Particle>] c0{soa_vector<Particle>()}
-  [soa_vector<Particle>] c1{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] t0{location(c0)}
-  [Pointer<soa_vector<Particle>>] t1{location(c1)}
-
-  return(plus(score_ptrs(r0, r1, r2),
-              plus(forward(s0, s1, s2),
-                   forward_mixed(t0, t1))))
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 9);
-}
-
-TEST_CASE("ir lowerer materializes variadic pointer soa_vector packs with checked body access helpers") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<int>]
-score_ptrs([args<Pointer<soa_vector<Particle>>>] values) {
-  return(plus(count(values),
-              plus(plus(values[0i32].count(), values.at(1i32).count()),
-                   values.at_unsafe(2i32).count())))
+  [soa_vector<Particle>] head{dereference(at(values, 0i32))}
+  [soa_vector<Particle>] tail{dereference(at(values, 2i32))}
+  return(plus(count(values), plus(count(head), count(tail))))
 }
 
 [return<int>]
@@ -4213,60 +3621,17 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
 score_soas([args<soa_vector<Particle>>] values) {
-  return(plus(count(values), plus(values[0i32].count(), values[2i32].count())))
-}
-
-[return<int>]
-forward([args<soa_vector<Particle>>] values) {
-  return(score_soas([spread] values))
-}
-
-[return<int>]
-forward_mixed([args<soa_vector<Particle>>] values) {
-  return(score_soas(soa_vector<Particle>(), [spread] values))
-}
-
-[return<int>]
-main() {
-  return(plus(score_soas(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
-              plus(forward(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
-                   forward_mixed(soa_vector<Particle>(), soa_vector<Particle>()))))
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 9);
-}
-
-TEST_CASE("ir lowerer materializes variadic soa_vector packs with checked body access helpers") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<int>]
-score_soas([args<soa_vector<Particle>>] values) {
-  return(plus(count(values),
-              plus(plus(values[0i32].count(), values.at(1i32).count()),
-                   values.at_unsafe(2i32).count())))
+  [soa_vector<Particle>] head{values[0i32]}
+  [soa_vector<Particle>] tail{values[2i32]}
+  return(plus(count(values), plus(count(head), count(tail))))
 }
 
 [return<int>]
@@ -4349,55 +3714,6 @@ main() {
   CHECK(result == 11);
 }
 
-TEST_CASE("ir lowerer materializes variadic map packs with indexed lookup helpers") {
-  const std::string source = R"(
-[return<int>]
-score_maps([args<map<i32, i32>>] values) {
-  [auto] head{values[0i32].at_unsafe(3i32)}
-  if(values[2i32].contains(11i32),
-     then(){ return(plus(head, values[2i32].at(11i32))) },
-     else(){ return(0i32) })
-}
-
-[return<int>]
-forward([args<map<i32, i32>>] values) {
-  return(score_maps([spread] values))
-}
-
-[return<int>]
-forward_mixed([args<map<i32, i32>>] values) {
-  return(score_maps(map<i32, i32>(19i32, 20i32, 3i32, 4i32), [spread] values))
-}
-
-[return<int>]
-main() {
-  return(plus(score_maps(map<i32, i32>(1i32, 2i32, 3i32, 4i32),
-                         map<i32, i32>(5i32, 6i32),
-                         map<i32, i32>(7i32, 8i32, 9i32, 10i32, 11i32, 12i32)),
-              plus(forward(map<i32, i32>(13i32, 14i32, 3i32, 4i32),
-                           map<i32, i32>(15i32, 16i32),
-                           map<i32, i32>(17i32, 18i32, 11i32, 12i32)),
-                   forward_mixed(map<i32, i32>(21i32, 22i32),
-                                 map<i32, i32>(23i32, 24i32, 11i32, 12i32)))))
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 48);
-}
-
 TEST_CASE("ir lowerer materializes variadic map packs with indexed tryAt inference") {
   const std::string source = R"(
 [return<int>]
@@ -4446,6 +3762,58 @@ main() {
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 60);
+}
+
+TEST_CASE("ir lowerer materializes variadic experimental map packs with indexed canonical count calls") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<int> effects(heap_alloc)]
+score_maps([args<Map<i32, i32>>] values) {
+  [Map<i32, i32>] head{at(values, 0i32)}
+  [Map<i32, i32>] tail{at(values, 2i32)}
+  return(plus(/std/collections/experimental_map/mapCount<i32, i32>(head),
+              /std/collections/experimental_map/mapCount<i32, i32>(tail)))
+}
+
+[return<int> effects(heap_alloc)]
+forward([args<Map<i32, i32>>] values) {
+  return(score_maps([spread] values))
+}
+
+[return<int> effects(heap_alloc)]
+forward_mixed([args<Map<i32, i32>>] values) {
+  return(score_maps(mapSingle(1i32, 2i32), [spread] values))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  return(plus(score_maps(mapPair(1i32, 2i32, 3i32, 4i32),
+                         mapSingle(5i32, 6i32),
+                         mapTriple(7i32, 8i32, 9i32, 10i32, 11i32, 12i32)),
+              plus(forward(mapSingle(13i32, 14i32),
+                           mapPair(15i32, 16i32, 17i32, 18i32),
+                           mapSingle(19i32, 20i32)),
+                   forward_mixed(mapPair(21i32, 22i32, 23i32, 24i32),
+                                 mapTriple(25i32, 26i32, 27i32, 28i32, 29i32, 30i32)))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
 }
 
 TEST_CASE("ir lowerer forwards count to method calls") {
@@ -4510,6 +3878,8 @@ main() {
 
 TEST_CASE("ir lowerer supports vector method calls") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 /vector/first([vector<i32>] items) {
   return(items[0i32])

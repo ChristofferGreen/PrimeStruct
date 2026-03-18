@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorStatementLoopCountStep.h"
 
 namespace primec::semantics {
 namespace {

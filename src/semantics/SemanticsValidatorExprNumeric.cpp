@@ -353,20 +353,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     return false;
   };
   auto isStringExpr = [&](const Expr &arg) -> bool {
-    if (resolveStringTarget(arg)) {
-      return true;
-    }
-    if (arg.kind == Expr::Kind::Call) {
-      std::string accessName;
-      if (defMap_.find(resolveCalleePath(arg)) == defMap_.end() && getBuiltinArrayAccessName(arg, accessName) &&
-          arg.args.size() == 2) {
-        std::string mapValueType;
-        if (resolveMapValueType(arg.args.front(), mapValueType) && normalizeBindingTypeName(mapValueType) == "string") {
-          return true;
-        }
-      }
-    }
-    return false;
+    return arg.kind == Expr::Kind::StringLiteral || inferExprReturnKind(arg, params, locals) == ReturnKind::String;
   };
   auto isUnsignedExpr = [&](const Expr &arg) -> bool {
     return inferExprReturnKind(arg, params, locals) == ReturnKind::UInt64;

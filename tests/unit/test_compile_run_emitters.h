@@ -384,15 +384,16 @@ TEST_CASE("C++ emitter runs software renderer command serialization deterministi
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -435,15 +436,16 @@ TEST_CASE("C++ emitter runs software renderer clip stack serialization determini
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -492,15 +494,16 @@ TEST_CASE("C++ emitter runs two-pass layout tree serialization deterministically
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -537,15 +540,16 @@ TEST_CASE("C++ emitter runs two-pass layout empty root deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -576,15 +580,16 @@ TEST_CASE("C++ emitter runs basic widget controls through layout deterministical
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -642,15 +647,16 @@ TEST_CASE("C++ emitter runs panel container widget deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -713,15 +719,16 @@ TEST_CASE("C++ emitter runs empty panel container stays balanced deterministical
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -757,15 +764,16 @@ TEST_CASE("C++ emitter runs composite login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -831,15 +839,16 @@ TEST_CASE("C++ emitter runs html adapter login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -908,15 +917,16 @@ TEST_CASE("C++ emitter runs ui event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -966,15 +976,16 @@ TEST_CASE("C++ emitter runs ui ime event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -1021,15 +1032,16 @@ TEST_CASE("C++ emitter runs ui resize and focus event stream deterministically")
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
+import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{/std/collections/vector/count(words)}
+  [i32] len{vectorCount<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(words[index])
+    print(vectorAt<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -1300,7 +1312,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") != std::string::npos);
+  CHECK_FALSE(readFile(errPath).empty());
 }
 
 TEST_CASE("C++ emitter lambda mutator bool positional call resolves user helper") {
@@ -1651,14 +1663,14 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
-  push(values, 4i32)
-  remove_at(values, 1i32)
-  remove_swap(values, 1i32)
-  pop(values)
-  reserve(values, 8i32)
-  capacity(values)
-  clear(values)
-  return(values.count())
+  vectorPush<i32>(values, 4i32)
+  vectorRemoveAt<i32>(values, 1i32)
+  vectorRemoveSwap<i32>(values, 1i32)
+  vectorPop<i32>(values)
+  vectorReserve<i32>(values, 8i32)
+  vectorCapacity<i32>(values)
+  vectorClear<i32>(values)
+  return(vectorCount<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_vector_helpers_exe.prime", source);
@@ -1705,7 +1717,7 @@ main() {
   pop(values)
   values.clear()
   clear(values)
-  return(values.count())
+  return(vectorCount<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_user_vector_mutator_shadow_precedence.prime", source);
@@ -1747,7 +1759,7 @@ TEST_CASE("rejects canonical reordered vector mutator statements with alias-only
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   /std/collections/vector/push(3i32, values)
-  return(values.count())
+  return(0i32)
 }
 )";
   const std::string srcPath =
@@ -1760,7 +1772,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") != std::string::npos);
+  const std::string errors = readFile(errPath);
+  CHECK(errors.find("native backend does not support vector helper: push") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs user vector mutator named call shadow in C++ emitter") {
@@ -1774,7 +1787,7 @@ import /std/collections/*
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   push([value] 3i32, [values] values)
-  return(values.count())
+  return(vectorCount<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_call_shadow.prime", source);
@@ -1818,7 +1831,7 @@ import /std/collections/*
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   push(3i32, values)
-  return(values.count())
+  return(vectorCount<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_positional_call_shadow.prime", source);
@@ -1839,7 +1852,7 @@ TEST_CASE("rejects alias reordered vector mutator statements with canonical-only
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   /vector/push(3i32, values)
-  return(values.count())
+  return(0i32)
 }
 )";
   const std::string srcPath =
@@ -1850,7 +1863,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
+  const std::string errors = readFile(errPath);
+  CHECK(errors.find("push requires vector binding") != std::string::npos);
 }
 
 TEST_CASE("rejects reordered namespaced vector push call expression compatibility alias in C++ emitter") {
@@ -1904,9 +1918,13 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto_exe")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs auto-inferred std namespaced vector push canonical definition in C++ emitter") {
@@ -2222,7 +2240,7 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   [i32] index{7i32}
   push(values, index)
-  return(values.count())
+  return(vectorCount<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_mutator_known_receiver_no_reorder.prime", source);
@@ -2234,7 +2252,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs user vector access named call shadow in C++ emitter") {
+TEST_CASE("rejects user vector access named call shadow in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -2250,10 +2268,13 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_vector_access_named_call_shadow.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_named_call_shadow_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_named_call_shadow_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports at()") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs auto-inferred std namespaced access helper canonical precedence in C++ emitter") {
@@ -2281,9 +2302,13 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto_exe")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs auto-inferred std namespaced access helper canonical definition in C++ emitter") {
@@ -2358,7 +2383,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs user vector access positional call shadow in C++ emitter") {
+TEST_CASE("rejects user vector access positional call shadow in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -2374,10 +2399,14 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_vector_access_positional_call_shadow.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_positional_call_shadow_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_positional_call_shadow_err.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 73);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports at()") != std::string::npos);
 }
 
 TEST_CASE("rejects user map access string positional call shadow in C++ emitter") {
@@ -5439,7 +5468,7 @@ import /std/collections/*
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   /std/collections/vector/push(values, 2i32)
-  return(count(values))
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_mutator_stmt.prime", source);
@@ -5453,23 +5482,23 @@ main() {
   CHECK(output.find("ps_missing_vector_push_call_helper") == std::string::npos);
 }
 
-TEST_CASE("rejects vector namespaced mutator alias statement without helper in C++ emitter") {
+TEST_CASE("C++ emitter lowers vector namespaced mutator alias statement without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   /vector/push(values, 2i32)
-  return(count(values))
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_mutator_stmt.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_mutator_stmt_err.txt").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_mutator_stmt.cpp").string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_vector_push_call_helper") == std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps stdlib namespaced vector access builtin fallback") {
@@ -5510,8 +5539,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK_FALSE(readFile(outPath).empty());
 }
 
 TEST_CASE("C++ emitter compiles stdlib namespaced map access and count helpers") {

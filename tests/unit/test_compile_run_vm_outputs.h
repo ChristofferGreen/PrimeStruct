@@ -213,7 +213,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -273,7 +273,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -328,7 +328,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   return(0i32)
 }
 )", escapedPath);
@@ -378,6 +378,7 @@ TEST_CASE("rejects oversized vm image read dimensions before overflow") {
   const std::string escapedPngPath = escapeStringLiteral(pngInPath);
   std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -388,7 +389,7 @@ main() {
   print_line(Result.why(ppmStatus))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(vectorCount<i32>(pixels))
   assign(width, 11i32)
   assign(height, 13i32)
   assign(pixels, vector<i32>(4i32, 5i32, 6i32))
@@ -396,7 +397,7 @@ main() {
   print_line(Result.why(pngStatus))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(vectorCount<i32>(pixels))
   return(0i32)
 }
 )";
@@ -493,6 +494,7 @@ TEST_CASE("runs vm png write for deterministic rgb outputs") {
   const std::string escapedPath = escapeStringLiteral(outPath.string());
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, file_write), return<int>]
 main() {
@@ -530,6 +532,7 @@ TEST_CASE("rejects invalid vm png write inputs deterministically") {
   const std::string escapedPath = escapeStringLiteral(outPath.string());
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -561,6 +564,7 @@ TEST_CASE("rejects oversized vm image write dimensions before overflow") {
   const std::string escapedPngPath = escapeStringLiteral(pngOutPath.string());
   std::string source = R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -628,7 +632,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -688,7 +692,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -754,7 +758,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -821,7 +825,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -887,7 +891,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -961,7 +965,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -1021,7 +1025,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -1078,7 +1082,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(/std/collections/vector/count(pixels))
+  print_line(vectorCount<i32>(pixels))
   return(0i32)
 }
 )", escapedPath);
@@ -1118,6 +1122,7 @@ TEST_CASE("rejects vm png inputs with critical chunk crc mismatches deterministi
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -1128,7 +1133,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(vectorCount<i32>(pixels))
   return(0i32)
 }
 )", escapedPath);
@@ -1173,6 +1178,7 @@ TEST_CASE("rejects vm png inputs with non-consecutive idat chunks deterministica
   const std::string escapedPath = escapeStringLiteral(inPath);
   const std::string source = injectEscapedPath(R"(
 import /std/image/*
+import /std/collections/*
 
 [effects(heap_alloc, io_out, file_write), return<int>]
 main() {
@@ -1183,7 +1189,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(count(pixels))
+  print_line(vectorCount<i32>(pixels))
   return(0i32)
 }
 )", escapedPath);

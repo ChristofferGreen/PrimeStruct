@@ -49,6 +49,7 @@ struct LocalInfo {
   bool referenceToMap = false;
   bool pointerToMap = false;
   bool isUninitializedStorage = false;
+  bool targetsUninitializedStorage = false;
   bool isSoaVector = false;
 };
 
@@ -1301,6 +1302,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &)> &isDynamicCollectionCountTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &isDynamicVectorCountTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &isDynamicVectorCapacityTarget,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
@@ -1994,6 +1996,7 @@ bool buildCallableDefinitionCallContext(
     int32_t &nextLocal,
     LocalMap &definitionLocals,
     Expr &callExpr,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)> &inferParameterLocalInfo,
     std::string &error);
 CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
@@ -2896,8 +2899,10 @@ struct UninitializedFieldStorageAccessInfo {
 };
 
 struct UninitializedStorageAccessInfo {
-  enum class Location { Local, Field } location = Location::Local;
+  enum class Location { Local, Field, Indirect } location = Location::Local;
   const LocalInfo *local = nullptr;
+  const LocalInfo *pointer = nullptr;
+  const Expr *pointerExpr = nullptr;
   const LocalInfo *receiver = nullptr;
   StructSlotFieldInfo fieldSlot;
   UninitializedTypeInfo typeInfo;
@@ -3241,12 +3246,6 @@ bool runLowerLocalsSetup(
 
 
 
-namespace primec {
-
-struct IrFunction;
-
-namespace ir_lowerer {
-
 using LowerReturnCallsEmitFileErrorWhyFn = std::function<bool(int32_t)>;
 
 struct LowerReturnCallsSetupInput {
@@ -3257,9 +3256,6 @@ struct LowerReturnCallsSetupInput {
 bool runLowerReturnCallsSetup(const LowerReturnCallsSetupInput &input,
                               LowerReturnCallsEmitFileErrorWhyFn &emitFileErrorWhyOut,
                               std::string &errorOut);
-
-} // namespace ir_lowerer
-} // namespace primec
 // END IrLowererLowerReturnCallsSetup.h
 
 // BEGIN IrLowererLowerStatementsCallsStep.h

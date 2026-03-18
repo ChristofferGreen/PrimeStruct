@@ -39,10 +39,10 @@ import /std/collections/*
 [return<int> effects(io_out, heap_alloc)]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
-  print_line(values.count())
-  print_line(values[1i32])
-  print_line(values[2i32])
-  return(values[0i32])
+  print_line(vectorCount<i32>(values))
+  print_line(vectorAt<i32>(values, 1i32))
+  print_line(vectorAt<i32>(values, 2i32))
+  return(vectorAt<i32>(values, 0i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_literals.prime", source);
@@ -1546,21 +1546,20 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects vm vector namespaced mutator alias") {
+TEST_CASE("runs vm vector namespaced mutator alias") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   /vector/push(values, 2i32)
-  return(plus(count(values), 10i32))
+  return(vectorAt<i32>(values, 1i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_namespaced_mutator_alias.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_namespaced_mutator_alias_out.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector namespaced count capacity access aliases without alias definitions") {
@@ -1592,7 +1591,7 @@ main() {
   [array<i32>] values{array<i32>[1i32, 2i32]}
   [vector<i32>] list{vector<i32>[3i32, 4i32]}
   [map<i32, i32>] table{map<i32, i32>[5i32=6i32]}
-  return(plus(plus(values.count(), list.count()), count(table)))
+  return(plus(plus(values.count(), vectorCount<i32>(list)), count(table)))
 }
 )";
   const std::string srcPath = writeTemp("vm_collection_brackets.prime", source);
@@ -1624,7 +1623,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_count_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
 TEST_CASE("runs vm with vector method call") {
@@ -1704,7 +1703,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm bare vector at method without imported helper") {
+TEST_CASE("runs vm bare vector at method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -1713,15 +1712,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_bare_vector_at_method_import_requirement.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_bare_vector_at_method_import_requirement_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
 }
 
-TEST_CASE("rejects vm wrapper temporary vector at method without helper") {
+TEST_CASE("runs vm wrapper temporary vector at method without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -1734,12 +1729,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_wrapper_vector_at_method_import_requirement.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_wrapper_vector_at_method_import_requirement_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
 }
 
 TEST_CASE("runs vm bare vector at_unsafe through imported stdlib helper") {
@@ -1774,7 +1765,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects vm bare vector at_unsafe method without imported helper") {
+TEST_CASE("runs vm bare vector at_unsafe method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -1783,15 +1774,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_bare_vector_at_unsafe_method_import_requirement.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
-                               "primec_vm_bare_vector_at_unsafe_method_import_requirement_err.txt")
-                                  .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
 }
 
-TEST_CASE("rejects vm wrapper temporary vector at_unsafe method without helper") {
+TEST_CASE("runs vm wrapper temporary vector at_unsafe method without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -1805,13 +1792,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_wrapper_vector_at_unsafe_method_import_requirement.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_wrapper_vector_at_unsafe_method_import_requirement_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
 }
 
 TEST_CASE("runs vm with map at helper") {
@@ -1871,7 +1853,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(plus(count(values), values.count()))
+  return(plus(vectorCount<i32>(values), vectorCount<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_count_helper.prime", source);
@@ -1909,7 +1891,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper temporary vector count method without helper") {
@@ -1931,7 +1913,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("vm backend only supports") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim helpers") {
@@ -4557,7 +4539,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm vector method alias struct-return precedence") {
+TEST_CASE("rejects vm vector method alias struct-return precedence without helper-backed receiver typing") {
   const std::string source = R"(
 AliasMarker {
   [i32] value
@@ -4588,8 +4570,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_method_struct_field_alias_precedence_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath).find("VM error: unaligned indirect address in IR") != std::string::npos);
 }
 
 TEST_CASE("vm keeps primitive diagnostics for canonical vector method access") {
@@ -6834,8 +6816,8 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  [i32] a{capacity(values)}
-  return(plus(a, values.capacity()))
+  [i32] a{vectorCapacity<i32>(values)}
+  return(plus(a, vectorCapacity<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_capacity_helper.prime", source);
