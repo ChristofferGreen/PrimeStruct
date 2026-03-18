@@ -9394,6 +9394,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
                                                              : std::filesystem::path("..");
 
   const std::filesystem::path semanticsValidatePath = repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
+  const std::filesystem::path semanticsValidateConvertConstructorsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateConvertConstructors.cpp";
+  const std::filesystem::path semanticsValidateConvertConstructorsHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateConvertConstructors.h";
   const std::filesystem::path semanticsValidateMaybeConstructorsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateMaybeConstructors.cpp";
   const std::filesystem::path semanticsValidateMaybeConstructorsHeaderPath =
@@ -9403,28 +9407,44 @@ TEST_CASE("semantics validate source delegation stays stable") {
   const std::filesystem::path semanticsValidateTransformsHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateTransforms.h";
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
+  REQUIRE(std::filesystem::exists(semanticsValidateConvertConstructorsPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateConvertConstructorsHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateMaybeConstructorsPath));
   REQUIRE(std::filesystem::exists(semanticsValidateMaybeConstructorsHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateTransformsPath));
   REQUIRE(std::filesystem::exists(semanticsValidateTransformsHeaderPath));
   const std::string semanticsValidateSource = readText(semanticsValidatePath);
+  const std::string semanticsValidateConvertConstructorsSource = readText(semanticsValidateConvertConstructorsPath);
+  const std::string semanticsValidateConvertConstructorsHeaderSource =
+      readText(semanticsValidateConvertConstructorsHeaderPath);
   const std::string semanticsValidateMaybeConstructorsSource = readText(semanticsValidateMaybeConstructorsPath);
   const std::string semanticsValidateMaybeConstructorsHeaderSource =
       readText(semanticsValidateMaybeConstructorsHeaderPath);
   const std::string semanticsValidateTransformsSource = readText(semanticsValidateTransformsPath);
   const std::string semanticsValidateTransformsHeaderSource = readText(semanticsValidateTransformsHeaderPath);
 
+  CHECK(semanticsValidateSource.find("#include \"SemanticsValidateConvertConstructors.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateMaybeConstructors.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateTransforms.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::applySemanticTransforms(program, semanticTransforms, error)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find("semantics::rewriteMaybeConstructors(program, error)") != std::string::npos);
+  CHECK(semanticsValidateSource.find("semantics::rewriteConvertConstructors(program, error)") !=
+        std::string::npos);
   CHECK(semanticsValidateSource.find("bool applySemanticTransforms(Program &program,") == std::string::npos);
+  CHECK(semanticsValidateSource.find("bool rewriteConvertConstructors(Program &program, std::string &error)") ==
+        std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteMaybeConstructors(Program &program, std::string &error)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find("bool validateExprTransforms(const Expr &expr,") == std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteEnumDefinitions(Program &program, std::string &error)") ==
         std::string::npos);
+  CHECK(semanticsValidateConvertConstructorsHeaderSource.find("bool rewriteConvertConstructors(Program &program, std::string &error)") !=
+        std::string::npos);
+  CHECK(semanticsValidateConvertConstructorsSource.find("bool rewriteConvertConstructors(Program &program, std::string &error)") !=
+        std::string::npos);
+  CHECK(semanticsValidateConvertConstructorsSource.find("std::ostringstream message;") != std::string::npos);
+  CHECK(semanticsValidateConvertConstructorsSource.find("expr.name = helpers.front();") != std::string::npos);
   CHECK(semanticsValidateMaybeConstructorsHeaderSource.find("bool rewriteMaybeConstructors(Program &program, std::string &error)") !=
         std::string::npos);
   CHECK(semanticsValidateMaybeConstructorsSource.find("bool rewriteMaybeConstructors(Program &program, std::string &error)") !=

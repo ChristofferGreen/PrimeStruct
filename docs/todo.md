@@ -250,11 +250,11 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ◐ Refactor `src/semantics/SemanticsValidatorPasses.cpp` (`2737` lines) below the `700`-line target. Progress: extracted effects/capabilities resolution helpers into `src/semantics/SemanticsValidatorPassesEffects.cpp` and definition/execution intra-body diagnostic collection helpers into `src/semantics/SemanticsValidatorPassesDiagnostics.cpp`.
 - ✓ Extract effects/capabilities resolution helpers from `SemanticsValidatorPasses.cpp` into `src/semantics/SemanticsValidatorPassesEffects.cpp`.
 - ✓ Extract definition/execution intra-body diagnostic collection helpers from `SemanticsValidatorPasses.cpp` into `src/semantics/SemanticsValidatorPassesDiagnostics.cpp`.
-- ◐ Refactor `src/semantics/SemanticsValidate.cpp` (`2602` lines) below the `700`-line target. Progress: extracted transform validation plus enum/shared-scope/indexed-access rewriting into `src/semantics/SemanticsValidateTransforms.cpp` and maybe-constructor rewriting into `src/semantics/SemanticsValidateMaybeConstructors.cpp`.
+- ◐ Refactor `src/semantics/SemanticsValidate.cpp` (`2329` lines) below the `700`-line target. Progress: extracted transform validation plus enum/shared-scope/indexed-access rewriting into `src/semantics/SemanticsValidateTransforms.cpp`, maybe-constructor rewriting into `src/semantics/SemanticsValidateMaybeConstructors.cpp`, and convert-constructor rewriting into `src/semantics/SemanticsValidateConvertConstructors.cpp`.
 - ✓ Extract transform validation plus enum/shared-scope/indexed-access rewriting from `SemanticsValidate.cpp` into dedicated helper unit `src/semantics/SemanticsValidateTransforms.cpp`.
-- ◐ Extract constructor rewrite helpers from `SemanticsValidate.cpp` into dedicated helper unit(s). Progress: extracted maybe-constructor rewriting into `src/semantics/SemanticsValidateMaybeConstructors.cpp`.
+- ◐ Extract constructor rewrite helpers from `SemanticsValidate.cpp` into dedicated helper unit(s). Progress: extracted maybe-constructor rewriting into `src/semantics/SemanticsValidateMaybeConstructors.cpp` and convert-constructor rewriting into `src/semantics/SemanticsValidateConvertConstructors.cpp`.
 - ✓ Extract maybe-constructor rewriting from `SemanticsValidate.cpp` into dedicated helper unit `src/semantics/SemanticsValidateMaybeConstructors.cpp`.
-- ○ Extract convert-constructor rewriting from `SemanticsValidate.cpp` into dedicated helper unit(s).
+- ✓ Extract convert-constructor rewriting from `SemanticsValidate.cpp` into dedicated helper unit `src/semantics/SemanticsValidateConvertConstructors.cpp`.
 - ○ Extract experimental gfx constructor rewriting from `SemanticsValidate.cpp` into dedicated helper unit(s).
 - ○ Extract reflection metadata/generated-helper rewrites from `SemanticsValidate.cpp` into dedicated helper unit(s).
 - ○ Refactor `src/semantics/SemanticsValidatorStatement.cpp` (`3351` lines) below the `700`-line target.
