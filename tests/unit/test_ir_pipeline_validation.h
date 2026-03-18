@@ -9510,16 +9510,28 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorPasses.cpp";
   const std::filesystem::path semanticsPassesEffectsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesEffects.cpp";
+  const std::filesystem::path semanticsPassesDiagnosticsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorPassesDiagnostics.cpp";
   REQUIRE(std::filesystem::exists(semanticsPassesPath));
   REQUIRE(std::filesystem::exists(semanticsPassesEffectsPath));
+  REQUIRE(std::filesystem::exists(semanticsPassesDiagnosticsPath));
   const std::string semanticsPassesSource = readText(semanticsPassesPath);
   const std::string semanticsPassesEffectsSource = readText(semanticsPassesEffectsPath);
+  const std::string semanticsPassesDiagnosticsSource = readText(semanticsPassesDiagnosticsPath);
 
   CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateDefinitions()") != std::string::npos);
   CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateExecutions()") != std::string::npos);
   CHECK(semanticsPassesSource.find("bool SemanticsValidator::resolveExecutionEffects(") == std::string::npos);
   CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateCapabilitiesSubset(") == std::string::npos);
   CHECK(semanticsPassesSource.find("std::unordered_set<std::string> SemanticsValidator::resolveEffects(") ==
+        std::string::npos);
+  CHECK(semanticsPassesSource.find("void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(") ==
+        std::string::npos);
+  CHECK(semanticsPassesSource.find("void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(") ==
+        std::string::npos);
+  CHECK(semanticsPassesSource.find("collectDefinitionIntraBodyCallDiagnostics(def, intraDefinitionRecords);") !=
+        std::string::npos);
+  CHECK(semanticsPassesSource.find("collectExecutionIntraBodyCallDiagnostics(exec, intraExecutionRecords);") !=
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("void expandEffectImplications(") != std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("std::unordered_set<std::string> SemanticsValidator::resolveEffects(") !=
@@ -9528,6 +9540,12 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::resolveExecutionEffects(") !=
         std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(") !=
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(") !=
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("isFlowEffectDiagnosticMessage(") != std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("collectResolvedCallArgumentDiagnostic") != std::string::npos);
 }
 
 TEST_CASE("semantics validator statement source delegation stays stable") {

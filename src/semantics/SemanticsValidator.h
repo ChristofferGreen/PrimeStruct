@@ -33,6 +33,10 @@ private:
   bool validateStructLayouts();
   bool validateDefinitions();
   bool validateExecutions();
+  void collectDefinitionIntraBodyCallDiagnostics(const Definition &def,
+                                                 std::vector<SemanticDiagnosticRecord> &out);
+  void collectExecutionIntraBodyCallDiagnostics(const Execution &exec,
+                                                std::vector<SemanticDiagnosticRecord> &out);
   bool validateEntry();
   std::optional<std::string> validateUninitializedDefiniteState(
       const std::vector<ParameterInfo> &params,
