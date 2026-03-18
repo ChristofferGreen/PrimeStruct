@@ -8420,6 +8420,204 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("variadic wrapped FileError packs still reject named free builtin at calls") {
+  const std::string source = R"(
+[return<int>]
+score_refs([args<Reference<FileError>>] values) {
+  [auto] head{at([values] values, [index] 0i32).why()}
+  return(count(head))
+}
+
+[return<int>]
+main() {
+  [FileError] value{13i32}
+  [Reference<FileError>] ref{location(value)}
+  return(score_refs(ref))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("variadic wrapped File handle packs accept canonical named free builtin at receivers") {
+  const std::string source = R"(
+[effects(file_write)]
+swallow_file_error([FileError] err) {}
+
+[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]
+score_refs([args<Reference<File<Write>>>] values) {
+  at([values] values, [index] 0i32).write_line("alpha"utf8)?
+  at([values] values, [index] minus(count(values), 1i32)).write_line("omega"utf8)?
+  at([values] values, [index] 0i32).flush()?
+  at([values] values, [index] minus(count(values), 1i32)).flush()?
+  return(plus(count(values), 10i32))
+}
+
+[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]
+forward_refs([args<Reference<File<Write>>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]
+forward_refs_mixed([args<Reference<File<Write>>>] values) {
+  [File<Write>] extra{File<Write>("extra_named_ref.txt"utf8)?}
+  [Reference<File<Write>>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
+}
+
+[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]
+score_ptrs([args<Pointer<File<Write>>>] values) {
+  at([values] values, [index] 0i32).write_line("alpha"utf8)?
+  at([values] values, [index] minus(count(values), 1i32)).write_line("omega"utf8)?
+  at([values] values, [index] 0i32).flush()?
+  at([values] values, [index] minus(count(values), 1i32)).flush()?
+  return(plus(count(values), 10i32))
+}
+
+[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]
+forward_ptrs([args<Pointer<File<Write>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]
+forward_ptrs_mixed([args<Pointer<File<Write>>>] values) {
+  [File<Write>] extra{File<Write>("extra_named_ptr.txt"utf8)?}
+  [Pointer<File<Write>>] extra_ptr{location(extra)}
+  return(score_ptrs([spread] values, extra_ptr))
+}
+
+[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]
+main() {
+  [File<Write>] a0{File<Write>("a0_named.txt"utf8)?}
+  [File<Write>] a1{File<Write>("a1_named.txt"utf8)?}
+  [Reference<File<Write>>] r0{location(a0)}
+  [Reference<File<Write>>] r1{location(a1)}
+
+  [File<Write>] b0{File<Write>("b0_named.txt"utf8)?}
+  [File<Write>] b1{File<Write>("b1_named.txt"utf8)?}
+  [Reference<File<Write>>] s0{location(b0)}
+  [Reference<File<Write>>] s1{location(b1)}
+
+  [File<Write>] c0{File<Write>("c0_named.txt"utf8)?}
+  [Reference<File<Write>>] t0{location(c0)}
+
+  [File<Write>] d0{File<Write>("d0_named.txt"utf8)?}
+  [File<Write>] d1{File<Write>("d1_named.txt"utf8)?}
+  [Pointer<File<Write>>] p0{location(d0)}
+  [Pointer<File<Write>>] p1{location(d1)}
+
+  [File<Write>] e0{File<Write>("e0_named.txt"utf8)?}
+  [File<Write>] e1{File<Write>("e1_named.txt"utf8)?}
+  [Pointer<File<Write>>] q0{location(e0)}
+  [Pointer<File<Write>>] q1{location(e1)}
+
+  [File<Write>] f0{File<Write>("f0_named.txt"utf8)?}
+  [Pointer<File<Write>>] u0{location(f0)}
+
+  return(plus(score_refs(r0, r1),
+              plus(forward_refs(s0, s1),
+                   plus(forward_refs_mixed(t0),
+                        plus(score_ptrs(p0, p1),
+                             plus(forward_ptrs(q0, q1),
+                                  forward_ptrs_mixed(u0)))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("variadic wrapped read File handle packs accept canonical named free builtin at read_byte try") {
+  const std::string source = R"(
+[effects(file_read)]
+swallow_file_error([FileError] err) {}
+
+[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
+score_refs([args<Reference<File<Read>>>] values) {
+  [i32 mut] first{0i32}
+  [i32 mut] last{0i32}
+  at([values] values, [index] 0i32).read_byte(first)?
+  at([values] values, [index] minus(count(values), 1i32)).read_byte(last)?
+  return(plus(plus(first, last), count(values)))
+}
+
+[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
+forward_refs([args<Reference<File<Read>>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
+forward_refs_mixed([args<Reference<File<Read>>>] values) {
+  [File<Read>] extra{File<Read>("extra_named_ref.txt"utf8)?}
+  [Reference<File<Read>>] extra_ref{location(extra)}
+  return(score_refs([spread] values, extra_ref))
+}
+
+[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
+score_ptrs([args<Pointer<File<Read>>>] values) {
+  [i32 mut] first{0i32}
+  [i32 mut] last{0i32}
+  at([values] values, [index] 0i32).read_byte(first)?
+  at([values] values, [index] minus(count(values), 1i32)).read_byte(last)?
+  return(plus(plus(first, last), count(values)))
+}
+
+[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
+forward_ptrs([args<Pointer<File<Read>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
+forward_ptrs_mixed([args<Pointer<File<Read>>>] values) {
+  [File<Read>] extra{File<Read>("extra_named_ptr.txt"utf8)?}
+  [Pointer<File<Read>>] extra_ptr{location(extra)}
+  return(score_ptrs([spread] values, extra_ptr))
+}
+
+[return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
+main() {
+  [File<Read>] a0{File<Read>("a0_named.txt"utf8)?}
+  [File<Read>] a1{File<Read>("a1_named.txt"utf8)?}
+  [Reference<File<Read>>] r0{location(a0)}
+  [Reference<File<Read>>] r1{location(a1)}
+
+  [File<Read>] b0{File<Read>("b0_named.txt"utf8)?}
+  [File<Read>] b1{File<Read>("b1_named.txt"utf8)?}
+  [Reference<File<Read>>] s0{location(b0)}
+  [Reference<File<Read>>] s1{location(b1)}
+
+  [File<Read>] c0{File<Read>("c0_named.txt"utf8)?}
+  [Reference<File<Read>>] t0{location(c0)}
+
+  [File<Read>] d0{File<Read>("d0_named.txt"utf8)?}
+  [File<Read>] d1{File<Read>("d1_named.txt"utf8)?}
+  [Pointer<File<Read>>] p0{location(d0)}
+  [Pointer<File<Read>>] p1{location(d1)}
+
+  [File<Read>] e0{File<Read>("e0_named.txt"utf8)?}
+  [File<Read>] e1{File<Read>("e1_named.txt"utf8)?}
+  [Pointer<File<Read>>] q0{location(e0)}
+  [Pointer<File<Read>>] q1{location(e1)}
+
+  [File<Read>] f0{File<Read>("f0_named.txt"utf8)?}
+  [Pointer<File<Read>>] u0{location(f0)}
+
+  return(plus(score_refs(r0, r1),
+              plus(forward_refs(s0, s1),
+                   plus(forward_refs_mixed(t0),
+                        plus(score_ptrs(p0, p1),
+                             plus(forward_ptrs(q0, q1),
+                                  forward_ptrs_mixed(u0)))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical map helper bodies reject conflicting imported count alias") {
   const std::string source = R"(
 import /util

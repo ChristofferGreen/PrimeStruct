@@ -1732,6 +1732,57 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto isNamedArgsPackMethodAccessCall = [&](const Expr &target) -> bool {
+      if (!target.isMethodCall) {
+        return false;
+      }
+      std::string accessName;
+      if (!getBuiltinArrayAccessName(target, accessName) || target.args.size() != 2) {
+        return false;
+      }
+      std::string elemType;
+      if (!resolveArgsPackAccessTarget(target.args.front(), elemType)) {
+        return false;
+      }
+      size_t namedCount = 0;
+      for (const auto &argName : target.argNames) {
+        if (!argName.has_value()) {
+          continue;
+        }
+        ++namedCount;
+        if (*argName != "index") {
+          return false;
+        }
+      }
+      return namedCount == 1;
+    };
+    auto isNamedArgsPackWrappedFileBuiltinAccessCall = [&](const Expr &target) -> bool {
+      if (target.isMethodCall) {
+        return false;
+      }
+      std::string accessName;
+      if (!getBuiltinArrayAccessName(target, accessName) || accessName != "at" ||
+          target.args.size() != 2) {
+        return false;
+      }
+      if (target.argNames.size() != 2 || !target.argNames[0].has_value() ||
+          !target.argNames[1].has_value() || *target.argNames[0] != "values" ||
+          *target.argNames[1] != "index") {
+        return false;
+      }
+      std::string elemType;
+      if (!resolveArgsPackAccessTarget(target.args.front(), elemType)) {
+        return false;
+      }
+      std::string pointeeType;
+      if (!extractWrappedPointeeType(elemType, pointeeType)) {
+        return false;
+      }
+      std::string base;
+      std::string argText;
+      return splitTemplateTypeName(normalizeBindingTypeName(pointeeType), base, argText) &&
+             normalizeBindingTypeName(base) == "File" && !argText.empty();
+    };
     auto resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -5683,6 +5734,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (hasNamedArguments(expr.argNames)) {
+        if (isNamedArgsPackMethodAccessCall(expr) ||
+            isNamedArgsPackWrappedFileBuiltinAccessCall(expr)) {
+          // Method-style args-pack body access keeps receiver/index order in the AST,
+          // and canonical free-builtin wrapped File access keeps [values]/[index]
+          // ordering in the AST, so only the validator needs to permit those labels.
+        } else {
         std::string builtinName;
         auto isLegacyCollectionBuiltinCall = [&]() {
           std::string collectionName;
@@ -5896,7 +5953,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "named arguments not supported for builtin calls";
         return false;
       }
-    }
+        }
+      }
     auto isIntegerKind = [&](ReturnKind kind) -> bool {
       return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64;
     };
@@ -6568,7 +6626,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       if (resolvedMethod && resolved.rfind("/soa_vector/field_view/", 0) == 0) {
-        if (hasNamedArguments(expr.argNames)) {
+        if (hasNamedArguments(expr.argNames) && !isNamedArgsPackMethodAccessCall(expr) &&
+            !isNamedArgsPackWrappedFileBuiltinAccessCall(expr)) {
           error_ = "named arguments not supported for builtin calls";
           return false;
         }
@@ -6682,7 +6741,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return validateExpr(params, locals, rewrittenMapHelperCall);
           }
         }
-        if (hasNamedArguments(expr.argNames)) {
+        if (hasNamedArguments(expr.argNames) && !isNamedArgsPackMethodAccessCall(expr) &&
+            !isNamedArgsPackWrappedFileBuiltinAccessCall(expr)) {
           error_ = "named arguments not supported for builtin calls";
           return false;
         }
