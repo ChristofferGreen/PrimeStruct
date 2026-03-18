@@ -37,10 +37,9 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       defaultEffects_(defaultEffects),
       entryDefaultEffects_(entryDefaultEffects),
       diagnosticInfo_(diagnosticInfo),
+      diagnosticSink_(diagnosticInfo),
       collectDiagnostics_(collectDiagnostics) {
-  if (diagnosticInfo_ != nullptr) {
-    *diagnosticInfo_ = {};
-  }
+  diagnosticSink_.reset();
   for (const auto &importPath : program_.imports) {
     if (importPath == "/std/math/*") {
       mathImportAll_ = true;
@@ -137,36 +136,11 @@ void SemanticsValidator::restoreValidationContext(ValidationContext context) {
 }
 
 void SemanticsValidator::capturePrimarySpanIfUnset(int line, int column) {
-  if (diagnosticInfo_ == nullptr) {
-    return;
-  }
-  if (line <= 0 || column <= 0) {
-    return;
-  }
-  if (diagnosticInfo_->line > 0 && diagnosticInfo_->column > 0) {
-    return;
-  }
-  diagnosticInfo_->line = line;
-  diagnosticInfo_->column = column;
+  diagnosticSink_.capturePrimarySpanIfUnset(line, column);
 }
 
 void SemanticsValidator::captureRelatedSpan(int line, int column, const std::string &label) {
-  if (diagnosticInfo_ == nullptr) {
-    return;
-  }
-  if (line <= 0 || column <= 0 || label.empty()) {
-    return;
-  }
-  for (const auto &related : diagnosticInfo_->relatedSpans) {
-    if (related.line == line && related.column == column && related.label == label) {
-      return;
-    }
-  }
-  SemanticDiagnosticRelatedSpan related;
-  related.line = line;
-  related.column = column;
-  related.label = label;
-  diagnosticInfo_->relatedSpans.push_back(std::move(related));
+  diagnosticSink_.addRelatedSpan(line, column, label);
 }
 
 void SemanticsValidator::captureExprContext(const Expr &expr) {
@@ -247,15 +221,18 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
   });
 
   if (diagnosticInfo_ != nullptr) {
-    diagnosticInfo_->records.clear();
-    diagnosticInfo_->records.reserve(duplicateGroups.size());
+    std::vector<DiagnosticSinkRecord> records;
+    records.reserve(duplicateGroups.size());
     for (const auto &group : duplicateGroups) {
-      SemanticDiagnosticRecord record;
+      DiagnosticSinkRecord record;
       record.message = "duplicate definition: " + group.path;
       const Definition *primary = group.definitions.front();
       if (primary->sourceLine > 0 && primary->sourceColumn > 0) {
-        record.line = primary->sourceLine;
-        record.column = primary->sourceColumn;
+        record.primarySpan.line = primary->sourceLine;
+        record.primarySpan.column = primary->sourceColumn;
+        record.primarySpan.endLine = primary->sourceLine;
+        record.primarySpan.endColumn = primary->sourceColumn;
+        record.hasPrimarySpan = true;
       }
       for (const Definition *def : group.definitions) {
         if (def->sourceLine <= 0 || def->sourceColumn <= 0) {
@@ -264,7 +241,8 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
         const std::string label = "definition: " + def->fullPath;
         bool duplicateSpan = false;
         for (const auto &existing : record.relatedSpans) {
-          if (existing.line == def->sourceLine && existing.column == def->sourceColumn && existing.label == label) {
+          if (existing.span.line == def->sourceLine && existing.span.column == def->sourceColumn &&
+              existing.label == label) {
             duplicateSpan = true;
             break;
           }
@@ -272,19 +250,17 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
         if (duplicateSpan) {
           continue;
         }
-        SemanticDiagnosticRelatedSpan span;
-        span.line = def->sourceLine;
-        span.column = def->sourceColumn;
+        DiagnosticRelatedSpan span;
+        span.span.line = def->sourceLine;
+        span.span.column = def->sourceColumn;
+        span.span.endLine = def->sourceLine;
+        span.span.endColumn = def->sourceColumn;
         span.label = label;
         record.relatedSpans.push_back(std::move(span));
       }
-      diagnosticInfo_->records.push_back(std::move(record));
+      records.push_back(std::move(record));
     }
-    if (!diagnosticInfo_->records.empty()) {
-      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
-      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
-      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
-    }
+    diagnosticSink_.setRecords(std::move(records));
   }
 
   error_ = "duplicate definition: " + duplicateGroups.front().path;

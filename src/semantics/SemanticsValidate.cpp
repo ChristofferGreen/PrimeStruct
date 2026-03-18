@@ -221,6 +221,20 @@ bool Semantics::validate(Program &program,
                          SemanticDiagnosticInfo *diagnosticInfo,
                          bool collectDiagnostics) const {
   error.clear();
+  DiagnosticSink diagnosticSink(diagnosticInfo);
+  diagnosticSink.reset();
+  bool validationSucceeded = false;
+  struct ValidationDiagnosticScope {
+    DiagnosticSink &diagnosticSink;
+    std::string &error;
+    bool &validationSucceeded;
+
+    ~ValidationDiagnosticScope() {
+      if (!validationSucceeded && !error.empty()) {
+        diagnosticSink.setSummary(error);
+      }
+    }
+  } validationDiagnosticScope{diagnosticSink, error, validationSucceeded};
   if (!semantics::applySemanticTransforms(program, semanticTransforms, error)) {
     return false;
   }
@@ -248,6 +262,7 @@ bool Semantics::validate(Program &program,
     return false;
   }
   error.clear();
+  validationSucceeded = true;
   return true;
 }
 

@@ -153,23 +153,7 @@ bool validateProgramCollectingDiagnostics(const std::string &source,
     const std::vector<std::string> defaults = {"io_out", "io_err"};
     const bool ok = validateProgramThroughCompilePipeline(
         source, entry, defaults, defaults, error, &pipelineDiagnostics);
-    diagnosticInfo = {};
-    for (const auto &record : pipelineDiagnostics.records) {
-      primec::SemanticDiagnosticRecord semanticRecord;
-      semanticRecord.message = record.normalizedMessage;
-      if (record.hasPrimarySpan) {
-        semanticRecord.line = record.primarySpan.line;
-        semanticRecord.column = record.primarySpan.column;
-      }
-      for (const auto &related : record.relatedSpans) {
-        primec::SemanticDiagnosticRelatedSpan relatedSpan;
-        relatedSpan.label = related.label;
-        relatedSpan.line = related.span.line;
-        relatedSpan.column = related.span.column;
-        semanticRecord.relatedSpans.push_back(std::move(relatedSpan));
-      }
-      diagnosticInfo.records.push_back(std::move(semanticRecord));
-    }
+    diagnosticInfo = pipelineDiagnostics;
     return ok;
   }
   auto program = parseProgram(source);

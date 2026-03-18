@@ -114,7 +114,7 @@ TEST_CASE("cli driver preserves parse-stage diagnostic context") {
   output.filteredSource = "main() { return(1i32) }";
 
   primec::CompilePipelineDiagnosticInfo diagnosticInfo;
-  diagnosticInfo.normalizedMessage = "expected token";
+  diagnosticInfo.message = "expected token";
 
   const primec::CliFailure failure = primec::describeCompilePipelineFailure(
       primec::CompilePipelineErrorStage::Parse, "raw parse failure", output, diagnosticInfo);

@@ -3,9 +3,24 @@ bool IrLowerer::lower(const Program &program,
                       const std::vector<std::string> &defaultEffects,
                       const std::vector<std::string> &entryDefaultEffects,
                       IrModule &out,
-                      std::string &error) const {
+                      std::string &error,
+                      DiagnosticSinkReport *diagnosticInfo) const {
   out = IrModule{};
   error.clear();
+  DiagnosticSink diagnosticSink(diagnosticInfo);
+  diagnosticSink.reset();
+  bool loweringSucceeded = false;
+  struct LoweringDiagnosticScope {
+    DiagnosticSink &diagnosticSink;
+    std::string &error;
+    bool &loweringSucceeded;
+
+    ~LoweringDiagnosticScope() {
+      if (!loweringSucceeded && !error.empty()) {
+        diagnosticSink.setSummary(error);
+      }
+    }
+  } loweringDiagnosticScope{diagnosticSink, error, loweringSucceeded};
 
   const Definition *entryDef = nullptr;
   uint64_t entryEffectMask = 0;

@@ -19,7 +19,7 @@ struct CliFailure {
   std::string message;
   int exitCode = 2;
   std::vector<std::string> notes;
-  const CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr;
+  const DiagnosticSinkReport *diagnosticInfo = nullptr;
   const std::string *sourceText = nullptr;
 };
 
@@ -33,7 +33,7 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
 CliFailure describeCompilePipelineFailure(CompilePipelineErrorStage errorStage,
                                           const std::string &message,
                                           const CompilePipelineOutput &output,
-                                          const CompilePipelineDiagnosticInfo &diagnosticInfo);
+                                          const DiagnosticSinkReport &diagnosticInfo);
 
 CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
                                         const IrBackendDiagnostics &diagnostics,

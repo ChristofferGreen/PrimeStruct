@@ -36,13 +36,18 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     SemanticDiagnosticRecord record;
     record.message = std::move(message);
     if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
-      record.line = expr.sourceLine;
-      record.column = expr.sourceColumn;
+      record.primarySpan.line = expr.sourceLine;
+      record.primarySpan.column = expr.sourceColumn;
+      record.primarySpan.endLine = expr.sourceLine;
+      record.primarySpan.endColumn = expr.sourceColumn;
+      record.hasPrimarySpan = true;
     }
     if (def.sourceLine > 0 && def.sourceColumn > 0) {
       SemanticDiagnosticRelatedSpan related;
-      related.line = def.sourceLine;
-      related.column = def.sourceColumn;
+      related.span.line = def.sourceLine;
+      related.span.column = def.sourceColumn;
+      related.span.endLine = def.sourceLine;
+      related.span.endColumn = def.sourceColumn;
       related.label = "definition: " + def.fullPath;
       record.relatedSpans.push_back(std::move(related));
     }
@@ -373,13 +378,18 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
     SemanticDiagnosticRecord record;
     record.message = std::move(message);
     if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
-      record.line = expr.sourceLine;
-      record.column = expr.sourceColumn;
+      record.primarySpan.line = expr.sourceLine;
+      record.primarySpan.column = expr.sourceColumn;
+      record.primarySpan.endLine = expr.sourceLine;
+      record.primarySpan.endColumn = expr.sourceColumn;
+      record.hasPrimarySpan = true;
     }
     if (exec.sourceLine > 0 && exec.sourceColumn > 0) {
       SemanticDiagnosticRelatedSpan related;
-      related.line = exec.sourceLine;
-      related.column = exec.sourceColumn;
+      related.span.line = exec.sourceLine;
+      related.span.column = exec.sourceColumn;
+      related.span.endLine = exec.sourceLine;
+      related.span.endColumn = exec.sourceColumn;
       related.label = "execution: " + exec.fullPath;
       record.relatedSpans.push_back(std::move(related));
     }

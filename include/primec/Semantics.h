@@ -1,31 +1,13 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "primec/Ast.h"
+#include "primec/Diagnostics.h"
 
 namespace primec {
 
-struct SemanticDiagnosticRelatedSpan {
-  int line = 0;
-  int column = 0;
-  std::string label;
-};
-
-struct SemanticDiagnosticRecord {
-  std::string message;
-  int line = 0;
-  int column = 0;
-  std::vector<SemanticDiagnosticRelatedSpan> relatedSpans;
-};
-
-struct SemanticDiagnosticInfo {
-  int line = 0;
-  int column = 0;
-  std::vector<SemanticDiagnosticRelatedSpan> relatedSpans;
-  std::vector<SemanticDiagnosticRecord> records;
-};
+using SemanticDiagnosticRelatedSpan = DiagnosticRelatedSpan;
+using SemanticDiagnosticRecord = DiagnosticSinkRecord;
+using SemanticDiagnosticInfo = DiagnosticSinkReport;
 
 class Semantics {
 public:

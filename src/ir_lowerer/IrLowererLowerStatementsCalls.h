@@ -150,5 +150,6 @@
   }
 
   error.clear();
+  loweringSucceeded = true;
   return true;
 }
