@@ -951,6 +951,31 @@ inline void expectExperimentalVectorVariadicConstructorMismatchReject(const std:
                                        "argument type mismatch");
 }
 
+inline std::string makeExperimentalVectorMoveOwnershipSource() {
+  std::string source;
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[effects(heap_alloc), return<Vector<i32>>]\n";
+  source += "wrapValues([i32] first, [i32] second) {\n";
+  source += "  return(vector<i32>(first, second))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32> mut] first{wrapValues(2i32, 4i32)}\n";
+  source += "  [Vector<i32>] second{move(first)}\n";
+  source += "  assign(first, vector<i32>(9i32))\n";
+  source += "  return(plus(plus(vectorCount<i32>(second), vectorAt<i32>(second, 1i32)),\n";
+  source += "              plus(vectorCount<i32>(first), vectorAt<i32>(first, 0i32))))\n";
+  source += "}\n";
+  return source;
+}
+
+inline void expectExperimentalVectorMoveOwnershipConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(makeExperimentalVectorMoveOwnershipSource(),
+                                     "experimental_vector_move_ownership_" + emitMode,
+                                     emitMode,
+                                     16);
+}
+
 inline std::string makeVectorIndexedRemovalOwnershipRejectSource(const std::string &mode) {
   std::string source;
   if (mode == "remove_at_drop") {

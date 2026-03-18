@@ -6,6 +6,30 @@ namespace std {
     [public i32] count
     [public i32] capacity
     [public Pointer<T>] data
+    [bool mut] ownsData{false}
+
+    [mut]
+    Move([Reference<Self>] other) {
+      assign(this.count, other.count)
+      assign(this.capacity, other.capacity)
+      assign(this.data, other.data)
+      assign(this.ownsData, other.ownsData)
+      assign(other.count, 0i32)
+      assign(other.capacity, 0i32)
+      assign(other.ownsData, false)
+    }
+
+    [mut effects(heap_alloc)]
+    Destroy() {
+      if(this.ownsData,
+         then() {
+           /std/collections/experimental_buffer_checked/bufferFree<T>(this.data)
+           assign(this.ownsData, false)
+           assign(this.count, 0i32)
+           assign(this.capacity, 0i32)
+         },
+         else() { })
+    }
   }
 
   [effects(heap_alloc), return<Vector<T>>]
@@ -14,7 +38,11 @@ namespace std {
     if(equal(allocCount, 0i32),
        then() { assign(allocCount, 1i32) },
        else() { })
-    return(Vector<T>(count, capacity, /std/collections/experimental_buffer_checked/bufferAlloc<T>(allocCount)))
+    return(Vector<T>(
+        count,
+        capacity,
+        /std/collections/experimental_buffer_checked/bufferAlloc<T>(allocCount),
+        true))
   }
 
   [return<void>]
