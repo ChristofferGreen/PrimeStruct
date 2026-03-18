@@ -10041,6 +10041,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererCallHelpers.cpp";
   const std::filesystem::path accessTargetResolutionPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererAccessTargetResolution.cpp";
+  const std::filesystem::path indexedAccessEmitPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererIndexedAccessEmit.cpp";
   const std::filesystem::path callResolutionPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
   const std::filesystem::path inlineDispatchPath =
@@ -10049,11 +10051,13 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
   REQUIRE(std::filesystem::exists(callHelpersPath));
   REQUIRE(std::filesystem::exists(accessTargetResolutionPath));
+  REQUIRE(std::filesystem::exists(indexedAccessEmitPath));
   REQUIRE(std::filesystem::exists(callResolutionPath));
   REQUIRE(std::filesystem::exists(inlineDispatchPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   const std::string callHelpersSource = readText(callHelpersPath);
   const std::string accessTargetResolutionSource = readText(accessTargetResolutionPath);
+  const std::string indexedAccessEmitSource = readText(indexedAccessEmitPath);
   const std::string callResolutionSource = readText(callResolutionPath);
   const std::string inlineDispatchSource = readText(inlineDispatchPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
@@ -10107,9 +10111,21 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(") ==
         std::string::npos);
+  CHECK(callHelpersSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("MapAccessLookupEmitResult tryEmitMapContainsLookup(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("StringTableAccessEmitResult tryEmitStringTableAccessLoad(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo,") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool emitArrayVectorIndexedAccess(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool emitBuiltinArrayAccess(") ==
+        std::string::npos);
   CHECK(callHelpersSource.find("BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(") !=
         std::string::npos);
-  CHECK(callHelpersSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") !=
+  CHECK(callHelpersSource.find("bool emitMapLookupAccess(") !=
         std::string::npos);
 
   CHECK(accessTargetResolutionSource.find("MapAccessTargetInfo resolveMapAccessTargetInfo(") !=
@@ -10125,6 +10141,25 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(accessTargetResolutionSource.find("ArrayVectorAccessTargetInfo inferred;") !=
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("bool emitBuiltinArrayAccess(") ==
+        std::string::npos);
+
+  CHECK(indexedAccessEmitSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") !=
+        std::string::npos);
+  CHECK(indexedAccessEmitSource.find("MapAccessLookupEmitResult tryEmitMapContainsLookup(") !=
+        std::string::npos);
+  CHECK(indexedAccessEmitSource.find("StringTableAccessEmitResult tryEmitStringTableAccessLoad(") !=
+        std::string::npos);
+  CHECK(indexedAccessEmitSource.find("enum class DynamicStringAccessEmitResult") !=
+        std::string::npos);
+  CHECK(indexedAccessEmitSource.find("bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo,") !=
+        std::string::npos);
+  CHECK(indexedAccessEmitSource.find("bool emitArrayVectorIndexedAccess(") !=
+        std::string::npos);
+  CHECK(indexedAccessEmitSource.find("bool emitBuiltinArrayAccess(") !=
+        std::string::npos);
+  CHECK(indexedAccessEmitSource.find("bool emitMapLookupAccess(") ==
         std::string::npos);
 
   CHECK(callResolutionSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") !=
