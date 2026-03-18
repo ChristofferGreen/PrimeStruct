@@ -159,6 +159,43 @@ inline std::string makeMapOverwriteConformanceSource(const std::string &importPa
   return source;
 }
 
+inline std::string makeExperimentalMapVariadicConstructorConformanceSource() {
+  std::string source;
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(heap_alloc), return<Map<K, V>> Comparable<K>]\n";
+  source += "wrapMap<K, V>([args<Entry<K, V>>] entries) {\n";
+  source += "  return(map<K, V>([spread] entries))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32>] empty{map<string, i32>()}\n";
+  source +=
+      "  [Map<string, i32>] direct{map<string, i32>(entry(\"left\"raw_utf8, 4i32), entry(\"right\"raw_utf8, 7i32), entry(\"bonus\"raw_utf8, 9i32))}\n";
+  source +=
+      "  [Map<string, i32>] wrapped{wrapMap<string, i32>(entry(\"alpha\"raw_utf8, 2i32), entry(\"beta\"raw_utf8, 5i32))}\n";
+  source += "  [i32 mut] total{plus(mapCount<string, i32>(empty), mapCount<string, i32>(direct))}\n";
+  source += "  assign(total, plus(total, mapAt<string, i32>(direct, \"right\"raw_utf8)))\n";
+  source += "  assign(total, plus(total, mapAtUnsafe<string, i32>(wrapped, \"beta\"raw_utf8)))\n";
+  source += "  if(mapContains<string, i32>(direct, \"bonus\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, mapCount<string, i32>(wrapped))) },\n";
+  source += "     else() { })\n";
+  source += "  return(total)\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeExperimentalMapVariadicConstructorMismatchSource() {
+  std::string source;
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source +=
+      "  [Map<string, i32>] values{map<string, i32>(entry(\"left\"raw_utf8, 4i32), entry(\"wrong\"raw_utf8, false))}\n";
+  source += "  return(mapCount<string, i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeMapTryAtConformanceImportSource(const std::string &importPath,
                                                        bool boolValues) {
   const bool experimental = isExperimentalMapImport(importPath);
@@ -1573,6 +1610,20 @@ inline void expectExperimentalMapReferenceMethodConformance(const std::string &e
                                     "experimental_map_reference_methods",
                                     emitMode,
                                     "try requires Result argument");
+}
+
+inline void expectExperimentalMapVariadicConstructorConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(makeExperimentalMapVariadicConstructorConformanceSource(),
+                                  "experimental_map_variadic_ctor_" + emitMode,
+                                  emitMode,
+                                  17);
+}
+
+inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::string &emitMode) {
+  expectMapConformanceCompileReject(makeExperimentalMapVariadicConstructorMismatchSource(),
+                                    "experimental_map_variadic_ctor_mismatch",
+                                    emitMode,
+                                    "argument type mismatch");
 }
 
 inline void expectExperimentalMapInsertConformance(const std::string &emitMode) {

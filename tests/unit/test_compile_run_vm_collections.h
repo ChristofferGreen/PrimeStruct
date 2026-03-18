@@ -2082,6 +2082,14 @@ TEST_CASE("runs vm wrapper map constructors through explicit experimental map pa
   expectWrapperMapConstructorExperimentalParameterConformance("vm");
 }
 
+TEST_CASE("runs vm experimental map variadic constructors") {
+  expectExperimentalMapVariadicConstructorConformance("vm");
+}
+
+TEST_CASE("rejects vm experimental map variadic constructor type mismatch") {
+  expectExperimentalMapVariadicConstructorMismatchReject("vm");
+}
+
 TEST_CASE("runs vm experimental map constructor assignments") {
   expectExperimentalMapAssignConformance("vm");
 }
