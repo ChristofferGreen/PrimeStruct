@@ -60,4 +60,35 @@ main() {
   CHECK(error.find("conflicting return types on /main") != std::string::npos);
 }
 
+TEST_CASE("default semantics path uses graph resolver while legacy remains available for rollback") {
+  const std::string source = R"(
+[return<auto>]
+alpha([bool] done{false}) {
+  if(done,
+    then(){ return(1i32) },
+    else(){ return(beta(true)) })
+}
+
+[return<auto>]
+beta([bool] done{false}) {
+  if(done,
+    then(){ return(1i32) },
+    else(){ return(alpha(true)) })
+}
+
+[return<i32>]
+main() {
+  return(alpha())
+}
+)";
+
+  std::string defaultError;
+  CHECK(validateProgram(source, "/main", defaultError));
+  CHECK(defaultError.empty());
+
+  std::string legacyError;
+  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.find("return type inference requires explicit annotation") != std::string::npos);
+}
+
 TEST_SUITE_END();

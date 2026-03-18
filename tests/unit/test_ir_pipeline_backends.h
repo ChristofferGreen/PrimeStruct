@@ -364,10 +364,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   const std::string primecMain = readTextFile(primecMainPath);
   const std::string primevmMain = readTextFile(primevmMainPath);
 
-  CHECK(optionsHeader.find("std::string typeResolver = \"legacy\";") != std::string::npos);
+  CHECK(optionsHeader.find("std::string typeResolver = \"graph\";") != std::string::npos);
   CHECK(optionsParser.find("unsupported --type-resolver value: ") != std::string::npos);
   CHECK(optionsParser.find("--type-resolver requires a value") != std::string::npos);
-  CHECK(semanticsHeader.find("const std::string &typeResolver = \"legacy\"") != std::string::npos);
+  CHECK(semanticsHeader.find("const std::string &typeResolver = \"graph\"") != std::string::npos);
   CHECK(semanticsValidate.find("collectDiagnostics, typeResolver") != std::string::npos);
   CHECK(validatorHeader.find("bool inferUnknownReturnKindsGraph();") != std::string::npos);
   CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);

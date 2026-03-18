@@ -19,7 +19,7 @@ public:
                 const std::vector<std::string> &semanticTransforms = {},
                 SemanticDiagnosticInfo *diagnosticInfo = nullptr,
                 bool collectDiagnostics = false,
-                const std::string &typeResolver = "legacy") const;
+                const std::string &typeResolver = "graph") const;
 };
 
 } // namespace primec
