@@ -1021,6 +1021,12 @@
   auto isNoHelperExplicitMapAccessCountReceiver = [&](const Expr &candidate) {
     return isNoHelperExplicitMapAccessCallFallback(candidate);
   };
+  auto isNoHelperExplicitMapAccessMethodCountReceiver = [&](const Expr &candidate) {
+    if (!candidate.isMethodCall || !isExplicitMapAccessMethod(candidate) || candidate.args.size() != 2) {
+      return false;
+    }
+    return nameMap.count(resolveExprPath(candidate)) == 0;
+  };
   auto isNoHelperExplicitMapAccessContainsReceiver = [&](const Expr &candidate) {
     return isNoHelperExplicitMapAccessCallFallback(candidate);
   };
@@ -1154,6 +1160,14 @@
       std::ostringstream out;
       out << "ps_missing_map_access_count_receiver_helper("
           << emitMissingExplicitMapAccessCall(expr.args.front())
+          << ")";
+      return out.str();
+    }
+    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+        isNoHelperExplicitMapAccessMethodCountReceiver(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_missing_map_access_count_receiver_helper("
+          << emitMissingExplicitMapAccessMethod(expr.args.front())
           << ")";
       return out.str();
     }

@@ -12702,7 +12702,39 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("ps_missing_map_access_count_receiver_helper") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter lowers wrapper-returned slash-method map access count receivers to deleted stubs") {
+  const std::string source = R"(
+[return</std/collections/map<i32, string>>]
+wrapMap() {
+  return(map<i32, string>(1i32, "hello"utf8, 2i32, "bye"utf8))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(count(wrapMap()./std/collections/map/at(1i32)),
+              count(wrapMap()./std/collections/map/at_unsafe(2i32))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_slash_method_map_access_count_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_slash_method_map_access_count_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_map_access_count_receiver_helper") != std::string::npos);
+  CHECK(output.find("ps_missing_map_access_count_receiver_helper(ps_missing_map_at_method_helper(wrapMap(), 1))") !=
+        std::string::npos);
+  CHECK(output.find(
+            "ps_missing_map_access_count_receiver_helper(ps_missing_map_at_unsafe_method_helper(wrapMap(), 2))") !=
+        std::string::npos);
+  CHECK(output.find("ps_map_count(") == std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps stdlib namespaced vector string access count fallback") {
