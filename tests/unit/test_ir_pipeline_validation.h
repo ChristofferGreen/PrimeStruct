@@ -41585,6 +41585,7 @@ TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
       },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
       [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
         return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
@@ -41628,6 +41629,7 @@ TEST_CASE("ir lowerer arithmetic helper validates pointer operand side") {
         auto it = localMap.find(arg.name);
         return (it == localMap.end()) ? primec::ir_lowerer::LocalInfo::ValueKind::Unknown : it->second.valueKind;
       },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
       [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
         return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
@@ -41651,6 +41653,7 @@ TEST_CASE("ir lowerer arithmetic helper ignores non arithmetic calls") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
       [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
         return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },

@@ -9378,7 +9378,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      const std::string expectedStructPath = resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
+      const std::string expectedStructPath =
+          resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
       if (expectedStructPath.empty()) {
         return true;
       }

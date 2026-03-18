@@ -360,6 +360,8 @@ std::string ensureFloatLiteral(const std::string &literal);
 
 std::string literalForType(GlslType type, int value) {
   switch (type) {
+  case GlslType::Bool:
+    return value == 0 ? "false" : "true";
   case GlslType::Int:
     return std::to_string(value);
   case GlslType::UInt:
@@ -376,7 +378,19 @@ std::string literalForType(GlslType type, int value) {
     std::string literal = std::to_string(value);
     return "double(" + ensureFloatLiteral(literal) + ")";
   }
-  case GlslType::Bool:
+  case GlslType::Vec2:
+    return "vec2(" + ensureFloatLiteral(std::to_string(value)) + ")";
+  case GlslType::Vec3:
+    return "vec3(" + ensureFloatLiteral(std::to_string(value)) + ")";
+  case GlslType::Vec4:
+  case GlslType::Quat:
+    return "vec4(" + ensureFloatLiteral(std::to_string(value)) + ")";
+  case GlslType::Mat2:
+    return "mat2(" + ensureFloatLiteral(std::to_string(value)) + ")";
+  case GlslType::Mat3:
+    return "mat3(" + ensureFloatLiteral(std::to_string(value)) + ")";
+  case GlslType::Mat4:
+    return "mat4(" + ensureFloatLiteral(std::to_string(value)) + ")";
   case GlslType::Unknown:
     return std::to_string(value);
   }

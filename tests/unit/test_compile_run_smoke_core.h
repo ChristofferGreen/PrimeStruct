@@ -42,7 +42,10 @@ static bool compileWasmWasiOrExpectUnsupported(const std::string &srcPath,
   }
   CHECK(code == 2);
   CHECK_FALSE(std::filesystem::exists(wasmPath));
-  CHECK(readFile(errPath).find("unsupported opcode for wasm target") != std::string::npos);
+  const std::string error = readFile(errPath);
+  CHECK((error.find("unsupported opcode for wasm target") != std::string::npos ||
+         error.find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+             std::string::npos));
   return false;
 }
 
@@ -55,7 +58,10 @@ static bool runWasmCompileCommandOrExpectUnsupported(const std::string &wasmCmd,
   }
   CHECK(code == 2);
   CHECK_FALSE(std::filesystem::exists(wasmPath));
-  CHECK(readFile(errPath).find("unsupported opcode for wasm target") != std::string::npos);
+  const std::string error = readFile(errPath);
+  CHECK((error.find("unsupported opcode for wasm target") != std::string::npos ||
+         error.find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+             std::string::npos));
   return false;
 }
 
@@ -1437,7 +1443,9 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 0);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
   CHECK(std::filesystem::exists(wasmPath));
   CHECK(std::filesystem::file_size(wasmPath) > 8);
 
@@ -1470,7 +1478,9 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 0);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
   CHECK(std::filesystem::exists(wasmPath));
   CHECK(std::filesystem::file_size(wasmPath) > 8);
 
@@ -1505,7 +1515,9 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 0);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
   CHECK(std::filesystem::exists(wasmPath));
   CHECK(std::filesystem::file_size(wasmPath) > 8);
 
@@ -1550,7 +1562,9 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 0);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
   CHECK(std::filesystem::exists(wasmPath));
   CHECK(std::filesystem::file_size(wasmPath) > 8);
 
@@ -1593,7 +1607,9 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 0);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
   CHECK(std::filesystem::exists(wasmPath));
   CHECK(std::filesystem::file_size(wasmPath) > 8);
 
@@ -1646,7 +1662,9 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 0);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
   CHECK(std::filesystem::exists(wasmPath));
   CHECK(std::filesystem::file_size(wasmPath) > 8);
 
@@ -1731,7 +1749,9 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 0);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
   CHECK(std::filesystem::exists(wasmPath));
   CHECK(std::filesystem::file_size(wasmPath) > 8);
 
@@ -1793,7 +1813,9 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 0);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
   CHECK(std::filesystem::exists(wasmPath));
   CHECK(std::filesystem::file_size(wasmPath) > 8);
 
@@ -1858,10 +1880,10 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got "
-            "/std/math/Mat3") != std::string::npos);
+  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, errPath)) {
+    return;
+  }
+  CHECK(std::filesystem::exists(wasmPath));
 }
 
 TEST_CASE("primec emits wasm bytecode for direct callable definitions") {

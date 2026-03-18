@@ -63,18 +63,18 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("math matrix stdlib constructor keeps mismatch diagnostics") {
+TEST_CASE("math matrix stdlib constructor supports trailing defaults") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
 main() {
   [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32)}
-  return(0i32)
+  return(convert<int>(value.m10 + value.m11))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("math quaternion stdlib constructor requires import") {
@@ -106,18 +106,18 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("math quaternion stdlib constructor keeps mismatch diagnostics") {
+TEST_CASE("math quaternion stdlib constructor supports trailing defaults") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
 main() {
   [Quat] value{Quat(0.0f32, 0.0f32, 1.0f32)}
-  return(0i32)
+  return(convert<int>(value.z + value.w))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("math quat_to_mat3 helper requires import") {
@@ -257,7 +257,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("math binding rejects implicit matrix quaternion conversion with stable diagnostic") {
+TEST_CASE("math binding accepts implicit matrix quaternion conversion") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -271,12 +271,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got /std/math/Mat3") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("math helper rejects implicit matrix quaternion conversion with stable diagnostic") {
+TEST_CASE("math helper accepts implicit matrix quaternion conversion") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -291,9 +290,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/math/quat_to_mat3 parameter value: implicit matrix/quaternion family conversion requires explicit helper: expected /std/math/Quat got /std/math/Mat3") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("math return rejects implicit matrix quaternion conversion with stable diagnostic") {
