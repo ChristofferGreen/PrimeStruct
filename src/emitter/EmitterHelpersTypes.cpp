@@ -307,6 +307,16 @@ std::string bindingTypeToCpp(const std::string &typeName) {
   std::string arg;
   if (splitTemplateTypeName(typeName, base, arg)) {
     base = normalizeBindingTypeName(base);
+    if (base == "uninitialized") {
+      return bindingTypeToCpp(arg);
+    }
+    if (base == "Pointer") {
+      std::string elemType = bindingTypeToCpp(arg);
+      if (elemType.empty()) {
+        elemType = "void";
+      }
+      return elemType + " *";
+    }
     if (base == "array" || base == "vector" || base == "args") {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
@@ -432,6 +442,16 @@ std::string bindingTypeToCpp(const std::string &typeName,
   std::string arg;
   if (splitTemplateTypeName(typeName, base, arg)) {
     base = normalizeBindingTypeName(base);
+    if (base == "uninitialized") {
+      return bindingTypeToCpp(arg, namespacePrefix, importAliases, structTypeMap);
+    }
+    if (base == "Pointer") {
+      std::string elemType = bindingTypeToCpp(arg, namespacePrefix, importAliases, structTypeMap);
+      if (elemType.empty()) {
+        elemType = "void";
+      }
+      return elemType + " *";
+    }
     if (base == "array" || base == "vector" || base == "args") {
       std::vector<std::string> args;
       if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {

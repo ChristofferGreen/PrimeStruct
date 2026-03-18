@@ -1921,6 +1921,40 @@ bool parseBindingInfo(const Expr &expr,
     unsupportedError = targetType;
     return false;
   };
+  auto isSupportedArgsUninitializedElementType = [&](const std::string &elementType, std::string &elementError) -> bool {
+    elementError.clear();
+    std::string elementBase;
+    std::string elementArgText;
+    if (!splitTemplateTypeName(trimTypeText(elementType), elementBase, elementArgText)) {
+      return false;
+    }
+    elementBase = normalizeBindingTypeName(trimTypeText(elementBase));
+    if (elementBase != "Pointer") {
+      return false;
+    }
+    std::vector<std::string> elementArgs;
+    if (!splitTopLevelTemplateArgs(elementArgText, elementArgs) || elementArgs.size() != 1) {
+      return false;
+    }
+
+    std::string targetType = elementArgs.front();
+    if (extractTopLevelUninitializedTarget(targetType, targetType)) {
+      if (containsUninitializedType(targetType)) {
+        elementError = "uninitialized storage is not allowed in pointer targets";
+        return false;
+      }
+    } else if (containsUninitializedType(elementArgs.front())) {
+      elementError = "uninitialized storage is not allowed as template argument to user-defined types";
+      return false;
+    }
+
+    std::string unsupportedTarget;
+    if (!isSupportedPointerReferenceTarget(targetType, unsupportedTarget)) {
+      elementError = "unsupported pointer target type: " + unsupportedTarget;
+      return false;
+    }
+    return true;
+  };
   const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
   if (typeHasTemplate &&
       (normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "Buffer")) {
@@ -1943,9 +1977,17 @@ bool parseBindingInfo(const Expr &expr,
   if (typeHasTemplate && normalizedTypeName != "Pointer" && normalizedTypeName != "Reference" &&
       normalizedTypeName != "uninitialized" && normalizedTypeName != "array" &&
       normalizedTypeName != "vector" && normalizedTypeName != "map" && normalizedTypeName != "Buffer" &&
-      normalizedTypeName != "Result") {
+      normalizedTypeName != "Result" && normalizedTypeName != "args") {
     if (containsUninitializedType(info.typeTemplateArg)) {
       error = "uninitialized storage is not allowed as template argument to user-defined types";
+      return false;
+    }
+  }
+  if (typeHasTemplate && normalizedTypeName == "args" && containsUninitializedType(info.typeTemplateArg)) {
+    std::string elementError;
+    if (!isSupportedArgsUninitializedElementType(info.typeTemplateArg, elementError)) {
+      error = elementError.empty() ? "uninitialized storage is not allowed as template argument to user-defined types"
+                                   : elementError;
       return false;
     }
   }

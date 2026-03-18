@@ -34449,6 +34449,61 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve indirect storage access
   CHECK(out.local == &slotIt->second);
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve indexed args-pack pointer storage access") {
+  primec::ir_lowerer::LocalMap locals;
+
+  primec::ir_lowerer::LocalInfo argsInfo;
+  argsInfo.index = 12;
+  argsInfo.isArgsPack = true;
+  argsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  argsInfo.targetsUninitializedStorage = true;
+  argsInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("values", argsInfo);
+  const auto valuesIt = locals.find("values");
+  REQUIRE(valuesIt != locals.end());
+
+  auto findField = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto resolveNamespacePrefix = [](const std::string &) { return std::string(); };
+  auto resolveTypeInfo = [](const std::string &,
+                            const std::string &,
+                            primec::ir_lowerer::UninitializedTypeInfo &) { return false; };
+  auto resolveSlot = [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  primec::Expr atExpr;
+  atExpr.kind = primec::Expr::Kind::Call;
+  atExpr.name = "at";
+  atExpr.args = {valuesName, indexExpr};
+
+  primec::Expr derefExpr;
+  derefExpr.kind = primec::Expr::Kind::Call;
+  derefExpr.name = "dereference";
+  derefExpr.args = {atExpr};
+
+  primec::ir_lowerer::UninitializedStorageAccessInfo out;
+  bool resolved = false;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccess(
+      derefExpr, locals, findField, resolveNamespacePrefix, resolveTypeInfo, resolveSlot, out, resolved, error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Indirect);
+  CHECK(out.pointer == &valuesIt->second);
+  REQUIRE(out.pointerExpr != nullptr);
+  CHECK(out.pointerExpr->kind == primec::Expr::Kind::Call);
+  CHECK(out.pointerExpr->name == "at");
+  CHECK(out.typeInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers resolve unified storage with field bindings") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo localStorage;

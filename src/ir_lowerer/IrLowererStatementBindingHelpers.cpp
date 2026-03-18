@@ -86,34 +86,38 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
   }
   if (base == "Pointer") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Pointer;
+    std::string pointerTargetType = trimTemplateTypeText(arg);
+    if (extractTopLevelUninitializedTypeText(pointerTargetType, pointerTargetType)) {
+      infoOut.targetsUninitializedStorage = true;
+    }
     std::string pointerBase;
     std::string pointerArg;
-    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+    if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
         normalizeCollectionBindingTypeName(pointerBase) == "File") {
       infoOut.isFileHandle = true;
       infoOut.valueKind = LocalInfo::ValueKind::Int64;
       return;
     }
-    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+    if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
         normalizeCollectionBindingTypeName(pointerBase) == "array") {
       infoOut.pointerToArray = true;
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
       return;
     }
-    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+    if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
         normalizeCollectionBindingTypeName(pointerBase) == "vector") {
       infoOut.pointerToVector = true;
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
       return;
     }
-    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+    if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
         normalizeCollectionBindingTypeName(pointerBase) == "soa_vector") {
       infoOut.pointerToVector = true;
       infoOut.isSoaVector = true;
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
       return;
     }
-    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+    if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
         normalizeCollectionBindingTypeName(pointerBase) == "map") {
       std::vector<std::string> args;
       if (!splitTemplateArgs(pointerArg, args) || args.size() != 2) {
@@ -125,13 +129,13 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = infoOut.mapValueKind;
       return;
     }
-    if (splitTemplateTypeName(trimTemplateTypeText(arg), pointerBase, pointerArg) &&
+    if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
         normalizeCollectionBindingTypeName(pointerBase) == "Buffer") {
       infoOut.pointerToBuffer = true;
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
       return;
     }
-    if (trimTemplateTypeText(arg) == "FileError") {
+    if (pointerTargetType == "FileError") {
       infoOut.isFileError = true;
       infoOut.valueKind = LocalInfo::ValueKind::Int32;
       return;
@@ -139,7 +143,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     bool pointerResultHasValue = false;
     LocalInfo::ValueKind pointerResultValueKind = LocalInfo::ValueKind::Unknown;
     std::string pointerResultErrorType;
-    if (parseResultTypeName(trimTemplateTypeText(arg),
+    if (parseResultTypeName(pointerTargetType,
                             pointerResultHasValue,
                             pointerResultValueKind,
                             pointerResultErrorType)) {
@@ -150,7 +154,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = pointerResultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       return;
     }
-    const LocalInfo::ValueKind pointerValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+    const LocalInfo::ValueKind pointerValueKind = valueKindFromTypeName(pointerTargetType);
     if (pointerValueKind != LocalInfo::ValueKind::Unknown) {
       infoOut.valueKind = pointerValueKind;
     }
@@ -160,10 +164,14 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     std::string refBase;
     std::string refArg;
     infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
+    std::string refTargetType = trimTemplateTypeText(arg);
+    if (extractTopLevelUninitializedTypeText(refTargetType, refTargetType)) {
+      infoOut.targetsUninitializedStorage = true;
+    }
     bool refResultHasValue = false;
     LocalInfo::ValueKind refResultValueKind = LocalInfo::ValueKind::Unknown;
     std::string refResultErrorType;
-    if (parseResultTypeName(trimTemplateTypeText(arg), refResultHasValue, refResultValueKind, refResultErrorType)) {
+    if (parseResultTypeName(refTargetType, refResultHasValue, refResultValueKind, refResultErrorType)) {
       infoOut.isResult = true;
       infoOut.resultHasValue = refResultHasValue;
       infoOut.resultValueKind = refResultValueKind;
@@ -171,11 +179,11 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = refResultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       return;
     }
-    if (!splitTemplateTypeName(trimTemplateTypeText(arg), refBase, refArg)) {
-      if (trimTemplateTypeText(arg) == "FileError") {
+    if (!splitTemplateTypeName(refTargetType, refBase, refArg)) {
+      if (refTargetType == "FileError") {
         infoOut.isFileError = true;
       }
-      const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+      const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(refTargetType);
       if (refValueKind != LocalInfo::ValueKind::Unknown) {
         infoOut.valueKind = refValueKind;
       }

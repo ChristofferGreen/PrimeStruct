@@ -372,6 +372,31 @@ bool resolveUninitializedTypeInfoFromPointerTargetLocal(const LocalInfo &local, 
   return true;
 }
 
+bool resolveUninitializedTypeInfoFromArgsPackPointerTargetLocal(const LocalInfo &local, UninitializedTypeInfo &out) {
+  out = UninitializedTypeInfo{};
+  if (!local.isArgsPack || !local.targetsUninitializedStorage ||
+      (local.argsPackElementKind != LocalInfo::Kind::Pointer &&
+       local.argsPackElementKind != LocalInfo::Kind::Reference)) {
+    return false;
+  }
+
+  out.kind = LocalInfo::Kind::Value;
+  if (local.referenceToArray || local.pointerToArray) {
+    out.kind = LocalInfo::Kind::Array;
+  } else if (local.referenceToVector || local.pointerToVector) {
+    out.kind = LocalInfo::Kind::Vector;
+  } else if (local.referenceToMap || local.pointerToMap) {
+    out.kind = LocalInfo::Kind::Map;
+  } else if (local.referenceToBuffer || local.pointerToBuffer) {
+    out.kind = LocalInfo::Kind::Buffer;
+  }
+  out.valueKind = local.valueKind;
+  out.mapKeyKind = local.mapKeyKind;
+  out.mapValueKind = local.mapValueKind;
+  out.structPath = local.structTypeName;
+  return true;
+}
+
 bool resolveUninitializedLocalStorageCandidate(const Expr &storage,
                                                const LocalMap &localsIn,
                                                const LocalInfo *&localOut,
@@ -864,6 +889,22 @@ bool resolveUninitializedStorageAccess(const Expr &storage,
       if (pointerIt != localsIn.end()) {
         UninitializedTypeInfo pointerTypeInfo;
         if (resolveUninitializedTypeInfoFromPointerTargetLocal(pointerIt->second, pointerTypeInfo)) {
+          out.location = UninitializedStorageAccessInfo::Location::Indirect;
+          out.pointer = &pointerIt->second;
+          out.pointerExpr = &pointerExpr;
+          out.typeInfo = pointerTypeInfo;
+          resolvedOut = true;
+          return true;
+        }
+      }
+    }
+    std::string accessName;
+    if (pointerExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(pointerExpr, accessName) &&
+        pointerExpr.args.size() == 2 && pointerExpr.args.front().kind == Expr::Kind::Name) {
+      auto pointerIt = localsIn.find(pointerExpr.args.front().name);
+      if (pointerIt != localsIn.end()) {
+        UninitializedTypeInfo pointerTypeInfo;
+        if (resolveUninitializedTypeInfoFromArgsPackPointerTargetLocal(pointerIt->second, pointerTypeInfo)) {
           out.location = UninitializedStorageAccessInfo::Location::Indirect;
           out.pointer = &pointerIt->second;
           out.pointerExpr = &pointerExpr;

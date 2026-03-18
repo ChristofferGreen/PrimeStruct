@@ -1649,6 +1649,29 @@ bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<Pa
     if (pointerExpr.kind != Expr::Kind::Call) {
       return false;
     }
+    std::string accessBuiltin;
+    if (getBuiltinArrayAccessName(pointerExpr, accessBuiltin) && pointerExpr.args.size() == 2 &&
+        pointerExpr.args.front().kind == Expr::Kind::Name) {
+      if (const BindingInfo *binding = findBinding(params, locals, pointerExpr.args.front().name)) {
+        std::string elementType;
+        if (getArgsPackElementType(*binding, elementType)) {
+          BindingInfo elementBinding;
+          std::string base;
+          std::string argText;
+          const std::string normalizedType = normalizeBindingTypeName(elementType);
+          if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+            elementBinding.typeName = normalizeBindingTypeName(base);
+            elementBinding.typeTemplateArg = argText;
+          } else {
+            elementBinding.typeName = normalizedType;
+            elementBinding.typeTemplateArg.clear();
+          }
+          pointerBinding = elementBinding;
+          return true;
+        }
+      }
+      return false;
+    }
     std::string pointerBuiltin;
     if (getBuiltinPointerName(pointerExpr, pointerBuiltin) && pointerBuiltin == "location" && pointerExpr.args.size() == 1) {
       BindingInfo pointeeBinding;

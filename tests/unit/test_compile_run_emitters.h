@@ -14246,4 +14246,64 @@ main() {
   CHECK(runCommand(exePath) == 20);
 }
 
+TEST_CASE("C++ emitter materializes variadic pointer uninitialized scalar packs with indexed init and take") {
+  const std::string source = R"(
+[return<int>]
+score_ptrs([args<Pointer<uninitialized<i32>>>] values) {
+  init(dereference(values[0i32]), 2i32)
+  init(dereference(values.at(1i32)), 3i32)
+  init(dereference(values.at_unsafe(2i32)), 4i32)
+  return(plus(take(dereference(values[0i32])),
+              plus(take(dereference(values.at(1i32))),
+                   take(dereference(values.at_unsafe(2i32))))))
+}
+
+[return<int>]
+forward([args<Pointer<uninitialized<i32>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<uninitialized<i32>>>] values) {
+  [uninitialized<i32>] extra{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [uninitialized<i32>] a0{uninitialized<i32>()}
+  [uninitialized<i32>] a1{uninitialized<i32>()}
+  [uninitialized<i32>] a2{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] p0{location(a0)}
+  [Pointer<uninitialized<i32>>] p1{location(a1)}
+  [Pointer<uninitialized<i32>>] p2{location(a2)}
+
+  [uninitialized<i32>] b0{uninitialized<i32>()}
+  [uninitialized<i32>] b1{uninitialized<i32>()}
+  [uninitialized<i32>] b2{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] q0{location(b0)}
+  [Pointer<uninitialized<i32>>] q1{location(b1)}
+  [Pointer<uninitialized<i32>>] q2{location(b2)}
+
+  [uninitialized<i32>] c0{uninitialized<i32>()}
+  [uninitialized<i32>] c1{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] r0{location(c0)}
+  [Pointer<uninitialized<i32>>] r1{location(c1)}
+
+  return(plus(score_ptrs(p0, p1, p2),
+              plus(forward(q0, q1, q2),
+                   forward_mixed(r0, r1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_pointer_uninitialized_scalar.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_pointer_uninitialized_scalar_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 27);
+}
+
 TEST_SUITE_END();

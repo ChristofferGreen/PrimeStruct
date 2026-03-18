@@ -65,6 +65,7 @@ bool emitInlineDefinitionCallParameters(
           if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Reference ||
               it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap ||
               it->second.referenceToBuffer != paramInfo.referenceToBuffer ||
+              it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
               it->second.isFileHandle != paramInfo.isFileHandle ||
               it->second.isFileError != paramInfo.isFileError ||
               it->second.isResult != paramInfo.isResult ||
@@ -92,6 +93,7 @@ bool emitInlineDefinitionCallParameters(
               it->second.isSoaVector != paramInfo.isSoaVector ||
               it->second.pointerToVector != paramInfo.pointerToVector ||
               it->second.pointerToMap != paramInfo.pointerToMap ||
+              it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
               it->second.isFileHandle != paramInfo.isFileHandle ||
               it->second.isFileError != paramInfo.isFileError ||
               it->second.isResult != paramInfo.isResult ||
@@ -183,6 +185,10 @@ bool emitInlineDefinitionCallParameters(
           error = "variadic parameter type mismatch";
           return false;
         }
+        if (callerIt->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage) {
+          error = "variadic parameter type mismatch";
+          return false;
+        }
         if (callerIt->second.referenceToArray != paramInfo.referenceToArray ||
             callerIt->second.pointerToArray != paramInfo.pointerToArray ||
             callerIt->second.referenceToVector != paramInfo.referenceToVector ||
@@ -228,6 +234,7 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.resultHasValue = callerIt->second.resultHasValue;
         paramInfo.resultValueKind = callerIt->second.resultValueKind;
         paramInfo.resultErrorType = callerIt->second.resultErrorType;
+        paramInfo.targetsUninitializedStorage = callerIt->second.targetsUninitializedStorage;
         calleeLocals.emplace(param.name, paramInfo);
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(callerIt->second.index));
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
