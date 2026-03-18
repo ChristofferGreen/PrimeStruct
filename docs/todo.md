@@ -205,7 +205,7 @@ Minimal vector substrate note: the remaining items below are only worth keeping 
 
 **Maintainability**
 File-size note: keep production source under `src/` below roughly 700 lines when practical. The items below track the current oversized files as behavior-preserving refactors; prefer extracting coherent helper units over purely mechanical file splits.
-- ○ Move duplicated compile-pipeline and IR-preparation error handling out of `main.cpp` and `primevm_main.cpp` into a shared driver layer.
+- ✓ Move duplicated compile-pipeline and IR-preparation error handling out of `main.cpp` and `primevm_main.cpp` into a shared driver layer. Progress: shared CLI driver helpers now own transform-list output plus compile-pipeline / IR-preparation diagnostic mapping and emission, and both entrypoints route those failures through `primec::CliDriver` instead of duplicating local switch trees.
 - ○ Split `primec_lib` into smaller subsystem libraries once the semantics and lowering interfaces are explicit.
 - ○ Add CI checks for include-layer violations and direct `tests -> src/` internal header dependencies.
 - ○ Define a stable internal testing API so unit tests stop including `src/` headers directly.

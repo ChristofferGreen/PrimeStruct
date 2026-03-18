@@ -7,6 +7,7 @@
 #include <string_view>
 #include <vector>
 
+#include "primec/CliDriver.h"
 #include "primec/EmitKind.h"
 #include "primec/IrBackends.h"
 #include "primec/IrPreparation.h"
@@ -107,6 +108,52 @@ TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved e
   CHECK(!failure.message.empty());
 }
 
+TEST_CASE("cli driver preserves parse-stage diagnostic context") {
+  primec::CompilePipelineOutput output;
+  output.filteredSource = "main() { return(1i32) }";
+
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  diagnosticInfo.normalizedMessage = "expected token";
+
+  const primec::CliFailure failure = primec::describeCompilePipelineFailure(
+      primec::CompilePipelineErrorStage::Parse, "raw parse failure", output, diagnosticInfo);
+
+  CHECK(failure.code == primec::DiagnosticCode::ParseError);
+  CHECK(failure.plainPrefix == "Parse error: ");
+  CHECK(failure.message == "raw parse failure");
+  CHECK(failure.exitCode == 2);
+  CHECK(failure.notes == std::vector<std::string>{"stage: parse"});
+  CHECK(failure.diagnosticInfo == &diagnosticInfo);
+  CHECK(failure.sourceText == &output.filteredSource);
+}
+
+TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {
+  const primec::IrBackend *vmBackend = primec::findIrBackend("vm");
+  REQUIRE(vmBackend != nullptr);
+
+  primec::IrPreparationFailure loweringFailure;
+  loweringFailure.stage = primec::IrPreparationFailureStage::Lowering;
+  loweringFailure.message = "native backend rejected entry";
+
+  const primec::CliFailure loweringCliFailure = primec::describeIrPreparationFailure(loweringFailure, *vmBackend, 7);
+  CHECK(loweringCliFailure.code == vmBackend->diagnostics().loweringDiagnosticCode);
+  CHECK(loweringCliFailure.plainPrefix == vmBackend->diagnostics().loweringErrorPrefix);
+  CHECK(loweringCliFailure.exitCode == 7);
+  CHECK(loweringCliFailure.notes == std::vector<std::string>{"backend: vm"});
+  CHECK(loweringCliFailure.message.find("vm backend") != std::string::npos);
+  CHECK(loweringCliFailure.message.find("native backend") == std::string::npos);
+
+  primec::IrPreparationFailure validationFailure;
+  validationFailure.stage = primec::IrPreparationFailureStage::Validation;
+  validationFailure.message = "bad ir";
+
+  const primec::CliFailure validationCliFailure = primec::describeIrPreparationFailure(validationFailure, *vmBackend);
+  CHECK(validationCliFailure.code == vmBackend->diagnostics().validationDiagnosticCode);
+  CHECK(validationCliFailure.plainPrefix == vmBackend->diagnostics().validationErrorPrefix);
+  CHECK(validationCliFailure.notes == std::vector<std::string>({"backend: vm", "stage: ir-validate"}));
+  CHECK(validationCliFailure.message == "bad ir");
+}
+
 TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
@@ -118,12 +165,16 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   const std::string source = readTextFile(mainPath);
   CHECK(source.find("resolveIrBackendEmitKind(options.emitKind)") != std::string::npos);
   CHECK(source.find("findIrBackend(irBackendKind)") != std::string::npos);
+  CHECK(source.find("describeCompilePipelineFailure(") != std::string::npos);
+  CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("prepareIrModule(program, options, validationTarget, ir, prepFailure)") != std::string::npos);
   CHECK(source.find("IrLowerer lowerer") == std::string::npos);
   CHECK(source.find("inlineIrModuleCalls(ir, error)") == std::string::npos);
   CHECK(source.find("validateIrModule(ir, validationTarget, error)") == std::string::npos);
   CHECK(source.find("if (options.emitKind == \"cpp\" || options.emitKind == \"exe\")") == std::string::npos);
   CHECK(source.find("isProductionCppOrExeEmitKind(") == std::string::npos);
+  CHECK(source.find("CompilePipelineErrorStage::Import") == std::string::npos);
+  CHECK(source.find("IrPreparationFailureStage::Validation") == std::string::npos);
   CHECK(source.find("scanSoftwareNumericTypes(") == std::string::npos);
   CHECK(source.find("software numeric types are not supported:") == std::string::npos);
   CHECK(source.find("emitter.emitCpp(program, options.entryPath)") == std::string::npos);
@@ -140,8 +191,12 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   REQUIRE(std::filesystem::exists(mainPath));
 
   const std::string source = readTextFile(mainPath);
+  CHECK(source.find("describeCompilePipelineFailure(") != std::string::npos);
+  CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, irFailure)") !=
         std::string::npos);
+  CHECK(source.find("CompilePipelineErrorStage::Import") == std::string::npos);
+  CHECK(source.find("IrPreparationFailureStage::Validation") == std::string::npos);
   CHECK(source.find("IrLowerer lowerer") == std::string::npos);
   CHECK(source.find("inlineIrModuleCalls(ir, error)") == std::string::npos);
   CHECK(source.find("validateIrModule(ir, primec::IrValidationTarget::Vm, error)") == std::string::npos);

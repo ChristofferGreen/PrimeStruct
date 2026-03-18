@@ -1,13 +1,12 @@
+#include "primec/CliDriver.h"
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
 #include "primec/IrPreparation.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
-#include "primec/TransformRegistry.h"
 #include "primec/Vm.h"
 #include "primec/VmDebugDap.h"
 
-#include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <fstream>
@@ -18,42 +17,6 @@
 #include <vector>
 
 namespace {
-std::string transformAvailability(const primec::TransformInfo &info) {
-  std::string availability;
-  if (info.availableInPrimec) {
-    availability = "primec";
-  }
-  if (info.availableInPrimevm) {
-    if (!availability.empty()) {
-      availability += ",";
-    }
-    availability += "primevm";
-  }
-  if (availability.empty()) {
-    return "none";
-  }
-  return availability;
-}
-
-void printTransformList(std::ostream &out) {
-  out << "name\tphase\taliases\tavailability\n";
-  for (const auto &transform : primec::listTransforms()) {
-    out << transform.name << '\t' << primec::transformPhaseName(transform.phase) << '\t' << transform.aliases << '\t'
-        << transformAvailability(transform) << '\n';
-  }
-}
-
-void replaceAll(std::string &text, std::string_view from, std::string_view to) {
-  if (from.empty()) {
-    return;
-  }
-  size_t pos = 0;
-  while ((pos = text.find(from, pos)) != std::string::npos) {
-    text.replace(pos, from.size(), to);
-    pos += to.size();
-  }
-}
-
 std::string jsonEscape(std::string_view text) {
   std::string out;
   out.reserve(text.size() + 8);
@@ -325,7 +288,9 @@ bool extractJsonObjectField(std::string_view json, std::string_view key, std::st
   return false;
 }
 
-bool parseTraceCheckpoints(const std::string &traceText, std::vector<TraceCheckpoint> &outCheckpoints, std::string &error) {
+bool parseTraceCheckpoints(const std::string &traceText,
+                          std::vector<TraceCheckpoint> &outCheckpoints,
+                          std::string &error) {
   outCheckpoints.clear();
   uint64_t lastSequence = 0;
   bool haveSequence = false;
@@ -381,60 +346,17 @@ bool parseTraceCheckpoints(const std::string &traceText, std::vector<TraceCheckp
   return true;
 }
 
-int emitFailure(const primec::Options &options,
-                primec::DiagnosticCode code,
-                const std::string &plainPrefix,
-                const std::string &message,
-                int exitCode,
-                const std::vector<std::string> &notes = {},
-                const primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr,
-                const std::string *sourceText = nullptr) {
-  std::vector<primec::DiagnosticRecord> diagnostics;
-  if (diagnosticInfo != nullptr && !diagnosticInfo->records.empty()) {
-    diagnostics.reserve(diagnosticInfo->records.size());
-    for (const auto &recordInfo : diagnosticInfo->records) {
-      std::string diagnosticMessage = recordInfo.normalizedMessage.empty() ? message : recordInfo.normalizedMessage;
-      const primec::DiagnosticSpan *primarySpan = nullptr;
-      if (recordInfo.hasPrimarySpan) {
-        primarySpan = &recordInfo.primarySpan;
-      }
-      diagnostics.push_back(primec::makeDiagnosticRecord(
-          code, diagnosticMessage, options.inputPath, notes, primarySpan, recordInfo.relatedSpans));
-    }
-  } else {
-    std::string diagnosticMessage = message;
-    primec::DiagnosticSpan primarySpanStorage;
-    const primec::DiagnosticSpan *primarySpan = nullptr;
-    std::vector<primec::DiagnosticRelatedSpan> relatedSpans;
-    if (diagnosticInfo != nullptr) {
-      if (!diagnosticInfo->normalizedMessage.empty()) {
-        diagnosticMessage = diagnosticInfo->normalizedMessage;
-      }
-      if (diagnosticInfo->hasPrimarySpan) {
-        primarySpanStorage = diagnosticInfo->primarySpan;
-        primarySpan = &primarySpanStorage;
-      }
-      relatedSpans = diagnosticInfo->relatedSpans;
-    }
-    diagnostics.push_back(
-        primec::makeDiagnosticRecord(code, diagnosticMessage, options.inputPath, notes, primarySpan, relatedSpans));
-  }
-
-  if (options.emitDiagnostics) {
-    std::cerr << primec::encodeDiagnosticsJson(diagnostics) << "\n";
-    return exitCode;
-  }
-
-  const bool hasLocation = std::any_of(diagnostics.begin(), diagnostics.end(), [](const auto &record) {
-    return record.primarySpan.line > 0 && record.primarySpan.column > 0;
-  });
-  if (hasLocation) {
-    std::cerr << primec::formatDiagnosticsText(diagnostics, plainPrefix, sourceText);
-    return exitCode;
-  }
-
-  std::cerr << plainPrefix << message << "\n";
-  return exitCode;
+int emitVmRuntimeFailure(const primec::Options &options,
+                         const primec::IrBackend &vmBackend,
+                         const std::string &message,
+                         std::string_view stage = {}) {
+  primec::CliFailure runtimeFailure;
+  runtimeFailure.code = primec::DiagnosticCode::RuntimeError;
+  runtimeFailure.plainPrefix = "VM error: ";
+  runtimeFailure.message = message;
+  runtimeFailure.exitCode = 3;
+  runtimeFailure.notes = primec::makeIrBackendNotes(vmBackend.diagnostics(), stage);
+  return primec::emitCliFailure(std::cerr, options, runtimeFailure);
 }
 } // namespace
 
@@ -466,7 +388,7 @@ int main(int argc, char **argv) {
     return 2;
   }
   if (options.listTransforms) {
-    printTransformList(std::cout);
+    primec::printTransformList(std::cout);
     return 0;
   }
   std::string error;
@@ -476,54 +398,8 @@ int main(int argc, char **argv) {
   primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;
   primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
   if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo)) {
-    switch (pipelineError) {
-      case primec::CompilePipelineErrorStage::Import:
-        return emitFailure(options,
-                           primec::DiagnosticCode::ImportError,
-                           "Import error: ",
-                           error,
-                           2,
-                           {"stage: import"});
-      case primec::CompilePipelineErrorStage::Transform:
-        return emitFailure(options,
-                           primec::DiagnosticCode::TransformError,
-                           "Transform error: ",
-                           error,
-                           2,
-                           {"stage: transform"});
-      case primec::CompilePipelineErrorStage::Parse:
-        return emitFailure(options,
-                           primec::DiagnosticCode::ParseError,
-                           "Parse error: ",
-                           error,
-                           2,
-                           {"stage: parse"},
-                           &pipelineDiagnosticInfo,
-                           &pipelineOutput.filteredSource);
-      case primec::CompilePipelineErrorStage::UnsupportedDumpStage:
-        return emitFailure(options,
-                           primec::DiagnosticCode::UnsupportedDumpStage,
-                           "Unsupported dump stage: ",
-                           error,
-                           2,
-                           {"stage: dump-stage"});
-      case primec::CompilePipelineErrorStage::Semantic:
-        return emitFailure(options,
-                           primec::DiagnosticCode::SemanticError,
-                           "Semantic error: ",
-                           error,
-                           2,
-                           {"stage: semantic"},
-                           &pipelineDiagnosticInfo,
-                           &pipelineOutput.filteredSource);
-      default:
-        return emitFailure(options,
-                           primec::DiagnosticCode::EmitError,
-                           "Compile pipeline error: ",
-                           error,
-                           2,
-                           {"stage: compile-pipeline"});
-    }
+    return primec::emitCliFailure(
+        std::cerr, options, primec::describeCompilePipelineFailure(pipelineError, error, pipelineOutput, pipelineDiagnosticInfo));
   }
   if (pipelineOutput.hasDumpOutput) {
     std::cout << pipelineOutput.dumpOutput;
@@ -531,41 +407,19 @@ int main(int argc, char **argv) {
   }
 
   primec::Program &program = pipelineOutput.program;
+  const primec::IrBackend *vmBackend = primec::findIrBackend("vm");
+  if (vmBackend == nullptr) {
+    primec::CliFailure emitFailure;
+    emitFailure.code = primec::DiagnosticCode::EmitError;
+    emitFailure.plainPrefix = "VM error: ";
+    emitFailure.message = "no vm backend registered";
+    return primec::emitCliFailure(std::cerr, options, emitFailure);
+  }
 
   primec::IrModule ir;
   primec::IrPreparationFailure irFailure;
   if (!primec::prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, irFailure)) {
-    if (irFailure.stage == primec::IrPreparationFailureStage::Lowering) {
-      replaceAll(irFailure.message, "native backend", "vm backend");
-      return emitFailure(options,
-                         primec::DiagnosticCode::LoweringError,
-                         "VM lowering error: ",
-                         irFailure.message,
-                         2,
-                         {"backend: vm"});
-    }
-    if (irFailure.stage == primec::IrPreparationFailureStage::Validation) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::LoweringError,
-                         "VM IR validation error: ",
-                         irFailure.message,
-                         2,
-                         {"backend: vm", "stage: ir-validate"});
-    }
-    if (irFailure.stage == primec::IrPreparationFailureStage::Inlining) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::LoweringError,
-                         "VM IR inlining error: ",
-                         irFailure.message,
-                         2,
-                         {"backend: vm", "stage: ir-inline"});
-    }
-    return emitFailure(options,
-                       primec::DiagnosticCode::LoweringError,
-                       "VM lowering error: ",
-                       irFailure.message,
-                       2,
-                       {"backend: vm"});
+    return primec::emitCliFailure(std::cerr, options, primec::describeIrPreparationFailure(irFailure, *vmBackend));
   }
 
   primec::Vm vm;
@@ -579,22 +433,12 @@ int main(int argc, char **argv) {
   if (!options.debugReplayPath.empty()) {
     std::string traceText;
     if (!readTextFile(options.debugReplayPath, traceText, error)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::RuntimeError,
-                         "VM error: ",
-                         error,
-                         3,
-                         {"backend: vm", "stage: debug-replay"});
+      return emitVmRuntimeFailure(options, *vmBackend, error, "debug-replay");
     }
 
     std::vector<TraceCheckpoint> checkpoints;
     if (!parseTraceCheckpoints(traceText, checkpoints, error)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::RuntimeError,
-                         "VM error: ",
-                         error,
-                         3,
-                         {"backend: vm", "stage: debug-replay"});
+      return emitVmRuntimeFailure(options, *vmBackend, error, "debug-replay");
     }
 
     const uint64_t targetSequence = options.debugReplaySequence.value_or(checkpoints.back().sequence);
@@ -627,19 +471,14 @@ int main(int argc, char **argv) {
   if (options.debugDap) {
     primec::VmDebugDapRunResult dapResult;
     if (!primec::runVmDebugDapSession(ir, args, options.inputPath, std::cin, std::cout, dapResult, error)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::RuntimeError,
-                         "VM error: ",
-                         error,
-                         3,
-                         {"backend: vm", "stage: debug-dap"});
+      return emitVmRuntimeFailure(options, *vmBackend, error, "debug-dap");
     }
     return 0;
   }
   if (!options.debugTracePath.empty()) {
     primec::VmDebugSession debugSession;
     if (!debugSession.start(ir, error, args)) {
-      return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
+      return emitVmRuntimeFailure(options, *vmBackend, error);
     }
 
     DebugJsonEmitContext emitContext;
@@ -744,27 +583,17 @@ int main(int argc, char **argv) {
 
     std::string traceError;
     if (!writeTraceLines(options.debugTracePath, traceLines, traceError)) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::RuntimeError,
-                         "VM error: ",
-                         traceError,
-                         3,
-                         {"backend: vm", "stage: debug-trace"});
+      return emitVmRuntimeFailure(options, *vmBackend, traceError, "debug-trace");
     }
     if (sawFault) {
-      return emitFailure(options,
-                         primec::DiagnosticCode::RuntimeError,
-                         "VM error: ",
-                         error,
-                         3,
-                         {"backend: vm", "stage: debug-trace"});
+      return emitVmRuntimeFailure(options, *vmBackend, error, "debug-trace");
     }
     return exitCode;
   }
   if (options.debugJson) {
     primec::VmDebugSession debugSession;
     if (!debugSession.start(ir, error, args)) {
-      return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
+      return emitVmRuntimeFailure(options, *vmBackend, error);
     }
 
     DebugJsonEmitContext emitContext;
@@ -847,12 +676,7 @@ int main(int argc, char **argv) {
       emitDebugJsonLine(stopLine);
 
       if (!ok) {
-        return emitFailure(options,
-                           primec::DiagnosticCode::RuntimeError,
-                           "VM error: ",
-                           error,
-                           3,
-                           {"backend: vm", "stage: debug-json"});
+        return emitVmRuntimeFailure(options, *vmBackend, error, "debug-json");
       }
       if (stopReason == primec::VmDebugStopReason::Exit) {
         return static_cast<int>(static_cast<int32_t>(stopSnapshot.result));
@@ -861,7 +685,7 @@ int main(int argc, char **argv) {
   }
 
   if (!vm.execute(ir, result, error, args)) {
-    return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
+    return emitVmRuntimeFailure(options, *vmBackend, error);
   }
 
   return static_cast<int>(static_cast<int32_t>(result));

@@ -1,3 +1,4 @@
+#include "primec/CliDriver.h"
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
 #include "primec/EmitKind.h"
@@ -5,12 +6,10 @@
 #include "primec/IrPreparation.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
-#include "primec/TransformRegistry.h"
 
-#include <algorithm>
 #include <filesystem>
 #include <iostream>
-#include <sstream>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -55,47 +54,8 @@ bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string 
   return true;
 }
 
-std::string transformAvailability(const primec::TransformInfo &info) {
-  std::string availability;
-  if (info.availableInPrimec) {
-    availability = "primec";
-  }
-  if (info.availableInPrimevm) {
-    if (!availability.empty()) {
-      availability += ",";
-    }
-    availability += "primevm";
-  }
-  if (availability.empty()) {
-    return "none";
-  }
-  return availability;
-}
-
-void printTransformList(std::ostream &out) {
-  out << "name\tphase\taliases\tavailability\n";
-  for (const auto &transform : primec::listTransforms()) {
-    out << transform.name << '\t' << primec::transformPhaseName(transform.phase) << '\t' << transform.aliases << '\t'
-        << transformAvailability(transform) << '\n';
-  }
-}
-
-std::vector<std::string> irBackendNotes(const primec::IrBackendDiagnostics &diagnostics,
-                                        std::string_view stage = {}) {
-  std::vector<std::string> notes;
-  notes.reserve(stage.empty() ? 1 : 2);
-  notes.push_back("backend: " + std::string(diagnostics.backendTag));
-  if (!stage.empty()) {
-    notes.push_back("stage: " + std::string(stage));
-  }
-  return notes;
-}
-
 enum class IrBackendRunFailureStage {
   None,
-  Lowering,
-  Validation,
-  Inlining,
   Emit,
   OutputWrite,
 };
@@ -103,6 +63,7 @@ enum class IrBackendRunFailureStage {
 struct IrBackendRunFailure {
   IrBackendRunFailureStage stage = IrBackendRunFailureStage::None;
   std::string message;
+  std::optional<primec::CliFailure> cliFailure;
 };
 
 bool runIrBackend(const primec::IrBackend &backend,
@@ -117,22 +78,7 @@ bool runIrBackend(const primec::IrBackend &backend,
   primec::IrModule ir;
   primec::IrPreparationFailure prepFailure;
   if (!primec::prepareIrModule(program, options, validationTarget, ir, prepFailure)) {
-    switch (prepFailure.stage) {
-      case primec::IrPreparationFailureStage::Lowering:
-        backend.normalizeLoweringError(prepFailure.message);
-        failure.stage = IrBackendRunFailureStage::Lowering;
-        break;
-      case primec::IrPreparationFailureStage::Validation:
-        failure.stage = IrBackendRunFailureStage::Validation;
-        break;
-      case primec::IrPreparationFailureStage::Inlining:
-        failure.stage = IrBackendRunFailureStage::Inlining;
-        break;
-      default:
-        failure.stage = IrBackendRunFailureStage::Lowering;
-        break;
-    }
-    failure.message = std::move(prepFailure.message);
+    failure.cliFailure = primec::describeIrPreparationFailure(prepFailure, backend);
     return false;
   }
 
@@ -152,62 +98,6 @@ bool runIrBackend(const primec::IrBackend &backend,
   }
 
   return true;
-}
-
-int emitFailure(const primec::Options &options,
-                primec::DiagnosticCode code,
-                const std::string &plainPrefix,
-                const std::string &message,
-                int exitCode,
-                const std::vector<std::string> &notes = {},
-                const primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr,
-                const std::string *sourceText = nullptr) {
-  std::vector<primec::DiagnosticRecord> diagnostics;
-  if (diagnosticInfo != nullptr && !diagnosticInfo->records.empty()) {
-    diagnostics.reserve(diagnosticInfo->records.size());
-    for (const auto &recordInfo : diagnosticInfo->records) {
-      std::string diagnosticMessage = recordInfo.normalizedMessage.empty() ? message : recordInfo.normalizedMessage;
-      const primec::DiagnosticSpan *primarySpan = nullptr;
-      if (recordInfo.hasPrimarySpan) {
-        primarySpan = &recordInfo.primarySpan;
-      }
-      diagnostics.push_back(primec::makeDiagnosticRecord(
-          code, diagnosticMessage, options.inputPath, notes, primarySpan, recordInfo.relatedSpans));
-    }
-  } else {
-    std::string diagnosticMessage = message;
-    primec::DiagnosticSpan primarySpanStorage;
-    const primec::DiagnosticSpan *primarySpan = nullptr;
-    std::vector<primec::DiagnosticRelatedSpan> relatedSpans;
-    if (diagnosticInfo != nullptr) {
-      if (!diagnosticInfo->normalizedMessage.empty()) {
-        diagnosticMessage = diagnosticInfo->normalizedMessage;
-      }
-      if (diagnosticInfo->hasPrimarySpan) {
-        primarySpanStorage = diagnosticInfo->primarySpan;
-        primarySpan = &primarySpanStorage;
-      }
-      relatedSpans = diagnosticInfo->relatedSpans;
-    }
-    diagnostics.push_back(
-        primec::makeDiagnosticRecord(code, diagnosticMessage, options.inputPath, notes, primarySpan, relatedSpans));
-  }
-
-  if (options.emitDiagnostics) {
-    std::cerr << primec::encodeDiagnosticsJson(diagnostics) << "\n";
-    return exitCode;
-  }
-
-  const bool hasLocation = std::any_of(diagnostics.begin(), diagnostics.end(), [](const auto &record) {
-    return record.primarySpan.line > 0 && record.primarySpan.column > 0;
-  });
-  if (hasLocation) {
-    std::cerr << primec::formatDiagnosticsText(diagnostics, plainPrefix, sourceText);
-    return exitCode;
-  }
-
-  std::cerr << plainPrefix << message << "\n";
-  return exitCode;
 }
 
 } // namespace
@@ -241,7 +131,7 @@ int main(int argc, char **argv) {
     return 2;
   }
   if (options.listTransforms) {
-    printTransformList(std::cout);
+    primec::printTransformList(std::cout);
     return 0;
   }
   std::string error;
@@ -251,54 +141,8 @@ int main(int argc, char **argv) {
   primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;
   primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
   if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo)) {
-    switch (pipelineError) {
-      case primec::CompilePipelineErrorStage::Import:
-        return emitFailure(options,
-                           primec::DiagnosticCode::ImportError,
-                           "Import error: ",
-                           error,
-                           2,
-                           {"stage: import"});
-      case primec::CompilePipelineErrorStage::Transform:
-        return emitFailure(options,
-                           primec::DiagnosticCode::TransformError,
-                           "Transform error: ",
-                           error,
-                           2,
-                           {"stage: transform"});
-      case primec::CompilePipelineErrorStage::Parse:
-        return emitFailure(options,
-                           primec::DiagnosticCode::ParseError,
-                           "Parse error: ",
-                           error,
-                           2,
-                           {"stage: parse"},
-                           &pipelineDiagnosticInfo,
-                           &pipelineOutput.filteredSource);
-      case primec::CompilePipelineErrorStage::UnsupportedDumpStage:
-        return emitFailure(options,
-                           primec::DiagnosticCode::UnsupportedDumpStage,
-                           "Unsupported dump stage: ",
-                           error,
-                           2,
-                           {"stage: dump-stage"});
-      case primec::CompilePipelineErrorStage::Semantic:
-        return emitFailure(options,
-                           primec::DiagnosticCode::SemanticError,
-                           "Semantic error: ",
-                           error,
-                           2,
-                           {"stage: semantic"},
-                           &pipelineDiagnosticInfo,
-                           &pipelineOutput.filteredSource);
-      default:
-        return emitFailure(options,
-                           primec::DiagnosticCode::EmitError,
-                           "Compile pipeline error: ",
-                           error,
-                           2,
-                           {"stage: compile-pipeline"});
-    }
+    return primec::emitCliFailure(
+        std::cerr, options, primec::describeCompilePipelineFailure(pipelineError, error, pipelineOutput, pipelineDiagnosticInfo));
   }
   if (pipelineOutput.hasDumpOutput) {
     std::cout << pipelineOutput.dumpOutput;
@@ -314,7 +158,11 @@ int main(int argc, char **argv) {
     std::filesystem::path resolved = resolveOutputPath(options);
     options.outputPath = resolved.string();
     if (!ensureOutputDirectory(resolved, error)) {
-      return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
+      primec::CliFailure outputFailure;
+      outputFailure.code = primec::DiagnosticCode::OutputError;
+      outputFailure.plainPrefix = "Output error: ";
+      outputFailure.message = error;
+      return primec::emitCliFailure(std::cerr, options, outputFailure);
     }
   }
 
@@ -323,44 +171,24 @@ int main(int argc, char **argv) {
     primec::IrBackendEmitResult emitResult;
     IrBackendRunFailure failure;
     if (!runIrBackend(*irBackend, program, options, emitResult, failure)) {
-      if (failure.stage == IrBackendRunFailureStage::Lowering) {
-        return emitFailure(options,
-                           diagnostics.loweringDiagnosticCode,
-                           diagnostics.loweringErrorPrefix,
-                           failure.message,
-                           2,
-                           irBackendNotes(diagnostics));
-      }
-      if (failure.stage == IrBackendRunFailureStage::Validation) {
-        return emitFailure(options,
-                           diagnostics.validationDiagnosticCode,
-                           diagnostics.validationErrorPrefix,
-                           failure.message,
-                           2,
-                           irBackendNotes(diagnostics, "ir-validate"));
-      }
-      if (failure.stage == IrBackendRunFailureStage::Inlining) {
-        return emitFailure(options,
-                           diagnostics.inliningDiagnosticCode,
-                           diagnostics.inliningErrorPrefix,
-                           failure.message,
-                           2,
-                           irBackendNotes(diagnostics, "ir-inline"));
+      if (failure.cliFailure.has_value()) {
+        return primec::emitCliFailure(std::cerr, options, *failure.cliFailure);
       }
       if (failure.stage == IrBackendRunFailureStage::OutputWrite) {
-        return emitFailure(options,
-                           primec::DiagnosticCode::OutputError,
-                           "Failed to write output: ",
-                           options.outputPath,
-                           2);
+        primec::CliFailure outputFailure;
+        outputFailure.code = primec::DiagnosticCode::OutputError;
+        outputFailure.plainPrefix = "Failed to write output: ";
+        outputFailure.message = options.outputPath;
+        return primec::emitCliFailure(std::cerr, options, outputFailure);
       }
       const int emitFailureCode = diagnostics.backendTag == std::string_view("vm") ? 3 : 2;
-      return emitFailure(options,
-                         diagnostics.emitDiagnosticCode,
-                         diagnostics.emitErrorPrefix,
-                         failure.message,
-                         emitFailureCode,
-                         irBackendNotes(diagnostics));
+      primec::CliFailure emitFailure;
+      emitFailure.code = diagnostics.emitDiagnosticCode;
+      emitFailure.plainPrefix = diagnostics.emitErrorPrefix;
+      emitFailure.message = failure.message;
+      emitFailure.exitCode = emitFailureCode;
+      emitFailure.notes = primec::makeIrBackendNotes(diagnostics);
+      return primec::emitCliFailure(std::cerr, options, emitFailure);
     }
     return emitResult.exitCode;
   }
@@ -369,13 +197,17 @@ int main(int argc, char **argv) {
     std::filesystem::path resolved = resolveOutputPath(options);
     options.outputPath = resolved.string();
     if (!ensureOutputDirectory(resolved, error)) {
-      return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
+      primec::CliFailure outputFailure;
+      outputFailure.code = primec::DiagnosticCode::OutputError;
+      outputFailure.plainPrefix = "Output error: ";
+      outputFailure.message = error;
+      return primec::emitCliFailure(std::cerr, options, outputFailure);
     }
   }
 
-  return emitFailure(options,
-                     primec::DiagnosticCode::EmitError,
-                     "Emit error: ",
-                     "no backend available for emit kind " + options.emitKind,
-                     2);
+  primec::CliFailure emitFailure;
+  emitFailure.code = primec::DiagnosticCode::EmitError;
+  emitFailure.plainPrefix = "Emit error: ";
+  emitFailure.message = "no backend available for emit kind " + options.emitKind;
+  return primec::emitCliFailure(std::cerr, options, emitFailure);
 }

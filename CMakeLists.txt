@@ -26,6 +26,7 @@ endfunction()
 
 add_library(primec_lib
   src/AstPrinter.cpp
+  src/CliDriver.cpp
   src/CompilePipeline.cpp
   src/Diagnostics.cpp
   src/EmitKind.cpp
