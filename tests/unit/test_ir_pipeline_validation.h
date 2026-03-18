@@ -10291,6 +10291,72 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("vm heap helpers source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                            : std::filesystem::path("..");
+
+  const std::filesystem::path vmPath = repoRoot / "src" / "Vm.cpp";
+  const std::filesystem::path vmHeapHelpersPath = repoRoot / "src" / "VmHeapHelpers.cpp";
+  const std::filesystem::path vmHeapHelpersHeaderPath = repoRoot / "src" / "VmHeapHelpers.h";
+  REQUIRE(std::filesystem::exists(vmPath));
+  REQUIRE(std::filesystem::exists(vmHeapHelpersPath));
+  REQUIRE(std::filesystem::exists(vmHeapHelpersHeaderPath));
+  const std::string vmSource = readText(vmPath);
+  const std::string vmHeapHelpersSource = readText(vmHeapHelpersPath);
+  const std::string vmHeapHelpersHeaderSource = readText(vmHeapHelpersHeaderPath);
+
+  CHECK(vmSource.find("#include \"VmHeapHelpers.h\"") != std::string::npos);
+  CHECK(vmSource.find("constexpr uint64_t kVmHeapAddressTag = 1ull << 63;") ==
+        std::string::npos);
+  CHECK(vmSource.find("bool isVmHeapAddress(uint64_t address) {") ==
+        std::string::npos);
+  CHECK(vmSource.find("bool resolveIndirectAddress(uint64_t address,") ==
+        std::string::npos);
+  CHECK(vmSource.find("bool allocateVmHeapSlots(uint64_t slotCount,") ==
+        std::string::npos);
+  CHECK(vmSource.find("bool freeVmHeapSlots(uint64_t address,") ==
+        std::string::npos);
+  CHECK(vmSource.find("bool reallocVmHeapSlots(uint64_t address,") ==
+        std::string::npos);
+  CHECK(vmSource.find("vm_detail::resolveIndirectAddress(") != std::string::npos);
+  CHECK(vmSource.find("vm_detail::allocateVmHeapSlots(") != std::string::npos);
+  CHECK(vmSource.find("vm_detail::freeVmHeapSlots(") != std::string::npos);
+  CHECK(vmSource.find("vm_detail::reallocVmHeapSlots(") != std::string::npos);
+
+  CHECK(vmHeapHelpersHeaderSource.find("namespace primec::vm_detail {") !=
+        std::string::npos);
+  CHECK(vmHeapHelpersHeaderSource.find("bool resolveIndirectAddress(") !=
+        std::string::npos);
+  CHECK(vmHeapHelpersHeaderSource.find("bool allocateVmHeapSlots(") !=
+        std::string::npos);
+  CHECK(vmHeapHelpersHeaderSource.find("bool freeVmHeapSlots(") !=
+        std::string::npos);
+  CHECK(vmHeapHelpersHeaderSource.find("bool reallocVmHeapSlots(") !=
+        std::string::npos);
+
+  CHECK(vmHeapHelpersSource.find("constexpr uint64_t kVmHeapAddressTag = 1ull << 63;") !=
+        std::string::npos);
+  CHECK(vmHeapHelpersSource.find("bool isVmHeapAddress(uint64_t address) {") !=
+        std::string::npos);
+  CHECK(vmHeapHelpersSource.find("bool resolveIndirectAddress(uint64_t address,") !=
+        std::string::npos);
+  CHECK(vmHeapHelpersSource.find("bool allocateVmHeapSlots(uint64_t slotCount,") !=
+        std::string::npos);
+  CHECK(vmHeapHelpersSource.find("bool freeVmHeapSlots(uint64_t address,") !=
+        std::string::npos);
+  CHECK(vmHeapHelpersSource.find("bool reallocVmHeapSlots(uint64_t address,") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";

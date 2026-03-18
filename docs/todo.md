@@ -277,7 +277,10 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract map/array-vector access target resolution helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit `src/ir_lowerer/IrLowererAccessTargetResolution.cpp`.
 - ✓ Extract map/string/array indexed access emission helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit `src/ir_lowerer/IrLowererIndexedAccessEmit.cpp`.
 - ✓ Extract low-level map lookup and string/array access load helpers from `IrLowererCallHelpers.cpp` into dedicated helper unit `src/ir_lowerer/IrLowererAccessLoadHelpers.cpp`.
-- ○ Refactor `src/Vm.cpp` (`3050` lines) below the `700`-line target.
+- ◐ Refactor `src/Vm.cpp` (`2950` lines) below the `700`-line target. Progress: extracted shared heap allocation and indirect-address helpers into `src/VmHeapHelpers.cpp`.
+- ✓ Extract shared heap allocation and indirect-address helpers from `Vm.cpp` into dedicated helper unit `src/VmHeapHelpers.cpp`.
+- ○ Extract source-breakpoint resolution and mapped stack-trace formatting helpers from `Vm.cpp` into dedicated helper unit(s).
+- ○ Extract shared file/print I/O opcode helpers from `Vm.cpp` into dedicated helper unit(s).
 - ○ Refactor `src/semantics/SemanticsValidatorBuild.cpp` (`2353` lines) below the `700`-line target.
 - ○ Refactor `src/wasm_emitter/WasmEmitter.cpp` (`2306` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererSetupTypeHelpers.cpp` (`1989` lines) below the `700`-line target.
