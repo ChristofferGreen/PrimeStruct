@@ -191,6 +191,16 @@ private:
                                  bool &resolvedMethod,
                                  const std::vector<Expr> *enclosingStatements,
                                  size_t statementIndex);
+  struct ExprResultFileBuiltinContext {
+    std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
+  };
+  bool validateExprResultFileBuiltins(const std::vector<ParameterInfo> &params,
+                                      const std::unordered_map<std::string, BindingInfo> &locals,
+                                      const Expr &expr,
+                                      const std::string &resolved,
+                                      bool resolvedMethod,
+                                      const ExprResultFileBuiltinContext &context,
+                                      bool &handledOut);
   std::string normalizeCollectionMethodName(const std::string &methodName) const;
   std::string inferPointerLikeCallReturnType(
       const Expr &receiverExpr,

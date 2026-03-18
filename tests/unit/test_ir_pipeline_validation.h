@@ -9254,6 +9254,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPointerLike.cpp";
+  const std::filesystem::path semanticsExprResultFilePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprResultFile.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
@@ -9267,6 +9269,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
+  REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
   const std::string semanticsExprBodyArgumentsSource = readText(semanticsExprBodyArgumentsPath);
@@ -9280,6 +9283,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprMethodResolutionSource = readText(semanticsExprMethodResolutionPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
+  const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
   CHECK(semanticsExprSource.find("return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);") !=
@@ -9321,6 +9325,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"File\")) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (resolvedMethod && resolved == \"/result/map2\") {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (resolvedMethod && resolved.rfind(\"/file/\", 0) == 0) {") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("(isSimpleCallName(expr, \"get\") || isSimpleCallName(expr, \"ref\")) && expr.args.size() == 2") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("isSimpleCallName(expr, \"contains\") || getBuiltinArrayAccessName(expr, accessHelperName)") ==
@@ -9338,6 +9348,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "resolveExprCollectionCountCapacityTarget(params, locals, expr, countCapacityContext,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprResultFileBuiltins(params, locals, expr, resolved, resolvedMethod,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("resolveExprCollectionAccessTarget(params, locals, expr, collectionAccessContext,") !=
         std::string::npos);
@@ -9363,6 +9376,14 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find("error_ = \"count requires vector target\";") !=
+        std::string::npos);
+  CHECK(semanticsExprResultFileSource.find("bool SemanticsValidator::validateExprResultFileBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprResultFileSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"File\")) {") !=
+        std::string::npos);
+  CHECK(semanticsExprResultFileSource.find("Result.map2 requires matching error types") !=
+        std::string::npos);
+  CHECK(semanticsExprResultFileSource.find("file operations require ") !=
         std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("bool SemanticsValidator::validateIfExpr") != std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("bool SemanticsValidator::isStructConstructorValueExpr") !=
