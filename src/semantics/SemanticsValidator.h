@@ -242,6 +242,15 @@ private:
                          const std::string &namespacePrefix,
                          const std::vector<Expr> *enclosingStatements = nullptr,
                          size_t statementIndex = 0);
+  bool validateVectorStatementHelper(const std::vector<ParameterInfo> &params,
+                                     const std::unordered_map<std::string, BindingInfo> &locals,
+                                     const Expr &stmt,
+                                     const std::string &namespacePrefix,
+                                     const std::vector<std::string> *definitionTemplateArgs,
+                                     const std::vector<Expr> *enclosingStatements,
+                                     size_t statementIndex,
+                                     bool &handled);
+  std::string preferVectorStdlibHelperPath(const std::string &path) const;
   bool statementAlwaysReturns(const Expr &stmt);
   bool blockAlwaysReturns(const std::vector<Expr> &statements);
 

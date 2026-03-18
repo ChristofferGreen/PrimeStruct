@@ -265,7 +265,11 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract reflection compare/equality/hash helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersCompare.cpp`.
 - ✓ Extract remaining reflection state/default helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersState.cpp`.
 - ✓ Extract remaining reflection clone/debug helper emission from `SemanticsValidateReflectionGeneratedHelpers.cpp` into dedicated helper unit `src/semantics/SemanticsValidateReflectionGeneratedHelpersCloneDebug.cpp`.
-- ○ Refactor `src/semantics/SemanticsValidatorStatement.cpp` (`3351` lines) below the `700`-line target.
+- ◐ Refactor `src/semantics/SemanticsValidatorStatement.cpp` (`2725` lines) below the `700`-line target. Progress: extracted vector helper statement validation into `src/semantics/SemanticsValidatorStatementVectorHelpers.cpp`.
+- ✓ Extract vector helper statement validation from `SemanticsValidatorStatement.cpp` into dedicated helper unit `src/semantics/SemanticsValidatorStatementVectorHelpers.cpp`.
+- ○ Extract loop/conditional statement validation from `SemanticsValidatorStatement.cpp` into dedicated helper unit(s).
+- ○ Extract binding initialization and borrow-validation statement checks from `SemanticsValidatorStatement.cpp` into dedicated helper unit(s).
+- ○ Extract path-space/compute/buffer builtin statement validation from `SemanticsValidatorStatement.cpp` into dedicated helper unit(s).
 - ○ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`3053` lines) below the `700`-line target.
 - ○ Refactor `src/Vm.cpp` (`3050` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorBuild.cpp` (`2353` lines) below the `700`-line target.
