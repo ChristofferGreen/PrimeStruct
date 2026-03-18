@@ -10994,7 +10994,7 @@ main() {
   [array<i32>] values{array<i32>[1i32, 2i32]}
   [vector<i32>] list{vector<i32>[3i32, 4i32]}
   [map<i32, i32>] table{map<i32, i32>[5i32=6i32]}
-  return(plus(plus(values.count(), list.count()), count(table)))
+  return(plus(plus(values[1i32], list[1i32]), at(table, 5i32)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_collection_brackets.prime", source);
@@ -11003,15 +11003,14 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  CHECK(runCommand(exePath) == 12);
 }
 
 TEST_CASE("compiles and runs native map literals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<i32, i32>{1i32=2i32}
-  return(1i32)
+  return(at(map<i32, i32>{1i32=2i32, 3i32=4i32}, 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal.prime", source);
@@ -11019,7 +11018,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("compiles and runs native map count helper") {
@@ -11076,22 +11075,6 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native map at helper") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
-  return(at(values, 3i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_map_at.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_at_method_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
-}
-
 TEST_CASE("compiles and runs native map indexing sugar") {
   const std::string source = R"(
 [return<int>]
@@ -11118,23 +11101,6 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_map_at_unsafe.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_at_unsafe_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
-}
-
-TEST_CASE("compiles and runs native map at_unsafe helper") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
-  return(at_unsafe(values, 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_map_at_unsafe.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_map_at_unsafe_method_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

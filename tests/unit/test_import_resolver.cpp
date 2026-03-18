@@ -105,7 +105,7 @@ TEST_CASE("rejects single legacy include alias") {
 TEST_CASE("expands import with whitespace") {
   const std::string marker = "LIB_WS_MARKER";
   const std::string libPath = writeTemp("lib_ws.prime", "// " + marker + "\n");
-  const std::string srcPath = writeTemp("main_ws.prime", "import<  \"" + libPath + "\"  >\n");
+  const std::string srcPath = writeTemp("main_ws_single.prime", "import<  \"" + libPath + "\"  >\n");
 
   std::string source;
   std::string error;

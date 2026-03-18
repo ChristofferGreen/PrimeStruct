@@ -139,7 +139,7 @@ main() {
   CHECK(error.find("mixed signed/unsigned") != std::string::npos);
 }
 
-TEST_CASE("sign rejects non-numeric operand") {
+TEST_CASE("sign rejects bool operand") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -152,7 +152,7 @@ main() {
   CHECK(error.find("numeric") != std::string::npos);
 }
 
-TEST_CASE("saturate rejects non-numeric operand") {
+TEST_CASE("saturate rejects bool operand") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -178,20 +178,6 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
-}
-
-TEST_CASE("assign through non-pointer dereference fails") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32 mut] value{1i32}
-  assign(dereference(value), 3i32)
-  return(value)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("assign target must be a mutable pointer binding") != std::string::npos);
 }
 
 TEST_CASE("not argument count fails") {

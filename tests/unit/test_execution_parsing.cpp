@@ -45,7 +45,7 @@ execute_task
   CHECK(error.find("expected '(' after identifier") != std::string::npos);
 }
 
-TEST_CASE("rejects execution body arguments") {
+TEST_CASE("parser rejects execution body arguments") {
   const std::string source = R"(
 execute_task(1i32) {
   [i32] value{2i32}

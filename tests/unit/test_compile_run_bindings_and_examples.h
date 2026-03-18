@@ -1,6 +1,6 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.bindings");
 
-TEST_CASE("compiles and runs void main") {
+TEST_CASE("compiles and runs empty void main") {
   const std::string source = R"(
 [return<void>]
 main() {

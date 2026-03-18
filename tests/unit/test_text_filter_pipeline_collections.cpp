@@ -44,7 +44,7 @@ TEST_CASE("rewrites map literal equals pairs") {
   CHECK(output.find("map<i32, i32>(1i32, 2i32, 3i32, 4i32)") != std::string::npos);
 }
 
-TEST_CASE("map literal preserves equality operators") {
+TEST_CASE("map literal preserves equality operator in trailing value") {
   const std::string source = "main(){ map<i32, i32>{1i32=2i32, 3i32==4i32} }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
@@ -74,7 +74,7 @@ TEST_CASE("rewrites nested expressions inside array literal") {
   CHECK(output.find("array<i32>(plus(1i32, 2i32))") != std::string::npos);
 }
 
-TEST_CASE("rewrites map literal with string keys") {
+TEST_CASE("rewrites map literal with typed string keys") {
   const std::string source = "main(){ map<string, i32>{\"a\"=1i32, \"b\"=2i32} }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;

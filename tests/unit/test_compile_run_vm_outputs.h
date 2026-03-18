@@ -1891,7 +1891,7 @@ log_file_error([FileError] err) {
   CHECK(output.find("int fileOpenFlags = O_RDONLY;") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs void main") {
+TEST_CASE("compiles and runs void main with local binding") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -3271,12 +3271,11 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs array literal") {
+TEST_CASE("compiles and runs three-element array literal") {
   const std::string source = R"(
 [return<int>]
 main() {
-  array<i32>{1i32, 2i32, 3i32}
-  return(7i32)
+  return(at_unsafe(array<i32>{1i32, 2i32, 3i32}, 2i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_array_literal.prime", source);
@@ -3284,7 +3283,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("compiles and runs array literal count method") {

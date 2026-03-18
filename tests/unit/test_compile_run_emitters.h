@@ -1433,8 +1433,8 @@ main() {
   return(helper())
 }
 )";
-  const std::string srcPath = writeTemp("compile_import_alias_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_exe").string();
+  const std::string srcPath = writeTemp("compile_import_alias_helper_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_helper_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -9289,7 +9289,7 @@ TEST_CASE("compiles and runs string-keyed map literal in C++ emitter") {
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 1i32, "b"utf8, 2i32)}
-  return(count(values))
+  return(plus(plus(at(values, "b"utf8), at_unsafe(values, "a"utf8)), count(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_map_string_keys_exe.prime", source);
@@ -9297,7 +9297,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_CASE("compiles and runs lerp in C++ emitter") {
@@ -9436,8 +9436,8 @@ main() {
   ))
 }
 )";
-  const std::string srcPath = writeTemp("compile_string_compare.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_compare_exe").string();
+  const std::string srcPath = writeTemp("compile_cpp_string_compare.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_cpp_string_compare_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -9616,8 +9616,8 @@ main() {
   return(inc(4i32))
 }
 )";
-  const std::string srcPath = writeTemp("compile_import_alias_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_exe").string();
+  const std::string srcPath = writeTemp("compile_import_alias_inc_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_inc_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -9943,12 +9943,11 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs map literal") {
+TEST_CASE("compiles and runs paired map literal") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<i32, i32>{1i32=2i32, 3i32=4i32}
-  return(9i32)
+  return(at(map<i32, i32>{1i32=2i32, 3i32=4i32}, 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map_literal.prime", source);
@@ -9956,7 +9955,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("C++ emitter runs variadic args body access and indexed method calls") {

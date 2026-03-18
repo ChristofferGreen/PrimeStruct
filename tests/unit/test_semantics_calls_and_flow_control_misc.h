@@ -1,6 +1,6 @@
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.control");
 
-TEST_CASE("namespace blocks may be reopened") {
+TEST_CASE("namespace blocks may be reopened for intra-namespace calls") {
   const std::string source = R"(
 namespace demo {
   [return<int>]
@@ -55,7 +55,7 @@ main() {
   CHECK(error.find("duplicate named argument") != std::string::npos);
 }
 
-TEST_CASE("array literal validates") {
+TEST_CASE("array literal validates multiple elements") {
   const std::string source = R"(
 [return<int>]
 use([array<i32>] x) {

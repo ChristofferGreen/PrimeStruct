@@ -201,7 +201,7 @@ task(1i32)
   CHECK(error.find("duplicate capabilities transform") != std::string::npos);
 }
 
-TEST_CASE("capabilities transform validates identifiers") {
+TEST_CASE("capabilities transform validates asset and gpu identifiers") {
   const std::string source = R"(
 [effects(asset_read, gpu_queue), capabilities(asset_read, gpu_queue), return<int>]
 main() {
@@ -213,31 +213,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("capabilities transform rejects template arguments") {
-  const std::string source = R"(
-[capabilities<io>, return<int>]
-main() {
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("capabilities transform does not accept template arguments") != std::string::npos);
-}
-
-TEST_CASE("capabilities transform rejects invalid capability") {
-  const std::string source = R"(
-[capabilities("io"utf8), return<int>]
-main() {
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("invalid capability") != std::string::npos);
-}
-
-TEST_CASE("capabilities transform rejects duplicate capability") {
+TEST_CASE("capabilities transform rejects duplicate gpu capability") {
   const std::string source = R"(
 [capabilities(gpu, gpu), return<int>]
 main() {

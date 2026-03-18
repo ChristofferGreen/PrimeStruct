@@ -91,7 +91,7 @@ job(1i32, [a] 2i32)
   CHECK(error.find("named argument duplicates parameter: a") != std::string::npos);
 }
 
-TEST_CASE("execution unknown named argument fails") {
+TEST_CASE("execution unknown named argument fails in source syntax") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -148,7 +148,7 @@ job(array<i32>([first] 1i32))
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("named arguments not allowed on builtin calls") {
+TEST_CASE("named arguments not allowed on builtin calls in source syntax") {
   const std::string source = R"(
 [return<int>]
 main() {

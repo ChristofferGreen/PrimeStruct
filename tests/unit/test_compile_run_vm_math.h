@@ -351,12 +351,12 @@ TEST_CASE("runs vm float literals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(convert<int>(1.5f))
+  return(convert<int>(plus(1.5f, 1.5f)))
 }
 )";
   const std::string srcPath = writeTemp("vm_float_literal.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 1);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("runs vm float bindings") {

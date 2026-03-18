@@ -40,8 +40,8 @@ TEST_CASE("expands multiple import paths") {
 TEST_CASE("expands whitespace-separated import paths") {
   const std::string libA = writeTemp("lib_ws_a.prime", "// LIB_WS_A\n[return<int>]\nhelper_a(){ return(1i32) }\n");
   const std::string libB = writeTemp("lib_ws_b.prime", "// LIB_WS_B\n[return<int>]\nhelper_b(){ return(2i32) }\n");
-  const std::string srcPath =
-      writeTemp("main_ws.prime", "import<\"" + libA + "\" \"" + libB + "\">\n[return<int>]\nmain(){ return(helper_a()) }\n");
+  const std::string srcPath = writeTemp(
+      "main_ws_multiple.prime", "import<\"" + libA + "\" \"" + libB + "\">\n[return<int>]\nmain(){ return(helper_a()) }\n");
 
   std::string source;
   std::string error;

@@ -9,9 +9,8 @@ TEST_CASE("compiles and runs collection literals in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
-  array<i32>{1i32, 2i32, 3i32}
-  map<i32, i32>{1i32=10i32, 2i32=20i32}
-  return(1i32)
+  return(plus(at_unsafe(array<i32>{1i32, 2i32, 3i32}, 1i32),
+              at(map<i32, i32>{1i32=10i32, 2i32=20i32}, 2i32)))
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_exe.prime", source);
@@ -19,15 +18,16 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 22);
 }
 
 TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
-  map<string, i32>{"a"utf8=1i32, "b"utf8=2i32}
-  return(1i32)
+  return(map<string, i32>{"a"utf8=1i32, "b"utf8=2i32}["b"utf8])
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_string_map.prime", source);
@@ -36,15 +36,16 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("compiles and runs string-keyed map literals with bracket sugar in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
-  map<string, i32>["a"=1i32, "b"=2i32]
-  return(1i32)
+  return(map<string, i32>["a"=1i32, "b"=2i32]["b"utf8])
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_string_map_brackets.prime", source);
@@ -53,7 +54,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("compiles and runs shared map conformance harness in C++ emitter") {
@@ -248,7 +249,7 @@ execute_task([items] array<i32>(1i32, 2i32), [pairs] map<i32, i32>(1i32, 2i32))
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("rejects execution body arguments") {
+TEST_CASE("compile run rejects execution body arguments") {
   const std::string source = R"(
 [return<int>]
 main() {

@@ -369,7 +369,7 @@ TEST_CASE("map literal preserves assignment in values") {
   CHECK(output.find("map<i32,i32>(1i32, assign(a,2i32))") != std::string::npos);
 }
 
-TEST_CASE("rewrites map literal with string keys") {
+TEST_CASE("rewrites map literal with string keys in return expression") {
   const std::string source = "main(){ return(map<i32,i32>{\"a\"=1i32,\"b\"=2i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
@@ -379,7 +379,7 @@ TEST_CASE("rewrites map literal with string keys") {
   CHECK(output.find("map<i32,i32>(\"a\"utf8, 1i32,\"b\"utf8, 2i32)") != std::string::npos);
 }
 
-TEST_CASE("map literal preserves equality operators") {
+TEST_CASE("map literal preserves equality and comparison operators in values") {
   const std::string source = "main(){ return(map<i32,i32>{1i32=2i32==3i32,4i32=5i32>=6i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;

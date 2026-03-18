@@ -378,12 +378,11 @@ main() {
   CHECK(readFile(cppPath).find("const const char *") == std::string::npos);
 }
 
-TEST_CASE("compiles and runs array literal") {
+TEST_CASE("compiles and runs two-element array literal") {
   const std::string source = R"(
 [return<int>]
 main() {
-  array<i32>{1i32, 2i32}
-  return(1i32)
+  return(at_unsafe(array<i32>{1i32, 2i32}, 1i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_array.prime", source);
@@ -391,15 +390,14 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs map literal") {
+TEST_CASE("compiles and runs flat map literal") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<i32, i32>{1i32, 2i32, 3i32, 4i32}
-  return(1i32)
+  return(at(map<i32, i32>{1i32, 2i32, 3i32, 4i32}, 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map.prime", source);
@@ -407,15 +405,14 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("compiles and runs map literal pairs") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<i32, i32>{1i32=2i32, 3i32=4i32}
-  return(1i32)
+  return(at(map<i32, i32>{1i32=2i32, 3i32=4i32}, 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map_pairs.prime", source);
@@ -423,15 +420,14 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("compiles and runs map literal whitespace pairs") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<i32, i32>{1i32 2i32 3i32 4i32}
-  return(1i32)
+  return(at(map<i32, i32>{1i32 2i32 3i32 4i32}, 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map_whitespace_pairs.prime", source);
@@ -439,7 +435,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("compiles and runs named-arg call") {
@@ -547,8 +543,7 @@ make_color([i32] hue, [i32] value) {
 
 [return<int>]
 main() {
-  map<i32, i32>{1i32=make_color([hue] 2i32, [value] 3i32)}
-  return(1i32)
+  return(at(map<i32, i32>{1i32=make_color([hue] 2i32, [value] 3i32)}, 1i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map_named_value.prime", source);
@@ -556,7 +551,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_CASE("compiles and runs if statement sugar") {

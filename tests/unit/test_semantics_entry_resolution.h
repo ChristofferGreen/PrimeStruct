@@ -1,6 +1,6 @@
 TEST_SUITE_BEGIN("primestruct.semantics.resolution");
 
-TEST_CASE("unknown identifier fails") {
+TEST_CASE("unknown identifier fails with parameter scope") {
   const std::string source = R"(
 [return<int>]
 main([i32] x) {
@@ -32,7 +32,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("namespace blocks may be reopened") {
+TEST_CASE("namespace blocks may be reopened for sibling resolution") {
   const std::string source = R"(
 namespace demo {
   [return<int>]

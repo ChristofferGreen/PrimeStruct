@@ -131,7 +131,7 @@ TEST_CASE("import math root is rejected") {
   CHECK(error.find("import /std/math is not supported") != std::string::npos);
 }
 
-TEST_CASE("return transform rejects arguments") {
+TEST_CASE("return transform rejects arguments in manual AST") {
   primec::Program program;
   primec::Transform transform = makeTransform("return", std::string("int"));
   transform.arguments = {"bad"};
@@ -2015,7 +2015,7 @@ TEST_CASE("return rejects named arguments") {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("if rejects named arguments") {
+TEST_CASE("if rejects named arguments in manual AST") {
   primec::Program program;
   primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("/return", {makeLiteral(1)})});
   thenBlock.hasBodyArguments = true;
@@ -2074,7 +2074,7 @@ TEST_CASE("for condition binding bool passes") {
   CHECK(error.empty());
 }
 
-TEST_CASE("for condition binding requires bool") {
+TEST_CASE("for condition binding requires bool in manual AST") {
   primec::Program program;
   primec::Expr initBinding = makeBinding("i", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(0)});
   primec::Expr condBinding = makeBinding("keepGoing", {makeTransform("i32")}, {makeLiteral(1)});
@@ -2123,7 +2123,7 @@ TEST_CASE("recursive return inference requires annotation") {
   CHECK(error.find("return type inference requires explicit annotation") != std::string::npos);
 }
 
-TEST_CASE("named arguments not allowed on builtin calls") {
+TEST_CASE("named arguments not allowed on builtin calls in manual AST") {
   primec::Program program;
   primec::Expr plusCall = makeCall("plus", {makeLiteral(1), makeLiteral(2)},
                                   {std::string("left"), std::string("right")});
@@ -2134,7 +2134,7 @@ TEST_CASE("named arguments not allowed on builtin calls") {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("execution unknown named argument fails") {
+TEST_CASE("execution unknown named argument fails in manual AST") {
   primec::Program program;
   program.definitions.push_back(
       makeDefinition("/main", {makeTransform("return", std::string("int"))},

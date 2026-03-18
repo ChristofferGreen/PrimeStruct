@@ -329,7 +329,7 @@ main() {
   CHECK(error.find("abs requires numeric operand") != std::string::npos);
 }
 
-TEST_CASE("sign rejects non-numeric operand") {
+TEST_CASE("sign rejects string operand") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -342,7 +342,7 @@ main() {
   CHECK(error.find("sign requires numeric operand") != std::string::npos);
 }
 
-TEST_CASE("saturate rejects non-numeric operand") {
+TEST_CASE("saturate rejects string operand") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]

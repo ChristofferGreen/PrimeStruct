@@ -472,7 +472,7 @@ main() {
   CHECK(error.find("binding does not accept capabilities transform") != std::string::npos);
 }
 
-TEST_CASE("binding rejects return transform") {
+TEST_CASE("binding rejects return transform with explicit type") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -724,7 +724,7 @@ main() {
   CHECK(error.find("align_bytes requires a positive integer argument") != std::string::npos);
 }
 
-TEST_CASE("binding rejects return transform") {
+TEST_CASE("binding rejects return transform with inferred type") {
   const std::string source = R"(
 [return<int>]
 main() {

@@ -111,25 +111,6 @@ main() {
   CHECK(error.find("return not allowed in execution body") != std::string::npos);
 }
 
-TEST_CASE("execution body arguments are rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-execute_repeat(1i32) { main() }
-)";
-  std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("executions do not accept body blocks") != std::string::npos);
-}
-
 TEST_CASE("print requires io_out effect") {
   const std::string source = R"(
 [effects(io_err)]
@@ -906,51 +887,6 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("statement-only") != std::string::npos);
-}
-
-TEST_CASE("string literal rejects unknown suffix") {
-  const std::string source = R"(
-[effects(io_out)]
-main() {
-  print("hello"utf16)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("unknown string literal suffix") != std::string::npos);
-}
-
-TEST_CASE("ascii string literal rejects non-ASCII characters") {
-  const std::string source = R"(
-[effects(io_out)]
-main() {
-  print("héllo"ascii)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("ascii string literal contains non-ASCII characters") != std::string::npos);
-}
-
-TEST_CASE("string literal rejects unknown escape sequences") {
-  const std::string source = R"(
-[effects(io_out)]
-main() {
-  print("hello\q"utf8)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("unknown escape sequence") != std::string::npos);
 }
 
 TEST_CASE("print not allowed in expression context") {

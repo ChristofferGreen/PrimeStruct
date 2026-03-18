@@ -546,8 +546,9 @@ main() {
   return(plus(plus(a, b), len))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_string_index.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_string_index_exe").string();
+  const std::string srcPath = writeTemp("compile_native_string_index_method.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_string_index_method_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

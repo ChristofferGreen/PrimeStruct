@@ -7546,7 +7546,6 @@ main() {
 }
 
 #endif
-
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*

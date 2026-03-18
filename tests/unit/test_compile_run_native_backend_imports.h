@@ -226,7 +226,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_import_alias.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_exe").string();
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_import_alias_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";

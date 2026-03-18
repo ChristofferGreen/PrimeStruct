@@ -150,7 +150,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("array literal validates") {
+TEST_CASE("array literal validates single element argument passing") {
   const std::string source = R"(
 [return<int>]
 use([i32] x) {

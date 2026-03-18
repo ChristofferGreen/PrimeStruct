@@ -21398,7 +21398,7 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-met
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access kinds") {
+TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access int32 kinds") {
   using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
 
   primec::Expr wrapMapCall;
@@ -36454,7 +36454,7 @@ TEST_CASE("ir lowerer setup inference helper handles invalid and templated acces
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access kinds") {
+TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access string kinds") {
   using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
 
   primec::Expr wrapMapCall;

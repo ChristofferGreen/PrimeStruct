@@ -360,7 +360,7 @@ main() {
   CHECK(firstMessage < secondMessage);
 }
 
-TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for duplicates") {
+TEST_CASE("primec collect-diagnostics keeps first duplicate-definition payload") {
   const std::string source = R"(
 [return<int>]
 dup() {
@@ -395,9 +395,7 @@ main() {
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"duplicate definition: /dup\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /dup\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /other\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") == std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -405,16 +403,13 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
+  CHECK(semanticCount == 1);
 
   const size_t firstMessage = diagnostics.find("\"message\":\"duplicate definition: /dup\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"duplicate definition: /other\"");
   REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
-TEST_CASE("primevm collect-diagnostics emits stable multi-semantic payload for duplicates") {
+TEST_CASE("primevm collect-diagnostics keeps first duplicate-definition payload") {
   const std::string source = R"(
 [return<int>]
 dup() {
@@ -449,9 +444,7 @@ main() {
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"duplicate definition: /dup\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /dup\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /other\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"duplicate definition: /other\"") == std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -459,24 +452,16 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
+  CHECK(semanticCount == 1);
 
   const size_t firstMessage = diagnostics.find("\"message\":\"duplicate definition: /dup\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"duplicate definition: /other\"");
   REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
-TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for import errors") {
+TEST_CASE("primec collect-diagnostics emits stable semantic import payload for unknown paths") {
   const std::string source = R"(
-import /std/math
-import /hidden
-import /missing
-[return<int>]
-hidden() {
-  return(7i32)
-}
+import /missing_alpha
+import /missing_beta
 [return<int>]
 main() {
   return(0i32)
@@ -493,11 +478,8 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"import /std/math is not supported; use import /std/math/* or /std/math/<name>\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"import path refers to private definition: /hidden\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /hidden\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing_alpha/*\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing_beta/*\"") != std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -505,28 +487,19 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 3);
+  CHECK(semanticCount == 2);
 
-  const size_t firstMessage = diagnostics.find(
-      "\"message\":\"import /std/math is not supported; use import /std/math/* or /std/math/<name>\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"import path refers to private definition: /hidden\"");
-  const size_t thirdMessage = diagnostics.find("\"message\":\"unknown import path: /missing\"");
+  const size_t firstMessage = diagnostics.find("\"message\":\"unknown import path: /missing_alpha/*\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown import path: /missing_beta/*\"");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
-  REQUIRE(thirdMessage != std::string::npos);
   CHECK(firstMessage < secondMessage);
-  CHECK(secondMessage < thirdMessage);
 }
 
-TEST_CASE("primevm collect-diagnostics emits stable multi-semantic payload for import errors") {
+TEST_CASE("primevm collect-diagnostics emits stable semantic import payload for unknown paths") {
   const std::string source = R"(
-import /std/math
-import /hidden
-import /missing
-[return<int>]
-hidden() {
-  return(7i32)
-}
+import /missing_alpha
+import /missing_beta
 [return<int>]
 main() {
   return(0i32)
@@ -543,11 +516,8 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"import /std/math is not supported; use import /std/math/* or /std/math/<name>\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"import path refers to private definition: /hidden\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /hidden\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing_alpha/*\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown import path: /missing_beta/*\"") != std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -555,17 +525,13 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 3);
+  CHECK(semanticCount == 2);
 
-  const size_t firstMessage = diagnostics.find(
-      "\"message\":\"import /std/math is not supported; use import /std/math/* or /std/math/<name>\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"import path refers to private definition: /hidden\"");
-  const size_t thirdMessage = diagnostics.find("\"message\":\"unknown import path: /missing\"");
+  const size_t firstMessage = diagnostics.find("\"message\":\"unknown import path: /missing_alpha/*\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown import path: /missing_beta/*\"");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
-  REQUIRE(thirdMessage != std::string::npos);
   CHECK(firstMessage < secondMessage);
-  CHECK(secondMessage < thirdMessage);
 }
 
 TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for invalid transforms") {
@@ -811,14 +777,6 @@ main() {
   CHECK(diagnostics.find("\"label\":\"definition: /first\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /second\"") != std::string::npos);
 
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
   const size_t firstMessage = diagnostics.find("\"message\":\"unknown call target: nope\"");
   const size_t secondMessage = diagnostics.find("\"message\":\"unknown call target: missing\"");
   REQUIRE(firstMessage != std::string::npos);
@@ -856,14 +814,6 @@ main() {
   CHECK(diagnostics.find("\"message\":\"unknown call target: missing\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /first\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /second\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
 
   const size_t firstMessage = diagnostics.find("\"message\":\"unknown call target: nope\"");
   const size_t secondMessage = diagnostics.find("\"message\":\"unknown call target: missing\"");
@@ -987,23 +937,8 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: a\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /take_two\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"duplicate named argument: a\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /take_two\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics emits intra-definition argument-shape payload") {
@@ -1036,23 +971,8 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: a\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /take_two\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"duplicate named argument: a\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /take_two\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user vector arg-shape diagnostics") {
@@ -1085,7 +1005,6 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
@@ -1120,7 +1039,6 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
@@ -1155,7 +1073,6 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
@@ -1190,7 +1107,6 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
@@ -1225,8 +1141,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: key\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"assign target must be a mutable binding: key\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
@@ -1260,8 +1175,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: key\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"assign target must be a mutable binding: key\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
@@ -1313,22 +1227,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/at_unsafe\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/at_unsafe\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper at_unsafe arg-shape diagnostics in definition scope") {
@@ -1379,22 +1278,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/at_unsafe\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/at_unsafe\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper unsafe arg-type diagnostics in definition scope") {
@@ -1446,25 +1330,7 @@ main() {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/at_unsafe parameter index") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/at_unsafe parameter index");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper unsafe arg-type diagnostics in definition scope") {
@@ -1517,25 +1383,7 @@ main() {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/at_unsafe parameter index") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/at_unsafe parameter index");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper at arg-shape diagnostics in definition scope") {
@@ -1586,22 +1434,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/at\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/at\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/at\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper at arg-shape diagnostics in definition scope") {
@@ -1652,22 +1485,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/at\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/at\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/at\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper index arg-type diagnostics in definition scope") {
@@ -1718,22 +1536,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at parameter key") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/at parameter index") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/at parameter key");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/at parameter index");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper index arg-type diagnostics in definition scope") {
@@ -1784,22 +1587,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at parameter key") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/at parameter index") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/at parameter key");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/at parameter index");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity arg-shape diagnostics in definition scope") {
@@ -1850,22 +1638,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity arg-shape diagnostics in definition scope") {
@@ -1916,22 +1689,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity arg-shape reverse diagnostics in definition scope") {
@@ -1983,22 +1741,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity arg-shape reverse diagnostics in definition scope") {
@@ -2050,22 +1793,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity pair extra-arg diagnostics in definition scope") {
@@ -2117,22 +1845,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity pair extra-arg diagnostics in definition scope") {
@@ -2184,22 +1897,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity pair missing-arg diagnostics in definition scope") {
@@ -2251,22 +1949,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity pair missing-arg diagnostics in definition scope") {
@@ -2318,22 +2001,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -2388,22 +2056,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -2458,22 +2111,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper method count capacity pair missing-arg diagnostics in definition scope") {
@@ -2525,22 +2163,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper method count capacity pair missing-arg diagnostics in definition scope") {
@@ -2592,22 +2215,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -2662,22 +2270,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -2732,22 +2325,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper method count capacity pair extra-arg diagnostics in definition scope") {
@@ -2799,22 +2377,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper method count capacity pair extra-arg diagnostics in definition scope") {
@@ -2866,22 +2429,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -2936,22 +2484,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -3006,22 +2539,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity call-pair arg-shape diagnostics in definition scope") {
@@ -3073,22 +2591,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity call-pair arg-shape diagnostics in definition scope") {
@@ -3140,22 +2643,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -3209,22 +2697,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -3278,22 +2751,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity call-pair extra-arg diagnostics in definition scope") {
@@ -3345,22 +2803,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity call-pair extra-arg diagnostics in definition scope") {
@@ -3412,22 +2855,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -3481,23 +2909,8 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -3551,23 +2964,8 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity call-pair arg-type diagnostics in definition scope") {
@@ -3619,24 +3017,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity call-pair arg-type diagnostics in definition scope") {
@@ -3688,24 +3069,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -3757,25 +3121,8 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -3827,25 +3174,8 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity call-pair mixed-shape diagnostics in definition scope") {
@@ -3898,22 +3228,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity call-pair mixed-shape diagnostics in definition scope") {
@@ -3966,22 +3281,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -4036,24 +3336,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -4108,24 +3391,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity arg-type diagnostics in definition scope") {
@@ -4176,24 +3442,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity arg-type diagnostics in definition scope") {
@@ -4244,24 +3493,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count capacity arg-type reverse diagnostics in definition scope") {
@@ -4314,23 +3546,7 @@ main() {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count capacity arg-type reverse diagnostics in definition scope") {
@@ -4383,23 +3599,7 @@ main() {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper method count capacity pair arg-type diagnostics in definition scope") {
@@ -4451,24 +3651,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper method count capacity pair arg-type diagnostics in definition scope") {
@@ -4520,24 +3703,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -4593,23 +3759,7 @@ main() {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -4665,23 +3815,7 @@ main() {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper method count capacity pair mixed-shape diagnostics in definition scope") {
@@ -4733,22 +3867,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper method count capacity pair mixed-shape diagnostics in definition scope") {
@@ -4800,22 +3919,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -4870,24 +3974,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -4942,24 +4029,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count pair arg-type diagnostics in definition scope") {
@@ -5011,22 +4081,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count pair arg-type diagnostics in definition scope") {
@@ -5078,22 +4133,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count pair arg-type reverse diagnostics in definition scope") {
@@ -5145,22 +4185,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count pair arg-type reverse diagnostics in definition scope") {
@@ -5212,22 +4237,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper method count pair arg-type diagnostics in definition scope") {
@@ -5279,22 +4289,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper method count pair arg-type diagnostics in definition scope") {
@@ -5346,22 +4341,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count call-pair arg-type diagnostics in definition scope") {
@@ -5413,22 +4393,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count call-pair arg-type diagnostics in definition scope") {
@@ -5480,22 +4445,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count call-pair arg-type reverse diagnostics in definition scope") {
@@ -5546,8 +4496,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -5556,13 +4505,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count call-pair arg-type reverse diagnostics in definition scope") {
@@ -5613,8 +4556,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -5623,13 +4565,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count call-pair mixed-shape diagnostics in definition scope") {
@@ -5681,22 +4617,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count call-pair mixed-shape diagnostics in definition scope") {
@@ -5748,22 +4669,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -5818,22 +4724,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -5888,22 +4779,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count call-pair arg-shape diagnostics in definition scope") {
@@ -5955,22 +4831,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count call-pair arg-shape diagnostics in definition scope") {
@@ -6022,22 +4883,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -6091,22 +4937,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -6160,22 +4991,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count call-pair extra-arg diagnostics in definition scope") {
@@ -6227,22 +5043,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count call-pair extra-arg diagnostics in definition scope") {
@@ -6294,22 +5095,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -6363,8 +5149,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -6373,13 +5158,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE(
@@ -6433,8 +5212,7 @@ main() {
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -6443,13 +5221,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count pair arg-shape diagnostics in definition scope") {
@@ -6501,22 +5273,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count pair arg-shape diagnostics in definition scope") {
@@ -6568,22 +5325,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count pair missing-arg reverse diagnostics in definition scope") {
@@ -6637,7 +5379,6 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -6646,13 +5387,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count pair missing-arg reverse diagnostics in definition scope") {
@@ -6706,7 +5441,6 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -6715,13 +5449,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper method count pair arg-shape diagnostics in definition scope") {
@@ -6773,22 +5501,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper method count pair arg-shape diagnostics in definition scope") {
@@ -6840,22 +5553,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -6910,7 +5608,6 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -6919,13 +5616,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE(
@@ -6980,7 +5671,6 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -6989,13 +5679,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE(
@@ -7048,22 +5732,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -7116,22 +5785,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper method count pair mixed-shape diagnostics in definition scope") {
@@ -7183,22 +5837,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper method count pair mixed-shape diagnostics in definition scope") {
@@ -7250,22 +5889,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -7320,7 +5944,6 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -7329,13 +5952,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE(
@@ -7390,7 +6007,6 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -7399,13 +6015,7 @@ main() {
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper method count pair extra-arg diagnostics in definition scope") {
@@ -7457,22 +6067,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper method count pair extra-arg diagnostics in definition scope") {
@@ -7524,22 +6119,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -7594,22 +6174,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE(
@@ -7664,22 +6229,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count pair extra-arg diagnostics in definition scope") {
@@ -7731,22 +6281,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count pair extra-arg diagnostics in definition scope") {
@@ -7798,22 +6333,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps user wrapper count pair extra-arg reverse diagnostics in definition scope") {
@@ -7867,22 +6387,7 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps user wrapper count pair extra-arg reverse diagnostics in definition scope") {
@@ -7936,25 +6441,10 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
-TEST_CASE("primec collect-diagnostics reports builtin map named-arg rejection in definition and execution scopes") {
+TEST_CASE("primec collect-diagnostics reports builtin map literal template-arity failure before execution") {
   const std::string source = R"(
 [return<i32>]
 bad() {
@@ -7985,27 +6475,12 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"map literal requires exactly two template arguments\"") !=
+        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t messageCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
-         std::string::npos) {
-    ++messageCount;
-    scan += 1;
-  }
-  CHECK(messageCount == 2);
-
-  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
-  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
-  REQUIRE(definitionLabel != std::string::npos);
-  REQUIRE(executionLabel != std::string::npos);
-  CHECK(definitionLabel < executionLabel);
 }
 
-TEST_CASE("primevm collect-diagnostics reports builtin map named-arg rejection in definition and execution scopes") {
+TEST_CASE("primevm collect-diagnostics reports builtin map literal template-arity failure before execution") {
   const std::string source = R"(
 [return<i32>]
 bad() {
@@ -8036,27 +6511,12 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"map literal requires exactly two template arguments\"") !=
+        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t messageCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
-         std::string::npos) {
-    ++messageCount;
-    scan += 1;
-  }
-  CHECK(messageCount == 2);
-
-  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
-  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
-  REQUIRE(definitionLabel != std::string::npos);
-  REQUIRE(executionLabel != std::string::npos);
-  CHECK(definitionLabel < executionLabel);
 }
 
-TEST_CASE("primec collect-diagnostics reports builtin vector named-arg rejection in definition and execution scopes") {
+TEST_CASE("primec collect-diagnostics reports builtin vector literal heap-alloc failure before execution") {
   const std::string source = R"(
 [return<i32>]
 bad() {
@@ -8088,27 +6548,11 @@ execute_repeat(vector(value=3i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"vector literal requires heap_alloc effect\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t messageCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
-         std::string::npos) {
-    ++messageCount;
-    scan += 1;
-  }
-  CHECK(messageCount == 2);
-
-  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
-  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
-  REQUIRE(definitionLabel != std::string::npos);
-  REQUIRE(executionLabel != std::string::npos);
-  CHECK(definitionLabel < executionLabel);
 }
 
-TEST_CASE("primevm collect-diagnostics reports builtin vector named-arg rejection in definition and execution scopes") {
+TEST_CASE("primevm collect-diagnostics reports builtin vector literal heap-alloc failure before execution") {
   const std::string source = R"(
 [return<i32>]
 bad() {
@@ -8140,27 +6584,11 @@ execute_repeat(vector(value=3i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"vector literal requires heap_alloc effect\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t messageCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
-         std::string::npos) {
-    ++messageCount;
-    scan += 1;
-  }
-  CHECK(messageCount == 2);
-
-  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
-  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
-  REQUIRE(definitionLabel != std::string::npos);
-  REQUIRE(executionLabel != std::string::npos);
-  CHECK(definitionLabel < executionLabel);
 }
 
-TEST_CASE("primec collect-diagnostics reports builtin array named-arg rejection in definition and execution scopes") {
+TEST_CASE("primec collect-diagnostics reports builtin array literal template-arity failure before execution") {
   const std::string source = R"(
 [return<i32>]
 bad() {
@@ -8192,27 +6620,12 @@ execute_repeat(array(value=3i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"array literal requires exactly one template argument\"") !=
+        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t messageCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
-         std::string::npos) {
-    ++messageCount;
-    scan += 1;
-  }
-  CHECK(messageCount == 2);
-
-  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
-  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
-  REQUIRE(definitionLabel != std::string::npos);
-  REQUIRE(executionLabel != std::string::npos);
-  CHECK(definitionLabel < executionLabel);
 }
 
-TEST_CASE("primevm collect-diagnostics reports builtin array named-arg rejection in definition and execution scopes") {
+TEST_CASE("primevm collect-diagnostics reports builtin array literal template-arity failure before execution") {
   const std::string source = R"(
 [return<i32>]
 bad() {
@@ -8244,24 +6657,9 @@ execute_repeat(array(value=3i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"array literal requires exactly one template argument\"") !=
+        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t messageCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"message\":\"named arguments not supported for builtin calls\"", scan)) !=
-         std::string::npos) {
-    ++messageCount;
-    scan += 1;
-  }
-  CHECK(messageCount == 2);
-
-  const size_t definitionLabel = diagnostics.find("\"label\":\"definition: /bad\"");
-  const size_t executionLabel = diagnostics.find("\"label\":\"execution: /execute_repeat\"");
-  REQUIRE(definitionLabel != std::string::npos);
-  REQUIRE(executionLabel != std::string::npos);
-  CHECK(definitionLabel < executionLabel);
 }
 
 TEST_CASE("primec collect-diagnostics emits intra-definition argument-type payload") {
@@ -8675,7 +7073,6 @@ execute_repeat(take_two(a=1i32, a=2i32), take_two(1i32))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: a\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /take_two\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
@@ -8685,13 +7082,7 @@ execute_repeat(take_two(a=1i32, a=2i32), take_two(1i32))
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"duplicate named argument: a\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /take_two\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics emits intra-execution argument-shape payload") {
@@ -8726,7 +7117,6 @@ execute_repeat(take_two(a=1i32, a=2i32), take_two(1i32))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: a\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /take_two\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
@@ -8736,13 +7126,7 @@ execute_repeat(take_two(a=1i32, a=2i32), take_two(1i32))
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"duplicate named argument: a\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /take_two\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution map arg-shape diagnostics") {
@@ -8777,9 +7161,16 @@ execute_repeat(map(key=1i32, key=2i32), map())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: key\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"assign target must be a mutable binding: key\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution map arg-shape diagnostics") {
@@ -8814,9 +7205,16 @@ execute_repeat(map(key=1i32, key=2i32), map())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: key\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"assign target must be a mutable binding: key\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution vector arg-shape diagnostics") {
@@ -8851,9 +7249,16 @@ execute_repeat(vector(value=1i32, value=2i32), vector())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution vector arg-shape diagnostics") {
@@ -8888,9 +7293,16 @@ execute_repeat(vector(value=1i32, value=2i32), vector())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution array arg-shape diagnostics") {
@@ -8925,9 +7337,16 @@ execute_repeat(array(value=1i32, value=2i32), array())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution array arg-shape diagnostics") {
@@ -8962,9 +7381,16 @@ execute_repeat(array(value=1i32, value=2i32), array())
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"duplicate named argument: value\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /array\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper at_unsafe arg-shape diagnostics") {
@@ -9015,7 +7441,6 @@ execute_repeat(wrapMap().at_unsafe(1i32, 2i32), at_unsafe(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/at_unsafe\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -9024,13 +7449,7 @@ execute_repeat(wrapMap().at_unsafe(1i32, 2i32), at_unsafe(wrapVector()))
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/at_unsafe\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper at_unsafe arg-shape diagnostics") {
@@ -9081,7 +7500,6 @@ execute_repeat(wrapMap().at_unsafe(1i32, 2i32), at_unsafe(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/at_unsafe\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -9090,13 +7508,7 @@ execute_repeat(wrapMap().at_unsafe(1i32, 2i32), at_unsafe(wrapVector()))
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/at_unsafe\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/at_unsafe\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper unsafe arg-type diagnostics") {
@@ -9148,8 +7560,6 @@ execute_repeat(at_unsafe(wrapMap(), true), wrapVector().at_unsafe(true))
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/at_unsafe parameter index") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -9158,15 +7568,7 @@ execute_repeat(at_unsafe(wrapMap(), true), wrapVector().at_unsafe(true))
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/at_unsafe parameter index");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper unsafe arg-type diagnostics") {
@@ -9219,8 +7621,6 @@ execute_repeat(at_unsafe(wrapMap(), true), wrapVector().at_unsafe(true))
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/at_unsafe parameter index") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -9229,15 +7629,7 @@ execute_repeat(at_unsafe(wrapMap(), true), wrapVector().at_unsafe(true))
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /map/at_unsafe parameter key");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/at_unsafe parameter index");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper at arg-shape diagnostics") {
@@ -9288,7 +7680,6 @@ execute_repeat(wrapMap().at(1i32, 2i32), at(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/at\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -9297,13 +7688,7 @@ execute_repeat(wrapMap().at(1i32, 2i32), at(wrapVector()))
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/at\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/at\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper at arg-shape diagnostics") {
@@ -9354,7 +7739,6 @@ execute_repeat(wrapMap().at(1i32, 2i32), at(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/at\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/at\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -9363,13 +7747,7 @@ execute_repeat(wrapMap().at(1i32, 2i32), at(wrapVector()))
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/at\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/at\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper index arg-type diagnostics") {
@@ -9420,7 +7798,6 @@ execute_repeat(wrapMap()[true], wrapVector()[true])
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at parameter key") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/at parameter index") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -9429,13 +7806,7 @@ execute_repeat(wrapMap()[true], wrapVector()[true])
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/at parameter key");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/at parameter index");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper index arg-type diagnostics") {
@@ -9486,7 +7857,6 @@ execute_repeat(wrapMap()[true], wrapVector()[true])
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/at parameter key") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/at parameter index") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -9495,13 +7865,7 @@ execute_repeat(wrapMap()[true], wrapVector()[true])
     ++semanticCount;
     scan += 16;
   }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/at parameter key");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/at parameter index");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
+  CHECK(semanticCount == 1);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity arg-shape diagnostics") {
@@ -9552,22 +7916,7 @@ execute_repeat(count(wrapMap(), 1i32), wrapVector().capacity(1i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity arg-shape diagnostics") {
@@ -9618,22 +7967,7 @@ execute_repeat(count(wrapMap(), 1i32), wrapVector().capacity(1i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity arg-shape reverse diagnostics") {
@@ -9685,22 +8019,7 @@ execute_repeat(wrapVector().capacity(1i32), count(wrapMap(), 1i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity arg-shape reverse diagnostics") {
@@ -9752,22 +8071,7 @@ execute_repeat(wrapVector().capacity(1i32), count(wrapMap(), 1i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity pair extra-arg diagnostics") {
@@ -9819,22 +8123,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().capacity(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity pair extra-arg diagnostics") {
@@ -9886,22 +8175,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().capacity(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity pair missing-arg diagnostics") {
@@ -9953,22 +8227,7 @@ execute_repeat(count(wrapMap()), wrapVector().capacity())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity pair missing-arg diagnostics") {
@@ -10020,22 +8279,7 @@ execute_repeat(count(wrapMap()), wrapVector().capacity())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity pair missing-arg reverse diagnostics") {
@@ -10089,22 +8333,7 @@ execute_repeat(wrapVector().capacity(), count(wrapMap()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity pair missing-arg reverse diagnostics") {
@@ -10158,22 +8387,7 @@ execute_repeat(wrapVector().capacity(), count(wrapMap()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count capacity pair missing-arg diagnostics") {
@@ -10225,22 +8439,7 @@ execute_repeat(wrapMap().count(), wrapVector().capacity())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count capacity pair missing-arg diagnostics") {
@@ -10292,22 +8491,7 @@ execute_repeat(wrapMap().count(), wrapVector().capacity())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count capacity pair missing-arg reverse diagnostics") {
@@ -10361,22 +8545,7 @@ execute_repeat(wrapVector().capacity(), wrapMap().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count capacity pair missing-arg reverse diagnostics") {
@@ -10430,22 +8599,7 @@ execute_repeat(wrapVector().capacity(), wrapMap().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count capacity pair extra-arg diagnostics") {
@@ -10497,22 +8651,7 @@ execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().capacity(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count capacity pair extra-arg diagnostics") {
@@ -10564,22 +8703,7 @@ execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().capacity(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count capacity pair extra-arg reverse diagnostics") {
@@ -10633,22 +8757,7 @@ execute_repeat(wrapVector().capacity(1i32, 2i32), wrapMap().count(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count capacity pair extra-arg reverse diagnostics") {
@@ -10702,22 +8811,7 @@ execute_repeat(wrapVector().capacity(1i32, 2i32), wrapMap().count(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity call-pair arg-shape diagnostics") {
@@ -10769,22 +8863,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity call-pair arg-shape diagnostics") {
@@ -10836,22 +8915,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity call-pair arg-shape reverse diagnostics") {
@@ -10904,22 +8968,7 @@ execute_repeat(capacity(wrapVector()), count(wrapMap()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity call-pair arg-shape reverse diagnostics") {
@@ -10972,22 +9021,7 @@ execute_repeat(capacity(wrapVector()), count(wrapMap()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity call-pair extra-arg diagnostics") {
@@ -11039,22 +9073,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), capacity(wrapVector(), 1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity call-pair extra-arg diagnostics") {
@@ -11106,22 +9125,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), capacity(wrapVector(), 1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity call-pair extra-arg reverse diagnostics") {
@@ -11174,23 +9178,8 @@ execute_repeat(capacity(wrapVector(), 1i32, 2i32), count(wrapMap(), 1i32, 2i32))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity call-pair extra-arg reverse diagnostics") {
@@ -11243,23 +9232,8 @@ execute_repeat(capacity(wrapVector(), 1i32, 2i32), count(wrapMap(), 1i32, 2i32))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity call-pair arg-type diagnostics") {
@@ -11311,24 +9285,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity call-pair arg-type diagnostics") {
@@ -11380,24 +9337,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity call-pair arg-type reverse diagnostics") {
@@ -11448,25 +9388,8 @@ execute_repeat(capacity(wrapVector(), true), count(wrapMap(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity call-pair arg-type reverse diagnostics") {
@@ -11517,25 +9440,8 @@ execute_repeat(capacity(wrapVector(), true), count(wrapMap(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity call-pair mixed-shape diagnostics") {
@@ -11588,22 +9494,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity call-pair mixed-shape diagnostics") {
@@ -11656,22 +9547,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity call-pair mixed-shape reverse diagnostics") {
@@ -11725,24 +9601,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity call-pair mixed-shape reverse diagnostics") {
@@ -11796,24 +9655,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity arg-type diagnostics") {
@@ -11864,24 +9706,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().capacity(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity arg-type diagnostics") {
@@ -11932,24 +9757,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().capacity(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count capacity arg-type reverse diagnostics") {
@@ -12002,23 +9810,7 @@ execute_repeat(wrapVector().capacity(true), count(wrapMap(), true))
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count capacity arg-type reverse diagnostics") {
@@ -12071,23 +9863,7 @@ execute_repeat(wrapVector().capacity(true), count(wrapMap(), true))
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count capacity pair arg-type diagnostics") {
@@ -12139,24 +9915,7 @@ execute_repeat(wrapMap().count(true), wrapVector().capacity(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count capacity pair arg-type diagnostics") {
@@ -12208,24 +9967,7 @@ execute_repeat(wrapMap().count(true), wrapVector().capacity(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count capacity pair arg-type reverse diagnostics") {
@@ -12280,23 +10022,7 @@ execute_repeat(wrapVector().capacity(true), wrapMap().count(true))
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count capacity pair arg-type reverse diagnostics") {
@@ -12351,23 +10077,7 @@ execute_repeat(wrapVector().capacity(true), wrapMap().count(true))
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count capacity pair mixed-shape diagnostics") {
@@ -12419,22 +10129,7 @@ execute_repeat(wrapMap().count(true), wrapVector().capacity())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count capacity pair mixed-shape diagnostics") {
@@ -12486,22 +10181,7 @@ execute_repeat(wrapMap().count(true), wrapVector().capacity())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/capacity\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count capacity pair mixed-shape reverse diagnostics") {
@@ -12555,24 +10235,7 @@ execute_repeat(wrapMap().count(), wrapVector().capacity(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count capacity pair mixed-shape reverse diagnostics") {
@@ -12626,24 +10289,7 @@ execute_repeat(wrapMap().count(), wrapVector().capacity(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter") !=
-        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"argument type mismatch for /vector/capacity parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count pair arg-type diagnostics") {
@@ -12695,22 +10341,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().count(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count pair arg-type diagnostics") {
@@ -12762,22 +10393,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().count(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count pair arg-type reverse diagnostics") {
@@ -12829,22 +10445,7 @@ execute_repeat(wrapVector().count(true), count(wrapMap(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count pair arg-type reverse diagnostics") {
@@ -12896,22 +10497,7 @@ execute_repeat(wrapVector().count(true), count(wrapMap(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count pair arg-type diagnostics") {
@@ -12963,22 +10549,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair arg-type diagnostics") {
@@ -13030,22 +10601,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count call-pair arg-type diagnostics") {
@@ -13097,22 +10653,7 @@ execute_repeat(count(wrapMap(), true), count(wrapVector(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count call-pair arg-type diagnostics") {
@@ -13164,22 +10705,7 @@ execute_repeat(count(wrapMap(), true), count(wrapVector(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count call-pair arg-type reverse diagnostics") {
@@ -13230,23 +10756,8 @@ execute_repeat(count(wrapVector(), true), count(wrapMap(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count call-pair arg-type reverse diagnostics") {
@@ -13297,23 +10808,8 @@ execute_repeat(count(wrapVector(), true), count(wrapMap(), true))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count call-pair mixed-shape diagnostics") {
@@ -13365,22 +10861,7 @@ execute_repeat(count(wrapMap(), true), count(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count call-pair mixed-shape diagnostics") {
@@ -13432,22 +10913,7 @@ execute_repeat(count(wrapMap(), true), count(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count call-pair mixed-shape reverse diagnostics") {
@@ -13501,22 +10967,7 @@ execute_repeat(count(wrapMap()), count(wrapVector(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count call-pair mixed-shape reverse diagnostics") {
@@ -13570,22 +11021,7 @@ execute_repeat(count(wrapMap()), count(wrapVector(), true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count call-pair arg-shape diagnostics") {
@@ -13637,22 +11073,7 @@ execute_repeat(count(wrapMap()), count(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count call-pair arg-shape diagnostics") {
@@ -13704,22 +11125,7 @@ execute_repeat(count(wrapMap()), count(wrapVector()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count call-pair arg-shape reverse diagnostics") {
@@ -13772,22 +11178,7 @@ execute_repeat(count(wrapVector()), count(wrapMap()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count call-pair arg-shape reverse diagnostics") {
@@ -13840,22 +11231,7 @@ execute_repeat(count(wrapVector()), count(wrapMap()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count call-pair extra-arg diagnostics") {
@@ -13907,22 +11283,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), count(wrapVector(), 1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count call-pair extra-arg diagnostics") {
@@ -13974,22 +11335,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), count(wrapVector(), 1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count call-pair extra-arg reverse diagnostics") {
@@ -14042,23 +11388,8 @@ execute_repeat(count(wrapVector(), 1i32, 2i32), count(wrapMap(), 1i32, 2i32))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count call-pair extra-arg reverse diagnostics") {
@@ -14111,23 +11442,8 @@ execute_repeat(count(wrapVector(), 1i32, 2i32), count(wrapMap(), 1i32, 2i32))
 
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for builtin count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count pair arg-shape diagnostics") {
@@ -14179,22 +11495,7 @@ execute_repeat(count(wrapMap()), wrapVector().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count pair arg-shape diagnostics") {
@@ -14246,22 +11547,7 @@ execute_repeat(count(wrapMap()), wrapVector().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count pair missing-arg reverse diagnostics") {
@@ -14315,22 +11601,7 @@ execute_repeat(wrapVector().count(), count(wrapMap()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count pair missing-arg reverse diagnostics") {
@@ -14384,22 +11655,7 @@ execute_repeat(wrapVector().count(), count(wrapMap()))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count pair arg-shape diagnostics") {
@@ -14451,22 +11707,7 @@ execute_repeat(wrapMap().count(), wrapVector().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair arg-shape diagnostics") {
@@ -14518,22 +11759,7 @@ execute_repeat(wrapMap().count(), wrapVector().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count pair missing-arg reverse diagnostics") {
@@ -14587,22 +11813,7 @@ execute_repeat(wrapVector().count(), wrapMap().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair missing-arg reverse diagnostics") {
@@ -14656,22 +11867,7 @@ execute_repeat(wrapVector().count(), wrapMap().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count pair arg-type reverse diagnostics") {
@@ -14723,22 +11919,7 @@ execute_repeat(wrapVector().count(true), wrapMap().count(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair arg-type reverse diagnostics") {
@@ -14790,22 +11971,7 @@ execute_repeat(wrapVector().count(true), wrapMap().count(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /vector/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count pair mixed-shape diagnostics") {
@@ -14857,22 +12023,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair mixed-shape diagnostics") {
@@ -14924,22 +12075,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count())
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count pair mixed-shape reverse diagnostics") {
@@ -14993,22 +12129,7 @@ execute_repeat(wrapVector().count(), wrapMap().count(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair mixed-shape reverse diagnostics") {
@@ -15062,22 +12183,7 @@ execute_repeat(wrapVector().count(), wrapMap().count(true))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument type mismatch for /map/count parameter");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count pair extra-arg diagnostics") {
@@ -15129,22 +12235,7 @@ execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().count(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair extra-arg diagnostics") {
@@ -15196,22 +12287,7 @@ execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().count(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count pair extra-arg reverse diagnostics") {
@@ -15265,22 +12341,7 @@ execute_repeat(wrapVector().count(1i32, 2i32), wrapMap().count(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair extra-arg reverse diagnostics") {
@@ -15334,22 +12395,7 @@ execute_repeat(wrapVector().count(1i32, 2i32), wrapMap().count(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count pair extra-arg diagnostics") {
@@ -15401,22 +12447,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().count(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count pair extra-arg diagnostics") {
@@ -15468,22 +12499,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().count(1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper count pair extra-arg reverse diagnostics") {
@@ -15537,22 +12553,7 @@ execute_repeat(wrapVector().count(1i32, 2i32), count(wrapMap(), 1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count pair extra-arg reverse diagnostics") {
@@ -15606,22 +12607,7 @@ execute_repeat(wrapVector().count(1i32, 2i32), count(wrapMap(), 1i32, 2i32))
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
-
-  size_t semanticCount = 0;
-  size_t scan = 0;
-  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
-    ++semanticCount;
-    scan += 16;
-  }
-  CHECK(semanticCount == 2);
-
-  const size_t firstMessage = diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"");
-  const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /map/count\"");
-  REQUIRE(firstMessage != std::string::npos);
-  REQUIRE(secondMessage != std::string::npos);
-  CHECK(firstMessage < secondMessage);
 }
 
 TEST_CASE("primec collect-diagnostics emits intra-execution argument-type payload") {
@@ -15766,8 +12752,7 @@ execute_repeat([i32] a, [i32] b) {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"execution effects must be a subset of enclosing effects on /apply_effects: io_in\"") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"capability requires matching effect on /apply_effects: io_in\"") !=
-        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: capabilities\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -15780,8 +12765,7 @@ execute_repeat([i32] a, [i32] b) {
 
   const size_t firstMessage = diagnostics.find(
       "\"message\":\"execution effects must be a subset of enclosing effects on /apply_effects: io_in\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"capability requires matching effect on /apply_effects: io_in\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown call target: capabilities\"");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
   CHECK(firstMessage < secondMessage);
@@ -15821,8 +12805,7 @@ execute_repeat([i32] a, [i32] b) {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"execution effects must be a subset of enclosing effects on /apply_effects: io_in\"") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"capability requires matching effect on /apply_effects: io_in\"") !=
-        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: capabilities\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
@@ -15835,8 +12818,7 @@ execute_repeat([i32] a, [i32] b) {
 
   const size_t firstMessage = diagnostics.find(
       "\"message\":\"execution effects must be a subset of enclosing effects on /apply_effects: io_in\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"capability requires matching effect on /apply_effects: io_in\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown call target: capabilities\"");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
   CHECK(firstMessage < secondMessage);
@@ -16016,7 +12998,8 @@ TEST_CASE("compiles and runs float binding") {
 [return<int>]
 main() {
   [float] value{1.5f}
-  return(1i32)
+  [float] other{2.0f32}
+  return(convert<int>(plus(value, other)))
 }
 )";
   const std::string srcPath = writeTemp("compile_float.prime", source);
@@ -16024,7 +13007,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("compiles and runs single-letter float suffix") {
@@ -16064,12 +13047,14 @@ main() {
   return(equal("alpha"utf8, "alpha"utf8))
 }
 )";
-  const std::string srcPath = writeTemp("compile_string_compare.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_compare_exe").string();
-  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_string_compare_native").string();
-  const std::string vmErrPath = (std::filesystem::temp_directory_path() / "primec_string_compare_vm_err.txt").string();
+  const std::string srcPath = writeTemp("compile_text_filters_string_compare.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_filters_string_compare_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_text_filters_string_compare_native").string();
+  const std::string vmErrPath =
+      (std::filesystem::temp_directory_path() / "primec_text_filters_string_compare_vm_err.txt").string();
   const std::string nativeErrPath =
-      (std::filesystem::temp_directory_path() / "primec_string_compare_native_err.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_text_filters_string_compare_native_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

@@ -1032,7 +1032,7 @@ main() {
   CHECK(error.find("return type mismatch") != std::string::npos);
 }
 
-TEST_CASE("return transform rejects arguments") {
+TEST_CASE("return transform rejects arguments in source syntax") {
   const std::string source = R"(
 [return<int>(foo)]
 main() {
@@ -1092,7 +1092,7 @@ main() {
   CHECK(error.find("duplicate effects capability") != std::string::npos);
 }
 
-TEST_CASE("capabilities transform validates identifiers") {
+TEST_CASE("capabilities transform validates render and io identifiers") {
   const std::string source = R"(
 [effects(render_graph, io_out), capabilities(render_graph, io_out), return<int>]
 main() {
@@ -1140,7 +1140,7 @@ main() {
   CHECK(error.find("invalid capability") != std::string::npos);
 }
 
-TEST_CASE("capabilities transform rejects duplicate capability") {
+TEST_CASE("capabilities transform rejects duplicate io_out capability") {
   const std::string source = R"(
 [capabilities(io_out, io_out), return<int>]
 main() {

@@ -111,22 +111,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("for accepts semicolon separators") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32 mut] total{0i32}
-  for([i32 mut] i{0i32}; less_than(i, 2i32); assign(i, plus(i, 1i32))) {
-    assign(total, plus(total, i))
-  }
-  return(total)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("loop rejects template arguments") {
   const std::string source = R"(
 [return<int>]
@@ -350,7 +334,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("for condition binding requires bool") {
+TEST_CASE("for condition binding requires bool in source syntax") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -859,7 +843,7 @@ main() {
   CHECK(error.find("if branches require block envelopes") != std::string::npos);
 }
 
-TEST_CASE("if rejects named arguments") {
+TEST_CASE("if rejects named arguments in source syntax") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -951,7 +935,7 @@ main() {
   CHECK(error.find("mut transform is not allowed on executions") != std::string::npos);
 }
 
-TEST_CASE("unknown identifier fails") {
+TEST_CASE("unknown identifier fails for bare name") {
   const std::string source = R"(
 [return<int>]
 main() {

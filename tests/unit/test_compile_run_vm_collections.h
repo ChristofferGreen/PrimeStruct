@@ -1662,32 +1662,6 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm with map at helper") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
-  return(at(values, 3i32))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_at.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 4);
-}
-
-TEST_CASE("runs vm with map at_unsafe helper") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
-  return(at_unsafe(values, 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_at_unsafe.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
-}
-
 TEST_CASE("runs vm with array count helper") {
   const std::string source = R"(
 [return<int>]

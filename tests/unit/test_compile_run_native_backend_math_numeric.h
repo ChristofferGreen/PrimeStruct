@@ -729,7 +729,7 @@ TEST_CASE("compiles and runs native float literals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(convert<int>(1.5f))
+  return(convert<int>(plus(1.5f, 1.5f)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_float_literal.prime", source);
@@ -737,7 +737,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("compiles and runs native float bindings") {
