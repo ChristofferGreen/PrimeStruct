@@ -5674,11 +5674,19 @@ make_value() {
 main() {
   [Result<FileError>] status{make_status()}
   [Result<i32, FileError>] valueStatus{make_value()}
+  [bool] eof{fileErrorIsEof(fileReadEof())}
+  [bool] otherEof{fileErrorIsEof(1i32)}
   if(not(Result.error(status))) {
     return(1i32)
   }
   if(not(Result.error(valueStatus))) {
     return(2i32)
+  }
+  if(not(eof)) {
+    return(3i32)
+  }
+  if(otherEof) {
+    return(4i32)
   }
   print_line(Result.why(status))
   print_line(Result.why(valueStatus))
@@ -5875,6 +5883,9 @@ import /std/file/*
 [return<int> effects(io_out)]
 main() {
   [FileError] err{fileReadEof()}
+  if(not(fileErrorIsEof(err))) {
+    return(1i32)
+  }
   print_line(/FileError/why(err))
   print_line(err.why())
   print_line(Result.why(fileErrorStatus(err)))

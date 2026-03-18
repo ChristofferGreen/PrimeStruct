@@ -94,11 +94,13 @@ import /std/file/*
 main() {
   [Result<FileError>] status{fileErrorStatus(fileReadEof())}
   [Result<i32, FileError>] valueStatus{fileErrorResult<i32>(fileReadEof())}
+  [bool] eof{fileErrorIsEof(fileReadEof())}
+  [bool] otherEof{fileErrorIsEof(1i32)}
   [bool] statusError{Result.error(status)}
   [bool] valueError{Result.error(valueStatus)}
   [string] statusWhy{Result.why(status)}
   [string] valueWhy{Result.why(valueStatus)}
-  if(and(statusError, valueError), then(){ return() }, else(){ return() })
+  if(and(and(statusError, valueError), and(eof, not(otherEof))), then(){ return() }, else(){ return() })
 }
 )";
   std::string error;
@@ -112,13 +114,13 @@ import /std/file/*
 
 [return<void>]
 main() {
-  [Result<i32, FileError>] status{fileErrorResult<i32>(true)}
+  [bool] eof{fileErrorIsEof(true)}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/file/fileErrorResult parameter err") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/file/fileErrorIsEof parameter err") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError why wrapper covers direct and Result-based access") {

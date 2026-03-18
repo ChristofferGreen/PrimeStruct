@@ -93,7 +93,7 @@ namespace std {
       [i32] status{ppmReadByteStatus(file, byte)}
       if(not_equal(status, 0i32),
          then() {
-           if(equal(status, 65536i32),
+           if(fileErrorIsEof(status),
               then() { return(0i32) },
               else() { return(status) })
          },
@@ -128,7 +128,7 @@ namespace std {
          then() {
            if(equal(started, 1i32),
               then() {
-                if(equal(status, 65536i32),
+                if(fileErrorIsEof(status),
                    then() { return(0i32) },
                    else() { return(status) })
               },

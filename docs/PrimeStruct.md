@@ -690,8 +690,9 @@ sum_two_files([string] a, [string] b) {
   - **Graphics entry flow:** `?` is also valid inside `return<int>` definitions with a matching
     `on_error<ErrorType, Handler>(...)`; on error, the handler runs and the definition returns the raw error code.
   - **Current stdlib progress:** import `/std/file/*` to use `.prime`-authored `fileReadEof()`,
-    `fileErrorStatus(err)`, and `fileErrorResult<T>(err)` helpers instead of hand-packing `FileError` results, and
-    load the public `/FileError/why([FileError] err)` wrapper that `Result.why(...)` now prefers when available.
+    `fileErrorStatus(err)`, `fileErrorIsEof(err)`, and `fileErrorResult<T>(err)` helpers instead of hand-packing
+    `FileError` results or hard-coding the EOF status code, and load the public `/FileError/why([FileError] err)`
+    wrapper that `Result.why(...)` now prefers when available.
     Import `/std/image/*` to use `.prime`-authored `imageReadUnsupported()`, `imageWriteUnsupported()`,
     `imageInvalidOperation()`, `imageErrorStatus(err)`, and `imageErrorResult<T>(err)` helpers instead of
     hand-packing `ImageError` result codes. Import `/std/gfx/*` or `/std/gfx/experimental/*` to use
@@ -724,7 +725,7 @@ sum_two_files([string] a, [string] b) {
 - **Error type:** `FileError` carries `why()` (owned `string`).
   - `read_byte(...)` reports deterministic end-of-file as `EOF`.
   - Import `/std/file/*` for the current stdlib-authored FileError helper layer:
-    `fileReadEof()`, `fileErrorStatus(err)`, and `fileErrorResult<T>(err)`.
+    `fileReadEof()`, `fileErrorStatus(err)`, `fileErrorIsEof(err)`, and `fileErrorResult<T>(err)`.
   - The stdlib file layer also defines `/FileError/why([FileError] err)` as the public wrapper over the
     intrinsic file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned
     helper surface while platform-specific code-to-string translation stays builtin substrate.

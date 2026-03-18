@@ -15,6 +15,11 @@ namespace std {
     return(err)
   }
 
+  [public return<bool>]
+  fileErrorIsEof([FileError] err) {
+    return(equal(err, fileReadEof()))
+  }
+
   [public return<Result<T, FileError>>]
   fileErrorResult<T>([FileError] err) {
     return(multiply(convert<i64>(err), 4294967296i64))
