@@ -9250,6 +9250,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprGpuBuffer.cpp";
   const std::filesystem::path semanticsExprLambdaPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
+  const std::filesystem::path semanticsExprMapSoaBuiltinsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMapSoaBuiltins.cpp";
   const std::filesystem::path semanticsExprMethodResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
   const std::filesystem::path semanticsExprNamedArgumentBuiltinsPath =
@@ -9273,6 +9275,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprGpuBufferPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
+  REQUIRE(std::filesystem::exists(semanticsExprMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
@@ -9290,6 +9293,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprGpuBufferSource = readText(semanticsExprGpuBufferPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
+  const std::string semanticsExprMapSoaBuiltinsSource =
+      readText(semanticsExprMapSoaBuiltinsPath);
   const std::string semanticsExprMethodResolutionSource = readText(semanticsExprMethodResolutionPath);
   const std::string semanticsExprNamedArgumentBuiltinsSource =
       readText(semanticsExprNamedArgumentBuiltinsPath);
@@ -9366,6 +9371,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("if (resolvedMethod && resolved.rfind(\"/file/\", 0) == 0) {") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, \"contains\")") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (!resolvedMethod &&\n          (isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\"))") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (resolvedMethod && resolved.rfind(\"/soa_vector/field_view/\", 0) == 0)") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("(isSimpleCallName(expr, \"get\") || isSimpleCallName(expr, \"ref\")) && expr.args.size() == 2") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("isSimpleCallName(expr, \"contains\") || getBuiltinArrayAccessName(expr, accessHelperName)") ==
@@ -9392,6 +9403,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprGpuBufferBuiltins(params, locals, expr,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprMapSoaBuiltins(params, locals, expr, resolved,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprResultFileBuiltins(params, locals, expr, resolved, resolvedMethod,") !=
@@ -9466,6 +9480,14 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprGpuBufferSource.find("dispatch requires gpu_dispatch effect") !=
         std::string::npos);
   CHECK(semanticsExprGpuBufferSource.find("buffer_store value type mismatch") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find("bool SemanticsValidator::validateExprMapSoaBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find("contains requires map key type ") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find("to_soa requires vector target") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find("soa_vector field views are not implemented yet: ") !=
         std::string::npos);
   CHECK(semanticsExprLambdaSource.find("bool SemanticsValidator::validateLambdaExpr") != std::string::npos);
   CHECK(semanticsExprLambdaSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") !=

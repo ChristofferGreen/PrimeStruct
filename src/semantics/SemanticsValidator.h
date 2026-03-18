@@ -227,6 +227,22 @@ private:
       const std::unordered_map<std::string, BindingInfo> &locals,
       const Expr &expr,
       bool &handledOut);
+  struct ExprMapSoaBuiltinContext {
+    bool shouldBuiltinValidateBareMapContainsCall = false;
+    std::function<bool(const Expr &, std::string &)> resolveMapKeyType;
+    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
+    std::function<bool(const Expr &)> resolveStringTarget;
+    std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
+    std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
+  };
+  bool validateExprMapSoaBuiltins(const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals,
+                                  const Expr &expr,
+                                  const std::string &resolved,
+                                  bool resolvedMethod,
+                                  const ExprMapSoaBuiltinContext &context,
+                                  bool &handledOut);
   std::string normalizeCollectionMethodName(const std::string &methodName) const;
   std::string inferPointerLikeCallReturnType(
       const Expr &receiverExpr,
