@@ -3620,6 +3620,14 @@ TEST_CASE("primec options parse type resolver flag and validate values") {
   {
     primec::Options options;
     std::string error;
+    CHECK(parsePrimec({"primec", "--emit=ir", "/tmp/input.prime"}, options, error));
+    CHECK(error.empty());
+    CHECK(options.typeResolver == "graph");
+  }
+
+  {
+    primec::Options options;
+    std::string error;
     CHECK(parsePrimec({"primec", "--emit=ir", "--type-resolver=graph", "/tmp/input.prime"}, options, error));
     CHECK(error.empty());
     CHECK(options.typeResolver == "graph");

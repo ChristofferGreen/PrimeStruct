@@ -47,7 +47,7 @@ bool validateProgramThroughCompilePipeline(const std::string &source,
                                            const std::string &wasmProfile,
                                            std::string &error,
                                            primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr,
-                                           const std::string &typeResolver = "legacy") {
+                                           const std::string &typeResolver = "graph") {
   const std::filesystem::path tempPath = makeTempSemanticSourcePath();
   {
     std::ofstream file(tempPath);
