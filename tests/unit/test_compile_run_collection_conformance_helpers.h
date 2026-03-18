@@ -3,131 +3,52 @@
 #include "test_compile_run_map_conformance_helpers.h"
 #include "test_compile_run_vector_conformance_helpers.h"
 
-inline void expectSharedMapConformanceHarness(const std::string &emitMode) {
-  if (emitMode != "vm") {
-    return;
-  }
-
+inline void expectVmSharedStdlibMapConformanceHarness() {
   SUBCASE("stdlib") {
-    expectMapHelperSurfaceConformance(emitMode, "/std/collections/*");
-    expectMapExtendedConstructorConformance(emitMode, "/std/collections/*");
-    if (emitMode != "vm") {
-      expectMapOverwriteConformance(emitMode, "/std/collections/*");
-    }
+    const std::string emitMode = "vm";
+    expectVmStdlibMapHelperSurfaceConformance();
+    expectVmStdlibMapExtendedConstructorConformance();
     expectMapTryAtConformance(emitMode, "/std/collections/*", false);
     expectMapTryAtConformance(emitMode, "/std/collections/*", true);
-    expectCanonicalMapNamespaceConformance(emitMode);
-    expectCanonicalMapNamespaceNamedArgsConformance(emitMode);
+    expectCanonicalMapNamespaceVmConformance();
+    expectCanonicalMapNamespaceNamedArgsVmConformance();
     expectCanonicalMapNamespaceTypeMismatchReject(emitMode);
-    expectCanonicalMapNamespaceImportRequirement(emitMode);
-    expectCanonicalMapCountImportRequirement(emitMode);
-    expectCanonicalMapContainsImportRequirement(emitMode);
-    expectCanonicalMapTryAtImportRequirement(emitMode);
-    expectCanonicalMapAccessImportRequirement(emitMode, "at");
-    expectCanonicalMapAccessImportRequirement(emitMode, "at_unsafe");
-    if (emitMode != "vm") {
-      expectCanonicalMapNamespaceCountShadow(emitMode);
-      expectCanonicalMapNamespaceAccessShadow(emitMode);
-    }
-  }
-
-  SUBCASE("experimental") {
-    if (emitMode == "vm") {
-      return;
-    }
-    expectMapHelperSurfaceConformance(emitMode, "/std/collections/experimental_map/*");
-    expectMapExtendedConstructorConformance(emitMode, "/std/collections/experimental_map/*");
-    expectMapOverwriteConformance(emitMode, "/std/collections/experimental_map/*");
-    expectMapTryAtConformance(emitMode, "/std/collections/experimental_map/*", false);
-    expectMapTryAtConformance(emitMode, "/std/collections/experimental_map/*", true);
-    expectExperimentalMapAtMissingConformance(emitMode);
-    expectExperimentalMapTryAtStringConformance(emitMode);
-    if (emitMode != "exe") {
-      expectExperimentalMapStringKeyReject(emitMode, "lookup_argv");
-      expectExperimentalMapStringKeyReject(emitMode, "constructor_argv");
-    }
+    expectCanonicalMapNamespaceVmImportRequirement();
+    expectCanonicalMapCountVmBuiltinRejectsTemplateArgs();
+    expectCanonicalMapContainsVmImportRequirement();
+    expectCanonicalMapTryAtVmImportRequirement();
+    expectCanonicalMapAccessVmBuiltinConformance("at");
+    expectCanonicalMapAccessVmBuiltinConformance("at_unsafe");
   }
 }
 
-inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
-  if (emitMode != "vm") {
-    return;
-  }
-
+inline void expectVmSharedStdlibVectorConformanceHarness() {
   SUBCASE("stdlib") {
-    expectVectorHelperSurfaceConformance(emitMode, "/std/collections/*");
-    expectVectorExtendedConstructorConformance(emitMode, "/std/collections/*");
-    expectVectorGrowthConformance(emitMode, "/std/collections/*");
-    expectVectorShrinkRemoveConformance(emitMode, "/std/collections/*");
+    const std::string emitMode = "vm";
+    expectVmStdlibVectorHelperSurfaceConformance();
+    expectVmStdlibVectorExtendedConstructorConformance();
+    expectVmStdlibVectorGrowthConformance();
+    expectVmStdlibVectorShrinkRemoveConformance();
     expectVectorTypeMismatchReject(emitMode, "/std/collections/*");
     expectVectorPopTypeMismatchReject(emitMode, "/std/collections/*");
     expectVectorPushTypeMismatchReject(emitMode, "/std/collections/*");
-    if (emitMode != "vm") {
-      expectCanonicalVectorNamespaceConformance(emitMode);
-    }
     expectCanonicalVectorNamespaceNamedArgsConformance(emitMode);
     expectCanonicalVectorNamespaceTypeMismatchReject(emitMode);
-    expectCanonicalVectorNamespaceImportRequirement(emitMode);
+    expectCanonicalVectorNamespaceVmImportRequirement();
     expectCanonicalVectorCountNamedArgsConformance(emitMode);
-    expectCanonicalVectorCountImportRequirement(emitMode);
+    expectCanonicalVectorCountVmImportRequirement();
     expectCanonicalVectorCapacityNamedArgsConformance(emitMode);
-    expectCanonicalVectorCapacityImportRequirement(emitMode);
+    expectCanonicalVectorCapacityVmImportRequirement();
     expectCanonicalVectorAccessNamedArgsConformance(emitMode);
-    expectCanonicalVectorAccessImportRequirement(emitMode, "at");
-    expectCanonicalVectorAccessImportRequirement(emitMode, "at_unsafe");
+    expectCanonicalVectorAccessVmImportRequirement("at");
+    expectCanonicalVectorAccessVmImportRequirement("at_unsafe");
     expectCanonicalVectorPushNamedArgsConformance(emitMode);
-    expectCanonicalVectorPushImportRequirement(emitMode);
+    expectCanonicalVectorPushVmImportRequirement();
     expectCanonicalVectorPopNamedArgsConformance(emitMode);
-    expectCanonicalVectorPopImportRequirement(emitMode);
+    expectCanonicalVectorPopVmImportRequirement();
     expectCanonicalVectorReserveNamedArgsConformance(emitMode);
-    expectCanonicalVectorReserveImportRequirement(emitMode);
-    if (emitMode != "vm") {
-      expectCanonicalVectorNamespaceCountShadow(emitMode);
-      expectCanonicalVectorNamespacePushShadow(emitMode);
-    }
+    expectCanonicalVectorReserveVmImportRequirement();
   }
-
-  SUBCASE("experimental") {
-    if (emitMode == "vm") {
-      return;
-    }
-    expectVectorHelperSurfaceConformance(emitMode, "/std/collections/experimental_vector/*");
-    expectVectorExtendedConstructorConformance(emitMode, "/std/collections/experimental_vector/*");
-    expectVectorGrowthConformance(emitMode, "/std/collections/experimental_vector/*");
-    expectVectorShrinkRemoveConformance(emitMode, "/std/collections/experimental_vector/*");
-    expectVectorTypeMismatchReject(emitMode, "/std/collections/experimental_vector/*");
-    expectVectorPopTypeMismatchReject(emitMode, "/std/collections/experimental_vector/*");
-    expectVectorPushTypeMismatchReject(emitMode, "/std/collections/experimental_vector/*");
-  }
-}
-
-inline void expectExperimentalVectorRuntimeContracts(const std::string &emitMode) {
-  (void)emitMode;
-  return;
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "pop_empty");
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_at_oob");
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_swap_oob");
-}
-
-inline void expectExperimentalVectorOwnershipRejects(const std::string &emitMode) {
-  (void)emitMode;
-  return;
-  expectExperimentalVectorOwnershipReject(
-      emitMode,
-      "constructor",
-      "clear requires drop-trivial vector element type until container drop semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      emitMode,
-      "push",
-      "push requires relocation-trivial vector element type until container move/reallocation semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      emitMode,
-      "pop",
-      "pop requires drop-trivial vector element type until container drop semantics are implemented: Owned");
-  expectExperimentalVectorOwnershipReject(
-      emitMode,
-      "remove_swap",
-      "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: Owned");
 }
 
 inline void expectVectorIndexedRemovalOwnershipRejects(const std::string &emitMode) {

@@ -2244,10 +2244,6 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native shared map conformance harness for stdlib and experimental helpers") {
-  expectSharedMapConformanceHarness("native");
-}
-
 TEST_CASE("compiles and runs native canonical namespaced map helpers on experimental map values") {
   expectCanonicalMapNamespaceExperimentalValueConformance("native");
 }
@@ -2410,18 +2406,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
         std::string::npos);
-}
-
-TEST_CASE("compiles and runs native shared vector conformance harness for stdlib and experimental helpers") {
-  expectSharedVectorConformanceHarness("native");
-}
-
-TEST_CASE("compiles and runs native experimental vector helper runtime contracts") {
-  expectExperimentalVectorRuntimeContracts("native");
-}
-
-TEST_CASE("rejects native experimental vector ownership-sensitive helpers") {
-  expectExperimentalVectorOwnershipRejects("native");
 }
 
 TEST_CASE("compiles and runs native vector pop empty runtime contract") {

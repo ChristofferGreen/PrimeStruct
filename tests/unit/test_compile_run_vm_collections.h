@@ -1820,8 +1820,8 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("runs vm shared map conformance harness for stdlib and experimental helpers") {
-  expectSharedMapConformanceHarness("vm");
+TEST_CASE("runs vm shared stdlib map conformance harness") {
+  expectVmSharedStdlibMapConformanceHarness();
 }
 
 TEST_CASE("runs vm canonical namespaced map helpers on experimental map values") {
@@ -1986,16 +1986,8 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("runs vm shared vector conformance harness for stdlib and experimental helpers") {
-  expectSharedVectorConformanceHarness("vm");
-}
-
-TEST_CASE("runs vm experimental vector helper runtime contracts") {
-  expectExperimentalVectorRuntimeContracts("vm");
-}
-
-TEST_CASE("rejects vm experimental vector ownership-sensitive helpers") {
-  expectExperimentalVectorOwnershipRejects("vm");
+TEST_CASE("runs vm shared stdlib vector conformance harness") {
+  expectVmSharedStdlibVectorConformanceHarness();
 }
 
 TEST_CASE("runs vm vector pop empty runtime contract") {

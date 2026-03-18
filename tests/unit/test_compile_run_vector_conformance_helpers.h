@@ -29,12 +29,19 @@ inline std::string makeVectorHelperSurfaceConformanceSource(const std::string &i
   source += "wrapVector<T>([T] first, [T] second, [T] third, [T] fourth) {\n";
   source += "  return(vectorQuad<T>(first, second, third, fourth))\n";
   source += "}\n\n";
-  source += "[effects(heap_alloc), return<int>]\n";
+  source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [" + vectorConformanceType(importPath, "i32") + "] empty{vectorNew<i32>()}\n";
   source += "  [" + vectorConformanceType(importPath, "i32") + "] pair{vectorPair<i32>(11i32, 13i32)}\n";
   source += "  [" + vectorConformanceType(importPath, "i32") +
             "] wrapped{wrapVector<i32>(1i32, 3i32, 5i32, 7i32)}\n";
+  source += "  print_line(vectorCount<i32>(empty))\n";
+  source += "  print_line(vectorCount<i32>(pair))\n";
+  source += "  print_line(vectorCapacity<i32>(pair))\n";
+  source += "  print_line(vectorAt<i32>(pair, 1i32))\n";
+  source += "  print_line(vectorAtUnsafe<i32>(pair, 0i32))\n";
+  source += "  print_line(vectorAt<i32>(wrapped, 2i32))\n";
+  source += "  print_line(vectorAtUnsafe<i32>(wrapped, 3i32))\n";
   source += "  return(plus(plus(vectorCount<i32>(empty), vectorCount<i32>(pair)),\n";
   source += "      plus(vectorCapacity<i32>(pair), plus(vectorAt<i32>(pair, 1i32),\n";
   source += "          plus(vectorAtUnsafe<i32>(pair, 0i32), plus(vectorAt<i32>(wrapped, 2i32),\n";
@@ -46,10 +53,14 @@ inline std::string makeVectorHelperSurfaceConformanceSource(const std::string &i
 inline std::string makeVectorExtendedConstructorConformanceSource(const std::string &importPath) {
   std::string source;
   source += "import " + importPath + "\n\n";
-  source += "[effects(heap_alloc), return<int>]\n";
+  source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [" + vectorConformanceType(importPath, "i32") +
             "] values{vectorOct<i32>(2i32, 4i32, 6i32, 8i32, 10i32, 12i32, 14i32, 16i32)}\n";
+  source += "  print_line(vectorCount<i32>(values))\n";
+  source += "  print_line(vectorCapacity<i32>(values))\n";
+  source += "  print_line(vectorAt<i32>(values, 6i32))\n";
+  source += "  print_line(vectorAtUnsafe<i32>(values, 0i32))\n";
   source += "  return(plus(plus(vectorCount<i32>(values), vectorCapacity<i32>(values)),\n";
   source += "      plus(vectorAt<i32>(values, 6i32), vectorAtUnsafe<i32>(values, 0i32))))\n";
   source += "}\n";
@@ -59,7 +70,7 @@ inline std::string makeVectorExtendedConstructorConformanceSource(const std::str
 inline std::string makeVectorGrowthConformanceSource(const std::string &importPath) {
   std::string source;
   source += "import " + importPath + "\n\n";
-  source += "[effects(heap_alloc), return<int>]\n";
+  source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorNew<i32>()}\n";
   source += "  vectorReserve<i32>(values, 2i32)\n";
@@ -67,6 +78,11 @@ inline std::string makeVectorGrowthConformanceSource(const std::string &importPa
   source += "  vectorPush<i32>(values, 11i32)\n";
   source += "  vectorPush<i32>(values, 22i32)\n";
   source += "  vectorPush<i32>(values, 33i32)\n";
+  source += "  print_line(reserved)\n";
+  source += "  print_line(vectorCount<i32>(values))\n";
+  source += "  print_line(vectorAt<i32>(values, 0i32))\n";
+  source += "  print_line(vectorAtUnsafe<i32>(values, 1i32))\n";
+  source += "  print_line(vectorAt<i32>(values, 2i32))\n";
   source += "  return(plus(plus(reserved, vectorCount<i32>(values)),\n";
   source += "      plus(vectorAt<i32>(values, 0i32), plus(vectorAtUnsafe<i32>(values, 1i32),\n";
   source += "          vectorAt<i32>(values, 2i32)))))\n";
@@ -77,17 +93,24 @@ inline std::string makeVectorGrowthConformanceSource(const std::string &importPa
 inline std::string makeVectorShrinkRemoveConformanceSource(const std::string &importPath) {
   std::string source;
   source += "import " + importPath + "\n\n";
-  source += "[effects(heap_alloc), return<int>]\n";
+  source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorQuad<i32>(10i32, 20i32, 30i32, 40i32)}\n";
   source += "  [i32 mut] total{0i32}\n";
   source += "  vectorPop<i32>(values)\n";
+  source += "  print_line(vectorCount<i32>(values))\n";
+  source += "  print_line(vectorAt<i32>(values, 1i32))\n";
   source += "  assign(total, plus(total, plus(vectorCount<i32>(values), vectorAt<i32>(values, 1i32))))\n";
   source += "  vectorRemoveAt<i32>(values, 1i32)\n";
+  source += "  print_line(vectorCount<i32>(values))\n";
+  source += "  print_line(vectorAtUnsafe<i32>(values, 1i32))\n";
   source += "  assign(total, plus(total, plus(vectorCount<i32>(values), vectorAtUnsafe<i32>(values, 1i32))))\n";
   source += "  vectorRemoveSwap<i32>(values, 0i32)\n";
+  source += "  print_line(vectorCount<i32>(values))\n";
+  source += "  print_line(vectorAt<i32>(values, 0i32))\n";
   source += "  assign(total, plus(total, plus(vectorCount<i32>(values), vectorAt<i32>(values, 0i32))))\n";
   source += "  vectorClear<i32>(values)\n";
+  source += "  print_line(vectorCount<i32>(values))\n";
   source += "  return(plus(total, vectorCount<i32>(values)))\n";
   source += "}\n";
   return source;
@@ -438,98 +461,96 @@ inline void expectVectorConformanceProgramRuns(const std::string &source,
   CHECK(runCommand(quoteShellArg(exePath)) == expectedExitCode);
 }
 
-inline void expectVectorHelperSurfaceConformance(const std::string &emitMode,
-                                                 const std::string &importPath) {
-  const std::string slug = vectorHelperConformanceImportSlug(importPath);
-  expectVectorConformanceProgramRuns(
-      makeVectorHelperSurfaceConformanceSource(importPath),
-      "vector_helper_surface_" + slug + "_" + emitMode,
-      emitMode,
-      40);
+inline void expectVectorVmProgramRunsWithOutput(const std::string &source,
+                                                const std::string &nameStem,
+                                                int expectedExitCode,
+                                                const std::string &expectedOutput) {
+  const std::string srcPath = writeTemp(nameStem + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / (nameStem + "_vm_out.txt")).string();
+  const std::string runCmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == expectedExitCode);
+  CHECK(readFile(outPath) == expectedOutput);
 }
 
-inline void expectVectorExtendedConstructorConformance(const std::string &emitMode,
-                                                       const std::string &importPath) {
-  const std::string slug = vectorHelperConformanceImportSlug(importPath);
-  expectVectorConformanceProgramRuns(
-      makeVectorExtendedConstructorConformanceSource(importPath),
-      "vector_extended_ctor_" + slug + "_" + emitMode,
-      emitMode,
-      32);
+inline void expectVectorConformanceCompileReject(const std::string &source,
+                                                 const std::string &nameStem,
+                                                 const std::string &emitMode,
+                                                 const std::string &expectedFragment,
+                                                 const std::string &requiredFragment = "") {
+  const std::string srcPath = writeTemp(nameStem + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
+  const std::string command = emitMode == "vm"
+                                  ? "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                                        quoteShellArg(outPath) + " 2>&1"
+                                  : "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                        " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(command) == 2);
+  const std::string diagnostics = readFile(outPath);
+  if (!requiredFragment.empty()) {
+    CHECK(diagnostics.find(requiredFragment) != std::string::npos);
+  }
+  CHECK(diagnostics.find(expectedFragment) != std::string::npos);
 }
 
-inline void expectVectorGrowthConformance(const std::string &emitMode,
-                                          const std::string &importPath) {
-  const std::string slug = vectorHelperConformanceImportSlug(importPath);
-  expectVectorConformanceProgramRuns(
-      makeVectorGrowthConformanceSource(importPath),
-      "vector_growth_" + slug + "_" + emitMode,
-      emitMode,
-      71);
+inline void expectVmStdlibVectorHelperSurfaceConformance() {
+  expectVectorVmProgramRunsWithOutput(makeVectorHelperSurfaceConformanceSource("/std/collections/*"),
+                                      "vector_helper_surface_stdlib",
+                                      40,
+                                      "0\n2\n2\n13\n11\n5\n7\n");
 }
 
-inline void expectVectorShrinkRemoveConformance(const std::string &emitMode,
-                                                const std::string &importPath) {
-  const std::string slug = vectorHelperConformanceImportSlug(importPath);
-  expectVectorConformanceProgramRuns(
-      makeVectorShrinkRemoveConformanceSource(importPath),
-      "vector_shrink_remove_" + slug + "_" + emitMode,
-      emitMode,
-      86);
+inline void expectVmStdlibVectorExtendedConstructorConformance() {
+  expectVectorVmProgramRunsWithOutput(makeVectorExtendedConstructorConformanceSource("/std/collections/*"),
+                                      "vector_extended_ctor_stdlib",
+                                      32,
+                                      "8\n8\n14\n2\n");
+}
+
+inline void expectVmStdlibVectorGrowthConformance() {
+  expectVectorVmProgramRunsWithOutput(makeVectorGrowthConformanceSource("/std/collections/*"),
+                                      "vector_growth_stdlib",
+                                      71,
+                                      "2\n3\n11\n22\n33\n");
+}
+
+inline void expectVmStdlibVectorShrinkRemoveConformance() {
+  expectVectorVmProgramRunsWithOutput(makeVectorShrinkRemoveConformanceSource("/std/collections/*"),
+                                      "vector_shrink_remove_stdlib",
+                                      86,
+                                      "3\n20\n2\n30\n1\n30\n0\n");
 }
 
 inline void expectVectorTypeMismatchReject(const std::string &emitMode,
                                            const std::string &importPath) {
   const std::string slug = vectorHelperConformanceImportSlug(importPath);
-  const std::string source = makeVectorTypeMismatchRejectSource(importPath);
-  const std::string srcPath = writeTemp("vector_type_mismatch_" + slug + "_" + emitMode + ".prime", source);
-
-  if (emitMode == "vm") {
-    const std::string runCmd =
-        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
-    CHECK(runCommand(runCmd) == 2);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  expectVectorConformanceCompileReject(makeVectorTypeMismatchRejectSource(importPath),
+                                       "vector_type_mismatch_" + slug,
+                                       emitMode,
+                                       "/std/collections/vectorPair",
+                                       "argument type mismatch");
 }
 
 inline void expectVectorPopTypeMismatchReject(const std::string &emitMode,
                                               const std::string &importPath) {
   const std::string slug = vectorHelperConformanceImportSlug(importPath);
-  const std::string source = makeVectorPopTypeMismatchRejectSource(importPath);
-  const std::string srcPath = writeTemp("vector_pop_type_mismatch_" + slug + "_" + emitMode + ".prime", source);
-
-  if (emitMode == "vm") {
-    const std::string runCmd =
-        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
-    CHECK(runCommand(runCmd) == 2);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  expectVectorConformanceCompileReject(makeVectorPopTypeMismatchRejectSource(importPath),
+                                       "vector_pop_type_mismatch_" + slug,
+                                       emitMode,
+                                       "/std/collections/vectorPop",
+                                       "argument type mismatch");
 }
 
 inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
                                                const std::string &importPath) {
   const std::string slug = vectorHelperConformanceImportSlug(importPath);
-  const std::string source = makeVectorPushTypeMismatchRejectSource(importPath);
-  const std::string srcPath = writeTemp("vector_push_type_mismatch_" + slug + "_" + emitMode + ".prime", source);
-
-  if (emitMode == "vm") {
-    const std::string runCmd =
-        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
-    CHECK(runCommand(runCmd) == 2);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  expectVectorConformanceCompileReject(makeVectorPushTypeMismatchRejectSource(importPath),
+                                       "vector_push_type_mismatch_" + slug,
+                                       emitMode,
+                                       "/std/collections/vectorPush",
+                                       "argument type mismatch");
 }
 
 inline void expectCanonicalVectorNamespaceConformance(const std::string &emitMode) {
@@ -570,26 +591,11 @@ inline void expectCanonicalVectorNamespaceTypeMismatchReject(const std::string &
   CHECK(readFile(outPath).find("mismatch") != std::string::npos);
 }
 
-inline void expectCanonicalVectorNamespaceImportRequirement(const std::string &emitMode) {
-  const std::string source = makeCanonicalVectorNamespaceImportRequirementSource();
-  const std::string srcPath = writeTemp("vector_namespace_canonical_import_requirement_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_vector_namespace_canonical_import_requirement_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                               quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/vector") != std::string::npos);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/vector") != std::string::npos);
+inline void expectCanonicalVectorNamespaceVmImportRequirement() {
+  expectVectorConformanceCompileReject(makeCanonicalVectorNamespaceImportRequirementSource(),
+                                       "vector_namespace_canonical_import_requirement",
+                                       "vm",
+                                       "/std/collections/vector/vector");
 }
 
 inline void expectCanonicalVectorCountNamedArgsConformance(const std::string &emitMode) {
@@ -600,26 +606,11 @@ inline void expectCanonicalVectorCountNamedArgsConformance(const std::string &em
       2);
 }
 
-inline void expectCanonicalVectorCountImportRequirement(const std::string &emitMode) {
-  const std::string source = makeCanonicalVectorCountImportRequirementSource();
-  const std::string srcPath = writeTemp("vector_count_canonical_import_requirement_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_vector_count_canonical_import_requirement_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                               quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+inline void expectCanonicalVectorCountVmImportRequirement() {
+  expectVectorConformanceCompileReject(makeCanonicalVectorCountImportRequirementSource(),
+                                       "vector_count_canonical_import_requirement",
+                                       "vm",
+                                       "/std/collections/vector/count");
 }
 
 inline void expectCanonicalVectorCapacityNamedArgsConformance(const std::string &emitMode) {
@@ -630,27 +621,11 @@ inline void expectCanonicalVectorCapacityNamedArgsConformance(const std::string 
       2);
 }
 
-inline void expectCanonicalVectorCapacityImportRequirement(const std::string &emitMode) {
-  const std::string source = makeCanonicalVectorCapacityImportRequirementSource();
-  const std::string srcPath =
-      writeTemp("vector_capacity_canonical_import_requirement_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_vector_capacity_canonical_import_requirement_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                               quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+inline void expectCanonicalVectorCapacityVmImportRequirement() {
+  expectVectorConformanceCompileReject(makeCanonicalVectorCapacityImportRequirementSource(),
+                                       "vector_capacity_canonical_import_requirement",
+                                       "vm",
+                                       "/std/collections/vector/capacity");
 }
 
 inline void expectCanonicalVectorAccessNamedArgsConformance(const std::string &emitMode) {
@@ -661,29 +636,11 @@ inline void expectCanonicalVectorAccessNamedArgsConformance(const std::string &e
       9);
 }
 
-inline void expectCanonicalVectorAccessImportRequirement(const std::string &emitMode,
-                                                         const std::string &helperName) {
-  const std::string source = makeCanonicalVectorAccessImportRequirementSource(helperName);
-  const std::string srcPath =
-      writeTemp("vector_" + helperName + "_canonical_import_requirement_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_vector_" + helperName + "_canonical_import_requirement_" + emitMode + "_out.txt"))
-          .string();
-  const std::string expected = "unknown call target: /std/collections/vector/" + helperName;
-
-  if (emitMode == "vm") {
-    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                               quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find(expected) != std::string::npos);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find(expected) != std::string::npos);
+inline void expectCanonicalVectorAccessVmImportRequirement(const std::string &helperName) {
+  expectVectorConformanceCompileReject(makeCanonicalVectorAccessImportRequirementSource(helperName),
+                                       "vector_" + helperName + "_canonical_import_requirement",
+                                       "vm",
+                                       "/std/collections/vector/" + helperName);
 }
 
 inline void expectCanonicalVectorPushNamedArgsConformance(const std::string &emitMode) {
@@ -694,27 +651,11 @@ inline void expectCanonicalVectorPushNamedArgsConformance(const std::string &emi
       2);
 }
 
-inline void expectCanonicalVectorPushImportRequirement(const std::string &emitMode) {
-  const std::string source = makeCanonicalVectorPushImportRequirementSource();
-  const std::string srcPath =
-      writeTemp("vector_push_canonical_import_requirement_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_vector_push_canonical_import_requirement_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                               quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/push") != std::string::npos);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/push") != std::string::npos);
+inline void expectCanonicalVectorPushVmImportRequirement() {
+  expectVectorConformanceCompileReject(makeCanonicalVectorPushImportRequirementSource(),
+                                       "vector_push_canonical_import_requirement",
+                                       "vm",
+                                       "/std/collections/vector/push");
 }
 
 inline void expectCanonicalVectorPopNamedArgsConformance(const std::string &emitMode) {
@@ -725,27 +666,11 @@ inline void expectCanonicalVectorPopNamedArgsConformance(const std::string &emit
       1);
 }
 
-inline void expectCanonicalVectorPopImportRequirement(const std::string &emitMode) {
-  const std::string source = makeCanonicalVectorPopImportRequirementSource();
-  const std::string srcPath =
-      writeTemp("vector_pop_canonical_import_requirement_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_vector_pop_canonical_import_requirement_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                               quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/pop") != std::string::npos);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/pop") != std::string::npos);
+inline void expectCanonicalVectorPopVmImportRequirement() {
+  expectVectorConformanceCompileReject(makeCanonicalVectorPopImportRequirementSource(),
+                                       "vector_pop_canonical_import_requirement",
+                                       "vm",
+                                       "/std/collections/vector/pop");
 }
 
 inline void expectCanonicalVectorReserveNamedArgsConformance(const std::string &emitMode) {
@@ -756,27 +681,11 @@ inline void expectCanonicalVectorReserveNamedArgsConformance(const std::string &
       10);
 }
 
-inline void expectCanonicalVectorReserveImportRequirement(const std::string &emitMode) {
-  const std::string source = makeCanonicalVectorReserveImportRequirementSource();
-  const std::string srcPath =
-      writeTemp("vector_reserve_canonical_import_requirement_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_vector_reserve_canonical_import_requirement_" + emitMode + "_out.txt"))
-          .string();
-
-  if (emitMode == "vm") {
-    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                               quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
-    return;
-  }
-
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
+inline void expectCanonicalVectorReserveVmImportRequirement() {
+  expectVectorConformanceCompileReject(makeCanonicalVectorReserveImportRequirementSource(),
+                                       "vector_reserve_canonical_import_requirement",
+                                       "vm",
+                                       "/std/collections/vector/reserve");
 }
 
 inline void expectCanonicalVectorNamespaceCountShadow(const std::string &emitMode) {

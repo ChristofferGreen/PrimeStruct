@@ -57,10 +57,6 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs shared map conformance harness in C++ emitter") {
-  expectSharedMapConformanceHarness("exe");
-}
-
 TEST_CASE("compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalValueConformance("exe");
 }
@@ -179,18 +175,6 @@ TEST_CASE("compiles and runs experimental map inserts in C++ emitter") {
 
 TEST_CASE("rejects experimental map bracket access in C++ emitter") {
   expectExperimentalMapIndexConformance("exe");
-}
-
-TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") {
-  expectSharedVectorConformanceHarness("exe");
-}
-
-TEST_CASE("compiles and runs experimental vector helper runtime contracts in C++ emitter") {
-  expectExperimentalVectorRuntimeContracts("exe");
-}
-
-TEST_CASE("rejects experimental vector ownership-sensitive helpers in C++ emitter") {
-  expectExperimentalVectorOwnershipRejects("exe");
 }
 
 TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") {
