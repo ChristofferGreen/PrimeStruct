@@ -10041,15 +10041,15 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererCallHelpers.cpp";
   const std::filesystem::path callResolutionPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
+  const std::filesystem::path inlineDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
   REQUIRE(std::filesystem::exists(callHelpersPath));
   REQUIRE(std::filesystem::exists(callResolutionPath));
+  REQUIRE(std::filesystem::exists(inlineDispatchPath));
   const std::string callHelpersSource = readText(callHelpersPath);
   const std::string callResolutionSource = readText(callResolutionPath);
+  const std::string inlineDispatchSource = readText(inlineDispatchPath);
 
-  CHECK(callHelpersSource.find("ResolvedInlineCallResult emitResolvedInlineDefinitionCall(") !=
-        std::string::npos);
-  CHECK(callHelpersSource.find("InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(") !=
-        std::string::npos);
   CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
         std::string::npos);
   CHECK(callHelpersSource.find("ResolveDefinitionCallFn makeResolveDefinitionCall(") ==
@@ -10068,6 +10068,24 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(callHelpersSource.find("bool isTailCallCandidate(const Expr &expr,") ==
         std::string::npos);
   CHECK(callHelpersSource.find("bool hasTailExecutionCandidate(const std::vector<Expr> &statements,") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("ResolvedInlineCallResult emitResolvedInlineDefinitionCall(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool isMapContainsHelperName(const Expr &expr) {") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool isMapTryAtHelperName(const Expr &expr) {") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") !=
+        std::string::npos);
+  CHECK(callHelpersSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(") !=
         std::string::npos);
 
   CHECK(callResolutionSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") !=
@@ -10093,6 +10111,27 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)") !=
         std::string::npos);
   CHECK(callResolutionSource.find("std::string normalizeMapImportAliasPath(const std::string &path)") !=
+        std::string::npos);
+
+  CHECK(inlineDispatchSource.find("bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("bool isMapContainsHelperName(const Expr &expr)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("bool isMapTryAtHelperName(const Expr &expr)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("bool isVectorTarget(const Expr &expr, const LocalMap &localsIn)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("ResolvedInlineCallResult emitResolvedInlineDefinitionCall(") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("const auto firstCountFallbackResult = tryEmitNonMethodCountFallback(") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("auto emitCanonicalInlineDefinitionCall = [&](const Expr &callExpr, const Definition &callee) {") !=
         std::string::npos);
 }
 

@@ -106,6 +106,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/IrVirtualRegisterVerifier.cpp
   src/ir_lowerer/IrLowererCallHelpers.cpp
   src/ir_lowerer/IrLowererCallResolution.cpp
+  src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp
   src/ir_lowerer/IrLowererBindingTransformHelpers.cpp
   src/ir_lowerer/IrLowererBindingTypeHelpers.cpp
   src/ir_lowerer/IrLowererCountAccessHelpers.cpp
