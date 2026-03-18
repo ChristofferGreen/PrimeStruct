@@ -54,6 +54,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprNumeric.cpp
   src/semantics/SemanticsValidatorExpr.cpp
   src/semantics/SemanticsValidatorInferCollectionCountCapacity.cpp
+  src/semantics/SemanticsValidatorInferCollectionDirectCountCapacity.cpp
   src/semantics/SemanticsValidatorInferCollectionDispatch.cpp
   src/semantics/SemanticsValidatorInferCollections.cpp
   src/semantics/SemanticsValidatorInferControlFlow.cpp
