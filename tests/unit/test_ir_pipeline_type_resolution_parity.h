@@ -129,6 +129,107 @@ main() {
 }
 )",
       },
+      {
+          "block_omitted_field_envelope_struct",
+          R"(
+[struct]
+Vec3() {
+  [i32] x{7i32}
+
+  [return<i32>]
+  getX() {
+    return(this.x)
+  }
+}
+
+[return<Vec3>]
+makeCenter() {
+  return(Vec3())
+}
+
+[struct]
+Sphere() {
+  center{
+    block {
+      return(makeCenter())
+    }
+  }
+}
+
+[return<i32>]
+main() {
+  [Sphere] shape{Sphere()}
+  return(shape.center.getX())
+}
+)",
+      },
+      {
+          "if_omitted_field_envelope_struct",
+          R"(
+[struct]
+Vec3() {
+  [i32] x{7i32}
+
+  [return<i32>]
+  getX() {
+    return(this.x)
+  }
+}
+
+[return<Vec3>]
+leftCenter() {
+  return(Vec3())
+}
+
+[return<Vec3>]
+rightCenter() {
+  return(Vec3())
+}
+
+[struct]
+Sphere() {
+  center{
+    if(true,
+      then(){ return(leftCenter()) },
+      else(){ return(rightCenter()) })
+  }
+}
+
+[return<i32>]
+main() {
+  [Sphere] shape{Sphere()}
+  return(shape.center.getX())
+}
+)",
+      },
+      {
+          "ambiguous_omitted_field_envelope",
+          R"(
+[struct]
+Vec2() {
+  [i32] x{1i32}
+}
+
+[struct]
+Vec3() {
+  [i32] x{2i32}
+}
+
+[struct]
+Shape() {
+  center{
+    if(true,
+      then(){ return(Vec2()) },
+      else(){ return(Vec3()) })
+  }
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)",
+      },
   };
 
   for (const ParityCase &testCase : cases) {
