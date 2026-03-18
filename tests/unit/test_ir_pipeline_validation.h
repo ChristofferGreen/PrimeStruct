@@ -9236,12 +9236,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::filesystem::path semanticsExprPath = repoRoot / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
   const std::filesystem::path semanticsExprLambdaPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
+  const std::filesystem::path semanticsExprNumericPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
+  REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
+  const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
   CHECK(semanticsExprSource.find("return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (!validateNumericBuiltinExpr(params, locals, expr, handledNumericBuiltin)) {") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
@@ -9250,6 +9256,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprLambdaSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") !=
         std::string::npos);
   CHECK(semanticsExprLambdaSource.find("duplicate lambda capture") != std::string::npos);
+  CHECK(semanticsExprNumericSource.find("bool SemanticsValidator::validateNumericBuiltinExpr") != std::string::npos);
+  CHECK(semanticsExprNumericSource.find("multiply requires scalar scaling") != std::string::npos);
+  CHECK(semanticsExprNumericSource.find("implicit matrix/quaternion family conversion requires explicit helper") !=
+        std::string::npos);
 
   const std::filesystem::path semanticsExprPredicatesHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPredicates.h";

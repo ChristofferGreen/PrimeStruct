@@ -107,6 +107,29 @@ private:
                     const Expr &expr,
                     const std::vector<Expr> *enclosingStatements = nullptr,
                     size_t statementIndex = 0);
+  bool isNumericExpr(const std::vector<ParameterInfo> &params,
+                     const std::unordered_map<std::string, BindingInfo> &locals,
+                     const Expr &expr);
+  bool isFloatExpr(const std::vector<ParameterInfo> &params,
+                   const std::unordered_map<std::string, BindingInfo> &locals,
+                   const Expr &expr);
+  bool isComparisonOperand(const std::vector<ParameterInfo> &params,
+                           const std::unordered_map<std::string, BindingInfo> &locals,
+                           const Expr &expr);
+  std::string inferMatrixQuaternionTypePath(const Expr &expr,
+                                            const std::vector<ParameterInfo> &params,
+                                            const std::unordered_map<std::string, BindingInfo> &locals);
+  std::string inferVectorTypePath(const Expr &expr,
+                                  const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals);
+  bool isImplicitMatrixQuaternionConversion(const std::string &expectedTypePath,
+                                            const std::string &actualTypePath) const;
+  std::string implicitMatrixQuaternionConversionDiagnostic(const std::string &expectedTypePath,
+                                                           const std::string &actualTypePath) const;
+  bool validateNumericBuiltinExpr(const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals,
+                                  const Expr &expr,
+                                  bool &handled);
   bool validateLambdaExpr(const std::vector<ParameterInfo> &params,
                           const std::unordered_map<std::string, BindingInfo> &locals,
                           const Expr &expr,
