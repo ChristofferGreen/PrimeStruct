@@ -6,6 +6,24 @@
 #include <ostream>
 
 namespace primec {
+namespace {
+
+DiagnosticSpan normalizeSpanFile(DiagnosticSpan span, const std::string &inputPath) {
+  if (span.file.empty()) {
+    span.file = inputPath;
+  }
+  return span;
+}
+
+std::vector<DiagnosticRelatedSpan> normalizeRelatedSpanFiles(std::vector<DiagnosticRelatedSpan> relatedSpans,
+                                                             const std::string &inputPath) {
+  for (auto &related : relatedSpans) {
+    related.span = normalizeSpanFile(std::move(related.span), inputPath);
+  }
+  return relatedSpans;
+}
+
+} // namespace
 
 std::string transformAvailability(const TransformInfo &info) {
   std::string availability;
@@ -37,14 +55,20 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
   if (failure.diagnosticInfo != nullptr && !failure.diagnosticInfo->records.empty()) {
     diagnostics.reserve(failure.diagnosticInfo->records.size());
     for (const auto &recordInfo : failure.diagnosticInfo->records) {
-      std::string diagnosticMessage =
-          recordInfo.normalizedMessage.empty() ? failure.message : recordInfo.normalizedMessage;
+      std::string diagnosticMessage = recordInfo.message.empty() ? failure.message : recordInfo.message;
       const DiagnosticSpan *primarySpan = nullptr;
+      DiagnosticSpan normalizedPrimarySpan;
       if (recordInfo.hasPrimarySpan) {
-        primarySpan = &recordInfo.primarySpan;
+        normalizedPrimarySpan = normalizeSpanFile(recordInfo.primarySpan, options.inputPath);
+        primarySpan = &normalizedPrimarySpan;
       }
       diagnostics.push_back(makeDiagnosticRecord(
-          failure.code, diagnosticMessage, options.inputPath, failure.notes, primarySpan, recordInfo.relatedSpans));
+          failure.code,
+          diagnosticMessage,
+          options.inputPath,
+          failure.notes,
+          primarySpan,
+          normalizeRelatedSpanFiles(recordInfo.relatedSpans, options.inputPath)));
     }
   } else {
     std::string diagnosticMessage = failure.message;
@@ -52,14 +76,14 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
     const DiagnosticSpan *primarySpan = nullptr;
     std::vector<DiagnosticRelatedSpan> relatedSpans;
     if (failure.diagnosticInfo != nullptr) {
-      if (!failure.diagnosticInfo->normalizedMessage.empty()) {
-        diagnosticMessage = failure.diagnosticInfo->normalizedMessage;
+      if (!failure.diagnosticInfo->message.empty()) {
+        diagnosticMessage = failure.diagnosticInfo->message;
       }
       if (failure.diagnosticInfo->hasPrimarySpan) {
-        primarySpanStorage = failure.diagnosticInfo->primarySpan;
+        primarySpanStorage = normalizeSpanFile(failure.diagnosticInfo->primarySpan, options.inputPath);
         primarySpan = &primarySpanStorage;
       }
-      relatedSpans = failure.diagnosticInfo->relatedSpans;
+      relatedSpans = normalizeRelatedSpanFiles(failure.diagnosticInfo->relatedSpans, options.inputPath);
     }
     diagnostics.push_back(
         makeDiagnosticRecord(failure.code, diagnosticMessage, options.inputPath, failure.notes, primarySpan, relatedSpans));
@@ -85,7 +109,7 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
 CliFailure describeCompilePipelineFailure(const CompilePipelineErrorStage errorStage,
                                           const std::string &message,
                                           const CompilePipelineOutput &output,
-                                          const CompilePipelineDiagnosticInfo &diagnosticInfo) {
+                                          const DiagnosticSinkReport &diagnosticInfo) {
   CliFailure failure;
   failure.message = message;
   switch (errorStage) {
@@ -165,6 +189,8 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure, con
       break;
   }
 
+  cliFailure.diagnosticInfo = &failure.diagnosticInfo;
+
   return cliFailure;
 }
 
@@ -198,6 +224,8 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
       }
       break;
   }
+
+  cliFailure.diagnosticInfo = &failure.diagnosticInfo;
 
   return cliFailure;
 }

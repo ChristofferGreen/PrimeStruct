@@ -195,6 +195,105 @@ std::string diagnosticCodeString(DiagnosticCode code) {
   }
 }
 
+void DiagnosticSink::reset() {
+  if (report_ == nullptr) {
+    return;
+  }
+  *report_ = {};
+}
+
+void DiagnosticSink::clearContext() {
+  if (report_ == nullptr) {
+    return;
+  }
+  report_->primarySpan = {};
+  report_->relatedSpans.clear();
+  report_->hasPrimarySpan = false;
+}
+
+void DiagnosticSink::capturePrimarySpanIfUnset(const DiagnosticSpan &span) {
+  if (report_ == nullptr || !spanHasLocation(span) || report_->hasPrimarySpan) {
+    return;
+  }
+  report_->primarySpan = span;
+  if (report_->primarySpan.endLine <= 0) {
+    report_->primarySpan.endLine = report_->primarySpan.line;
+  }
+  if (report_->primarySpan.endColumn <= 0) {
+    report_->primarySpan.endColumn = report_->primarySpan.column;
+  }
+  report_->hasPrimarySpan = true;
+}
+
+void DiagnosticSink::capturePrimarySpanIfUnset(int line, int column, std::string_view file) {
+  DiagnosticSpan span;
+  span.file = std::string(file);
+  span.line = line;
+  span.column = column;
+  span.endLine = line;
+  span.endColumn = column;
+  capturePrimarySpanIfUnset(span);
+}
+
+void DiagnosticSink::addRelatedSpan(const DiagnosticRelatedSpan &span) {
+  if (report_ == nullptr || !spanHasLocation(span.span) || span.label.empty()) {
+    return;
+  }
+  for (const auto &existing : report_->relatedSpans) {
+    if (existing.span.file == span.span.file && existing.span.line == span.span.line &&
+        existing.span.column == span.span.column && existing.label == span.label) {
+      return;
+    }
+  }
+  report_->relatedSpans.push_back(span);
+}
+
+void DiagnosticSink::addRelatedSpan(int line, int column, std::string label, std::string_view file) {
+  DiagnosticRelatedSpan span;
+  span.span.file = std::string(file);
+  span.span.line = line;
+  span.span.column = column;
+  span.span.endLine = line;
+  span.span.endColumn = column;
+  span.label = std::move(label);
+  addRelatedSpan(span);
+}
+
+void DiagnosticSink::setSummary(std::string message) {
+  if (report_ == nullptr) {
+    return;
+  }
+  report_->message = std::move(message);
+}
+
+DiagnosticSinkRecord DiagnosticSink::makeRecord(std::string message) const {
+  DiagnosticSinkRecord record;
+  record.message = std::move(message);
+  if (report_ == nullptr) {
+    return record;
+  }
+  record.primarySpan = report_->primarySpan;
+  record.relatedSpans = report_->relatedSpans;
+  record.hasPrimarySpan = report_->hasPrimarySpan;
+  return record;
+}
+
+void DiagnosticSink::setRecords(std::vector<DiagnosticSinkRecord> records) {
+  if (report_ == nullptr) {
+    return;
+  }
+  report_->records = std::move(records);
+  if (report_->records.empty()) {
+    clearContext();
+    return;
+  }
+  const DiagnosticSinkRecord &first = report_->records.front();
+  report_->message = first.message;
+  report_->primarySpan = first.primarySpan;
+  report_->relatedSpans = first.relatedSpans;
+  report_->hasPrimarySpan = first.hasPrimarySpan;
+}
+
 DiagnosticRecord makeDiagnosticRecord(DiagnosticCode code,
                                       const std::string &message,
                                       const std::string &inputPath,

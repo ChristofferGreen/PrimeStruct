@@ -275,15 +275,10 @@ bool validateGraphicsBackendSupport(const Program &program,
     }
     error = "graphics stdlib runtime substrate unavailable for " + targetName + " target: " + importPath;
     if (diagnosticInfo != nullptr) {
-      diagnosticInfo->normalizedMessage = error;
-      diagnosticInfo->hasPrimarySpan = false;
-      diagnosticInfo->primarySpan = {};
-      diagnosticInfo->relatedSpans.clear();
-      diagnosticInfo->records.clear();
-      CompilePipelineDiagnosticInfo::RecordInfo record;
-      record.normalizedMessage = error;
-      record.hasPrimarySpan = false;
-      diagnosticInfo->records.push_back(std::move(record));
+      DiagnosticSink sink(diagnosticInfo);
+      DiagnosticSinkRecord record;
+      record.message = error;
+      sink.setRecords({std::move(record)});
     }
     return false;
   }
@@ -369,14 +364,14 @@ bool runCompilePipeline(const Options &options,
   errorStage = CompilePipelineErrorStage::None;
   output = {};
   error.clear();
-  if (diagnosticInfo != nullptr) {
-    *diagnosticInfo = {};
-  }
+  DiagnosticSink diagnosticSink(diagnosticInfo);
+  diagnosticSink.reset();
 
   std::string source;
   ImportResolver importResolver;
   if (!importResolver.expandImports(options.inputPath, source, error, options.importPaths)) {
     errorStage = CompilePipelineErrorStage::Import;
+    diagnosticSink.setSummary(error);
     return false;
   }
 
@@ -384,6 +379,7 @@ bool runCompilePipeline(const Options &options,
     const std::vector<std::string> sourceImports = collectStdImportPaths(source);
     if (!appendStdlibModuleSources(options.importPaths, sourceImports, source, error)) {
       errorStage = CompilePipelineErrorStage::Import;
+      diagnosticSink.setSummary(error);
       return false;
     }
   }
@@ -396,6 +392,7 @@ bool runCompilePipeline(const Options &options,
 
   if (!textPipeline.apply(source, output.filteredSource, error, textOptions)) {
     errorStage = CompilePipelineErrorStage::Transform;
+    diagnosticSink.setSummary(error);
     return false;
   }
 
@@ -432,32 +429,25 @@ bool runCompilePipeline(const Options &options,
     }
     if (diagnosticInfo != nullptr) {
       if (!parserErrors.empty()) {
-        diagnosticInfo->records.reserve(parserErrors.size());
+        std::vector<DiagnosticSinkRecord> records;
+        records.reserve(parserErrors.size());
         for (const auto &item : parserErrors) {
-          CompilePipelineDiagnosticInfo::RecordInfo record;
-          record.normalizedMessage = item.message;
+          DiagnosticSinkRecord record;
+          record.message = item.message;
           if (item.line > 0 && item.column > 0) {
-            record.primarySpan.file = options.inputPath;
             record.primarySpan.line = item.line;
             record.primarySpan.column = item.column;
             record.primarySpan.endLine = item.line;
             record.primarySpan.endColumn = item.column;
             record.hasPrimarySpan = true;
           }
-          diagnosticInfo->records.push_back(std::move(record));
+          records.push_back(std::move(record));
         }
-        diagnosticInfo->normalizedMessage = diagnosticInfo->records.front().normalizedMessage;
-        diagnosticInfo->primarySpan = diagnosticInfo->records.front().primarySpan;
-        diagnosticInfo->hasPrimarySpan = diagnosticInfo->records.front().hasPrimarySpan;
+        diagnosticSink.setRecords(std::move(records));
       } else {
-        diagnosticInfo->normalizedMessage = parserErrorInfo.message;
+        diagnosticSink.setSummary(parserErrorInfo.message);
         if (parserErrorInfo.line > 0 && parserErrorInfo.column > 0) {
-          diagnosticInfo->primarySpan.file = options.inputPath;
-          diagnosticInfo->primarySpan.line = parserErrorInfo.line;
-          diagnosticInfo->primarySpan.column = parserErrorInfo.column;
-          diagnosticInfo->primarySpan.endLine = parserErrorInfo.line;
-          diagnosticInfo->primarySpan.endColumn = parserErrorInfo.column;
-          diagnosticInfo->hasPrimarySpan = true;
+          diagnosticSink.capturePrimarySpanIfUnset(parserErrorInfo.line, parserErrorInfo.column);
         }
       }
     }
@@ -479,6 +469,7 @@ bool runCompilePipeline(const Options &options,
     }
     errorStage = CompilePipelineErrorStage::UnsupportedDumpStage;
     error = options.dumpStage;
+    diagnosticSink.setSummary(error);
     return false;
   }
 
@@ -498,67 +489,9 @@ bool runCompilePipeline(const Options &options,
                           options.collectDiagnostics)) {
     errorStage = CompilePipelineErrorStage::Semantic;
     if (diagnosticInfo != nullptr) {
-      if (!semanticDiagnosticInfo.records.empty()) {
-        diagnosticInfo->records.clear();
-        diagnosticInfo->records.reserve(semanticDiagnosticInfo.records.size());
-        for (const auto &semanticRecord : semanticDiagnosticInfo.records) {
-          CompilePipelineDiagnosticInfo::RecordInfo record;
-          record.normalizedMessage = semanticRecord.message;
-          if (semanticRecord.line > 0 && semanticRecord.column > 0) {
-            record.primarySpan.file = options.inputPath;
-            record.primarySpan.line = semanticRecord.line;
-            record.primarySpan.column = semanticRecord.column;
-            record.primarySpan.endLine = semanticRecord.line;
-            record.primarySpan.endColumn = semanticRecord.column;
-            record.hasPrimarySpan = true;
-          }
-          record.relatedSpans.reserve(semanticRecord.relatedSpans.size());
-          for (const auto &semanticRelated : semanticRecord.relatedSpans) {
-            if (semanticRelated.line <= 0 || semanticRelated.column <= 0) {
-              continue;
-            }
-            DiagnosticRelatedSpan span;
-            span.span.file = options.inputPath;
-            span.span.line = semanticRelated.line;
-            span.span.column = semanticRelated.column;
-            span.span.endLine = semanticRelated.line;
-            span.span.endColumn = semanticRelated.column;
-            span.label = semanticRelated.label;
-            record.relatedSpans.push_back(std::move(span));
-          }
-          diagnosticInfo->records.push_back(std::move(record));
-        }
-        if (!diagnosticInfo->records.empty()) {
-          diagnosticInfo->normalizedMessage = diagnosticInfo->records.front().normalizedMessage;
-          diagnosticInfo->primarySpan = diagnosticInfo->records.front().primarySpan;
-          diagnosticInfo->relatedSpans = diagnosticInfo->records.front().relatedSpans;
-          diagnosticInfo->hasPrimarySpan = diagnosticInfo->records.front().hasPrimarySpan;
-        }
-      } else {
-        diagnosticInfo->normalizedMessage = error;
-        if (semanticDiagnosticInfo.line > 0 && semanticDiagnosticInfo.column > 0) {
-          diagnosticInfo->primarySpan.file = options.inputPath;
-          diagnosticInfo->primarySpan.line = semanticDiagnosticInfo.line;
-          diagnosticInfo->primarySpan.column = semanticDiagnosticInfo.column;
-          diagnosticInfo->primarySpan.endLine = semanticDiagnosticInfo.line;
-          diagnosticInfo->primarySpan.endColumn = semanticDiagnosticInfo.column;
-          diagnosticInfo->hasPrimarySpan = true;
-        }
-        diagnosticInfo->relatedSpans.clear();
-        diagnosticInfo->relatedSpans.reserve(semanticDiagnosticInfo.relatedSpans.size());
-        for (const auto &related : semanticDiagnosticInfo.relatedSpans) {
-          if (related.line <= 0 || related.column <= 0) {
-            continue;
-          }
-          DiagnosticRelatedSpan span;
-          span.span.file = options.inputPath;
-          span.span.line = related.line;
-          span.span.column = related.column;
-          span.span.endLine = related.line;
-          span.span.endColumn = related.column;
-          span.label = related.label;
-          diagnosticInfo->relatedSpans.push_back(std::move(span));
-        }
+      *diagnosticInfo = semanticDiagnosticInfo;
+      if (diagnosticInfo->message.empty()) {
+        diagnosticSink.setSummary(error);
       }
     }
     return false;

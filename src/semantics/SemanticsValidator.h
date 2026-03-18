@@ -662,6 +662,7 @@ private:
   const std::vector<std::string> &defaultEffects_;
   const std::vector<std::string> &entryDefaultEffects_;
   SemanticDiagnosticInfo *diagnosticInfo_ = nullptr;
+  DiagnosticSink diagnosticSink_;
   bool collectDiagnostics_ = false;
 
   std::unordered_set<std::string> defaultEffectSet_;

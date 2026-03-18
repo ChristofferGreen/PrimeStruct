@@ -119,20 +119,13 @@ bool SemanticsValidator::validateDefinitions() {
     if (!collectDiagnostics) {
       return;
     }
-    diagnosticInfo_->line = 0;
-    diagnosticInfo_->column = 0;
-    diagnosticInfo_->relatedSpans.clear();
+    diagnosticSink_.clearContext();
   };
   auto pushCollectedRecord = [&]() {
     if (!collectDiagnostics || error_.empty()) {
       return;
     }
-    SemanticDiagnosticRecord record;
-    record.message = error_;
-    record.line = diagnosticInfo_->line;
-    record.column = diagnosticInfo_->column;
-    record.relatedSpans = diagnosticInfo_->relatedSpans;
-    collectedRecords.push_back(std::move(record));
+    collectedRecords.push_back(diagnosticSink_.makeRecord(error_));
     error_.clear();
     resetCollectedState();
   };
@@ -279,13 +272,8 @@ bool SemanticsValidator::validateDefinitions() {
   }
 
   if (collectDiagnostics && !collectedRecords.empty()) {
-    diagnosticInfo_->records = std::move(collectedRecords);
-    if (!diagnosticInfo_->records.empty()) {
-      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
-      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
-      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
-      error_ = diagnosticInfo_->records.front().message;
-    }
+    diagnosticSink_.setRecords(std::move(collectedRecords));
+    error_ = diagnosticInfo_->records.front().message;
     return false;
   }
 
@@ -945,20 +933,13 @@ bool SemanticsValidator::validateExecutions() {
     if (!collectDiagnostics) {
       return;
     }
-    diagnosticInfo_->line = 0;
-    diagnosticInfo_->column = 0;
-    diagnosticInfo_->relatedSpans.clear();
+    diagnosticSink_.clearContext();
   };
   auto pushCollectedRecord = [&]() {
     if (!collectDiagnostics || error_.empty()) {
       return;
     }
-    SemanticDiagnosticRecord record;
-    record.message = error_;
-    record.line = diagnosticInfo_->line;
-    record.column = diagnosticInfo_->column;
-    record.relatedSpans = diagnosticInfo_->relatedSpans;
-    collectedRecords.push_back(std::move(record));
+    collectedRecords.push_back(diagnosticSink_.makeRecord(error_));
     error_.clear();
     resetCollectedState();
   };
@@ -1122,13 +1103,8 @@ bool SemanticsValidator::validateExecutions() {
   }
 
   if (collectDiagnostics && !collectedRecords.empty()) {
-    diagnosticInfo_->records = std::move(collectedRecords);
-    if (!diagnosticInfo_->records.empty()) {
-      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
-      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
-      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
-      error_ = diagnosticInfo_->records.front().message;
-    }
+    diagnosticSink_.setRecords(std::move(collectedRecords));
+    error_ = diagnosticInfo_->records.front().message;
     return false;
   }
 

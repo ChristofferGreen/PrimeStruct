@@ -179,12 +179,17 @@ bool SemanticsValidator::buildDefinitionMaps() {
       SemanticDiagnosticRecord record;
       record.message = message;
       if (def.sourceLine > 0 && def.sourceColumn > 0) {
-        record.line = def.sourceLine;
-        record.column = def.sourceColumn;
+        record.primarySpan.line = def.sourceLine;
+        record.primarySpan.column = def.sourceColumn;
+        record.primarySpan.endLine = def.sourceLine;
+        record.primarySpan.endColumn = def.sourceColumn;
+        record.hasPrimarySpan = true;
       }
       SemanticDiagnosticRelatedSpan related;
-      related.line = def.sourceLine;
-      related.column = def.sourceColumn;
+      related.span.line = def.sourceLine;
+      related.span.column = def.sourceColumn;
+      related.span.endLine = def.sourceLine;
+      related.span.endColumn = def.sourceColumn;
       related.label = "definition: " + def.fullPath;
       record.relatedSpans.push_back(std::move(related));
       if (error_.empty()) {
@@ -656,12 +661,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     defMap_[def.fullPath] = &def;
   }
   if (collectTransformDiagnostics && !transformDiagnosticRecords.empty()) {
-    diagnosticInfo_->records = std::move(transformDiagnosticRecords);
-    if (!diagnosticInfo_->records.empty()) {
-      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
-      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
-      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
-    }
+    diagnosticSink_.setRecords(std::move(transformDiagnosticRecords));
     return false;
   }
 
@@ -677,8 +677,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
     record.message = message;
     if (relatedDef != nullptr && relatedDef->sourceLine > 0 && relatedDef->sourceColumn > 0) {
       SemanticDiagnosticRelatedSpan related;
-      related.line = relatedDef->sourceLine;
-      related.column = relatedDef->sourceColumn;
+      related.span.line = relatedDef->sourceLine;
+      related.span.column = relatedDef->sourceColumn;
+      related.span.endLine = relatedDef->sourceLine;
+      related.span.endColumn = relatedDef->sourceColumn;
       related.label = "definition: " + relatedDef->fullPath;
       record.relatedSpans.push_back(std::move(related));
     }
@@ -830,12 +832,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   }
 
   if (collectImportDiagnostics && !importDiagnosticRecords.empty()) {
-    diagnosticInfo_->records = std::move(importDiagnosticRecords);
-    if (!diagnosticInfo_->records.empty()) {
-      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
-      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
-      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
-    }
+    diagnosticSink_.setRecords(std::move(importDiagnosticRecords));
     return false;
   }
 
@@ -991,12 +988,17 @@ bool SemanticsValidator::buildDefinitionMaps() {
         SemanticDiagnosticRecord record;
         record.message = returnKindError;
         if (def.sourceLine > 0 && def.sourceColumn > 0) {
-          record.line = def.sourceLine;
-          record.column = def.sourceColumn;
+          record.primarySpan.line = def.sourceLine;
+          record.primarySpan.column = def.sourceColumn;
+          record.primarySpan.endLine = def.sourceLine;
+          record.primarySpan.endColumn = def.sourceColumn;
+          record.hasPrimarySpan = true;
         }
         SemanticDiagnosticRelatedSpan related;
-        related.line = def.sourceLine;
-        related.column = def.sourceColumn;
+        related.span.line = def.sourceLine;
+        related.span.column = def.sourceColumn;
+        related.span.endLine = def.sourceLine;
+        related.span.endColumn = def.sourceColumn;
         related.label = "definition: " + def.fullPath;
         record.relatedSpans.push_back(std::move(related));
         if (error_.empty()) {
@@ -1009,12 +1011,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     returnKinds_[def.fullPath] = kind;
   }
   if (collectReturnKindDiagnostics && !returnKindDiagnosticRecords.empty()) {
-    diagnosticInfo_->records = std::move(returnKindDiagnosticRecords);
-    if (!diagnosticInfo_->records.empty()) {
-      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
-      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
-      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
-    }
+    diagnosticSink_.setRecords(std::move(returnKindDiagnosticRecords));
     return false;
   }
 

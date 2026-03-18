@@ -172,7 +172,7 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 
 **Architecture follow-up (type-resolution dependency graph / SCC solver)**
 Type-resolution graph rollout note: keep the graph migration blocked on the remaining collection-helper/runtime predecessor items so solver work does not target moving call-target semantics. Near-term graph work should stop at a return-kind pilot plus parity; query, CT-eval, parallelization, and broad inference migration stay deferred until that path is stable.
-- ○ Add a `DiagnosticSink` abstraction shared by compile pipeline, semantics, lowering, and both CLIs.
+- ✓ Add a `DiagnosticSink` abstraction shared by compile pipeline, semantics, lowering, and both CLIs. Progress: `DiagnosticSink`/`DiagnosticSinkReport` now back shared parser/semantic/lowering diagnostics, `IrPreparationFailure` and both CLI entrypoints consume the same report shape, and compile-pipeline/semantics adapters no longer translate between bespoke diagnostic record structs.
 - ○ Extract per-definition `ValidationContext` objects from `SemanticsValidator` and remove shared mutable traversal fields.
 - ○ Add a short staged rollout note that names the implementation checkpoints (builder/dump, return-kind pilot, parity, template/local expansion, query and CT-eval follow-ups, legacy removal) and the rollback gates between them.
 - ○ Add a short design note in `docs/PrimeStruct.md` defining the graph model and invariants: node kinds (definition return-kind, call-site type constraints, local `auto` constraints), edge kinds (dependency vs requirement), legal-cycle policy (SCC fixed-point) vs illegal-cycle policy (deterministic diagnostic), and deterministic ordering guarantees.

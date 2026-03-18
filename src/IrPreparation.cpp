@@ -13,9 +13,17 @@ bool prepareIrModule(Program &program,
                      IrPreparationFailure &failure) {
   failure = {};
   std::string error;
+  DiagnosticSink diagnosticSink(&failure.diagnosticInfo);
+  diagnosticSink.reset();
 
   IrLowerer lowerer;
-  if (!lowerer.lower(program, options.entryPath, options.defaultEffects, options.entryDefaultEffects, ir, error)) {
+  if (!lowerer.lower(program,
+                     options.entryPath,
+                     options.defaultEffects,
+                     options.entryDefaultEffects,
+                     ir,
+                     error,
+                     &failure.diagnosticInfo)) {
     failure.stage = IrPreparationFailureStage::Lowering;
     failure.message = std::move(error);
     return false;
@@ -24,6 +32,7 @@ bool prepareIrModule(Program &program,
   if (!validateIrModule(ir, validationTarget, error)) {
     failure.stage = IrPreparationFailureStage::Validation;
     failure.message = std::move(error);
+    diagnosticSink.setSummary(failure.message);
     return false;
   }
 
@@ -31,11 +40,13 @@ bool prepareIrModule(Program &program,
     if (!inlineIrModuleCalls(ir, error)) {
       failure.stage = IrPreparationFailureStage::Inlining;
       failure.message = std::move(error);
+      diagnosticSink.setSummary(failure.message);
       return false;
     }
     if (!validateIrModule(ir, validationTarget, error)) {
       failure.stage = IrPreparationFailureStage::Validation;
       failure.message = std::move(error);
+      diagnosticSink.setSummary(failure.message);
       return false;
     }
   }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace primec {
@@ -30,6 +31,42 @@ struct DiagnosticSpan {
 struct DiagnosticRelatedSpan {
   DiagnosticSpan span;
   std::string label;
+};
+
+struct DiagnosticSinkRecord {
+  std::string message;
+  DiagnosticSpan primarySpan;
+  std::vector<DiagnosticRelatedSpan> relatedSpans;
+  bool hasPrimarySpan = false;
+};
+
+struct DiagnosticSinkReport {
+  std::string message;
+  DiagnosticSpan primarySpan;
+  std::vector<DiagnosticRelatedSpan> relatedSpans;
+  bool hasPrimarySpan = false;
+  std::vector<DiagnosticSinkRecord> records;
+};
+
+class DiagnosticSink {
+public:
+  explicit DiagnosticSink(DiagnosticSinkReport *report = nullptr) : report_(report) {}
+
+  void reset();
+  bool enabled() const { return report_ != nullptr; }
+
+  void clearContext();
+  void capturePrimarySpanIfUnset(const DiagnosticSpan &span);
+  void capturePrimarySpanIfUnset(int line, int column, std::string_view file = {});
+  void addRelatedSpan(const DiagnosticRelatedSpan &span);
+  void addRelatedSpan(int line, int column, std::string label, std::string_view file = {});
+
+  void setSummary(std::string message);
+  DiagnosticSinkRecord makeRecord(std::string message) const;
+  void setRecords(std::vector<DiagnosticSinkRecord> records);
+
+private:
+  DiagnosticSinkReport *report_ = nullptr;
 };
 
 struct DiagnosticRecord {
