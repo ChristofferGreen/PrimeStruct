@@ -1513,6 +1513,12 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     }
     return true;
   }
+  if (lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)) {
+    if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+      return false;
+    }
+    return true;
+  }
   const std::string fieldPath = structDef.fullPath + "/" + fieldStmt.name;
   if (fieldStmt.args.size() != 1) {
     error_ = "omitted struct field envelope requires exactly one initializer: " + fieldPath;
@@ -1880,17 +1886,23 @@ std::string SemanticsValidator::typeNameForReturnKind(ReturnKind kind) const {
   }
 }
 
-bool SemanticsValidator::lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const {
-  if (!graphTypeResolverEnabled_ || currentValidationContext_.definitionPath.empty()) {
+bool SemanticsValidator::lookupGraphLocalAutoBinding(const std::string &scopePath,
+                                                     const Expr &bindingExpr,
+                                                     BindingInfo &bindingOut) const {
+  if (!graphTypeResolverEnabled_ || scopePath.empty()) {
     return false;
   }
   const auto it = graphLocalAutoBindings_.find(graphLocalAutoBindingKey(
-      currentValidationContext_.definitionPath, bindingExpr.sourceLine, bindingExpr.sourceColumn));
+      scopePath, bindingExpr.sourceLine, bindingExpr.sourceColumn));
   if (it == graphLocalAutoBindings_.end()) {
     return false;
   }
   bindingOut = it->second;
   return true;
+}
+
+bool SemanticsValidator::lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const {
+  return lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut);
 }
 
 bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const {

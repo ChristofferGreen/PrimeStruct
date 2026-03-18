@@ -376,6 +376,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("bool inferUnknownReturnKindsGraph();") != std::string::npos);
   CHECK(validatorHeader.find("void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);") !=
         std::string::npos);
+  CHECK(validatorHeader.find("bool lookupGraphLocalAutoBinding(const std::string &scopePath,") !=
+        std::string::npos);
   CHECK(validatorHeader.find("bool lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const;") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;") !=
@@ -383,7 +385,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnKindGraphStep") != std::string::npos);
   CHECK(validatorHeader.find("bool graphTypeResolverEnabled_ = false;") != std::string::npos);
-  CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(*bindingExpr, bindingOut)") != std::string::npos);
+  CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut)") !=
+        std::string::npos);
+  CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)") !=
+        std::string::npos);
   CHECK(validatorBuild.find("inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const") !=
         std::string::npos);
   CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
@@ -428,6 +433,9 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("direct_call_local_auto_collection") != std::string::npos);
   CHECK(parityHeader.find("block_local_auto_struct") != std::string::npos);
   CHECK(parityHeader.find("if_local_auto_collection") != std::string::npos);
+  CHECK(parityHeader.find("block_omitted_field_envelope_struct") != std::string::npos);
+  CHECK(parityHeader.find("if_omitted_field_envelope_struct") != std::string::npos);
+  CHECK(parityHeader.find("ambiguous_omitted_field_envelope") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally corrects grounded mutual recursion") !=

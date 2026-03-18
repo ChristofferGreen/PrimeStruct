@@ -68,6 +68,9 @@ private:
                                        BindingInfo &bindingOut,
                                        const Expr *bindingExpr = nullptr);
   static std::string graphLocalAutoBindingKey(const std::string &scopePath, int sourceLine, int sourceColumn);
+  bool lookupGraphLocalAutoBinding(const std::string &scopePath,
+                                   const Expr &bindingExpr,
+                                   BindingInfo &bindingOut) const;
   bool lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const;
   bool inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const;
   bool resolveStructFieldBinding(const Definition &structDef,

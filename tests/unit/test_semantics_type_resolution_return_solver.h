@@ -193,6 +193,130 @@ main() {
   CHECK(legacyError.empty());
 }
 
+TEST_CASE("graph type resolver infers omitted struct field envelope from block-valued helper") {
+  const std::string source = R"(
+[struct]
+Vec3() {
+  [i32] x{7i32}
+
+  [return<i32>]
+  getX() {
+    return(this.x)
+  }
+}
+
+[return<Vec3>]
+makeCenter() {
+  return(Vec3())
+}
+
+[struct]
+Sphere() {
+  center{
+    block {
+      return(makeCenter())
+    }
+  }
+}
+
+[return<i32>]
+main() {
+  [Sphere] shape{Sphere()}
+  return(shape.center.getX())
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
+TEST_CASE("graph type resolver infers omitted struct field envelope from control-flow helper") {
+  const std::string source = R"(
+[struct]
+Vec3() {
+  [i32] x{7i32}
+
+  [return<i32>]
+  getX() {
+    return(this.x)
+  }
+}
+
+[return<Vec3>]
+leftCenter() {
+  return(Vec3())
+}
+
+[return<Vec3>]
+rightCenter() {
+  return(Vec3())
+}
+
+[struct]
+Sphere() {
+  center{
+    if(true,
+      then(){ return(leftCenter()) },
+      else(){ return(rightCenter()) })
+  }
+}
+
+[return<i32>]
+main() {
+  [Sphere] shape{Sphere()}
+  return(shape.center.getX())
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
+TEST_CASE("graph type resolver preserves ambiguous omitted struct field envelope diagnostic") {
+  const std::string source = R"(
+[struct]
+Vec2() {
+  [i32] x{1i32}
+}
+
+[struct]
+Vec3() {
+  [i32] x{2i32}
+}
+
+[struct]
+Shape() {
+  center{
+    if(true,
+      then(){ return(Vec2()) },
+      else(){ return(Vec3()) })
+  }
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  std::string graphError;
+  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.find("unresolved or ambiguous omitted struct field envelope: /Shape/center") !=
+        std::string::npos);
+
+  std::string legacyError;
+  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.find("unresolved or ambiguous omitted struct field envelope: /Shape/center") !=
+        std::string::npos);
+}
+
 TEST_CASE("default semantics path uses graph resolver while legacy remains available for rollback") {
   const std::string source = R"(
 [return<auto>]
