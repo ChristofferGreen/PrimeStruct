@@ -688,6 +688,8 @@ sum_two_files([string] a, [string] b) {
     `Result.and_then` semantics and is the recommended shorthand for fallible sequencing.
   - **Graphics entry flow:** `?` is also valid inside `return<int>` definitions with a matching
     `on_error<ErrorType, Handler>(...)`; on error, the handler runs and the definition returns the raw error code.
+  - **Current stdlib progress:** import `/std/file/*` to use `.prime`-authored `fileReadEof()`,
+    `fileErrorStatus(err)`, and `fileErrorResult<T>(err)` helpers instead of hand-packing `FileError` results.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
@@ -714,6 +716,8 @@ sum_two_files([string] a, [string] b) {
   - `close()`
 - **Error type:** `FileError` carries `why()` (owned `string`).
   - `read_byte(...)` reports deterministic end-of-file as `EOF`.
+  - Import `/std/file/*` for the current stdlib-authored FileError helper layer:
+    `fileReadEof()`, `fileErrorStatus(err)`, and `fileErrorResult<T>(err)`.
 - **Effect requirement:** read-only file operations require `effects(file_read)` and write/append operations require `effects(file_write)`. `file_write` also implies `file_read` for compatibility.
 - **Example:**
   ```

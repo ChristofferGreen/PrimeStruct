@@ -1,0 +1,18 @@
+namespace std {
+  namespace file {
+  [public return<FileError>]
+  fileReadEof() {
+    return(65536i32)
+  }
+
+  [public return<Result<FileError>>]
+  fileErrorStatus([FileError] err) {
+    return(err)
+  }
+
+  [public return<Result<T, FileError>>]
+  fileErrorResult<T>([FileError] err) {
+    return(multiply(convert<i64>(err), 4294967296i64))
+  }
+  }
+}

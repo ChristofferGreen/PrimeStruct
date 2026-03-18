@@ -86,6 +86,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib file error result helpers construct status and value results") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [Result<FileError>] status{fileErrorStatus(fileReadEof())}
+  [Result<i32, FileError>] valueStatus{fileErrorResult<i32>(fileReadEof())}
+  [bool] statusError{Result.error(status)}
+  [bool] valueError{Result.error(valueStatus)}
+  [string] statusWhy{Result.why(status)}
+  [string] valueWhy{Result.why(valueStatus)}
+  if(and(statusError, valueError), then(){ return() }, else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib file error result helpers reject non file errors") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [Result<i32, FileError>] status{fileErrorResult<i32>(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/file/fileErrorResult parameter err") != std::string::npos);
+}
+
 TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {
   const std::string source = R"(
 [return<void>]

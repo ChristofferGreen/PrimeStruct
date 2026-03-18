@@ -1219,6 +1219,43 @@ main() {
   CHECK(readFile(outPath) == "custom error\n");
 }
 
+TEST_CASE("vm supports stdlib FileError result helpers") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<Result<FileError>>]
+make_status() {
+  return(fileErrorStatus(fileReadEof()))
+}
+
+[return<Result<i32, FileError>>]
+make_value() {
+  return(fileErrorResult<i32>(fileReadEof()))
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Result<FileError>] status{make_status()}
+  [Result<i32, FileError>] valueStatus{make_value()}
+  if(not(Result.error(status))) {
+    return(1i32)
+  }
+  if(not(Result.error(valueStatus))) {
+    return(2i32)
+  }
+  print_line(Result.why(status))
+  print_line(Result.why(valueStatus))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_file_error_result_helpers.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_error_result_helpers_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "EOF\nEOF\n");
+}
+
 TEST_CASE("vm supports graphics-style int return propagation with on_error") {
   const std::string source = R"(
 [struct]
