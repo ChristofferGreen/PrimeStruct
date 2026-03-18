@@ -247,7 +247,9 @@ File-size note: keep production source under `src/` below roughly 700 lines when
 - ✓ Extract binding-type inference helpers from `TemplateMonomorph.cpp` into dedicated helper unit(s).
 - ✓ Extract block-bodied binding inference from `inferBindingTypeForMonomorph(...)` into `src/semantics/TemplateMonomorphBindingBlockInference.h`.
 - ✓ Extract call/return-based binding-type inference from `inferBindingTypeForMonomorph(...)` into `src/semantics/TemplateMonomorphBindingCallInference.h`.
-- ○ Refactor `src/semantics/SemanticsValidatorPasses.cpp` (`3553` lines) below the `700`-line target.
+- ◐ Refactor `src/semantics/SemanticsValidatorPasses.cpp` (`3417` lines) below the `700`-line target. Progress: extracted effects/capabilities resolution helpers into `src/semantics/SemanticsValidatorPassesEffects.cpp`.
+- ✓ Extract effects/capabilities resolution helpers from `SemanticsValidatorPasses.cpp` into `src/semantics/SemanticsValidatorPassesEffects.cpp`.
+- ○ Extract definition/execution intra-body diagnostic collection helpers from `SemanticsValidatorPasses.cpp` into dedicated helper unit(s).
 - ○ Refactor `src/semantics/SemanticsValidate.cpp` (`3499` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorStatement.cpp` (`3351` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`3053` lines) below the `700`-line target.

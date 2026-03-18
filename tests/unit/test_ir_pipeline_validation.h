@@ -9493,6 +9493,43 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferDefinitionSource.find("if (isForCall(stmt) && stmt.args.size() == 4)") != std::string::npos);
 }
 
+TEST_CASE("semantics validator passes source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path semanticsPassesPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorPasses.cpp";
+  const std::filesystem::path semanticsPassesEffectsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorPassesEffects.cpp";
+  REQUIRE(std::filesystem::exists(semanticsPassesPath));
+  REQUIRE(std::filesystem::exists(semanticsPassesEffectsPath));
+  const std::string semanticsPassesSource = readText(semanticsPassesPath);
+  const std::string semanticsPassesEffectsSource = readText(semanticsPassesEffectsPath);
+
+  CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateDefinitions()") != std::string::npos);
+  CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateExecutions()") != std::string::npos);
+  CHECK(semanticsPassesSource.find("bool SemanticsValidator::resolveExecutionEffects(") == std::string::npos);
+  CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateCapabilitiesSubset(") == std::string::npos);
+  CHECK(semanticsPassesSource.find("std::unordered_set<std::string> SemanticsValidator::resolveEffects(") ==
+        std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find("void expandEffectImplications(") != std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find("std::unordered_set<std::string> SemanticsValidator::resolveEffects(") !=
+        std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::validateCapabilitiesSubset(") !=
+        std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::resolveExecutionEffects(") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantics validator statement source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
