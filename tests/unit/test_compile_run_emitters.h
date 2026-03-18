@@ -6073,6 +6073,55 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_map_access_contains_receiver_helper") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter lowers canonical slash-method map access without helper to deleted stubs") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(plus(values./std/collections/map/at(1i32),
+              values./std/collections/map/at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_slash_method_map_access_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_slash_method_map_access_deleted_stub.cpp")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_missing_map_at_method_helper(values, 1)") != std::string::npos);
+  CHECK(output.find("ps_missing_map_at_unsafe_method_helper(values, 2)") != std::string::npos);
+  CHECK(output.find("ps_map_at(") == std::string::npos);
+  CHECK(output.find("ps_map_at_unsafe(") == std::string::npos);
+}
+
+TEST_CASE("rejects canonical slash-method map access without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(plus(values./std/collections/map/at(1i32),
+              values./std/collections/map/at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_slash_method_map_access_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_canonical_slash_method_map_access_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string errors = readFile(errPath);
+  CHECK(errors.find("ps_missing_map_at_method_helper") != std::string::npos);
+  CHECK(errors.find("ps_missing_map_at_unsafe_method_helper") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs bare map count through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
