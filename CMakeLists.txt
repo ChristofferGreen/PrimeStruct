@@ -73,6 +73,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp
   src/semantics/SemanticsValidatorExprPointerLike.cpp
   src/semantics/SemanticsValidatorExprResultFile.cpp
+  src/semantics/SemanticsValidatorExprScalarPointerMemory.cpp
   src/semantics/SemanticsValidatorExprTry.cpp
   src/semantics/SemanticsValidatorExprVectorHelpers.cpp
   src/semantics/SemanticsValidatorExpr.cpp

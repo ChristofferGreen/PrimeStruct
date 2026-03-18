@@ -9264,6 +9264,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPointerLike.cpp";
   const std::filesystem::path semanticsExprResultFilePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprResultFile.cpp";
+  const std::filesystem::path semanticsExprScalarPointerMemoryPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprScalarPointerMemory.cpp";
   const std::filesystem::path semanticsExprTryPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprTry.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
@@ -9284,6 +9286,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
   REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
+  REQUIRE(std::filesystem::exists(semanticsExprScalarPointerMemoryPath));
   REQUIRE(std::filesystem::exists(semanticsExprTryPath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
@@ -9306,6 +9309,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
   const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
+  const std::string semanticsExprScalarPointerMemorySource =
+      readText(semanticsExprScalarPointerMemoryPath);
   const std::string semanticsExprTrySource = readText(semanticsExprTryPath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
@@ -9386,6 +9391,14 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("if (getBuiltinArrayAccessName(expr, builtinName) &&") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("if (getBuiltinConvertName(expr, builtinName)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getPrintBuiltin(expr, printBuiltin)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getBuiltinMemoryName(expr, builtinName)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto validateMemoryTargetType = [&](const std::string &targetType) -> bool") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("(isSimpleCallName(expr, \"get\") || isSimpleCallName(expr, \"ref\")) && expr.args.size() == 2") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("isSimpleCallName(expr, \"contains\") || getBuiltinArrayAccessName(expr, accessHelperName)") ==
@@ -9418,6 +9431,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprCollectionAccessFallbacks(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprScalarPointerMemoryBuiltins(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprResultFileBuiltins(params, locals, expr, resolved, resolvedMethod,") !=
@@ -9466,6 +9482,17 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprResultFileSource.find("Result.map2 requires matching error types") !=
         std::string::npos);
   CHECK(semanticsExprResultFileSource.find("file operations require ") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find(
+            "bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find("unsupported convert target type: ") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find("is only supported as a statement") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find("alloc requires heap_alloc effect") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find("realloc requires integer element count") !=
         std::string::npos);
   CHECK(semanticsExprTrySource.find("bool SemanticsValidator::validateExprTryBuiltin") !=
         std::string::npos);
