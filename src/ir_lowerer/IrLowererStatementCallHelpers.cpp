@@ -6,6 +6,7 @@
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererStructTypeHelpers.h"
 
 #include <optional>
 #include <utility>
@@ -614,6 +615,7 @@ bool buildCallableDefinitionCallContext(
     int32_t &nextLocal,
     LocalMap &definitionLocals,
     Expr &callExpr,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)> &inferParameterLocalInfo,
     std::string &error) {
   definitionLocals.clear();
@@ -653,6 +655,14 @@ bool buildCallableDefinitionCallContext(
     if (!inferParameterLocalInfo(thisParam, definitionLocals, thisInfo, error)) {
       return false;
     }
+    if (!thisInfo.structTypeName.empty() && thisInfo.structSlotCount <= 0) {
+      StructSlotLayoutInfo layout;
+      if (!resolveStructSlotLayout(thisInfo.structTypeName, layout)) {
+        error = "internal error: missing struct slot layout for " + thisInfo.structTypeName;
+        return false;
+      }
+      thisInfo.structSlotCount = layout.totalSlots;
+    }
     definitionLocals.emplace(thisParam.name, thisInfo);
 
     Expr argExpr;
@@ -667,6 +677,14 @@ bool buildCallableDefinitionCallContext(
     info.index = nextLocal++;
     if (!inferParameterLocalInfo(param, definitionLocals, info, error)) {
       return false;
+    }
+    if (!info.structTypeName.empty() && info.structSlotCount <= 0) {
+      StructSlotLayoutInfo layout;
+      if (!resolveStructSlotLayout(info.structTypeName, layout)) {
+        error = "internal error: missing struct slot layout for " + info.structTypeName;
+        return false;
+      }
+      info.structSlotCount = layout.totalSlots;
     }
     if (info.isArgsPack && info.argsPackElementCount < 0) {
       // Synthetic callable lowering has no concrete caller, but mixed forwarding still

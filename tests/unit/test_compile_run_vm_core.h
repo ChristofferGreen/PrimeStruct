@@ -1388,4 +1388,44 @@ unused()
   CHECK(runCommand(runCmd) == 0);
 }
 
+TEST_CASE("vm materializes variadic experimental map packs with indexed canonical count calls") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<int> effects(heap_alloc)]
+score_maps([args<Map<i32, i32>>] values) {
+  [Map<i32, i32>] head{at(values, 0i32)}
+  [Map<i32, i32>] tail{at(values, 2i32)}
+  return(plus(/std/collections/map/count<i32, i32>(head),
+              /std/collections/map/count<i32, i32>(tail)))
+}
+
+[return<int> effects(heap_alloc)]
+forward([args<Map<i32, i32>>] values) {
+  return(score_maps([spread] values))
+}
+
+[return<int> effects(heap_alloc)]
+forward_mixed([args<Map<i32, i32>>] values) {
+  return(score_maps(mapSingle(1i32, 2i32), [spread] values))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  return(plus(score_maps(mapPair(1i32, 2i32, 3i32, 4i32),
+                         mapSingle(5i32, 6i32),
+                         mapTriple(7i32, 8i32, 9i32, 10i32, 11i32, 12i32)),
+              plus(forward(mapSingle(13i32, 14i32),
+                           mapPair(15i32, 16i32, 17i32, 18i32),
+                           mapSingle(19i32, 20i32)),
+                   forward_mixed(mapPair(21i32, 22i32, 23i32, 24i32),
+                                 mapTriple(25i32, 26i32, 27i32, 28i32, 29i32, 30i32)))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_variadic_args_experimental_map_count.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
+}
+
 TEST_SUITE_END();

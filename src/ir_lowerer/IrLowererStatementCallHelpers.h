@@ -14,6 +14,8 @@
 
 namespace primec::ir_lowerer {
 
+struct StructSlotLayoutInfo;
+
 enum class BufferStoreStatementEmitResult {
   NotMatched,
   Emitted,
@@ -88,6 +90,7 @@ bool buildCallableDefinitionCallContext(
     int32_t &nextLocal,
     LocalMap &definitionLocals,
     Expr &callExpr,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)> &inferParameterLocalInfo,
     std::string &error);
 CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(

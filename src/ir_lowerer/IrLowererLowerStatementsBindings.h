@@ -348,7 +348,43 @@
         function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
         const int32_t srcPtrLocal = allocTempLocal();
-        if (!emitExpr(init, localsIn)) {
+        bool emittedStructArgsPackAccessInit = false;
+        std::string accessName;
+        if (init.kind == Expr::Kind::Call &&
+            getBuiltinArrayAccessName(init, accessName) &&
+            init.args.size() == 2) {
+          const auto targetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(init.args.front(), localsIn);
+          const bool isStructArgsPackAccess =
+              targetInfo.isArgsPackTarget &&
+              !targetInfo.isVectorTarget &&
+              !targetInfo.structTypeName.empty() &&
+              targetInfo.elemSlotCount > 0;
+          if (isStructArgsPackAccess) {
+            if (!ir_lowerer::emitArrayVectorIndexedAccess(
+                    accessName,
+                    init.args.front(),
+                    init.args[1],
+                    localsIn,
+                    [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                      return inferExprKind(valueExpr, valueLocals);
+                    },
+                    [&]() { return allocTempLocal(); },
+                    [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                      return emitExpr(valueExpr, valueLocals);
+                    },
+                    [&]() { emitArrayIndexOutOfBounds(); },
+                    [&]() { return function.instructions.size(); },
+                    [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                    [&](size_t indexToPatch, uint64_t target) {
+                      function.instructions[indexToPatch].imm = target;
+                    },
+                    error)) {
+              return false;
+            }
+            emittedStructArgsPackAccessInit = true;
+          }
+        }
+        if (!emittedStructArgsPackAccessInit && !emitExpr(init, localsIn)) {
           return false;
         }
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});

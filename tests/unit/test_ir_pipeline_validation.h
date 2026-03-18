@@ -42537,6 +42537,7 @@ TEST_CASE("ir lowerer statement call helper builds callable definition contexts"
       nextLocal,
       locals,
       callExpr,
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo &info, std::string &) {
         info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
         info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
@@ -42565,6 +42566,7 @@ TEST_CASE("ir lowerer statement call helper builds callable definition contexts"
       nextLocal,
       locals,
       callExpr,
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo &info, std::string &) {
         info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
         info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -42597,6 +42599,14 @@ TEST_CASE("ir lowerer statement call helper builds callable context for struct h
       nextLocal,
       locals,
       callExpr,
+      [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layout) {
+        if (structPath != "/pkg/Widget") {
+          return false;
+        }
+        layout.structPath = structPath;
+        layout.totalSlots = 1;
+        return true;
+      },
       [](const primec::Expr &param,
          const primec::ir_lowerer::LocalMap &,
          primec::ir_lowerer::LocalInfo &info,
@@ -42617,6 +42627,56 @@ TEST_CASE("ir lowerer statement call helper builds callable context for struct h
   CHECK(locals.at("this").structTypeName == "/pkg/Widget");
   REQUIRE(callExpr.args.size() == 1u);
   CHECK(callExpr.args.front().name == "this");
+}
+
+TEST_CASE("ir lowerer statement call helper preserves struct slot counts for variadic callable locals") {
+  primec::Definition def;
+  def.fullPath = "/pkg/score";
+
+  primec::Expr valuesParam;
+  valuesParam.kind = primec::Expr::Kind::Name;
+  valuesParam.isBinding = true;
+  valuesParam.name = "values";
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  argsTransform.templateArgs = {"/pkg/MapLike"};
+  valuesParam.transforms.push_back(std::move(argsTransform));
+  def.parameters = {valuesParam};
+
+  int32_t nextLocal = 0;
+  const std::unordered_set<std::string> structNames;
+  primec::ir_lowerer::LocalMap locals;
+  primec::Expr callExpr;
+  std::string error;
+  CHECK(primec::ir_lowerer::buildCallableDefinitionCallContext(
+      def,
+      structNames,
+      nextLocal,
+      locals,
+      callExpr,
+      [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layout) {
+        if (structPath != "/pkg/MapLike") {
+          return false;
+        }
+        layout.structPath = structPath;
+        layout.totalSlots = 2;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo &info, std::string &) {
+        info.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+        info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        info.structTypeName = "/pkg/MapLike";
+        info.isArgsPack = true;
+        return true;
+      },
+      error));
+  CHECK(error.empty());
+  REQUIRE(locals.count("values") == 1u);
+  CHECK(locals.at("values").structTypeName == "/pkg/MapLike");
+  CHECK(locals.at("values").structSlotCount == 2);
+  CHECK(locals.at("values").argsPackElementCount == 0);
+  REQUIRE(callExpr.args.size() == 1u);
+  CHECK(callExpr.args.front().name == "values");
 }
 
 TEST_CASE("ir lowerer statement call helper orchestrates callable lowering") {

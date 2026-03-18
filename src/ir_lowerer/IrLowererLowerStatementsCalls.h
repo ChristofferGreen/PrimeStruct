@@ -105,6 +105,9 @@
                         definitionNextLocal,
                         definitionLocals,
                         callExpr,
+                        [&](const std::string &structPath, ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+                          return resolveStructSlotLayout(structPath, layoutOut);
+                        },
                         [&](const Expr &param, const LocalMap &localsForKindInference, LocalInfo &info, std::string &inferError) {
                           return ir_lowerer::inferCallParameterLocalInfo(param,
                                                                          localsForKindInference,
