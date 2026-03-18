@@ -10043,12 +10043,16 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
   const std::filesystem::path inlineDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
+  const std::filesystem::path nativeTailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
   REQUIRE(std::filesystem::exists(callHelpersPath));
   REQUIRE(std::filesystem::exists(callResolutionPath));
   REQUIRE(std::filesystem::exists(inlineDispatchPath));
+  REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   const std::string callHelpersSource = readText(callHelpersPath);
   const std::string callResolutionSource = readText(callResolutionPath);
   const std::string inlineDispatchSource = readText(inlineDispatchPath);
+  const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
 
   CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
         std::string::npos);
@@ -10083,9 +10087,15 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") !=
+  CHECK(callHelpersSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(") !=
+  CHECK(callHelpersSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(") !=
+        std::string::npos);
+  CHECK(callHelpersSource.find("MapAccessTargetInfo resolveMapAccessTargetInfo(") !=
         std::string::npos);
 
   CHECK(callResolutionSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") !=
@@ -10132,6 +10142,23 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find("const auto firstCountFallbackResult = tryEmitNonMethodCountFallback(") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("auto emitCanonicalInlineDefinitionCall = [&](const Expr &callExpr, const Definition &callee) {") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") ==
+        std::string::npos);
+
+  CHECK(nativeTailDispatchSource.find("bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName)") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("const auto countAccessResult = tryEmitCountAccessCall(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("if (!emitBuiltinArrayAccess(accessName,") !=
         std::string::npos);
 }
 
