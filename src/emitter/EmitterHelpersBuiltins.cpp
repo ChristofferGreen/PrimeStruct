@@ -1217,6 +1217,45 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return "";
   };
+  auto isBareMapAccessMethod = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
+        candidate.args.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "at" && normalized != "at_unsafe") {
+      return false;
+    }
+    if (normalized.find('/') != std::string::npos) {
+      return false;
+    }
+    const Expr &receiverExpr = candidate.args.front();
+    if (isMapValue(receiverExpr, localTypes)) {
+      return true;
+    }
+    if (inferPrimitiveTypeName) {
+      const std::string inferredReceiverType = normalizeBindingTypeName(inferPrimitiveTypeName(receiverExpr));
+      return inferredReceiverType == "map";
+    }
+    return false;
+  };
+  auto resolveBareMapAccessMethodHelperPath = [&](const Expr &candidate) -> std::string {
+    if (!isBareMapAccessMethod(candidate)) {
+      return "";
+    }
+    const std::string canonicalPath = "/std/collections/map/" + candidate.name;
+    if (hasDefinitionOrMetadata(canonicalPath)) {
+      return canonicalPath;
+    }
+    const std::string aliasPath = "/map/" + candidate.name;
+    if (hasDefinitionOrMetadata(aliasPath)) {
+      return aliasPath;
+    }
+    return "";
+  };
   auto resolveCollectionElementTypeFromCall = [&](const Expr &candidate, std::string &typeOut) -> bool {
     typeOut.clear();
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
@@ -1616,6 +1655,21 @@ bool resolveMethodCallPath(const Expr &call,
         }
         if (isVectorCapacityCall(expr, localTypes)) {
           return "i32";
+        }
+        if (const std::string bareMapAccessMethodPath = resolveBareMapAccessMethodHelperPath(expr);
+            !bareMapAccessMethodPath.empty()) {
+          if (const std::string *structPath = findReturnStructMetadata(bareMapAccessMethodPath)) {
+            return normalizeCollectionReceiverType(*structPath);
+          }
+          if (const ReturnKind *kind = findReturnKindMetadata(bareMapAccessMethodPath)) {
+            if (*kind == ReturnKind::Array) {
+              return "array";
+            }
+            const std::string inferredType = typeNameForReturnKind(*kind);
+            if (!inferredType.empty()) {
+              return inferredType;
+            }
+          }
         }
         const std::string accessTypeName =
             inferAccessCallTypeName(expr, localTypes, inferPrimitiveTypeName, resolveCollectionElementTypeFromCall);

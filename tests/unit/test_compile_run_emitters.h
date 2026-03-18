@@ -3295,49 +3295,54 @@ TEST_CASE("C++ emitter helper falls back to canonical map receiver metadata when
 }
 
 TEST_CASE("C++ emitter helper keeps bare map access canonical struct forwarding") {
-  primec::Expr receiverCall;
-  receiverCall.kind = primec::Expr::Kind::Call;
-  receiverCall.isMethodCall = true;
-  receiverCall.name = "at";
+  auto expectResolved = [&](const char *accessName, const char *metadataPath) {
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.isMethodCall = true;
+    receiverCall.name = accessName;
 
-  primec::Expr receiverName;
-  receiverName.kind = primec::Expr::Kind::Name;
-  receiverName.name = "values";
+    primec::Expr receiverName;
+    receiverName.kind = primec::Expr::Kind::Name;
+    receiverName.name = "values";
 
-  primec::Expr keyLiteral;
-  keyLiteral.kind = primec::Expr::Kind::Literal;
-  keyLiteral.intWidth = 32;
-  keyLiteral.literalValue = 1;
+    primec::Expr keyLiteral;
+    keyLiteral.kind = primec::Expr::Kind::Literal;
+    keyLiteral.intWidth = 32;
+    keyLiteral.literalValue = 1;
 
-  receiverCall.args.push_back(receiverName);
-  receiverCall.args.push_back(keyLiteral);
-  receiverCall.argNames.push_back(std::nullopt);
-  receiverCall.argNames.push_back(std::nullopt);
+    receiverCall.args.push_back(receiverName);
+    receiverCall.args.push_back(keyLiteral);
+    receiverCall.argNames.push_back(std::nullopt);
+    receiverCall.argNames.push_back(std::nullopt);
 
-  primec::Expr methodCall;
-  methodCall.kind = primec::Expr::Kind::Call;
-  methodCall.isMethodCall = true;
-  methodCall.name = "tag";
-  methodCall.args.push_back(receiverCall);
-  methodCall.argNames.push_back(std::nullopt);
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.isMethodCall = true;
+    methodCall.name = "tag";
+    methodCall.args.push_back(receiverCall);
+    methodCall.argNames.push_back(std::nullopt);
 
-  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
-  primec::emitter::BindingInfo receiverInfo;
-  receiverInfo.typeName = "map";
-  receiverInfo.typeTemplateArg = "i32, i32";
-  localTypes.emplace("values", receiverInfo);
+    std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+    primec::emitter::BindingInfo receiverInfo;
+    receiverInfo.typeName = "map";
+    receiverInfo.typeTemplateArg = "i32, i32";
+    localTypes.emplace("values", receiverInfo);
 
-  std::unordered_map<std::string, const primec::Definition *> defMap;
-  std::unordered_map<std::string, std::string> importAliases;
-  std::unordered_map<std::string, std::string> structTypeMap;
-  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
-  std::unordered_map<std::string, std::string> returnStructs;
-  returnStructs.emplace("/std/collections/map/at", "/CanonicalMarker");
+    std::unordered_map<std::string, const primec::Definition *> defMap;
+    std::unordered_map<std::string, std::string> importAliases;
+    std::unordered_map<std::string, std::string> structTypeMap;
+    std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+    std::unordered_map<std::string, std::string> returnStructs;
+    returnStructs.emplace(metadataPath, "/CanonicalMarker");
 
-  std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
-      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/i32/tag");
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == "/CanonicalMarker/tag");
+  };
+
+  expectResolved("at", "/std/collections/map/at");
+  expectResolved("at_unsafe", "/std/collections/map/at_unsafe");
 }
 
 TEST_CASE("C++ emitter helper keeps direct map access compatibility call primitive fallback") {
@@ -8731,10 +8736,63 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_method_struct_chain_canonical_precedence.out")
           .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_method_struct_chain_canonical_precedence_exe")
+          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 2);
+  CHECK(readFile(outPath).empty());
+}
+
+TEST_CASE("prefers canonical bare map unsafe method struct chain forwarding in C++ emitter") {
+  const std::string source = R"(
+CanonicalMarker {
+  [i32] value
+}
+
+AliasMarker {
+  [i32] value
+}
+
+[return<AliasMarker>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(AliasMarker(plus(key, 40i32)))
+}
+
+[return<CanonicalMarker>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(CanonicalMarker(key))
+}
+
+[return<int>]
+/CanonicalMarker/tag([CanonicalMarker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(values.at_unsafe(2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence.out")
+                                  .string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 2);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("keeps canonical bare map method non-struct diagnostics in C++ emitter") {
@@ -8773,7 +8831,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects map access compatibility call struct method chain canonical forwarding in C++ emitter") {
