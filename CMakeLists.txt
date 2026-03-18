@@ -274,7 +274,7 @@ target_include_directories(primec_lib INTERFACE include)
 target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)
 
 add_executable(primec src/main.cpp)
-target_link_libraries(primec PRIVATE primec_lib)
+target_link_libraries(primec PRIVATE primec_backend_lib)
 primestructEnableWarnings(primec)
 
 add_executable(primevm src/primevm_main.cpp)

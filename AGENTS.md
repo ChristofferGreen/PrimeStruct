@@ -106,8 +106,10 @@ build and layout solidify.
   (emitters and external tooling), `primec_runtime_lib` (VM runtime/debugger), and
   `primec_backend_registry_lib` (backend registry glue such as `IrBackends.cpp`). Keep
   `primec_backend_lib` and `primec_lib` as compatibility umbrellas instead of adding new source
-  files to them directly. When a target only needs IR preparation plus VM execution, prefer
-  linking `primec_ir_lib` + `primec_runtime_lib` over the broader backend umbrellas.
+  files to them directly. Internal executables/tests should prefer direct subsystem links over
+  `primec_lib` once their dependencies are explicit. When a target only needs IR preparation plus
+  VM execution, prefer linking `primec_ir_lib` + `primec_runtime_lib` over the broader backend
+  umbrellas.
 - **Doctest target layout:** when a test source only exercises compile-pipeline/frontend/IR APIs,
   prefer a dedicated doctest binary linked to `primec_ir_lib` or `primec_frontend_lib` instead of
   routing it through `PrimeStruct_backend_tests` or the `primec_lib` compatibility umbrella.
