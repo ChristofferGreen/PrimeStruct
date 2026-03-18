@@ -22,7 +22,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("graph type resolver preserves recursive annotation diagnostic") {
+TEST_CASE("graph type resolver reports self-recursive return inference cycles explicitly") {
   const std::string source = R"(
 [return<auto>]
 main() {
@@ -31,7 +31,29 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "graph", error));
-  CHECK(error.find("return type inference requires explicit annotation on /main") != std::string::npos);
+  CHECK(error == "return type inference cycle requires explicit annotation on /main");
+}
+
+TEST_CASE("graph type resolver reports mutual recursion cycle members in deterministic order") {
+  const std::string source = R"(
+[return<auto>]
+alpha() {
+  return(beta())
+}
+
+[return<auto>]
+beta() {
+  return(alpha())
+}
+
+[return<i32>]
+main() {
+  return(alpha())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "graph", error));
+  CHECK(error == "return type inference cycle requires explicit annotations on /alpha, /beta");
 }
 
 TEST_CASE("graph type resolver preserves unresolved acyclic diagnostic") {

@@ -5,9 +5,48 @@
 
 #include <algorithm>
 #include <functional>
+#include <limits>
 #include <sstream>
 
 namespace primec::semantics {
+
+namespace {
+
+void sortDefinitionsForDeterministicDiagnostics(std::vector<const Definition *> &definitions) {
+  std::stable_sort(definitions.begin(), definitions.end(), [](const Definition *left, const Definition *right) {
+    const int leftLine = left->sourceLine > 0 ? left->sourceLine : std::numeric_limits<int>::max();
+    const int rightLine = right->sourceLine > 0 ? right->sourceLine : std::numeric_limits<int>::max();
+    if (leftLine != rightLine) {
+      return leftLine < rightLine;
+    }
+    const int leftColumn = left->sourceColumn > 0 ? left->sourceColumn : std::numeric_limits<int>::max();
+    const int rightColumn = right->sourceColumn > 0 ? right->sourceColumn : std::numeric_limits<int>::max();
+    if (leftColumn != rightColumn) {
+      return leftColumn < rightColumn;
+    }
+    return left->fullPath < right->fullPath;
+  });
+}
+
+std::string formatReturnInferenceCycleDiagnostic(const std::vector<const Definition *> &definitions) {
+  std::ostringstream message;
+  if (definitions.size() == 1) {
+    message << "return type inference cycle requires explicit annotation on "
+            << definitions.front()->fullPath;
+    return message.str();
+  }
+
+  message << "return type inference cycle requires explicit annotations on ";
+  for (size_t index = 0; index < definitions.size(); ++index) {
+    if (index != 0) {
+      message << ", ";
+    }
+    message << definitions[index]->fullPath;
+  }
+  return message.str();
+}
+
+} // namespace
 
 bool SemanticsValidator::inferUnknownReturnKinds() {
   if (graphTypeResolverEnabled_) {
@@ -63,6 +102,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
       }
       definitions.push_back(defIt->second);
     }
+    sortDefinitionsForDeterministicDiagnostics(definitions);
     return definitions;
   };
 
@@ -92,6 +132,36 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
     std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);
     if (unresolvedDefinitions.empty()) {
       continue;
+    }
+
+    if (componentHasCycle) {
+      error_ = formatReturnInferenceCycleDiagnostic(unresolvedDefinitions);
+      if (collectDiagnostics_ && diagnosticInfo_ != nullptr) {
+        DiagnosticSinkRecord record;
+        record.message = error_;
+        const Definition *primary = unresolvedDefinitions.front();
+        if (primary->sourceLine > 0 && primary->sourceColumn > 0) {
+          record.primarySpan.line = primary->sourceLine;
+          record.primarySpan.column = primary->sourceColumn;
+          record.primarySpan.endLine = primary->sourceLine;
+          record.primarySpan.endColumn = primary->sourceColumn;
+          record.hasPrimarySpan = true;
+        }
+        for (const Definition *definition : unresolvedDefinitions) {
+          if (definition->sourceLine <= 0 || definition->sourceColumn <= 0) {
+            continue;
+          }
+          DiagnosticRelatedSpan span;
+          span.span.line = definition->sourceLine;
+          span.span.column = definition->sourceColumn;
+          span.span.endLine = definition->sourceLine;
+          span.span.endColumn = definition->sourceColumn;
+          span.label = "cycle member: " + definition->fullPath;
+          record.relatedSpans.push_back(std::move(span));
+        }
+        diagnosticSink_.setRecords({std::move(record)});
+      }
+      return false;
     }
 
     for (const Definition *definition : unresolvedDefinitions) {

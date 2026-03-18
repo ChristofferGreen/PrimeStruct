@@ -377,6 +377,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
         std::string::npos);
+  CHECK(validatorInfer.find("formatReturnInferenceCycleDiagnostic(") != std::string::npos);
+  CHECK(validatorInfer.find("cycle member: ") != std::string::npos);
   CHECK(validatorInfer.find("allowRecursiveReturnInference_ = false;") != std::string::npos);
   CHECK(validatorInfer.find("ensureDefinitionReturnKindReady(*defIt->second)") != std::string::npos);
   CHECK(pipeline.find("options.typeResolver") != std::string::npos);
@@ -401,6 +403,8 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(irPipeline.find("runTypeResolverPipelineSnapshot") != std::string::npos);
   CHECK(irPipeline.find("#include \"test_ir_pipeline_type_resolution_parity.h\"") != std::string::npos);
   CHECK(parityHeader.find("legacy and graph type resolvers keep diagnostics and vm ir aligned on parity corpus") !=
+        std::string::npos);
+  CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally corrects grounded mutual recursion") !=
         std::string::npos);
