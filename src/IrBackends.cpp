@@ -1,6 +1,7 @@
 #include "primec/IrBackends.h"
 
 #include "primec/ExternalTooling.h"
+#include "primec/IrBackendProfiles.h"
 #include "primec/IrSerializer.h"
 #include "primec/IrToCppEmitter.h"
 #include "primec/IrToGlslEmitter.h"
@@ -20,17 +21,6 @@
 
 namespace primec {
 namespace {
-
-void replaceAll(std::string &text, std::string_view from, std::string_view to) {
-  if (from.empty()) {
-    return;
-  }
-  size_t pos = 0;
-  while ((pos = text.find(from, pos)) != std::string::npos) {
-    text.replace(pos, from.size(), to);
-    pos += to.size();
-  }
-}
 
 bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data) {
   std::ofstream out(path, std::ios::binary);
@@ -70,18 +60,7 @@ public:
   }
 
   const IrBackendDiagnostics &diagnostics() const override {
-    static constexpr IrBackendDiagnostics Diagnostics = {
-        .loweringDiagnosticCode = DiagnosticCode::LoweringError,
-        .validationDiagnosticCode = DiagnosticCode::LoweringError,
-        .inliningDiagnosticCode = DiagnosticCode::LoweringError,
-        .emitDiagnosticCode = DiagnosticCode::RuntimeError,
-        .loweringErrorPrefix = "VM lowering error: ",
-        .validationErrorPrefix = "VM IR validation error: ",
-        .inliningErrorPrefix = "VM IR inlining error: ",
-        .emitErrorPrefix = "VM error: ",
-        .backendTag = "vm",
-    };
-    return Diagnostics;
+    return vmIrBackendDiagnostics();
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
@@ -93,7 +72,7 @@ public:
   }
 
   void normalizeLoweringError(std::string &error) const override {
-    replaceAll(error, "native backend", "vm backend");
+    normalizeVmLoweringError(error);
   }
 
   bool emit(const IrModule &module,

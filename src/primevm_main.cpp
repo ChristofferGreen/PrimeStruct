@@ -1,6 +1,7 @@
 #include "primec/CliDriver.h"
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
+#include "primec/IrBackendProfiles.h"
 #include "primec/IrPreparation.h"
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
@@ -347,7 +348,7 @@ bool parseTraceCheckpoints(const std::string &traceText,
 }
 
 int emitVmRuntimeFailure(const primec::Options &options,
-                         const primec::IrBackend &vmBackend,
+                         const primec::IrBackendDiagnostics &vmDiagnostics,
                          const std::string &message,
                          std::string_view stage = {}) {
   primec::CliFailure runtimeFailure;
@@ -355,7 +356,7 @@ int emitVmRuntimeFailure(const primec::Options &options,
   runtimeFailure.plainPrefix = "VM error: ";
   runtimeFailure.message = message;
   runtimeFailure.exitCode = 3;
-  runtimeFailure.notes = primec::makeIrBackendNotes(vmBackend.diagnostics(), stage);
+  runtimeFailure.notes = primec::makeIrBackendNotes(vmDiagnostics, stage);
   return primec::emitCliFailure(std::cerr, options, runtimeFailure);
 }
 } // namespace
@@ -407,19 +408,15 @@ int main(int argc, char **argv) {
   }
 
   primec::Program &program = pipelineOutput.program;
-  const primec::IrBackend *vmBackend = primec::findIrBackend("vm");
-  if (vmBackend == nullptr) {
-    primec::CliFailure emitFailure;
-    emitFailure.code = primec::DiagnosticCode::EmitError;
-    emitFailure.plainPrefix = "VM error: ";
-    emitFailure.message = "no vm backend registered";
-    return primec::emitCliFailure(std::cerr, options, emitFailure);
-  }
+  const primec::IrBackendDiagnostics &vmDiagnostics = primec::vmIrBackendDiagnostics();
 
   primec::IrModule ir;
   primec::IrPreparationFailure irFailure;
   if (!primec::prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, irFailure)) {
-    return primec::emitCliFailure(std::cerr, options, primec::describeIrPreparationFailure(irFailure, *vmBackend));
+    return primec::emitCliFailure(
+        std::cerr,
+        options,
+        primec::describeIrPreparationFailure(irFailure, vmDiagnostics, &primec::normalizeVmLoweringError));
   }
 
   primec::Vm vm;
@@ -433,12 +430,12 @@ int main(int argc, char **argv) {
   if (!options.debugReplayPath.empty()) {
     std::string traceText;
     if (!readTextFile(options.debugReplayPath, traceText, error)) {
-      return emitVmRuntimeFailure(options, *vmBackend, error, "debug-replay");
+      return emitVmRuntimeFailure(options, vmDiagnostics, error, "debug-replay");
     }
 
     std::vector<TraceCheckpoint> checkpoints;
     if (!parseTraceCheckpoints(traceText, checkpoints, error)) {
-      return emitVmRuntimeFailure(options, *vmBackend, error, "debug-replay");
+      return emitVmRuntimeFailure(options, vmDiagnostics, error, "debug-replay");
     }
 
     const uint64_t targetSequence = options.debugReplaySequence.value_or(checkpoints.back().sequence);
@@ -471,14 +468,14 @@ int main(int argc, char **argv) {
   if (options.debugDap) {
     primec::VmDebugDapRunResult dapResult;
     if (!primec::runVmDebugDapSession(ir, args, options.inputPath, std::cin, std::cout, dapResult, error)) {
-      return emitVmRuntimeFailure(options, *vmBackend, error, "debug-dap");
+      return emitVmRuntimeFailure(options, vmDiagnostics, error, "debug-dap");
     }
     return 0;
   }
   if (!options.debugTracePath.empty()) {
     primec::VmDebugSession debugSession;
     if (!debugSession.start(ir, error, args)) {
-      return emitVmRuntimeFailure(options, *vmBackend, error);
+      return emitVmRuntimeFailure(options, vmDiagnostics, error);
     }
 
     DebugJsonEmitContext emitContext;
@@ -583,17 +580,17 @@ int main(int argc, char **argv) {
 
     std::string traceError;
     if (!writeTraceLines(options.debugTracePath, traceLines, traceError)) {
-      return emitVmRuntimeFailure(options, *vmBackend, traceError, "debug-trace");
+      return emitVmRuntimeFailure(options, vmDiagnostics, traceError, "debug-trace");
     }
     if (sawFault) {
-      return emitVmRuntimeFailure(options, *vmBackend, error, "debug-trace");
+      return emitVmRuntimeFailure(options, vmDiagnostics, error, "debug-trace");
     }
     return exitCode;
   }
   if (options.debugJson) {
     primec::VmDebugSession debugSession;
     if (!debugSession.start(ir, error, args)) {
-      return emitVmRuntimeFailure(options, *vmBackend, error);
+      return emitVmRuntimeFailure(options, vmDiagnostics, error);
     }
 
     DebugJsonEmitContext emitContext;
@@ -676,7 +673,7 @@ int main(int argc, char **argv) {
       emitDebugJsonLine(stopLine);
 
       if (!ok) {
-        return emitVmRuntimeFailure(options, *vmBackend, error, "debug-json");
+        return emitVmRuntimeFailure(options, vmDiagnostics, error, "debug-json");
       }
       if (stopReason == primec::VmDebugStopReason::Exit) {
         return static_cast<int>(static_cast<int32_t>(stopSnapshot.result));
@@ -685,7 +682,7 @@ int main(int argc, char **argv) {
   }
 
   if (!vm.execute(ir, result, error, args)) {
-    return emitVmRuntimeFailure(options, *vmBackend, error);
+    return emitVmRuntimeFailure(options, vmDiagnostics, error);
   }
 
   return static_cast<int>(static_cast<int32_t>(result));

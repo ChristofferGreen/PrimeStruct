@@ -65,6 +65,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
 set(PRIMESTRUCT_IR_SOURCES
   src/CliDriver.cpp
   src/CompilePipeline.cpp
+  src/IrBackendProfiles.cpp
   src/IrInliner.cpp
   src/IrPreparation.cpp
   src/IrPrinter.cpp
@@ -244,7 +245,7 @@ target_link_libraries(primec PRIVATE primec_lib)
 primestructEnableWarnings(primec)
 
 add_executable(primevm src/primevm_main.cpp)
-target_link_libraries(primevm PRIVATE primec_lib)
+target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib)
 primestructEnableWarnings(primevm)
 
 if(PRIMESTRUCT_BUILD_TESTS)

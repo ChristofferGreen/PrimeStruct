@@ -167,4 +167,38 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure, con
   return cliFailure;
 }
 
+CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
+                                        const IrBackendDiagnostics &diagnostics,
+                                        IrLoweringErrorNormalizer normalizeLoweringError,
+                                        int exitCode) {
+  CliFailure cliFailure;
+  cliFailure.exitCode = exitCode;
+  cliFailure.message = failure.message;
+
+  switch (failure.stage) {
+    case IrPreparationFailureStage::Validation:
+      cliFailure.code = diagnostics.validationDiagnosticCode;
+      cliFailure.plainPrefix = diagnostics.validationErrorPrefix;
+      cliFailure.notes = makeIrBackendNotes(diagnostics, "ir-validate");
+      break;
+    case IrPreparationFailureStage::Inlining:
+      cliFailure.code = diagnostics.inliningDiagnosticCode;
+      cliFailure.plainPrefix = diagnostics.inliningErrorPrefix;
+      cliFailure.notes = makeIrBackendNotes(diagnostics, "ir-inline");
+      break;
+    case IrPreparationFailureStage::Lowering:
+    case IrPreparationFailureStage::None:
+    default:
+      cliFailure.code = diagnostics.loweringDiagnosticCode;
+      cliFailure.plainPrefix = diagnostics.loweringErrorPrefix;
+      cliFailure.notes = makeIrBackendNotes(diagnostics);
+      if (normalizeLoweringError != nullptr) {
+        normalizeLoweringError(cliFailure.message);
+      }
+      break;
+  }
+
+  return cliFailure;
+}
+
 } // namespace primec

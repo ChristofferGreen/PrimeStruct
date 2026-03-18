@@ -10,6 +10,7 @@
 #include "primec/CliDriver.h"
 #include "primec/EmitKind.h"
 #include "primec/IrBackends.h"
+#include "primec/IrBackendProfiles.h"
 #include "primec/IrPreparation.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
@@ -154,6 +155,27 @@ TEST_CASE("cli driver maps ir preparation failures through backend diagnostics")
   CHECK(validationCliFailure.message == "bad ir");
 }
 
+TEST_CASE("shared vm backend profile exposes canonical diagnostics") {
+  const primec::IrBackendDiagnostics &diagnostics = primec::vmIrBackendDiagnostics();
+  CHECK(diagnostics.loweringDiagnosticCode == primec::DiagnosticCode::LoweringError);
+  CHECK(std::string_view(diagnostics.emitErrorPrefix) == "VM error: ");
+  CHECK(std::string_view(diagnostics.backendTag) == "vm");
+
+  primec::IrPreparationFailure loweringFailure;
+  loweringFailure.stage = primec::IrPreparationFailureStage::Lowering;
+  loweringFailure.message = "native backend rejected entry";
+  const primec::CliFailure cliFailure =
+      primec::describeIrPreparationFailure(loweringFailure, diagnostics, &primec::normalizeVmLoweringError, 5);
+  CHECK(cliFailure.code == primec::DiagnosticCode::LoweringError);
+  CHECK(cliFailure.exitCode == 5);
+  CHECK(cliFailure.message.find("vm backend") != std::string::npos);
+
+  std::string loweringError = "native backend rejected entry";
+  primec::normalizeVmLoweringError(loweringError);
+  CHECK(loweringError.find("vm backend") != std::string::npos);
+  CHECK(loweringError.find("native backend") == std::string::npos);
+}
+
 TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path mainPath = cwd / "src" / "main.cpp";
@@ -191,10 +213,13 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   REQUIRE(std::filesystem::exists(mainPath));
 
   const std::string source = readTextFile(mainPath);
+  CHECK(source.find("vmIrBackendDiagnostics()") != std::string::npos);
+  CHECK(source.find("normalizeVmLoweringError") != std::string::npos);
   CHECK(source.find("describeCompilePipelineFailure(") != std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, irFailure)") !=
         std::string::npos);
+  CHECK(source.find("findIrBackend(\"vm\")") == std::string::npos);
   CHECK(source.find("CompilePipelineErrorStage::Import") == std::string::npos);
   CHECK(source.find("IrPreparationFailureStage::Validation") == std::string::npos);
   CHECK(source.find("IrLowerer lowerer") == std::string::npos);
@@ -258,6 +283,7 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("set(PRIMESTRUCT_CODEGEN_SOURCES") != std::string::npos);
   CHECK(cmake.find("set(PRIMESTRUCT_RUNTIME_SOURCES") != std::string::npos);
   CHECK(cmake.find("set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES") != std::string::npos);
+  CHECK(cmake.find("src/IrBackendProfiles.cpp") != std::string::npos);
   CHECK(cmake.find("add_library(primec_support_lib") != std::string::npos);
   CHECK(cmake.find("add_library(primec_frontend_lib") != std::string::npos);
   CHECK(cmake.find("add_library(primec_ir_lib") != std::string::npos);
@@ -280,7 +306,7 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)") !=
         std::string::npos);
   CHECK(cmake.find("target_link_libraries(primec PRIVATE primec_lib)") != std::string::npos);
-  CHECK(cmake.find("target_link_libraries(primevm PRIVATE primec_lib)") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib)") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)") != std::string::npos);
 }
 

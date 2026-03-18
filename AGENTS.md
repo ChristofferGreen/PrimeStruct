@@ -105,7 +105,8 @@ build and layout solidify.
   (emitters and external tooling), `primec_runtime_lib` (VM runtime/debugger), and
   `primec_backend_registry_lib` (backend registry glue such as `IrBackends.cpp`). Keep
   `primec_backend_lib` and `primec_lib` as compatibility umbrellas instead of adding new source
-  files to them directly.
+  files to them directly. When a target only needs IR preparation plus VM execution, prefer
+  linking `primec_ir_lib` + `primec_runtime_lib` over the broader backend umbrellas.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **VM/native strings:** string values are represented as string-table indices; dynamic

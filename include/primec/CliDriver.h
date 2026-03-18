@@ -23,6 +23,8 @@ struct CliFailure {
   const std::string *sourceText = nullptr;
 };
 
+using IrLoweringErrorNormalizer = void (*)(std::string &error);
+
 std::string transformAvailability(const TransformInfo &info);
 void printTransformList(std::ostream &out);
 
@@ -32,6 +34,11 @@ CliFailure describeCompilePipelineFailure(CompilePipelineErrorStage errorStage,
                                           const std::string &message,
                                           const CompilePipelineOutput &output,
                                           const CompilePipelineDiagnosticInfo &diagnosticInfo);
+
+CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
+                                        const IrBackendDiagnostics &diagnostics,
+                                        IrLoweringErrorNormalizer normalizeLoweringError = nullptr,
+                                        int exitCode = 2);
 
 CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
                                         const IrBackend &backend,
