@@ -181,6 +181,7 @@ Frame.present(self) -> Result<void, GfxError>
 Buffer.count(self) -> i32
 Buffer.empty(self) -> bool
 Buffer.is_valid(self) -> bool
+Buffer.readback(self) -> array<T>
 ```
 
 ### Locked Profile-Deduction Rule

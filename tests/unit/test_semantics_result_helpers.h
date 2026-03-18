@@ -441,6 +441,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib gfx Buffer readback helpers cover experimental method and slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gpu/buffer<i32>(2i32)}
+  [array<i32>] viaMethod{data.readback()}
+  [array<i32>] viaDirect{/std/gfx/experimental/Buffer/readback(data)}
+  return(plus(viaMethod.count(), viaDirect.count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical stdlib gfx Buffer readback helpers cover method and slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gpu/buffer<i32>(2i32)}
+  [array<i32>] viaMethod{data.readback()}
+  [array<i32>] viaDirect{/std/gfx/Buffer/readback(data)}
+  return(plus(viaMethod.count(), viaDirect.count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical stdlib gfx Buffer slash-call helpers require stdlib import") {
   const std::string source = R"(
 [effects(gpu_dispatch) return<int>]
@@ -452,6 +486,36 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/gfx/Buffer/count") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer readback slash-call helpers require stdlib import") {
+  const std::string source = R"(
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gpu/buffer<i32>(2i32)}
+  [array<i32>] out{/std/gfx/Buffer/readback(data)}
+  return(out.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/gfx/Buffer/readback") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer readback helper rejects unsupported element type") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<string>] data{Buffer<string>([token] 1i32, [elementCount] 1i32)}
+  [array<string>] out{data.readback()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("readback requires numeric/bool element type") != std::string::npos);
 }
 
 TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {

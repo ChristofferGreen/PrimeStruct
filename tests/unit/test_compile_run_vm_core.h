@@ -1574,6 +1574,40 @@ main() {
   CHECK(runCommand(runCmd) == 5);
 }
 
+TEST_CASE("vm uses stdlib experimental Buffer readback helpers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gpu/buffer<i32>(3i32)}
+  [array<i32>] viaMethod{data.readback()}
+  [array<i32>] viaDirect{/std/gfx/experimental/Buffer/readback(data)}
+  return(plus(plus(viaMethod.count(), viaDirect.count()), plus(viaMethod[0i32], viaDirect[2i32])))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_readback_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
+TEST_CASE("vm uses canonical stdlib Buffer readback helpers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gpu/buffer<i32>(3i32)}
+  [array<i32>] viaMethod{data.readback()}
+  [array<i32>] viaDirect{/std/gfx/Buffer/readback(data)}
+  return(plus(plus(viaMethod.count(), viaDirect.count()), plus(viaMethod[0i32], viaDirect[2i32])))
+}
+)";
+  const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_readback_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
 TEST_CASE("vm uses stdlib FileError why wrapper") {
   const std::string source = R"(
 import /std/file/*

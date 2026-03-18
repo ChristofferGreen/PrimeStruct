@@ -3088,6 +3088,48 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("native uses stdlib experimental Buffer readback helpers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gpu/buffer<i32>(3i32)}
+  [array<i32>] viaMethod{data.readback()}
+  [array<i32>] viaDirect{/std/gfx/experimental/Buffer/readback(data)}
+  return(plus(plus(viaMethod.count(), viaDirect.count()), plus(viaMethod[0i32], viaDirect[2i32])))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_experimental_gfx_buffer_readback_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_experimental_gfx_buffer_readback_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("native uses canonical stdlib Buffer readback helpers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch), return<int>]
+main() {
+  [Buffer<i32>] data{/std/gpu/buffer<i32>(3i32)}
+  [array<i32>] viaMethod{data.readback()}
+  [array<i32>] viaDirect{/std/gfx/Buffer/readback(data)}
+  return(plus(plus(viaMethod.count(), viaDirect.count()), plus(viaMethod[0i32], viaDirect[2i32])))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_canonical_gfx_buffer_readback_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_gfx_buffer_readback_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs native ppm read for ascii p3 inputs") {
   const std::string inPath = (std::filesystem::temp_directory_path() / "primec_native_image_read.ppm").string();
   {

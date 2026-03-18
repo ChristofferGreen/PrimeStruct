@@ -244,6 +244,11 @@ namespace std {
     }
   }
 
+  [public effects(gpu_dispatch), return<array<T>>]
+  /Buffer/readback<T>([Buffer<T>] self) {
+    return(/std/gpu/readback(self))
+  }
+
   [public struct]
   Texture2D<T>() {
     [public i32] token{0i32}
