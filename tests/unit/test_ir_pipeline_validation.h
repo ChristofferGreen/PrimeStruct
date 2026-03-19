@@ -9759,6 +9759,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") !=
         std::string::npos);
+  CHECK(semanticsInferSource.find("makeBuiltinCollectionDispatchResolvers(params, locals)") != std::string::npos);
+  CHECK(semanticsInferSource.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
+        std::string::npos);
   CHECK(semanticsInferSource.find("resolveCallCollectionTypePath(target, params, locals, collectionTypePath)") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args)") !=
@@ -9814,6 +9817,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTypePath") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("SemanticsValidator::makeBuiltinCollectionDispatchResolvers(") !=
         std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind combineNumericReturnKinds") != std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind SemanticsValidator::inferControlFlowExprReturnKind") !=

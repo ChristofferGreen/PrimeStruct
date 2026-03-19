@@ -400,6 +400,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool inferQueryExprTypeText(const Expr &expr,") != std::string::npos);
+  CHECK(validatorHeader.find("BuiltinCollectionDispatchResolvers makeBuiltinCollectionDispatchResolvers(") !=
+        std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut)") !=
         std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)") !=
@@ -407,6 +409,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorCollections.find("ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));") !=
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("SemanticsValidator::makeBuiltinCollectionDispatchResolvers(") !=
         std::string::npos);
   CHECK(validatorCollections.find("if (inferQueryExprTypeText(target, params, locals, targetTypeText))") !=
         std::string::npos);
@@ -435,6 +439,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("makeBuiltinCollectionDispatchResolvers(params, locals)") != std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
         std::string::npos);
   CHECK(validatorInfer.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
         std::string::npos);
@@ -480,6 +487,7 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("query_result_return_binding") != std::string::npos);
   CHECK(parityHeader.find("query_map_receiver_type_text") != std::string::npos);
   CHECK(parityHeader.find("infer_map_value_return_kind") != std::string::npos);
+  CHECK(parityHeader.find("shared_collection_receiver_classifiers") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally corrects grounded mutual recursion") !=
