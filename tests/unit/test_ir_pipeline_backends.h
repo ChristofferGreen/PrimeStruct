@@ -418,6 +418,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &)> resolveBufferTarget;") !=
         std::string::npos);
+  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapTarget;") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapValueTarget;") !=
+        std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut)") !=
         std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)") !=
@@ -434,10 +438,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCollections.find("auto inferCallBinding = [&](const Expr &target, BindingInfo &bindingOut) -> bool {") !=
         std::string::npos);
+  CHECK(validatorCollections.find("auto isDirectMapConstructorCall = [&](const Expr &candidate)") !=
+        std::string::npos);
   CHECK(validatorCollections.find("state->resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
         std::string::npos);
   CHECK(validatorCollections.find("state->resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
         std::string::npos);
+  CHECK(validatorCollections.find("state->resolveExperimentalMapTarget =") != std::string::npos);
+  CHECK(validatorCollections.find("state->resolveExperimentalMapValueTarget =") != std::string::npos);
   CHECK(validatorCollections.find("if (inferQueryExprTypeText(target, params, locals, targetTypeText))") !=
         std::string::npos);
   CHECK(validatorBuild.find("inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const") !=
@@ -478,7 +486,17 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExpr.find("const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
         std::string::npos);
+  CHECK(validatorExpr.find("const auto &resolveExperimentalMapTarget =") != std::string::npos);
+  CHECK(validatorExpr.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("const auto &resolveExperimentalMapValueTarget =") != std::string::npos);
+  CHECK(validatorExpr.find("builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget;") !=
+        std::string::npos);
   CHECK(validatorExpr.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("return resolveMapTargetWithTypes(target, keyType, valueTypeOut);") !=
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
@@ -500,6 +518,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExpr.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
   CHECK(validatorExpr.find("auto resolveMapValueTypeForStringTarget = [&](const Expr &target, std::string &valueTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto extractExperimentalMapFieldTypes = [&](const BindingInfo &binding,") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto resolveExperimentalMapTarget = [&](const Expr &target,") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto resolveExperimentalMapValueTarget = [&](const Expr &target,") ==
         std::string::npos);
   CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
   CHECK(validatorInfer.find("collectGraphLocalAutoBindings(graph);") != std::string::npos);

@@ -7515,6 +7515,36 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("field-bound experimental map methods accept struct field receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(io_err)]
+unexpectedFieldExperimentalMapMethodReceiverError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+Holder() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc)
+ on_error<ContainerError, /unexpectedFieldExperimentalMapMethodReceiverError>]
+main() {
+  [Holder] holder{Holder()}
+  [i32] found{try(holder.values.tryAt("left"raw_utf8))}
+  [i32 mut] total{plus(holder.values.count(), found)}
+  assign(total, plus(total, holder.values.at("right"raw_utf8)))
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib map constructor assignments accept explicit experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*

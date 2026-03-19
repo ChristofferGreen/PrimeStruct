@@ -215,6 +215,8 @@ private:
     std::function<bool(const Expr &, std::string &)> resolveBufferTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapValueTarget;
   };
   BuiltinCollectionDispatchResolvers makeBuiltinCollectionDispatchResolvers(
       const std::vector<ParameterInfo> &params,

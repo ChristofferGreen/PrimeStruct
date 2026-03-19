@@ -9288,7 +9288,19 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &resolveExperimentalMapTarget =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &resolveExperimentalMapValueTarget =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget;") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueTypeOut);") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
@@ -9310,6 +9322,14 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveMapValueTypeForStringTarget = [&](const Expr &target, std::string &valueTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto extractExperimentalMapFieldTypes = [&](const BindingInfo &binding,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveExperimentalMapTarget = [&](const Expr &target,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveExperimentalMapValueTarget = [&](const Expr &target,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
