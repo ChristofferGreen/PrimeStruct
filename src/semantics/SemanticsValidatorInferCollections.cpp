@@ -69,6 +69,12 @@ constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[
     {RemovedCollectionHelperFamily::Map, "at_unsafe", "/map/at_unsafe", false},
 };
 
+bool resolveRemovedCollectionHelperReference(std::string_view rawMethodName,
+                                             std::string_view namespacePrefix,
+                                             RemovedCollectionHelperFamily &familyOut,
+                                             std::string_view &helperNameOut,
+                                             bool &preserveArrayPathOut);
+
 std::string bindingTypeText(const BindingInfo &binding) {
   if (binding.typeTemplateArg.empty()) {
     return binding.typeName;
@@ -154,6 +160,31 @@ const RemovedCollectionHelperDescriptor *findRemovedCollectionHelper(RemovedColl
     }
   }
   return nullptr;
+}
+
+const RemovedCollectionHelperDescriptor *findRemovedCollectionHelperReference(
+    RemovedCollectionHelperFamily family,
+    std::string_view rawMethodName,
+    std::string_view namespacePrefix = "",
+    bool allowWrappedReceiverPath = false) {
+  rawMethodName = trimLeadingSlash(rawMethodName);
+  namespacePrefix = trimLeadingSlash(namespacePrefix);
+  if (allowWrappedReceiverPath) {
+    if (rawMethodName.rfind("Reference/", 0) == 0) {
+      rawMethodName.remove_prefix(std::string_view("Reference/").size());
+    } else if (rawMethodName.rfind("Pointer/", 0) == 0) {
+      rawMethodName.remove_prefix(std::string_view("Pointer/").size());
+    }
+  }
+  RemovedCollectionHelperFamily resolvedFamily = RemovedCollectionHelperFamily::VectorLike;
+  std::string_view helperName;
+  bool preserveArrayPath = false;
+  if (resolveRemovedCollectionHelperReference(
+          rawMethodName, namespacePrefix, resolvedFamily, helperName, preserveArrayPath) &&
+      resolvedFamily == family) {
+    return findRemovedCollectionHelper(family, helperName);
+  }
+  return findRemovedCollectionHelper(family, rawMethodName);
 }
 
 std::string removedCollectionMethodPath(RemovedCollectionHelperFamily family,
@@ -450,6 +481,115 @@ bool SemanticsValidator::isUnnamespacedMapCountBuiltinFallbackCall(const Expr &c
     return false;
   }
   return resolveMapTarget(candidate.args[receiverIndex]);
+}
+
+bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candidate,
+                                                             const std::string &resolvedPath,
+                                                             std::string &targetPathOut) const {
+  targetPathOut.clear();
+
+  auto preferredRemovedMapHelperPath = [&](std::string_view helperName) {
+    const std::string canonical = "/std/collections/map/" + std::string(helperName);
+    const std::string alias = "/map/" + std::string(helperName);
+    if (defMap_.count(canonical) > 0) {
+      return canonical;
+    }
+    if (defMap_.count(alias) > 0) {
+      return alias;
+    }
+    return canonical;
+  };
+
+  if (candidate.kind != Expr::Kind::Call || candidate.name.empty() || candidate.args.empty()) {
+    return false;
+  }
+
+  if (!candidate.isMethodCall) {
+    const RemovedCollectionHelperDescriptor *descriptor =
+        findRemovedCollectionHelperReference(RemovedCollectionHelperFamily::Map, candidate.name);
+    if (descriptor == nullptr) {
+      descriptor =
+          findRemovedCollectionHelperReference(RemovedCollectionHelperFamily::Map, resolvedPath);
+    }
+    if (descriptor == nullptr || defMap_.count("/" + std::string(descriptor->helperName)) > 0) {
+      return false;
+    }
+
+    std::vector<size_t> receiverIndices;
+    auto appendReceiverIndex = [&](size_t index) {
+      if (index >= candidate.args.size()) {
+        return;
+      }
+      for (size_t existing : receiverIndices) {
+        if (existing == index) {
+          return;
+        }
+      }
+      receiverIndices.push_back(index);
+    };
+    if (hasNamedArguments(candidate.argNames)) {
+      bool foundValues = false;
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          appendReceiverIndex(i);
+          foundValues = true;
+          break;
+        }
+      }
+      if (!foundValues) {
+        for (size_t i = 0; i < candidate.args.size(); ++i) {
+          appendReceiverIndex(i);
+        }
+      }
+    } else {
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        appendReceiverIndex(i);
+      }
+    }
+
+    for (size_t receiverIndex : receiverIndices) {
+      if (!resolveMapTarget(candidate.args[receiverIndex])) {
+        continue;
+      }
+      targetPathOut = preferredRemovedMapHelperPath(descriptor->helperName);
+      return true;
+    }
+    return false;
+  }
+
+  const RemovedCollectionHelperDescriptor *descriptor =
+      findRemovedCollectionHelperReference(RemovedCollectionHelperFamily::Map,
+                                           resolvedPath,
+                                           "",
+                                           true);
+  if (descriptor == nullptr) {
+    return false;
+  }
+
+  auto isWrappedMapReceiverCall = [&](const Expr &receiverExpr) {
+    if (receiverExpr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    auto defIt = defMap_.find(resolveCalleePath(receiverExpr));
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      return returnsMapCollectionType(transform.templateArgs.front());
+    }
+    return false;
+  };
+
+  if (!(resolveMapTarget(candidate.args.front()) || isWrappedMapReceiverCall(candidate.args.front()))) {
+    return false;
+  }
+
+  targetPathOut = preferredRemovedMapHelperPath(descriptor->helperName);
+  return true;
 }
 
 bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut) {

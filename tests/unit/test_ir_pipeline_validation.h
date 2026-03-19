@@ -9348,6 +9348,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto remapWrappedMapMethodBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "this->resolveRemovedMapBodyArgumentTarget(expr, resolved, remappedRemovedMapBodyArgumentTarget)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto remapWrappedMapMethodBodyArgumentTarget = [&]() -> bool {") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("const std::string directRemovedMapCompatibilityPath =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
