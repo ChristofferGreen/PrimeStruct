@@ -5225,6 +5225,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
         const bool isAliasCount = resolved == "/vector/count";
         std::string elemType;
+        if (isAliasCount && expr.args.front().kind == Expr::Kind::Call &&
+            resolveVectorTarget(expr.args.front(), elemType)) {
+          error_ = "unknown call target: /vector/count";
+          return false;
+        }
         if (!resolveVectorTarget(expr.args.front(), elemType) &&
             !resolveArrayTarget(expr.args.front(), elemType) &&
             !resolveStringTarget(expr.args.front())) {
@@ -5245,6 +5250,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
         const bool isAliasCapacity = resolved == "/vector/capacity";
         std::string elemType;
+        if (isAliasCapacity && expr.args.front().kind == Expr::Kind::Call &&
+            resolveVectorTarget(expr.args.front(), elemType)) {
+          error_ = "unknown call target: /vector/capacity";
+          return false;
+        }
         if (!resolveVectorTarget(expr.args.front(), elemType)) {
           if (!validateExpr(params, locals, expr.args.front())) {
             return false;
