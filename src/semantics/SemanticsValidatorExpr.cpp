@@ -882,27 +882,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return canonical;
     };
-    auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {
-      if (helperName == "count") {
-        return std::string("mapCount");
-      }
-      if (helperName == "contains") {
-        return std::string("mapContains");
-      }
-      if (helperName == "tryAt") {
-        return std::string("mapTryAt");
-      }
-      if (helperName == "at") {
-        return std::string("mapAt");
-      }
-      if (helperName == "at_unsafe") {
-        return std::string("mapAtUnsafe");
-      }
-      return std::string(helperName);
-    };
-    auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {
-      return "/std/collections/experimental_map/" + preferredExperimentalMapHelperTarget(helperName);
-    };
     auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {
       if (helperName == "count") {
         return definitionPathContains("/mapCount");
@@ -940,7 +919,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string keyType;
       std::string valueType;
       if (resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType)) {
-        rewrittenOut.name = preferredExperimentalMapHelperTarget(helperName);
+        rewrittenOut.name = this->preferredExperimentalMapHelperTarget(helperName);
       } else {
         rewrittenOut.name = preferredBareMapHelperTarget(helperName);
       }
@@ -973,46 +952,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       rewrittenOut.namespacePrefix.clear();
       return true;
     };
-    auto canonicalExperimentalMapHelperPath = [&](const std::string &resolvedPath, std::string &canonicalPathOut, std::string &helperNameOut) {
-      auto matchHelper = [&](std::string_view canonicalPath,
-                             std::string_view aliasPath,
-                             std::string_view wrapperPath,
-                             std::string_view helperName) {
-        const std::string canonicalPrefix = std::string(canonicalPath) + "__t";
-        const std::string aliasPrefix = std::string(aliasPath) + "__t";
-        const std::string wrapperPrefix = std::string(wrapperPath) + "__t";
-        if (resolvedPath == canonicalPath || resolvedPath.rfind(canonicalPrefix, 0) == 0 ||
-            resolvedPath == aliasPath || resolvedPath.rfind(aliasPrefix, 0) == 0 ||
-            resolvedPath == wrapperPath || resolvedPath.rfind(wrapperPrefix, 0) == 0) {
-          canonicalPathOut = std::string(canonicalPath);
-          helperNameOut = std::string(helperName);
-          return true;
-        }
-        return false;
-      };
-      return matchHelper("/std/collections/map/count", "/map/count", "/std/collections/mapCount", "count") ||
-             matchHelper("/std/collections/map/contains", "/map/contains", "/std/collections/mapContains", "contains") ||
-             matchHelper("/std/collections/map/tryAt", "/map/tryAt", "/std/collections/mapTryAt", "tryAt") ||
-             matchHelper("/std/collections/map/at", "/map/at", "/std/collections/mapAt", "at") ||
-             matchHelper("/std/collections/map/at_unsafe", "/map/at_unsafe", "/std/collections/mapAtUnsafe", "at_unsafe");
-    };
-    auto canonicalizeExperimentalMapHelperResolvedPath = [&](const std::string &resolvedPath,
-                                                             std::string &canonicalPathOut) {
-      auto matchExperimentalHelper = [&](std::string_view experimentalPath, std::string_view canonicalPath) {
-        const std::string experimentalPrefix = std::string(experimentalPath) + "__t";
-        if (resolvedPath == experimentalPath || resolvedPath.rfind(experimentalPrefix, 0) == 0) {
-          canonicalPathOut = std::string(canonicalPath);
-          return true;
-        }
-        return false;
-      };
-      return matchExperimentalHelper("/std/collections/experimental_map/mapCount", "/std/collections/map/count") ||
-             matchExperimentalHelper("/std/collections/experimental_map/mapContains", "/std/collections/map/contains") ||
-             matchExperimentalHelper("/std/collections/experimental_map/mapTryAt", "/std/collections/map/tryAt") ||
-             matchExperimentalHelper("/std/collections/experimental_map/mapAt", "/std/collections/map/at") ||
-             matchExperimentalHelper("/std/collections/experimental_map/mapAtUnsafe",
-                                     "/std/collections/map/at_unsafe");
-    };
     auto tryRewriteCanonicalExperimentalMapHelperCall = [&](const Expr &candidate, Expr &rewrittenOut) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.args.empty()) {
         return false;
@@ -1036,7 +975,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         canonicalCandidate.namespacePrefix.clear();
       } else {
         const std::string resolvedPath = resolveCalleePath(candidate);
-        if (!canonicalExperimentalMapHelperPath(resolvedPath, canonicalPath, helperName)) {
+        if (!this->canonicalExperimentalMapHelperPath(resolvedPath, canonicalPath, helperName)) {
           return false;
         }
       }
@@ -1055,7 +994,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         rewrittenOut.templateArgs = {keyType, valueType};
       }
       if (!candidate.isMethodCall) {
-        rewrittenOut.name = preferredCanonicalExperimentalMapHelperTarget(helperName);
+        rewrittenOut.name = this->preferredCanonicalExperimentalMapHelperTarget(helperName);
         rewrittenOut.namespacePrefix.clear();
       }
       return true;
@@ -1066,7 +1005,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       std::string helperName;
-      if (!canonicalExperimentalMapHelperPath(resolveCalleePath(candidate), resolvedPathOut, helperName)) {
+      if (!this->canonicalExperimentalMapHelperPath(resolveCalleePath(candidate), resolvedPathOut, helperName)) {
         return false;
       }
       const size_t receiverIndex = mapHelperReceiverIndex(candidate);
@@ -1601,7 +1540,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (defMap_.count(canonical) > 0 || hasImportedDefinitionPath(canonical)) {
             return canonical;
           }
-          return preferredCanonicalExperimentalMapHelperTarget(helperName);
+          return this->preferredCanonicalExperimentalMapHelperTarget(helperName);
         }
         const std::string canonical = "/std/collections/map/" + helperName;
         const std::string alias = "/map/" + helperName;
@@ -2334,7 +2273,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     std::string resolved = resolveCalleePath(expr);
     std::string canonicalExperimentalMapHelperResolved;
     if (!expr.isMethodCall && defMap_.count(resolved) == 0 &&
-        canonicalizeExperimentalMapHelperResolvedPath(resolved, canonicalExperimentalMapHelperResolved)) {
+        this->canonicalizeExperimentalMapHelperResolvedPath(resolved, canonicalExperimentalMapHelperResolved)) {
       resolved = canonicalExperimentalMapHelperResolved;
     }
     Expr rewrittenCanonicalExperimentalMapHelperCall;

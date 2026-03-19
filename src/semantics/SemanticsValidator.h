@@ -200,6 +200,13 @@ private:
                                          const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          std::vector<std::string> &argsOut);
+  std::string preferredExperimentalMapHelperTarget(std::string_view helperName) const;
+  std::string preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const;
+  bool canonicalExperimentalMapHelperPath(const std::string &resolvedPath,
+                                          std::string &canonicalPathOut,
+                                          std::string &helperNameOut) const;
+  bool canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,
+                                                     std::string &canonicalPathOut) const;
   struct BuiltinCollectionDispatchResolverAdapters {
     std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;
     std::function<bool(const Expr &, BindingInfo &)> inferCallBinding;

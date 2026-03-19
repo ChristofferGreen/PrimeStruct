@@ -9296,6 +9296,20 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget;") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto canonicalExperimentalMapHelperPath = [&](const std::string &resolvedPath, std::string &canonicalPathOut, std::string &helperNameOut) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto canonicalizeExperimentalMapHelperResolvedPath = [&](const std::string &resolvedPath,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->preferredExperimentalMapHelperTarget(helperName)") != std::string::npos);
+  CHECK(semanticsExprSource.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->canonicalExperimentalMapHelperPath(") != std::string::npos);
+  CHECK(semanticsExprSource.find("this->canonicalizeExperimentalMapHelperResolvedPath(") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") !=

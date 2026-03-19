@@ -400,6 +400,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool inferQueryExprTypeText(const Expr &expr,") != std::string::npos);
+  CHECK(validatorHeader.find("std::string preferredExperimentalMapHelperTarget(std::string_view helperName) const;") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("std::string preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const;") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("bool canonicalExperimentalMapHelperPath(const std::string &resolvedPath,") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("bool canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,") !=
+        std::string::npos);
   CHECK(validatorHeader.find("struct BuiltinCollectionDispatchResolverAdapters {") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;") !=
@@ -446,6 +454,17 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCollections.find("state->resolveExperimentalMapTarget =") != std::string::npos);
   CHECK(validatorCollections.find("state->resolveExperimentalMapValueTarget =") != std::string::npos);
+  CHECK(validatorCollections.find("struct ExperimentalMapHelperDescriptor {") != std::string::npos);
+  CHECK(validatorCollections.find("constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = {") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("std::string SemanticsValidator::preferredExperimentalMapHelperTarget(std::string_view helperName) const {") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("std::string SemanticsValidator::preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const {") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &resolvedPath,") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,") !=
+        std::string::npos);
   CHECK(validatorCollections.find("if (inferQueryExprTypeText(target, params, locals, targetTypeText))") !=
         std::string::npos);
   CHECK(validatorBuild.find("inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const") !=
@@ -492,6 +511,18 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExpr.find("const auto &resolveExperimentalMapValueTarget =") != std::string::npos);
   CHECK(validatorExpr.find("builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget;") !=
         std::string::npos);
+  CHECK(validatorExpr.find("auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto canonicalExperimentalMapHelperPath = [&](const std::string &resolvedPath, std::string &canonicalPathOut, std::string &helperNameOut) {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto canonicalizeExperimentalMapHelperResolvedPath = [&](const std::string &resolvedPath,") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("this->preferredExperimentalMapHelperTarget(helperName)") != std::string::npos);
+  CHECK(validatorExpr.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") != std::string::npos);
+  CHECK(validatorExpr.find("this->canonicalExperimentalMapHelperPath(") != std::string::npos);
+  CHECK(validatorExpr.find("this->canonicalizeExperimentalMapHelperResolvedPath(") != std::string::npos);
   CHECK(validatorExpr.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
         std::string::npos);
   CHECK(validatorExpr.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") !=
