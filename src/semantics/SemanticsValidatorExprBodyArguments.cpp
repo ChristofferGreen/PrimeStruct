@@ -239,7 +239,7 @@ bool SemanticsValidator::validateExprBodyArguments(const std::vector<ParameterIn
     }
   }
   OnErrorScope onErrorScope(*this, std::nullopt);
-  BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+  BorrowEndScope borrowScope(*this, currentValidationContext_.endedReferenceBorrows);
   for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size(); ++bodyIndex) {
     const Expr &bodyExpr = expr.bodyArguments[bodyIndex];
     if (!validateStatement(params, blockLocals, bodyExpr, ReturnKind::Unknown, false, true, nullptr,

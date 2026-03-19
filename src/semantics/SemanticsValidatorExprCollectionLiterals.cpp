@@ -77,13 +77,13 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
                                                 expr.namespacePrefix)) {
       return false;
     }
-    if (!expr.args.empty() && activeEffects_.count("heap_alloc") == 0) {
+    if (!expr.args.empty() && currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
       error_ = "soa_vector literal requires heap_alloc effect";
       return false;
     }
   }
   if (builtinName == "vector" && !expr.args.empty()) {
-    if (activeEffects_.count("heap_alloc") == 0) {
+    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
       error_ = "vector literal requires heap_alloc effect";
       return false;
     }

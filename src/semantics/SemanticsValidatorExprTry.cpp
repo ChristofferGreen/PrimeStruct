@@ -52,15 +52,17 @@ bool SemanticsValidator::validateExprTryBuiltin(
   }
 
   ReturnKind enclosingReturnKind = ReturnKind::Unknown;
-  if (!currentDefinitionPath_.empty()) {
-    auto enclosingReturnIt = returnKinds_.find(currentDefinitionPath_);
+  if (!currentValidationContext_.definitionPath.empty()) {
+    auto enclosingReturnIt = returnKinds_.find(currentValidationContext_.definitionPath);
     if (enclosingReturnIt != returnKinds_.end()) {
       enclosingReturnKind = enclosingReturnIt->second;
     }
   }
 
-  const bool returnsResult = currentResultType_.has_value() && currentResultType_->isResult;
-  if (!currentOnError_.has_value()) {
+  const bool returnsResult =
+      currentValidationContext_.resultType.has_value() &&
+      currentValidationContext_.resultType->isResult;
+  if (!currentValidationContext_.onError.has_value()) {
     error_ = "missing on_error for ? usage";
     return false;
   }
@@ -69,7 +71,8 @@ bool SemanticsValidator::validateExprTryBuiltin(
     return false;
   }
   if (returnsResult &&
-      !errorTypesMatch(currentResultType_->errorType, currentOnError_->errorType,
+      !errorTypesMatch(currentValidationContext_.resultType->errorType,
+                       currentValidationContext_.onError->errorType,
                        expr.namespacePrefix)) {
     error_ = "on_error error type mismatch";
     return false;
@@ -83,8 +86,8 @@ bool SemanticsValidator::validateExprTryBuiltin(
     error_ = "try requires Result argument";
     return false;
   }
-  if (currentOnError_.has_value() &&
-      !errorTypesMatch(argResult.errorType, currentOnError_->errorType,
+  if (currentValidationContext_.onError.has_value() &&
+      !errorTypesMatch(argResult.errorType, currentValidationContext_.onError->errorType,
                        expr.namespacePrefix)) {
     error_ = "try error type mismatch";
     return false;

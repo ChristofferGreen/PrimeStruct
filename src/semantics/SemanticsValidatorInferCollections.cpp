@@ -1520,7 +1520,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     auto it = locals.find(accessReceiver->name);
     return it != locals.end() && resolveBinding(it->second);
   };
-  state->resolveDereferencedIndexedArgsPackElementType = [=, this](const Expr &target, std::string &elemTypeOut) -> bool {
+  state->resolveDereferencedIndexedArgsPackElementType = [=](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     if (!isSimpleCallName(target, "dereference") || target.args.size() != 1) {
       return false;
@@ -1531,7 +1531,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     return extractWrappedPointeeType(wrappedType, elemTypeOut);
   };
-  state->resolveWrappedIndexedArgsPackElementType = [=, this](const Expr &target, std::string &elemTypeOut) -> bool {
+  state->resolveWrappedIndexedArgsPackElementType = [=](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     std::string wrappedType;
     if (!state->resolveIndexedArgsPackElementType(target, wrappedType)) {
@@ -1875,7 +1875,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
            extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
   state->resolveExperimentalMapValueTarget =
-      [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+      [=](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     auto extractValueBinding = [&](const BindingInfo &binding) {
       const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
       if (normalizedType == "Reference" || normalizedType == "Pointer") {
@@ -1894,7 +1894,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
            extractValueBinding(binding);
   };
   state->isDirectCanonicalVectorAccessCallOnBuiltinReceiver =
-      [=, this](const Expr &candidate, size_t &receiverIndexOut) -> bool {
+      [=](const Expr &candidate, size_t &receiverIndexOut) -> bool {
     receiverIndexOut = 0;
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;

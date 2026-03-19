@@ -234,7 +234,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
 
   auto definitionPathContains = [&](std::string_view needle) {
-    return currentDefinitionPath_.find(std::string(needle)) != std::string::npos;
+    return currentValidationContext_.definitionPath.find(std::string(needle)) != std::string::npos;
   };
   auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {
     if (helperName == "count") {
@@ -1176,10 +1176,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (resolveSoaVectorTarget(receiver, elemType)) {
     const std::string normalizedElemType = normalizeBindingTypeName(elemType);
     std::string currentNamespace;
-    if (!currentDefinitionPath_.empty()) {
-      const size_t slash = currentDefinitionPath_.find_last_of('/');
+    if (!currentValidationContext_.definitionPath.empty()) {
+      const size_t slash = currentValidationContext_.definitionPath.find_last_of('/');
       if (slash != std::string::npos && slash > 0) {
-        currentNamespace = currentDefinitionPath_.substr(0, slash);
+        currentNamespace = currentValidationContext_.definitionPath.substr(0, slash);
       }
     }
     const std::string lookupNamespace =

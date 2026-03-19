@@ -243,7 +243,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       if (!validateMemoryTargetType(expr.templateArgs.front())) {
         return false;
       }
-      if (activeEffects_.count("heap_alloc") == 0) {
+      if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
         error_ = "alloc requires heap_alloc effect";
         return false;
       }
@@ -339,7 +339,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       error_ = builtinName + " requires pointer target";
       return false;
     }
-    if (activeEffects_.count("heap_alloc") == 0) {
+    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
       error_ = builtinName + " requires heap_alloc effect";
       return false;
     }

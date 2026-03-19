@@ -196,11 +196,11 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
 
   if (isSimpleCallName(expr, "dispatch")) {
     handledOut = true;
-    if (currentDefinitionIsCompute_) {
+    if (currentValidationContext_.definitionIsCompute) {
       error_ = "dispatch is not allowed in compute definitions";
       return false;
     }
-    if (activeEffects_.count("gpu_dispatch") == 0) {
+    if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
       error_ = "dispatch requires gpu_dispatch effect";
       return false;
     }
@@ -268,11 +268,11 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
   }
   if (isSimpleCallName(expr, "buffer")) {
     handledOut = true;
-    if (currentDefinitionIsCompute_) {
+    if (currentValidationContext_.definitionIsCompute) {
       error_ = "buffer is not allowed in compute definitions";
       return false;
     }
-    if (activeEffects_.count("gpu_dispatch") == 0) {
+    if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
       error_ = "buffer requires gpu_dispatch effect";
       return false;
     }
@@ -305,11 +305,11 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
   }
   if (isSimpleCallName(expr, "upload")) {
     handledOut = true;
-    if (currentDefinitionIsCompute_) {
+    if (currentValidationContext_.definitionIsCompute) {
       error_ = "upload is not allowed in compute definitions";
       return false;
     }
-    if (activeEffects_.count("gpu_dispatch") == 0) {
+    if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
       error_ = "upload requires gpu_dispatch effect";
       return false;
     }
@@ -342,11 +342,11 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
   }
   if (isSimpleCallName(expr, "readback")) {
     handledOut = true;
-    if (currentDefinitionIsCompute_) {
+    if (currentValidationContext_.definitionIsCompute) {
       error_ = "readback is not allowed in compute definitions";
       return false;
     }
-    if (activeEffects_.count("gpu_dispatch") == 0) {
+    if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
       error_ = "readback requires gpu_dispatch effect";
       return false;
     }
@@ -379,7 +379,7 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
   }
   if (isSimpleCallName(expr, "buffer_load")) {
     handledOut = true;
-    if (!currentDefinitionIsCompute_) {
+    if (!currentValidationContext_.definitionIsCompute) {
       error_ = "buffer_load requires a compute definition";
       return false;
     }
@@ -418,7 +418,7 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
   }
   if (isSimpleCallName(expr, "buffer_store")) {
     handledOut = true;
-    if (!currentDefinitionIsCompute_) {
+    if (!currentValidationContext_.definitionIsCompute) {
       error_ = "buffer_store requires a compute definition";
       return false;
     }
