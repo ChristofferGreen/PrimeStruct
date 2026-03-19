@@ -381,6 +381,24 @@ main() {
 }
 )",
       },
+      {
+          "borrowed_soa_vector_auto_return",
+          R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<auto>]
+scoreRefs([args<Reference<soa_vector<Particle>>>] values) {
+  return(count(to_aos(dereference(values[0i32]))))
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)",
+      },
   };
 
   for (const ParityCase &testCase : cases) {
