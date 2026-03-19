@@ -7771,6 +7771,27 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("field-bound experimental map wrapper helpers accept struct field receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+Holder() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(plus(/std/collections/mapCount(holder.values),
+              /std/collections/mapAt(holder.values, "left"raw_utf8)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib map constructor assignments accept explicit experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*

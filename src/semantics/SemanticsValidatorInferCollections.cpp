@@ -10,6 +10,27 @@
 namespace primec::semantics {
 namespace {
 
+struct ExperimentalMapHelperDescriptor {
+  std::string_view helperName;
+  std::string_view canonicalPath;
+  std::string_view aliasPath;
+  std::string_view wrapperPath;
+  std::string_view experimentalPath;
+};
+
+constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = {
+    {"count", "/std/collections/map/count", "/map/count", "/std/collections/mapCount",
+     "/std/collections/experimental_map/mapCount"},
+    {"contains", "/std/collections/map/contains", "/map/contains", "/std/collections/mapContains",
+     "/std/collections/experimental_map/mapContains"},
+    {"tryAt", "/std/collections/map/tryAt", "/map/tryAt", "/std/collections/mapTryAt",
+     "/std/collections/experimental_map/mapTryAt"},
+    {"at", "/std/collections/map/at", "/map/at", "/std/collections/mapAt",
+     "/std/collections/experimental_map/mapAt"},
+    {"at_unsafe", "/std/collections/map/at_unsafe", "/map/at_unsafe", "/std/collections/mapAtUnsafe",
+     "/std/collections/experimental_map/mapAtUnsafe"},
+};
+
 std::string bindingTypeText(const BindingInfo &binding) {
   if (binding.typeTemplateArg.empty()) {
     return binding.typeName;
@@ -42,6 +63,19 @@ bool isDirectMapConstructorPath(std::string_view resolvedCandidate) {
          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSext") ||
          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSept") ||
          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapOct");
+}
+
+bool matchesResolvedPath(std::string_view resolvedPath, std::string_view basePath) {
+  return resolvedPath == basePath || resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
+}
+
+const ExperimentalMapHelperDescriptor *findExperimentalMapHelperByName(std::string_view helperName) {
+  for (const auto &descriptor : kExperimentalMapHelperDescriptors) {
+    if (descriptor.helperName == helperName) {
+      return &descriptor;
+    }
+  }
+  return nullptr;
 }
 
 } // namespace
@@ -84,6 +118,56 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
       if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
         return true;
       }
+    }
+  }
+  return false;
+}
+
+std::string SemanticsValidator::preferredExperimentalMapHelperTarget(std::string_view helperName) const {
+  const ExperimentalMapHelperDescriptor *descriptor = findExperimentalMapHelperByName(helperName);
+  if (descriptor == nullptr) {
+    return std::string(helperName);
+  }
+  constexpr std::string_view prefix = "/std/collections/experimental_map/";
+  std::string_view experimentalPath = descriptor->experimentalPath;
+  if (experimentalPath.rfind(prefix, 0) == 0) {
+    experimentalPath.remove_prefix(prefix.size());
+  }
+  return std::string(experimentalPath);
+}
+
+std::string SemanticsValidator::preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const {
+  const ExperimentalMapHelperDescriptor *descriptor = findExperimentalMapHelperByName(helperName);
+  if (descriptor == nullptr) {
+    return "/std/collections/experimental_map/" + std::string(helperName);
+  }
+  return std::string(descriptor->experimentalPath);
+}
+
+bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &resolvedPath,
+                                                            std::string &canonicalPathOut,
+                                                            std::string &helperNameOut) const {
+  canonicalPathOut.clear();
+  helperNameOut.clear();
+  for (const auto &descriptor : kExperimentalMapHelperDescriptors) {
+    if (matchesResolvedPath(resolvedPath, descriptor.canonicalPath) ||
+        matchesResolvedPath(resolvedPath, descriptor.aliasPath) ||
+        matchesResolvedPath(resolvedPath, descriptor.wrapperPath)) {
+      canonicalPathOut = descriptor.canonicalPath;
+      helperNameOut = descriptor.helperName;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,
+                                                                       std::string &canonicalPathOut) const {
+  canonicalPathOut.clear();
+  for (const auto &descriptor : kExperimentalMapHelperDescriptors) {
+    if (matchesResolvedPath(resolvedPath, descriptor.experimentalPath)) {
+      canonicalPathOut = descriptor.canonicalPath;
+      return true;
     }
   }
   return false;
