@@ -1881,6 +1881,44 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("wrapper vector capacity method resolves through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc)]
+wrapVector() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().capacity())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper vector capacity method requires helper") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+wrapVector() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("capacity method rejects extra arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

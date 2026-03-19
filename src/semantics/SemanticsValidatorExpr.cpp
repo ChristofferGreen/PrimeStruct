@@ -4446,6 +4446,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
       }
+      if (expr.isMethodCall && resolved == "/vector/capacity" &&
+          !hasDeclaredDefinitionPath(resolved) &&
+          !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
+          !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
+          expr.args.size() == 1 &&
+          expr.args.front().kind == Expr::Kind::Call) {
+        std::string elemType;
+        if (resolveVectorTarget(expr.args.front(), elemType)) {
+          error_ = "unknown method: /vector/capacity";
+          return false;
+        }
+      }
       if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" ||
                              resolved == "/soa_vector/count" || resolved == "/string/count" ||
                              resolved == "/map/count" || resolved == "/std/collections/map/count")) {
