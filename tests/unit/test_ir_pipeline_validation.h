@@ -9259,6 +9259,44 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("return validateIfExpr(params, locals, expr);") != std::string::npos);
   CHECK(semanticsExprSource.find("if (!validateNumericBuiltinExpr(params, locals, expr, handledNumericBuiltin)) {") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("makeBuiltinCollectionDispatchResolvers(params, locals)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &resolveWrappedIndexedArgsPackElementType =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &sharedResolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &sharedResolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &sharedResolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("return sharedResolveArrayTarget(target, elemType);") != std::string::npos);
+  CHECK(semanticsExprSource.find("return sharedResolveVectorTarget(target, elemType);") != std::string::npos);
+  CHECK(semanticsExprSource.find("return sharedResolveSoaVectorTarget(target, elemType);") != std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveDereferencedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveWrappedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto extractCollectionElementType = [&](const std::string &typeText,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprValidation.h\"") == std::string::npos);
