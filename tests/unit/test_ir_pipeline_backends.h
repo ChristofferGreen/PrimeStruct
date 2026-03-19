@@ -441,13 +441,32 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
         std::string::npos);
   CHECK(validatorInfer.find("makeBuiltinCollectionDispatchResolvers(params, locals)") != std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
+        std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType)") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("auto resolveArrayTarget = [&](const Expr &target, std::string &elemType)") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("auto resolveVectorTarget = [&](const Expr &target, std::string &elemType)") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
+  CHECK(validatorInfer.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget =") ==
         std::string::npos);
   CHECK(validatorInfer.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
         std::string::npos);
   CHECK(validatorInfer.find("return SemanticsValidator::resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, argsOut);") !=
         std::string::npos);
   CHECK(validatorInfer.find("auto inferTargetTypeText = [&](const Expr &candidate, std::string &typeTextOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,") ==
         std::string::npos);
   CHECK(validatorInfer.find("formatReturnInferenceCycleDiagnostic(") != std::string::npos);
   CHECK(validatorInfer.find("cycle member: ") != std::string::npos);

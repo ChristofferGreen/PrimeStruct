@@ -709,6 +709,68 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         }
         return true;
       }
+      if (!target.isMethodCall && isSimpleCallName(target, "to_aos") && target.args.size() == 1) {
+        std::string sourceElemType;
+        const Expr &source = target.args.front();
+        if (source.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, source.name)) {
+            if (paramBinding->typeName != "soa_vector" || paramBinding->typeTemplateArg.empty()) {
+              return false;
+            }
+            sourceElemType = paramBinding->typeTemplateArg;
+          } else {
+            auto it = locals.find(source.name);
+            if (it == locals.end() || it->second.typeName != "soa_vector" || it->second.typeTemplateArg.empty()) {
+              return false;
+            }
+            sourceElemType = it->second.typeTemplateArg;
+          }
+        } else if (source.kind == Expr::Kind::Call) {
+          std::string sourceCollection;
+          if (defMap_.find(resolveCalleePath(source)) == defMap_.end() &&
+              getBuiltinCollectionName(source, sourceCollection) && sourceCollection == "soa_vector") {
+            if (source.templateArgs.size() == 1) {
+              sourceElemType = source.templateArgs.front();
+            }
+          } else if (!source.isMethodCall && isSimpleCallName(source, "to_soa") && source.args.size() == 1) {
+            const Expr &vectorSource = source.args.front();
+            if (vectorSource.kind == Expr::Kind::Name) {
+              if (const BindingInfo *paramBinding = findParamBinding(params, vectorSource.name)) {
+                if (paramBinding->typeName != "vector" || paramBinding->typeTemplateArg.empty()) {
+                  return false;
+                }
+                sourceElemType = paramBinding->typeTemplateArg;
+              } else {
+                auto sourceIt = locals.find(vectorSource.name);
+                if (sourceIt == locals.end() || sourceIt->second.typeName != "vector" ||
+                    sourceIt->second.typeTemplateArg.empty()) {
+                  return false;
+                }
+                sourceElemType = sourceIt->second.typeTemplateArg;
+              }
+            } else if (vectorSource.kind == Expr::Kind::Call) {
+              std::string vectorCollectionTypePath;
+              if (!resolveCallCollectionTypePath(vectorSource, params, locals, vectorCollectionTypePath) ||
+                  vectorCollectionTypePath != "/vector") {
+                return false;
+              }
+              std::vector<std::string> vectorArgs;
+              if (resolveCallCollectionTemplateArgs(vectorSource, "vector", params, locals, vectorArgs) &&
+                  vectorArgs.size() == 1) {
+                sourceElemType = vectorArgs.front();
+              }
+            } else {
+              return false;
+            }
+          } else {
+            return false;
+          }
+        } else {
+          return false;
+        }
+        elemType = sourceElemType;
+        return true;
+      }
     }
     return false;
   };
