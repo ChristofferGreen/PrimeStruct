@@ -10099,6 +10099,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args)") !=
         std::string::npos);
+  CHECK(semanticsInferSource.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("return SemanticsValidator::resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, argsOut);") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto inferTargetTypeText = [&](const Expr &candidate, std::string &typeTextOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto matchesDirectMapConstructorPath = [&](std::string_view basePath)") ==
+        std::string::npos);
   CHECK(semanticsInferSource.find("resolveBuiltinCollectionMethodReturnKind(") != std::string::npos);
   CHECK(semanticsInferSource.find("resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)") !=
         std::string::npos);
