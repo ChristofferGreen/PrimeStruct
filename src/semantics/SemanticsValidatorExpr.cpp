@@ -3529,6 +3529,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isDirectStdNamespacedVectorCountWrapperMapTarget =
         !expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Call && resolveMapTarget(expr.args.front());
+    const bool isDirectStdNamespacedVectorCountWrapperVectorTarget = [&]() {
+      if (expr.isMethodCall || !isStdNamespacedVectorCountCall || expr.args.size() != 1 ||
+          expr.args.front().kind != Expr::Kind::Call) {
+        return false;
+      }
+      std::string elemType;
+      return resolveVectorTarget(expr.args.front(), elemType);
+    }();
     const bool hasStdNamespacedVectorCountAliasDefinition =
         defMap_.find("/std/collections/vector/count") != defMap_.end() ||
         hasImportedDefinitionPath("/std/collections/vector/count");
@@ -3784,6 +3792,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                                   handledCountCapacity, resolved, resolvedMethod,
                                                   usedMethodTarget, hasMethodReceiverIndex,
                                                   methodReceiverIndex)) {
+      return false;
+    } else if (isDirectStdNamespacedVectorCountWrapperVectorTarget &&
+               !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
+               !hasImportedDefinitionPath("/std/collections/vector/count")) {
+      error_ = "unknown call target: /std/collections/vector/count";
       return false;
     }
     (void)handledCountCapacity;
