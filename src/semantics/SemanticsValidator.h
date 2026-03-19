@@ -214,6 +214,9 @@ private:
                                                   std::string_view namespacePrefix) const;
   bool shouldPreserveRemovedCollectionHelperPath(const std::string &path) const;
   bool isUnnamespacedMapCountBuiltinFallbackCall(const Expr &candidate) const;
+  bool resolveRemovedMapBodyArgumentTarget(const Expr &candidate,
+                                           const std::string &resolvedPath,
+                                           std::string &targetPathOut) const;
   struct BuiltinCollectionDispatchResolverAdapters {
     std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;
     std::function<bool(const Expr &, BindingInfo &)> inferCallBinding;

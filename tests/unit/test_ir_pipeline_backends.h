@@ -420,6 +420,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("bool isUnnamespacedMapCountBuiltinFallbackCall(const Expr &candidate) const;") !=
         std::string::npos);
+  CHECK(validatorHeader.find("bool resolveRemovedMapBodyArgumentTarget(const Expr &candidate,") !=
+        std::string::npos);
   CHECK(validatorHeader.find("struct BuiltinCollectionDispatchResolverAdapters {") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;") !=
@@ -492,6 +494,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorCollections.find("bool SemanticsValidator::shouldPreserveRemovedCollectionHelperPath(const std::string &path) const {") !=
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::isUnnamespacedMapCountBuiltinFallbackCall(const Expr &candidate) const {") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("findRemovedCollectionHelperReference(") != std::string::npos);
+  CHECK(validatorCollections.find("bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candidate,") !=
         std::string::npos);
   CHECK(validatorCollections.find("if (inferQueryExprTypeText(target, params, locals, targetTypeText))") !=
         std::string::npos);
@@ -579,6 +584,12 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExpr.find("this->shouldPreserveRemovedCollectionHelperPath(resolved)") !=
         std::string::npos);
   CHECK(validatorExpr.find("this->isUnnamespacedMapCountBuiltinFallbackCall(expr)") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("this->resolveRemovedMapBodyArgumentTarget(expr, resolved, remappedRemovedMapBodyArgumentTarget)") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto remapWrappedMapMethodBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
   CHECK(validatorExpr.find("const std::string directRemovedMapCompatibilityPath =") != std::string::npos);
   CHECK(validatorExpr.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=

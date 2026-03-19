@@ -7586,6 +7586,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("field-bound experimental map bare at body arguments validate") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<int>]
+/std/collections/map/at([Map<string, i32>] values, [string] key) {
+  return(90i32)
+}
+
+Holder() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  at(holder.values, "left"raw_utf8) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("field-bound experimental map compatibility count calls keep removed-path diagnostics") {
   const std::string source = R"(
 import /std/collections/*
