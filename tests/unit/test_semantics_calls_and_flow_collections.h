@@ -13029,6 +13029,84 @@ main() {
   CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced count accepts same-path helper on string target") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([string] values) {
+  return(44i32)
+}
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(/vector/count(wrapText()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced count string target without helper reports unknown target") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(/vector/count(wrapText()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count accepts same-path helper on array target") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([array<i32>] values) {
+  return(45i32)
+}
+
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(/vector/count(wrapArray()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced count array target without helper reports unknown target") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(/vector/count(wrapArray()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
 [return<int>]

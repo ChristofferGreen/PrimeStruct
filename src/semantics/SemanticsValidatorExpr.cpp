@@ -5226,7 +5226,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         const bool isAliasCount = resolved == "/vector/count";
         std::string elemType;
         if (isAliasCount && expr.args.front().kind == Expr::Kind::Call &&
-            resolveVectorTarget(expr.args.front(), elemType)) {
+            (resolveVectorTarget(expr.args.front(), elemType) ||
+             resolveArrayTarget(expr.args.front(), elemType) ||
+             resolveStringTarget(expr.args.front()) ||
+             resolveMapTarget(expr.args.front()))) {
           error_ = "unknown call target: /vector/count";
           return false;
         }

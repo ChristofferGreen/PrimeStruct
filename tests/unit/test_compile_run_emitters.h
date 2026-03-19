@@ -8370,7 +8370,7 @@ main() {
   CHECK(runCommand(exePath) == 95);
 }
 
-TEST_CASE("C++ emitter lowers alias direct-call vector count on string receiver to deleted stub") {
+TEST_CASE("C++ emitter rejects alias direct-call vector count on string receiver before emission") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -8389,15 +8389,13 @@ main() {
        "primec_cpp_alias_direct_vector_count_string_deleted_stub.cpp")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_count_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_count_call_helper(wrapText())") != std::string::npos);
-  CHECK(output.find("ps_string_count(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects alias direct-call vector count builtin fallback on string receiver in C++ emitter") {
+TEST_CASE("rejects alias direct-call vector count on string receiver in C++ emitter") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -8419,7 +8417,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_count_call_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps alias direct-call vector count same-path helper on array receiver") {
@@ -8451,7 +8449,7 @@ main() {
   CHECK(runCommand(exePath) == 99);
 }
 
-TEST_CASE("C++ emitter lowers alias direct-call vector count on array receiver to deleted stub") {
+TEST_CASE("C++ emitter rejects alias direct-call vector count on array receiver before emission") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -8470,15 +8468,13 @@ main() {
        "primec_cpp_alias_direct_vector_count_array_deleted_stub.cpp")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_count_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_count_call_helper(wrapArray())") != std::string::npos);
-  CHECK(output.find("ps_array_count(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects alias direct-call vector count builtin fallback on array receiver in C++ emitter") {
+TEST_CASE("rejects alias direct-call vector count on array receiver in C++ emitter") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -8500,7 +8496,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_count_call_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects namespaced access method chain compatibility fallback in C++ emitter") {
