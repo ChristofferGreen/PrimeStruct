@@ -41,6 +41,34 @@ constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = 
      {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef"}, 4},
 };
 
+enum class RemovedCollectionHelperFamily {
+  VectorLike,
+  Map,
+};
+
+struct RemovedCollectionHelperDescriptor {
+  RemovedCollectionHelperFamily family;
+  std::string_view helperName;
+  std::string_view removedPath;
+  bool supportsUnnamespacedFallback;
+};
+
+constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[] = {
+    {RemovedCollectionHelperFamily::VectorLike, "count", "/vector/count", false},
+    {RemovedCollectionHelperFamily::VectorLike, "capacity", "/vector/capacity", false},
+    {RemovedCollectionHelperFamily::VectorLike, "at", "/vector/at", false},
+    {RemovedCollectionHelperFamily::VectorLike, "at_unsafe", "/vector/at_unsafe", false},
+    {RemovedCollectionHelperFamily::VectorLike, "push", "/vector/push", false},
+    {RemovedCollectionHelperFamily::VectorLike, "pop", "/vector/pop", false},
+    {RemovedCollectionHelperFamily::VectorLike, "reserve", "/vector/reserve", false},
+    {RemovedCollectionHelperFamily::VectorLike, "clear", "/vector/clear", false},
+    {RemovedCollectionHelperFamily::VectorLike, "remove_at", "/vector/remove_at", false},
+    {RemovedCollectionHelperFamily::VectorLike, "remove_swap", "/vector/remove_swap", false},
+    {RemovedCollectionHelperFamily::Map, "count", "/map/count", true},
+    {RemovedCollectionHelperFamily::Map, "at", "/map/at", false},
+    {RemovedCollectionHelperFamily::Map, "at_unsafe", "/map/at_unsafe", false},
+};
+
 std::string bindingTypeText(const BindingInfo &binding) {
   if (binding.typeTemplateArg.empty()) {
     return binding.typeName;
@@ -116,6 +144,78 @@ const ExperimentalMapHelperDescriptor *findExperimentalMapCompatibilityHelper(st
     }
   }
   return nullptr;
+}
+
+const RemovedCollectionHelperDescriptor *findRemovedCollectionHelper(RemovedCollectionHelperFamily family,
+                                                                     std::string_view helperName) {
+  for (const auto &descriptor : kRemovedCollectionHelperDescriptors) {
+    if (descriptor.family == family && descriptor.helperName == helperName) {
+      return &descriptor;
+    }
+  }
+  return nullptr;
+}
+
+std::string removedCollectionMethodPath(RemovedCollectionHelperFamily family,
+                                        std::string_view helperName,
+                                        bool preserveArrayPath) {
+  const RemovedCollectionHelperDescriptor *descriptor = findRemovedCollectionHelper(family, helperName);
+  if (descriptor == nullptr) {
+    return "";
+  }
+  if (family == RemovedCollectionHelperFamily::VectorLike && preserveArrayPath) {
+    return "/array/" + std::string(helperName);
+  }
+  return std::string(descriptor->removedPath);
+}
+
+bool resolveRemovedCollectionHelperReference(std::string_view rawMethodName,
+                                             std::string_view namespacePrefix,
+                                             RemovedCollectionHelperFamily &familyOut,
+                                             std::string_view &helperNameOut,
+                                             bool &preserveArrayPathOut) {
+  rawMethodName = trimLeadingSlash(rawMethodName);
+  namespacePrefix = trimLeadingSlash(namespacePrefix);
+  preserveArrayPathOut = false;
+
+  auto setVectorLike = [&](std::string_view helperName, bool preserveArrayPath) {
+    helperNameOut = helperName;
+    familyOut = RemovedCollectionHelperFamily::VectorLike;
+    preserveArrayPathOut = preserveArrayPath;
+    return true;
+  };
+  auto setMap = [&](std::string_view helperName) {
+    helperNameOut = helperName;
+    familyOut = RemovedCollectionHelperFamily::Map;
+    preserveArrayPathOut = false;
+    return true;
+  };
+
+  if (namespacePrefix == "array") {
+    return setVectorLike(rawMethodName, true);
+  }
+  if (namespacePrefix == "vector" || namespacePrefix == "std/collections/vector") {
+    return setVectorLike(rawMethodName, false);
+  }
+  if (namespacePrefix == "map" || namespacePrefix == "std/collections/map") {
+    return setMap(rawMethodName);
+  }
+  if (rawMethodName.rfind("array/", 0) == 0) {
+    return setVectorLike(rawMethodName.substr(std::string_view("array/").size()), true);
+  }
+  if (rawMethodName.rfind("vector/", 0) == 0) {
+    return setVectorLike(rawMethodName.substr(std::string_view("vector/").size()), false);
+  }
+  if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
+    return setVectorLike(rawMethodName.substr(std::string_view("std/collections/vector/").size()), false);
+  }
+  if (rawMethodName.rfind("map/", 0) == 0) {
+    return setMap(rawMethodName.substr(std::string_view("map/").size()));
+  }
+  if (rawMethodName.rfind("std/collections/map/", 0) == 0) {
+    return setMap(rawMethodName.substr(std::string_view("std/collections/map/").size()));
+  }
+  return false;
 }
 
 } // namespace
@@ -284,6 +384,69 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(const Expr &can
     return "";
   }
   return removedPath;
+}
+
+std::string SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_view rawMethodName,
+                                                                    std::string_view namespacePrefix) const {
+  RemovedCollectionHelperFamily family = RemovedCollectionHelperFamily::VectorLike;
+  std::string_view helperName;
+  bool preserveArrayPath = false;
+  if (!resolveRemovedCollectionHelperReference(rawMethodName, namespacePrefix, family, helperName, preserveArrayPath)) {
+    return "";
+  }
+  return removedCollectionMethodPath(family, helperName, preserveArrayPath);
+}
+
+bool SemanticsValidator::shouldPreserveRemovedCollectionHelperPath(const std::string &path) const {
+  RemovedCollectionHelperFamily family = RemovedCollectionHelperFamily::VectorLike;
+  std::string_view helperName;
+  bool preserveArrayPath = false;
+  if (!resolveRemovedCollectionHelperReference(path, "", family, helperName, preserveArrayPath)) {
+    return false;
+  }
+  return !removedCollectionMethodPath(family, helperName, preserveArrayPath).empty();
+}
+
+bool SemanticsValidator::isUnnamespacedMapCountBuiltinFallbackCall(const Expr &candidate) const {
+  const RemovedCollectionHelperDescriptor *descriptor =
+      findRemovedCollectionHelper(RemovedCollectionHelperFamily::Map, "count");
+  if (descriptor == nullptr || !descriptor->supportsUnnamespacedFallback) {
+    return false;
+  }
+  if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+    return false;
+  }
+  std::string normalized = candidate.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  const bool spellsCount = normalized == "count";
+  const bool resolvesCount = resolveCalleePath(candidate) == "/count";
+  if (!spellsCount && !resolvesCount) {
+    return false;
+  }
+  if (defMap_.find("/count") != defMap_.end() || candidate.args.empty()) {
+    return false;
+  }
+  size_t receiverIndex = 0;
+  if (hasNamedArguments(candidate.argNames)) {
+    bool foundValues = false;
+    for (size_t i = 0; i < candidate.args.size(); ++i) {
+      if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+          *candidate.argNames[i] == "values") {
+        receiverIndex = i;
+        foundValues = true;
+        break;
+      }
+    }
+    if (!foundValues) {
+      receiverIndex = 0;
+    }
+  }
+  if (receiverIndex >= candidate.args.size()) {
+    return false;
+  }
+  return resolveMapTarget(candidate.args[receiverIndex]);
 }
 
 bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut) {

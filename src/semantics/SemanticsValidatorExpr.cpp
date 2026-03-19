@@ -1002,48 +1002,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool shouldBuiltinValidateBareMapContainsCall = true;
     const bool shouldBuiltinValidateBareMapTryAtCall = true;
     const bool shouldBuiltinValidateBareMapAccessCall = true;
-    auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
-        return false;
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      const bool spellsCount = (normalized == "count");
-      const bool resolvesCount = (resolveCalleePath(candidate) == "/count");
-      if (!spellsCount && !resolvesCount) {
-        return false;
-      }
-      if (defMap_.find("/count") != defMap_.end()) {
-        return false;
-      }
-      if (candidate.args.empty()) {
-        return false;
-      }
-      size_t receiverIndex = 0;
-      if (hasNamedArguments(candidate.argNames)) {
-        bool foundValues = false;
-        for (size_t i = 0; i < candidate.args.size(); ++i) {
-          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
-              *candidate.argNames[i] == "values") {
-            receiverIndex = i;
-            foundValues = true;
-            break;
-          }
-        }
-        if (!foundValues) {
-          receiverIndex = 0;
-        }
-      }
-      if (receiverIndex >= candidate.args.size()) {
-        return false;
-      }
-      if (!shouldBuiltinValidateBareMapCountCall) {
-        return false;
-      }
-      return resolveMapTarget(candidate.args[receiverIndex]);
-    };
     auto resolveMapKeyType = [&](const Expr &target, std::string &keyTypeOut) -> bool {
       keyTypeOut.clear();
       std::string valueType;
@@ -1123,77 +1081,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
-      auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
-        return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
-               helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
-               helperName == "remove_at" || helperName == "remove_swap";
-      };
-      auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
-        return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
-      };
-      auto explicitRemovedCollectionMethodPath = [&](const std::string &rawMethodName) -> std::string {
-        std::string candidate = rawMethodName;
-        if (!candidate.empty() && candidate.front() == '/') {
-          candidate.erase(candidate.begin());
-        }
-        std::string normalizedPrefix = expr.namespacePrefix;
-        if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-          normalizedPrefix.erase(normalizedPrefix.begin());
-        }
-        std::string_view helperName;
-        bool isStdNamespacedVectorHelper = false;
-        std::string compatibilityCollection;
-        if (normalizedPrefix == "array") {
-          helperName = candidate;
-          compatibilityCollection = "array";
-        } else if (normalizedPrefix == "vector") {
-          helperName = candidate;
-          compatibilityCollection = "vector";
-        } else if (normalizedPrefix == "std/collections/vector") {
-          helperName = candidate;
-          isStdNamespacedVectorHelper = true;
-          compatibilityCollection = "vector";
-        } else if (normalizedPrefix == "map") {
-          helperName = candidate;
-          compatibilityCollection = "map";
-        } else if (normalizedPrefix == "std/collections/map") {
-          helperName = candidate;
-          compatibilityCollection = "map";
-        } else if (candidate.rfind("array/", 0) == 0) {
-          helperName = std::string_view(candidate).substr(std::string_view("array/").size());
-          compatibilityCollection = "array";
-        } else if (candidate.rfind("vector/", 0) == 0) {
-          helperName = std::string_view(candidate).substr(std::string_view("vector/").size());
-          compatibilityCollection = "vector";
-        } else if (candidate.rfind("std/collections/vector/", 0) == 0) {
-          helperName = std::string_view(candidate).substr(std::string_view("std/collections/vector/").size());
-          isStdNamespacedVectorHelper = true;
-          compatibilityCollection = "vector";
-        } else if (candidate.rfind("map/", 0) == 0) {
-          helperName = std::string_view(candidate).substr(std::string_view("map/").size());
-          compatibilityCollection = "map";
-        } else if (candidate.rfind("std/collections/map/", 0) == 0) {
-          helperName = std::string_view(candidate).substr(std::string_view("std/collections/map/").size());
-          compatibilityCollection = "map";
-        }
-        if (helperName.empty()) {
-          return "";
-        }
-        if (compatibilityCollection == "map") {
-          if (!isRemovedMapCompatibilityHelper(helperName)) {
-            return "";
-          }
-          return "/map/" + std::string(helperName);
-        }
-        if (!isRemovedVectorCompatibilityHelper(helperName)) {
-          return "";
-        }
-        if (isStdNamespacedVectorHelper) {
-          return "/vector/" + std::string(helperName);
-        }
-        return "/" + candidate;
-      };
-      const std::string explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName);
+      const std::string explicitRemovedMethodPath =
+          this->explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
       std::string normalizedMethodName = methodName;
       if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
         normalizedMethodName.erase(normalizedMethodName.begin());
@@ -2277,7 +2166,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         !isStdNamespacedMapCountCall && !isMapNamespacedCountCompatibilityCall &&
         defMap_.find(resolved) == defMap_.end();
     const bool isUnnamespacedMapCountFallbackCall =
-        !expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr);
+        !expr.isMethodCall && this->isUnnamespacedMapCountBuiltinFallbackCall(expr);
     const bool isResolvedMapCountCall =
         !expr.isMethodCall && resolved == "/map/count" &&
         !isMapNamespacedCountCompatibilityCall &&
@@ -3028,38 +2917,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
     }
-      auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
-        return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
-               helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
-               helperName == "remove_at" || helperName == "remove_swap";
-      };
-      auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
-        return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
-      };
-      auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {
-        auto helperSuffix = [](const std::string &candidate, const char *prefix) -> std::string_view {
-          const size_t prefixLen = std::char_traits<char>::length(prefix);
-          if (candidate.rfind(prefix, 0) != 0 || candidate.size() <= prefixLen) {
-            return std::string_view();
-          }
-          return std::string_view(candidate).substr(prefixLen);
-        };
-        std::string_view helper = helperSuffix(path, "/vector/");
-        if (helper.empty()) {
-          helper = helperSuffix(path, "/array/");
-        }
-        if (helper.empty()) {
-          helper = helperSuffix(path, "/std/collections/vector/");
-        }
-        if (!helper.empty()) {
-          return isRemovedVectorCompatibilityHelper(helper);
-        }
-        helper = helperSuffix(path, "/map/");
-        if (helper.empty()) {
-          helper = helperSuffix(path, "/std/collections/map/");
-        }
-        return !helper.empty() && isRemovedMapCompatibilityHelper(helper);
-      };
     auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool {
         if (expr.isMethodCall || expr.name.empty()) {
           return false;
@@ -3181,7 +3038,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         };
         if (!resolvedMethod) {
           if (!resolveBareMapCallBodyArgumentTarget() && !remapWrappedMapMethodBodyArgumentTarget() &&
-              !shouldPreserveBodyArgumentTarget(resolved)) {
+              !this->shouldPreserveRemovedCollectionHelperPath(resolved)) {
             resolved = preferVectorStdlibHelperPath(resolved);
           }
         } else {
@@ -4630,7 +4487,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
           (!shouldBuiltinValidateStdNamespacedVectorCountCall && !isStdNamespacedVectorCountCall) &&
           !isNamespacedMapCountCall && !isResolvedMapCountCall &&
-          !isUnnamespacedMapCountBuiltinFallbackCall(expr) && it == defMap_.end()) {
+          !this->isUnnamespacedMapCountBuiltinFallbackCall(expr) && it == defMap_.end()) {
         if (!shouldBuiltinValidateBareMapCountCall) {
           Expr rewrittenMapHelperCall;
           if (tryRewriteBareMapHelperCall(expr, "count", rewrittenMapHelperCall)) {

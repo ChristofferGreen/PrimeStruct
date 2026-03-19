@@ -9314,6 +9314,16 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto getDirectMapHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto explicitRemovedCollectionMethodPath = [&](const std::string &rawMethodName) -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("this->preferredExperimentalMapHelperTarget(helperName)") != std::string::npos);
   CHECK(semanticsExprSource.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
         std::string::npos);
@@ -9325,6 +9335,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("this->mapNamespacedMethodCompatibilityPath(expr)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("this->directMapHelperCompatibilityPath(") != std::string::npos);
+  CHECK(semanticsExprSource.find("this->explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->shouldPreserveRemovedCollectionHelperPath(resolved)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->isUnnamespacedMapCountBuiltinFallbackCall(expr)") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("const std::string directRemovedMapCompatibilityPath =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=

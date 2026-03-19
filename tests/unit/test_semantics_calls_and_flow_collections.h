@@ -7566,6 +7566,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("field-bound experimental map bare count fallback validates") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+Holder() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(count(holder.values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("field-bound experimental map compatibility count calls keep removed-path diagnostics") {
   const std::string source = R"(
 import /std/collections/*
