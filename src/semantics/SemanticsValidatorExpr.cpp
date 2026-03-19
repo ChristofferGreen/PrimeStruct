@@ -3709,6 +3709,19 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             !keepBuiltinIndexedArgsPackMapMethod) {
           isBuiltinMethod = false;
         }
+        const bool isCanonicalStdVectorMutatorMethodWithoutImportedHelper =
+            (resolved == "/std/collections/vector/push" ||
+             resolved == "/std/collections/vector/pop" ||
+             resolved == "/std/collections/vector/reserve" ||
+             resolved == "/std/collections/vector/clear" ||
+             resolved == "/std/collections/vector/remove_at" ||
+             resolved == "/std/collections/vector/remove_swap") &&
+            !hasDeclaredDefinitionPath(resolved) &&
+            !hasImportedDefinitionPath(resolved);
+        if (isCanonicalStdVectorMutatorMethodWithoutImportedHelper) {
+          error_ = "unknown method: " + resolved;
+          return false;
+        }
         if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
             isVectorBuiltinName(expr, "capacity") && !isStdNamespacedVectorCapacityCall) {
           promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);

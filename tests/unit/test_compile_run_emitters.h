@@ -11931,7 +11931,7 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_vector_push_method_helper") != std::string::npos);
 }
 
-TEST_CASE("rejects explicit vector mutator canonical method statements without helper in C++ emitter") {
+TEST_CASE("rejects explicit canonical vector clear method without imported helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -11950,7 +11950,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_clear_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/clear") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs explicit canonical vector mutator method helper in C++ emitter") {
@@ -12301,57 +12301,28 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_vector_push_call_helper") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers canonical clear remove statements without alias bridge to deleted stubs") {
+TEST_CASE("rejects explicit canonical vector remove methods without imported helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
-  /std/collections/vector/remove_at(values, 0i32)
+  values./std/collections/vector/remove_at(0i32)
   values./std/collections/vector/remove_swap(0i32)
-  values./std/collections/vector/clear()
   return(0i32)
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_canonical_vector_remove_clear_deleted_stub.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_vector_remove_clear_deleted_stub.cpp")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_remove_at_call_helper(values, 0)") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_remove_swap_method_helper(values, 0)") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_clear_method_helper(values)") != std::string::npos);
-}
-
-TEST_CASE("rejects canonical clear remove statements without alias bridge in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
-  /std/collections/vector/remove_at(values, 0i32)
-  values./std/collections/vector/remove_swap(0i32)
-  values./std/collections/vector/clear()
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_vector_remove_clear_deleted_stub_exe.prime", source);
+      writeTemp("compile_cpp_canonical_vector_remove_methods_no_import.prime", source);
   const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_vector_remove_clear_deleted_stub.err")
+       "primec_cpp_canonical_vector_remove_methods_no_import.err")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string errors = readFile(errPath);
-  CHECK(errors.find("ps_missing_vector_remove_at_call_helper") != std::string::npos);
-  CHECK(errors.find("ps_missing_vector_remove_swap_method_helper") != std::string::npos);
-  CHECK(errors.find("ps_missing_vector_clear_method_helper") != std::string::npos);
+  CHECK(errors.find("unknown method: /std/collections/vector/remove_at") != std::string::npos);
 }
 
 TEST_CASE("rejects inferred wrapper map capacity target in C++ emitter") {
