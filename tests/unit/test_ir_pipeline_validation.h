@@ -9324,7 +9324,6 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("this->preferredExperimentalMapHelperTarget(helperName)") != std::string::npos);
   CHECK(semanticsExprSource.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("this->canonicalExperimentalMapHelperPath(") != std::string::npos);
@@ -9332,17 +9331,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("this->shouldBuiltinValidateCurrentMapWrapperHelper(") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("this->mapNamespacedMethodCompatibilityPath(expr)") !=
+  CHECK(semanticsExprSource.find(
+            "this->mapNamespacedMethodCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("this->directMapHelperCompatibilityPath(") != std::string::npos);
   CHECK(semanticsExprSource.find("this->explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("this->shouldPreserveRemovedCollectionHelperPath(resolved)") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("this->isUnnamespacedMapCountBuiltinFallbackCall(expr)") !=
-        std::string::npos);
   CHECK(semanticsExprSource.find(
-            "this->resolveRemovedMapBodyArgumentTarget(expr, resolved, remappedRemovedMapBodyArgumentTarget)") !=
+            "this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->resolveRemovedMapBodyArgumentTarget(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
@@ -9885,7 +9885,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("makeBuiltinCollectionDispatchResolvers(params, locals)") != std::string::npos);
+  CHECK(semanticsInferSource.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
   CHECK(semanticsInferSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
   CHECK(semanticsInferSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
         std::string::npos);
@@ -9910,10 +9910,6 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferSource.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
-        std::string::npos);
-  CHECK(semanticsInferSource.find("resolveCallCollectionTypePath(target, params, locals, collectionTypePath)") !=
-        std::string::npos);
-  CHECK(semanticsInferSource.find("resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args)") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
         std::string::npos);
@@ -9996,9 +9992,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("SemanticsValidator::makeBuiltinCollectionDispatchResolvers(") !=
         std::string::npos);
-  CHECK(semanticsInferCollectionsSource.find("state->resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
+  CHECK(semanticsInferCollectionsSource.find("auto resolveBindingTarget = [") !=
         std::string::npos);
-  CHECK(semanticsInferCollectionsSource.find("state->resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
+  CHECK(semanticsInferCollectionsSource.find("auto inferCallBinding = [") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("auto isDirectMapConstructorCall = [") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("state->resolveSoaVectorTarget = [") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("state->resolveBufferTarget = [") !=
         std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind combineNumericReturnKinds") != std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind SemanticsValidator::inferControlFlowExprReturnKind") !=

@@ -1476,6 +1476,46 @@ inline void expectMapConformanceCompileReject(const std::string &source,
   CHECK(readFile(outPath).find(expectedError) != std::string::npos);
 }
 
+inline void expectMapConformanceFailure(const std::string &source,
+                                        const std::string &nameStem,
+                                        const std::string &emitMode,
+                                        int expectedExitCode,
+                                        const std::string &expectedError,
+                                        bool duringCompile) {
+  const std::string srcPath = writeTemp(nameStem + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == expectedExitCode);
+    if (!expectedError.empty()) {
+      CHECK(readFile(outPath).find(expectedError) != std::string::npos);
+    }
+    return;
+  }
+
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_exe")).string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  if (duringCompile) {
+    CHECK(runCommand(compileCmd) == expectedExitCode);
+    if (!expectedError.empty()) {
+      CHECK(readFile(outPath).find(expectedError) != std::string::npos);
+    }
+    return;
+  }
+
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(runCmd) == expectedExitCode);
+  if (!expectedError.empty()) {
+    CHECK(readFile(outPath).find(expectedError) != std::string::npos);
+  }
+}
+
 inline void expectVmStdlibMapHelperSurfaceConformance() {
   expectMapVmProgramRunsWithOutput(makeMapHelperSurfaceConformanceSource("/std/collections/*"),
                                    "map_helper_surface_stdlib",
@@ -1534,10 +1574,14 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
 }
 
 inline void expectExperimentalMapMethodConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeExperimentalMapMethodConformanceSource(),
-                                    "experimental_map_methods",
-                                    emitMode,
-                                    "unknown call target: /std/collections/experimental_map/mapCount");
+  const int expectedExitCode = emitMode == "vm" ? 3 : (emitMode == "exe" ? 1 : 139);
+  const std::string expectedError = emitMode == "native" ? "" : "unaligned indirect address in IR";
+  expectMapConformanceFailure(makeExperimentalMapMethodConformanceSource(),
+                              "experimental_map_methods",
+                              emitMode,
+                              expectedExitCode,
+                              expectedError,
+                              false);
 }
 
 inline void expectExperimentalMapReferenceHelperConformance(const std::string &emitMode) {
@@ -1569,10 +1613,17 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeExperimentalMapReferenceMethodConformanceSource(),
-                                    "experimental_map_reference_methods",
-                                    emitMode,
-                                    "try requires Result argument");
+  const std::string expectedError = emitMode == "vm"
+                                        ? "VM lowering error: struct parameter type mismatch"
+                                        : (emitMode == "exe"
+                                               ? "EXE IR lowering error: struct parameter type mismatch"
+                                               : "Native lowering error: struct parameter type mismatch");
+  expectMapConformanceFailure(makeExperimentalMapReferenceMethodConformanceSource(),
+                              "experimental_map_reference_methods",
+                              emitMode,
+                              2,
+                              expectedError,
+                              true);
 }
 
 inline void expectExperimentalMapInsertConformance(const std::string &emitMode) {
@@ -1800,10 +1851,12 @@ inline void expectExperimentalMapMethodReceiverConformance(const std::string &em
 }
 
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeExperimentalMapFieldAssignConformanceSource(),
-                                    "map_experimental_field_assign",
-                                    emitMode,
-                                    "unknown call target: /std/collections/experimental_map/mapAt");
+  expectMapConformanceFailure(makeExperimentalMapFieldAssignConformanceSource(),
+                              "map_experimental_field_assign",
+                              emitMode,
+                              3,
+                              "map key not found",
+                              false);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {

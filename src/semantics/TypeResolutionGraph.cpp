@@ -41,6 +41,16 @@ std::optional<std::string> explicitBindingTypeName(const Expr &expr) {
   return std::nullopt;
 }
 
+std::pair<int, int> graphLocalAutoSourceLocation(const Expr &expr) {
+  if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
+    return {expr.sourceLine, expr.sourceColumn};
+  }
+  if (!expr.args.empty() && expr.args.front().sourceLine > 0 && expr.args.front().sourceColumn > 0) {
+    return {expr.args.front().sourceLine, expr.args.front().sourceColumn};
+  }
+  return {expr.sourceLine, expr.sourceColumn};
+}
+
 class TypeResolutionGraphBuilder {
 public:
   explicit TypeResolutionGraphBuilder(const Program &program)
@@ -290,10 +300,11 @@ private:
         visitExpr(bodyExpr, context, &initializerCallIds);
       }
       if (isLocalAutoConstraint(expr)) {
+        const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(expr);
         const std::string label =
             context.scopePath + "::auto:" + expr.name + "#" + std::to_string(context.localAutoOrdinal++);
         const uint32_t localNodeId = addNode(
-            TypeResolutionNodeKind::LocalAuto, label, context.scopePath, {}, expr.sourceLine, expr.sourceColumn);
+            TypeResolutionNodeKind::LocalAuto, label, context.scopePath, {}, sourceLine, sourceColumn);
         for (uint32_t callNodeId : initializerCallIds) {
           addEdge(localNodeId, callNodeId, TypeResolutionEdgeKind::Dependency);
         }
@@ -370,6 +381,9 @@ private:
     }
 
     for (const auto &stmt : def.statements) {
+      if (def.returnExpr.has_value() && isReturnCall(stmt)) {
+        continue;
+      }
       visitExpr(stmt, context, nullptr);
     }
 

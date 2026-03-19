@@ -8,6 +8,29 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     const std::vector<ParameterInfo> &defParams,
     const std::unordered_map<std::string, BindingInfo> &activeLocals,
     DefinitionReturnInferenceState &state) {
+  auto containsDeferredMapAliasInference = [&](const Expr &candidate, auto &&containsDeferredMapAliasInferenceRef)
+      -> bool {
+    std::string builtinAccessName;
+    if (candidate.kind == Expr::Kind::Call && candidate.isMethodCall &&
+        getBuiltinArrayAccessName(candidate, builtinAccessName)) {
+      const std::string resolvedPath = resolveCalleePath(candidate);
+      if (resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe" ||
+          resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe") {
+        return true;
+      }
+    }
+    for (const auto &arg : candidate.args) {
+      if (containsDeferredMapAliasInferenceRef(arg, containsDeferredMapAliasInferenceRef)) {
+        return true;
+      }
+    }
+    for (const auto &bodyExpr : candidate.bodyArguments) {
+      if (containsDeferredMapAliasInferenceRef(bodyExpr, containsDeferredMapAliasInferenceRef)) {
+        return true;
+      }
+    }
+    return false;
+  };
   state.sawReturn = true;
   ReturnKind exprKind = ReturnKind::Void;
   std::string exprStructPath;
@@ -22,6 +45,12 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
   }
   if (exprKind == ReturnKind::Unknown) {
     if (deferUnknownReturnInferenceErrors_) {
+      const bool shouldDeferExplicitMapAliasDiagnostic =
+          valueExpr != nullptr &&
+          containsDeferredMapAliasInference(*valueExpr, containsDeferredMapAliasInference);
+      if (!error_.empty() && !shouldDeferExplicitMapAliasDiagnostic) {
+        return false;
+      }
       state.sawUnresolvedReturnDependency = true;
       return true;
     }

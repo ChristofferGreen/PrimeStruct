@@ -362,6 +362,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.conversions
     primestruct.ir.pipeline.entry_args
     primestruct.ir.pipeline.backends
+    primestruct.ir.pipeline.type_resolution_parity
     primestruct.ir.pipeline.to_cpp
     primestruct.ir.pipeline.to_glsl
     primestruct.ir.pipeline.gpu

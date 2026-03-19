@@ -847,7 +847,24 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         error_ = "return requires exactly one argument";
         return false;
       }
+      auto declaresAutoReturn = [&]() {
+        auto defIt = defMap_.find(currentValidationContext_.definitionPath);
+        if (defIt == defMap_.end() || defIt->second == nullptr) {
+          return false;
+        }
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+              transform.templateArgs.front() == "auto") {
+            return true;
+          }
+        }
+        return false;
+      };
       if (!validateExpr(params, locals, stmt.args.front())) {
+        if (declaresAutoReturn() &&
+            (error_ == "unknown method: /map/at" || error_ == "unknown method: /map/at_unsafe")) {
+          error_ = "unable to infer return type on " + currentValidationContext_.definitionPath;
+        }
         return false;
       }
       auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {

@@ -77,32 +77,83 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
     return false;
   }
 
-  std::string elemType;
-  if (resolvers.resolveStringTarget(callExpr.args.front())) {
-    kindOut = ReturnKind::Int;
-    return true;
-  }
-  std::string keyType;
-  std::string valueType;
-  if (resolvers.resolveMapTarget(callExpr.args.front(), keyType, valueType)) {
-    ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
-    if (kind != ReturnKind::Unknown) {
-      kindOut = kind;
+  auto resolveReceiverReturnKind = [&](const Expr &receiverExpr) {
+    std::string elemType;
+    if (resolvers.resolveStringTarget(receiverExpr)) {
+      kindOut = ReturnKind::Int;
       return true;
     }
-  }
-  if (resolvers.resolveVectorTarget(callExpr.args.front(), elemType)) {
-    ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
-    if (kind != ReturnKind::Unknown) {
-      kindOut = kind;
-      return true;
+    std::string keyType;
+    std::string valueType;
+    if (resolvers.resolveMapTarget(receiverExpr, keyType, valueType) ||
+        resolvers.resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
+      ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
+      if (kind != ReturnKind::Unknown) {
+        kindOut = kind;
+        return true;
+      }
+    }
+    if (resolvers.resolveVectorTarget(receiverExpr, elemType)) {
+      ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
+      if (kind != ReturnKind::Unknown) {
+        kindOut = kind;
+        return true;
+      }
+    }
+    if (resolvers.resolveArgsPackAccessTarget(receiverExpr, elemType) ||
+        resolvers.resolveArrayTarget(receiverExpr, elemType)) {
+      ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
+      if (kind != ReturnKind::Unknown) {
+        kindOut = kind;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  std::vector<size_t> receiverIndices;
+  auto appendReceiverIndex = [&](size_t index) {
+    if (index >= callExpr.args.size()) {
+      return;
+    }
+    for (size_t existing : receiverIndices) {
+      if (existing == index) {
+        return;
+      }
+    }
+    receiverIndices.push_back(index);
+  };
+
+  const bool hasNamedArgs = hasNamedArguments(callExpr.argNames);
+  if (hasNamedArgs) {
+    bool foundValuesReceiver = false;
+    for (size_t i = 0; i < callExpr.args.size(); ++i) {
+      if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value() &&
+          *callExpr.argNames[i] == "values") {
+        appendReceiverIndex(i);
+        foundValuesReceiver = true;
+      }
+    }
+    if (!foundValuesReceiver) {
+      appendReceiverIndex(0);
+    }
+  } else {
+    appendReceiverIndex(0);
+    const bool probePositionalReorderedReceiver =
+        callExpr.args.size() > 1 &&
+        (callExpr.args.front().kind == Expr::Kind::Literal ||
+         callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
+         callExpr.args.front().kind == Expr::Kind::FloatLiteral ||
+         callExpr.args.front().kind == Expr::Kind::StringLiteral);
+    if (probePositionalReorderedReceiver) {
+      for (size_t i = 1; i < callExpr.args.size(); ++i) {
+        appendReceiverIndex(i);
+      }
     }
   }
-  if (resolvers.resolveArgsPackAccessTarget(callExpr.args.front(), elemType) ||
-      resolvers.resolveArrayTarget(callExpr.args.front(), elemType)) {
-    ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
-    if (kind != ReturnKind::Unknown) {
-      kindOut = kind;
+
+  for (size_t receiverIndex : receiverIndices) {
+    if (resolveReceiverReturnKind(callExpr.args[receiverIndex])) {
       return true;
     }
   }
