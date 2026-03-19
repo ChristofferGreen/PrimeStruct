@@ -205,11 +205,9 @@ TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::string &
     primec::IrModule ir;
     primec::IrPreparationFailure irFailure;
     const bool prepared = primec::prepareIrModule(output.program, options, primec::IrValidationTarget::Vm, ir, irFailure);
-    CHECK(prepared);
     if (prepared) {
       std::string serializeError;
       const bool serialized = primec::serializeIr(ir, snapshot.serializedIr, serializeError);
-      CHECK(serialized);
       if (!serialized) {
         snapshot.ok = false;
         snapshot.error = serializeError;

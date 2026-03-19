@@ -410,17 +410,17 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("bool shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const;") !=
         std::string::npos);
-  CHECK(validatorHeader.find("std::string mapNamespacedMethodCompatibilityPath(const Expr &candidate) const;") !=
+  CHECK(validatorHeader.find("std::string mapNamespacedMethodCompatibilityPath(") !=
         std::string::npos);
-  CHECK(validatorHeader.find("std::string directMapHelperCompatibilityPath(const Expr &candidate) const;") !=
+  CHECK(validatorHeader.find("std::string directMapHelperCompatibilityPath(") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::string explicitRemovedCollectionMethodPath(std::string_view rawMethodName,") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool shouldPreserveRemovedCollectionHelperPath(const std::string &path) const;") !=
         std::string::npos);
-  CHECK(validatorHeader.find("bool isUnnamespacedMapCountBuiltinFallbackCall(const Expr &candidate) const;") !=
+  CHECK(validatorHeader.find("bool isUnnamespacedMapCountBuiltinFallbackCall(") !=
         std::string::npos);
-  CHECK(validatorHeader.find("bool resolveRemovedMapBodyArgumentTarget(const Expr &candidate,") !=
+  CHECK(validatorHeader.find("bool resolveRemovedMapBodyArgumentTarget(") !=
         std::string::npos);
   CHECK(validatorHeader.find("struct BuiltinCollectionDispatchResolverAdapters {") !=
         std::string::npos);
@@ -456,15 +456,15 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCollections.find("const BuiltinCollectionDispatchResolverAdapters &adapters") !=
         std::string::npos);
-  CHECK(validatorCollections.find("auto resolveBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {") !=
+  CHECK(validatorCollections.find("auto resolveBindingTarget = [") !=
         std::string::npos);
-  CHECK(validatorCollections.find("auto inferCallBinding = [&](const Expr &target, BindingInfo &bindingOut) -> bool {") !=
+  CHECK(validatorCollections.find("auto inferCallBinding = [") !=
         std::string::npos);
-  CHECK(validatorCollections.find("auto isDirectMapConstructorCall = [&](const Expr &candidate)") !=
+  CHECK(validatorCollections.find("auto isDirectMapConstructorCall = [") !=
         std::string::npos);
-  CHECK(validatorCollections.find("state->resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
+  CHECK(validatorCollections.find("state->resolveSoaVectorTarget = [") !=
         std::string::npos);
-  CHECK(validatorCollections.find("state->resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
+  CHECK(validatorCollections.find("state->resolveBufferTarget = [") !=
         std::string::npos);
   CHECK(validatorCollections.find("state->resolveExperimentalMapTarget =") != std::string::npos);
   CHECK(validatorCollections.find("state->resolveExperimentalMapValueTarget =") != std::string::npos);
@@ -481,9 +481,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const {") !=
         std::string::npos);
-  CHECK(validatorCollections.find("std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(const Expr &candidate) const {") !=
+  CHECK(validatorCollections.find("std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(") !=
         std::string::npos);
-  CHECK(validatorCollections.find("std::string SemanticsValidator::directMapHelperCompatibilityPath(const Expr &candidate) const {") !=
+  CHECK(validatorCollections.find("std::string SemanticsValidator::directMapHelperCompatibilityPath(") !=
         std::string::npos);
   CHECK(validatorCollections.find("enum class RemovedCollectionHelperFamily {") != std::string::npos);
   CHECK(validatorCollections.find("struct RemovedCollectionHelperDescriptor {") != std::string::npos);
@@ -493,10 +493,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::shouldPreserveRemovedCollectionHelperPath(const std::string &path) const {") !=
         std::string::npos);
-  CHECK(validatorCollections.find("bool SemanticsValidator::isUnnamespacedMapCountBuiltinFallbackCall(const Expr &candidate) const {") !=
+  CHECK(validatorCollections.find("bool SemanticsValidator::isUnnamespacedMapCountBuiltinFallbackCall(") !=
         std::string::npos);
   CHECK(validatorCollections.find("findRemovedCollectionHelperReference(") != std::string::npos);
-  CHECK(validatorCollections.find("bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candidate,") !=
+  CHECK(validatorCollections.find("bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(") !=
         std::string::npos);
   CHECK(validatorCollections.find("if (inferQueryExprTypeText(target, params, locals, targetTypeText))") !=
         std::string::npos);
@@ -572,20 +572,20 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExpr.find("auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(validatorExpr.find("this->preferredExperimentalMapHelperTarget(helperName)") != std::string::npos);
   CHECK(validatorExpr.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") != std::string::npos);
   CHECK(validatorExpr.find("this->canonicalExperimentalMapHelperPath(") != std::string::npos);
   CHECK(validatorExpr.find("this->canonicalizeExperimentalMapHelperResolvedPath(") != std::string::npos);
   CHECK(validatorExpr.find("this->shouldBuiltinValidateCurrentMapWrapperHelper(") != std::string::npos);
-  CHECK(validatorExpr.find("this->mapNamespacedMethodCompatibilityPath(expr)") != std::string::npos);
+  CHECK(validatorExpr.find("this->mapNamespacedMethodCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
+        std::string::npos);
   CHECK(validatorExpr.find("this->directMapHelperCompatibilityPath(") != std::string::npos);
   CHECK(validatorExpr.find("this->explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix)") !=
         std::string::npos);
   CHECK(validatorExpr.find("this->shouldPreserveRemovedCollectionHelperPath(resolved)") !=
         std::string::npos);
-  CHECK(validatorExpr.find("this->isUnnamespacedMapCountBuiltinFallbackCall(expr)") !=
+  CHECK(validatorExpr.find("this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
-  CHECK(validatorExpr.find("this->resolveRemovedMapBodyArgumentTarget(expr, resolved, remappedRemovedMapBodyArgumentTarget)") !=
+  CHECK(validatorExpr.find("this->resolveRemovedMapBodyArgumentTarget(") !=
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
@@ -638,7 +638,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
         std::string::npos);
-  CHECK(validatorInfer.find("makeBuiltinCollectionDispatchResolvers(params, locals)") != std::string::npos);
+  CHECK(validatorInfer.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
   CHECK(validatorInfer.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
         std::string::npos);

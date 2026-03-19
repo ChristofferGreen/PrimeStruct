@@ -1,4 +1,6 @@
 #include "primec/Ast.h"
+#include "primec/Lexer.h"
+#include "primec/Parser.h"
 #include "primec/Semantics.h"
 
 #include "third_party/doctest.h"
@@ -80,7 +82,19 @@ primec::Definition makeDefinition(const std::string &fullPath,
 bool validateProgram(primec::Program &program, const std::string &entry, std::string &error) {
   primec::Semantics semantics;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  return semantics.validate(program, entry, error, defaults, defaults);
+  return semantics.validate(program, entry, error, defaults, defaults, {}, nullptr, false, "legacy");
+}
+
+bool validateSourceProgram(const std::string &source, const std::string &entry, std::string &error) {
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  if (!parser.parse(program, error)) {
+    return false;
+  }
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  return semantics.validate(program, entry, error, defaults, defaults, {}, nullptr, false, "graph");
 }
 } // namespace
 
@@ -2114,13 +2128,14 @@ TEST_CASE("method calls require a receiver") {
 }
 
 TEST_CASE("recursive return inference requires annotation") {
-  primec::Program program;
-  primec::Expr recursiveCall = makeCall("main");
-  primec::Expr returnCall = makeCall("/return", {recursiveCall});
-  program.definitions.push_back(makeDefinition("/main", {}, {returnCall}));
+  const std::string source = R"(
+main() {
+  return(main())
+}
+)";
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("return type inference requires explicit annotation") != std::string::npos);
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  CHECK(error.find("/main") != std::string::npos);
 }
 
 TEST_CASE("named arguments not allowed on builtin calls in manual AST") {

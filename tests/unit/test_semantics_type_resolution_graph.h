@@ -61,11 +61,11 @@ main() {
   CHECK(requireGraphNode(graph, 3).kind == "call_constraint");
   CHECK(requireGraphNode(graph, 3).label == "/mid::call#0");
   CHECK(requireGraphNode(graph, 3).resolvedPath == "/leaf");
-  CHECK(requireGraphNode(graph, 4).kind == "local_auto");
-  CHECK(requireGraphNode(graph, 4).label == "/main::auto:value#0");
-  CHECK(requireGraphNode(graph, 5).kind == "call_constraint");
-  CHECK(requireGraphNode(graph, 5).label == "/main::call#0");
-  CHECK(requireGraphNode(graph, 5).resolvedPath == "/mid");
+  CHECK(requireGraphNode(graph, 4).kind == "call_constraint");
+  CHECK(requireGraphNode(graph, 4).label == "/main::call#0");
+  CHECK(requireGraphNode(graph, 4).resolvedPath == "/mid");
+  CHECK(requireGraphNode(graph, 5).kind == "local_auto");
+  CHECK(requireGraphNode(graph, 5).label == "/main::auto:value#0");
 
   REQUIRE(graph.edges.size() == 4);
   CHECK(requireGraphEdge(graph, 0).kind == "dependency");
@@ -75,11 +75,11 @@ main() {
   CHECK(requireGraphEdge(graph, 1).sourceId == 1);
   CHECK(requireGraphEdge(graph, 1).targetId == 3);
   CHECK(requireGraphEdge(graph, 2).kind == "dependency");
-  CHECK(requireGraphEdge(graph, 2).sourceId == 5);
+  CHECK(requireGraphEdge(graph, 2).sourceId == 4);
   CHECK(requireGraphEdge(graph, 2).targetId == 1);
   CHECK(requireGraphEdge(graph, 3).kind == "dependency");
-  CHECK(requireGraphEdge(graph, 3).sourceId == 4);
-  CHECK(requireGraphEdge(graph, 3).targetId == 5);
+  CHECK(requireGraphEdge(graph, 3).sourceId == 5);
+  CHECK(requireGraphEdge(graph, 3).targetId == 4);
 }
 
 TEST_CASE("type resolution graph builder records requirement edges for explicit return contracts") {
@@ -228,7 +228,7 @@ TEST_CASE("type resolution graph dump stays stable for namespace import resoluti
 TEST_CASE("type resolution graph dump stays stable for template specialization expansion") {
   const std::string source =
       "[return<auto>]\n"
-      "id<T>(value:[T]) {\n"
+      "id<T>([T] value) {\n"
       "  return(value)\n"
       "}\n"
       "\n"
@@ -245,7 +245,7 @@ TEST_CASE("type resolution graph dump stays stable for template specialization e
       "  node 1 kind=definition_return label=\"/main\" scope=\"/main\" path=\"/main\" line=7 column=1\n"
       "  node 2 kind=call_constraint label=\"/main::call#0\" scope=\"/main\" path=\"/id__t25a78a513414c3bf\" "
       "line=8 column=16\n"
-      "  node 3 kind=local_auto label=\"/main::auto:value#0\" scope=\"/main\" path=\"\" line=8 column=3\n"
+      "  node 3 kind=local_auto label=\"/main::auto:value#0\" scope=\"/main\" path=\"\" line=8 column=16\n"
       "  edge 0 kind=dependency source=2 target=0\n"
       "  edge 1 kind=dependency source=3 target=2\n"
       "}\n";

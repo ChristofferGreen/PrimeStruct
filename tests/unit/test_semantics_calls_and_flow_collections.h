@@ -245,7 +245,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental map method-call sugar stays unsupported on the real Map struct") {
+TEST_CASE("experimental map method-call sugar validates on the real Map struct") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -256,8 +256,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental map Ref helper calls accept borrowed Map references") {
@@ -282,7 +282,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map borrowed method-call sugar stays unsupported") {
+TEST_CASE("experimental map borrowed method-call sugar validates") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -294,8 +294,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental map insert helpers validate on value and borrowed mutation surfaces") {

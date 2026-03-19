@@ -68,6 +68,7 @@ private:
                                        BindingInfo &bindingOut,
                                        const Expr *bindingExpr = nullptr);
   static std::string graphLocalAutoBindingKey(const std::string &scopePath, int sourceLine, int sourceColumn);
+  static std::pair<int, int> graphLocalAutoSourceLocation(const Expr &expr);
   bool lookupGraphLocalAutoBinding(const std::string &scopePath,
                                    const Expr &bindingExpr,
                                    BindingInfo &bindingOut) const;
@@ -309,6 +310,7 @@ private:
                                             const std::unordered_map<std::string, BindingInfo> &locals,
                                             bool &handled);
   std::string normalizeCollectionTypePath(const std::string &typePath) const;
+  bool hasDefinitionPath(const std::string &path) const;
   bool hasImportedDefinitionPath(const std::string &path) const;
   bool isStaticHelperDefinition(const Definition &def) const;
   bool hasDeclaredDefinitionPath(const std::string &path) const;
@@ -404,6 +406,7 @@ private:
                                          const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          std::vector<std::string> &argsOut);
+  struct BuiltinCollectionDispatchResolverAdapters;
   std::string preferredExperimentalMapHelperTarget(std::string_view helperName) const;
   std::string preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const;
   bool canonicalExperimentalMapHelperPath(const std::string &resolvedPath,
@@ -412,15 +415,31 @@ private:
   bool canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,
                                                      std::string &canonicalPathOut) const;
   bool shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const;
-  std::string mapNamespacedMethodCompatibilityPath(const Expr &candidate) const;
-  std::string directMapHelperCompatibilityPath(const Expr &candidate) const;
+  std::string mapNamespacedMethodCompatibilityPath(
+      const Expr &candidate,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const BuiltinCollectionDispatchResolverAdapters &adapters = {});
+  std::string directMapHelperCompatibilityPath(
+      const Expr &candidate,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const BuiltinCollectionDispatchResolverAdapters &adapters = {});
   std::string explicitRemovedCollectionMethodPath(std::string_view rawMethodName,
                                                   std::string_view namespacePrefix) const;
   bool shouldPreserveRemovedCollectionHelperPath(const std::string &path) const;
-  bool isUnnamespacedMapCountBuiltinFallbackCall(const Expr &candidate) const;
-  bool resolveRemovedMapBodyArgumentTarget(const Expr &candidate,
-                                           const std::string &resolvedPath,
-                                           std::string &targetPathOut) const;
+  bool isUnnamespacedMapCountBuiltinFallbackCall(
+      const Expr &candidate,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const BuiltinCollectionDispatchResolverAdapters &adapters = {});
+  bool resolveRemovedMapBodyArgumentTarget(
+      const Expr &candidate,
+      const std::string &resolvedPath,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const BuiltinCollectionDispatchResolverAdapters &adapters,
+      std::string &targetPathOut);
   struct BuiltinCollectionDispatchResolverAdapters {
     std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;
     std::function<bool(const Expr &, BindingInfo &)> inferCallBinding;
@@ -733,6 +752,9 @@ private:
   std::unordered_map<std::string, ValidationContext> executionValidationContexts_;
   ValidationContext currentValidationContext_;
   std::unordered_set<std::string> inferenceStack_;
+  std::unordered_set<std::string> returnBindingInferenceStack_;
+  std::unordered_set<std::string> queryTypeInferenceDefinitionStack_;
+  std::unordered_set<const Expr *> queryTypeInferenceExprStack_;
   std::unordered_map<std::string, std::string> importAliases_;
   std::unordered_map<std::string, EffectFreeSummary> effectFreeDefCache_;
   std::unordered_set<std::string> effectFreeDefStack_;

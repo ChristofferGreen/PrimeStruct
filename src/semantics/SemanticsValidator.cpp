@@ -62,6 +62,16 @@ std::string SemanticsValidator::graphLocalAutoBindingKey(const std::string &scop
   return scopePath + "@" + std::to_string(sourceLine) + ":" + std::to_string(sourceColumn);
 }
 
+std::pair<int, int> SemanticsValidator::graphLocalAutoSourceLocation(const Expr &expr) {
+  if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
+    return {expr.sourceLine, expr.sourceColumn};
+  }
+  if (!expr.args.empty() && expr.args.front().sourceLine > 0 && expr.args.front().sourceColumn > 0) {
+    return {expr.args.front().sourceLine, expr.args.front().sourceColumn};
+  }
+  return {expr.sourceLine, expr.sourceColumn};
+}
+
 std::string SemanticsValidator::formatUnknownCallTarget(const Expr &expr) const {
   if (!isSlashlessMapHelperName(expr.name)) {
     return expr.name;
@@ -437,21 +447,66 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     return false;
   };
   auto resolveBuiltinMapResultType = [&](const std::string &typeText) -> bool {
+    const std::string normalizedTypeText = normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
     std::string base;
     std::string argText;
-    if (!splitTemplateTypeName(normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText)), base, argText)) {
+    if (splitTemplateTypeName(normalizedTypeText, base, argText) &&
+        normalizeBindingTypeName(base) == "map") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
+        return false;
+      }
+      out.isResult = true;
+      out.hasValue = true;
+      out.valueType = args[1];
+      out.errorType = "ContainerError";
+      return true;
+    }
+    std::string resolvedPath = normalizedTypeText;
+    if (!resolvedPath.empty() && resolvedPath.front() != '/') {
+      resolvedPath.insert(resolvedPath.begin(), '/');
+    }
+    if (resolvedPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
       return false;
     }
-    if (normalizeBindingTypeName(base) != "map") {
+    auto defIt = defMap_.find(resolvedPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
       return false;
     }
-    std::vector<std::string> args;
-    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
+    std::string valueType;
+    for (const auto &fieldExpr : defIt->second->statements) {
+      if (!fieldExpr.isBinding || fieldExpr.name != "payloads") {
+        continue;
+      }
+      BindingInfo fieldBinding;
+      std::optional<std::string> restrictType;
+      std::string parseError;
+      if (!parseBindingInfo(fieldExpr,
+                            defIt->second->namespacePrefix,
+                            structNames_,
+                            importAliases_,
+                            fieldBinding,
+                            restrictType,
+                            parseError)) {
+        continue;
+      }
+      if (normalizeBindingTypeName(fieldBinding.typeName) != "vector" ||
+          fieldBinding.typeTemplateArg.empty()) {
+        continue;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, args) || args.size() != 1) {
+        continue;
+      }
+      valueType = args.front();
+      break;
+    }
+    if (valueType.empty()) {
       return false;
     }
     out.isResult = true;
     out.hasValue = true;
-    out.valueType = args[1];
+    out.valueType = valueType;
     out.errorType = "ContainerError";
     return true;
   };

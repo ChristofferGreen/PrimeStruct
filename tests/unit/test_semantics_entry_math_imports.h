@@ -19,7 +19,7 @@ import /std/math/*
 main() {
   return(clamp(2i32, 1i32, 5i32))
 }
-)";
+  )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
@@ -57,7 +57,7 @@ main() {
   )}
   return(convert<int>(m2.m00 + m2.m11 + m3.m12 + m4.m33))
 }
-)";
+  )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
@@ -71,7 +71,7 @@ main() {
   [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32)}
   return(convert<int>(value.m10 + value.m11))
 }
-)";
+  )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
