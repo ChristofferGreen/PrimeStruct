@@ -206,7 +206,7 @@ namespace std {
   }
 
   [public effects(gpu_dispatch), return<Buffer<T>>]
-  /Buffer/allocate<T>([auto] count) {
+  /Buffer/allocate<T>([i32] count) {
     return(/std/gpu/buffer<T>(count))
   }
 

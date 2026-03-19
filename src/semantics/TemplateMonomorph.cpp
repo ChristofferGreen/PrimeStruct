@@ -1109,16 +1109,38 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
           }
         }
       } else {
+        bool allConcreteTemplateArgs = true;
         for (auto &arg : transform.templateArgs) {
           ResolvedType resolvedArg = resolveTypeString(arg, mapping, allowedParams, namespacePrefix, ctx, error);
           if (!error.empty()) {
             return false;
           }
+          allConcreteTemplateArgs = allConcreteTemplateArgs && resolvedArg.concrete;
           arg = resolvedArg.text;
         }
 
         const std::string resolvedPath =
             resolveNameToPath(transform.name, namespacePrefix, ctx.importAliases, ctx.sourceDefs);
+        const bool isImportedGfxBufferTemplate =
+            resolvedPath == "/std/gfx/Buffer" || resolvedPath == "/std/gfx/experimental/Buffer";
+        if (isImportedGfxBufferTemplate && allConcreteTemplateArgs) {
+          std::string specializedPath;
+          if (!instantiateTemplate(resolvedPath, transform.templateArgs, ctx, error, specializedPath)) {
+            return false;
+          }
+          transform.name = resolvedPath;
+          continue;
+        }
+        if (!isBuiltinTemplateContainer(transform.name) && ctx.templateDefs.count(resolvedPath) > 0 &&
+            allConcreteTemplateArgs) {
+          std::string specializedPath;
+          if (!instantiateTemplate(resolvedPath, transform.templateArgs, ctx, error, specializedPath)) {
+            return false;
+          }
+          transform.name = specializedPath;
+          transform.templateArgs.clear();
+          continue;
+        }
         const bool canResolveTemplatedName =
             isBuiltinTemplateContainer(transform.name) || ctx.templateDefs.count(resolvedPath) > 0;
         if (canResolveTemplatedName) {

@@ -26698,7 +26698,7 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
       []() { return 0; },
       [](primec::IrOpcode, uint64_t) {},
       error));
-  CHECK(error == "native backend requires struct field values to be numeric/bool on /pkg/Vec");
+  CHECK(error == "struct field type mismatch");
 }
 
 TEST_CASE("ir lowerer inline param helper emits non-struct parameter flow") {

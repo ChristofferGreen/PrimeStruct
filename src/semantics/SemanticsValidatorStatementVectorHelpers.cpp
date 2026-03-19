@@ -529,6 +529,19 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       }
     }
   }
+  const bool isCanonicalStdVectorMutatorMethodCall =
+      stmt.isMethodCall &&
+      (vectorHelperResolved == "/std/collections/vector/push" ||
+       vectorHelperResolved == "/std/collections/vector/pop" ||
+       vectorHelperResolved == "/std/collections/vector/reserve" ||
+       vectorHelperResolved == "/std/collections/vector/clear" ||
+       vectorHelperResolved == "/std/collections/vector/remove_at" ||
+       vectorHelperResolved == "/std/collections/vector/remove_swap");
+  if (isCanonicalStdVectorMutatorMethodCall &&
+      !hasImportedDefinitionPath(vectorHelperResolved)) {
+    error_ = "unknown method: " + vectorHelperResolved;
+    return false;
+  }
   if (defMap_.find(vectorHelperResolved) != defMap_.end()) {
     Expr helperCall = stmt;
     helperCall.name = vectorHelperResolved;

@@ -895,7 +895,7 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
       (std::filesystem::temp_directory_path() /
        ("primec_vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + "_err.txt"))
           .string();
-  const std::string expectedError = mode == "pop_empty" ? "container empty\n" : "container index out of bounds\n";
+  const std::string expectedError = mode == "pop_empty" ? "container empty\n" : "array index out of bounds\n";
 
   if (emitMode == "vm") {
     const std::string runCmd =

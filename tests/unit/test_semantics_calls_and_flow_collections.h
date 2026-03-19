@@ -9501,7 +9501,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity alias rejects method-call sugar auto inference") {
@@ -9539,7 +9539,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector access alias rejects method-call sugar auto inference") {
@@ -9577,7 +9577,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method rejects map receiver without helper") {
@@ -11546,7 +11546,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("templated slash-path vector helper arity failures stay on unknown method diagnostics") {
@@ -11564,7 +11564,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("templated stdlib canonical vector helper reports current argument mismatch diagnostics") {

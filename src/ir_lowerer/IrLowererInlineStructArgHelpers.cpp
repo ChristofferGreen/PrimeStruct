@@ -43,8 +43,8 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
       if (argKind == LocalInfo::ValueKind::Unknown && field.valueKind != LocalInfo::ValueKind::Unknown) {
         argKind = field.valueKind;
       }
-      if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
-        error = "native backend requires struct field values to be numeric/bool on " + calleePath;
+      if (argKind == LocalInfo::ValueKind::Unknown) {
+        error = "native backend requires known scalar struct field values on " + calleePath;
         return false;
       }
       if (argKind != field.valueKind) {

@@ -118,9 +118,13 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     pathOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
     return true;
   }
+  std::string normalizedTypeName = typeName;
+  if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
+    normalizedTypeName.erase(normalizedTypeName.begin());
+  }
   std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
   if (ctx.sourceDefs.count(resolvedType) == 0) {
-    auto aliasIt = ctx.importAliases.find(typeName);
+    auto aliasIt = ctx.importAliases.find(normalizedTypeName);
     if (aliasIt != ctx.importAliases.end()) {
       resolvedType = aliasIt->second;
     }

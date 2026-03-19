@@ -416,6 +416,18 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   StatementBindingTypeInfo info;
   info.kind = bindingKind(stmt);
   const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
+  auto isRawStructBufferInit = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.isBinding) {
+      return false;
+    }
+    return candidate.name == "Buffer" || candidate.name == "/std/gfx/Buffer" ||
+           candidate.name == "/std/gfx/experimental/Buffer" ||
+           candidate.name.rfind("/std/gfx/Buffer__t", 0) == 0 ||
+           candidate.name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
+  };
+  if (hasExplicitType && info.kind == LocalInfo::Kind::Buffer && isRawStructBufferInit(init)) {
+    info.kind = LocalInfo::Kind::Value;
+  }
   LocalInfo::ValueKind inferredInitValueKind = LocalInfo::ValueKind::Unknown;
   if (!hasExplicitType && info.kind == LocalInfo::Kind::Value) {
       if (init.kind == Expr::Kind::Name) {

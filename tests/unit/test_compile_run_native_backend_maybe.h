@@ -61,7 +61,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend requires struct field values to be numeric/bool") != std::string::npos);
+  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native Maybe of struct value") {

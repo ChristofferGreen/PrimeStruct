@@ -50,7 +50,8 @@ main() {
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_maybe_string_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend requires struct field values to be numeric/bool") != std::string::npos);
+  CHECK(readFile(errPath).find("vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with Maybe of struct value") {

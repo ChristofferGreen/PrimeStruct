@@ -5,8 +5,8 @@ namespace std {
   Vector<T>() {
     [public i32] count
     [public i32] capacity
-    [public Pointer<T>] data
-    [bool mut] ownsData{false}
+    [public Pointer<T>] data{/std/collections/experimental_buffer_checked/bufferAlloc<T>(1i32)}
+    [bool mut] ownsData{true}
 
     [mut]
     Move([Reference<Self>] other) {
@@ -14,9 +14,6 @@ namespace std {
       assign(this.capacity, other.capacity)
       assign(this.data, other.data)
       assign(this.ownsData, other.ownsData)
-      assign(other.count, 0i32)
-      assign(other.capacity, 0i32)
-      assign(other.ownsData, false)
     }
 
     [mut effects(heap_alloc)]
@@ -122,8 +119,12 @@ namespace std {
 
   [return<void>]
   vectorCheckIndex<T>([Vector<T>] values, [i32] index) {
-    [Pointer<T>] checked{/std/collections/experimental_buffer_checked/bufferOffsetChecked<T>(
-        values.data, index, values.count)}
+    if(not(less_than(index, values.count)),
+       then() {
+         [vector<T>] empty{/vector/vector<T>()}
+         at(empty, index)
+       },
+       else() { })
   }
 
   [effects(heap_alloc), return<void>]
@@ -237,7 +238,7 @@ namespace std {
     vectorValidatePopElementType<T>()
     if(equal(values.count, 0i32),
        then() {
-         [vector<T> mut] empty{vector<T>()}
+         [vector<T> mut] empty{/vector/vector<T>()}
          pop(empty)
        },
        else() { assign(values.count, minus(values.count, 1i32)) })
@@ -275,7 +276,8 @@ namespace std {
 
   [public return<T>]
   vectorAt<T>([Vector<T>] values, [i32] index) {
-    return(/std/collections/experimental_buffer_checked/bufferReadChecked<T>(values.data, index, values.count))
+    vectorCheckIndex<T>(values, index)
+    return(/std/collections/experimental_buffer_unchecked/bufferReadUnsafe<T>(values.data, index))
   }
 
   [public return<T>]

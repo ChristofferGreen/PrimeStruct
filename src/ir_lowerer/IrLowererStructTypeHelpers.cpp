@@ -605,6 +605,9 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.valueKind = elementKind;
         info.structPath = "/vector";
         info.slotCount = 3;
+      } else if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
+        info.valueKind = LocalInfo::ValueKind::Int64;
+        info.slotCount = 1;
       } else {
         error = "native backend does not support templated struct fields on " + structPath;
         layoutStack.erase(structPath);

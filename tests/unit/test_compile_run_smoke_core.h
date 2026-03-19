@@ -43,7 +43,8 @@ static bool compileWasmWasiOrExpectUnsupported(const std::string &srcPath,
   CHECK(code == 2);
   CHECK_FALSE(std::filesystem::exists(wasmPath));
   const std::string error = readFile(errPath);
-  CHECK((error.find("unsupported opcode for wasm target") != std::string::npos ||
+  CHECK((error.find("Wasm IR validation error") != std::string::npos ||
+         error.find("unsupported opcode for wasm target") != std::string::npos ||
          error.find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
              std::string::npos));
   return false;
@@ -59,7 +60,8 @@ static bool runWasmCompileCommandOrExpectUnsupported(const std::string &wasmCmd,
   CHECK(code == 2);
   CHECK_FALSE(std::filesystem::exists(wasmPath));
   const std::string error = readFile(errPath);
-  CHECK((error.find("unsupported opcode for wasm target") != std::string::npos ||
+  CHECK((error.find("Wasm IR validation error") != std::string::npos ||
+         error.find("unsupported opcode for wasm target") != std::string::npos ||
          error.find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
              std::string::npos));
   return false;

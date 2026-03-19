@@ -45,6 +45,11 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     return false;
   };
   auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool {
+    auto isBufferTypeNameText = [&](const std::string &typeNameText) {
+      const std::string normalized = normalizeBindingTypeName(typeNameText);
+      return normalized == "Buffer" || normalized == "std/gfx/Buffer" ||
+             normalized == "std/gfx/experimental/Buffer";
+    };
     auto resolveReferenceBufferType = [&](const std::string &typeName,
                                           const std::string &typeTemplateArg,
                                           std::string &elemTypeOut) -> bool {
@@ -53,7 +58,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
       }
       std::string base;
       std::string nestedArg;
-      if (!splitTemplateTypeName(typeTemplateArg, base, nestedArg) || normalizeBindingTypeName(base) != "Buffer" ||
+      if (!splitTemplateTypeName(typeTemplateArg, base, nestedArg) || !isBufferTypeNameText(base) ||
           nestedArg.empty()) {
         return false;
       }
@@ -87,7 +92,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
         std::string base;
         return getArgsPackElementType(binding, packElemType) &&
                splitTemplateTypeName(normalizeBindingTypeName(packElemType), base, elemTypeOut) &&
-               normalizeBindingTypeName(base) == "Buffer";
+               isBufferTypeNameText(base);
       };
       if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
         return resolveBinding(*paramBinding);
@@ -113,14 +118,14 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     };
     if (arg.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
-        if (paramBinding->typeName == "Buffer" && !paramBinding->typeTemplateArg.empty()) {
+        if (isBufferTypeNameText(paramBinding->typeName) && !paramBinding->typeTemplateArg.empty()) {
           elemType = paramBinding->typeTemplateArg;
           return true;
         }
       }
       auto itLocal = locals.find(arg.name);
       if (itLocal != locals.end()) {
-        if (itLocal->second.typeName == "Buffer" && !itLocal->second.typeTemplateArg.empty()) {
+        if (isBufferTypeNameText(itLocal->second.typeName) && !itLocal->second.typeTemplateArg.empty()) {
           elemType = itLocal->second.typeTemplateArg;
           return true;
         }

@@ -174,7 +174,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
@@ -204,7 +204,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 

@@ -113,13 +113,65 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     return resolved;
   };
 
-  using LocalBindings = std::unordered_map<std::string, BindingInfo>;
+  auto hasImportedDefinitionPath = [&](const std::string &path) {
+    std::string canonicalPath = path;
+    const size_t suffix = canonicalPath.find("__t");
+    if (suffix != std::string::npos) {
+      canonicalPath.erase(suffix);
+    }
+    if (canonicalPath.rfind("/File/", 0) == 0 || canonicalPath.rfind("/FileError/", 0) == 0) {
+      canonicalPath.insert(0, "/std/file");
+    }
+    for (const auto &importPath : program.imports) {
+      if (importPath == canonicalPath) {
+        return true;
+      }
+      if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+        const std::string prefix = importPath.substr(0, importPath.size() - 2);
+        if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  enum class BufferBindingInitKind {
+    Unknown,
+    RawStruct,
+    Substrate,
+  };
+
+  struct LocalBindingState {
+    BindingInfo binding;
+    BufferBindingInitKind bufferInitKind = BufferBindingInitKind::Unknown;
+    std::optional<Expr> bufferTokenExpr;
+    std::optional<Expr> bufferElementCountExpr;
+  };
+
+  using LocalBindings = std::unordered_map<std::string, LocalBindingState>;
 
   auto resolveBindingStructPath = [&](const BindingInfo &binding, const std::string &namespacePrefix) {
     if (!binding.typeName.empty() && binding.typeName.front() == '/' && structNames.count(binding.typeName) > 0) {
       return binding.typeName;
     }
     return resolveImportedStructPath(binding.typeName, namespacePrefix);
+  };
+
+  auto resolveBufferStructPath = [&](const Expr &expr,
+                                     const std::string &namespacePrefix,
+                                     const LocalBindings &locals) -> std::string {
+    if (expr.kind == Expr::Kind::Name) {
+      auto it = locals.find(expr.name);
+      if (it != locals.end()) {
+        return resolveBindingStructPath(it->second.binding, namespacePrefix);
+      }
+      return resolveImportedStructPath(expr.name, expr.namespacePrefix);
+    }
+    if (expr.kind == Expr::Kind::Call && !expr.isBinding) {
+      return resolveImportedStructPath(expr.name, expr.namespacePrefix);
+    }
+    return "";
   };
 
   auto rememberBinding = [&](const Expr &expr, const std::string &namespacePrefix, LocalBindings &locals) {
@@ -132,7 +184,118 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     if (!parseBindingInfo(expr, namespacePrefix, structNames, importAliases, binding, restrictType, parseError)) {
       return;
     }
-    locals[expr.name] = std::move(binding);
+    LocalBindingState state;
+    state.binding = std::move(binding);
+    if (normalizeBindingTypeName(state.binding.typeName) == "Buffer" && expr.args.size() == 1) {
+      const Expr &initializer = expr.args.front();
+      if (initializer.kind == Expr::Kind::Call && !initializer.isMethodCall && !initializer.isBinding) {
+        if (initializer.name == "/std/gpu/buffer" || initializer.name == "/std/gpu/upload") {
+          state.bufferInitKind = BufferBindingInitKind::Substrate;
+        } else {
+          std::string resolvedInitPath = resolveImportedStructPath(initializer.name, initializer.namespacePrefix);
+          if (resolvedInitPath == "/std/gfx/Buffer" || resolvedInitPath == "/std/gfx/experimental/Buffer" ||
+              initializer.name.rfind("/std/gfx/Buffer__t", 0) == 0 ||
+              initializer.name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0 ||
+              initializer.name == "Buffer") {
+            state.bufferInitKind = BufferBindingInitKind::RawStruct;
+            for (size_t i = 0; i < initializer.args.size(); ++i) {
+              const std::optional<std::string> argName =
+                  i < initializer.argNames.size() ? initializer.argNames[i] : std::nullopt;
+              if (argName.has_value()) {
+                if (*argName == "token") {
+                  state.bufferTokenExpr = initializer.args[i];
+                } else if (*argName == "elementCount") {
+                  state.bufferElementCountExpr = initializer.args[i];
+                }
+                continue;
+              }
+              if (i == 0 && !state.bufferTokenExpr.has_value()) {
+                state.bufferTokenExpr = initializer.args[i];
+              } else if (i == 1 && !state.bufferElementCountExpr.has_value()) {
+                state.bufferElementCountExpr = initializer.args[i];
+              }
+            }
+          }
+        }
+      }
+    }
+    locals[expr.name] = std::move(state);
+  };
+
+  auto makeI32Literal = [](int64_t value) {
+    Expr literal;
+    literal.kind = Expr::Kind::Literal;
+    literal.literalValue = static_cast<uint64_t>(value);
+    literal.intWidth = 32;
+    literal.isUnsigned = false;
+    return literal;
+  };
+
+  auto makeBareCountCall = [&](Expr receiver) {
+    Expr call;
+    call.kind = Expr::Kind::Call;
+    call.name = "count";
+    call.args.push_back(std::move(receiver));
+    return call;
+  };
+
+  auto makeBufferCountComparison = [&](Expr receiver, int64_t lhsValue, int64_t rhsValue) {
+    Expr comparison;
+    comparison.kind = Expr::Kind::Call;
+    comparison.name = "less_than";
+    if (rhsValue >= 0) {
+      comparison.args.push_back(makeBareCountCall(std::move(receiver)));
+      comparison.args.push_back(makeI32Literal(rhsValue));
+    } else {
+      comparison.args.push_back(makeI32Literal(lhsValue));
+      comparison.args.push_back(makeBareCountCall(std::move(receiver)));
+    }
+    return comparison;
+  };
+
+  auto makeLessThanExpr = [&](Expr lhs, Expr rhs) {
+    Expr comparison;
+    comparison.kind = Expr::Kind::Call;
+    comparison.name = "less_than";
+    comparison.args.push_back(std::move(lhs));
+    comparison.args.push_back(std::move(rhs));
+    return comparison;
+  };
+
+  auto resolveRawBufferFieldExpr =
+      [&](const Expr &expr, const LocalBindings &locals, const char *fieldName) -> std::optional<Expr> {
+    if (expr.kind != Expr::Kind::Name) {
+      return std::nullopt;
+    }
+    auto it = locals.find(expr.name);
+    if (it == locals.end() || it->second.bufferInitKind != BufferBindingInitKind::RawStruct) {
+      return std::nullopt;
+    }
+    if (std::string_view(fieldName) == "token") {
+      return it->second.bufferTokenExpr;
+    }
+    if (std::string_view(fieldName) == "elementCount") {
+      return it->second.bufferElementCountExpr;
+    }
+    return std::nullopt;
+  };
+
+  auto resolveBufferBindingInitKind =
+      [&](const Expr &expr, const std::string &namespacePrefix, const LocalBindings &locals) -> BufferBindingInitKind {
+    if (expr.kind == Expr::Kind::Name) {
+      auto it = locals.find(expr.name);
+      if (it != locals.end()) {
+        return it->second.bufferInitKind;
+      }
+      return BufferBindingInitKind::Unknown;
+    }
+    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall && !expr.isBinding) {
+      if (expr.name == "/std/gpu/buffer" || expr.name == "/std/gpu/upload") {
+        return BufferBindingInitKind::Substrate;
+      }
+    }
+    (void)namespacePrefix;
+    return BufferBindingInitKind::Unknown;
   };
 
   auto rewriteExpr = [&](auto &self, Expr &expr, const std::string &namespacePrefix,
@@ -152,13 +315,160 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     if (expr.kind != Expr::Kind::Call || expr.isBinding) {
       return true;
     }
+    if (!expr.isMethodCall) {
+      if (expr.name == "/File/read_byte" && hasImportedDefinitionPath("/File/read_byte")) {
+        expr.isMethodCall = true;
+        expr.name = "read_byte";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        return true;
+      }
+      if (expr.name == "/File/write_byte" && hasImportedDefinitionPath("/File/write_byte")) {
+        expr.isMethodCall = true;
+        expr.name = "write_byte";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        return true;
+      }
+      if (expr.name == "/File/write_bytes" && hasImportedDefinitionPath("/File/write_bytes")) {
+        expr.isMethodCall = true;
+        expr.name = "write_bytes";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        return true;
+      }
+      if (expr.name == "/File/flush" && hasImportedDefinitionPath("/File/flush")) {
+        expr.isMethodCall = true;
+        expr.name = "flush";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        return true;
+      }
+      if ((expr.name == "/std/gfx/Buffer/allocate" || expr.name == "/std/gfx/experimental/Buffer/allocate") &&
+          hasImportedDefinitionPath(expr.name)) {
+        expr.name = "/std/gpu/buffer";
+        expr.namespacePrefix.clear();
+        return true;
+      }
+      if ((expr.name == "/std/gfx/Buffer/upload" || expr.name == "/std/gfx/experimental/Buffer/upload") &&
+          hasImportedDefinitionPath(expr.name)) {
+        expr.name = "/std/gpu/upload";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        return true;
+      }
+      if ((expr.name == "/std/gfx/Buffer/readback" || expr.name == "/std/gfx/experimental/Buffer/readback") &&
+          hasImportedDefinitionPath(expr.name)) {
+        expr.name = "/std/gpu/readback";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        return true;
+      }
+      if ((expr.name == "/std/gfx/Buffer/count" || expr.name == "/std/gfx/experimental/Buffer/count") &&
+          hasImportedDefinitionPath(expr.name) && expr.args.size() == 1 &&
+          resolveBufferBindingInitKind(expr.args.front(), namespacePrefix, locals) == BufferBindingInitKind::Substrate) {
+        expr.name = "count";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        expr.isMethodCall = false;
+        return true;
+      }
+      if ((expr.name == "/std/gfx/Buffer/count" || expr.name == "/std/gfx/experimental/Buffer/count") &&
+          hasImportedDefinitionPath(expr.name) && expr.args.size() == 1) {
+        if (std::optional<Expr> elementCountExpr =
+                resolveRawBufferFieldExpr(expr.args.front(), locals, "elementCount")) {
+          expr = *elementCountExpr;
+          return true;
+        }
+      }
+      if ((expr.name == "/std/gfx/Buffer/empty" || expr.name == "/std/gfx/experimental/Buffer/empty") &&
+          hasImportedDefinitionPath(expr.name) && expr.args.size() == 1 &&
+          resolveBufferBindingInitKind(expr.args.front(), namespacePrefix, locals) == BufferBindingInitKind::Substrate) {
+        if (expr.args.size() == 1) {
+          expr = makeBufferCountComparison(std::move(expr.args.front()), 0, 1);
+        }
+        return true;
+      }
+      if ((expr.name == "/std/gfx/Buffer/empty" || expr.name == "/std/gfx/experimental/Buffer/empty") &&
+          hasImportedDefinitionPath(expr.name) && expr.args.size() == 1) {
+        if (std::optional<Expr> elementCountExpr =
+                resolveRawBufferFieldExpr(expr.args.front(), locals, "elementCount")) {
+          expr = makeLessThanExpr(std::move(*elementCountExpr), makeI32Literal(1));
+          return true;
+        }
+      }
+      if ((expr.name == "/std/gfx/Buffer/is_valid" || expr.name == "/std/gfx/experimental/Buffer/is_valid") &&
+          hasImportedDefinitionPath(expr.name) && expr.args.size() == 1 &&
+          resolveBufferBindingInitKind(expr.args.front(), namespacePrefix, locals) == BufferBindingInitKind::Substrate) {
+        if (expr.args.size() == 1) {
+          expr = makeBufferCountComparison(std::move(expr.args.front()), 0, -1);
+        }
+        return true;
+      }
+      if ((expr.name == "/std/gfx/Buffer/is_valid" || expr.name == "/std/gfx/experimental/Buffer/is_valid") &&
+          hasImportedDefinitionPath(expr.name) && expr.args.size() == 1) {
+        if (std::optional<Expr> tokenExpr = resolveRawBufferFieldExpr(expr.args.front(), locals, "token")) {
+          expr = makeLessThanExpr(makeI32Literal(0), std::move(*tokenExpr));
+          return true;
+        }
+      }
+    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return true;
     }
-    if (!expr.templateArgs.empty()) {
-      return true;
-    }
     if (expr.isMethodCall) {
+      if (!expr.args.empty()) {
+        const std::string receiverPath = resolveBufferStructPath(expr.args.front(), namespacePrefix, locals);
+        const bool isCanonicalBuffer = receiverPath == "/std/gfx/Buffer";
+        const bool isExperimentalBuffer = receiverPath == "/std/gfx/experimental/Buffer";
+        const BufferBindingInitKind receiverInitKind =
+            resolveBufferBindingInitKind(expr.args.front(), namespacePrefix, locals);
+        if ((isCanonicalBuffer || isExperimentalBuffer) && expr.name == "readback" && expr.args.size() == 1) {
+            expr.isMethodCall = false;
+            expr.name = "/std/gpu/readback";
+            expr.namespacePrefix.clear();
+            expr.templateArgs.clear();
+            return true;
+        }
+        if ((isCanonicalBuffer || isExperimentalBuffer) && expr.name == "count" && expr.args.size() == 1 &&
+            receiverInitKind == BufferBindingInitKind::Substrate) {
+          expr.isMethodCall = false;
+          expr.name = "count";
+          expr.namespacePrefix.clear();
+          expr.templateArgs.clear();
+          return true;
+        }
+        if ((isCanonicalBuffer || isExperimentalBuffer) && expr.name == "count" && expr.args.size() == 1) {
+          if (std::optional<Expr> elementCountExpr =
+                  resolveRawBufferFieldExpr(expr.args.front(), locals, "elementCount")) {
+            expr = *elementCountExpr;
+            return true;
+          }
+        }
+        if ((isCanonicalBuffer || isExperimentalBuffer) && expr.name == "empty" && expr.args.size() == 1 &&
+            receiverInitKind == BufferBindingInitKind::Substrate) {
+          expr = makeBufferCountComparison(std::move(expr.args.front()), 0, 1);
+          return true;
+        }
+        if ((isCanonicalBuffer || isExperimentalBuffer) && expr.name == "empty" && expr.args.size() == 1) {
+          if (std::optional<Expr> elementCountExpr =
+                  resolveRawBufferFieldExpr(expr.args.front(), locals, "elementCount")) {
+            expr = makeLessThanExpr(std::move(*elementCountExpr), makeI32Literal(1));
+            return true;
+          }
+        }
+        if ((isCanonicalBuffer || isExperimentalBuffer) && expr.name == "is_valid" && expr.args.size() == 1 &&
+            receiverInitKind == BufferBindingInitKind::Substrate) {
+          expr = makeBufferCountComparison(std::move(expr.args.front()), 0, -1);
+          return true;
+        }
+        if ((isCanonicalBuffer || isExperimentalBuffer) && expr.name == "is_valid" && expr.args.size() == 1) {
+          if (std::optional<Expr> tokenExpr = resolveRawBufferFieldExpr(expr.args.front(), locals, "token")) {
+            expr = makeLessThanExpr(makeI32Literal(0), std::move(*tokenExpr));
+            return true;
+          }
+        }
+      }
       if (expr.args.empty() || expr.name != "create_pipeline") {
         return true;
       }
@@ -167,7 +477,7 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
       if (receiverExpr.kind == Expr::Kind::Name) {
         auto localIt = locals.find(receiverExpr.name);
         if (localIt != locals.end()) {
-          receiverPath = resolveBindingStructPath(localIt->second, namespacePrefix);
+          receiverPath = resolveBindingStructPath(localIt->second.binding, namespacePrefix);
         } else {
           receiverPath = resolveImportedStructPath(receiverExpr.name, receiverExpr.namespacePrefix);
         }
@@ -205,6 +515,15 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
       return true;
     }
     std::string resolved = resolveImportedStructPath(expr.name, expr.namespacePrefix);
+    if ((resolved == "/std/gfx/experimental/Buffer" || resolved == "/std/gfx/Buffer") && expr.args.size() == 1 &&
+        !expr.hasBodyArguments && expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames)) {
+      expr.name = "/std/gpu/buffer";
+      expr.namespacePrefix.clear();
+      return true;
+    }
+    if (!expr.templateArgs.empty()) {
+      return true;
+    }
     if (resolved.empty()) {
       return true;
     }
@@ -225,12 +544,6 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     if ((resolved == "/std/gfx/experimental/Device" || resolved == "/std/gfx/Device") && expr.args.empty() &&
         !expr.hasBodyArguments && expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames)) {
       expr.name = resolved == "/std/gfx/Device" ? "/std/gfx/deviceCreate" : "/std/gfx/experimental/deviceCreate";
-      expr.namespacePrefix.clear();
-      return true;
-    }
-    if ((resolved == "/std/gfx/experimental/Buffer" || resolved == "/std/gfx/Buffer") && expr.args.size() == 1 &&
-        !expr.hasBodyArguments && expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames)) {
-      expr.name = resolved == "/std/gfx/Buffer" ? "/std/gfx/Buffer/allocate" : "/std/gfx/experimental/Buffer/allocate";
       expr.namespacePrefix.clear();
       return true;
     }

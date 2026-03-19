@@ -328,26 +328,29 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
       }
       if (info.argsPackElementKind == LocalInfo::Kind::Array ||
           info.argsPackElementKind == LocalInfo::Kind::Vector ||
+          info.argsPackElementKind == LocalInfo::Kind::Buffer ||
           info.argsPackElementKind == LocalInfo::Kind::Map ||
           (info.argsPackElementKind == LocalInfo::Kind::Reference &&
-           (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+           (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToMap)) ||
           (info.argsPackElementKind == LocalInfo::Kind::Pointer &&
-           (info.pointerToArray || info.pointerToVector || info.pointerToMap)) ||
+           (info.pointerToArray || info.pointerToVector || info.pointerToBuffer || info.pointerToMap)) ||
           info.isSoaVector) {
         return true;
       }
     }
     if (it->second.kind == LocalInfo::Kind::Reference) {
-      return it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap;
+      return it->second.referenceToArray || it->second.referenceToVector ||
+             it->second.referenceToBuffer || it->second.referenceToMap;
     }
     if (it->second.kind == LocalInfo::Kind::Pointer) {
-      return it->second.pointerToArray || it->second.pointerToVector || it->second.pointerToMap;
+      return it->second.pointerToArray || it->second.pointerToVector ||
+             it->second.pointerToBuffer || it->second.pointerToMap;
     }
     if (it->second.isSoaVector && isExplicitVectorCompatibilityName(expr, "count")) {
       return false;
     }
     return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
-           it->second.isSoaVector ||
+           it->second.kind == LocalInfo::Kind::Buffer || it->second.isSoaVector ||
            it->second.kind == LocalInfo::Kind::Map;
   }
   if (target.kind == Expr::Kind::Call) {
@@ -359,11 +362,13 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
         const LocalInfo &info = localIt->second;
         if (info.argsPackElementKind == LocalInfo::Kind::Array ||
             info.argsPackElementKind == LocalInfo::Kind::Vector ||
+            info.argsPackElementKind == LocalInfo::Kind::Buffer ||
             info.argsPackElementKind == LocalInfo::Kind::Map ||
             (info.argsPackElementKind == LocalInfo::Kind::Reference &&
-             (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+             (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToMap)) ||
             (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToArray) ||
             (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
+            (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToBuffer) ||
             (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
             info.isSoaVector) {
           return true;

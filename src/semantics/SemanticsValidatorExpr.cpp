@@ -6,6 +6,7 @@
 #include <cctype>
 #include <functional>
 #include <optional>
+#include <sstream>
 #include <unordered_set>
 
 namespace primec::semantics {
@@ -2550,6 +2551,24 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
+    auto definitionCountAtPath = [&](const std::string &path) {
+      size_t count = 0;
+      for (const auto &def : program_.definitions) {
+        if (def.fullPath == path) {
+          ++count;
+        }
+      }
+      return count;
+    };
+    auto hasVisibleCanonicalVectorHelperPath = [&](const std::string &path) {
+      if (path.rfind("/std/collections/vector/", 0) != 0) {
+        return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
+      }
+      if (hasImportedDefinitionPath(path)) {
+        return true;
+      }
+      return definitionCountAtPath(path) > 1;
+    };
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
@@ -2624,6 +2643,21 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return "/" + candidate;
       };
       const std::string explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName);
+      auto explicitVectorMethodPath = [&](const std::string &candidate) -> std::string {
+        if (candidate.empty()) {
+          return "";
+        }
+        std::string normalized = candidate;
+        if (!normalized.empty() && normalized.front() == '/') {
+          normalized.erase(normalized.begin());
+        }
+        if (normalized.rfind("vector/", 0) == 0 ||
+            normalized.rfind("std/collections/vector/", 0) == 0) {
+          return "/" + normalized;
+        }
+        return "";
+      };
+      const std::string explicitVectorPath = explicitVectorMethodPath(methodName);
       std::string normalizedMethodName = methodName;
       if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
         normalizedMethodName.erase(normalizedMethodName.begin());
@@ -2729,12 +2763,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (!resolvedReceiverPath.empty() &&
             (structNames_.count(resolvedReceiverPath) > 0 ||
              defMap_.find(resolvedReceiverPath + "/" + normalizedMethodName) != defMap_.end())) {
-          resolvedOut = resolvedReceiverPath + "/" + normalizedMethodName;
+          resolvedOut = explicitVectorPath.empty() ? resolvedReceiverPath + "/" + normalizedMethodName
+                                                   : explicitVectorPath;
           return true;
         }
         const std::string resolvedType = resolveStructTypePath(receiver.name, receiver.namespacePrefix);
         if (!resolvedType.empty()) {
-          resolvedOut = resolvedType + "/" + normalizedMethodName;
+          resolvedOut = explicitVectorPath.empty() ? resolvedType + "/" + normalizedMethodName
+                                                   : explicitVectorPath;
           return true;
         }
       }
@@ -2743,6 +2779,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (!explicitRemovedMethodPath.empty() && path.rfind("/string/", 0) != 0) {
           resolvedOut = explicitRemovedMethodPath;
           isBuiltinOut = defMap_.count(resolvedOut) == 0;
+          return true;
+        }
+        if (!explicitVectorPath.empty()) {
+          resolvedOut = explicitVectorPath;
+          isBuiltinOut = defMap_.count(resolvedOut) == 0 &&
+                         !hasImportedDefinitionPath(resolvedOut);
           return true;
         }
         resolvedOut = preferVectorStdlibHelperPath(path);
@@ -2791,6 +2833,125 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return stdlibPath;
         }
         return std::string("/file/") + methodName;
+      };
+      auto isBufferLikeBinding = [&](const BindingInfo &binding) {
+        if (normalizeBindingTypeName(binding.typeName) == "Buffer") {
+          return true;
+        }
+        if ((binding.typeName == "Reference" || binding.typeName == "Pointer") && !binding.typeTemplateArg.empty()) {
+          std::string base;
+          std::string arg;
+          return splitTemplateTypeName(binding.typeTemplateArg, base, arg) && normalizeBindingTypeName(base) == "Buffer";
+        }
+        return false;
+      };
+      auto importedBufferStructPath = [&]() -> std::string {
+        const std::string canonical = "/std/gfx/Buffer";
+        const std::string experimental = "/std/gfx/experimental/Buffer";
+        auto aliasIt = importAliases_.find("Buffer");
+        if (aliasIt != importAliases_.end() &&
+            (aliasIt->second == canonical || aliasIt->second == experimental)) {
+          return aliasIt->second;
+        }
+        if (defMap_.count(canonical) > 0 || hasImportedDefinitionPath(canonical)) {
+          return canonical;
+        }
+        if (defMap_.count(experimental) > 0 || hasImportedDefinitionPath(experimental)) {
+          return experimental;
+        }
+        return {};
+      };
+      auto mangleTemplateArgs = [&](const std::vector<std::string> &args) {
+        std::string canonicalArgs;
+        for (const std::string &arg : args) {
+          for (char c : arg) {
+            if (!std::isspace(static_cast<unsigned char>(c))) {
+              canonicalArgs.push_back(c);
+            }
+          }
+        }
+        uint64_t hash = 1469598103934665603ULL;
+        for (unsigned char c : canonicalArgs) {
+          hash ^= static_cast<uint64_t>(c);
+          hash *= 1099511628211ULL;
+        }
+        std::ostringstream out;
+        out << "__t" << std::hex << hash;
+        return out.str();
+      };
+      auto resolveBufferReceiverInfo =
+          [&](const Expr &receiverExpr, std::string &bufferStructPathOut, std::string &elemTypeOut) -> bool {
+        auto setFromBinding = [&](const BindingInfo &binding) {
+          std::string baseTypeName = binding.typeName;
+          std::string elemType = binding.typeTemplateArg;
+          if ((binding.typeName == "Reference" || binding.typeName == "Pointer") && !binding.typeTemplateArg.empty()) {
+            std::string wrappedBase;
+            std::string wrappedArg;
+            if (!splitTemplateTypeName(binding.typeTemplateArg, wrappedBase, wrappedArg) ||
+                normalizeBindingTypeName(wrappedBase) != "Buffer") {
+              return false;
+            }
+            baseTypeName = wrappedBase;
+            elemType = wrappedArg;
+          }
+          if (normalizeBindingTypeName(baseTypeName) != "Buffer" || elemType.empty()) {
+            return false;
+          }
+          if (baseTypeName == "/std/gfx/Buffer" || baseTypeName == "/std/gfx/experimental/Buffer") {
+            bufferStructPathOut = baseTypeName;
+          } else {
+            bufferStructPathOut = importedBufferStructPath();
+          }
+          if (bufferStructPathOut.empty()) {
+            return false;
+          }
+          elemTypeOut = elemType;
+          return true;
+        };
+        if (receiverExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, receiverExpr.name)) {
+            return setFromBinding(*paramBinding);
+          }
+          auto it = locals.find(receiverExpr.name);
+          return it != locals.end() && setFromBinding(it->second);
+        }
+        return false;
+      };
+      auto resolveImportedBufferMethodTarget = [&](const Expr &receiverExpr,
+                                                   const std::string &methodName,
+                                                   std::string &resolvedPathOut) {
+        std::string bufferStructPath;
+        std::string elemType;
+        if (resolveBufferReceiverInfo(receiverExpr, bufferStructPath, elemType)) {
+          const std::string specializedMethodPath =
+              bufferStructPath + mangleTemplateArgs({elemType}) + "/" + methodName;
+          if (defMap_.count(specializedMethodPath) > 0) {
+            resolvedPathOut = specializedMethodPath;
+            return true;
+          }
+          resolvedPathOut = bufferStructPath + "/" + methodName;
+          return true;
+        }
+        const std::string importedStructPath = importedBufferStructPath();
+        if (importedStructPath.empty()) {
+          return false;
+        }
+        resolvedPathOut = importedStructPath + "/" + methodName;
+        return true;
+      };
+      auto isBufferLikeReceiver = [&](const Expr &receiverExpr) {
+        if (receiverExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, receiverExpr.name)) {
+            return isBufferLikeBinding(*paramBinding);
+          }
+          auto it = locals.find(receiverExpr.name);
+          return it != locals.end() && isBufferLikeBinding(it->second);
+        }
+        if (receiverExpr.kind == Expr::Kind::Call && !receiverExpr.isBinding) {
+          const std::string inferredStruct = inferStructReturnPath(receiverExpr, params, locals);
+          return inferredStruct == "/std/gfx/Buffer" || inferredStruct == "/std/gfx/experimental/Buffer";
+        }
+        return false;
       };
       auto resolveArgsPackElementMethodTarget = [&](const std::string &elementTypeText,
                                                     const Expr &receiverExpr) -> bool {
@@ -3095,7 +3256,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
         const std::string resolvedType = resolveCalleePath(receiver);
         if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
-          resolvedOut = resolvedType + "/" + normalizedMethodName;
+          resolvedOut = explicitVectorPath.empty() ? resolvedType + "/" + normalizedMethodName
+                                                   : explicitVectorPath;
           return true;
         }
       }
@@ -3111,6 +3273,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             typeName = it->second.typeName;
             typeTemplateArg = it->second.typeTemplateArg;
           }
+        }
+      }
+      if (!typeTemplateArg.empty()) {
+        std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
+        if (!inferredStruct.empty()) {
+          typeName = inferredStruct;
         }
       }
       if (typeName.empty()) {
@@ -3153,6 +3321,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return true;
         }
       }
+      if (isBufferLikeReceiver(receiver) &&
+          (normalizedMethodName == "count" || normalizedMethodName == "empty" || normalizedMethodName == "is_valid")) {
+        if (resolveImportedBufferMethodTarget(receiver, normalizedMethodName, resolvedOut)) {
+          return true;
+        }
+      }
+      if (normalizeBindingTypeName(typeName) == "Buffer" &&
+          (normalizedMethodName == "count" || normalizedMethodName == "empty" || normalizedMethodName == "is_valid")) {
+        if (resolveImportedBufferMethodTarget(receiver, normalizedMethodName, resolvedOut)) {
+          return true;
+        }
+      }
       if (typeName == "FileError" && normalizedMethodName == "why") {
         resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
         isBuiltinOut = resolvedOut == "/file_error/why";
@@ -3180,6 +3360,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       std::string resolvedType = resolveStructTypePath(typeName, receiver.namespacePrefix);
+      if (resolvedType.empty()) {
+        auto importIt = importAliases_.find(typeName);
+        if (importIt != importAliases_.end()) {
+          resolvedType = importIt->second;
+        }
+      }
       if (resolvedType.empty()) {
         resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
       }
@@ -3262,7 +3448,262 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     };
-    (void)isConvertibleExpr;
+
+    auto inferStructFieldBinding = [&](const Definition &def,
+                                       const std::string &fieldName,
+                                       BindingInfo &bindingOut,
+                                       bool allowStatic,
+                                       bool allowPrivate) -> bool {
+      auto isStaticField = [](const Expr &stmt) -> bool {
+        for (const auto &transform : stmt.transforms) {
+          if (transform.name == "static") {
+            return true;
+          }
+        }
+        return false;
+      };
+      auto isPrivateField = [](const Expr &stmt) -> bool {
+        for (const auto &transform : stmt.transforms) {
+          if (transform.name == "private") {
+            return true;
+          }
+        }
+        return false;
+      };
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding) {
+          error_ = "struct definitions may only contain field bindings: " + def.fullPath;
+          return false;
+        }
+        if (stmt.name != fieldName) {
+          continue;
+        }
+        if (isStaticField(stmt) && !allowStatic) {
+          return false;
+        }
+        if (isPrivateField(stmt) && !allowPrivate) {
+          error_ = "private field is not accessible: " + def.fullPath + "/" + fieldName;
+          return false;
+        }
+        BindingInfo fieldBinding;
+        if (!resolveStructFieldBinding(def, stmt, fieldBinding)) {
+          return false;
+        }
+        bindingOut = std::move(fieldBinding);
+        return true;
+      }
+      return false;
+    };
+
+    auto resolveStructFieldReceiverPath =
+        [&](const Expr &receiver, std::string &structPathOut) -> bool {
+      auto resolveStructPathFromType = [&](const std::string &typeName,
+                                           const std::string &namespacePrefix,
+                                           std::string &structPathOut) -> bool {
+        if (normalizeBindingTypeName(typeName) == "Buffer") {
+          const std::string canonical = "/std/gfx/Buffer";
+          const std::string experimental = "/std/gfx/experimental/Buffer";
+          if (structNames_.count(canonical) > 0 &&
+              (defMap_.count(canonical) > 0 || hasImportedDefinitionPath(canonical))) {
+            structPathOut = canonical;
+            return true;
+          }
+          if (structNames_.count(experimental) > 0 &&
+              (defMap_.count(experimental) > 0 || hasImportedDefinitionPath(experimental))) {
+            structPathOut = experimental;
+            return true;
+          }
+        }
+        if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
+          return false;
+        }
+        if (!typeName.empty() && typeName[0] == '/') {
+          if (structNames_.count(typeName) > 0) {
+            structPathOut = typeName;
+            return true;
+          }
+          return false;
+        }
+        std::string current = namespacePrefix;
+        while (true) {
+          if (!current.empty()) {
+            std::string scoped = current + "/" + typeName;
+            if (structNames_.count(scoped) > 0) {
+              structPathOut = scoped;
+              return true;
+            }
+            if (current.size() > typeName.size()) {
+              const size_t start = current.size() - typeName.size();
+              if (start > 0 && current[start - 1] == '/' &&
+                  current.compare(start, typeName.size(), typeName) == 0 &&
+                  structNames_.count(current) > 0) {
+                structPathOut = current;
+                return true;
+              }
+            }
+          } else {
+            std::string root = "/" + typeName;
+            if (structNames_.count(root) > 0) {
+              structPathOut = root;
+              return true;
+            }
+          }
+          if (current.empty()) {
+            break;
+          }
+          const size_t slash = current.find_last_of('/');
+          if (slash == std::string::npos || slash == 0) {
+            current.clear();
+          } else {
+            current.erase(slash);
+          }
+        }
+        auto importIt = importAliases_.find(typeName);
+        if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+          structPathOut = importIt->second;
+          return true;
+        }
+        return false;
+      };
+      if (receiver.kind == Expr::Kind::Name) {
+        const BindingInfo *binding = findParamBinding(params, receiver.name);
+        if (!binding) {
+          auto it = locals.find(receiver.name);
+          if (it != locals.end()) {
+            binding = &it->second;
+          }
+        }
+        if (binding) {
+          const auto bindingLooksLikeImportedBuffer = [&]() {
+            if (normalizeBindingTypeName(binding->typeName) == "Buffer") {
+              return true;
+            }
+            if ((binding->typeName == "Reference" || binding->typeName == "Pointer") &&
+                !binding->typeTemplateArg.empty()) {
+              std::string base;
+              std::string arg;
+              return splitTemplateTypeName(binding->typeTemplateArg, base, arg) &&
+                     normalizeBindingTypeName(base) == "Buffer";
+            }
+            return false;
+          };
+          if (bindingLooksLikeImportedBuffer()) {
+            if (structNames_.count("/std/gfx/Buffer") > 0 &&
+                (defMap_.count("/std/gfx/Buffer") > 0 || hasImportedDefinitionPath("/std/gfx/Buffer"))) {
+              structPathOut = "/std/gfx/Buffer";
+              return true;
+            }
+            if (structNames_.count("/std/gfx/experimental/Buffer") > 0 &&
+                (defMap_.count("/std/gfx/experimental/Buffer") > 0 ||
+                 hasImportedDefinitionPath("/std/gfx/experimental/Buffer"))) {
+              structPathOut = "/std/gfx/experimental/Buffer";
+              return true;
+            }
+          }
+          std::string typeName = binding->typeName;
+          if ((typeName == "Reference" || typeName == "Pointer") && !binding->typeTemplateArg.empty()) {
+            typeName = binding->typeTemplateArg;
+          }
+          (void)resolveStructPathFromType(typeName, receiver.namespacePrefix, structPathOut);
+          if (structPathOut.empty()) {
+            std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
+            if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
+              structPathOut = inferredStruct;
+            }
+          }
+        } else {
+          (void)resolveStructPathFromType(receiver.name, receiver.namespacePrefix, structPathOut);
+        }
+      } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
+        std::string accessName;
+        if (getBuiltinArrayAccessName(receiver, accessName) && receiver.args.size() == 2) {
+          std::string elemType;
+          if (resolveArgsPackAccessTarget(receiver.args.front(), elemType) ||
+              resolveArrayTarget(receiver.args.front(), elemType) ||
+              resolveVectorTarget(receiver.args.front(), elemType)) {
+            const std::string unwrappedElemType = unwrapReferencePointerTypeText(elemType);
+            (void)resolveStructPathFromType(unwrappedElemType, receiver.namespacePrefix, structPathOut);
+          }
+        }
+        std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
+        if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
+          structPathOut = inferredStruct;
+        } else {
+          std::string resolvedType = resolveCalleePath(receiver);
+          if (structNames_.count(resolvedType) > 0) {
+            structPathOut = resolvedType;
+          }
+        }
+      }
+      return !structPathOut.empty();
+    };
+
+    auto isTypeNamespaceFieldReceiver = [&](const Expr &receiver, std::string &structPathOut) -> bool {
+      structPathOut.clear();
+      if (receiver.kind != Expr::Kind::Name) {
+        return false;
+      }
+      if (findParamBinding(params, receiver.name) != nullptr || locals.find(receiver.name) != locals.end()) {
+        return false;
+      }
+      return resolveStructFieldReceiverPath(receiver, structPathOut);
+    };
+
+    auto resolveStructFieldBinding =
+        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &bindingOut) -> bool {
+      std::string structPath;
+      const bool isTypeReceiver = isTypeNamespaceFieldReceiver(receiver, structPath);
+      if (!isTypeReceiver && !resolveStructFieldReceiverPath(receiver, structPath)) {
+        return false;
+      }
+      auto defIt = defMap_.find(structPath);
+      if (defIt == defMap_.end() || !defIt->second) {
+        return false;
+      }
+      if (isTypeReceiver) {
+        auto isStaticField = [](const Expr &stmt) {
+          for (const auto &transform : stmt.transforms) {
+            if (transform.name == "static") {
+              return true;
+            }
+          }
+          return false;
+        };
+        for (const auto &stmt : defIt->second->statements) {
+          if (!stmt.isBinding || !isStaticField(stmt) || stmt.name != fieldName) {
+            continue;
+          }
+          return SemanticsValidator::resolveStructFieldBinding(*defIt->second, stmt, bindingOut);
+        }
+        return false;
+      }
+      BindingInfo inferred;
+      if (!inferStructFieldBinding(*defIt->second, fieldName, inferred, false, true)) {
+        return false;
+      }
+      bindingOut = std::move(inferred);
+      return true;
+    };
+
+    auto isUnboundMetaReceiver = [&](const Expr &receiver) {
+      if (receiver.kind != Expr::Kind::Name || receiver.name != "meta") {
+        return false;
+      }
+      if (findParamBinding(params, receiver.name) != nullptr) {
+        return false;
+      }
+      return locals.find(receiver.name) == locals.end();
+    };
+    auto describeMethodReflectionTarget = [&](const Expr &callExpr) -> std::string {
+      if (!callExpr.isMethodCall || callExpr.args.empty()) {
+        return "";
+      }
+      const Expr &receiver = callExpr.args.front();
+      if (!isUnboundMetaReceiver(receiver)) {
+        return "";
+      }
+      return "meta." + callExpr.name;
+    };
 
     std::string earlyPointerBuiltin;
     if (getBuiltinPointerName(expr, earlyPointerBuiltin)) {
@@ -3481,7 +3922,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isStdNamespacedVectorCountCall =
         !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
     const bool hasStdNamespacedVectorCountDefinition =
-        hasImportedDefinitionPath("/std/collections/vector/count");
+        hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count");
     const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
         isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
     const bool isStdNamespacedMapCountCall =
@@ -3518,7 +3959,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool isStdNamespacedVectorCapacityCall =
         !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
     const bool hasStdNamespacedVectorCapacityDefinition =
-        hasImportedDefinitionPath("/std/collections/vector/capacity");
+        hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity");
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && !isStdNamespacedVectorCapacityCall &&
         isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
@@ -3526,6 +3967,49 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         defMap_.find(resolved) == defMap_.end();
     const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =
         isStdNamespacedVectorCapacityCall && hasStdNamespacedVectorCapacityDefinition;
+    const bool shouldSkipStdCapacityMethodFallback = false;
+    const bool hasBuiltinAccessSpelling =
+        !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
+    const bool isStdNamespacedVectorAccessCall =
+        hasBuiltinAccessSpelling && !expr.isMethodCall &&
+        resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+    const bool hasStdNamespacedVectorAccessDefinition =
+        isStdNamespacedVectorAccessCall &&
+        hasVisibleCanonicalVectorHelperPath(resolveCalleePath(expr));
+    const bool isStdNamespacedMapAccessCall =
+        hasBuiltinAccessSpelling && !expr.isMethodCall &&
+        (resolveCalleePath(expr) == "/std/collections/map/at" ||
+         resolveCalleePath(expr) == "/std/collections/map/at_unsafe");
+    const bool hasStdNamespacedMapAccessDefinition =
+        isStdNamespacedMapAccessCall &&
+        hasImportedDefinitionPath(resolveCalleePath(expr));
+    const bool isResolvedMapAccessCall =
+        !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
+        !isMapNamespacedAccessCompatibilityCall(expr);
+    const bool prefersExplicitDirectMapAccessAliasDefinition =
+        !expr.isMethodCall &&
+        (((isNamespacedMapHelperCall && (namespacedHelper == "at" || namespacedHelper == "at_unsafe")) ||
+          (((expr.namespacePrefix == "map") || (expr.namespacePrefix == "/map")) &&
+           (expr.name == "at" || expr.name == "at_unsafe")))) &&
+        defMap_.find("/map/" +
+                     ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper)) !=
+            defMap_.end();
+    const bool shouldAllowStdAccessCompatibilityFallback = false;
+    const bool isBuiltinAccessName =
+        hasBuiltinAccessSpelling &&
+        (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback ||
+         hasStdNamespacedVectorAccessDefinition) &&
+        !isStdNamespacedMapAccessCall && !isResolvedMapAccessCall;
+    const bool isNamespacedVectorAccessCall =
+        !isStdNamespacedVectorAccessCall && isBuiltinAccessName && isNamespacedVectorHelperCall &&
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
+        defMap_.find(resolved) == defMap_.end();
+    const bool shouldSkipStdAccessMethodFallback = false;
+    const bool isNamespacedMapAccessCall =
+        isBuiltinAccessName && isNamespacedMapHelperCall &&
+        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
+        !prefersExplicitDirectMapAccessAliasDefinition &&
+        defMap_.find(resolved) == defMap_.end();
     const bool isDirectStdNamespacedVectorCountWrapperMapTarget =
         !expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Call && resolveMapTarget(expr.args.front());
@@ -3546,11 +4030,73 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return resolveVectorTarget(expr.args.front(), elemType);
     }();
     const bool hasStdNamespacedVectorCountAliasDefinition =
-        defMap_.find("/std/collections/vector/count") != defMap_.end() ||
-        hasImportedDefinitionPath("/std/collections/vector/count");
+        hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count");
     const bool prefersCanonicalVectorCountAliasDefinition =
         !expr.isMethodCall && resolved == "/vector/count" && defMap_.find(resolved) == defMap_.end() &&
-        defMap_.find("/std/collections/vector/count") != defMap_.end();
+        hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count");
+    auto explicitVectorMethodPathFromExpr = [&]() -> std::string {
+      const std::string resolvedPath = resolveCalleePath(expr);
+      if (resolvedPath.rfind("/vector/", 0) == 0 ||
+          resolvedPath.rfind("/std/collections/vector/", 0) == 0) {
+        return resolvedPath;
+      }
+      std::string normalizedPrefix = expr.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
+      if (!normalizedPrefix.empty() &&
+          (normalizedPrefix == "vector" || normalizedPrefix == "std/collections/vector")) {
+        return "/" + normalizedPrefix + "/" + expr.name;
+      }
+      std::string explicitPath = expr.name;
+      if (!explicitPath.empty() && explicitPath.front() != '/' &&
+          (explicitPath.rfind("vector/", 0) == 0 ||
+           explicitPath.rfind("std/collections/vector/", 0) == 0)) {
+        explicitPath.insert(explicitPath.begin(), '/');
+      }
+      if (explicitPath.rfind("/vector/", 0) == 0 ||
+          explicitPath.rfind("/std/collections/vector/", 0) == 0) {
+        return explicitPath;
+      }
+      return "";
+    };
+    const std::string explicitVectorMethodPath = explicitVectorMethodPathFromExpr();
+    auto explicitVectorMethodReceiverMatches = [&]() {
+      std::string elemType;
+      return !expr.args.empty() &&
+             (resolveVectorTarget(expr.args.front(), elemType) ||
+              resolveArrayTarget(expr.args.front(), elemType) ||
+              resolveStringTarget(expr.args.front()) ||
+              resolveMapTarget(expr.args.front()));
+    };
+    if (expr.isMethodCall && !explicitVectorMethodPath.empty()) {
+      const bool isCanonicalStdVectorMutatorMethod =
+          explicitVectorMethodPath == "/std/collections/vector/push" ||
+          explicitVectorMethodPath == "/std/collections/vector/pop" ||
+          explicitVectorMethodPath == "/std/collections/vector/reserve" ||
+          explicitVectorMethodPath == "/std/collections/vector/clear" ||
+          explicitVectorMethodPath == "/std/collections/vector/remove_at" ||
+          explicitVectorMethodPath == "/std/collections/vector/remove_swap";
+      if (isCanonicalStdVectorMutatorMethod &&
+          !hasImportedDefinitionPath(explicitVectorMethodPath)) {
+        error_ = "unknown method: " + explicitVectorMethodPath;
+        return false;
+      }
+      if ((explicitVectorMethodPath == "/std/collections/vector/count" ||
+           explicitVectorMethodPath == "/std/collections/vector/capacity") &&
+          !hasVisibleCanonicalVectorHelperPath(explicitVectorMethodPath) &&
+          explicitVectorMethodReceiverMatches()) {
+        error_ = "unknown method: " + explicitVectorMethodPath;
+        return false;
+      }
+      if ((explicitVectorMethodPath == "/vector/count" ||
+           explicitVectorMethodPath == "/vector/capacity") &&
+          !hasDeclaredDefinitionPath(explicitVectorMethodPath) &&
+          explicitVectorMethodReceiverMatches()) {
+        error_ = "unknown method: " + explicitVectorMethodPath;
+        return false;
+      }
+    }
     if (prefersCanonicalVectorCountAliasDefinition) {
       resolved = "/std/collections/vector/count";
     }
@@ -3732,8 +4278,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
              resolved == "/std/collections/vector/clear" ||
              resolved == "/std/collections/vector/remove_at" ||
              resolved == "/std/collections/vector/remove_swap") &&
-            !hasDeclaredDefinitionPath(resolved) &&
-            !hasImportedDefinitionPath(resolved);
+            !hasVisibleCanonicalVectorHelperPath(resolved);
         if (isCanonicalStdVectorMutatorMethodWithoutImportedHelper) {
           error_ = "unknown method: " + resolved;
           return false;
@@ -3802,13 +4347,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                                   methodReceiverIndex)) {
       return false;
     } else if (isDirectStdNamespacedVectorCountWrapperVectorTarget &&
-               !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-               !hasImportedDefinitionPath("/std/collections/vector/count")) {
+               !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count")) {
       error_ = "unknown call target: /std/collections/vector/count";
       return false;
     } else if (isDirectStdNamespacedVectorCapacityWrapperVectorTarget &&
-               !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
-               !hasImportedDefinitionPath("/std/collections/vector/capacity")) {
+               !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity")) {
       error_ = "unknown call target: /std/collections/vector/capacity";
       return false;
     }
@@ -4148,8 +4691,104 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                   handledTryBuiltin)) {
         return false;
       }
-      if (handledTryBuiltin) {
+      if (arg.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (defMap_.find(resolveCalleePath(arg)) != defMap_.end()) {
+          return false;
+        }
+        if (getBuiltinCollectionName(arg, collection) && collection == "array" && arg.templateArgs.size() == 1) {
+          elemType = arg.templateArgs.front();
+          return true;
+        }
+      }
+      return false;
+    };
+    auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool {
+      auto isBufferTypeNameText = [&](const std::string &typeNameText) {
+        const std::string normalized = normalizeBindingTypeName(typeNameText);
+        return normalized == "Buffer" || normalized == "std/gfx/Buffer" ||
+               normalized == "std/gfx/experimental/Buffer";
+      };
+      auto resolveReferenceBufferType = [&](const std::string &typeName,
+                                            const std::string &typeTemplateArg,
+                                            std::string &elemTypeOut) -> bool {
+        if ((typeName != "Reference" && typeName != "Pointer") || typeTemplateArg.empty()) {
+          return false;
+        }
+        std::string base;
+        std::string nestedArg;
+        if (!splitTemplateTypeName(typeTemplateArg, base, nestedArg) || !isBufferTypeNameText(base) ||
+            nestedArg.empty()) {
+          return false;
+        }
+        elemTypeOut = nestedArg;
         return true;
+      };
+      auto resolveArgsPackReferenceBufferType = [&](const std::string &typeName,
+                                                    const std::string &typeTemplateArg,
+                                                    std::string &elemTypeOut) -> bool {
+        if (typeName != "args" || typeTemplateArg.empty()) {
+          return false;
+        }
+        std::string base;
+        std::string nestedArg;
+        if (!splitTemplateTypeName(typeTemplateArg, base, nestedArg) ||
+            (normalizeBindingTypeName(base) != "Reference" && normalizeBindingTypeName(base) != "Pointer") ||
+            nestedArg.empty()) {
+          return false;
+        }
+        return resolveReferenceBufferType(base, nestedArg, elemTypeOut);
+      };
+      auto resolveIndexedArgsPackReferenceBuffer = [&](const Expr &targetExpr, std::string &elemTypeOut) -> bool {
+        std::string accessName;
+        if (targetExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(targetExpr, accessName) ||
+            targetExpr.args.size() != 2 || targetExpr.args.front().kind != Expr::Kind::Name) {
+          return false;
+        }
+        const std::string &targetName = targetExpr.args.front().name;
+        if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
+          if (resolveArgsPackReferenceBufferType(paramBinding->typeName, paramBinding->typeTemplateArg, elemTypeOut)) {
+            return true;
+          }
+        }
+        auto itLocal = locals.find(targetName);
+        return itLocal != locals.end() &&
+               resolveArgsPackReferenceBufferType(itLocal->second.typeName, itLocal->second.typeTemplateArg, elemTypeOut);
+      };
+      auto resolveIndexedArgsPackValueBuffer = [&](const Expr &targetExpr, std::string &elemTypeOut) -> bool {
+        std::string accessName;
+        if (targetExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(targetExpr, accessName) ||
+            targetExpr.args.size() != 2 || targetExpr.args.front().kind != Expr::Kind::Name) {
+          return false;
+        }
+        const std::string &targetName = targetExpr.args.front().name;
+        auto resolveBinding = [&](const BindingInfo &binding) {
+          std::string packElemType;
+          std::string base;
+          return getArgsPackElementType(binding, packElemType) &&
+                 splitTemplateTypeName(normalizeBindingTypeName(packElemType), base, elemTypeOut) &&
+                 isBufferTypeNameText(base);
+        };
+        if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
+          return resolveBinding(*paramBinding);
+        }
+        auto itLocal = locals.find(targetName);
+        return itLocal != locals.end() && resolveBinding(itLocal->second);
+      };
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          if (isBufferTypeNameText(paramBinding->typeName) && !paramBinding->typeTemplateArg.empty()) {
+            elemType = paramBinding->typeTemplateArg;
+            return true;
+          }
+        }
+        auto itLocal = locals.find(arg.name);
+        if (itLocal != locals.end()) {
+          if (isBufferTypeNameText(itLocal->second.typeName) && !itLocal->second.typeTemplateArg.empty()) {
+            elemType = itLocal->second.typeTemplateArg;
+            return true;
+          }
+        }
       }
       ExprResultFileBuiltinContext resultFileContext;
       resultFileContext.isNamedArgsPackWrappedFileBuiltinAccessCall =
@@ -4424,8 +5063,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
       if (expr.isMethodCall && resolved == "/std/collections/vector/count" &&
-          !hasDeclaredDefinitionPath(resolved) &&
-          !hasImportedDefinitionPath(resolved) &&
+          !hasVisibleCanonicalVectorHelperPath(resolved) &&
           expr.args.size() == 1) {
         std::string elemType;
         if (resolveMapTarget(expr.args.front()) || resolveArrayTarget(expr.args.front(), elemType) ||
@@ -4436,8 +5074,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (expr.isMethodCall && resolved == "/vector/count" &&
           !hasDeclaredDefinitionPath(resolved) &&
-          !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-          !hasImportedDefinitionPath("/std/collections/vector/count") &&
+          !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count") &&
           expr.args.size() == 1 &&
           expr.args.front().kind == Expr::Kind::Call) {
         std::string elemType;
@@ -4450,8 +5087,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (expr.isMethodCall && resolved == "/vector/capacity" &&
           !hasDeclaredDefinitionPath(resolved) &&
-          !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
-          !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
+          !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity") &&
           expr.args.size() == 1 &&
           expr.args.front().kind == Expr::Kind::Call) {
         std::string elemType;

@@ -42,6 +42,9 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
   if (suffix != std::string::npos) {
     canonicalPath.erase(suffix);
   }
+  if (canonicalPath.rfind("/File/", 0) == 0 || canonicalPath.rfind("/FileError/", 0) == 0) {
+    canonicalPath.insert(0, "/std/file");
+  }
   for (const auto &importPath : program_.imports) {
     if (importPath == canonicalPath) {
       return true;

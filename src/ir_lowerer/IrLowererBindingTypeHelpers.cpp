@@ -11,6 +11,10 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
   if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
     return "map";
   }
+  if (name == "Buffer" || name == "std/gfx/Buffer" || name == "/std/gfx/Buffer" ||
+      name == "std/gfx/experimental/Buffer" || name == "/std/gfx/experimental/Buffer") {
+    return "Buffer";
+  }
   if (name == "args") {
     return "array";
   }

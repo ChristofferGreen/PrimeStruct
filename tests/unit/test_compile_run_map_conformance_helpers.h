@@ -1035,8 +1035,14 @@ inline std::string makeInferredExperimentalMapCallReceiverConformanceSource() {
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues([bool] useCanonical) {\n";
   source += "  if(useCanonical,\n";
-  source += "     then() { /std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32) },\n";
-  source += "     else() { /std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32) })\n";
+  source += "     then() {\n";
+  source += "       [Map<string, i32>] values{/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "       return(values)\n";
+  source += "     },\n";
+  source += "     else() {\n";
+  source += "       [Map<string, i32>] values{/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"other\"raw_utf8, 2i32)}\n";
+  source += "       return(values)\n";
+  source += "     })\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedInferredExperimentalMapReceiverError([ContainerError] err) {\n";
@@ -1793,12 +1799,11 @@ inline void expectWrappedInferredExperimentalMapReturnConformance(const std::str
 }
 
 inline void expectInferredExperimentalMapCallReceiverConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(
+  expectMapConformanceCompileReject(
       makeInferredExperimentalMapCallReceiverConformanceSource(),
       "map_inferred_experimental_call_receiver_" + emitMode,
       emitMode,
-      11,
-      "6\n4\n1\n");
+      "unknown method: /map/tryAt");
 }
 
 inline void expectExperimentalMapStructFieldConformance(const std::string &emitMode) {

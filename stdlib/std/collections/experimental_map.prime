@@ -171,7 +171,8 @@ namespace std {
     [i32] entryCount{count(entries)}
     [i32 mut] index{0i32}
     while(less_than(index, entryCount), do() {
-      mapInsert<K, V>(out, entries[index].key, entries[index].value)
+      [Entry<K, V>] current{entries[index]}
+      mapInsert<K, V>(out, current.key, current.value)
       increment(index)
     })
     return(out)
@@ -179,58 +180,74 @@ namespace std {
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapSingle<K, V>([K] key, [V] value) {
-    return(map<K, V>(entry<K, V>(key, value)))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, key, value)
+    return(out)
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapDouble<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-    return(map<K, V>(entry<K, V>(firstKey, firstValue), entry<K, V>(secondKey, secondValue)))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapPair<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-    return(mapDouble<K, V>(firstKey, firstValue, secondKey, secondValue))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapTriple<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue) {
-    return(map<K, V>(entry<K, V>(firstKey, firstValue),
-        entry<K, V>(secondKey, secondValue),
-        entry<K, V>(thirdKey, thirdValue)))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapQuad<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue) {
-    return(map<K, V>(entry<K, V>(firstKey, firstValue),
-        entry<K, V>(secondKey, secondValue),
-        entry<K, V>(thirdKey, thirdValue),
-        entry<K, V>(fourthKey, fourthValue)))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapQuint<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue) {
-    return(map<K, V>(entry<K, V>(firstKey, firstValue),
-        entry<K, V>(secondKey, secondValue),
-        entry<K, V>(thirdKey, thirdValue),
-        entry<K, V>(fourthKey, fourthValue),
-        entry<K, V>(fifthKey, fifthValue)))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    mapInsert<K, V>(out, fifthKey, fifthValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
   mapSext<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue) {
-    return(map<K, V>(entry<K, V>(firstKey, firstValue),
-        entry<K, V>(secondKey, secondValue),
-        entry<K, V>(thirdKey, thirdValue),
-        entry<K, V>(fourthKey, fourthValue),
-        entry<K, V>(fifthKey, fifthValue),
-        entry<K, V>(sixthKey, sixthValue)))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    mapInsert<K, V>(out, fifthKey, fifthValue)
+    mapInsert<K, V>(out, sixthKey, sixthValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
@@ -238,13 +255,15 @@ namespace std {
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey,
       [V] seventhValue) {
-    return(map<K, V>(entry<K, V>(firstKey, firstValue),
-        entry<K, V>(secondKey, secondValue),
-        entry<K, V>(thirdKey, thirdValue),
-        entry<K, V>(fourthKey, fourthValue),
-        entry<K, V>(fifthKey, fifthValue),
-        entry<K, V>(sixthKey, sixthValue),
-        entry<K, V>(seventhKey, seventhValue)))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    mapInsert<K, V>(out, fifthKey, fifthValue)
+    mapInsert<K, V>(out, sixthKey, sixthValue)
+    mapInsert<K, V>(out, seventhKey, seventhValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
@@ -252,14 +271,16 @@ namespace std {
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey, [V] seventhValue,
       [K] eighthKey, [V] eighthValue) {
-    return(map<K, V>(entry<K, V>(firstKey, firstValue),
-        entry<K, V>(secondKey, secondValue),
-        entry<K, V>(thirdKey, thirdValue),
-        entry<K, V>(fourthKey, fourthValue),
-        entry<K, V>(fifthKey, fifthValue),
-        entry<K, V>(sixthKey, sixthValue),
-        entry<K, V>(seventhKey, seventhValue),
-        entry<K, V>(eighthKey, eighthValue)))
+    [Map<K, V> mut] out{mapNew<K, V>()}
+    mapInsert<K, V>(out, firstKey, firstValue)
+    mapInsert<K, V>(out, secondKey, secondValue)
+    mapInsert<K, V>(out, thirdKey, thirdValue)
+    mapInsert<K, V>(out, fourthKey, fourthValue)
+    mapInsert<K, V>(out, fifthKey, fifthValue)
+    mapInsert<K, V>(out, sixthKey, sixthValue)
+    mapInsert<K, V>(out, seventhKey, seventhValue)
+    mapInsert<K, V>(out, eighthKey, eighthValue)
+    return(out)
   }
 
   [public return<i32>]
