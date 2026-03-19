@@ -2064,7 +2064,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native vector method call") {
@@ -2341,7 +2341,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native stdlib collection shim helpers") {
@@ -3131,7 +3133,7 @@ main() {
   CHECK(runCommand(exePath) == 83);
 }
 
-TEST_CASE("native user wrapper temporary count capacity shadow precedence currently fails during semantic resolution") {
+TEST_CASE("native user wrapper temporary count capacity shadow precedence currently fails during lowering") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -3177,7 +3179,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: count") != std::string::npos);
+  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
 TEST_CASE("rejects native user wrapper temporary count capacity shadow value mismatch") {
@@ -7722,7 +7724,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+  CHECK(readFile(errPath).find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native bare vector capacity after pop through imported stdlib helper") {

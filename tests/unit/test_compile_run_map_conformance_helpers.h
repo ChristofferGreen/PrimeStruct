@@ -1854,7 +1854,7 @@ inline void expectInferredExperimentalMapCallReceiverConformance(const std::stri
       makeInferredExperimentalMapCallReceiverConformanceSource(),
       "map_inferred_experimental_call_receiver_" + emitMode,
       emitMode,
-      "unknown method: /map/tryAt");
+      "unknown method: /array/tryAt");
 }
 
 inline void expectExperimentalMapStructFieldConformance(const std::string &emitMode) {

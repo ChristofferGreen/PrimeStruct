@@ -52,7 +52,7 @@ void printTransformList(std::ostream &out) {
 
 int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &failure) {
   std::vector<DiagnosticRecord> diagnostics;
-  if (failure.diagnosticInfo != nullptr && !failure.diagnosticInfo->records.empty()) {
+  if (failure.diagnosticInfo.has_value() && !failure.diagnosticInfo->records.empty()) {
     diagnostics.reserve(failure.diagnosticInfo->records.size());
     for (const auto &recordInfo : failure.diagnosticInfo->records) {
       std::string diagnosticMessage = recordInfo.message.empty() ? failure.message : recordInfo.message;
@@ -75,7 +75,7 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
     DiagnosticSpan primarySpanStorage;
     const DiagnosticSpan *primarySpan = nullptr;
     std::vector<DiagnosticRelatedSpan> relatedSpans;
-    if (failure.diagnosticInfo != nullptr) {
+    if (failure.diagnosticInfo.has_value()) {
       if (!failure.diagnosticInfo->message.empty()) {
         diagnosticMessage = failure.diagnosticInfo->message;
       }
@@ -98,7 +98,8 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
     return record.primarySpan.line > 0 && record.primarySpan.column > 0;
   });
   if (hasLocation) {
-    err << formatDiagnosticsText(diagnostics, failure.plainPrefix, failure.sourceText);
+    const std::string *sourceText = failure.sourceText.has_value() ? &*failure.sourceText : nullptr;
+    err << formatDiagnosticsText(diagnostics, failure.plainPrefix, sourceText);
     return failure.exitCode;
   }
 
@@ -127,8 +128,8 @@ CliFailure describeCompilePipelineFailure(const CompilePipelineErrorStage errorS
       failure.code = DiagnosticCode::ParseError;
       failure.plainPrefix = "Parse error: ";
       failure.notes = {"stage: parse"};
-      failure.diagnosticInfo = &diagnosticInfo;
-      failure.sourceText = &output.filteredSource;
+      failure.diagnosticInfo = diagnosticInfo;
+      failure.sourceText = output.filteredSource;
       break;
     case CompilePipelineErrorStage::UnsupportedDumpStage:
       failure.code = DiagnosticCode::UnsupportedDumpStage;
@@ -139,8 +140,8 @@ CliFailure describeCompilePipelineFailure(const CompilePipelineErrorStage errorS
       failure.code = DiagnosticCode::SemanticError;
       failure.plainPrefix = "Semantic error: ";
       failure.notes = {"stage: semantic"};
-      failure.diagnosticInfo = &diagnosticInfo;
-      failure.sourceText = &output.filteredSource;
+      failure.diagnosticInfo = diagnosticInfo;
+      failure.sourceText = output.filteredSource;
       break;
     case CompilePipelineErrorStage::None:
     default:
@@ -189,7 +190,7 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure, con
       break;
   }
 
-  cliFailure.diagnosticInfo = &failure.diagnosticInfo;
+  cliFailure.diagnosticInfo = failure.diagnosticInfo;
 
   return cliFailure;
 }
@@ -225,7 +226,7 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
       break;
   }
 
-  cliFailure.diagnosticInfo = &failure.diagnosticInfo;
+  cliFailure.diagnosticInfo = failure.diagnosticInfo;
 
   return cliFailure;
 }

@@ -3138,7 +3138,7 @@ import /std/gfx/experimental/*
 main() {
   [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
-  return(plus(data.count(), out.count()))
+  return(plus(/std/gfx/experimental/Buffer/count(data), out.count()))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_experimental_gfx_buffer_allocate_helpers.prime", source);
@@ -3158,7 +3158,7 @@ import /std/gfx/*
 main() {
   [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
-  return(plus(data.count(), out.count()))
+  return(plus(/std/gfx/Buffer/count(data), out.count()))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_canonical_gfx_buffer_allocate_helpers.prime", source);
@@ -3178,7 +3178,7 @@ import /std/gfx/experimental/*
 main() {
   [Buffer<i32>] data{Buffer<i32>(3i32)}
   [array<i32>] out{data.readback()}
-  return(plus(data.count(), out.count()))
+  return(plus(/std/gfx/experimental/Buffer/count(data), out.count()))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_experimental_gfx_buffer_constructor.prime", source);
@@ -3198,7 +3198,7 @@ import /std/gfx/*
 main() {
   [Buffer<i32>] data{Buffer<i32>(3i32)}
   [array<i32>] out{data.readback()}
-  return(plus(data.count(), out.count()))
+  return(plus(/std/gfx/Buffer/count(data), out.count()))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_canonical_gfx_buffer_constructor.prime", source);

@@ -7,8 +7,8 @@
 #include "primec/TransformRegistry.h"
 
 #include <iosfwd>
+#include <optional>
 #include <string>
-#include <string_view>
 #include <vector>
 
 namespace primec {
@@ -19,8 +19,8 @@ struct CliFailure {
   std::string message;
   int exitCode = 2;
   std::vector<std::string> notes;
-  const DiagnosticSinkReport *diagnosticInfo = nullptr;
-  const std::string *sourceText = nullptr;
+  std::optional<DiagnosticSinkReport> diagnosticInfo;
+  std::optional<std::string> sourceText;
 };
 
 using IrLoweringErrorNormalizer = void (*)(std::string &error);

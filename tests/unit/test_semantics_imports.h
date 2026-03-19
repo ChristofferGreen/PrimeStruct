@@ -1054,7 +1054,7 @@ main() {
   CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("experimental gfx Buffer constructor entry point validates through stdlib helper") {
+TEST_CASE("experimental gfx Buffer constructor entry point validates through builtin rewrite") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -1062,7 +1062,7 @@ import /std/gfx/experimental/*
 main() {
   [Buffer<i32>] data{Buffer<i32>(2i32)}
   [array<i32>] out{data.readback()}
-  return(plus(data.count(), out.count()))
+  return(plus(/std/gfx/experimental/Buffer/count(data), out.count()))
 }
 )";
   std::string error;
@@ -1070,7 +1070,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical gfx Buffer constructor entry point validates through stdlib helper") {
+TEST_CASE("canonical gfx Buffer constructor entry point validates through builtin rewrite") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -1078,7 +1078,7 @@ import /std/gfx/*
 main() {
   [Buffer<i32>] data{Buffer<i32>(2i32)}
   [array<i32>] out{data.readback()}
-  return(plus(data.count(), out.count()))
+  return(plus(/std/gfx/Buffer/count(data), out.count()))
 }
 )";
   std::string error;

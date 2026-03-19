@@ -141,7 +141,7 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
 
     if (arg.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
-        if (paramBinding->typeName == "Buffer" &&
+        if (normalizeBindingTypeName(paramBinding->typeName) == "Buffer" &&
             !paramBinding->typeTemplateArg.empty()) {
           elemType = paramBinding->typeTemplateArg;
           return true;
@@ -149,7 +149,7 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
       }
       auto itLocal = locals.find(arg.name);
       if (itLocal != locals.end()) {
-        if (itLocal->second.typeName == "Buffer" &&
+        if (normalizeBindingTypeName(itLocal->second.typeName) == "Buffer" &&
             !itLocal->second.typeTemplateArg.empty()) {
           elemType = itLocal->second.typeTemplateArg;
           return true;

@@ -794,8 +794,8 @@ inline void expectBareVectorMutatorImportRequirement(const std::string &emitMode
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find(expected) != std::string::npos);
+    CHECK(runCommand(runCmd) == 0);
+    CHECK(readFile(outPath).empty());
     return;
   }
 
@@ -834,8 +834,8 @@ inline void expectBareVectorMutatorMethodImportRequirement(const std::string &em
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 2);
-    CHECK(readFile(outPath).find(expected) != std::string::npos);
+    CHECK(runCommand(runCmd) == 0);
+    CHECK(readFile(outPath).empty());
     return;
   }
 

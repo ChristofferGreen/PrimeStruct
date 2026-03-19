@@ -1714,14 +1714,16 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     };
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        if (paramBinding->typeName == "Buffer" && !paramBinding->typeTemplateArg.empty()) {
+        if (normalizeBindingTypeName(paramBinding->typeName) == "Buffer" &&
+            !paramBinding->typeTemplateArg.empty()) {
           elemType = paramBinding->typeTemplateArg;
           return true;
         }
       }
       auto it = locals.find(target.name);
       if (it != locals.end()) {
-        if (it->second.typeName == "Buffer" && !it->second.typeTemplateArg.empty()) {
+        if (normalizeBindingTypeName(it->second.typeName) == "Buffer" &&
+            !it->second.typeTemplateArg.empty()) {
           elemType = it->second.typeTemplateArg;
           return true;
         }

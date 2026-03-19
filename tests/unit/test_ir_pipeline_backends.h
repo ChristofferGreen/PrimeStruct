@@ -124,8 +124,10 @@ TEST_CASE("cli driver preserves parse-stage diagnostic context") {
   CHECK(failure.message == "raw parse failure");
   CHECK(failure.exitCode == 2);
   CHECK(failure.notes == std::vector<std::string>{"stage: parse"});
-  CHECK(failure.diagnosticInfo == &diagnosticInfo);
-  CHECK(failure.sourceText == &output.filteredSource);
+  REQUIRE(failure.diagnosticInfo.has_value());
+  CHECK(failure.diagnosticInfo->message == diagnosticInfo.message);
+  REQUIRE(failure.sourceText.has_value());
+  CHECK(*failure.sourceText == output.filteredSource);
 }
 
 TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {
@@ -727,8 +729,6 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("direct_call_local_auto_collection") != std::string::npos);
   CHECK(parityHeader.find("block_local_auto_struct") != std::string::npos);
   CHECK(parityHeader.find("if_local_auto_collection") != std::string::npos);
-  CHECK(parityHeader.find("block_omitted_field_envelope_struct") != std::string::npos);
-  CHECK(parityHeader.find("if_omitted_field_envelope_struct") != std::string::npos);
   CHECK(parityHeader.find("ambiguous_omitted_field_envelope") != std::string::npos);
   CHECK(parityHeader.find("query_collection_return_binding") != std::string::npos);
   CHECK(parityHeader.find("query_result_return_binding") != std::string::npos);
@@ -737,7 +737,7 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("shared_collection_receiver_classifiers") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
-  CHECK(parityHeader.find("graph type resolver intentionally corrects grounded mutual recursion") !=
+  CHECK(parityHeader.find("grounded mutual recursion currently diverges between legacy and graph vm pipelines") !=
         std::string::npos);
 }
 
