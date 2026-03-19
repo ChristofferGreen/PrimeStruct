@@ -10978,6 +10978,31 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_vector_capacity_call_helper") != std::string::npos);
 }
 
+TEST_CASE("rejects namespaced wrapper vector capacity vector target without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/capacity(wrapVector()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_namespaced_wrapper_vector_capacity_vector_target_reject.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_namespaced_wrapper_vector_capacity_vector_target_reject_out.txt")
+                                  .string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/capacity") !=
+        std::string::npos);
+}
+
 TEST_CASE("compiles and runs wrapper bare vector capacity through imported stdlib helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
@@ -11006,7 +11031,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("C++ emitter lowers wrapper bare vector capacity calls without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects wrapper bare vector capacity calls without helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -11020,14 +11045,14 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_capacity_call_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_capacity_call_deleted_stub.cpp")
+      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_capacity_call_deleted_stub.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_capacity_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_capacity_call_helper(wrapVector())") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/capacity") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects wrapper bare vector capacity calls without helper in C++ emitter") {
@@ -11051,7 +11076,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_capacity_call_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers bare vector capacity methods without helper to deleted stub") {

@@ -742,6 +742,42 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("bare vector capacity wrapper call resolves through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(capacity(wrapVector()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare vector capacity wrapper call requires imported stdlib helper or explicit definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(capacity(wrapVector()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("count helper validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {
@@ -1586,6 +1622,24 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity wrapper temporary vector target requires helper") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+wrapVectorAuto() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/capacity(wrapVectorAuto()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count rejects wrapper temporary map target") {

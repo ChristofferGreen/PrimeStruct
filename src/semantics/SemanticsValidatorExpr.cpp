@@ -3537,6 +3537,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string elemType;
       return resolveVectorTarget(expr.args.front(), elemType);
     }();
+    const bool isDirectStdNamespacedVectorCapacityWrapperVectorTarget = [&]() {
+      if (expr.isMethodCall || !isStdNamespacedVectorCapacityCall || expr.args.size() != 1 ||
+          expr.args.front().kind != Expr::Kind::Call) {
+        return false;
+      }
+      std::string elemType;
+      return resolveVectorTarget(expr.args.front(), elemType);
+    }();
     const bool hasStdNamespacedVectorCountAliasDefinition =
         defMap_.find("/std/collections/vector/count") != defMap_.end() ||
         hasImportedDefinitionPath("/std/collections/vector/count");
@@ -3797,6 +3805,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
                !hasImportedDefinitionPath("/std/collections/vector/count")) {
       error_ = "unknown call target: /std/collections/vector/count";
+      return false;
+    } else if (isDirectStdNamespacedVectorCapacityWrapperVectorTarget &&
+               !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
+               !hasImportedDefinitionPath("/std/collections/vector/capacity")) {
+      error_ = "unknown call target: /std/collections/vector/capacity";
       return false;
     }
     (void)handledCountCapacity;
