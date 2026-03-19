@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -16,19 +17,28 @@ struct ExperimentalMapHelperDescriptor {
   std::string_view aliasPath;
   std::string_view wrapperPath;
   std::string_view experimentalPath;
+  bool supportsMethodCompatibility;
+  bool requiresValidatedMapReceiverForDirectCompatibility;
+  std::array<std::string_view, 4> wrapperDefinitionNeedles;
+  size_t wrapperDefinitionNeedlesCount;
 };
 
 constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = {
     {"count", "/std/collections/map/count", "/map/count", "/std/collections/mapCount",
-     "/std/collections/experimental_map/mapCount"},
+     "/std/collections/experimental_map/mapCount", true, true,
+     {"/mapCount", "", "", ""}, 1},
     {"contains", "/std/collections/map/contains", "/map/contains", "/std/collections/mapContains",
-     "/std/collections/experimental_map/mapContains"},
+     "/std/collections/experimental_map/mapContains", false, true,
+     {"/mapContains", "/mapTryAt", "", ""}, 2},
     {"tryAt", "/std/collections/map/tryAt", "/map/tryAt", "/std/collections/mapTryAt",
-     "/std/collections/experimental_map/mapTryAt"},
+     "/std/collections/experimental_map/mapTryAt", false, true,
+     {"/mapTryAt", "", "", ""}, 1},
     {"at", "/std/collections/map/at", "/map/at", "/std/collections/mapAt",
-     "/std/collections/experimental_map/mapAt"},
+     "/std/collections/experimental_map/mapAt", true, false,
+     {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef"}, 4},
     {"at_unsafe", "/std/collections/map/at_unsafe", "/map/at_unsafe", "/std/collections/mapAtUnsafe",
-     "/std/collections/experimental_map/mapAtUnsafe"},
+     "/std/collections/experimental_map/mapAtUnsafe", true, false,
+     {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef"}, 4},
 };
 
 std::string bindingTypeText(const BindingInfo &binding) {
@@ -69,9 +79,39 @@ bool matchesResolvedPath(std::string_view resolvedPath, std::string_view basePat
   return resolvedPath == basePath || resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
 }
 
+std::string_view trimLeadingSlash(std::string_view text) {
+  if (!text.empty() && text.front() == '/') {
+    text.remove_prefix(1);
+  }
+  return text;
+}
+
 const ExperimentalMapHelperDescriptor *findExperimentalMapHelperByName(std::string_view helperName) {
   for (const auto &descriptor : kExperimentalMapHelperDescriptors) {
     if (descriptor.helperName == helperName) {
+      return &descriptor;
+    }
+  }
+  return nullptr;
+}
+
+const ExperimentalMapHelperDescriptor *findExperimentalMapCompatibilityHelper(std::string_view normalizedName,
+                                                                              std::string_view normalizedPrefix,
+                                                                              std::string_view resolvedPath,
+                                                                              bool allowResolvedAliasMatch,
+                                                                              bool requireMethodCompatibility) {
+  normalizedName = trimLeadingSlash(normalizedName);
+  normalizedPrefix = trimLeadingSlash(normalizedPrefix);
+  for (const auto &descriptor : kExperimentalMapHelperDescriptors) {
+    if (requireMethodCompatibility && !descriptor.supportsMethodCompatibility) {
+      continue;
+    }
+    const std::string_view aliasPath = trimLeadingSlash(descriptor.aliasPath);
+    const std::string_view canonicalPath = trimLeadingSlash(descriptor.canonicalPath);
+    if (normalizedName == aliasPath || normalizedName == canonicalPath ||
+        ((normalizedPrefix == "map" || normalizedPrefix == "std/collections/map") &&
+         normalizedName == descriptor.helperName) ||
+        (allowResolvedAliasMatch && matchesResolvedPath(resolvedPath, descriptor.aliasPath))) {
       return &descriptor;
     }
   }
@@ -168,6 +208,82 @@ bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std
     }
   }
   return false;
+}
+
+bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const {
+  const ExperimentalMapHelperDescriptor *descriptor = findExperimentalMapHelperByName(helperName);
+  if (descriptor == nullptr) {
+    return false;
+  }
+  for (size_t i = 0; i < descriptor->wrapperDefinitionNeedlesCount; ++i) {
+    if (currentValidationContext_.definitionPath.find(std::string(descriptor->wrapperDefinitionNeedles[i])) !=
+        std::string::npos) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(const Expr &candidate) const {
+  if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
+      candidate.args.empty()) {
+    return "";
+  }
+  const ExperimentalMapHelperDescriptor *descriptor =
+      findExperimentalMapCompatibilityHelper(candidate.name, candidate.namespacePrefix, "", false, true);
+  if (descriptor == nullptr) {
+    return "";
+  }
+  const std::string removedPath(descriptor->aliasPath);
+  if (defMap_.find(removedPath) != defMap_.end()) {
+    return "";
+  }
+  if (!resolveMapTarget(candidate.args.front())) {
+    return "";
+  }
+  return removedPath;
+}
+
+std::string SemanticsValidator::directMapHelperCompatibilityPath(const Expr &candidate) const {
+  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+    return "";
+  }
+  const std::string resolvedPath = resolveCalleePath(candidate);
+  const ExperimentalMapHelperDescriptor *descriptor =
+      findExperimentalMapCompatibilityHelper(candidate.name,
+                                             candidate.namespacePrefix,
+                                             resolvedPath,
+                                             true,
+                                             false);
+  if (descriptor == nullptr) {
+    return "";
+  }
+  const std::string removedPath(descriptor->aliasPath);
+  if (defMap_.find(removedPath) != defMap_.end() || candidate.args.empty()) {
+    return "";
+  }
+  if (!descriptor->requiresValidatedMapReceiverForDirectCompatibility) {
+    return removedPath;
+  }
+  size_t receiverIndex = 0;
+  if (hasNamedArguments(candidate.argNames)) {
+    bool foundValues = false;
+    for (size_t i = 0; i < candidate.args.size(); ++i) {
+      if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+          *candidate.argNames[i] == "values") {
+        receiverIndex = i;
+        foundValues = true;
+        break;
+      }
+    }
+    if (!foundValues) {
+      receiverIndex = 0;
+    }
+  }
+  if (receiverIndex >= candidate.args.size() || !resolveMapTarget(candidate.args[receiverIndex])) {
+    return "";
+  }
+  return removedPath;
 }
 
 bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut) {

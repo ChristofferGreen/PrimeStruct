@@ -845,9 +845,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
-    auto definitionPathContains = [&](std::string_view needle) {
-      return currentValidationContext_.definitionPath.find(std::string(needle)) != std::string::npos;
-    };
     auto mapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {
       size_t receiverIndex = 0;
       if (hasNamedArguments(candidate.argNames)) {
@@ -881,25 +878,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return alias;
       }
       return canonical;
-    };
-    auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {
-      if (helperName == "count") {
-        return definitionPathContains("/mapCount");
-      }
-      if (helperName == "contains") {
-        return definitionPathContains("/mapContains") ||
-               definitionPathContains("/mapTryAt");
-      }
-      if (helperName == "tryAt") {
-        return definitionPathContains("/mapTryAt");
-      }
-      if (helperName == "at" || helperName == "at_unsafe") {
-        return definitionPathContains("/mapAt") ||
-               definitionPathContains("/mapAtUnsafe") ||
-               definitionPathContains("/mapTryAt") ||
-               definitionPathContains("/mapAtRef");
-      }
-      return false;
     };
     auto tryRewriteBareMapHelperCall = [&](const Expr &candidate,
                                            std::string_view helperName,
@@ -1065,186 +1043,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       return resolveMapTarget(candidate.args[receiverIndex]);
-    };
-    auto isMapNamespacedCountCompatibilityCall = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
-        return false;
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      const bool spellsMapCount = (normalized == "map/count");
-      const bool resolvesMapCount = (resolveCalleePath(candidate) == "/map/count");
-      if (!spellsMapCount && !resolvesMapCount) {
-        return false;
-      }
-      if (defMap_.find("/map/count") != defMap_.end() || candidate.args.empty()) {
-        return false;
-      }
-      size_t receiverIndex = 0;
-      if (hasNamedArguments(candidate.argNames)) {
-        bool foundValues = false;
-        for (size_t i = 0; i < candidate.args.size(); ++i) {
-          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
-              *candidate.argNames[i] == "values") {
-            receiverIndex = i;
-            foundValues = true;
-            break;
-          }
-        }
-        if (!foundValues) {
-          receiverIndex = 0;
-        }
-      }
-      if (receiverIndex >= candidate.args.size()) {
-        return false;
-      }
-      return resolveMapTarget(candidate.args[receiverIndex]);
-    };
-    auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
-        return false;
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      if (normalized != "map/at" && normalized != "map/at_unsafe") {
-        std::string namespacePrefix = candidate.namespacePrefix;
-        if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
-          namespacePrefix.erase(namespacePrefix.begin());
-        }
-        if (namespacePrefix == "map" &&
-            (normalized == "at" || normalized == "at_unsafe")) {
-          normalized = "map/" + normalized;
-        }
-      }
-      if (normalized != "map/at" && normalized != "map/at_unsafe") {
-        const std::string resolvedPath = resolveCalleePath(candidate);
-        if (resolvedPath == "/map/at") {
-          normalized = "map/at";
-        } else if (resolvedPath == "/map/at_unsafe") {
-          normalized = "map/at_unsafe";
-        } else {
-          return false;
-        }
-      }
-      return defMap_.find("/" + normalized) == defMap_.end();
-    };
-    auto getMapNamespacedMethodCompatibilityPath = [&](const Expr &candidate) -> std::string {
-      if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
-          candidate.args.empty()) {
-        return "";
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      std::string normalizedPrefix = candidate.namespacePrefix;
-      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-        normalizedPrefix.erase(normalizedPrefix.begin());
-      }
-      std::string helperName;
-      if (normalized == "map/count") {
-        helperName = "count";
-      } else if (normalized == "map/at") {
-        helperName = "at";
-      } else if (normalized == "map/at_unsafe") {
-        helperName = "at_unsafe";
-      } else if (normalized == "std/collections/map/count") {
-        helperName = "count";
-      } else if (normalized == "std/collections/map/at") {
-        helperName = "at";
-      } else if (normalized == "std/collections/map/at_unsafe") {
-        helperName = "at_unsafe";
-      } else if (normalizedPrefix == "map" &&
-                 (normalized == "count" || normalized == "at" || normalized == "at_unsafe")) {
-        helperName = normalized;
-      } else if (normalizedPrefix == "std/collections/map" &&
-                 (normalized == "count" || normalized == "at" || normalized == "at_unsafe")) {
-        helperName = normalized;
-      } else {
-        return "";
-      }
-      const std::string removedPath = "/map/" + helperName;
-      if (defMap_.find(removedPath) != defMap_.end()) {
-        return "";
-      }
-      if (!resolveMapTarget(candidate.args.front())) {
-        return "";
-      }
-      return removedPath;
-    };
-    auto getDirectMapHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-        return "";
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      std::string helperName;
-      std::string normalizedPrefix = candidate.namespacePrefix;
-      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-        normalizedPrefix.erase(normalizedPrefix.begin());
-      }
-      if (normalized == "map/count") {
-        helperName = "count";
-      } else if (normalized == "map/contains") {
-        helperName = "contains";
-      } else if (normalized == "map/tryAt") {
-        helperName = "tryAt";
-      } else if (normalized == "map/at") {
-        helperName = "at";
-      } else if (normalized == "map/at_unsafe") {
-        helperName = "at_unsafe";
-      } else if (normalizedPrefix == "map" &&
-                 (normalized == "count" || normalized == "contains" || normalized == "tryAt" ||
-                  normalized == "at" || normalized == "at_unsafe")) {
-        helperName = normalized;
-      } else {
-        const std::string resolvedPath = resolveCalleePath(candidate);
-        if (resolvedPath == "/map/count") {
-          helperName = "count";
-        } else if (resolvedPath == "/map/contains") {
-          helperName = "contains";
-        } else if (resolvedPath == "/map/tryAt") {
-          helperName = "tryAt";
-        } else if (resolvedPath == "/map/at") {
-          helperName = "at";
-        } else if (resolvedPath == "/map/at_unsafe") {
-          helperName = "at_unsafe";
-        } else {
-          return "";
-        }
-      }
-      const std::string removedPath = "/map/" + helperName;
-      if (defMap_.find(removedPath) != defMap_.end() || candidate.args.empty()) {
-        return "";
-      }
-      if (helperName == "at" || helperName == "at_unsafe") {
-        return removedPath;
-      }
-      size_t receiverIndex = 0;
-      if (hasNamedArguments(candidate.argNames)) {
-        bool foundValues = false;
-        for (size_t i = 0; i < candidate.args.size(); ++i) {
-          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
-              *candidate.argNames[i] == "values") {
-            receiverIndex = i;
-            foundValues = true;
-            break;
-          }
-        }
-        if (!foundValues) {
-          receiverIndex = 0;
-        }
-      }
-      if (receiverIndex >= candidate.args.size() || !resolveMapTarget(candidate.args[receiverIndex])) {
-        return "";
-      }
-      return removedPath;
     };
     auto resolveMapKeyType = [&](const Expr &target, std::string &keyTypeOut) -> bool {
       keyTypeOut.clear();
@@ -1522,7 +1320,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
              resolvedOut == "/std/collections/map/contains" ||
              resolvedOut == "/std/collections/map/at" ||
              resolvedOut == "/std/collections/map/at_unsafe") &&
-            (shouldBuiltinValidateCurrentMapWrapperHelper(
+            (this->shouldBuiltinValidateCurrentMapWrapperHelper(
                  resolvedOut.substr(std::string("/std/collections/map/").size())) ||
              hasImportedDefinitionPath(resolvedOut))) {
           isBuiltinOut = true;
@@ -1758,7 +1556,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
         std::string accessHelperName;
         if (getBuiltinArrayAccessName(receiver, accessHelperName) && !receiver.args.empty()) {
-          const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(receiver);
+          const std::string removedMapCompatibilityPath = this->directMapHelperCompatibilityPath(receiver);
           if (!removedMapCompatibilityPath.empty()) {
             error_ = "unknown call target: " + removedMapCompatibilityPath;
             return false;
@@ -2336,7 +2134,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     }
     if (!expr.isMethodCall) {
-      const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(expr);
+      const std::string removedMapCompatibilityPath = this->directMapHelperCompatibilityPath(expr);
       if (!removedMapCompatibilityPath.empty()) {
         error_ = "unknown call target: " + removedMapCompatibilityPath;
         return false;
@@ -2461,6 +2259,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         !expr.isMethodCall && resolveCalleePath(expr) == "/std/collections/map/count";
     const bool isNamespacedMapHelperCall =
         isNamespacedCollectionHelperCall && namespacedCollection == "map";
+    const std::string directRemovedMapCompatibilityPath =
+        !expr.isMethodCall ? this->directMapHelperCompatibilityPath(expr) : std::string();
+    const bool isMapNamespacedCountCompatibilityCall =
+        directRemovedMapCompatibilityPath == "/map/count";
+    const bool isMapNamespacedAccessCompatibilityCall =
+        directRemovedMapCompatibilityPath == "/map/at" ||
+        directRemovedMapCompatibilityPath == "/map/at_unsafe";
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && !isStdNamespacedVectorCountCall &&
         isNamespacedVectorHelperCall && namespacedHelper == "count" &&
@@ -2469,13 +2274,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
-        !isStdNamespacedMapCountCall && !isMapNamespacedCountCompatibilityCall(expr) &&
+        !isStdNamespacedMapCountCall && !isMapNamespacedCountCompatibilityCall &&
         defMap_.find(resolved) == defMap_.end();
     const bool isUnnamespacedMapCountFallbackCall =
         !expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(expr);
     const bool isResolvedMapCountCall =
         !expr.isMethodCall && resolved == "/map/count" &&
-        !isMapNamespacedCountCompatibilityCall(expr) &&
+        !isMapNamespacedCountCompatibilityCall &&
         !isUnnamespacedMapCountFallbackCall;
     const bool isStdNamespacedVectorCapacityCall =
         !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
@@ -2506,7 +2311,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         hasImportedDefinitionPath(resolveCalleePath(expr));
     const bool isResolvedMapAccessCall =
         !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
-        !isMapNamespacedAccessCompatibilityCall(expr);
+        !isMapNamespacedAccessCompatibilityCall;
     const bool prefersExplicitDirectMapAccessAliasDefinition =
         !expr.isMethodCall &&
         (((isNamespacedMapHelperCall && (namespacedHelper == "at" || namespacedHelper == "at_unsafe")) ||
@@ -2695,7 +2500,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     };
     if (expr.isMethodCall) {
-      const std::string removedMapMethodPath = getMapNamespacedMethodCompatibilityPath(expr);
+      const std::string removedMapMethodPath = this->mapNamespacedMethodCompatibilityPath(expr);
       if (!removedMapMethodPath.empty()) {
         error_ = "unknown method: " + removedMapMethodPath;
         return false;
@@ -3671,7 +3476,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
         if (expr.args.front().kind == Expr::Kind::Call) {
-          const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(expr.args.front());
+          const std::string removedMapCompatibilityPath = this->directMapHelperCompatibilityPath(expr.args.front());
           if (!removedMapCompatibilityPath.empty()) {
             error_ = "unknown call target: " + removedMapCompatibilityPath;
             return false;

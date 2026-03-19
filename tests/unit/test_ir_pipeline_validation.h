@@ -9304,11 +9304,28 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto canonicalizeExperimentalMapHelperResolvedPath = [&](const std::string &resolvedPath,") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isMapNamespacedCountCompatibilityCall = [&](const Expr &candidate) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto getMapNamespacedMethodCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto getDirectMapHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("this->preferredExperimentalMapHelperTarget(helperName)") != std::string::npos);
   CHECK(semanticsExprSource.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("this->canonicalExperimentalMapHelperPath(") != std::string::npos);
   CHECK(semanticsExprSource.find("this->canonicalizeExperimentalMapHelperResolvedPath(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->shouldBuiltinValidateCurrentMapWrapperHelper(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->mapNamespacedMethodCompatibilityPath(expr)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->directMapHelperCompatibilityPath(") != std::string::npos);
+  CHECK(semanticsExprSource.find("const std::string directRemovedMapCompatibilityPath =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
         std::string::npos);
