@@ -476,6 +476,40 @@ main() {
   CHECK(legacyError.empty());
 }
 
+TEST_CASE("graph type resolver infers auto return kinds through shared collection receiver classifiers") {
+  const std::string source = R"(
+[return<auto>]
+packScore([args<string>] values) {
+  return(plus(values.at(0i32).count(), values.at_unsafe(1i32).count()))
+}
+
+[return<auto> effects(heap_alloc)]
+vectorScore() {
+  [vector<string>] values{vector<string>("alpha"raw_utf8, "beta"raw_utf8)}
+  return(plus(values.at(0i32).count(), values.at_unsafe(1i32).count()))
+}
+
+[return<auto> effects(heap_alloc)]
+mapScore() {
+  [map<i32, string>] values{map<i32, string>(1i32, "left"raw_utf8, 2i32, "right"raw_utf8)}
+  return(plus(values.at(1i32).count(), values.at_unsafe(2i32).count()))
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  return(plus(packScore("ab"raw_utf8, "cde"raw_utf8),
+              plus(vectorScore(), mapScore())))
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
 TEST_CASE("default semantics path uses graph resolver while legacy remains available for rollback") {
   const std::string source = R"(
 [return<auto>]
