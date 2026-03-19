@@ -306,6 +306,27 @@ main() {
 }
 )",
       },
+      {
+          "infer_map_value_return_kind",
+          R"(
+[return<auto> effects(heap_alloc)]
+selectValues() {
+  if(true,
+    then(){ return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) },
+    else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
+}
+
+[return<auto> effects(heap_alloc)]
+pickLeft() {
+  return(selectValues().at("left"raw_utf8))
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  return(pickLeft())
+}
+)",
+      },
   };
 
   for (const ParityCase &testCase : cases) {

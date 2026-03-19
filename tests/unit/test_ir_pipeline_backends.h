@@ -436,6 +436,12 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
         std::string::npos);
+  CHECK(validatorInfer.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("return SemanticsValidator::resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, argsOut);") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("auto inferTargetTypeText = [&](const Expr &candidate, std::string &typeTextOut) -> bool {") ==
+        std::string::npos);
   CHECK(validatorInfer.find("formatReturnInferenceCycleDiagnostic(") != std::string::npos);
   CHECK(validatorInfer.find("cycle member: ") != std::string::npos);
   CHECK(validatorInfer.find("allowRecursiveReturnInference_ = false;") != std::string::npos);
@@ -473,6 +479,7 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("query_collection_return_binding") != std::string::npos);
   CHECK(parityHeader.find("query_result_return_binding") != std::string::npos);
   CHECK(parityHeader.find("query_map_receiver_type_text") != std::string::npos);
+  CHECK(parityHeader.find("infer_map_value_return_kind") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally corrects grounded mutual recursion") !=
