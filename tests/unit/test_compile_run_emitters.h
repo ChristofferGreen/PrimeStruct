@@ -7941,7 +7941,7 @@ main() {
   CHECK(runCommand(exePath) == 97);
 }
 
-TEST_CASE("C++ emitter lowers canonical slash-method vector count on map receiver to deleted stub") {
+TEST_CASE("rejects canonical slash-method vector count on map receiver without helper in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -7954,43 +7954,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_count_map_deleted_stub.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_slash_vector_count_map_deleted_stub.cpp")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_count_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_count_method_helper(wrapMap())") != std::string::npos);
-  CHECK(output.find("ps_map_count(") == std::string::npos);
-}
-
-TEST_CASE("rejects canonical slash-method vector count builtin fallback on map receiver in C++ emitter") {
-  const std::string source = R"(
-[return<map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 2i32))
-}
-
-[return<int>]
-main() {
-  return(wrapMap()./std/collections/vector/count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_count_map_deleted_stub_exe.prime", source);
+      writeTemp("compile_cpp_canonical_slash_vector_count_map_no_helper.prime", source);
   const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_slash_vector_count_map_deleted_stub.err")
+       "primec_cpp_canonical_slash_vector_count_map_no_helper.err")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on array receiver") {
@@ -8022,7 +7995,7 @@ main() {
   CHECK(runCommand(exePath) == 98);
 }
 
-TEST_CASE("C++ emitter lowers canonical slash-method vector count on array receiver to deleted stub") {
+TEST_CASE("rejects canonical slash-method vector count on array receiver without helper in C++ emitter") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -8035,43 +8008,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_count_array_deleted_stub.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_slash_vector_count_array_deleted_stub.cpp")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_count_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_count_method_helper(wrapArray())") != std::string::npos);
-  CHECK(output.find("ps_array_count(") == std::string::npos);
-}
-
-TEST_CASE("rejects canonical slash-method vector count builtin fallback on array receiver in C++ emitter") {
-  const std::string source = R"(
-[return<array<i32>>]
-wrapArray() {
-  return(array<i32>(1i32, 2i32, 3i32))
-}
-
-[return<int>]
-main() {
-  return(wrapArray()./std/collections/vector/count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_canonical_slash_vector_count_array_deleted_stub_exe.prime", source);
+      writeTemp("compile_cpp_canonical_slash_vector_count_array_no_helper.prime", source);
   const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_canonical_slash_vector_count_array_deleted_stub.err")
+       "primec_cpp_canonical_slash_vector_count_array_no_helper.err")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps alias slash-method vector count same-path helper on string receiver") {
