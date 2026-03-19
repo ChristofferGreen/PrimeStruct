@@ -15410,6 +15410,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("field-bound map access count keeps builtin string fallback") {
+  const std::string source = R"(
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+Holder() {
+  [map<i32, string>] values{map<i32, string>(1i32, "abc"utf8)}
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(count(holder.values.at(1i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("wrapper-returned canonical map method access count keeps primitive diagnostics") {
   const std::string source = R"(
 [return<int>]
