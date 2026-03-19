@@ -439,9 +439,44 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExpr.find("auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {") ==
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveCallCollectionTemplateArgs =") == std::string::npos);
+  CHECK(validatorExpr.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("makeBuiltinCollectionDispatchResolvers(params, locals)") != std::string::npos);
+  CHECK(validatorExpr.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
+  CHECK(validatorExpr.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("const auto &resolveDereferencedIndexedArgsPackElementType =") != std::string::npos);
+  CHECK(validatorExpr.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("const auto &resolveWrappedIndexedArgsPackElementType =") != std::string::npos);
+  CHECK(validatorExpr.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("const auto &sharedResolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("const auto &sharedResolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("const auto &sharedResolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
+        std::string::npos);
   CHECK(validatorExpr.find("resolveCallCollectionTypePath(target, params, locals, collectionTypePath)") !=
         std::string::npos);
   CHECK(validatorExpr.find("resolveCallCollectionTemplateArgs(target, \"map\", params, locals, args)") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("return sharedResolveArrayTarget(target, elemType);") != std::string::npos);
+  CHECK(validatorExpr.find("return sharedResolveVectorTarget(target, elemType);") != std::string::npos);
+  CHECK(validatorExpr.find("return sharedResolveSoaVectorTarget(target, elemType);") != std::string::npos);
+  CHECK(validatorExpr.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto resolveDereferencedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto resolveWrappedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto extractCollectionElementType = [&](const std::string &typeText,") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
         std::string::npos);
   CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
   CHECK(validatorInfer.find("collectGraphLocalAutoBindings(graph);") != std::string::npos);

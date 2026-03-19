@@ -973,6 +973,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("to_aos validates on borrowed indexed soa_vector receiver") {
+  const std::string source = R"(
+import /std/collections/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/score([args<Reference<soa_vector<Particle>>>] values) {
+  return(count(to_aos(dereference(values[0i32]))))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("to_soa and to_aos helpers compose for explicit conversion") {
   const std::string source = R"(
 import /std/collections/*

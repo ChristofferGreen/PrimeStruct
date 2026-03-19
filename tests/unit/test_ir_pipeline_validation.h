@@ -9234,90 +9234,24 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
                                                              : std::filesystem::path("..");
 
   const std::filesystem::path semanticsExprPath = repoRoot / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
-  const std::filesystem::path semanticsExprBodyArgumentsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprBodyArguments.cpp";
   const std::filesystem::path semanticsExprBlockPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprBlock.cpp";
-  const std::filesystem::path semanticsExprCollectionAccessPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccess.cpp";
-  const std::filesystem::path semanticsExprCollectionAccessValidationPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccessValidation.cpp";
-  const std::filesystem::path semanticsExprCollectionCountCapacityPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionCountCapacity.cpp";
-  const std::filesystem::path semanticsExprCollectionLiteralsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionLiterals.cpp";
   const std::filesystem::path semanticsExprControlFlowPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprControlFlow.cpp";
-  const std::filesystem::path semanticsExprFieldResolutionPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprFieldResolution.cpp";
-  const std::filesystem::path semanticsExprGpuBufferPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprGpuBuffer.cpp";
   const std::filesystem::path semanticsExprLambdaPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
-  const std::filesystem::path semanticsExprMapSoaBuiltinsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMapSoaBuiltins.cpp";
-  const std::filesystem::path semanticsExprMethodResolutionPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
-  const std::filesystem::path semanticsExprNamedArgumentBuiltinsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprNamedArgumentBuiltins.cpp";
   const std::filesystem::path semanticsExprNumericPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
-  const std::filesystem::path semanticsExprPointerLikePath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprPointerLike.cpp";
-  const std::filesystem::path semanticsExprResultFilePath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprResultFile.cpp";
-  const std::filesystem::path semanticsExprScalarPointerMemoryPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprScalarPointerMemory.cpp";
-  const std::filesystem::path semanticsExprTryPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprTry.cpp";
-  const std::filesystem::path semanticsExprVectorHelpersPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
-  REQUIRE(std::filesystem::exists(semanticsExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(semanticsExprBlockPath));
-  REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessPath));
-  REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
-  REQUIRE(std::filesystem::exists(semanticsExprCollectionCountCapacityPath));
-  REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
-  REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
-  REQUIRE(std::filesystem::exists(semanticsExprGpuBufferPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
-  REQUIRE(std::filesystem::exists(semanticsExprMapSoaBuiltinsPath));
-  REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
-  REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
-  REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
-  REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
-  REQUIRE(std::filesystem::exists(semanticsExprScalarPointerMemoryPath));
-  REQUIRE(std::filesystem::exists(semanticsExprTryPath));
-  REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
-  const std::string semanticsExprBodyArgumentsSource = readText(semanticsExprBodyArgumentsPath);
   const std::string semanticsExprBlockSource = readText(semanticsExprBlockPath);
-  const std::string semanticsExprCollectionAccessSource = readText(semanticsExprCollectionAccessPath);
-  const std::string semanticsExprCollectionAccessValidationSource =
-      readText(semanticsExprCollectionAccessValidationPath);
-  const std::string semanticsExprCollectionCountCapacitySource =
-      readText(semanticsExprCollectionCountCapacityPath);
-  const std::string semanticsExprCollectionLiteralsSource =
-      readText(semanticsExprCollectionLiteralsPath);
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
-  const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
-  const std::string semanticsExprGpuBufferSource = readText(semanticsExprGpuBufferPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
-  const std::string semanticsExprMapSoaBuiltinsSource =
-      readText(semanticsExprMapSoaBuiltinsPath);
-  const std::string semanticsExprMethodResolutionSource = readText(semanticsExprMethodResolutionPath);
-  const std::string semanticsExprNamedArgumentBuiltinsSource =
-      readText(semanticsExprNamedArgumentBuiltinsPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
-  const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
-  const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
-  const std::string semanticsExprScalarPointerMemorySource =
-      readText(semanticsExprScalarPointerMemoryPath);
-  const std::string semanticsExprTrySource = readText(semanticsExprTryPath);
-  const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
   CHECK(semanticsExprSource.find("return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);") !=
         std::string::npos);
@@ -9325,132 +9259,131 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("return validateIfExpr(params, locals, expr);") != std::string::npos);
   CHECK(semanticsExprSource.find("if (!validateNumericBuiltinExpr(params, locals, expr, handledNumericBuiltin)) {") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (!resolveExprVectorHelperCall(params,") != std::string::npos);
-  CHECK(semanticsExprSource.find("auto isVectorBuiltinName = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto getVectorStatementHelperName = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveVectorHelperMethodTarget = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto getDirectVectorHelperCompatibilityPath = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto preferVectorStdlibHelperPath = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto isStaticHelperDefinition = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto hasDeclaredDefinitionPath = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveMethodTarget =") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto inferStructFieldBinding = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveStructFieldReceiverPath =") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto isTypeNamespaceFieldReceiver = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveStructFieldBinding =") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto isUnboundMetaReceiver = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto describeMethodReflectionTarget = [&]") == std::string::npos);
-  CHECK(semanticsExprSource.find("auto shouldPreserveBodyArgumentTarget = [&](const std::string &path)") ==
+  CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool") ==
+  CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto remapWrappedMapMethodBodyArgumentTarget = [&]() -> bool") ==
+  CHECK(semanticsExprSource.find("makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto normalizeCollectionMethodName = [](const std::string &methodName)") ==
+  CHECK(semanticsExprSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto inferPointerLikeCallReturnType = [&](const Expr &receiverExpr)") ==
+  CHECK(semanticsExprSource.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolvePointerLikeMethodTarget = [&](const Expr &receiverExpr,") ==
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool") ==
+  CHECK(semanticsExprSource.find("const auto &resolveWrappedIndexedArgsPackElementType =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveCountMethod = [&](bool requireSingleArg) -> bool") ==
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool") ==
+  CHECK(semanticsExprSource.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto isIntegerKind = [&](ReturnKind kind) -> bool") ==
+  CHECK(semanticsExprSource.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto isNumericOrBoolKind = [&](ReturnKind kind) -> bool") ==
+  CHECK(semanticsExprSource.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveArrayElemType = [&](const Expr &arg, std::string &elemType) -> bool") ==
+  CHECK(semanticsExprSource.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool") ==
+  CHECK(semanticsExprSource.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("const bool allowsNamedArgsPackBuiltinLabels =") ==
+  CHECK(semanticsExprSource.find("const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto isLegacyCollectionBuiltinCall = [&]() {") ==
+  CHECK(semanticsExprSource.find("const auto &resolveExperimentalMapTarget =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto isLegacyArrayAccessBuiltinCall = [&]() {") ==
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto isLegacyCountLikeBuiltinCall = [&](const char *helperName)") ==
+  CHECK(semanticsExprSource.find("const auto &resolveExperimentalMapValueTarget =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveLegacyVectorHelperName = [&](std::string &nameOut) -> bool") ==
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto isLegacyVectorHelperBuiltinCall = [&]() {") ==
+  CHECK(semanticsExprSource.find("auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"File\")) {") ==
+  CHECK(semanticsExprSource.find("auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"try\")) {") ==
+  CHECK(semanticsExprSource.find("auto canonicalExperimentalMapHelperPath = [&](const std::string &resolvedPath, std::string &canonicalPathOut, std::string &helperNameOut) {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (resolvedMethod && resolved == \"/result/map2\") {") ==
+  CHECK(semanticsExprSource.find("auto canonicalizeExperimentalMapHelperResolvedPath = [&](const std::string &resolvedPath,") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (resolvedMethod && resolved.rfind(\"/file/\", 0) == 0) {") ==
+  CHECK(semanticsExprSource.find("auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, \"contains\")") ==
+  CHECK(semanticsExprSource.find("auto isMapNamespacedCountCompatibilityCall = [&](const Expr &candidate) -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (!resolvedMethod &&\n          (isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\"))") ==
+  CHECK(semanticsExprSource.find("auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (resolvedMethod && resolved.rfind(\"/soa_vector/field_view/\", 0) == 0)") ==
+  CHECK(semanticsExprSource.find("auto getMapNamespacedMethodCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto getRemovedVectorAccessBuiltinName = [&](const Expr &candidate, std::string &helperOut) -> bool") ==
+  CHECK(semanticsExprSource.find("auto getDirectMapHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (getBuiltinArrayAccessName(expr, builtinName) &&") ==
+  CHECK(semanticsExprSource.find("auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (getBuiltinConvertName(expr, builtinName)) {") ==
+  CHECK(semanticsExprSource.find("auto explicitRemovedCollectionMethodPath = [&](const std::string &rawMethodName) -> std::string {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (getPrintBuiltin(expr, printBuiltin)) {") ==
+  CHECK(semanticsExprSource.find("auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (getBuiltinMemoryName(expr, builtinName)) {") ==
+  CHECK(semanticsExprSource.find("auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto validateMemoryTargetType = [&](const std::string &targetType) -> bool") ==
+  CHECK(semanticsExprSource.find("auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto validateCollectionElementType = [&](const Expr &arg, const std::string &typeName,") ==
+  CHECK(semanticsExprSource.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (getBuiltinCollectionName(expr, builtinName)) {") ==
+  CHECK(semanticsExprSource.find("this->canonicalExperimentalMapHelperPath(") != std::string::npos);
+  CHECK(semanticsExprSource.find("this->canonicalizeExperimentalMapHelperResolvedPath(") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("(isSimpleCallName(expr, \"get\") || isSimpleCallName(expr, \"ref\")) && expr.args.size() == 2") ==
-        std::string::npos);
-  CHECK(semanticsExprSource.find("isSimpleCallName(expr, \"contains\") || getBuiltinArrayAccessName(expr, accessHelperName)") ==
-        std::string::npos);
-  CHECK(semanticsExprSource.find("resolveMethodTarget(params, locals, expr.namespacePrefix,") != std::string::npos);
-  CHECK(semanticsExprSource.find("describeMethodReflectionTarget(params, locals, expr)") != std::string::npos);
-  CHECK(semanticsExprSource.find("resolveStructFieldBinding(params, locals, expr.args.front(), expr.name, fieldBinding)") !=
-        std::string::npos);
-  CHECK(semanticsExprSource.find("isTypeNamespaceMethodCall(params, locals, expr, resolved)") != std::string::npos);
-  CHECK(semanticsExprSource.find("if (!validateExprBodyArguments(params, locals, expr, resolved, resolvedMethod, "
-                                 "enclosingStatements,") != std::string::npos);
-  CHECK(semanticsExprSource.find("resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, "
-                                 "resolved)") != std::string::npos);
-  CHECK(semanticsExprSource.find("inferPointerLikeCallReturnType(receiver, params, locals)") !=
+  CHECK(semanticsExprSource.find("this->shouldBuiltinValidateCurrentMapWrapperHelper(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "resolveExprCollectionCountCapacityTarget(params, locals, expr, countCapacityContext,") !=
+            "this->mapNamespacedMethodCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->directMapHelperCompatibilityPath(") != std::string::npos);
+  CHECK(semanticsExprSource.find("this->explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("this->shouldPreserveRemovedCollectionHelperPath(resolved)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "validateExprTryBuiltin(params, locals, expr, tryContext,") !=
+            "this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "validateExprNamedArgumentBuiltins(params, locals, expr, resolved,") !=
+  CHECK(semanticsExprSource.find("this->resolveRemovedMapBodyArgumentTarget(") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "validateExprGpuBufferBuiltins(params, locals, expr,") !=
+  CHECK(semanticsExprSource.find("auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "validateExprMapSoaBuiltins(params, locals, expr, resolved,") !=
+  CHECK(semanticsExprSource.find("auto remapWrappedMapMethodBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "validateExprCollectionAccessFallbacks(") !=
+  CHECK(semanticsExprSource.find("const std::string directRemovedMapCompatibilityPath =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "validateExprScalarPointerMemoryBuiltins(") !=
+  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "validateExprCollectionLiteralBuiltins(") !=
+  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "validateExprResultFileBuiltins(params, locals, expr, resolved, resolvedMethod,") !=
+  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueTypeOut);") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("resolveExprCollectionAccessTarget(params, locals, expr, collectionAccessContext,") !=
+  CHECK(semanticsExprSource.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveDereferencedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveWrappedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto extractCollectionElementType = [&](const std::string &typeText,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveMapValueTypeForStringTarget = [&](const Expr &target, std::string &valueTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto extractExperimentalMapFieldTypes = [&](const BindingInfo &binding,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveExperimentalMapTarget = [&](const Expr &target,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveExperimentalMapValueTarget = [&](const Expr &target,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
@@ -9458,160 +9391,17 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprBlockSource.find("bool SemanticsValidator::validateBlockExpr") != std::string::npos);
   CHECK(semanticsExprBlockSource.find("block expression does not accept arguments") != std::string::npos);
   CHECK(semanticsExprBlockSource.find("block expression must end with an expression") != std::string::npos);
-  CHECK(semanticsExprCollectionAccessSource.find("bool SemanticsValidator::resolveExprCollectionAccessTarget") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionAccessSource.find("unknown call target: /std/collections/map/") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionAccessSource.find("isSimpleCallName(expr, \"get\") || isSimpleCallName(expr, \"ref\")") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionAccessValidationSource.find(
-            "bool SemanticsValidator::validateExprCollectionAccessFallbacks") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionAccessValidationSource.find(
-            "getRemovedVectorAccessBuiltinName(expr, removedVectorAccessBuiltinName)") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionAccessValidationSource.find(
-            "requires array, vector, map, or string target") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionAccessValidationSource.find(
-            "unknown call target: /std/collections/map/") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionLiteralsSource.find(
-            "bool SemanticsValidator::validateExprCollectionLiteralBuiltins") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionLiteralsSource.find(
-            "soa_vector literal requires struct element type") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionLiteralsSource.find(
-            "array<T, N> is unsupported; use array<T> (runtime-count array)") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionLiteralsSource.find(
-            "map literal requires exactly two template arguments") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "bool SemanticsValidator::resolveExprCollectionCountCapacityTarget") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "auto resolveCountMethod = [&](bool requireSingleArg) -> bool") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "auto isConcreteCountCapacityInstantiation = [&](const std::string &path)") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find("error_ = \"count requires vector target\";") !=
-        std::string::npos);
-  CHECK(semanticsExprResultFileSource.find("bool SemanticsValidator::validateExprResultFileBuiltins") !=
-        std::string::npos);
-  CHECK(semanticsExprResultFileSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"File\")) {") !=
-        std::string::npos);
-  CHECK(semanticsExprResultFileSource.find("Result.map2 requires matching error types") !=
-        std::string::npos);
-  CHECK(semanticsExprResultFileSource.find("file operations require ") !=
-        std::string::npos);
-  CHECK(semanticsExprScalarPointerMemorySource.find(
-            "bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins") !=
-        std::string::npos);
-  CHECK(semanticsExprScalarPointerMemorySource.find("unsupported convert target type: ") !=
-        std::string::npos);
-  CHECK(semanticsExprScalarPointerMemorySource.find("is only supported as a statement") !=
-        std::string::npos);
-  CHECK(semanticsExprScalarPointerMemorySource.find("alloc requires heap_alloc effect") !=
-        std::string::npos);
-  CHECK(semanticsExprScalarPointerMemorySource.find("realloc requires integer element count") !=
-        std::string::npos);
-  CHECK(semanticsExprTrySource.find("bool SemanticsValidator::validateExprTryBuiltin") !=
-        std::string::npos);
-  CHECK(semanticsExprTrySource.find("missing on_error for ? usage") !=
-        std::string::npos);
-  CHECK(semanticsExprTrySource.find("try requires Result argument") !=
-        std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("bool SemanticsValidator::validateIfExpr") != std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("bool SemanticsValidator::isStructConstructorValueExpr") !=
         std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("if branches require block envelopes") != std::string::npos);
-  CHECK(semanticsExprBodyArgumentsSource.find("bool SemanticsValidator::validateExprBodyArguments") !=
-        std::string::npos);
-  CHECK(semanticsExprBodyArgumentsSource.find("block arguments require a definition target: ") !=
-        std::string::npos);
-  CHECK(semanticsExprBodyArgumentsSource.find("resolved = preferVectorStdlibHelperPath(resolved);") !=
-        std::string::npos);
-  CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::resolveStructFieldReceiverPath") !=
-        std::string::npos);
-  CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceFieldReceiver") !=
-        std::string::npos);
-  CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::resolveStructFieldBinding") !=
-        std::string::npos);
-  CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceMethodCall") !=
-        std::string::npos);
-  CHECK(semanticsExprFieldResolutionSource.find("std::string SemanticsValidator::describeMethodReflectionTarget") !=
-        std::string::npos);
-  CHECK(semanticsExprGpuBufferSource.find("bool SemanticsValidator::validateExprGpuBufferBuiltins") !=
-        std::string::npos);
-  CHECK(semanticsExprGpuBufferSource.find(
-            "auto resolveArrayElemType = [&](const Expr &arg, std::string &elemType) -> bool") !=
-        std::string::npos);
-  CHECK(semanticsExprGpuBufferSource.find(
-            "auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool") !=
-        std::string::npos);
-  CHECK(semanticsExprGpuBufferSource.find("dispatch requires gpu_dispatch effect") !=
-        std::string::npos);
-  CHECK(semanticsExprGpuBufferSource.find("buffer_store value type mismatch") !=
-        std::string::npos);
-  CHECK(semanticsExprMapSoaBuiltinsSource.find("bool SemanticsValidator::validateExprMapSoaBuiltins") !=
-        std::string::npos);
-  CHECK(semanticsExprMapSoaBuiltinsSource.find("contains requires map key type ") !=
-        std::string::npos);
-  CHECK(semanticsExprMapSoaBuiltinsSource.find("to_soa requires vector target") !=
-        std::string::npos);
-  CHECK(semanticsExprMapSoaBuiltinsSource.find("soa_vector field views are not implemented yet: ") !=
-        std::string::npos);
   CHECK(semanticsExprLambdaSource.find("bool SemanticsValidator::validateLambdaExpr") != std::string::npos);
   CHECK(semanticsExprLambdaSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") !=
         std::string::npos);
   CHECK(semanticsExprLambdaSource.find("duplicate lambda capture") != std::string::npos);
-  CHECK(semanticsExprMethodResolutionSource.find("bool SemanticsValidator::isStaticHelperDefinition") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodResolutionSource.find("bool SemanticsValidator::hasDeclaredDefinitionPath") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodResolutionSource.find("bool SemanticsValidator::resolveMethodTarget") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodResolutionSource.find(
-            "normalizeBindingTypeName(typeName) == \"map\"") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodResolutionSource.find("unknown method target for ") != std::string::npos);
-  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
-            "bool SemanticsValidator::validateExprNamedArgumentBuiltins") !=
-        std::string::npos);
-  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
-            "auto isLegacyCollectionBuiltinCall = [&]() {") !=
-        std::string::npos);
-  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
-            "auto resolveLegacyVectorHelperName = [&](std::string &nameOut) -> bool") !=
-        std::string::npos);
-  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
-            "named arguments not supported for builtin calls") !=
-        std::string::npos);
   CHECK(semanticsExprNumericSource.find("bool SemanticsValidator::validateNumericBuiltinExpr") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("multiply requires scalar scaling") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("implicit matrix/quaternion family conversion requires explicit helper") !=
-        std::string::npos);
-  CHECK(semanticsExprPointerLikeSource.find("std::string SemanticsValidator::normalizeCollectionMethodName") !=
-        std::string::npos);
-  CHECK(semanticsExprPointerLikeSource.find("std::string SemanticsValidator::inferPointerLikeCallReturnType") !=
-        std::string::npos);
-  CHECK(semanticsExprPointerLikeSource.find("bool SemanticsValidator::resolvePointerLikeMethodTarget") !=
-        std::string::npos);
-  CHECK(semanticsExprPointerLikeSource.find("resolvedOut = \"/\" + typeName + \"/\" + normalizeCollectionMethodName(methodName);") !=
-        std::string::npos);
-  CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::resolveExprVectorHelperCall") !=
-        std::string::npos);
-  CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::isVectorBuiltinName") !=
-        std::string::npos);
-  CHECK(semanticsExprVectorHelpersSource.find("std::string SemanticsValidator::getDirectVectorHelperCompatibilityPath") !=
-        std::string::npos);
-  CHECK(semanticsExprVectorHelpersSource.find("vectorHelper + \" is only supported as a statement\"") !=
         std::string::npos);
 
   const std::filesystem::path semanticsExprPredicatesHeaderPath =
@@ -10095,7 +9885,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("makeBuiltinCollectionDispatchResolvers(params, locals)") != std::string::npos);
+  CHECK(semanticsInferSource.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
   CHECK(semanticsInferSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
   CHECK(semanticsInferSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
         std::string::npos);
@@ -10120,10 +9910,6 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferSource.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
-        std::string::npos);
-  CHECK(semanticsInferSource.find("resolveCallCollectionTypePath(target, params, locals, collectionTypePath)") !=
-        std::string::npos);
-  CHECK(semanticsInferSource.find("resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args)") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
         std::string::npos);
@@ -10206,9 +9992,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("SemanticsValidator::makeBuiltinCollectionDispatchResolvers(") !=
         std::string::npos);
-  CHECK(semanticsInferCollectionsSource.find("state->resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
+  CHECK(semanticsInferCollectionsSource.find("auto resolveBindingTarget = [") !=
         std::string::npos);
-  CHECK(semanticsInferCollectionsSource.find("state->resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
+  CHECK(semanticsInferCollectionsSource.find("auto inferCallBinding = [") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("auto isDirectMapConstructorCall = [") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("state->resolveSoaVectorTarget = [") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("state->resolveBufferTarget = [") !=
         std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind combineNumericReturnKinds") != std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind SemanticsValidator::inferControlFlowExprReturnKind") !=
@@ -26765,7 +26557,7 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
       []() { return 0; },
       [](primec::IrOpcode, uint64_t) {},
       error));
-  CHECK(error == "struct field type mismatch");
+  CHECK(error == "native backend requires struct field values to be numeric/bool on /pkg/Vec");
 }
 
 TEST_CASE("ir lowerer inline param helper emits non-struct parameter flow") {
