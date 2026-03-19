@@ -411,6 +411,9 @@ private:
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
   };
+  BuiltinCollectionDispatchResolvers makeBuiltinCollectionDispatchResolvers(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   struct BuiltinCollectionCountCapacityDispatchContext {
     bool isCountLike = false;
     bool isCapacityLike = false;
