@@ -604,6 +604,36 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
                                std::string &valueTypeOut) -> bool {
     return extractAnyMapKeyValueTypes(binding, keyTypeOut, valueTypeOut);
   };
+  auto isDirectMapConstructorCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+      return false;
+    }
+    const std::string resolvedCandidate = resolveCalleePath(candidate);
+    auto matchesPath = [&](std::string_view basePath) {
+      return resolvedCandidate == basePath || resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
+    };
+    return matchesPath("/std/collections/map/map") ||
+           matchesPath("/std/collections/mapNew") ||
+           matchesPath("/std/collections/mapSingle") ||
+           matchesPath("/std/collections/mapDouble") ||
+           matchesPath("/std/collections/mapPair") ||
+           matchesPath("/std/collections/mapTriple") ||
+           matchesPath("/std/collections/mapQuad") ||
+           matchesPath("/std/collections/mapQuint") ||
+           matchesPath("/std/collections/mapSext") ||
+           matchesPath("/std/collections/mapSept") ||
+           matchesPath("/std/collections/mapOct") ||
+           matchesPath("/std/collections/experimental_map/mapNew") ||
+           matchesPath("/std/collections/experimental_map/mapSingle") ||
+           matchesPath("/std/collections/experimental_map/mapDouble") ||
+           matchesPath("/std/collections/experimental_map/mapPair") ||
+           matchesPath("/std/collections/experimental_map/mapTriple") ||
+           matchesPath("/std/collections/experimental_map/mapQuad") ||
+           matchesPath("/std/collections/experimental_map/mapQuint") ||
+           matchesPath("/std/collections/experimental_map/mapSext") ||
+           matchesPath("/std/collections/experimental_map/mapSept") ||
+           matchesPath("/std/collections/experimental_map/mapOct");
+  };
 
   struct ReceiverResolverState {
     std::function<bool(const Expr &, std::string &)> resolveIndexedArgsPackElementType;
@@ -616,6 +646,8 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     std::function<bool(const Expr &, std::string &)> resolveBufferTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapValueTarget;
     std::function<bool(const Expr &, size_t &)> isDirectCanonicalVectorAccessCallOnBuiltinReceiver;
   };
   auto state = std::make_shared<ReceiverResolverState>();
@@ -1042,6 +1074,47 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     return false;
   };
+  state->resolveExperimentalMapTarget =
+      [&](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+    keyTypeOut.clear();
+    valueTypeOut.clear();
+    BindingInfo binding;
+    if (resolveBindingTarget(target, binding)) {
+      return extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+    }
+    if (target.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (isDirectMapConstructorCall(target)) {
+      std::vector<std::string> args;
+      if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) && args.size() == 2) {
+        keyTypeOut = args[0];
+        valueTypeOut = args[1];
+        return true;
+      }
+    }
+    return inferCallBinding(target, binding) &&
+           extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+  };
+  state->resolveExperimentalMapValueTarget =
+      [&](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+    auto extractValueBinding = [&](const BindingInfo &binding) {
+      const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+      if (normalizedType == "Reference" || normalizedType == "Pointer") {
+        return false;
+      }
+      return extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+    };
+    keyTypeOut.clear();
+    valueTypeOut.clear();
+    BindingInfo binding;
+    if (resolveBindingTarget(target, binding)) {
+      return extractValueBinding(binding);
+    }
+    return target.kind == Expr::Kind::Call &&
+           inferCallBinding(target, binding) &&
+           extractValueBinding(binding);
+  };
   state->isDirectCanonicalVectorAccessCallOnBuiltinReceiver =
       [&](const Expr &candidate, size_t &receiverIndexOut) -> bool {
     receiverIndexOut = 0;
@@ -1173,7 +1246,9 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
           state->resolveSoaVectorTarget,
           state->resolveBufferTarget,
           state->resolveStringTarget,
-          state->resolveMapTarget};
+          state->resolveMapTarget,
+          state->resolveExperimentalMapTarget,
+          state->resolveExperimentalMapValueTarget};
 }
 
 bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
