@@ -405,9 +405,14 @@ private:
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          std::vector<std::string> &argsOut);
   struct BuiltinCollectionDispatchResolvers {
+    std::function<bool(const Expr &, std::string &)> resolveIndexedArgsPackElementType;
+    std::function<bool(const Expr &, std::string &)> resolveDereferencedIndexedArgsPackElementType;
+    std::function<bool(const Expr &, std::string &)> resolveWrappedIndexedArgsPackElementType;
     std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveBufferTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
   };

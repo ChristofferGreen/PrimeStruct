@@ -402,6 +402,16 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("bool inferQueryExprTypeText(const Expr &expr,") != std::string::npos);
   CHECK(validatorHeader.find("BuiltinCollectionDispatchResolvers makeBuiltinCollectionDispatchResolvers(") !=
         std::string::npos);
+  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &)> resolveIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &)> resolveDereferencedIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &)> resolveWrappedIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &)> resolveBufferTarget;") !=
+        std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut)") !=
         std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)") !=
@@ -411,6 +421,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorCollections.find("bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,") !=
         std::string::npos);
   CHECK(validatorCollections.find("SemanticsValidator::makeBuiltinCollectionDispatchResolvers(") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("state->resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("state->resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
         std::string::npos);
   CHECK(validatorCollections.find("if (inferQueryExprTypeText(target, params, locals, targetTypeText))") !=
         std::string::npos);
@@ -441,15 +455,35 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
         std::string::npos);
   CHECK(validatorInfer.find("makeBuiltinCollectionDispatchResolvers(params, locals)") != std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
+  CHECK(validatorInfer.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveWrappedIndexedArgsPackElementType =") != std::string::npos);
+  CHECK(validatorInfer.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
+        std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
         std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
         std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
         std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;") !=
+        std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
         std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("auto resolveDereferencedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("auto resolveWrappedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
   CHECK(validatorInfer.find("auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType)") ==
         std::string::npos);
@@ -457,8 +491,18 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("auto resolveVectorTarget = [&](const Expr &target, std::string &elemType)") ==
         std::string::npos);
+  CHECK(validatorInfer.find("auto resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("auto resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
   CHECK(validatorInfer.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
   CHECK(validatorInfer.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget =") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("auto resolveBuiltinAccessReceiverExprInline = [&](const Expr &accessExpr) -> const Expr * {") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorInfer.find("auto extractCollectionElementType = [&](const std::string &typeText,") ==
         std::string::npos);
   CHECK(validatorInfer.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
         std::string::npos);

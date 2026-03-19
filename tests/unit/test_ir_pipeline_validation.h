@@ -10096,11 +10096,26 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("makeBuiltinCollectionDispatchResolvers(params, locals)") != std::string::npos);
+  CHECK(semanticsInferSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
+  CHECK(semanticsInferSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("const auto &resolveWrappedIndexedArgsPackElementType =") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
+        std::string::npos);
   CHECK(semanticsInferSource.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
         std::string::npos);
@@ -10114,14 +10129,30 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("return SemanticsValidator::resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, argsOut);") !=
         std::string::npos);
+  CHECK(semanticsInferSource.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto resolveDereferencedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto resolveWrappedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType)") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveArrayTarget = [&](const Expr &target, std::string &elemType)") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveVectorTarget = [&](const Expr &target, std::string &elemType)") ==
         std::string::npos);
+  CHECK(semanticsInferSource.find("auto resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
   CHECK(semanticsInferSource.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
   CHECK(semanticsInferSource.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget =") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto resolveBuiltinAccessReceiverExprInline = [&](const Expr &accessExpr) -> const Expr * {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto extractCollectionElementType = [&](const std::string &typeText,") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto inferTargetTypeText = [&](const Expr &candidate, std::string &typeTextOut) -> bool {") ==
         std::string::npos);
@@ -10174,6 +10205,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("SemanticsValidator::makeBuiltinCollectionDispatchResolvers(") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("state->resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("state->resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {") !=
         std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind combineNumericReturnKinds") != std::string::npos);
   CHECK(semanticsInferControlFlowSource.find("ReturnKind SemanticsValidator::inferControlFlowExprReturnKind") !=

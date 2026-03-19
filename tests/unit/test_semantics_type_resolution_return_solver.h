@@ -510,6 +510,31 @@ main() {
   CHECK(legacyError.empty());
 }
 
+TEST_CASE("graph type resolver shares borrowed indexed collection plumbing for soa_vector auto returns") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<auto>]
+scoreRefs([args<Reference<soa_vector<Particle>>>] values) {
+  return(count(to_aos(dereference(values[0i32]))))
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  std::string graphError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
+  CHECK(graphError.empty());
+
+  std::string legacyError;
+  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
+  CHECK(legacyError.empty());
+}
+
 TEST_CASE("default semantics path uses graph resolver while legacy remains available for rollback") {
   const std::string source = R"(
 [return<auto>]
