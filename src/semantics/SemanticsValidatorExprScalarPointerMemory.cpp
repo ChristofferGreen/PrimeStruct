@@ -28,6 +28,98 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     const Expr &expr,
     bool &handledOut) {
   handledOut = false;
+  auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
+    if (binding.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg) && base == "array") {
+        std::vector<std::string> args;
+        if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+          return ReturnKind::Array;
+        }
+      }
+      return returnKindForTypeName(binding.typeTemplateArg);
+    }
+    return returnKindForTypeName(binding.typeName);
+  };
+  auto isIntegerExpr = [&](const Expr &arg) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
+      return true;
+    }
+    if (kind == ReturnKind::Bool || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
+        kind == ReturnKind::String || kind == ReturnKind::Void || kind == ReturnKind::Array) {
+      return false;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral ||
+          arg.kind == Expr::Kind::BoolLiteral) {
+        return false;
+      }
+      if (isPointerExpr(arg, params, locals)) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          ReturnKind paramKind = returnKindForBinding(*paramBinding);
+          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
+                 paramKind == ReturnKind::UInt64;
+        }
+        auto it = locals.find(arg.name);
+        if (it != locals.end()) {
+          ReturnKind localKind = returnKindForBinding(it->second);
+          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
+                 localKind == ReturnKind::UInt64;
+        }
+      }
+      return true;
+    }
+    return false;
+  };
+  auto isConvertibleExpr = [&](const Expr &arg) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+        kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Bool ||
+        kind == ReturnKind::Integer || kind == ReturnKind::Decimal || kind == ReturnKind::Complex) {
+      return true;
+    }
+    if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
+      return false;
+    }
+    if (arg.kind == Expr::Kind::StringLiteral) {
+      return false;
+    }
+    if (isPointerExpr(arg, params, locals)) {
+      return false;
+    }
+    if (arg.kind == Expr::Kind::Call) {
+      std::string collection;
+      if (defMap_.find(resolveCalleePath(arg)) == defMap_.end() &&
+          getBuiltinCollectionName(arg, collection)) {
+        return false;
+      }
+    }
+    if (arg.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+        ReturnKind paramKind = returnKindForBinding(*paramBinding);
+        return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
+               paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Float32 ||
+               paramKind == ReturnKind::Float64 || paramKind == ReturnKind::Bool ||
+               paramKind == ReturnKind::Integer || paramKind == ReturnKind::Decimal ||
+               paramKind == ReturnKind::Complex;
+      }
+      auto it = locals.find(arg.name);
+      if (it != locals.end()) {
+        ReturnKind localKind = returnKindForBinding(it->second);
+        return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
+               localKind == ReturnKind::UInt64 || localKind == ReturnKind::Float32 ||
+               localKind == ReturnKind::Float64 || localKind == ReturnKind::Bool ||
+               localKind == ReturnKind::Integer || localKind == ReturnKind::Decimal ||
+               localKind == ReturnKind::Complex;
+      }
+    }
+    return true;
+  };
 
   auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {
     std::string targetBase;
@@ -158,7 +250,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
-      if (!isIntegerExpr(expr.args.front(), params, locals)) {
+      if (!isIntegerExpr(expr.args.front())) {
         error_ = "alloc requires integer element count";
         return false;
       }
@@ -255,7 +347,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
       }
-      if (!isIntegerExpr(expr.args[1], params, locals)) {
+      if (!isIntegerExpr(expr.args[1])) {
         error_ = "realloc requires integer element count";
         return false;
       }

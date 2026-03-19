@@ -44,8 +44,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       isStdNamespacedVectorAccessCall && hasImportedDefinitionPath(resolveCalleePath(expr));
   const bool isStdNamespacedMapAccessCall =
       hasBuiltinAccessSpelling && !expr.isMethodCall &&
-      (resolveCalleePath(expr) == "/std/collections/map/at" ||
-       resolveCalleePath(expr) == "/std/collections/map/at_unsafe");
+      (resolveCalleePath(expr).rfind("/std/collections/map/at", 0) == 0 ||
+       resolveCalleePath(expr).rfind("/std/collections/map/at_unsafe", 0) == 0);
   const bool prefersExplicitDirectMapAccessAliasDefinition =
       !expr.isMethodCall &&
       (((context.isNamespacedMapHelperCall &&
@@ -58,6 +58,35 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   if (prefersExplicitDirectMapAccessAliasDefinition) {
     resolved = "/map/" + ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : context.namespacedHelper);
   }
+  auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "map/at" && normalized != "map/at_unsafe") {
+      std::string namespacePrefix = candidate.namespacePrefix;
+      if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
+        namespacePrefix.erase(namespacePrefix.begin());
+      }
+      if (namespacePrefix == "map" && (normalized == "at" || normalized == "at_unsafe")) {
+        normalized = "map/" + normalized;
+      }
+    }
+    if (normalized != "map/at" && normalized != "map/at_unsafe") {
+      const std::string resolvedPath = resolveCalleePath(candidate);
+      if (resolvedPath == "/map/at") {
+        normalized = "map/at";
+      } else if (resolvedPath == "/map/at_unsafe") {
+        normalized = "map/at_unsafe";
+      } else {
+        return false;
+      }
+    }
+    return defMap_.find("/" + normalized) == defMap_.end();
+  };
   const bool isResolvedMapAccessCall =
       !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
       !isMapNamespacedAccessCompatibilityCall(expr);
@@ -151,6 +180,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         (void)validateExpr(params, locals, receiverCandidate);
         return false;
       }
+      if ((accessHelperName == "at" || accessHelperName == "at_unsafe") &&
+          context.resolveMapTarget(receiverCandidate) &&
+          defMap_.find("/map/" + accessHelperName) != defMap_.end()) {
+        methodResolved = "/map/" + accessHelperName;
+        isBuiltinMethod = false;
+      }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
         error_ = "unknown method: " + methodResolved;
         return false;
@@ -170,6 +205,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       std::string methodResolved;
       if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), accessHelperName,
                               methodResolved, isBuiltinMethod)) {
+        if ((accessHelperName == "at" || accessHelperName == "at_unsafe") &&
+            context.resolveMapTarget(expr.args.front()) &&
+            defMap_.find("/map/" + accessHelperName) != defMap_.end()) {
+          methodResolved = "/map/" + accessHelperName;
+          isBuiltinMethod = false;
+        }
         if (isBuiltinMethod) {
           usedMethodTarget = true;
           hasMethodReceiverIndex = true;
@@ -192,6 +233,39 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             resolved = methodResolved;
             resolvedMethod = false;
           }
+        }
+      } else {
+        std::string receiverStructPath;
+        if (expr.args.front().kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, expr.args.front().name)) {
+            receiverStructPath = resolveTypePath(paramBinding->typeName, expr.args.front().namespacePrefix);
+          } else if (auto it = locals.find(expr.args.front().name); it != locals.end()) {
+            receiverStructPath = resolveTypePath(it->second.typeName, expr.args.front().namespacePrefix);
+          }
+        } else if (expr.args.front().kind == Expr::Kind::Call) {
+          receiverStructPath = inferStructReturnPath(expr.args.front(), params, locals);
+          if (receiverStructPath.empty()) {
+            auto defIt = defMap_.find(resolveCalleePath(expr.args.front()));
+            if (defIt != defMap_.end() && defIt->second != nullptr) {
+              BindingInfo inferredReturn;
+              if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+                receiverStructPath = resolveTypePath(inferredReturn.typeName, expr.args.front().namespacePrefix);
+              }
+            }
+          }
+          if (receiverStructPath.empty()) {
+            const std::string resolvedReceiver = resolveCalleePath(expr.args.front());
+            if (structNames_.count(resolvedReceiver) > 0) {
+              receiverStructPath = resolvedReceiver;
+            }
+          }
+        }
+        if (!receiverStructPath.empty() && receiverStructPath.front() != '/') {
+          receiverStructPath.insert(receiverStructPath.begin(), '/');
+        }
+        if (!receiverStructPath.empty() && structNames_.count(receiverStructPath) > 0) {
+          error_ = "unknown method: " + receiverStructPath + "/" + accessHelperName;
+          return false;
         }
       }
     }

@@ -17,6 +17,23 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     size_t &methodReceiverIndex) {
   handledOut = false;
 
+  auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
+    if (defMap_.find(path) == defMap_.end()) {
+      return false;
+    }
+    const size_t lastSlash = path.find_last_of('/');
+    const size_t instantiationPos = path.find("__t", lastSlash == std::string::npos ? 0 : lastSlash + 1);
+    if (instantiationPos == std::string::npos) {
+      return false;
+    }
+    const std::string helperName =
+        path.substr(lastSlash == std::string::npos ? 0 : lastSlash + 1, instantiationPos - lastSlash - 1);
+    return helperName == "count" || helperName == "capacity";
+  };
+  if (!expr.isMethodCall && isConcreteCountCapacityInstantiation(resolved)) {
+    return true;
+  }
+
   if (hasNamedArguments(expr.argNames) &&
       expr.args.size() == 1 &&
       defMap_.find(resolved) == defMap_.end() &&
@@ -107,6 +124,45 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     methodReceiverIndex = 0;
     bool isBuiltinMethod = false;
     std::string methodResolved;
+    auto resolveBodyArgumentCountTarget = [&]() -> bool {
+      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) || expr.args.empty()) {
+        return false;
+      }
+      const Expr &receiver = expr.args.front();
+      if (context.resolveMapTarget != nullptr && context.resolveMapTarget(receiver)) {
+        if (defMap_.count("/std/collections/map/count") > 0) {
+          methodResolved = "/std/collections/map/count";
+        } else if (defMap_.count("/map/count") > 0) {
+          methodResolved = "/map/count";
+        } else {
+          methodResolved = "/std/collections/map/count";
+        }
+        return true;
+      }
+      std::string typeName;
+      if (receiver.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+          typeName = paramBinding->typeName;
+        } else if (auto it = locals.find(receiver.name); it != locals.end()) {
+          typeName = it->second.typeName;
+        }
+      }
+      if (typeName.empty()) {
+        typeName = inferPointerLikeCallReturnType(receiver, params, locals);
+      }
+      if (typeName.empty()) {
+        if (isPointerExpr(receiver, params, locals)) {
+          typeName = "Pointer";
+        } else if (isPointerLikeExpr(receiver, params, locals)) {
+          typeName = "Reference";
+        }
+      }
+      if (typeName != "Pointer" && typeName != "Reference") {
+        return false;
+      }
+      methodResolved = "/" + typeName + "/count";
+      return true;
+    };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
         !hasDeclaredDefinitionPath("/map/count") &&
@@ -117,8 +173,23 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       isBuiltinMethod = true;
     } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "count",
                                     methodResolved, isBuiltinMethod)) {
-      (void)validateExpr(params, locals, expr.args.front());
-      return false;
+      if (!resolveBodyArgumentCountTarget()) {
+        (void)validateExpr(params, locals, expr.args.front());
+        return false;
+      }
+      error_.clear();
+      isBuiltinMethod = false;
+    }
+    if (!expr.isMethodCall && context.isNamespacedMapCountCall &&
+        context.resolveMapTarget != nullptr &&
+        context.resolveMapTarget(expr.args.front()) &&
+        hasDeclaredDefinitionPath("/map/count")) {
+      methodResolved = "/map/count";
+      isBuiltinMethod = false;
+    }
+    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
+        resolved.rfind(methodResolved + "__t", 0) == 0) {
+      methodResolved = resolved;
     }
     if (isBuiltinMethod && methodResolved == "/std/collections/map/count" &&
         !hasDeclaredDefinitionPath("/map/count") &&
@@ -183,6 +254,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                              methodResolved, isBuiltinMethod)) {
       (void)validateExpr(params, locals, expr.args.front());
       return false;
+    }
+    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
+        resolved.rfind(methodResolved + "__t", 0) == 0) {
+      methodResolved = resolved;
     }
     if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
       if (requireSingleArg &&

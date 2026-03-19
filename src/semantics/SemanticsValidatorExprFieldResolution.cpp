@@ -6,6 +6,12 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
                                                         const std::unordered_map<std::string, BindingInfo> &locals,
                                                         const Expr &receiverExpr,
                                                         std::string &structPathOut) {
+  auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
+    if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
+      return false;
+    }
+    return resolveStructFieldBinding(params, locals, target.args.front(), target.name, bindingOut);
+  };
   auto resolveStructPathFromType = [&](const std::string &typeName,
                                        const std::string &namespacePrefix,
                                        std::string &resolvedStructPathOut) -> bool {
@@ -59,6 +65,124 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
         return true;
       }
       return false;
+  };
+  auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {
+    return resolveArgsPackElementTypeForExpr(target, params, locals, elemType);
+  };
+  auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
+    if (target.kind == Expr::Kind::Name) {
+      auto resolveReference = [&](const BindingInfo &binding) -> bool {
+        if (binding.typeName != "Reference" || binding.typeTemplateArg.empty()) {
+          return false;
+        }
+        std::string base;
+        std::string arg;
+        if (!splitTemplateTypeName(binding.typeTemplateArg, base, arg) || base != "array") {
+          return false;
+        }
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          return false;
+        }
+        elemType = args.front();
+        return true;
+      };
+      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+        if (resolveReference(*paramBinding)) {
+          return true;
+        }
+        if ((paramBinding->typeName == "array" || paramBinding->typeName == "vector") &&
+            !paramBinding->typeTemplateArg.empty()) {
+          elemType = paramBinding->typeTemplateArg;
+          return true;
+        }
+        return false;
+      }
+      auto it = locals.find(target.name);
+      if (it == locals.end()) {
+        return false;
+      }
+      if (resolveReference(it->second)) {
+        return true;
+      }
+      if ((it->second.typeName == "array" || it->second.typeName == "vector") &&
+          !it->second.typeTemplateArg.empty()) {
+        elemType = it->second.typeTemplateArg;
+        return true;
+      }
+      return false;
+    }
+    BindingInfo fieldBinding;
+    if (resolveFieldBindingTarget(target, fieldBinding)) {
+      std::string base;
+      std::string arg;
+      if (fieldBinding.typeName == "Reference" && !fieldBinding.typeTemplateArg.empty() &&
+          splitTemplateTypeName(fieldBinding.typeTemplateArg, base, arg) && base == "array") {
+        std::vector<std::string> args;
+        if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+          elemType = args.front();
+          return true;
+        }
+      }
+      if ((fieldBinding.typeName == "array" || fieldBinding.typeName == "vector") &&
+          !fieldBinding.typeTemplateArg.empty()) {
+        elemType = fieldBinding.typeTemplateArg;
+        return true;
+      }
+    }
+    if (target.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string collectionTypePath;
+    if (!resolveCallCollectionTypePath(target, params, locals, collectionTypePath) ||
+        (collectionTypePath != "/array" && collectionTypePath != "/vector")) {
+      return false;
+    }
+    std::vector<std::string> args;
+    const std::string expectedBase = collectionTypePath == "/vector" ? "vector" : "array";
+    if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args) &&
+        args.size() == 1) {
+      elemType = args.front();
+    }
+    return true;
+  };
+  auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
+    if (target.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+        if (paramBinding->typeName == "vector" && !paramBinding->typeTemplateArg.empty()) {
+          elemType = paramBinding->typeTemplateArg;
+          return true;
+        }
+        return false;
+      }
+      auto it = locals.find(target.name);
+      if (it != locals.end() && it->second.typeName == "vector" &&
+          !it->second.typeTemplateArg.empty()) {
+        elemType = it->second.typeTemplateArg;
+        return true;
+      }
+      return false;
+    }
+    BindingInfo fieldBinding;
+    if (resolveFieldBindingTarget(target, fieldBinding) &&
+        fieldBinding.typeName == "vector" && !fieldBinding.typeTemplateArg.empty()) {
+      elemType = fieldBinding.typeTemplateArg;
+      return true;
+    }
+    if (target.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string collectionTypePath;
+    if (!resolveCallCollectionTypePath(target, params, locals, collectionTypePath) ||
+        collectionTypePath != "/vector") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (resolveCallCollectionTemplateArgs(target, "vector", params, locals, args) &&
+        args.size() == 1) {
+      elemType = args.front();
+    }
+    return true;
   };
 
   structPathOut.clear();

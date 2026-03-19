@@ -43,6 +43,41 @@ bool SemanticsValidator::validateExprBodyArguments(const std::vector<ParameterIn
     return true;
   }
 
+  auto resolveMapTarget = [&](const Expr &target) -> bool {
+    std::string keyType;
+    std::string valueType;
+    if (target.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+        return extractMapKeyValueTypes(*paramBinding, keyType, valueType);
+      }
+      auto it = locals.find(target.name);
+      return it != locals.end() && extractMapKeyValueTypes(it->second, keyType, valueType);
+    }
+    if (target.kind != Expr::Kind::Call) {
+      return false;
+    }
+
+    std::string collectionTypePath;
+    if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
+        collectionTypePath == "/map") {
+      return true;
+    }
+
+    auto defIt = defMap_.find(resolveCalleePath(target));
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1) {
+        return returnsMapCollectionType(transform.templateArgs.front());
+      }
+    }
+
+    BindingInfo inferredReturn;
+    return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+           extractMapKeyValueTypes(inferredReturn, keyType, valueType);
+  };
+
   auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {
     auto helperSuffix = [](const std::string &candidate, const char *prefix) -> std::string_view {
       const size_t prefixLen = std::char_traits<char>::length(prefix);

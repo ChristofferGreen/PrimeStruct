@@ -12,6 +12,18 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     const Expr &expr,
     bool &handledOut) {
   handledOut = false;
+  auto isStringExpr = [&](const Expr &arg) -> bool {
+    if (arg.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    if (inferExprReturnKind(arg, params, locals) == ReturnKind::String) {
+      return true;
+    }
+    std::string collectionTypePath;
+    return arg.kind == Expr::Kind::Call &&
+           resolveCallCollectionTypePath(arg, params, locals, collectionTypePath) &&
+           collectionTypePath == "/string";
+  };
 
   auto validateCollectionElementType = [&](const Expr &arg,
                                            const std::string &typeName,

@@ -9421,7 +9421,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
                                  "enclosingStatements,") != std::string::npos);
   CHECK(semanticsExprSource.find("resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, "
                                  "resolved)") != std::string::npos);
-  CHECK(semanticsExprSource.find("inferPointerLikeCallReturnType(expr.args.front(), params, locals)") !=
+  CHECK(semanticsExprSource.find("inferPointerLikeCallReturnType(receiver, params, locals)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "resolveExprCollectionCountCapacityTarget(params, locals, expr, countCapacityContext,") !=
@@ -9493,6 +9493,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "auto resolveCountMethod = [&](bool requireSingleArg) -> bool") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "auto isConcreteCountCapacityInstantiation = [&](const std::string &path)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool") !=
@@ -9574,6 +9577,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find("bool SemanticsValidator::resolveMethodTarget") !=
         std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "normalizeBindingTypeName(typeName) == \"map\"") !=
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find("unknown method target for ") != std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "bool SemanticsValidator::validateExprNamedArgumentBuiltins") !=
@@ -9597,7 +9603,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprPointerLikeSource.find("bool SemanticsValidator::resolvePointerLikeMethodTarget") !=
         std::string::npos);
-  CHECK(semanticsExprPointerLikeSource.find("return \"/\" + typeName + \"/\" + normalizeCollectionMethodName(methodName);") !=
+  CHECK(semanticsExprPointerLikeSource.find("resolvedOut = \"/\" + typeName + \"/\" + normalizeCollectionMethodName(methodName);") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::resolveExprVectorHelperCall") !=
         std::string::npos);

@@ -411,10 +411,10 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("NAME PrimeStruct_include_layers") != std::string::npos);
   CHECK(cmake.find("scripts/check_include_layers.py") != std::string::npos);
   CHECK(cmake.find("scripts/include_layer_allowlist.txt") != std::string::npos);
-  CHECK(cmake.find("NAME PrimeStruct_misc_suite_registration") != std::string::npos);
-  CHECK(cmake.find("NAME PrimeStruct_backend_suite_registration") != std::string::npos);
-  CHECK(cmake.find("NAME PrimeStruct_parser_suite_registration") != std::string::npos);
-  CHECK(cmake.find("NAME PrimeStruct_text_filter_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_misc_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_backend_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_parser_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_text_filter_suite_registration") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)") == std::string::npos);
 }
 

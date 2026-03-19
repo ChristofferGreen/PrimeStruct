@@ -16,6 +16,63 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     bool &handledOut) {
   handledOut = false;
   const bool resolvedMissing = defMap_.find(resolved) == defMap_.end();
+  auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
+    if (binding.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg) && base == "array") {
+        std::vector<std::string> args;
+        if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+          return ReturnKind::Array;
+        }
+      }
+      return returnKindForTypeName(binding.typeTemplateArg);
+    }
+    return returnKindForTypeName(binding.typeName);
+  };
+  auto isIntegerExpr = [&](const Expr &arg) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
+      return true;
+    }
+    if (kind == ReturnKind::Bool || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
+        kind == ReturnKind::String || kind == ReturnKind::Void || kind == ReturnKind::Array) {
+      return false;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral ||
+          arg.kind == Expr::Kind::BoolLiteral) {
+        return false;
+      }
+      if (isPointerExpr(arg, params, locals)) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          ReturnKind paramKind = returnKindForBinding(*paramBinding);
+          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
+                 paramKind == ReturnKind::UInt64;
+        }
+        auto it = locals.find(arg.name);
+        if (it != locals.end()) {
+          ReturnKind localKind = returnKindForBinding(it->second);
+          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
+                 localKind == ReturnKind::UInt64;
+        }
+      }
+      return true;
+    }
+    return false;
+  };
+  auto isStringExpr = [&](const Expr &arg) -> bool {
+    if (arg.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    if (context.resolveStringTarget != nullptr && context.resolveStringTarget(arg)) {
+      return true;
+    }
+    return inferExprReturnKind(arg, params, locals) == ReturnKind::String;
+  };
 
   auto validateMapContainsKeyExpr = [&](const Expr &keyExpr,
                                         const std::string &mapKeyType) -> bool {
@@ -147,7 +204,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = helperName + " requires soa_vector target";
       return false;
     }
-    if (!isIntegerExpr(expr.args[1], params, locals)) {
+    if (!isIntegerExpr(expr.args[1])) {
       error_ = helperName + " requires integer index";
       return false;
     }
@@ -212,7 +269,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = helperName + " requires soa_vector target";
       return false;
     }
-    if (!isIntegerExpr(expr.args[1], params, locals)) {
+    if (!isIntegerExpr(expr.args[1])) {
       error_ = helperName + " requires integer index";
       return false;
     }

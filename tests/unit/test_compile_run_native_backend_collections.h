@@ -3123,7 +3123,7 @@ main() {
   CHECK(runCommand(exePath) == 83);
 }
 
-TEST_CASE("native user wrapper temporary count capacity shadow precedence currently fails during lowering") {
+TEST_CASE("native user wrapper temporary count capacity shadow precedence currently fails during semantic resolution") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -3169,7 +3169,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: count") != std::string::npos);
 }
 
 TEST_CASE("rejects native user wrapper temporary count capacity shadow value mismatch") {

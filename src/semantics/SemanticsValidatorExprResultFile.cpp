@@ -13,6 +13,73 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     const ExprResultFileBuiltinContext &context,
     bool &handledOut) {
   handledOut = false;
+  auto isMutableBinding = [&](const std::string &name) -> bool {
+    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+      return paramBinding->isMutable;
+    }
+    auto it = locals.find(name);
+    return it != locals.end() && it->second.isMutable;
+  };
+  auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
+    if (binding.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg) && base == "array") {
+        std::vector<std::string> args;
+        if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+          return ReturnKind::Array;
+        }
+      }
+      return returnKindForTypeName(binding.typeTemplateArg);
+    }
+    return returnKindForTypeName(binding.typeName);
+  };
+  auto isStringExpr = [&](const Expr &arg) -> bool {
+    if (arg.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    if (inferExprReturnKind(arg, params, locals) == ReturnKind::String) {
+      return true;
+    }
+    std::string collectionTypePath;
+    return arg.kind == Expr::Kind::Call &&
+           resolveCallCollectionTypePath(arg, params, locals, collectionTypePath) &&
+           collectionTypePath == "/string";
+  };
+  auto isIntegerExpr = [&](const Expr &arg) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
+      return true;
+    }
+    if (kind == ReturnKind::Bool || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
+        kind == ReturnKind::String || kind == ReturnKind::Void || kind == ReturnKind::Array) {
+      return false;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral ||
+          arg.kind == Expr::Kind::BoolLiteral) {
+        return false;
+      }
+      if (isPointerExpr(arg, params, locals)) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          ReturnKind paramKind = returnKindForBinding(*paramBinding);
+          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
+                 paramKind == ReturnKind::UInt64;
+        }
+        auto it = locals.find(arg.name);
+        if (it != locals.end()) {
+          ReturnKind localKind = returnKindForBinding(it->second);
+          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
+                 localKind == ReturnKind::UInt64;
+        }
+      }
+      return true;
+    }
+    return false;
+  };
 
   if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
     handledOut = true;
@@ -290,7 +357,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
         error_ = "at does not accept block arguments";
         return false;
       }
-      if (!isIntegerExpr(receiverExpr.args[1], params, locals)) {
+      if (!isIntegerExpr(receiverExpr.args[1])) {
         error_ = "at requires integer index";
         return false;
       }
@@ -410,7 +477,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
       }
-      if (expr.args[1].kind != Expr::Kind::Name || !isMutableBinding(params, locals, expr.args[1].name)) {
+      if (expr.args[1].kind != Expr::Kind::Name || !isMutableBinding(expr.args[1].name)) {
         error_ = "read_byte requires mutable integer binding";
         return false;
       }

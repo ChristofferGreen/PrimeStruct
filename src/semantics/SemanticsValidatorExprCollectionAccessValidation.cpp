@@ -41,6 +41,62 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   handledOut = false;
   const bool resolvedMissing = defMap_.find(resolved) == defMap_.end();
 
+  auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
+    if (binding.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg) && base == "array") {
+        std::vector<std::string> args;
+        if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+          return ReturnKind::Array;
+        }
+      }
+      return returnKindForTypeName(binding.typeTemplateArg);
+    }
+    return returnKindForTypeName(binding.typeName);
+  };
+  auto isIntegerExpr = [&](const Expr &arg) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
+      return true;
+    }
+    if (kind == ReturnKind::Bool || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
+        kind == ReturnKind::String || kind == ReturnKind::Void || kind == ReturnKind::Array) {
+      return false;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral ||
+          arg.kind == Expr::Kind::BoolLiteral) {
+        return false;
+      }
+      if (isPointerExpr(arg, params, locals)) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          ReturnKind paramKind = returnKindForBinding(*paramBinding);
+          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
+                 paramKind == ReturnKind::UInt64;
+        }
+        auto it = locals.find(arg.name);
+        if (it != locals.end()) {
+          ReturnKind localKind = returnKindForBinding(it->second);
+          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
+                 localKind == ReturnKind::UInt64;
+        }
+      }
+      return true;
+    }
+    return false;
+  };
+  auto isStringExpr = [&](const Expr &arg) -> bool {
+    if (context.resolveStringTarget != nullptr && context.resolveStringTarget(arg)) {
+      return true;
+    }
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    return kind == ReturnKind::String || arg.kind == Expr::Kind::StringLiteral;
+  };
+
   auto validateMapKeyExpr = [&](const std::string &helperName,
                                 const Expr &keyExpr,
                                 const std::string &mapKeyType) -> bool {
@@ -137,17 +193,43 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return false;
     }
 
+    size_t indexArgIndex = 1;
     std::string elemType;
-    const bool isArrayOrString =
-        (context.resolveArgsPackAccessTarget != nullptr &&
-         context.resolveArgsPackAccessTarget(expr.args.front(), elemType)) ||
-        (context.resolveArrayTarget != nullptr &&
-         context.resolveArrayTarget(expr.args.front(), elemType)) ||
-        (context.resolveStringTarget != nullptr &&
-         context.resolveStringTarget(expr.args.front()));
+    auto isArrayOrStringTarget = [&](const Expr &candidate, std::string &elemTypeOut) {
+      return (context.resolveArgsPackAccessTarget != nullptr &&
+              context.resolveArgsPackAccessTarget(candidate, elemTypeOut)) ||
+             (context.resolveArrayTarget != nullptr &&
+              context.resolveArrayTarget(candidate, elemTypeOut)) ||
+             (context.resolveStringTarget != nullptr &&
+              context.resolveStringTarget(candidate));
+    };
     std::string mapKeyType;
-    const bool isMap = context.resolveMapKeyType != nullptr &&
-                       context.resolveMapKeyType(expr.args.front(), mapKeyType);
+    auto isMapTarget = [&](const Expr &candidate, std::string &mapKeyTypeOut) {
+      return context.resolveMapKeyType != nullptr &&
+             context.resolveMapKeyType(candidate, mapKeyTypeOut);
+    };
+    bool isArrayOrString = isArrayOrStringTarget(expr.args.front(), elemType);
+    bool isMap = isMapTarget(expr.args.front(), mapKeyType);
+    const bool shouldProbeReorderedReceiver =
+        expr.args.size() == 2 &&
+        (expr.args.front().kind == Expr::Kind::Literal ||
+         expr.args.front().kind == Expr::Kind::BoolLiteral ||
+         expr.args.front().kind == Expr::Kind::FloatLiteral ||
+         expr.args.front().kind == Expr::Kind::StringLiteral ||
+         (expr.args.front().kind == Expr::Kind::Name && !isArrayOrString && !isMap));
+    if (!isArrayOrString && !isMap && shouldProbeReorderedReceiver) {
+      std::string reorderedElemType;
+      std::string reorderedMapKeyType;
+      const bool reorderedArrayOrString = isArrayOrStringTarget(expr.args[1], reorderedElemType);
+      const bool reorderedMap = isMapTarget(expr.args[1], reorderedMapKeyType);
+      if (reorderedArrayOrString || reorderedMap) {
+        indexArgIndex = 0;
+        elemType = reorderedElemType;
+        mapKeyType = reorderedMapKeyType;
+        isArrayOrString = reorderedArrayOrString;
+        isMap = reorderedMap;
+      }
+    }
     if (!isArrayOrString && !isMap) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
@@ -163,6 +245,35 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         error_ = "unknown method: " + methodResolved;
         return false;
       }
+      if (expr.args.front().kind == Expr::Kind::Call || expr.args.front().kind == Expr::Kind::Name) {
+        std::string receiverStructPath;
+        if (expr.args.front().kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, expr.args.front().name)) {
+            receiverStructPath = resolveTypePath(paramBinding->typeName, expr.args.front().namespacePrefix);
+          } else if (auto it = locals.find(expr.args.front().name); it != locals.end()) {
+            receiverStructPath = resolveTypePath(it->second.typeName, expr.args.front().namespacePrefix);
+          }
+        } else {
+          receiverStructPath = inferStructReturnPath(expr.args.front(), params, locals);
+          if (receiverStructPath.empty()) {
+            auto defIt = defMap_.find(resolveCalleePath(expr.args.front()));
+            if (defIt != defMap_.end() && defIt->second != nullptr) {
+              BindingInfo inferredReturn;
+              if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+                receiverStructPath = resolveTypePath(inferredReturn.typeName, expr.args.front().namespacePrefix);
+              }
+            }
+          }
+        }
+        if (!receiverStructPath.empty() && receiverStructPath.front() != '/') {
+          receiverStructPath.insert(receiverStructPath.begin(), '/');
+        }
+        if (!receiverStructPath.empty() && context.isNonCollectionStructAccessTarget != nullptr &&
+            context.isNonCollectionStructAccessTarget(receiverStructPath + "/" + builtinName)) {
+          error_ = "unknown method: " + receiverStructPath + "/" + builtinName;
+          return false;
+        }
+      }
       error_ = builtinName +
                " requires array, vector, map, or string target";
       return false;
@@ -177,11 +288,11 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return false;
     }
     if (!isMap) {
-      if (!isIntegerExpr(expr.args[1], params, locals)) {
+      if (!isIntegerExpr(expr.args[indexArgIndex])) {
         error_ = builtinName + " requires integer index";
         return false;
       }
-    } else if (!validateMapKeyExpr(builtinName, expr.args[1], mapKeyType)) {
+    } else if (!validateMapKeyExpr(builtinName, expr.args[indexArgIndex], mapKeyType)) {
       return false;
     }
 

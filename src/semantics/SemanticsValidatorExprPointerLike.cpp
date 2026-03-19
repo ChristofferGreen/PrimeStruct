@@ -31,37 +31,46 @@ std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) 
     }
     candidates.push_back(candidate);
   };
+  auto canonicalizePath = [](const std::string &candidate) {
+    const size_t instantiationPos = candidate.find("__t");
+    if (instantiationPos == std::string::npos) {
+      return candidate;
+    }
+    return candidate.substr(0, instantiationPos);
+  };
 
+  const std::string canonicalPath = canonicalizePath(path);
   appendUnique(path);
-  if (path.rfind("/array/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/array/").size());
+  appendUnique(canonicalPath);
+  if (canonicalPath.rfind("/array/", 0) == 0) {
+    const std::string suffix = canonicalPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique("/vector/" + suffix);
       appendUnique("/std/collections/vector/" + suffix);
     }
-  } else if (path.rfind("/vector/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/vector/").size());
+  } else if (canonicalPath.rfind("/vector/", 0) == 0) {
+    const std::string suffix = canonicalPath.substr(std::string("/vector/").size());
     if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
       appendUnique("/std/collections/vector/" + suffix);
     }
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique("/array/" + suffix);
     }
-  } else if (path.rfind("/std/collections/vector/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
+  } else if (canonicalPath.rfind("/std/collections/vector/", 0) == 0) {
+    const std::string suffix = canonicalPath.substr(std::string("/std/collections/vector/").size());
     if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
       appendUnique("/vector/" + suffix);
     }
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique("/array/" + suffix);
     }
-  } else if (path.rfind("/map/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/map/").size());
+  } else if (canonicalPath.rfind("/map/", 0) == 0) {
+    const std::string suffix = canonicalPath.substr(std::string("/map/").size());
     if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
       appendUnique("/std/collections/map/" + suffix);
     }
-  } else if (path.rfind("/std/collections/map/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/std/collections/map/").size());
+  } else if (canonicalPath.rfind("/std/collections/map/", 0) == 0) {
+    const std::string suffix = canonicalPath.substr(std::string("/std/collections/map/").size());
     if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
         suffix != "at" && suffix != "at_unsafe") {
       appendUnique("/map/" + suffix);
@@ -107,7 +116,33 @@ std::string SemanticsValidator::inferPointerLikeCallReturnType(
     return "";
   }
 
-  for (const auto &callPath : pointerLikeCallPathCandidates(resolveCalleePath(receiverExpr))) {
+  std::vector<std::string> candidatePaths;
+  auto appendCandidatePaths = [&](const std::string &path) {
+    for (const auto &candidate : pointerLikeCallPathCandidates(path)) {
+      bool seen = false;
+      for (const auto &existing : candidatePaths) {
+        if (existing == candidate) {
+          seen = true;
+          break;
+        }
+      }
+      if (!seen) {
+        candidatePaths.push_back(candidate);
+      }
+    }
+  };
+
+  appendCandidatePaths(resolveCalleePath(receiverExpr));
+  std::string rawPath = receiverExpr.name;
+  if (!receiverExpr.namespacePrefix.empty()) {
+    rawPath = receiverExpr.namespacePrefix + "/" + receiverExpr.name;
+  }
+  if (!rawPath.empty() && rawPath.front() != '/') {
+    rawPath.insert(rawPath.begin(), '/');
+  }
+  appendCandidatePaths(rawPath);
+
+  for (const auto &callPath : candidatePaths) {
     auto defIt = defMap_.find(callPath);
     if (defIt == defMap_.end() || defIt->second == nullptr) {
       continue;
