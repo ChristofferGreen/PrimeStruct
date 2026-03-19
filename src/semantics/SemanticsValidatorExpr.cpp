@@ -4402,7 +4402,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           !hasImportedDefinitionPath(resolved) &&
           expr.args.size() == 1) {
         std::string elemType;
-        if (resolveMapTarget(expr.args.front()) || resolveArrayTarget(expr.args.front(), elemType)) {
+        if (resolveMapTarget(expr.args.front()) || resolveArrayTarget(expr.args.front(), elemType) ||
+            resolveStringTarget(expr.args.front())) {
           error_ = "unknown method: /std/collections/vector/count";
           return false;
         }

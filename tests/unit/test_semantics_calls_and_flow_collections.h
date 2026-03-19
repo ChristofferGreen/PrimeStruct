@@ -9422,6 +9422,19 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector count method rejects string receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("array namespaced slash method spelling rejects statement body arguments") {
   const std::string source = R"(
 [return<int>]
