@@ -13107,6 +13107,84 @@ main() {
   CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced count slash method accepts same-path helper on string target") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([string] values) {
+  return(46i32)
+}
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./vector/count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced count slash method string target without helper reports unknown method") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count slash method accepts same-path helper on array target") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([array<i32>] values) {
+  return(47i32)
+}
+
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(wrapArray()./vector/count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced count slash method array target without helper reports unknown method") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(wrapArray()./vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
 [return<int>]

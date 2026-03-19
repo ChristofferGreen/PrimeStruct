@@ -4441,7 +4441,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           expr.args.size() == 1 &&
           expr.args.front().kind == Expr::Kind::Call) {
         std::string elemType;
-        if (resolveVectorTarget(expr.args.front(), elemType)) {
+        if (resolveVectorTarget(expr.args.front(), elemType) ||
+            resolveArrayTarget(expr.args.front(), elemType) ||
+            resolveStringTarget(expr.args.front())) {
           error_ = "unknown method: /vector/count";
           return false;
         }

@@ -8046,7 +8046,7 @@ main() {
   CHECK(runCommand(exePath) == 96);
 }
 
-TEST_CASE("C++ emitter lowers alias slash-method vector count on string receiver to deleted stub") {
+TEST_CASE("C++ emitter rejects alias slash-method vector count on string receiver before emission") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -8065,15 +8065,13 @@ main() {
        "primec_cpp_alias_slash_vector_count_string_deleted_stub.cpp")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_count_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_count_method_helper(wrapText())") != std::string::npos);
-  CHECK(output.find("ps_string_count(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects alias slash-method vector count builtin fallback on string receiver in C++ emitter") {
+TEST_CASE("rejects alias slash-method vector count on string receiver in C++ emitter") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -8095,7 +8093,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps alias slash-method vector count same-path helper on map receiver") {
@@ -8208,7 +8206,7 @@ main() {
   CHECK(runCommand(exePath) == 98);
 }
 
-TEST_CASE("C++ emitter lowers alias slash-method vector count on array receiver to deleted stub") {
+TEST_CASE("C++ emitter rejects alias slash-method vector count on array receiver before emission") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -8227,15 +8225,13 @@ main() {
        "primec_cpp_alias_slash_vector_count_array_deleted_stub.cpp")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_count_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_count_method_helper(wrapArray())") != std::string::npos);
-  CHECK(output.find("ps_array_count(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects alias slash-method vector count builtin fallback on array receiver in C++ emitter") {
+TEST_CASE("rejects alias slash-method vector count on array receiver in C++ emitter") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -8257,7 +8253,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on string receiver") {
