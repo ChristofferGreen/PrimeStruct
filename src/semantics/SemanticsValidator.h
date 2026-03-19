@@ -414,6 +414,10 @@ private:
   bool shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const;
   std::string mapNamespacedMethodCompatibilityPath(const Expr &candidate) const;
   std::string directMapHelperCompatibilityPath(const Expr &candidate) const;
+  std::string explicitRemovedCollectionMethodPath(std::string_view rawMethodName,
+                                                  std::string_view namespacePrefix) const;
+  bool shouldPreserveRemovedCollectionHelperPath(const std::string &path) const;
+  bool isUnnamespacedMapCountBuiltinFallbackCall(const Expr &candidate) const;
   struct BuiltinCollectionDispatchResolverAdapters {
     std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;
     std::function<bool(const Expr &, BindingInfo &)> inferCallBinding;
