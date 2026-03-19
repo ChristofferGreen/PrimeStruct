@@ -200,6 +200,10 @@ private:
                                          const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          std::vector<std::string> &argsOut);
+  struct BuiltinCollectionDispatchResolverAdapters {
+    std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;
+    std::function<bool(const Expr &, BindingInfo &)> inferCallBinding;
+  };
   struct BuiltinCollectionDispatchResolvers {
     std::function<bool(const Expr &, std::string &)> resolveIndexedArgsPackElementType;
     std::function<bool(const Expr &, std::string &)> resolveDereferencedIndexedArgsPackElementType;
@@ -214,7 +218,8 @@ private:
   };
   BuiltinCollectionDispatchResolvers makeBuiltinCollectionDispatchResolvers(
       const std::vector<ParameterInfo> &params,
-      const std::unordered_map<std::string, BindingInfo> &locals);
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const BuiltinCollectionDispatchResolverAdapters &adapters = {});
   struct BuiltinCollectionCountCapacityDispatchContext {
     bool isCountLike = false;
     bool isCapacityLike = false;

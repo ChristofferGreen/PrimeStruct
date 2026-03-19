@@ -9259,9 +9259,11 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("return validateIfExpr(params, locals, expr);") != std::string::npos);
   CHECK(semanticsExprSource.find("if (!validateNumericBuiltinExpr(params, locals, expr, handledNumericBuiltin)) {") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("makeBuiltinCollectionDispatchResolvers(params, locals)") !=
+  CHECK(semanticsExprSource.find("makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
   CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
@@ -9276,15 +9278,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("const auto &sharedResolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
+  CHECK(semanticsExprSource.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("const auto &sharedResolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
+  CHECK(semanticsExprSource.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("const auto &sharedResolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
+  CHECK(semanticsExprSource.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("return sharedResolveArrayTarget(target, elemType);") != std::string::npos);
-  CHECK(semanticsExprSource.find("return sharedResolveVectorTarget(target, elemType);") != std::string::npos);
-  CHECK(semanticsExprSource.find("return sharedResolveSoaVectorTarget(target, elemType);") != std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveDereferencedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
@@ -9296,6 +9301,15 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("auto extractCollectionElementType = [&](const std::string &typeText,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveMapValueTypeForStringTarget = [&](const Expr &target, std::string &valueTypeOut) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
