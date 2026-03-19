@@ -411,6 +411,9 @@ private:
                                           std::string &helperNameOut) const;
   bool canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,
                                                      std::string &canonicalPathOut) const;
+  bool shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const;
+  std::string mapNamespacedMethodCompatibilityPath(const Expr &candidate) const;
+  std::string directMapHelperCompatibilityPath(const Expr &candidate) const;
   struct BuiltinCollectionDispatchResolverAdapters {
     std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;
     std::function<bool(const Expr &, BindingInfo &)> inferCallBinding;

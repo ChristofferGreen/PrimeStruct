@@ -408,6 +408,12 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("bool canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,") !=
         std::string::npos);
+  CHECK(validatorHeader.find("bool shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const;") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("std::string mapNamespacedMethodCompatibilityPath(const Expr &candidate) const;") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("std::string directMapHelperCompatibilityPath(const Expr &candidate) const;") !=
+        std::string::npos);
   CHECK(validatorHeader.find("struct BuiltinCollectionDispatchResolverAdapters {") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;") !=
@@ -465,6 +471,12 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,") !=
         std::string::npos);
+  CHECK(validatorCollections.find("bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const {") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(const Expr &candidate) const {") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("std::string SemanticsValidator::directMapHelperCompatibilityPath(const Expr &candidate) const {") !=
+        std::string::npos);
   CHECK(validatorCollections.find("if (inferQueryExprTypeText(target, params, locals, targetTypeText))") !=
         std::string::npos);
   CHECK(validatorBuild.find("inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const") !=
@@ -519,10 +531,24 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExpr.find("auto canonicalizeExperimentalMapHelperResolvedPath = [&](const std::string &resolvedPath,") ==
         std::string::npos);
+  CHECK(validatorExpr.find("auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto isMapNamespacedCountCompatibilityCall = [&](const Expr &candidate) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto getMapNamespacedMethodCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto getDirectMapHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
+        std::string::npos);
   CHECK(validatorExpr.find("this->preferredExperimentalMapHelperTarget(helperName)") != std::string::npos);
   CHECK(validatorExpr.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") != std::string::npos);
   CHECK(validatorExpr.find("this->canonicalExperimentalMapHelperPath(") != std::string::npos);
   CHECK(validatorExpr.find("this->canonicalizeExperimentalMapHelperResolvedPath(") != std::string::npos);
+  CHECK(validatorExpr.find("this->shouldBuiltinValidateCurrentMapWrapperHelper(") != std::string::npos);
+  CHECK(validatorExpr.find("this->mapNamespacedMethodCompatibilityPath(expr)") != std::string::npos);
+  CHECK(validatorExpr.find("this->directMapHelperCompatibilityPath(") != std::string::npos);
+  CHECK(validatorExpr.find("const std::string directRemovedMapCompatibilityPath =") != std::string::npos);
   CHECK(validatorExpr.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
         std::string::npos);
   CHECK(validatorExpr.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") !=

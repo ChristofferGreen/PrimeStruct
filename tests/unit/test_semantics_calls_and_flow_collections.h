@@ -7792,6 +7792,54 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("field-bound experimental map compatibility count calls keep removed-path diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+/std/collections/map/count([map<string, i32>] values) {
+  return(17i32)
+}
+
+Holder() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(/map/count(holder.values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+}
+
+TEST_CASE("field-bound experimental map stdlib namespaced methods keep removed-path diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+/std/collections/map/count([map<string, i32>] values) {
+  return(17i32)
+}
+
+Holder() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(holder.values./std/collections/map/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+}
+
 TEST_CASE("stdlib map constructor assignments accept explicit experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
