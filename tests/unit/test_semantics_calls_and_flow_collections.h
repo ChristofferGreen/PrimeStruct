@@ -1395,6 +1395,44 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("wrapper vector count method resolves through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc)]
+wrapVector() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper vector count method requires helper") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+wrapVector() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("count wrapper temporary chained method reports i32 path diagnostics") {
   const std::string source = R"(
 wrapText() {

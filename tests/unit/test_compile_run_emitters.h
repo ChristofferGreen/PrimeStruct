@@ -10811,7 +10811,29 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("rejects wrapper vector count methods without helper before emission in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector().count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_count_method_deleted_stub_cpp.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_vector_count_method_deleted_stub.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs wrapper bare vector count through imported stdlib helper in C++ emitter") {
