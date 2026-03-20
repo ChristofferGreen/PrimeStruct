@@ -9516,7 +9516,11 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("collectionAccessValidationContext.resolveExperimentalMapTarget =") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("collectionAccessValidationContext.isMapLikeBareAccessReceiverTarget =") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("auto getRemovedVectorAccessBuiltinName = [&](const Expr &candidate, std::string &helperOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isMapLikeBareAccessReceiver = [&](const Expr &candidate) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("unknown call target: /std/collections/map/\" + builtinName") ==
         std::string::npos);
@@ -9653,6 +9657,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find(
             "bool SemanticsValidator::isNamedArgsPackWrappedFileBuiltinAccessCall") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "bool SemanticsValidator::isMapLikeBareAccessReceiver") !=
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find(
             "bool SemanticsValidator::isArrayNamespacedVectorCountCompatibilityCall") !=

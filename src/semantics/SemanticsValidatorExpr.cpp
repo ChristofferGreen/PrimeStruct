@@ -1835,46 +1835,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (handledNumericBuiltin) {
         return true;
       }
-      auto isMapLikeBareAccessReceiver = [&](const Expr &candidate) -> bool {
-        std::string keyType;
-        std::string valueType;
-        if (resolveMapTarget(candidate) ||
-            resolveExperimentalMapTarget(candidate, keyType, valueType)) {
-          return true;
-        }
-        if (candidate.kind != Expr::Kind::Call) {
-          return false;
-        }
-        auto defIt = defMap_.find(resolveCalleePath(candidate));
-        if ((defIt == defMap_.end() || defIt->second == nullptr) &&
-            !candidate.name.empty() && candidate.name.find('/') == std::string::npos) {
-          defIt = defMap_.find("/" + candidate.name);
-        }
-        if (defIt != defMap_.end() && defIt->second != nullptr) {
-          BindingInfo inferredReturn;
-          if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-            const std::string inferredTypeText =
-                inferredReturn.typeTemplateArg.empty()
-                    ? inferredReturn.typeName
-                    : inferredReturn.typeName + "<" +
-                          inferredReturn.typeTemplateArg + ">";
-            if (returnsMapCollectionType(inferredTypeText)) {
-              return true;
-            }
-          }
-          for (const auto &transform : defIt->second->transforms) {
-            if (transform.name == "return" &&
-                transform.templateArgs.size() == 1 &&
-                returnsMapCollectionType(transform.templateArgs.front())) {
-              return true;
-            }
-          }
-        }
-        std::string receiverTypeText;
-        return inferQueryExprTypeText(candidate, params, locals,
-                                      receiverTypeText) &&
-               returnsMapCollectionType(receiverTypeText);
-      };
       ExprCollectionAccessValidationContext collectionAccessValidationContext;
       collectionAccessValidationContext.isStdNamespacedVectorAccessCall =
           isStdNamespacedVectorAccessCall;
@@ -1928,7 +1888,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           };
       collectionAccessValidationContext.isMapLikeBareAccessReceiverTarget =
           [&](const Expr &target) {
-            return isMapLikeBareAccessReceiver(target);
+            return this->isMapLikeBareAccessReceiver(
+                target, params, locals, builtinCollectionDispatchResolvers);
           };
       collectionAccessValidationContext.isNonCollectionStructAccessTarget =
           [&](const std::string &targetPath) {
@@ -1953,8 +1914,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) && expr.args.size() == 2 &&
           !hasNamedArguments(expr.argNames)) {
-        if (!isMapLikeBareAccessReceiver(expr.args.front()) &&
-            isMapLikeBareAccessReceiver(expr.args[1])) {
+        if (!this->isMapLikeBareAccessReceiver(
+                expr.args.front(), params, locals,
+                builtinCollectionDispatchResolvers) &&
+            this->isMapLikeBareAccessReceiver(
+                expr.args[1], params, locals,
+                builtinCollectionDispatchResolvers)) {
           Expr rewrittenMapAccessCall = expr;
           std::swap(rewrittenMapAccessCall.args[0], rewrittenMapAccessCall.args[1]);
           return validateExpr(params, locals, rewrittenMapAccessCall);
@@ -2576,38 +2541,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) && expr.args.size() == 2 &&
           !hasNamedArguments(expr.argNames)) {
-        auto isMapLikeBareAccessReceiver = [&](const Expr &candidate) -> bool {
-          std::string keyType;
-          std::string valueType;
-          if (resolveMapTarget(candidate) || resolveExperimentalMapTarget(candidate, keyType, valueType)) {
-            return true;
-          }
-          if (candidate.kind != Expr::Kind::Call) {
-            return false;
-          }
-          auto defIt = defMap_.find(resolveCalleePath(candidate));
-          if ((defIt == defMap_.end() || defIt->second == nullptr) &&
-              !candidate.name.empty() && candidate.name.find('/') == std::string::npos) {
-            defIt = defMap_.find("/" + candidate.name);
-          }
-          if (defIt != defMap_.end() && defIt->second != nullptr) {
-            BindingInfo inferredReturn;
-            if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-              const std::string inferredTypeText =
-                  inferredReturn.typeTemplateArg.empty()
-                      ? inferredReturn.typeName
-                      : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
-              if (returnsMapCollectionType(inferredTypeText)) {
-                return true;
-              }
-            }
-          }
-          std::string receiverTypeText;
-          return inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
-                 returnsMapCollectionType(receiverTypeText);
-        };
-        if (!isMapLikeBareAccessReceiver(expr.args.front()) &&
-            isMapLikeBareAccessReceiver(expr.args[1])) {
+        if (!this->isMapLikeBareAccessReceiver(
+                expr.args.front(), params, locals,
+                builtinCollectionDispatchResolvers) &&
+            this->isMapLikeBareAccessReceiver(
+                expr.args[1], params, locals,
+                builtinCollectionDispatchResolvers)) {
           Expr rewrittenMapAccessCall = expr;
           std::swap(rewrittenMapAccessCall.args[0], rewrittenMapAccessCall.args[1]);
           return validateExpr(params, locals, rewrittenMapAccessCall);

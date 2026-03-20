@@ -514,6 +514,11 @@ private:
   bool isNamedArgsPackWrappedFileBuiltinAccessCall(
       const Expr &target,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  bool isMapLikeBareAccessReceiver(
+      const Expr &candidate,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers);
   bool isArrayNamespacedVectorCountCompatibilityCall(
       const Expr &candidate,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;

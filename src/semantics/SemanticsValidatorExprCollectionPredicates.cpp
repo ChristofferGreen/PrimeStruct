@@ -90,6 +90,52 @@ bool SemanticsValidator::isNamedArgsPackWrappedFileBuiltinAccessCall(
          normalizeBindingTypeName(base) == "File" && !argText.empty();
 }
 
+bool SemanticsValidator::isMapLikeBareAccessReceiver(
+    const Expr &candidate,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers) {
+  std::string keyType;
+  std::string valueType;
+  if ((dispatchResolvers.resolveMapTarget != nullptr &&
+       dispatchResolvers.resolveMapTarget(candidate, keyType, valueType)) ||
+      (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
+       dispatchResolvers.resolveExperimentalMapTarget(candidate, keyType,
+                                                     valueType))) {
+    return true;
+  }
+  if (candidate.kind != Expr::Kind::Call) {
+    return false;
+  }
+  auto defIt = defMap_.find(resolveCalleePath(candidate));
+  if ((defIt == defMap_.end() || defIt->second == nullptr) &&
+      !candidate.name.empty() && candidate.name.find('/') == std::string::npos) {
+    defIt = defMap_.find("/" + candidate.name);
+  }
+  if (defIt != defMap_.end() && defIt->second != nullptr) {
+    BindingInfo inferredReturn;
+    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+      const std::string inferredTypeText =
+          inferredReturn.typeTemplateArg.empty()
+              ? inferredReturn.typeName
+              : inferredReturn.typeName + "<" +
+                    inferredReturn.typeTemplateArg + ">";
+      if (returnsMapCollectionType(inferredTypeText)) {
+        return true;
+      }
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+          returnsMapCollectionType(transform.templateArgs.front())) {
+        return true;
+      }
+    }
+  }
+  std::string receiverTypeText;
+  return inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
+         returnsMapCollectionType(receiverTypeText);
+}
+
 bool SemanticsValidator::isArrayNamespacedVectorCountCompatibilityCall(
     const Expr &candidate,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
