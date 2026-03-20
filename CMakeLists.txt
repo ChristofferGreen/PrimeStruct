@@ -76,6 +76,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprNumeric.cpp
   src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp
   src/semantics/SemanticsValidatorExprPointerLike.cpp
+  src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp
   src/semantics/SemanticsValidatorExprResultFile.cpp
   src/semantics/SemanticsValidatorExprScalarPointerMemory.cpp
   src/semantics/SemanticsValidatorExprTry.cpp

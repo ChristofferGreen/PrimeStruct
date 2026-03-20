@@ -467,6 +467,40 @@ private:
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const BuiltinCollectionDispatchResolverAdapters &adapters = {});
+  size_t mapHelperReceiverIndex(const Expr &candidate,
+                                const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  bool bareMapHelperOperandIndices(const Expr &candidate,
+                                   const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+                                   size_t &receiverIndexOut,
+                                   size_t &keyIndexOut) const;
+  std::string preferredBareMapHelperTarget(std::string_view helperName) const;
+  std::string specializedExperimentalMapHelperTarget(std::string_view helperName,
+                                                     const std::string &keyType,
+                                                     const std::string &valueType) const;
+  std::string preferredBareVectorHelperTarget(std::string_view helperName) const;
+  bool tryRewriteBareMapHelperCall(const Expr &candidate,
+                                   std::string_view helperName,
+                                   const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+                                   Expr &rewrittenOut) const;
+  bool tryRewriteBareVectorHelperCall(const Expr &candidate,
+                                      std::string_view helperName,
+                                      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+                                      Expr &rewrittenOut) const;
+  bool tryRewriteCanonicalExperimentalMapHelperCall(
+      const Expr &candidate,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      Expr &rewrittenOut) const;
+  bool explicitCanonicalExperimentalMapBorrowedHelperPath(
+      const Expr &candidate,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      std::string &resolvedPathOut) const;
+  bool hasResolvableMapHelperPath(const std::string &path) const;
+  bool resolveMapKeyType(const Expr &target,
+                         const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+                         std::string &keyTypeOut) const;
+  bool resolveMapValueType(const Expr &target,
+                           const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+                           std::string &valueTypeOut) const;
   struct BuiltinCollectionCountCapacityDispatchContext {
     bool isCountLike = false;
     bool isCapacityLike = false;

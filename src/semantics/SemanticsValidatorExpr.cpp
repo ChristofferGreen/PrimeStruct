@@ -407,8 +407,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;
     const auto &resolveExperimentalMapTarget =
         builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;
-    const auto &resolveExperimentalMapValueTarget =
-        builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget;
     auto isNamedArgsPackMethodAccessCall = [&](const Expr &target) -> bool {
       if (!target.isMethodCall) {
         return false;
@@ -490,244 +488,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
-    auto mapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {
-      size_t receiverIndex = 0;
-      if (hasNamedArguments(candidate.argNames)) {
-        for (size_t i = 0; i < candidate.args.size(); ++i) {
-          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
-              *candidate.argNames[i] == "values") {
-            return i;
-          }
-        }
-      }
-      if (!candidate.args.empty() && !resolveMapTarget(candidate.args.front())) {
-        for (size_t i = 1; i < candidate.args.size(); ++i) {
-          if (resolveMapTarget(candidate.args[i])) {
-            return i;
-          }
-        }
-      }
-      return receiverIndex;
-    };
-    auto bareMapHelperOperandIndices = [&](const Expr &candidate,
-                                           size_t &receiverIndexOut,
-                                           size_t &keyIndexOut) -> bool {
-      receiverIndexOut = 0;
-      keyIndexOut = 0;
-      if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 2) {
-        return false;
-      }
-      receiverIndexOut = mapHelperReceiverIndex(candidate);
-      if (receiverIndexOut >= candidate.args.size() ||
-          !resolveMapTarget(candidate.args[receiverIndexOut])) {
-        return false;
-      }
-      keyIndexOut = receiverIndexOut == 0 ? 1 : 0;
-      return keyIndexOut < candidate.args.size();
-    };
-    auto preferredBareMapHelperTarget = [&](std::string_view helperName) {
-      const std::string canonical = "/std/collections/map/" + std::string(helperName);
-      if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
-        return canonical;
-      }
-      const std::string alias = "/map/" + std::string(helperName);
-      if (hasDefinitionPath(alias)) {
-        return alias;
-      }
-      return canonical;
-    };
-    auto specializedExperimentalMapHelperTarget = [&](std::string_view helperName,
-                                                      const std::string &keyType,
-                                                      const std::string &valueType) {
-      auto fnv1a64 = [](const std::string &text) {
-        uint64_t hash = 1469598103934665603ULL;
-        for (unsigned char ch : text) {
-          hash ^= static_cast<uint64_t>(ch);
-          hash *= 1099511628211ULL;
-        }
-        return hash;
-      };
-      auto stripWhitespace = [](const std::string &text) {
-        std::string out;
-        out.reserve(text.size());
-        for (unsigned char ch : text) {
-          if (!std::isspace(ch)) {
-            out.push_back(static_cast<char>(ch));
-          }
-        }
-        return out;
-      };
-      const std::string basePath = this->preferredCanonicalExperimentalMapHelperTarget(helperName);
-      std::ostringstream specializedPath;
-      specializedPath << basePath
-                      << "__t"
-                      << std::hex
-                      << fnv1a64(stripWhitespace(joinTemplateArgs({keyType, valueType})));
-      if (defMap_.count(specializedPath.str()) > 0) {
-        return specializedPath.str();
-      }
-      return basePath;
-    };
-    auto preferredBareVectorHelperTarget = [&](std::string_view helperName) {
-      const std::string canonical = "/std/collections/vector/" + std::string(helperName);
-      if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
-        return canonical;
-      }
-      const std::string alias = "/vector/" + std::string(helperName);
-      if (hasDefinitionPath(alias)) {
-        return alias;
-      }
-      return canonical;
-    };
-    auto tryRewriteBareMapHelperCall = [&](const Expr &candidate,
-                                           std::string_view helperName,
-                                           Expr &rewrittenOut) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
-        return false;
-      }
-      if (candidate.name == "/std/collections/map/" + std::string(helperName) ||
-          candidate.name == "/map/" + std::string(helperName)) {
-        return false;
-      }
-      const size_t receiverIndex = mapHelperReceiverIndex(candidate);
-      if (receiverIndex >= candidate.args.size() || !resolveMapTarget(candidate.args[receiverIndex])) {
-        return false;
-      }
-      rewrittenOut = candidate;
-      std::string keyType;
-      std::string valueType;
-      if (resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType)) {
-        rewrittenOut.name = specializedExperimentalMapHelperTarget(helperName, keyType, valueType);
-        rewrittenOut.templateArgs.clear();
-      } else {
-        rewrittenOut.name = preferredBareMapHelperTarget(helperName);
-      }
-      rewrittenOut.namespacePrefix.clear();
-      return true;
-    };
-    auto tryRewriteBareVectorHelperCall = [&](const Expr &candidate,
-                                              std::string_view helperName,
-                                              Expr &rewrittenOut) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
-        return false;
-      }
-      if (candidate.name != helperName || candidate.name.find('/') != std::string::npos ||
-          !candidate.namespacePrefix.empty()) {
-        return false;
-      }
-      if (defMap_.find("/" + std::string(helperName)) != defMap_.end()) {
-        return false;
-      }
-      const size_t receiverIndex = mapHelperReceiverIndex(candidate);
-      if (receiverIndex >= candidate.args.size()) {
-        return false;
-      }
-      std::string elemType;
-      if (!resolveVectorTarget(candidate.args[receiverIndex], elemType)) {
-        return false;
-      }
-      rewrittenOut = candidate;
-      rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
-      rewrittenOut.namespacePrefix.clear();
-      return true;
-    };
-    auto tryRewriteCanonicalExperimentalMapHelperCall = [&](const Expr &candidate, Expr &rewrittenOut) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.args.empty()) {
-        return false;
-      }
-      std::string canonicalPath;
-      std::string helperName;
-      Expr canonicalCandidate = candidate;
-      if (candidate.isMethodCall) {
-        std::string normalizedMethod = candidate.name;
-        if (!normalizedMethod.empty() && normalizedMethod.front() == '/') {
-          normalizedMethod.erase(normalizedMethod.begin());
-        }
-        if (normalizedMethod != "count" && normalizedMethod != "contains" && normalizedMethod != "tryAt" &&
-            normalizedMethod != "at" && normalizedMethod != "at_unsafe") {
-          return false;
-        }
-        helperName = normalizedMethod;
-        canonicalPath = "/std/collections/map/" + normalizedMethod;
-        canonicalCandidate.isMethodCall = false;
-        canonicalCandidate.name = canonicalPath;
-        canonicalCandidate.namespacePrefix.clear();
-      } else {
-        const std::string resolvedPath = resolveCalleePath(candidate);
-        if (!this->canonicalExperimentalMapHelperPath(resolvedPath, canonicalPath, helperName)) {
-          return false;
-        }
-      }
-      const size_t receiverIndex = candidate.isMethodCall ? 0 : mapHelperReceiverIndex(canonicalCandidate);
-      if (receiverIndex >= canonicalCandidate.args.size()) {
-        return false;
-      }
-      const Expr &receiverExpr = canonicalCandidate.args[receiverIndex];
-      if (candidate.isMethodCall &&
-          receiverExpr.kind == Expr::Kind::Call &&
-          !receiverExpr.isBinding &&
-          !receiverExpr.isMethodCall) {
-        return false;
-      }
-      if (!candidate.isMethodCall &&
-          !candidate.templateArgs.empty() &&
-          receiverExpr.kind == Expr::Kind::Call &&
-          !receiverExpr.isBinding &&
-          !receiverExpr.isMethodCall) {
-        return false;
-      }
-      std::string keyType;
-      std::string valueType;
-      if (!resolveExperimentalMapValueTarget(receiverExpr, keyType, valueType) &&
-          !resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
-        return false;
-      }
-      rewrittenOut = canonicalCandidate;
-      if (rewrittenOut.templateArgs.empty()) {
-        rewrittenOut.templateArgs = {keyType, valueType};
-      }
-      if (!candidate.isMethodCall) {
-        rewrittenOut.name = specializedExperimentalMapHelperTarget(helperName, keyType, valueType);
-        rewrittenOut.namespacePrefix.clear();
-        rewrittenOut.templateArgs.clear();
-      }
-      return true;
-    };
-    auto explicitCanonicalExperimentalMapBorrowedHelperPath = [&](const Expr &candidate,
-                                                                  std::string &resolvedPathOut) {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
-        return false;
-      }
-      std::string helperName;
-      if (!this->canonicalExperimentalMapHelperPath(resolveCalleePath(candidate), resolvedPathOut, helperName)) {
-        return false;
-      }
-      const size_t receiverIndex = mapHelperReceiverIndex(candidate);
-      if (receiverIndex >= candidate.args.size()) {
-        return false;
-      }
-      std::string keyType;
-      std::string valueType;
-      return resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType) &&
-             !resolveExperimentalMapValueTarget(candidate.args[receiverIndex], keyType, valueType);
-    };
-    auto hasResolvableMapHelperPath = [&](const std::string &path) {
-      return hasDefinitionPath(path) || hasImportedDefinitionPath(path);
-    };
     const bool shouldBuiltinValidateBareMapCountCall = true;
     const bool shouldBuiltinValidateBareMapContainsCall = true;
     const bool shouldBuiltinValidateBareMapTryAtCall = true;
     const bool shouldBuiltinValidateBareMapAccessCall = true;
-    auto resolveMapKeyType = [&](const Expr &target, std::string &keyTypeOut) -> bool {
-      keyTypeOut.clear();
-      std::string valueType;
-      return resolveMapTargetWithTypes(target, keyTypeOut, valueType);
-    };
-    auto resolveMapValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {
-      valueTypeOut.clear();
-      std::string keyType;
-      return resolveMapTargetWithTypes(target, keyType, valueTypeOut);
-    };
     auto resolveLeadingNonCollectionAccessReceiverPath = [&](const Expr &receiverExpr,
                                                              std::string_view helperName,
                                                              std::string &pathOut) -> bool {
@@ -937,7 +701,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (defMap_.find(resolveCalleePath(arg)) == defMap_.end() && getBuiltinArrayAccessName(arg, accessName) &&
             arg.args.size() == 2) {
           std::string mapValueType;
-          if (resolveMapValueType(arg.args.front(), mapValueType) && normalizeBindingTypeName(mapValueType) == "string") {
+          if (this->resolveMapValueType(arg.args.front(), builtinCollectionDispatchResolvers, mapValueType) &&
+              normalizeBindingTypeName(mapValueType) == "string") {
             return true;
           }
         }
@@ -1295,12 +1060,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       resolved = canonicalExperimentalMapHelperResolved;
     }
     Expr rewrittenCanonicalExperimentalMapHelperCall;
-    if (tryRewriteCanonicalExperimentalMapHelperCall(expr, rewrittenCanonicalExperimentalMapHelperCall)) {
+    if (this->tryRewriteCanonicalExperimentalMapHelperCall(
+            expr, builtinCollectionDispatchResolvers, rewrittenCanonicalExperimentalMapHelperCall)) {
       return validateExpr(params, locals, rewrittenCanonicalExperimentalMapHelperCall);
     }
     std::string borrowedCanonicalExperimentalMapHelperPath;
     if (!expr.isMethodCall &&
-        explicitCanonicalExperimentalMapBorrowedHelperPath(expr, borrowedCanonicalExperimentalMapHelperPath)) {
+        this->explicitCanonicalExperimentalMapBorrowedHelperPath(
+            expr, builtinCollectionDispatchResolvers, borrowedCanonicalExperimentalMapHelperPath)) {
       error_ = "unknown call target: " + borrowedCanonicalExperimentalMapHelperPath;
       return false;
     }
@@ -1615,7 +1382,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
         std::string mapValueType;
-        if (!resolveMapValueType(*accessReceiver, mapValueType) ||
+        if (!this->resolveMapValueType(*accessReceiver, builtinCollectionDispatchResolvers, mapValueType) ||
             normalizeBindingTypeName(mapValueType) == "string") {
           return false;
         }
@@ -1730,8 +1497,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     Expr rewrittenVectorHelperCall;
-    if (tryRewriteBareVectorHelperCall(expr, "count", rewrittenVectorHelperCall) ||
-        tryRewriteBareVectorHelperCall(expr, "capacity", rewrittenVectorHelperCall)) {
+    if (this->tryRewriteBareVectorHelperCall(
+            expr, "count", builtinCollectionDispatchResolvers, rewrittenVectorHelperCall) ||
+        this->tryRewriteBareVectorHelperCall(
+            expr, "capacity", builtinCollectionDispatchResolvers, rewrittenVectorHelperCall)) {
       return validateExpr(params, locals, rewrittenVectorHelperCall);
     }
     if ((isStdNamespacedVectorCountCall && expr.args.size() == 1 && resolveMapTarget(expr.args.front())) &&
@@ -1876,8 +1645,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
-    } else if (tryRewriteBareVectorHelperCall(expr, "at", rewrittenVectorHelperCall) ||
-               tryRewriteBareVectorHelperCall(expr, "at_unsafe", rewrittenVectorHelperCall)) {
+    } else if (this->tryRewriteBareVectorHelperCall(
+                   expr, "at", builtinCollectionDispatchResolvers, rewrittenVectorHelperCall) ||
+               this->tryRewriteBareVectorHelperCall(
+                   expr, "at_unsafe", builtinCollectionDispatchResolvers, rewrittenVectorHelperCall)) {
       return validateExpr(params, locals, rewrittenVectorHelperCall);
     } else if (isBuiltinAccessName &&
                !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames)) &&
@@ -2197,7 +1968,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                      std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe" : "at");
             return false;
           }
-        } else if (defMap_.find(methodResolved) == defMap_.end() && !hasResolvableMapHelperPath(methodResolved)) {
+        } else if (defMap_.find(methodResolved) == defMap_.end() &&
+                   !this->hasResolvableMapHelperPath(methodResolved)) {
           error_ = "unknown method: " + methodResolved;
           return false;
         }
@@ -3630,7 +3402,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           it == defMap_.end()) {
         if (!shouldBuiltinValidateBareMapCountCall) {
           Expr rewrittenMapHelperCall;
-          if (tryRewriteBareMapHelperCall(expr, "count", rewrittenMapHelperCall)) {
+          if (this->tryRewriteBareMapHelperCall(
+                  expr, "count", builtinCollectionDispatchResolvers, rewrittenMapHelperCall)) {
             return validateExpr(params, locals, rewrittenMapHelperCall);
           }
         }
@@ -3715,11 +3488,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         size_t receiverIndex = 0;
         size_t keyIndex = 1;
-        const bool hasBareMapOperands = bareMapHelperOperandIndices(expr, receiverIndex, keyIndex);
+        const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
+            expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
         const Expr &receiverExpr = hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
         const Expr &keyExpr = hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
         std::string mapKeyType;
-        if (!resolveMapKeyType(receiverExpr, mapKeyType)) {
+        if (!this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType)) {
           if (!validateExpr(params, locals, receiverExpr)) {
             return false;
           }
@@ -3768,11 +3542,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         size_t receiverIndex = 0;
         size_t keyIndex = 1;
-        const bool hasBareMapOperands = bareMapHelperOperandIndices(expr, receiverIndex, keyIndex);
+        const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
+            expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
         const Expr &receiverExpr = hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
         const Expr &keyExpr = hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
         std::string mapKeyType;
-        if (!resolveMapKeyType(receiverExpr, mapKeyType)) {
+        if (!this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType)) {
           if (!validateExpr(params, locals, receiverExpr)) {
             return false;
           }
@@ -3979,7 +3754,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames))) {
         if (!shouldBuiltinValidateBareMapAccessCall) {
           Expr rewrittenMapHelperCall;
-          if (tryRewriteBareMapHelperCall(expr, builtinName, rewrittenMapHelperCall)) {
+          if (this->tryRewriteBareMapHelperCall(
+                  expr, builtinName, builtinCollectionDispatchResolvers, rewrittenMapHelperCall)) {
             return validateExpr(params, locals, rewrittenMapHelperCall);
           }
         }
@@ -4002,7 +3778,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         size_t receiverIndex = 0;
         size_t keyIndex = 1;
-        const bool hasBareMapOperands = bareMapHelperOperandIndices(expr, receiverIndex, keyIndex);
+        const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
+            expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
         const Expr &receiverExpr = hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
         const Expr &indexExpr = hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
         std::string elemType;
@@ -4016,7 +3793,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = builtinName + " requires integer index";
           return false;
         }
-        bool isMap = resolveMapKeyType(receiverExpr, mapKeyType);
+        bool isMap =
+            this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType);
         if (!isArrayOrString && !isMap) {
           if (!validateExpr(params, locals, receiverExpr)) {
             return false;
@@ -4436,7 +4214,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
           expr.args.size() == 2) {
-        const size_t receiverIndex = mapHelperReceiverIndex(expr);
+        const size_t receiverIndex = this->mapHelperReceiverIndex(expr, builtinCollectionDispatchResolvers);
         if (receiverIndex < expr.args.size()) {
           const Expr &receiverExpr = expr.args[receiverIndex];
           std::string elemType;
@@ -5072,20 +4850,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (!expr.isMethodCall && isSimpleCallName(expr, "contains") && !shouldBuiltinValidateBareMapContainsCall) {
         Expr rewrittenMapHelperCall;
-        if (tryRewriteBareMapHelperCall(expr, "contains", rewrittenMapHelperCall)) {
+        if (this->tryRewriteBareMapHelperCall(
+                expr, "contains", builtinCollectionDispatchResolvers, rewrittenMapHelperCall)) {
           return validateExpr(params, locals, rewrittenMapHelperCall);
         }
       }
       if (!expr.isMethodCall && isSimpleCallName(expr, "tryAt") && !shouldBuiltinValidateBareMapTryAtCall) {
         Expr rewrittenMapHelperCall;
-        if (tryRewriteBareMapHelperCall(expr, "tryAt", rewrittenMapHelperCall)) {
+        if (this->tryRewriteBareMapHelperCall(
+                expr, "tryAt", builtinCollectionDispatchResolvers, rewrittenMapHelperCall)) {
           return validateExpr(params, locals, rewrittenMapHelperCall);
         }
       }
       if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
           !shouldBuiltinValidateBareMapAccessCall) {
         Expr rewrittenMapHelperCall;
-        if (tryRewriteBareMapHelperCall(expr, builtinName, rewrittenMapHelperCall)) {
+        if (this->tryRewriteBareMapHelperCall(
+                expr, builtinName, builtinCollectionDispatchResolvers, rewrittenMapHelperCall)) {
           return validateExpr(params, locals, rewrittenMapHelperCall);
         }
       }
@@ -5093,11 +4874,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           (shouldBuiltinValidateBareMapContainsCall || isIndexedArgsPackMapReceiverTarget(expr.args.front()))) {
         size_t receiverIndex = 0;
         size_t keyIndex = 1;
-        const bool hasBareMapOperands = bareMapHelperOperandIndices(expr, receiverIndex, keyIndex);
+        const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
+            expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
         const Expr &receiverExpr = hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
         const Expr &keyExpr = hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
         std::string mapKeyType;
-        if (!resolveMapKeyType(receiverExpr, mapKeyType)) {
+        if (!this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType)) {
           if (!validateExpr(params, locals, receiverExpr)) {
             return false;
           }
@@ -5136,14 +4918,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             (isSimpleCallName(expr, "tryAt") || resolved == "/std/collections/map/tryAt"))) &&
           expr.args.size() == 2 &&
           (shouldBuiltinValidateBareMapTryAtCall ||
-           isIndexedArgsPackMapReceiverTarget(expr.args[mapHelperReceiverIndex(expr)]))) {
+           isIndexedArgsPackMapReceiverTarget(
+               expr.args[this->mapHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)]))) {
         size_t receiverIndex = 0;
         size_t keyIndex = 1;
-        const bool hasBareMapOperands = bareMapHelperOperandIndices(expr, receiverIndex, keyIndex);
+        const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
+            expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
         const Expr &receiverExpr = hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
         const Expr &keyExpr = hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
         std::string mapKeyType;
-        if (!resolveMapKeyType(receiverExpr, mapKeyType)) {
+        if (!this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType)) {
           if (!validateExpr(params, locals, receiverExpr)) {
             return false;
           }
@@ -5180,14 +4964,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
           expr.args.size() == 2 &&
           (shouldBuiltinValidateBareMapAccessCall ||
-           isIndexedArgsPackMapReceiverTarget(expr.args[mapHelperReceiverIndex(expr)]))) {
+           isIndexedArgsPackMapReceiverTarget(
+               expr.args[this->mapHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)]))) {
         size_t receiverIndex = 0;
         size_t keyIndex = 1;
-        const bool hasBareMapOperands = bareMapHelperOperandIndices(expr, receiverIndex, keyIndex);
+        const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
+            expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
         const Expr &receiverExpr = hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
         const Expr &keyExpr = hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
         std::string mapKeyType;
-        if (resolveMapKeyType(receiverExpr, mapKeyType)) {
+        if (this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType)) {
           if (!mapKeyType.empty()) {
             if (normalizeBindingTypeName(mapKeyType) == "string") {
               if (!isStringExpr(keyExpr)) {
@@ -5422,7 +5208,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           } else if (normalizedExpectedBase == "map" && expectedTemplateArgs.size() == 2) {
             std::string actualKeyType;
             std::string actualValueType;
-            if (resolveMapKeyType(arg, actualKeyType) && resolveMapValueType(arg, actualValueType) &&
+            if (this->resolveMapKeyType(arg, builtinCollectionDispatchResolvers, actualKeyType) &&
+                this->resolveMapValueType(arg, builtinCollectionDispatchResolvers, actualValueType) &&
                 (normalizeBindingTypeName(expectedTemplateArgs[0]) != normalizeBindingTypeName(actualKeyType) ||
                  normalizeBindingTypeName(expectedTemplateArgs[1]) != normalizeBindingTypeName(actualValueType))) {
               error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
@@ -5512,8 +5299,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       const bool isCompatibleExperimentalMapReceiver =
           extractExperimentalMapFieldTypesFromStructPath(
               expectedStructPath, expectedMapKeyType, expectedMapValueType) &&
-          resolveMapKeyType(arg, actualMapKeyType) &&
-          resolveMapValueType(arg, actualMapValueType) &&
+          this->resolveMapKeyType(arg, builtinCollectionDispatchResolvers, actualMapKeyType) &&
+          this->resolveMapValueType(arg, builtinCollectionDispatchResolvers, actualMapValueType) &&
           normalizeBindingTypeName(expectedMapKeyType) == normalizeBindingTypeName(actualMapKeyType) &&
           normalizeBindingTypeName(expectedMapValueType) == normalizeBindingTypeName(actualMapValueType);
       const std::string actualStructPath = inferStructReturnPath(arg, params, locals);

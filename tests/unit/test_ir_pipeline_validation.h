@@ -9244,6 +9244,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPointerLike.cpp";
+  const std::filesystem::path semanticsCollectionHelperRewritesPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
@@ -9252,6 +9254,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
+  REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
   const std::string semanticsExprBlockSource = readText(semanticsExprBlockPath);
@@ -9259,6 +9262,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
+  const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
   CHECK(semanticsExprSource.find("return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);") !=
@@ -9300,9 +9304,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("const auto &resolveExperimentalMapValueTarget =") !=
+  CHECK(semanticsExprSource.find("const auto &resolveExperimentalMapValueTarget =") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget;") !=
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget;") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
         std::string::npos);
@@ -9332,9 +9336,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
+  CHECK(semanticsExprSource.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("this->canonicalExperimentalMapHelperPath(") != std::string::npos);
+  CHECK(semanticsExprSource.find("this->canonicalExperimentalMapHelperPath(") == std::string::npos);
   CHECK(semanticsExprSource.find("this->canonicalizeExperimentalMapHelperResolvedPath(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
@@ -9367,9 +9371,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") !=
+  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueTypeOut);") !=
+  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueTypeOut);") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
@@ -9391,6 +9395,24 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveMapValueTypeForStringTarget = [&](const Expr &target, std::string &valueTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto mapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto bareMapHelperOperandIndices = [&](const Expr &candidate,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto preferredBareMapHelperTarget = [&](std::string_view helperName)") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto specializedExperimentalMapHelperTarget = [&](std::string_view helperName,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto preferredBareVectorHelperTarget = [&](std::string_view helperName)") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto tryRewriteBareMapHelperCall = [&](const Expr &candidate,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto tryRewriteBareVectorHelperCall = [&](const Expr &candidate,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto tryRewriteCanonicalExperimentalMapHelperCall = [&](const Expr &candidate, Expr &rewrittenOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto explicitCanonicalExperimentalMapBorrowedHelperPath = [&](const Expr &candidate,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto extractExperimentalMapFieldTypes = [&](const BindingInfo &binding,") ==
         std::string::npos);
@@ -9429,6 +9451,39 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::resolveVectorHelperMethodTarget") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::resolveExprVectorHelperCall") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("size_t SemanticsValidator::mapHelperReceiverIndex") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::bareMapHelperOperandIndices") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("std::string SemanticsValidator::preferredBareMapHelperTarget") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("canonicalExperimentalMapHelperPath(") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "std::string SemanticsValidator::specializedExperimentalMapHelperTarget") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "std::string SemanticsValidator::preferredBareVectorHelperTarget") != std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareMapHelperCall") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareVectorHelperCall") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "bool SemanticsValidator::explicitCanonicalExperimentalMapBorrowedHelperPath") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("dispatchResolvers.resolveExperimentalMapValueTarget") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::hasResolvableMapHelperPath") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::resolveMapKeyType") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::resolveMapValueType") !=
         std::string::npos);
 
   const std::filesystem::path semanticsExprPredicatesHeaderPath =
@@ -9887,6 +9942,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferControlFlow.cpp";
   const std::filesystem::path semanticsInferDefinitionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferDefinition.cpp";
+  const std::filesystem::path semanticsCollectionHelperRewritesPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   REQUIRE(std::filesystem::exists(semanticsInferPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDirectCountCapacityPath));
@@ -9894,6 +9951,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsInferDefinitionPath));
+  REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
   const std::string semanticsInferCollectionCountCapacitySource =
       readText(semanticsInferCollectionCountCapacityPath);
@@ -9903,6 +9961,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   const std::string semanticsInferCollectionsSource = readText(semanticsInferCollectionsPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
+  const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
   CHECK(semanticsInferSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
   CHECK(semanticsInferSource.find("inferControlFlowExprReturnKind(expr, params, locals, handledControlFlow);") !=
         std::string::npos);
@@ -9993,6 +10052,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("auto preferVectorStdlibHelperPathForCall = [&](const std::string &path)") ==
         std::string::npos);
+  CHECK(semanticsInferSource.find("auto mapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto bareMapHelperOperandIndices = [&](const Expr &candidate,") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto preferredBareMapHelperTarget = [&](std::string_view helperName)") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto tryRewriteBareMapHelperCall = [&](const Expr &candidate,") ==
+        std::string::npos);
   CHECK(semanticsInferSource.find("auto explicitRemovedCollectionMethodPath = [&](const Expr &candidate) -> std::string {") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {") ==
@@ -10018,6 +10085,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDispatchSource.find("bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::normalizeCollectionTypePath") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareMapHelperCall") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::hasImportedDefinitionPath") !=
         std::string::npos);
