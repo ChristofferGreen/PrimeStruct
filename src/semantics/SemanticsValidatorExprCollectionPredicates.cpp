@@ -1,0 +1,166 @@
+#include "SemanticsValidator.h"
+
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace primec::semantics {
+
+const Expr *SemanticsValidator::resolveBuiltinAccessReceiverExpr(const Expr &accessExpr) const {
+  if (accessExpr.kind != Expr::Kind::Call || accessExpr.args.size() != 2) {
+    return nullptr;
+  }
+  if (accessExpr.isMethodCall) {
+    return accessExpr.args.empty() ? nullptr : &accessExpr.args.front();
+  }
+  size_t receiverIndex = 0;
+  if (hasNamedArguments(accessExpr.argNames)) {
+    bool foundValues = false;
+    for (size_t i = 0; i < accessExpr.args.size(); ++i) {
+      if (i < accessExpr.argNames.size() && accessExpr.argNames[i].has_value() &&
+          *accessExpr.argNames[i] == "values") {
+        receiverIndex = i;
+        foundValues = true;
+        break;
+      }
+    }
+    if (!foundValues) {
+      receiverIndex = 0;
+    }
+  }
+  return receiverIndex < accessExpr.args.size() ? &accessExpr.args[receiverIndex] : nullptr;
+}
+
+bool SemanticsValidator::isNamedArgsPackMethodAccessCall(
+    const Expr &target,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
+  if (!target.isMethodCall) {
+    return false;
+  }
+  std::string accessName;
+  if (!getBuiltinArrayAccessName(target, accessName) || target.args.size() != 2) {
+    return false;
+  }
+  std::string elemType;
+  if (dispatchResolvers.resolveArgsPackAccessTarget == nullptr ||
+      !dispatchResolvers.resolveArgsPackAccessTarget(target.args.front(), elemType)) {
+    return false;
+  }
+  size_t namedCount = 0;
+  for (const auto &argName : target.argNames) {
+    if (!argName.has_value()) {
+      continue;
+    }
+    ++namedCount;
+    if (*argName != "index") {
+      return false;
+    }
+  }
+  return namedCount == 1;
+}
+
+bool SemanticsValidator::isNamedArgsPackWrappedFileBuiltinAccessCall(
+    const Expr &target,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
+  if (target.isMethodCall) {
+    return false;
+  }
+  std::string accessName;
+  if (!getBuiltinArrayAccessName(target, accessName) || accessName != "at" ||
+      target.args.size() != 2) {
+    return false;
+  }
+  if (target.argNames.size() != 2 || !target.argNames[0].has_value() ||
+      !target.argNames[1].has_value() || *target.argNames[0] != "values" ||
+      *target.argNames[1] != "index") {
+    return false;
+  }
+  std::string elemType;
+  if (dispatchResolvers.resolveArgsPackAccessTarget == nullptr ||
+      !dispatchResolvers.resolveArgsPackAccessTarget(target.args.front(), elemType)) {
+    return false;
+  }
+  std::string pointeeType = unwrapReferencePointerTypeText(elemType);
+  if (pointeeType.empty() || pointeeType == elemType) {
+    return false;
+  }
+  std::string base;
+  std::string argText;
+  return splitTemplateTypeName(normalizeBindingTypeName(pointeeType), base, argText) &&
+         normalizeBindingTypeName(base) == "File" && !argText.empty();
+}
+
+bool SemanticsValidator::isArrayNamespacedVectorCountCompatibilityCall(
+    const Expr &candidate,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
+  if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+    return false;
+  }
+  std::string normalized = candidate.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  const bool spellsArrayCount = (normalized == "array/count");
+  const bool resolvesArrayCount = (resolveCalleePath(candidate) == "/array/count");
+  if (!spellsArrayCount && !resolvesArrayCount) {
+    return false;
+  }
+  if (dispatchResolvers.resolveVectorTarget == nullptr) {
+    return false;
+  }
+  for (const Expr &arg : candidate.args) {
+    std::string elemType;
+    if (dispatchResolvers.resolveVectorTarget(arg, elemType)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool SemanticsValidator::isIndexedArgsPackMapReceiverTarget(
+    const Expr &receiverExpr,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
+  std::string elemType;
+  std::string keyType;
+  std::string valueType;
+  return (((dispatchResolvers.resolveIndexedArgsPackElementType != nullptr &&
+            dispatchResolvers.resolveIndexedArgsPackElementType(receiverExpr, elemType)) ||
+           (dispatchResolvers.resolveWrappedIndexedArgsPackElementType != nullptr &&
+            dispatchResolvers.resolveWrappedIndexedArgsPackElementType(receiverExpr, elemType)) ||
+           (dispatchResolvers.resolveDereferencedIndexedArgsPackElementType != nullptr &&
+            dispatchResolvers.resolveDereferencedIndexedArgsPackElementType(receiverExpr, elemType))) &&
+          extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
+}
+
+bool SemanticsValidator::validateCollectionElementType(
+    const Expr &arg,
+    const std::string &typeName,
+    const std::string &errorPrefix,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers) {
+  const std::string normalizedType = normalizeBindingTypeName(typeName);
+  if (normalizedType == "string") {
+    if (!isStringExprForArgumentValidation(arg, dispatchResolvers)) {
+      error_ = errorPrefix + typeName;
+      return false;
+    }
+    return true;
+  }
+  ReturnKind expectedKind = returnKindForTypeName(normalizedType);
+  if (expectedKind == ReturnKind::Unknown) {
+    return true;
+  }
+  if (isStringExprForArgumentValidation(arg, dispatchResolvers)) {
+    error_ = errorPrefix + typeName;
+    return false;
+  }
+  ReturnKind argKind = inferExprReturnKind(arg, params, locals);
+  if (argKind != ReturnKind::Unknown && argKind != expectedKind) {
+    error_ = errorPrefix + typeName;
+    return false;
+  }
+  return true;
+}
+
+} // namespace primec::semantics

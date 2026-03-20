@@ -501,6 +501,26 @@ private:
   bool resolveMapValueType(const Expr &target,
                            const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                            std::string &valueTypeOut) const;
+  const Expr *resolveBuiltinAccessReceiverExpr(const Expr &accessExpr) const;
+  bool isNamedArgsPackMethodAccessCall(
+      const Expr &target,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  bool isNamedArgsPackWrappedFileBuiltinAccessCall(
+      const Expr &target,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  bool isArrayNamespacedVectorCountCompatibilityCall(
+      const Expr &candidate,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  bool isIndexedArgsPackMapReceiverTarget(
+      const Expr &receiverExpr,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  bool validateCollectionElementType(
+      const Expr &arg,
+      const std::string &typeName,
+      const std::string &errorPrefix,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers);
   bool resolveNonCollectionAccessHelperPathFromTypeText(const std::string &typeText,
                                                         const std::string &typeNamespace,
                                                         std::string_view helperName,

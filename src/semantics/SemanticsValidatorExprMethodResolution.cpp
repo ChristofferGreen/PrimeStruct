@@ -282,30 +282,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return resolveStructFieldBinding(params, locals, target.args.front(), target.name, bindingOut);
   };
-  auto resolveBuiltinAccessReceiverExpr = [&](const Expr &accessExpr) -> const Expr * {
-    if (accessExpr.kind != Expr::Kind::Call || accessExpr.args.size() != 2) {
-      return nullptr;
-    }
-    if (accessExpr.isMethodCall) {
-      return accessExpr.args.empty() ? nullptr : &accessExpr.args.front();
-    }
-    size_t receiverIndex = 0;
-    if (hasNamedArguments(accessExpr.argNames)) {
-      bool foundValues = false;
-      for (size_t i = 0; i < accessExpr.args.size(); ++i) {
-        if (i < accessExpr.argNames.size() && accessExpr.argNames[i].has_value() &&
-            *accessExpr.argNames[i] == "values") {
-          receiverIndex = i;
-          foundValues = true;
-          break;
-        }
-      }
-      if (!foundValues) {
-        receiverIndex = 0;
-      }
-    }
-    return receiverIndex < accessExpr.args.size() ? &accessExpr.args[receiverIndex] : nullptr;
-  };
   auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {
     pointeeTypeOut.clear();
     std::string base;

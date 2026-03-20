@@ -1243,30 +1243,6 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     const BuiltinCollectionDispatchResolverAdapters &adapters) {
-  auto resolveBuiltinAccessReceiverExprInline = [&](const Expr &accessExpr) -> const Expr * {
-    if (accessExpr.kind != Expr::Kind::Call || accessExpr.args.size() != 2) {
-      return nullptr;
-    }
-    if (accessExpr.isMethodCall) {
-      return accessExpr.args.empty() ? nullptr : &accessExpr.args.front();
-    }
-    size_t receiverIndex = 0;
-    if (hasNamedArguments(accessExpr.argNames)) {
-      bool foundValues = false;
-      for (size_t i = 0; i < accessExpr.args.size(); ++i) {
-        if (i < accessExpr.argNames.size() && accessExpr.argNames[i].has_value() &&
-            *accessExpr.argNames[i] == "values") {
-          receiverIndex = i;
-          foundValues = true;
-          break;
-        }
-      }
-      if (!foundValues) {
-        receiverIndex = 0;
-      }
-    }
-    return receiverIndex < accessExpr.args.size() ? &accessExpr.args[receiverIndex] : nullptr;
-  };
   auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {
     pointeeTypeOut.clear();
     std::string base;
@@ -1607,7 +1583,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     if (target.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(target, accessName) || target.args.size() != 2) {
       return false;
     }
-    const Expr *accessReceiver = resolveBuiltinAccessReceiverExprInline(target);
+    const Expr *accessReceiver = this->resolveBuiltinAccessReceiverExpr(target);
     if (accessReceiver == nullptr || accessReceiver->kind != Expr::Kind::Name) {
       return false;
     }
@@ -1883,7 +1859,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       }
       std::string accessName;
       if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
-        const Expr *accessReceiver = resolveBuiltinAccessReceiverExprInline(target);
+        const Expr *accessReceiver = this->resolveBuiltinAccessReceiverExpr(target);
         if (accessReceiver != nullptr && accessReceiver->kind == Expr::Kind::Name) {
           if (const BindingInfo *paramBinding = findParamBinding(params, accessReceiver->name)) {
             std::string packElemType;
@@ -2064,7 +2040,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       }
       std::string builtinName;
       if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
-        if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExprInline(target)) {
+        if (const Expr *accessReceiver = this->resolveBuiltinAccessReceiverExpr(target)) {
           std::string elemType;
           std::string keyType;
           std::string valueType;

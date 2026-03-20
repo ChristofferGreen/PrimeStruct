@@ -9246,6 +9246,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprFieldResolution.cpp";
   const std::filesystem::path semanticsExprArgumentValidationPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidation.cpp";
+  const std::filesystem::path semanticsExprCollectionPredicatesPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionPredicates.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPointerLike.cpp";
   const std::filesystem::path semanticsExprReceiverPathsPath =
@@ -9261,6 +9263,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCollectionPredicatesPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
   REQUIRE(std::filesystem::exists(semanticsExprReceiverPathsPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
@@ -9272,6 +9275,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprArgumentValidationSource = readText(semanticsExprArgumentValidationPath);
+  const std::string semanticsExprCollectionPredicatesSource = readText(semanticsExprCollectionPredicatesPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
   const std::string semanticsExprReceiverPathsSource = readText(semanticsExprReceiverPathsPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
@@ -9289,16 +9293,16 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
-  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
+  CHECK(semanticsExprSource.find("const auto &resolveIndexedArgsPackElementType =") == std::string::npos);
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
+  CHECK(semanticsExprSource.find("const auto &resolveDereferencedIndexedArgsPackElementType =") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("const auto &resolveWrappedIndexedArgsPackElementType =") !=
+  CHECK(semanticsExprSource.find("const auto &resolveWrappedIndexedArgsPackElementType =") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
         std::string::npos);
@@ -9396,6 +9400,20 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("auto resolveDereferencedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveWrappedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveBuiltinAccessReceiverExprInline = [&](const Expr &accessExpr) -> const Expr * {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isNamedArgsPackMethodAccessCall = [&](const Expr &target) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isNamedArgsPackWrappedFileBuiltinAccessCall = [&](const Expr &target) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isArrayNamespacedVectorCountCompatibilityCall = [&](const Expr &candidate) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isIndexedArgsPackMapReceiverTarget = [&](const Expr &receiverExpr) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isStringExpr = [&](const Expr &arg) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto validateCollectionElementType = [&](const Expr &arg, const std::string &typeName,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
         std::string::npos);
@@ -9507,6 +9525,24 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprArgumentValidationSource.find(
             "bool SemanticsValidator::validateArgumentsForParameter") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "const Expr *SemanticsValidator::resolveBuiltinAccessReceiverExpr") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "bool SemanticsValidator::isNamedArgsPackMethodAccessCall") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "bool SemanticsValidator::isNamedArgsPackWrappedFileBuiltinAccessCall") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "bool SemanticsValidator::isArrayNamespacedVectorCountCompatibilityCall") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "bool SemanticsValidator::isIndexedArgsPackMapReceiverTarget") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "bool SemanticsValidator::validateCollectionElementType") !=
         std::string::npos);
   CHECK(semanticsExprPointerLikeSource.find("std::string SemanticsValidator::normalizeCollectionMethodName") !=
         std::string::npos);
