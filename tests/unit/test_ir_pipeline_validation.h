@@ -9244,6 +9244,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPointerLike.cpp";
+  const std::filesystem::path semanticsExprReceiverPathsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprReceiverPaths.cpp";
   const std::filesystem::path semanticsCollectionHelperRewritesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
@@ -9254,6 +9256,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
+  REQUIRE(std::filesystem::exists(semanticsExprReceiverPathsPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
@@ -9262,6 +9265,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
+  const std::string semanticsExprReceiverPathsSource = readText(semanticsExprReceiverPathsPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
@@ -9357,6 +9361,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto remapWrappedMapMethodBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveLeadingNonCollectionAccessReceiverPath = [&](const Expr &receiverExpr,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveDirectCallTemporaryAccessReceiverPath = [&](const Expr &receiverExpr,") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveVectorHelperMethodTarget = [&](const Expr &receiver,") ==
@@ -9445,6 +9453,15 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprPointerLikeSource.find("std::string SemanticsValidator::inferPointerLikeCallReturnType") !=
         std::string::npos);
   CHECK(semanticsExprPointerLikeSource.find("bool SemanticsValidator::resolvePointerLikeMethodTarget") !=
+        std::string::npos);
+  CHECK(semanticsExprReceiverPathsSource.find(
+            "bool SemanticsValidator::resolveNonCollectionAccessHelperPathFromTypeText") !=
+        std::string::npos);
+  CHECK(semanticsExprReceiverPathsSource.find(
+            "bool SemanticsValidator::resolveLeadingNonCollectionAccessReceiverPath") !=
+        std::string::npos);
+  CHECK(semanticsExprReceiverPathsSource.find(
+            "bool SemanticsValidator::resolveDirectCallTemporaryAccessReceiverPath") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::isVectorBuiltinName") !=
         std::string::npos);

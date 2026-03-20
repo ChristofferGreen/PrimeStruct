@@ -492,197 +492,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool shouldBuiltinValidateBareMapContainsCall = true;
     const bool shouldBuiltinValidateBareMapTryAtCall = true;
     const bool shouldBuiltinValidateBareMapAccessCall = true;
-    auto resolveLeadingNonCollectionAccessReceiverPath = [&](const Expr &receiverExpr,
-                                                             std::string_view helperName,
-                                                             std::string &pathOut) -> bool {
-      pathOut.clear();
-      auto formatBindingTypeText = [](const BindingInfo &binding) {
-        if (binding.typeTemplateArg.empty()) {
-          return binding.typeName;
-        }
-        return binding.typeName + "<" + binding.typeTemplateArg + ">";
-      };
-      auto setPathFromTypeText = [&](const std::string &typeText, const std::string &typeNamespace) -> bool {
-        std::string normalizedType = normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
-        if (normalizedType.empty() || !normalizeCollectionTypePath(normalizedType).empty() ||
-            normalizedType == "Pointer" || normalizedType == "Reference") {
-          return false;
-        }
-        if (isPrimitiveBindingTypeName(normalizedType)) {
-          pathOut = "/" + normalizedType + "/" + std::string(helperName);
-          return true;
-        }
-        std::string resolvedLookupType = normalizedType;
-        std::string base;
-        std::string argText;
-        if (splitTemplateTypeName(normalizedType, base, argText)) {
-          base = normalizeBindingTypeName(base);
-          if (base.empty() || base == "args" || base == "Pointer" || base == "Reference" ||
-              !normalizeCollectionTypePath(base).empty()) {
-            return false;
-          }
-          resolvedLookupType = base;
-        }
-        std::string resolvedType = resolveStructTypePath(resolvedLookupType, typeNamespace, structNames_);
-        if (resolvedType.empty()) {
-          resolvedType = resolveTypePath(resolvedLookupType, typeNamespace);
-        }
-        if (resolvedType.empty() ||
-            resolvedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-          return false;
-        }
-        pathOut = resolvedType + "/" + std::string(helperName);
-        return true;
-      };
-      if (receiverExpr.kind == Expr::Kind::Name) {
-        if (const BindingInfo *paramBinding = findParamBinding(params, receiverExpr.name)) {
-          if (isArgsPackBinding(*paramBinding)) {
-            return false;
-          }
-          std::string elemType;
-          if (resolveVectorTarget(receiverExpr, elemType) || resolveArrayTarget(receiverExpr, elemType) ||
-              resolveSoaVectorTarget(receiverExpr, elemType) || resolveStringTarget(receiverExpr) ||
-              resolveMapTarget(receiverExpr) || isPointerExpr(receiverExpr, params, locals) ||
-              isPointerLikeExpr(receiverExpr, params, locals)) {
-            return false;
-          }
-          return setPathFromTypeText(formatBindingTypeText(*paramBinding), receiverExpr.namespacePrefix);
-        }
-        auto localIt = locals.find(receiverExpr.name);
-        if (localIt != locals.end()) {
-          if (isArgsPackBinding(localIt->second)) {
-            return false;
-          }
-          std::string elemType;
-          if (resolveVectorTarget(receiverExpr, elemType) || resolveArrayTarget(receiverExpr, elemType) ||
-              resolveSoaVectorTarget(receiverExpr, elemType) || resolveStringTarget(receiverExpr) ||
-              resolveMapTarget(receiverExpr) || isPointerExpr(receiverExpr, params, locals) ||
-              isPointerLikeExpr(receiverExpr, params, locals)) {
-            return false;
-          }
-          return setPathFromTypeText(formatBindingTypeText(localIt->second), receiverExpr.namespacePrefix);
-        }
-        return false;
-      }
-      if (receiverExpr.kind != Expr::Kind::Call) {
-        return false;
-      }
-      if (isSimpleCallName(receiverExpr, "array") || isSimpleCallName(receiverExpr, "vector") ||
-          isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa_vector")) {
-        return false;
-      }
-      const std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);
-      if (resolvedReceiverPath == "/array" || resolvedReceiverPath == "/vector" ||
-          resolvedReceiverPath == "/map" || resolvedReceiverPath == "/soa_vector") {
-        return false;
-      }
-      auto defIt = defMap_.find(resolvedReceiverPath);
-      if (defIt != defMap_.end() && defIt->second != nullptr) {
-        for (const auto &transform : defIt->second->transforms) {
-          if (transform.name != "return" || transform.templateArgs.size() != 1) {
-            continue;
-          }
-          if (setPathFromTypeText(transform.templateArgs.front(), defIt->second->namespacePrefix)) {
-            return true;
-          }
-          break;
-        }
-        BindingInfo inferredReturnBinding;
-        if (inferDefinitionReturnBinding(*defIt->second, inferredReturnBinding) &&
-            setPathFromTypeText(formatBindingTypeText(inferredReturnBinding), defIt->second->namespacePrefix)) {
-          return true;
-        }
-      }
-      std::string elemType;
-      if (resolveVectorTarget(receiverExpr, elemType) || resolveArrayTarget(receiverExpr, elemType) ||
-          resolveSoaVectorTarget(receiverExpr, elemType) || resolveStringTarget(receiverExpr) ||
-          resolveMapTarget(receiverExpr) || isPointerExpr(receiverExpr, params, locals) ||
-          isPointerLikeExpr(receiverExpr, params, locals)) {
-        return false;
-      }
-      std::string receiverTypeText;
-      if (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) && !receiverTypeText.empty()) {
-        if (setPathFromTypeText(receiverTypeText, receiverExpr.namespacePrefix)) {
-          return true;
-        }
-      }
-      BindingInfo inferredReceiverBinding;
-      if (inferBindingTypeFromInitializer(receiverExpr, params, locals, inferredReceiverBinding) &&
-          setPathFromTypeText(inferredReceiverBinding.typeTemplateArg.empty()
-                                  ? inferredReceiverBinding.typeName
-                                  : inferredReceiverBinding.typeName + "<" + inferredReceiverBinding.typeTemplateArg + ">",
-                              receiverExpr.namespacePrefix)) {
-        return true;
-      }
-      const std::string structPath = inferStructReturnPath(receiverExpr, params, locals);
-      if (structPath.empty() || !normalizeCollectionTypePath(structPath).empty() ||
-          structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-        return false;
-      }
-      pathOut = structPath + "/" + std::string(helperName);
-      return true;
-    };
-    auto resolveDirectCallTemporaryAccessReceiverPath = [&](const Expr &receiverExpr,
-                                                            std::string_view helperName,
-                                                            std::string &pathOut) -> bool {
-      pathOut.clear();
-      if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
-        return false;
-      }
-      if (isSimpleCallName(receiverExpr, "array") || isSimpleCallName(receiverExpr, "vector") ||
-          isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa_vector")) {
-        return false;
-      }
-      auto setPathFromTypeText = [&](const std::string &typeText, const std::string &typeNamespace) -> bool {
-        std::string normalizedType = normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
-        if (normalizedType.empty() || !normalizeCollectionTypePath(normalizedType).empty() ||
-            normalizedType == "Pointer" || normalizedType == "Reference") {
-          return false;
-        }
-        if (isPrimitiveBindingTypeName(normalizedType)) {
-          pathOut = "/" + normalizedType + "/" + std::string(helperName);
-          return true;
-        }
-        std::string resolvedLookupType = normalizedType;
-        std::string base;
-        std::string argText;
-        if (splitTemplateTypeName(normalizedType, base, argText)) {
-          base = normalizeBindingTypeName(base);
-          if (base.empty() || base == "args" || base == "Pointer" || base == "Reference" ||
-              !normalizeCollectionTypePath(base).empty()) {
-            return false;
-          }
-          resolvedLookupType = base;
-        }
-        std::string resolvedType = resolveStructTypePath(resolvedLookupType, typeNamespace, structNames_);
-        if (resolvedType.empty()) {
-          resolvedType = resolveTypePath(resolvedLookupType, typeNamespace);
-        }
-        if (resolvedType.empty() ||
-            resolvedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-          return false;
-        }
-        pathOut = resolvedType + "/" + std::string(helperName);
-        return true;
-      };
-      const std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);
-      auto defIt = defMap_.find(resolvedReceiverPath);
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
-        return false;
-      }
-      for (const auto &transform : defIt->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        return setPathFromTypeText(transform.templateArgs.front(), defIt->second->namespacePrefix);
-      }
-      BindingInfo inferredReturnBinding;
-      return inferDefinitionReturnBinding(*defIt->second, inferredReturnBinding) &&
-             setPathFromTypeText(inferredReturnBinding.typeTemplateArg.empty()
-                                     ? inferredReturnBinding.typeName
-                                     : inferredReturnBinding.typeName + "<" + inferredReturnBinding.typeTemplateArg + ">",
-                                 defIt->second->namespacePrefix);
-    };
     auto isIndexedArgsPackMapReceiverTarget = [&](const Expr &receiverExpr) -> bool {
       std::string elemType;
       std::string keyType;
@@ -1357,8 +1166,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe")) &&
         defMap_.find("/" + expr.name) == defMap_.end()) {
       std::string shadowedReceiverPath;
-      if (resolveDirectCallTemporaryAccessReceiverPath(expr.args.front(), expr.name, shadowedReceiverPath) ||
-          resolveLeadingNonCollectionAccessReceiverPath(expr.args.front(), expr.name, shadowedReceiverPath)) {
+      if (this->resolveDirectCallTemporaryAccessReceiverPath(expr.args.front(), expr.name, shadowedReceiverPath) ||
+          this->resolveLeadingNonCollectionAccessReceiverPath(
+              params,
+              locals,
+              expr.args.front(),
+              expr.name,
+              builtinCollectionDispatchResolvers,
+              shadowedReceiverPath)) {
         error_ = "unknown method: " + shadowedReceiverPath;
         return false;
       }
@@ -1806,8 +1621,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               resolvedMethod = false;
             }
           }
-        } else if (resolveDirectCallTemporaryAccessReceiverPath(expr.args.front(), accessHelperName, methodResolved) ||
-                   resolveLeadingNonCollectionAccessReceiverPath(expr.args.front(), accessHelperName, methodResolved)) {
+        } else if (
+            this->resolveDirectCallTemporaryAccessReceiverPath(
+                expr.args.front(), accessHelperName, methodResolved) ||
+            this->resolveLeadingNonCollectionAccessReceiverPath(
+                params,
+                locals,
+                expr.args.front(),
+                accessHelperName,
+                builtinCollectionDispatchResolvers,
+                methodResolved)) {
           error_ = "unknown method: " + methodResolved;
           return false;
         }

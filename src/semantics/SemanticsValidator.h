@@ -501,6 +501,20 @@ private:
   bool resolveMapValueType(const Expr &target,
                            const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                            std::string &valueTypeOut) const;
+  bool resolveNonCollectionAccessHelperPathFromTypeText(const std::string &typeText,
+                                                        const std::string &typeNamespace,
+                                                        std::string_view helperName,
+                                                        std::string &pathOut) const;
+  bool resolveLeadingNonCollectionAccessReceiverPath(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &receiverExpr,
+      std::string_view helperName,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      std::string &pathOut);
+  bool resolveDirectCallTemporaryAccessReceiverPath(const Expr &receiverExpr,
+                                                    std::string_view helperName,
+                                                    std::string &pathOut);
   struct BuiltinCollectionCountCapacityDispatchContext {
     bool isCountLike = false;
     bool isCapacityLike = false;
