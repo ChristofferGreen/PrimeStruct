@@ -40,6 +40,7 @@ private:
   std::string resolveStructReturnPathForBuild(const std::string &typeName,
                                               const std::string &namespacePrefix) const;
   bool buildDefinitionReturnKinds(const std::unordered_set<std::string> &explicitStructs);
+  bool validateLifecycleHelperDefinitions();
   bool buildParameters();
   bool inferUnknownReturnKinds();
   bool inferUnknownReturnKindsLegacy();
