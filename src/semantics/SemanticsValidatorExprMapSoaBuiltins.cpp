@@ -117,16 +117,25 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = "argument count mismatch for builtin " + helperName;
       return false;
     }
+    size_t receiverIndex = 0;
+    size_t keyIndex = 1;
+    const bool hasBareMapOperands =
+        context.bareMapHelperOperandIndices != nullptr &&
+        context.bareMapHelperOperandIndices(expr, receiverIndex, keyIndex);
+    const Expr &receiverExpr =
+        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+    const Expr &keyExpr =
+        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
     std::string mapKeyType;
     if (!(context.resolveMapKeyType != nullptr &&
-          context.resolveMapKeyType(expr.args.front(), mapKeyType))) {
-      if (!validateExpr(params, locals, expr.args.front())) {
+          context.resolveMapKeyType(receiverExpr, mapKeyType))) {
+      if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
       error_ = helperName + " requires map target";
       return false;
     }
-    if (!validateMapContainsKeyExpr(expr.args[1], mapKeyType)) {
+    if (!validateMapContainsKeyExpr(keyExpr, mapKeyType)) {
       return false;
     }
     if (!validateExpr(params, locals, expr.args.front()) ||

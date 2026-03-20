@@ -251,6 +251,8 @@ private:
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
+    std::function<bool(const Expr &, size_t &, size_t &)>
+        bareMapHelperOperandIndices;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
   };

@@ -1828,116 +1828,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, "contains") &&
-          shouldBuiltinValidateBareMapContainsCall && it == defMap_.end()) {
-        if (!expr.templateArgs.empty()) {
-          error_ = "contains does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = "contains does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 2) {
-          error_ = "argument count mismatch for builtin contains";
-          return false;
-        }
-        size_t receiverIndex = 0;
-        size_t keyIndex = 1;
-        const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
-            expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
-        const Expr &receiverExpr = hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
-        const Expr &keyExpr = hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
-        std::string mapKeyType;
-        if (!this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType)) {
-          if (!validateExpr(params, locals, receiverExpr)) {
-            return false;
-          }
-          error_ = "contains requires map target";
-          return false;
-        }
-        if (!mapKeyType.empty()) {
-          if (normalizeBindingTypeName(mapKeyType) == "string") {
-            if (!this->isStringExprForArgumentValidation(keyExpr, builtinCollectionDispatchResolvers)) {
-              error_ = "contains requires string map key";
-              return false;
-            }
-          } else {
-            ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
-            if (keyKind != ReturnKind::Unknown) {
-              if (resolveStringTarget(keyExpr)) {
-                error_ = "contains requires map key type " + mapKeyType;
-                return false;
-              }
-              ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
-              if (candidateKind != ReturnKind::Unknown && candidateKind != keyKind) {
-                error_ = "contains requires map key type " + mapKeyType;
-                return false;
-              }
-            }
-          }
-        }
-        if (!validateExpr(params, locals, expr.args.front()) ||
-            !validateExpr(params, locals, expr.args[1])) {
-          return false;
-        }
-        return true;
-      }
-      if (resolvedMethod && resolved == "/std/collections/map/contains") {
-        if (!expr.templateArgs.empty()) {
-          error_ = "contains does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = "contains does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 2) {
-          error_ = "argument count mismatch for builtin contains";
-          return false;
-        }
-        size_t receiverIndex = 0;
-        size_t keyIndex = 1;
-        const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
-            expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
-        const Expr &receiverExpr = hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
-        const Expr &keyExpr = hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
-        std::string mapKeyType;
-        if (!this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType)) {
-          if (!validateExpr(params, locals, receiverExpr)) {
-            return false;
-          }
-          error_ = "contains requires map target";
-          return false;
-        }
-        if (!mapKeyType.empty()) {
-          if (normalizeBindingTypeName(mapKeyType) == "string") {
-            if (!this->isStringExprForArgumentValidation(keyExpr, builtinCollectionDispatchResolvers)) {
-              error_ = "contains requires string map key";
-              return false;
-            }
-          } else {
-            ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
-            if (keyKind != ReturnKind::Unknown) {
-              if (resolveStringTarget(keyExpr)) {
-                error_ = "contains requires map key type " + mapKeyType;
-                return false;
-              }
-              ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
-              if (candidateKind != ReturnKind::Unknown && candidateKind != keyKind) {
-                error_ = "contains requires map key type " + mapKeyType;
-                return false;
-              }
-            }
-          }
-        }
-        if (!validateExpr(params, locals, expr.args.front()) ||
-            !validateExpr(params, locals, expr.args[1])) {
-          return false;
-        }
-        return true;
-      }
       ExprMapSoaBuiltinContext mapSoaBuiltinContext;
+      mapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =
+          shouldBuiltinValidateBareMapContainsCall;
       mapSoaBuiltinContext.resolveMapKeyType =
           [&](const Expr &target, std::string &mapKeyTypeOut) {
             return this->resolveMapKeyType(
@@ -1955,6 +1848,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           [&](const Expr &target) {
             return this->isStringExprForArgumentValidation(
                 target, builtinCollectionDispatchResolvers);
+          };
+      mapSoaBuiltinContext.bareMapHelperOperandIndices =
+          [&](const Expr &target, size_t &receiverIndexOut,
+              size_t &keyIndexOut) {
+            return this->bareMapHelperOperandIndices(
+                target, builtinCollectionDispatchResolvers,
+                receiverIndexOut, keyIndexOut);
           };
       mapSoaBuiltinContext.isNamedArgsPackMethodAccessCall =
           [&](const Expr &target) {

@@ -9410,6 +9410,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprMapSoaBuiltins(") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("mapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("mapSoaBuiltinContext.bareMapHelperOperandIndices =") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("if (getBuiltinCollectionName(expr, builtinName)) {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"try\")) {") ==
@@ -9506,6 +9510,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("to_soa requires vector target") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("soa_vector field views are not implemented yet: ") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (resolvedMethod && resolved == \"/std/collections/map/contains\") {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, \"contains\") &&\n"
+            "          shouldBuiltinValidateBareMapContainsCall && it == defMap_.end()) {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("resolved == \"/soa_vector/get\" || resolved == \"/soa_vector/ref\"") ==
         std::string::npos);
@@ -9688,6 +9698,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "bool SemanticsValidator::validateExprMapSoaBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find(
+            "context.bareMapHelperOperandIndices != nullptr") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "to_soa requires vector target") !=
