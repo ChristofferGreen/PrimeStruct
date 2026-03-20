@@ -206,4 +206,65 @@ bool buildWasiRuntimeContext(const IrModule &module,
                              WasmRuntimeContext &runtime,
                              std::string &error);
 
+void emitWasiWritePtrLen(uint32_t fd,
+                         uint32_t ptrLocal,
+                         uint32_t lenLocal,
+                         const WasmRuntimeContext &runtime,
+                         std::vector<uint8_t> &out,
+                         bool dropResult = true);
+
+void emitWasiWriteLiteral(uint32_t fd,
+                          uint32_t ptr,
+                          uint32_t len,
+                          const WasmRuntimeContext &runtime,
+                          std::vector<uint8_t> &out,
+                          bool dropResult = true);
+
+void emitWasiWriteLiteralFromFdLocal(uint32_t fdLocal,
+                                     uint32_t ptr,
+                                     uint32_t len,
+                                     const WasmRuntimeContext &runtime,
+                                     std::vector<uint8_t> &out);
+
+void emitWasiWritePtrLenFromFdLocal(uint32_t fdLocal,
+                                    uint32_t ptrLocal,
+                                    uint32_t lenLocal,
+                                    const WasmRuntimeContext &runtime,
+                                    std::vector<uint8_t> &out);
+
+void emitWasiReadByteFromFdLocal(uint32_t fdLocal,
+                                 const WasmRuntimeContext &runtime,
+                                 std::vector<uint8_t> &out);
+
+void emitWasiWriteDecimalFromI64Local(uint32_t fdLocal,
+                                      uint32_t valueLocal,
+                                      uint32_t remLocal,
+                                      uint32_t ptrLocal,
+                                      uint32_t lenLocal,
+                                      uint32_t negLocal,
+                                      bool signedValue,
+                                      const WasmRuntimeContext &runtime,
+                                      std::vector<uint8_t> &out);
+
+void emitWasiWriteDynamicStringFromI64Local(uint32_t fdLocal,
+                                            uint32_t stringIndexLocal,
+                                            const WasmRuntimeContext &runtime,
+                                            std::vector<uint8_t> &out);
+
+void emitWasiPathOpenDynamicFromI64Local(uint32_t stringIndexLocal,
+                                         uint32_t errorLocal,
+                                         uint32_t oflags,
+                                         uint64_t rightsBase,
+                                         uint32_t fdflags,
+                                         const WasmRuntimeContext &runtime,
+                                         std::vector<uint8_t> &out);
+
+void emitWasiPathOpen(uint32_t pathPtr,
+                      uint32_t pathLen,
+                      uint32_t oflags,
+                      uint64_t rightsBase,
+                      uint32_t fdflags,
+                      const WasmRuntimeContext &runtime,
+                      std::vector<uint8_t> &out);
+
 } // namespace primec
