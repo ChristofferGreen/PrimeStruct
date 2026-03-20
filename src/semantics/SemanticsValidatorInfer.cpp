@@ -341,104 +341,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return resolveInferMethodCallPath(expr, params, locals, methodName, resolvedOut);
     };
     auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
-      if (isSimpleCallName(candidate, helper)) {
-        return true;
-      }
-      std::string namespacedCollection;
-      std::string namespacedHelper;
-      if (!getNamespacedCollectionHelperName(candidate, namespacedCollection, namespacedHelper)) {
-        return false;
-      }
-      if (!(namespacedCollection == "vector" && namespacedHelper == helper)) {
-        return false;
-      }
-      if ((namespacedHelper != "count" && namespacedHelper != "capacity") ||
-          resolveCalleePath(candidate) != "/std/collections/vector/" + namespacedHelper) {
-        return true;
-      }
-      return hasDefinitionPath("/std/collections/vector/" + namespacedHelper) ||
-             hasDefinitionPath("/vector/" + namespacedHelper);
+      return this->isVectorBuiltinName(candidate, helper);
     };
     auto isArrayNamespacedVectorCountCompatibilityCall = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
-        return false;
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      const bool spellsArrayCount = (normalized == "array/count");
-      const bool resolvesArrayCount = (resolveCalleePath(candidate) == "/array/count");
-      if (!spellsArrayCount && !resolvesArrayCount) {
-        return false;
-      }
-      for (const Expr &arg : candidate.args) {
-        std::string elemType;
-        if (resolveVectorTarget(arg, elemType)) {
-          return true;
-        }
-      }
-      return false;
-    };
-    auto isMapNamespacedCountCompatibilityCall = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
-        return false;
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      const bool spellsMapCount = (normalized == "map/count");
-      const bool resolvesMapCount = (resolveCalleePath(candidate) == "/map/count");
-      if (!spellsMapCount && !resolvesMapCount) {
-        return false;
-      }
-      if (hasDefinitionPath("/map/count")) {
-        return false;
-      }
-      for (const Expr &arg : candidate.args) {
-        std::string keyType;
-        std::string valueType;
-        if (resolveMapTarget(arg, keyType, valueType)) {
-          return true;
-        }
-      }
-      return false;
+      return this->isArrayNamespacedVectorCountCompatibilityCall(candidate, builtinCollectionDispatchResolvers);
     };
     const bool shouldInferBuiltinBareMapCountCall = true;
-    auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
-        return false;
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      if (normalized != "map/at" && normalized != "map/at_unsafe") {
-        std::string namespacePrefix = candidate.namespacePrefix;
-        if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
-          namespacePrefix.erase(namespacePrefix.begin());
-        }
-        if (namespacePrefix == "map" &&
-            (normalized == "at" || normalized == "at_unsafe")) {
-          normalized = "map/" + normalized;
-        }
-      }
-      if (normalized != "map/at" && normalized != "map/at_unsafe") {
-        const std::string resolvedPath = resolveCalleePath(candidate);
-        if (resolvedPath == "/map/at") {
-          normalized = "map/at";
-        } else if (resolvedPath == "/map/at_unsafe") {
-          normalized = "map/at_unsafe";
-        } else {
-          return false;
-        }
-      }
-      return !hasDefinitionPath("/" + normalized);
-    };
-    auto resolveRemovedCollectionMethodCompatibilityPath = [&](const Expr &candidate) {
-      return this->methodRemovedCollectionCompatibilityPath(candidate, params, locals);
-    };
     auto preferVectorStdlibHelperPathForDispatch = [&](const std::string &path) {
       return this->preferVectorStdlibHelperPath(path);
     };
@@ -605,107 +513,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return !def.templateArgs.empty() && def.templateArgs.size() == expr.templateArgs.size();
     };
-    auto explicitMapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {
-      size_t receiverIndex = 0;
-      if (hasNamedArguments(candidate.argNames)) {
-        for (size_t i = 0; i < candidate.args.size(); ++i) {
-          if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
-              *candidate.argNames[i] == "values") {
-            return i;
-          }
-        }
-      }
-      return receiverIndex;
-    };
-    auto canonicalExperimentalMapHelperName = [&](const std::string &resolvedPath, std::string &helperNameOut) {
-      auto matchHelper = [&](std::string_view canonicalPath,
-                             std::string_view aliasPath,
-                             std::string_view wrapperPath,
-                             std::string_view helperName) {
-        const std::string canonicalPrefix = std::string(canonicalPath) + "__t";
-        const std::string aliasPrefix = std::string(aliasPath) + "__t";
-        const std::string wrapperPrefix = std::string(wrapperPath) + "__t";
-        if (resolvedPath == canonicalPath || resolvedPath.rfind(canonicalPrefix, 0) == 0 ||
-            resolvedPath == aliasPath || resolvedPath.rfind(aliasPrefix, 0) == 0 ||
-            resolvedPath == wrapperPath || resolvedPath.rfind(wrapperPrefix, 0) == 0) {
-          helperNameOut = std::string(helperName);
-          return true;
-        }
-        return false;
-      };
-      return matchHelper("/std/collections/map/count", "/map/count", "/std/collections/mapCount", "count") ||
-             matchHelper("/std/collections/map/contains", "/map/contains", "/std/collections/mapContains", "contains") ||
-             matchHelper("/std/collections/map/tryAt", "/map/tryAt", "/std/collections/mapTryAt", "tryAt") ||
-             matchHelper("/std/collections/map/at", "/map/at", "/std/collections/mapAt", "at") ||
-             matchHelper("/std/collections/map/at_unsafe", "/map/at_unsafe", "/std/collections/mapAtUnsafe", "at_unsafe");
-    };
-    auto canonicalizeExperimentalMapHelperResolvedPath = [&](const std::string &resolvedPath,
-                                                             std::string &canonicalPathOut) {
-      auto matchExperimentalHelper = [&](std::string_view experimentalPath, std::string_view canonicalPath) {
-        const std::string experimentalPrefix = std::string(experimentalPath) + "__t";
-        if (resolvedPath == experimentalPath || resolvedPath.rfind(experimentalPrefix, 0) == 0) {
-          canonicalPathOut = std::string(canonicalPath);
-          return true;
-        }
-        return false;
-      };
-      return matchExperimentalHelper("/std/collections/experimental_map/mapCount", "/std/collections/map/count") ||
-             matchExperimentalHelper("/std/collections/experimental_map/mapContains", "/std/collections/map/contains") ||
-             matchExperimentalHelper("/std/collections/experimental_map/mapTryAt", "/std/collections/map/tryAt") ||
-             matchExperimentalHelper("/std/collections/experimental_map/mapAt", "/std/collections/map/at") ||
-             matchExperimentalHelper("/std/collections/experimental_map/mapAtUnsafe",
-                                     "/std/collections/map/at_unsafe");
-    };
-    auto tryRewriteExplicitCanonicalExperimentalMapHelperCall = [&](const Expr &candidate, Expr &rewrittenOut) {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
-        return false;
-      }
-      const std::string resolvedPath = resolveCalleePath(candidate);
-      std::string helperName;
-      if (!canonicalExperimentalMapHelperName(resolvedPath, helperName)) {
-        return false;
-      }
-      const size_t receiverIndex = explicitMapHelperReceiverIndex(candidate);
-      if (receiverIndex >= candidate.args.size()) {
-        return false;
-      }
-      const Expr &receiverExpr = candidate.args[receiverIndex];
-      if (!candidate.templateArgs.empty() &&
-          receiverExpr.kind == Expr::Kind::Call &&
-          !receiverExpr.isBinding &&
-          !receiverExpr.isMethodCall) {
-        return false;
-      }
-      std::string keyType;
-      std::string valueType;
-      if (!resolveExperimentalMapValueTarget(receiverExpr, keyType, valueType)) {
-        return false;
-      }
-      rewrittenOut = candidate;
-      rewrittenOut.name = preferredCanonicalExperimentalMapHelperTarget(helperName);
-      rewrittenOut.namespacePrefix.clear();
-      if (rewrittenOut.templateArgs.empty()) {
-        rewrittenOut.templateArgs = {keyType, valueType};
-      }
-      return true;
-    };
-    auto isExplicitCanonicalExperimentalMapBorrowedHelperCall = [&](const Expr &candidate) {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
-        return false;
-      }
-      std::string helperName;
-      if (!canonicalExperimentalMapHelperName(resolveCalleePath(candidate), helperName)) {
-        return false;
-      }
-      const size_t receiverIndex = explicitMapHelperReceiverIndex(candidate);
-      if (receiverIndex >= candidate.args.size()) {
-        return false;
-      }
-      std::string keyType;
-      std::string valueType;
-      return resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType) &&
-             !resolveExperimentalMapValueTarget(candidate.args[receiverIndex], keyType, valueType);
-    };
     std::string earlyPointerBuiltin;
     if (getBuiltinPointerName(expr, earlyPointerBuiltin) && expr.args.size() == 1) {
       if (earlyPointerBuiltin == "dereference") {
@@ -728,29 +535,45 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
 
     std::string resolvedCallee = resolveCalleePath(expr);
     std::string canonicalExperimentalMapHelperResolved;
-    if (defMap_.count(resolvedCallee) == 0 &&
-        canonicalizeExperimentalMapHelperResolvedPath(resolvedCallee, canonicalExperimentalMapHelperResolved)) {
+    if (!expr.isMethodCall && defMap_.count(resolvedCallee) == 0 &&
+        this->canonicalizeExperimentalMapHelperResolvedPath(resolvedCallee, canonicalExperimentalMapHelperResolved)) {
       resolvedCallee = canonicalExperimentalMapHelperResolved;
     }
     Expr rewrittenCanonicalExperimentalMapHelperCall;
     if (!expr.isMethodCall &&
-        tryRewriteExplicitCanonicalExperimentalMapHelperCall(expr, rewrittenCanonicalExperimentalMapHelperCall)) {
+        this->tryRewriteCanonicalExperimentalMapHelperCall(
+            expr, builtinCollectionDispatchResolvers, rewrittenCanonicalExperimentalMapHelperCall)) {
       return inferExprReturnKind(rewrittenCanonicalExperimentalMapHelperCall, params, locals);
     }
-    if (!expr.isMethodCall && isExplicitCanonicalExperimentalMapBorrowedHelperCall(expr)) {
+    std::string borrowedExplicitCanonicalExperimentalMapHelperPath;
+    if (!expr.isMethodCall &&
+        this->explicitCanonicalExperimentalMapBorrowedHelperPath(
+            expr, builtinCollectionDispatchResolvers, borrowedExplicitCanonicalExperimentalMapHelperPath)) {
       return ReturnKind::Unknown;
     }
     if (!expr.isMethodCall && isArrayNamespacedVectorCountCompatibilityCall(expr)) {
       return ReturnKind::Unknown;
     }
-    if (!expr.isMethodCall && isMapNamespacedCountCompatibilityCall(expr)) {
+    const std::string directRemovedMapCompatibilityPath =
+        !expr.isMethodCall
+            ? this->directMapHelperCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)
+            : std::string();
+    const bool isMapNamespacedCountCompatibilityCall =
+        directRemovedMapCompatibilityPath == "/map/count";
+    const bool isMapNamespacedAccessCompatibilityCall =
+        directRemovedMapCompatibilityPath == "/map/at" ||
+        directRemovedMapCompatibilityPath == "/map/at_unsafe";
+    if (!expr.isMethodCall && isMapNamespacedCountCompatibilityCall) {
       return ReturnKind::Unknown;
     }
-    if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall(expr)) {
+    if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall) {
       return ReturnKind::Unknown;
     }
     const std::string removedCollectionMethodCompatibilityPath =
-        expr.isMethodCall ? resolveRemovedCollectionMethodCompatibilityPath(expr) : "";
+        expr.isMethodCall
+            ? this->methodRemovedCollectionCompatibilityPath(
+                  expr, params, locals, builtinCollectionDispatchResolverAdapters)
+            : "";
     if (!removedCollectionMethodCompatibilityPath.empty()) {
       if (removedCollectionMethodCompatibilityPath == "/vector/at" ||
           removedCollectionMethodCompatibilityPath == "/vector/at_unsafe") {
@@ -819,7 +642,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
     }
     if (expr.isMethodCall) {
-      const std::string removedCollectionMethodPath = resolveRemovedCollectionMethodCompatibilityPath(expr);
+      const std::string removedCollectionMethodPath =
+          this->methodRemovedCollectionCompatibilityPath(
+              expr, params, locals, builtinCollectionDispatchResolverAdapters);
       if (!removedCollectionMethodPath.empty()) {
         error_ = "unknown method: " + removedCollectionMethodPath;
         return ReturnKind::Unknown;
@@ -1066,7 +891,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         isVectorBuiltinName(expr, "count") && !isArrayNamespacedVectorCountCompatibilityCall(expr);
     const bool isNamespacedMapCountCall =
         !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
-        !isMapNamespacedCountCompatibilityCall(expr) && !isStdNamespacedMapCountCall &&
+        !isMapNamespacedCountCompatibilityCall && !isStdNamespacedMapCountCall &&
         !hasDefinitionPath(resolved);
     const bool prefersExplicitDirectMapAccessAliasDefinition =
         !expr.isMethodCall &&
@@ -1085,7 +910,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, mapCountDispatchResolverAdapters);
     const bool isResolvedMapCountCall =
         !expr.isMethodCall && resolved == "/map/count" &&
-        !isMapNamespacedCountCompatibilityCall(expr) &&
+        !isMapNamespacedCountCompatibilityCall &&
         !isUnnamespacedMapCountFallbackCall;
     const bool isNamespacedVectorCapacityCall =
         !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
@@ -1113,7 +938,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         hasImportedDefinitionPath(resolveCalleePath(expr));
     const bool isResolvedMapAccessCall =
         !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
-        !isMapNamespacedAccessCompatibilityCall(expr);
+        !isMapNamespacedAccessCompatibilityCall;
     const bool shouldAllowStdAccessCompatibilityFallback =
         isStdNamespacedVectorAccessSpelling && !builtinAccessName.empty() &&
         hasDefinitionPath("/vector/" + builtinAccessName);
@@ -1129,7 +954,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall &&
         (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
         !prefersExplicitDirectMapAccessAliasDefinition &&
-        !isMapNamespacedAccessCompatibilityCall(expr) &&
+        !isMapNamespacedAccessCompatibilityCall &&
         !hasDefinitionPath(resolved);
     const bool shouldInferBuiltinBareMapContainsCall = true;
     const bool shouldInferBuiltinBareMapTryAtCall = true;
