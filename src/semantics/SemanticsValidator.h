@@ -37,6 +37,9 @@ private:
                                          std::vector<SemanticDiagnosticRecord> *transformDiagnosticRecords,
                                          bool &definitionTransformError);
   bool buildImportAliases();
+  std::string resolveStructReturnPathForBuild(const std::string &typeName,
+                                              const std::string &namespacePrefix) const;
+  bool buildDefinitionReturnKinds(const std::unordered_set<std::string> &explicitStructs);
   bool buildParameters();
   bool inferUnknownReturnKinds();
   bool inferUnknownReturnKindsLegacy();
