@@ -110,6 +110,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorPassesExecutions.cpp
   src/semantics/SemanticsValidatorPassesOmittedInitializers.cpp
   src/semantics/SemanticsValidatorPassesStructLayouts.cpp
+  src/semantics/SemanticsValidatorPassesUninitialized.cpp
   src/semantics/SemanticsValidatorPasses.cpp
   src/semantics/SemanticsValidatorStatementBindings.cpp
   src/semantics/SemanticsValidatorStatementBuiltins.cpp
