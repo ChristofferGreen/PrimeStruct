@@ -69,40 +69,6 @@ bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *
          defMap_.find("/vector/" + namespacedHelper) != defMap_.end();
 }
 
-bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate, std::string &nameOut) const {
-  if (candidate.kind != Expr::Kind::Call) {
-    return false;
-  }
-  auto matchesHelper = [&](const char *helper) -> bool {
-    return isVectorBuiltinName(candidate, helper);
-  };
-  if (matchesHelper("push")) {
-    nameOut = "push";
-    return true;
-  }
-  if (matchesHelper("pop")) {
-    nameOut = "pop";
-    return true;
-  }
-  if (matchesHelper("reserve")) {
-    nameOut = "reserve";
-    return true;
-  }
-  if (matchesHelper("clear")) {
-    nameOut = "clear";
-    return true;
-  }
-  if (matchesHelper("remove_at")) {
-    nameOut = "remove_at";
-    return true;
-  }
-  if (matchesHelper("remove_swap")) {
-    nameOut = "remove_swap";
-    return true;
-  }
-  return false;
-}
-
 bool SemanticsValidator::resolveVectorHelperMethodTarget(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -159,35 +125,6 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     return true;
   }
   return false;
-}
-
-std::string SemanticsValidator::getDirectVectorHelperCompatibilityPath(const Expr &candidate) const {
-  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-    return "";
-  }
-  std::string normalized = candidate.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  std::string normalizedPrefix = candidate.namespacePrefix;
-  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-    normalizedPrefix.erase(normalizedPrefix.begin());
-  }
-  std::string helperName;
-  if (normalized.rfind("vector/", 0) == 0) {
-    helperName = normalized.substr(std::string("vector/").size());
-  } else if (normalizedPrefix == "vector") {
-    helperName = normalized;
-  } else if (resolveCalleePath(candidate).rfind("/vector/", 0) == 0) {
-    helperName = resolveCalleePath(candidate).substr(std::string("/vector/").size());
-  } else {
-    return "";
-  }
-  if (!isVectorCompatibilityHelperName(helperName)) {
-    return "";
-  }
-  const std::string removedPath = "/vector/" + helperName;
-  return defMap_.find(removedPath) == defMap_.end() ? removedPath : "";
 }
 
 bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<ParameterInfo> &params,

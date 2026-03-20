@@ -9960,6 +9960,16 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("resolveMethodCallPath(\"count\"") == std::string::npos);
   CHECK(semanticsInferSource.find("resolveMethodCallPath(\"capacity\"") == std::string::npos);
+  CHECK(semanticsInferSource.find("methodRemovedCollectionCompatibilityPath(candidate, params, locals)") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("preferVectorStdlibHelperPath(resolveCalleePath(expr))") !=
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto preferVectorStdlibHelperPathForCall = [&](const std::string &path)") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto explicitRemovedCollectionMethodPath = [&](const Expr &candidate) -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {") ==
+        std::string::npos);
   CHECK(semanticsInferSource.find("std::function<bool(const Expr &, std::unordered_map<std::string, BindingInfo> &)> inferStatement;") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionMethodReturnKind = [&]") == std::string::npos);
@@ -9985,6 +9995,12 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::hasImportedDefinitionPath") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::inferDefinitionReturnBinding") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::methodRemovedCollectionCompatibilityPath") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::getVectorStatementHelperName") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::getDirectVectorHelperCompatibilityPath") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTypePath") !=
         std::string::npos);

@@ -478,6 +478,45 @@ std::string SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_
   return removedCollectionMethodPath(family, helperName, preserveArrayPath);
 }
 
+std::string SemanticsValidator::methodRemovedCollectionCompatibilityPath(
+    const Expr &candidate,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const BuiltinCollectionDispatchResolverAdapters &adapters) {
+  if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
+      candidate.args.empty()) {
+    return "";
+  }
+
+  RemovedCollectionHelperFamily family = RemovedCollectionHelperFamily::VectorLike;
+  std::string_view helperName;
+  bool preserveArrayPath = false;
+  if (!resolveRemovedCollectionHelperReference(
+          candidate.name, candidate.namespacePrefix, family, helperName, preserveArrayPath)) {
+    return "";
+  }
+
+  const BuiltinCollectionDispatchResolvers dispatchResolvers =
+      makeBuiltinCollectionDispatchResolvers(params, locals, adapters);
+  if (family == RemovedCollectionHelperFamily::Map) {
+    const std::string removedPath = removedCollectionMethodPath(family, helperName, preserveArrayPath);
+    if (removedPath.empty() || hasDefinitionPath(removedPath)) {
+      return "";
+    }
+    std::string keyType;
+    std::string valueType;
+    return dispatchResolvers.resolveMapTarget(candidate.args.front(), keyType, valueType) ? removedPath : "";
+  }
+
+  std::string elemType;
+  if (!dispatchResolvers.resolveVectorTarget(candidate.args.front(), elemType) &&
+      !dispatchResolvers.resolveArrayTarget(candidate.args.front(), elemType) &&
+      !dispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
+    return "";
+  }
+  return removedCollectionMethodPath(family, helperName, preserveArrayPath);
+}
+
 bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
                                                       std::string &helperNameOut) const {
   helperNameOut.clear();
