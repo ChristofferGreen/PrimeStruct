@@ -102,6 +102,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorInferCollections.cpp
   src/semantics/SemanticsValidatorInferControlFlow.cpp
   src/semantics/SemanticsValidatorInferDefinition.cpp
+  src/semantics/SemanticsValidatorInferGraph.cpp
   src/semantics/SemanticsValidatorInfer.cpp
   src/semantics/SemanticsValidatorPassesEffects.cpp
   src/semantics/SemanticsValidatorPassesDiagnostics.cpp
