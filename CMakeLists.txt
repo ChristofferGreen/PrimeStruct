@@ -249,6 +249,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
 
 set(PRIMESTRUCT_RUNTIME_SOURCES
   src/Vm.cpp
+  src/VmDebugHelpers.cpp
   src/VmHeapHelpers.cpp
   src/VmDebugAdapter.cpp
   src/VmDebugDap.cpp

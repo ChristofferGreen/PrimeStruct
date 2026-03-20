@@ -220,6 +220,7 @@ private:
   enum class StepOutcome { Continue, Exit, Fault };
 
   bool initFromModule(const IrModule &module, uint64_t argCount, const std::vector<std::string_view> *args);
+  void appendMappedStackTrace(std::string &error) const;
   StepOutcome stepInstruction(std::string &error);
 
   const IrModule *module_ = nullptr;
