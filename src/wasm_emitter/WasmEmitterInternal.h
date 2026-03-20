@@ -284,4 +284,10 @@ bool emitInstructionRange(const IrFunction &function,
                           std::vector<uint8_t> &out,
                           std::string &error);
 
+bool lowerFunctionCode(const IrFunction &function,
+                       const std::vector<WasmFunctionType> &functionTypes,
+                       const WasmRuntimeContext &runtime,
+                       WasmCodeBody &outBody,
+                       std::string &error);
+
 } // namespace primec
