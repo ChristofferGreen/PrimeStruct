@@ -1284,8 +1284,10 @@ import /std/file/*
 [return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
 main() {
   [File<Write>] file{ File<Write>("__PATH__"utf8)? }
-  [array<i32>] bytes{ array<i32>(66i32, 67i32) }
-  file.write_byte(65i32)?
+  [array<i32>] bytes{ array<i32>(68i32, 69i32) }
+  /File/write<Write, i32>(file, 65i32)?
+  /File/write_line<Write, i32>(file, 66i32)?
+  file.write_byte(67i32)?
   /File/write_bytes(file, bytes)?
   /File/flush(file)?
   file.close()?
@@ -1305,7 +1307,7 @@ log_file_error([FileError] err) {
   const std::string srcPath = writeTemp("vm_stdlib_file_helpers.prime", program);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(filePath) == "ABC");
+  CHECK(readFile(filePath) == "6566\nCDE");
 }
 
 TEST_CASE("vm supports graphics-style int return propagation with on_error") {

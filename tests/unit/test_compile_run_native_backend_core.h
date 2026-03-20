@@ -113,8 +113,10 @@ TEST_CASE("native uses stdlib File helper wrappers") {
       "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
       "main() {\n"
       "  [File<Write>] file{ File<Write>(\"" + escapedPath + "\"utf8)? }\n"
-      "  [array<i32>] bytes{ array<i32>(66i32, 67i32) }\n"
-      "  file.write_byte(65i32)?\n"
+      "  [array<i32>] bytes{ array<i32>(68i32, 69i32) }\n"
+      "  /File/write<Write, i32>(file, 65i32)?\n"
+      "  /File/write_line<Write, i32>(file, 66i32)?\n"
+      "  file.write_byte(67i32)?\n"
       "  /File/write_bytes(file, bytes)?\n"
       "  /File/flush(file)?\n"
       "  file.close()?\n"
@@ -131,7 +133,7 @@ TEST_CASE("native uses stdlib File helper wrappers") {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
-  CHECK(readFile(outPath) == "ABC");
+  CHECK(readFile(outPath) == "6566\nCDE");
 }
 
 TEST_CASE("compiles and runs native mutable scalar helper copy-back") {

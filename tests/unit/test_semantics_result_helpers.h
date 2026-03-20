@@ -162,6 +162,8 @@ import /std/file/*
 
 [effects(file_write), return<void>]
 write_out([File<Write>] file, [array<i32>] bytes) {
+  [Result<FileError>] directWrite{/File/write<Write, i32>(file, 65i32)}
+  [Result<FileError>] directWriteLine{/File/write_line<Write, i32>(file, 7i32)}
   [Result<FileError>] methodByte{file.write_byte(65i32)}
   [Result<FileError>] directBytes{/File/write_bytes(file, bytes)}
   [Result<FileError>] methodFlush{file.flush()}
@@ -186,11 +188,11 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib File slash-call helpers require stdlib import") {
+TEST_CASE("stdlib File text slash-call helpers require stdlib import") {
   const std::string source = R"(
 [effects(file_write), return<void>]
-write_out([File<Write>] file, [array<i32>] bytes) {
-  /File/write_bytes(file, bytes)
+write_out([File<Write>] file) {
+  /File/write(file, "hello"utf8)
 }
 
 [return<void>]
@@ -200,7 +202,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /File/write_bytes") != std::string::npos);
+  CHECK(error.find("unknown call target: /File/write") != std::string::npos);
 }
 
 TEST_CASE("stdlib image error result helpers construct status and value results") {

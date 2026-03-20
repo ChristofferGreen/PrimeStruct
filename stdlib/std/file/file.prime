@@ -4,6 +4,16 @@
 }
 
 [public effects(file_write), return<Result<FileError>>]
+/File/write<Mode, T>([File<Mode>] self, [T] value) {
+  return(self.write(value))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write_line<Mode, T>([File<Mode>] self, [T] value) {
+  return(self.write_line(value))
+}
+
+[public effects(file_write), return<Result<FileError>>]
 /File/write_byte<Mode, T>([File<Mode>] self, [T] value) {
   return(/file/write_byte(self, value))
 }
