@@ -515,6 +515,41 @@ private:
   bool resolveDirectCallTemporaryAccessReceiverPath(const Expr &receiverExpr,
                                                     std::string_view helperName,
                                                     std::string &pathOut);
+  struct ExprArgumentValidationContext {
+    const Expr *callExpr = nullptr;
+    const std::string *resolved = nullptr;
+    const std::string *diagnosticResolved = nullptr;
+    const std::vector<ParameterInfo> *params = nullptr;
+    const std::unordered_map<std::string, BindingInfo> *locals = nullptr;
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+  };
+  std::string expectedBindingTypeText(const BindingInfo &binding) const;
+  std::string argumentStructMismatchDiagnostic(std::string_view diagnosticResolved,
+                                               std::string_view paramName,
+                                               const std::string &expectedTypePath,
+                                               const std::string &actualTypePath) const;
+  static bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind);
+  bool isBuiltinCollectionLiteralExpr(const Expr &candidate) const;
+  bool isStringExprForArgumentValidation(const Expr &arg,
+                                         const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  bool extractExperimentalMapFieldTypesFromStructPath(const std::string &structPath,
+                                                      std::string &keyTypeOut,
+                                                      std::string &valueTypeOut) const;
+  bool validateArgumentTypeAgainstParam(const Expr &arg,
+                                        const ParameterInfo &param,
+                                        const std::string &expectedTypeName,
+                                        const std::string &expectedTypeText,
+                                        const ExprArgumentValidationContext &context);
+  bool validateSpreadArgumentTypeAgainstParam(const Expr &arg,
+                                              const ParameterInfo &param,
+                                              const std::string &expectedTypeName,
+                                              const std::string &expectedTypeText,
+                                              const ExprArgumentValidationContext &context);
+  bool validateArgumentsForParameter(const ParameterInfo &param,
+                                     const std::string &expectedTypeName,
+                                     const std::string &expectedTypeText,
+                                     const std::vector<const Expr *> &argsToValidate,
+                                     const ExprArgumentValidationContext &context);
   struct BuiltinCollectionCountCapacityDispatchContext {
     bool isCountLike = false;
     bool isCapacityLike = false;

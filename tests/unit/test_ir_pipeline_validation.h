@@ -9242,6 +9242,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
   const std::filesystem::path semanticsExprNumericPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
+  const std::filesystem::path semanticsExprArgumentValidationPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidation.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPointerLike.cpp";
   const std::filesystem::path semanticsExprReceiverPathsPath =
@@ -9255,6 +9257,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
+  REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
   REQUIRE(std::filesystem::exists(semanticsExprReceiverPathsPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
@@ -9264,6 +9267,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
+  const std::string semanticsExprArgumentValidationSource = readText(semanticsExprArgumentValidationPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
   const std::string semanticsExprReceiverPathsSource = readText(semanticsExprReceiverPathsPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
@@ -9430,6 +9434,24 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveExperimentalMapValueTarget = [&](const Expr &target,") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto argumentStructMismatchDiagnostic = [&](const std::string &paramName,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto expectedBindingTypeText = [](const BindingInfo &binding)") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isSoftwareNumericParamCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isBuiltinCollectionLiteralExpr = [&](const Expr &candidate) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto validateArgumentTypeAgainstParam = [&](const Expr &arg,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto extractExperimentalMapFieldTypesFromStructPath = [&](const std::string &structPath,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto validateSpreadArgumentTypeAgainstParam = [&](const Expr &arg,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto validateArgumentsForParameter = [&](const ParameterInfo &param,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const ExprArgumentValidationContext argumentValidationContext{") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprValidation.h\"") == std::string::npos);
@@ -9447,6 +9469,26 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprNumericSource.find("bool SemanticsValidator::validateNumericBuiltinExpr") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("multiply requires scalar scaling") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("implicit matrix/quaternion family conversion requires explicit helper") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find("std::string SemanticsValidator::expectedBindingTypeText") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find(
+            "std::string SemanticsValidator::argumentStructMismatchDiagnostic") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find(
+            "bool SemanticsValidator::isBuiltinCollectionLiteralExpr") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find(
+            "bool SemanticsValidator::extractExperimentalMapFieldTypesFromStructPath") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find(
+            "bool SemanticsValidator::validateArgumentTypeAgainstParam") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find(
+            "bool SemanticsValidator::validateSpreadArgumentTypeAgainstParam") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find(
+            "bool SemanticsValidator::validateArgumentsForParameter") !=
         std::string::npos);
   CHECK(semanticsExprPointerLikeSource.find("std::string SemanticsValidator::normalizeCollectionMethodName") !=
         std::string::npos);
