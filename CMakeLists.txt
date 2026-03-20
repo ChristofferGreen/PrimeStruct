@@ -65,6 +65,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorBuildReturnKinds.cpp
   src/semantics/SemanticsValidatorBuildLifecycle.cpp
   src/semantics/SemanticsValidatorBuildParameters.cpp
+  src/semantics/SemanticsValidatorBuildCallResolution.cpp
   src/semantics/SemanticsValidatorExprBlock.cpp
   src/semantics/SemanticsValidatorExprCaptureSplitStep.cpp
   src/semantics/SemanticsValidatorExprBodyArguments.cpp
