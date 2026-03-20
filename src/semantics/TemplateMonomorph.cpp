@@ -27,11 +27,18 @@ struct TemplateRootInfo {
   std::vector<std::string> params;
 };
 
+struct HelperOverloadEntry {
+  std::string internalPath;
+  size_t parameterCount = 0;
+};
+
 struct Context {
   Program &program;
   std::unordered_map<std::string, Definition> sourceDefs;
   std::unordered_set<std::string> templateDefs;
   std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::vector<HelperOverloadEntry>> helperOverloads;
+  std::unordered_map<std::string, std::string> helperOverloadInternalToPublic;
   std::unordered_map<std::string, std::string> specializationCache;
   std::unordered_set<std::string> outputPaths;
   std::vector<Definition> outputDefs;
@@ -134,6 +141,60 @@ bool isStructDefinition(const Definition &def) {
     }
   }
   return true;
+}
+
+std::string helperOverloadInternalPath(const std::string &publicPath, size_t parameterCount) {
+  return publicPath + "__ov" + std::to_string(parameterCount);
+}
+
+std::string helperOverloadDisplayPath(const std::string &path, const Context &ctx) {
+  auto directIt = ctx.helperOverloadInternalToPublic.find(path);
+  if (directIt != ctx.helperOverloadInternalToPublic.end()) {
+    return directIt->second;
+  }
+  for (const auto &[internalPath, publicPath] : ctx.helperOverloadInternalToPublic) {
+    if (path.rfind(internalPath + "__t", 0) == 0) {
+      return publicPath;
+    }
+  }
+  return path;
+}
+
+std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolvedPath, const Context &ctx) {
+  auto familyIt = ctx.helperOverloads.find(resolvedPath);
+  if (familyIt == ctx.helperOverloads.end()) {
+    return resolvedPath;
+  }
+  const size_t argumentCount = expr.args.size();
+  for (const auto &entry : familyIt->second) {
+    if (entry.parameterCount == argumentCount) {
+      return entry.internalPath;
+    }
+  }
+  return resolvedPath;
+}
+
+bool resolveHelperOverloadDefinitionIdentity(const Definition &def,
+                                             const Context &ctx,
+                                             std::string &internalPathOut,
+                                             std::string &nameOut) {
+  internalPathOut = def.fullPath;
+  nameOut = def.name;
+  auto familyIt = ctx.helperOverloads.find(def.fullPath);
+  if (familyIt == ctx.helperOverloads.end()) {
+    return false;
+  }
+  const size_t parameterCount = def.parameters.size();
+  for (const auto &entry : familyIt->second) {
+    if (entry.parameterCount != parameterCount) {
+      continue;
+    }
+    internalPathOut = entry.internalPath;
+    const size_t slash = internalPathOut.find_last_of('/');
+    nameOut = slash == std::string::npos ? internalPathOut : internalPathOut.substr(slash + 1);
+    return true;
+  }
+  return false;
 }
 
 std::string trimWhitespace(const std::string &text) {
@@ -1261,14 +1322,17 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     }
     return resolvedPath;
   };
+  auto finalizeResolvedPath = [&](const std::string &resolvedPath) -> std::string {
+    return selectHelperOverloadPath(expr, rewriteCanonicalCollectionConstructorPath(resolvedPath), ctx);
+  };
   if (expr.name.empty()) {
     return "";
   }
   if (!expr.name.empty() && expr.name[0] == '/') {
-    return rewriteCanonicalCollectionConstructorPath(expr.name);
+    return finalizeResolvedPath(expr.name);
   }
   if (expr.name.find('/') != std::string::npos) {
-    return rewriteCanonicalCollectionConstructorPath("/" + expr.name);
+    return finalizeResolvedPath("/" + expr.name);
   }
   if (!namespacePrefix.empty()) {
     const size_t lastSlash = namespacePrefix.find_last_of('/');
@@ -1276,13 +1340,13 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
                                         ? std::string_view(namespacePrefix)
                                         : std::string_view(namespacePrefix).substr(lastSlash + 1);
     if (suffix == expr.name && ctx.sourceDefs.count(namespacePrefix) > 0) {
-      return namespacePrefix;
+      return finalizeResolvedPath(namespacePrefix);
     }
     std::string prefix = namespacePrefix;
     while (!prefix.empty()) {
       std::string candidate = prefix + "/" + expr.name;
       if (ctx.sourceDefs.count(candidate) > 0) {
-        return candidate;
+        return finalizeResolvedPath(candidate);
       }
       const size_t slash = prefix.find_last_of('/');
       if (slash == std::string::npos) {
@@ -1292,20 +1356,19 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     }
     auto aliasIt = ctx.importAliases.find(expr.name);
     if (aliasIt != ctx.importAliases.end()) {
-      return rewriteCanonicalCollectionConstructorPath(rewriteBuiltinCollectionImportAlias(aliasIt->second));
+      return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(aliasIt->second));
     }
-    return rewriteCanonicalCollectionConstructorPath(
-        rewriteBuiltinCollectionImportAlias(namespacePrefix + "/" + expr.name));
+    return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(namespacePrefix + "/" + expr.name));
   }
   std::string root = "/" + expr.name;
   if (ctx.sourceDefs.count(root) > 0) {
-    return rewriteCanonicalCollectionConstructorPath(root);
+    return finalizeResolvedPath(root);
   }
   auto aliasIt = ctx.importAliases.find(expr.name);
   if (aliasIt != ctx.importAliases.end()) {
-    return rewriteCanonicalCollectionConstructorPath(rewriteBuiltinCollectionImportAlias(aliasIt->second));
+    return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(aliasIt->second));
   }
-  return rewriteCanonicalCollectionConstructorPath(rewriteBuiltinCollectionImportAlias(root));
+  return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(root));
 }
 
 bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
@@ -2387,6 +2450,10 @@ bool rewriteExpr(Expr &expr,
         expr.name = implicitTemplatePreferredPath;
       }
     }
+    if (ctx.helperOverloadInternalToPublic.count(resolvedPath) > 0) {
+      expr.name = resolvedPath;
+      expr.namespacePrefix.clear();
+    }
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
     const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
     if (isTemplateDef) {
@@ -2435,7 +2502,7 @@ bool rewriteExpr(Expr &expr,
         if (shouldDeferStdlibCollectionHelperTemplateRewrite(resolvedPath)) {
           return true;
         }
-        error = "template arguments required for " + resolvedPath;
+        error = "template arguments required for " + helperOverloadDisplayPath(resolvedPath, ctx);
         return false;
       }
       if (allConcrete) {
@@ -2447,7 +2514,8 @@ bool rewriteExpr(Expr &expr,
         expr.templateArgs.clear();
       }
     } else if (isKnownDef && !expr.templateArgs.empty()) {
-      error = "template arguments are only supported on templated definitions: " + resolvedPath;
+      error = "template arguments are only supported on templated definitions: " +
+              helperOverloadDisplayPath(resolvedPath, ctx);
       return false;
     }
     auto defIt = ctx.sourceDefs.find(resolveCalleePath(expr, namespacePrefix, ctx));
@@ -2513,6 +2581,11 @@ bool rewriteExpr(Expr &expr,
         methodPath =
             preferVectorStdlibImplicitTemplatePath(expr, methodPath, locals, params, allowMathBare, ctx, namespacePrefix);
       }
+      if (ctx.helperOverloadInternalToPublic.count(methodPath) > 0) {
+        expr.name = methodPath;
+        expr.namespacePrefix.clear();
+        expr.isMethodCall = false;
+      }
       const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
       const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;
       if (isTemplateDef) {
@@ -2561,7 +2634,7 @@ bool rewriteExpr(Expr &expr,
           if (shouldDeferStdlibCollectionHelperTemplateRewrite(methodPath)) {
             return true;
           }
-          error = "template arguments required for " + methodPath;
+          error = "template arguments required for " + helperOverloadDisplayPath(methodPath, ctx);
           return false;
         }
         if (allConcrete) {
@@ -2574,7 +2647,8 @@ bool rewriteExpr(Expr &expr,
           expr.isMethodCall = false;
         }
       } else if (isKnownDef && !expr.templateArgs.empty()) {
-        error = "template arguments are only supported on templated definitions: " + methodPath;
+        error = "template arguments are only supported on templated definitions: " +
+                helperOverloadDisplayPath(methodPath, ctx);
         return false;
       }
       auto methodDefIt = ctx.sourceDefs.find(resolveCalleePath(expr, namespacePrefix, ctx));
@@ -2933,7 +3007,8 @@ bool rewriteExecution(Execution &exec, Context &ctx, std::string &error) {
   exec.bodyArguments = execExpr.bodyArguments;
   exec.hasBodyArguments = execExpr.hasBodyArguments;
   if (ctx.templateDefs.count(resolveCalleePath(execExpr, exec.namespacePrefix, ctx)) > 0 && exec.templateArgs.empty()) {
-    error = "template arguments required for " + resolveCalleePath(execExpr, exec.namespacePrefix, ctx);
+    error = "template arguments required for " +
+            helperOverloadDisplayPath(resolveCalleePath(execExpr, exec.namespacePrefix, ctx), ctx);
     return false;
   }
   if (ctx.templateDefs.count(resolveCalleePath(execExpr, exec.namespacePrefix, ctx)) > 0 && !allConcrete) {
@@ -2955,12 +3030,14 @@ bool instantiateTemplate(const std::string &basePath,
   }
   const Definition &baseDef = defIt->second;
   if (baseDef.templateArgs.empty()) {
-    error = "template arguments are only supported on templated definitions: " + basePath;
+    error = "template arguments are only supported on templated definitions: " +
+            helperOverloadDisplayPath(basePath, ctx);
     return false;
   }
   if (baseDef.templateArgs.size() != resolvedArgs.size()) {
     std::ostringstream out;
-    out << "template argument count mismatch for " << basePath << ": expected " << baseDef.templateArgs.size()
+    out << "template argument count mismatch for " << helperOverloadDisplayPath(basePath, ctx) << ": expected "
+        << baseDef.templateArgs.size()
         << ", got " << resolvedArgs.size();
     error = out.str();
     return false;
@@ -3083,8 +3160,22 @@ void buildImportAliases(Context &ctx) {
     }
     if (isWildcard) {
       const std::string scopedPrefix = prefix + "/";
+      for (const auto &[publicPath, overloads] : ctx.helperOverloads) {
+        (void)overloads;
+        if (publicPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string remainder = publicPath.substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        ctx.importAliases.emplace(remainder, publicPath);
+      }
       for (const auto &entry : ctx.sourceDefs) {
         const std::string &path = entry.first;
+        if (ctx.helperOverloadInternalToPublic.count(path) > 0) {
+          continue;
+        }
         if (path.rfind(scopedPrefix, 0) != 0) {
           continue;
         }
@@ -3098,7 +3189,9 @@ void buildImportAliases(Context &ctx) {
     }
     auto defIt = ctx.sourceDefs.find(importPath);
     if (defIt == ctx.sourceDefs.end()) {
-      continue;
+      if (ctx.helperOverloads.count(importPath) == 0) {
+        continue;
+      }
     }
     const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
     if (remainder.empty()) {
@@ -3111,7 +3204,7 @@ void buildImportAliases(Context &ctx) {
 } // namespace
 
 bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error) {
-  Context ctx{program, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
+  Context ctx{program, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
   ctx.sourceDefs.clear();
   ctx.templateDefs.clear();
   ctx.outputDefs.clear();
@@ -3119,6 +3212,8 @@ bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::
   ctx.outputPaths.clear();
   ctx.implicitTemplateDefs.clear();
   ctx.implicitTemplateParams.clear();
+  ctx.helperOverloads.clear();
+  ctx.helperOverloadInternalToPublic.clear();
 
   if (!applyImplicitAutoTemplates(program, ctx, error)) {
     return false;
@@ -3126,15 +3221,72 @@ bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::
 
   std::unordered_set<std::string> templateRoots;
   templateRoots.clear();
+  std::unordered_map<std::string, std::vector<const Definition *>> definitionsByPath;
+  definitionsByPath.reserve(program.definitions.size());
+  std::unordered_set<std::string> occupiedPaths;
+  occupiedPaths.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {
-    auto [it, inserted] = ctx.sourceDefs.emplace(def.fullPath, def);
-    if (!inserted) {
-      error = "duplicate definition: " + def.fullPath;
+    definitionsByPath[def.fullPath].push_back(&def);
+    occupiedPaths.insert(def.fullPath);
+  }
+  for (const auto &[publicPath, family] : definitionsByPath) {
+    if (family.size() == 1) {
+      const Definition &def = *family.front();
+      ctx.sourceDefs.emplace(def.fullPath, def);
+      if (!def.templateArgs.empty()) {
+        ctx.templateDefs.insert(def.fullPath);
+        templateRoots.insert(def.fullPath);
+      }
+      continue;
+    }
+
+    bool allowHelperOverloadFamily = true;
+    std::unordered_set<size_t> seenParameterCounts;
+    std::vector<HelperOverloadEntry> overloads;
+    overloads.reserve(family.size());
+    for (const Definition *def : family) {
+      if (isStructDefinition(*def)) {
+        allowHelperOverloadFamily = false;
+        break;
+      }
+      const size_t parameterCount = def->parameters.size();
+      if (!seenParameterCounts.insert(parameterCount).second) {
+        allowHelperOverloadFamily = false;
+        break;
+      }
+      const std::string internalPath = helperOverloadInternalPath(publicPath, parameterCount);
+      if (occupiedPaths.count(internalPath) > 0) {
+        error = "helper overload internal path conflicts with existing definition: " + internalPath;
+        return false;
+      }
+      overloads.push_back({internalPath, parameterCount});
+    }
+    if (!allowHelperOverloadFamily) {
+      error = "duplicate definition: " + publicPath;
       return false;
     }
-    if (!def.templateArgs.empty()) {
-      ctx.templateDefs.insert(def.fullPath);
-      templateRoots.insert(def.fullPath);
+    std::stable_sort(overloads.begin(),
+                     overloads.end(),
+                     [](const HelperOverloadEntry &left, const HelperOverloadEntry &right) {
+                       return left.parameterCount < right.parameterCount;
+                     });
+    ctx.helperOverloads.emplace(publicPath, overloads);
+    for (const Definition *def : family) {
+      std::string internalPath;
+      std::string internalName;
+      if (!resolveHelperOverloadDefinitionIdentity(*def, ctx, internalPath, internalName)) {
+        error = "duplicate definition: " + publicPath;
+        return false;
+      }
+      Definition clone = *def;
+      clone.fullPath = internalPath;
+      clone.name = internalName;
+      ctx.sourceDefs.emplace(clone.fullPath, clone);
+      ctx.helperOverloadInternalToPublic.emplace(clone.fullPath, publicPath);
+      if (!clone.templateArgs.empty()) {
+        ctx.templateDefs.insert(clone.fullPath);
+        templateRoots.insert(clone.fullPath);
+      }
     }
   }
   if (templateRoots.count(entryPath) > 0) {
@@ -3154,10 +3306,16 @@ bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::
   };
 
   for (const auto &def : program.definitions) {
-    if (isUnderTemplateRoot(def.fullPath)) {
+    Definition clone = def;
+    std::string overloadInternalPath;
+    std::string overloadName;
+    if (resolveHelperOverloadDefinitionIdentity(def, ctx, overloadInternalPath, overloadName)) {
+      clone.fullPath = std::move(overloadInternalPath);
+      clone.name = std::move(overloadName);
+    }
+    if (isUnderTemplateRoot(clone.fullPath)) {
       continue;
     }
-    Definition clone = def;
     if (!rewriteDefinition(clone, SubstMap{}, {}, ctx, error)) {
       return false;
     }

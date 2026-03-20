@@ -259,6 +259,17 @@ module {
   - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>([first] 1i32)` is rejected).
   - Example: `execute_task([items] array<i32>(1i32, 2i32) [pairs] map<i32, i32>(1i32, 2i32))`.
   - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
+  - **Helper overloading:** non-struct definitions may reuse the same public helper path when their exact parameter counts differ. Call resolution picks the exact-arity match before template specialization and method-call lowering, while same-path same-arity definitions are still duplicates. Minimal example:
+    ```text
+    [return<i32>] /helper/value<T>([T] value) { return(1i32) }
+    [return<i32>] /helper/value<A, B>([A] first, [B] second) { return(2i32) }
+    [return<int> effects(io_out)]
+    main() {
+      print_line(/helper/value(7i32))
+      print_line(/helper/value(7i32, true))
+      return(0i32)
+    }
+    ```
   - Note: current VM/native/GLSL/C++ emitters only generate code for definitions; top-level executions are parsed/validated but not emitted (tooling-only for now).
 - **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<f32>] blend<…>(…) { … }`). Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
 - **Surface vs canonical:** surface syntax may omit the return transform or use `return<auto>` (or `[auto]` with `single_type_to_return`) and rely on inference; canonical/bottom-level syntax always carries an explicit concrete `return<T>` after monomorphisation, and the base-level tree contains no templates or `auto`. Example surface: `main() { return(0) }` → canonical: `[return<i32>] main() { return(0i32) }`. If all return paths yield no value, `return<auto>` resolves to `return<void>`.

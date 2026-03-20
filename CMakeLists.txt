@@ -466,17 +466,65 @@ if(PRIMESTRUCT_BUILD_TESTS)
   foreach(suite IN LISTS PrimeStructBackendTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+    if (suite STREQUAL "primestruct.ir.pipeline.conversions")
+      add_test(NAME "${testName}_core"
+               COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
+                       "--test-suite=${suite}"
+                       "--source-file=*test_ir_pipeline_conversions_core.h")
+      add_test(NAME "${testName}_numbers"
+               COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
+                       "--test-suite=${suite}"
+                       "--source-file=*test_ir_pipeline_conversions_numbers.h")
+      add_test(NAME "${testName}_calls_and_args_first_half"
+               COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
+                       "--test-suite=${suite}"
+                       "--source-file=*test_ir_pipeline_conversions_calls_and_args.h"
+                       "--order-by=file"
+                       "--first=1"
+                       "--last=38")
+      add_test(NAME "${testName}_calls_and_args_second_half"
+               COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
+                       "--test-suite=${suite}"
+                       "--source-file=*test_ir_pipeline_conversions_calls_and_args.h"
+                       "--order-by=file"
+                       "--first=39"
+                       "--last=76")
+      set_tests_properties("${testName}_core" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
+      set_tests_properties("${testName}_numbers" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
+      set_tests_properties("${testName}_calls_and_args_first_half" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
+      set_tests_properties("${testName}_calls_and_args_second_half" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
+    else()
+      add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> "--test-suite=${suite}")
+      set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
+      set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+    endif()
   endforeach()
 
   foreach(suite IN LISTS PrimeStructSemanticsTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+    if (suite STREQUAL "primestruct.semantics.operators")
+      add_test(NAME "${testName}_matrix_and_shape_rules"
+               COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
+                       "--test-suite=${suite}"
+                       "--source-file=*test_semantics_entry_operators.h"
+                       "--order-by=file"
+                       "--first=1"
+                       "--last=15")
+      add_test(NAME "${testName}_scalar_and_mixed_numeric_rules"
+               COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
+                       "--test-suite=${suite}"
+                       "--source-file=*test_semantics_entry_operators.h"
+                       "--order-by=file"
+                       "--first=16"
+                       "--last=29")
+      set_tests_properties("${testName}_matrix_and_shape_rules" PROPERTIES RUN_SERIAL TRUE TIMEOUT 900)
+      set_tests_properties("${testName}_scalar_and_mixed_numeric_rules" PROPERTIES RUN_SERIAL TRUE TIMEOUT 900)
+    else()
+      add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests> "--test-suite=${suite}")
+      set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
+      set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+    endif()
   endforeach()
 
   foreach(suite IN LISTS PrimeStructTextFilterTestSuites)

@@ -77,7 +77,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       auto defIt = ctx.sourceDefs.find(resolved);
       if (defIt != ctx.sourceDefs.end()) {
         if (isStructDefinition(defIt->second)) {
-          pathOut = resolved + "/" + methodName;
+          pathOut = selectHelperOverloadPath(expr, resolved + "/" + methodName, ctx);
           return true;
         }
         for (const auto &transform : defIt->second.transforms) {
@@ -115,7 +115,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   const std::string normalizedMethodName = normalizeCollectionMethodName(typeName, methodName);
   if (isPrimitiveBindingTypeName(typeName)) {
-    pathOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
+    pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
     return true;
   }
   std::string normalizedTypeName = typeName;
@@ -133,16 +133,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     if (typeName == "array" || typeName == "vector" || typeName == "map" || typeName == "soa_vector") {
       pathOut = "/" + typeName + "/" + normalizedMethodName;
       pathOut = preferVectorStdlibHelperPath(pathOut, ctx.sourceDefs);
+      pathOut = selectHelperOverloadPath(expr, pathOut, ctx);
       return true;
     }
     if (typeName == "string") {
-      pathOut = "/string/" + normalizedMethodName;
+      pathOut = selectHelperOverloadPath(expr, "/string/" + normalizedMethodName, ctx);
       return true;
     }
     return false;
   }
-  pathOut = resolvedType + "/" + normalizedMethodName;
-  pathOut = preferVectorStdlibHelperPath(pathOut, ctx.sourceDefs);
+  pathOut = preferVectorStdlibHelperPath(resolvedType + "/" + normalizedMethodName, ctx.sourceDefs);
+  pathOut = selectHelperOverloadPath(expr, pathOut, ctx);
   return true;
 }
 

@@ -227,6 +227,68 @@ main() {
   CHECK(error.find("template arguments required for /File/close") != std::string::npos);
 }
 
+TEST_CASE("templated helper overload families resolve by exact arity") {
+  const std::string source = R"(
+[struct]
+Marker() {}
+
+[return<i32>]
+/helper/value<T>([T] value) {
+  return(1i32)
+}
+
+[return<i32>]
+/helper/value<A, B>([A] first, [B] second) {
+  return(2i32)
+}
+
+[return<i32>]
+/Marker/mark<T>([Marker] self, [T] value) {
+  return(/helper/value(value))
+}
+
+[return<i32>]
+/Marker/mark<A, B>([Marker] self, [A] first, [B] second) {
+  return(/helper/value(first, second))
+}
+
+[return<void>]
+main() {
+  [Marker] marker{Marker()}
+  [i32] directOne{/helper/value(7i32)}
+  [i32] directTwo{/helper/value(7i32, true)}
+  [i32] methodOne{marker.mark(9i32)}
+  [i32] methodTwo{marker.mark(9i32, false)}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("templated helper overload families still reject duplicate same-arity definitions") {
+  const std::string source = R"(
+[return<i32>]
+/helper/value<T>([T] value) {
+  return(1i32)
+}
+
+[return<i32>]
+/helper/value<U>([U] other) {
+  return(2i32)
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate definition: /helper/value") != std::string::npos);
+}
+
 TEST_CASE("stdlib image error result helpers construct status and value results") {
   const std::string source = R"(
 import /std/image/*

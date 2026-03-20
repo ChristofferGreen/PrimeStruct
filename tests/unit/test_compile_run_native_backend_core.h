@@ -215,6 +215,53 @@ TEST_CASE("native uses stdlib File string helper wrappers") {
   CHECK(readFile(outPath) == "alphaomega\n");
 }
 
+TEST_CASE("native resolves templated helper overload families by exact arity") {
+  const std::string source = R"(
+[struct]
+Marker() {}
+
+[return<i32>]
+/helper/value<T>([T] value) {
+  return(1i32)
+}
+
+[return<i32>]
+/helper/value<A, B>([A] first, [B] second) {
+  return(2i32)
+}
+
+[return<i32>]
+/Marker/mark<T>([Marker] self, [T] value) {
+  return(/helper/value(value))
+}
+
+[return<i32>]
+/Marker/mark<A, B>([Marker] self, [A] first, [B] second) {
+  return(/helper/value(first, second))
+}
+
+[effects(io_out), return<int>]
+main() {
+  [Marker] marker{Marker()}
+  print_line(/helper/value(9i32))
+  print_line(/helper/value(9i32, true))
+  print_line(marker.mark(7i32))
+  print_line(marker.mark(7i32, false))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("native_helper_overload_families.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_helper_overload_families_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_helper_overload_families_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "1\n2\n1\n2\n");
+}
+
 TEST_CASE("compiles and runs native mutable scalar helper copy-back") {
   const std::string source = R"(
 [return<void>]

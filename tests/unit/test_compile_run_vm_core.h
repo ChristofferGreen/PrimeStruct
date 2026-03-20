@@ -1395,6 +1395,50 @@ log_file_error([FileError] err) {
   CHECK(readFile(filePath) == "alphaomega\n");
 }
 
+TEST_CASE("vm resolves templated helper overload families by exact arity") {
+  const std::string source = R"(
+[struct]
+Marker() {}
+
+[return<i32>]
+/helper/value<T>([T] value) {
+  return(1i32)
+}
+
+[return<i32>]
+/helper/value<A, B>([A] first, [B] second) {
+  return(2i32)
+}
+
+[return<i32>]
+/Marker/mark<T>([Marker] self, [T] value) {
+  return(/helper/value(value))
+}
+
+[return<i32>]
+/Marker/mark<A, B>([Marker] self, [A] first, [B] second) {
+  return(/helper/value(first, second))
+}
+
+[effects(io_out), return<int>]
+main() {
+  [Marker] marker{Marker()}
+  print_line(/helper/value(9i32))
+  print_line(/helper/value(9i32, true))
+  print_line(marker.mark(7i32))
+  print_line(marker.mark(7i32, false))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_helper_overload_families.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_helper_overload_families_out.txt").string();
+
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "1\n2\n1\n2\n");
+}
+
 TEST_CASE("vm supports graphics-style int return propagation with on_error") {
   const std::string source = R"(
 [struct]
