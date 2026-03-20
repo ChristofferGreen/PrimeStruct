@@ -95,6 +95,11 @@ private:
                                               const Expr &target,
                                               std::string &keyTypeOut,
                                               std::string &valueTypeOut);
+  bool resolveInferMethodCallPath(const Expr &expr,
+                                  const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals,
+                                  const std::string &methodName,
+                                  std::string &resolvedOut);
   bool inferBindingTypeFromInitializer(const Expr &initializer,
                                        const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,
