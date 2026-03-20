@@ -118,10 +118,20 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (resolvedType.empty() || structNames_.count(resolvedType) == 0) {
       resolvedType = inferStructReturnPath(receiver, params, locals);
     }
-    if (resolvedType.empty()) {
+    if (!resolvedType.empty()) {
+      resolvedOut = resolvedType + "/" + helperName;
+      return true;
+    }
+    const ReturnKind receiverKind = inferExprReturnKind(receiver, params, locals);
+    if (receiverKind == ReturnKind::Unknown || receiverKind == ReturnKind::Void ||
+        receiverKind == ReturnKind::Array) {
       return false;
     }
-    resolvedOut = resolvedType + "/" + helperName;
+    const std::string receiverType = typeNameForReturnKind(receiverKind);
+    if (receiverType.empty()) {
+      return false;
+    }
+    resolvedOut = "/" + receiverType + "/" + helperName;
     return true;
   }
   return false;
