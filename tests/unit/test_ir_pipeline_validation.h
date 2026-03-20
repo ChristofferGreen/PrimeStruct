@@ -9262,6 +9262,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   const std::filesystem::path semanticsExprGpuBufferPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprGpuBuffer.cpp";
+  const std::filesystem::path semanticsExprScalarPointerMemoryPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprScalarPointerMemory.cpp";
   const std::filesystem::path semanticsExprResultFilePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprResultFile.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
@@ -9281,6 +9283,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprTryPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(semanticsExprGpuBufferPath));
+  REQUIRE(std::filesystem::exists(semanticsExprScalarPointerMemoryPath));
   REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
@@ -9298,6 +9301,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprTrySource = readText(semanticsExprTryPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
   const std::string semanticsExprGpuBufferSource = readText(semanticsExprGpuBufferPath);
+  const std::string semanticsExprScalarPointerMemorySource = readText(semanticsExprScalarPointerMemoryPath);
   const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
@@ -9398,6 +9402,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprGpuBufferBuiltins(params, locals, expr,") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("validateExprScalarPointerMemoryBuiltins(") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("if (getBuiltinCollectionName(expr, builtinName)) {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"try\")) {") ==
@@ -9463,17 +9469,33 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (isSimpleCallName(expr, \"dispatch\")) {") ==
+  CHECK(semanticsExprSource.find("dispatch requires kernel and three dimension arguments") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (isSimpleCallName(expr, \"buffer\")) {") ==
+  CHECK(semanticsExprSource.find("buffer requires exactly one template argument") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (isSimpleCallName(expr, \"upload\")) {") ==
+  CHECK(semanticsExprSource.find("upload requires array input") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (isSimpleCallName(expr, \"readback\")) {") ==
+  CHECK(semanticsExprSource.find("readback requires Buffer input") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (isSimpleCallName(expr, \"buffer_load\")) {") ==
+  CHECK(semanticsExprSource.find("buffer_load requires integer index") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("if (isSimpleCallName(expr, \"buffer_store\")) {") ==
+  CHECK(semanticsExprSource.find("buffer_store value type mismatch") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getBuiltinConvertName(expr, builtinName)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("PrintBuiltin printBuiltin;") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getPrintBuiltin(expr, printBuiltin)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getBuiltinPointerName(expr, builtinName)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getBuiltinMemoryName(expr, builtinName)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto normalizeIndexKind = [&](ReturnKind kind) -> ReturnKind {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isSupportedIndexKind = [&](ReturnKind kind) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
         std::string::npos);
@@ -9640,6 +9662,15 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprGpuBufferSource.find(
             "dispatch requires kernel and three dimension arguments") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find(
+            "bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find(
+            "convert requires numeric or bool operand") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find(
+            "alloc requires exactly one template argument") !=
         std::string::npos);
   CHECK(semanticsExprResultFileSource.find(
             "bool SemanticsValidator::validateExprResultFileBuiltins") !=
