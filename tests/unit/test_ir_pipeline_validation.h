@@ -9242,6 +9242,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
   const std::filesystem::path semanticsExprNumericPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
+  const std::filesystem::path semanticsExprFieldResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprFieldResolution.cpp";
   const std::filesystem::path semanticsExprArgumentValidationPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidation.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
@@ -9257,6 +9259,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
+  REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
   REQUIRE(std::filesystem::exists(semanticsExprReceiverPathsPath));
@@ -9267,6 +9270,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
+  const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprArgumentValidationSource = readText(semanticsExprArgumentValidationPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
   const std::string semanticsExprReceiverPathsSource = readText(semanticsExprReceiverPathsPath);
@@ -9450,6 +9454,20 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto validateArgumentsForParameter = [&](const ParameterInfo &param,") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto inferStructFieldBinding = [&](const Definition &def,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveStructFieldReceiverPath =") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isTypeNamespaceFieldReceiver = [&](const Expr &receiver, std::string &structPathOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveStructFieldBinding =") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isUnboundMetaReceiver = [&](const Expr &receiver)") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto describeMethodReflectionTarget = [&](const Expr &callExpr) -> std::string {") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("const ExprArgumentValidationContext argumentValidationContext{") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
@@ -9504,6 +9522,15 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprReceiverPathsSource.find(
             "bool SemanticsValidator::resolveDirectCallTemporaryAccessReceiverPath") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceFieldReceiver") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find(
+            "bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterInfo> &params,") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceMethodCall") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find("std::string SemanticsValidator::describeMethodReflectionTarget") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::isVectorBuiltinName") !=
         std::string::npos);
