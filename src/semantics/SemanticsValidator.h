@@ -30,6 +30,12 @@ public:
 
 private:
   bool buildDefinitionMaps();
+  bool validateDefinitionBuildTransforms(const Definition &def,
+                                         bool isStructHelper,
+                                         bool isLifecycleHelper,
+                                         std::unordered_set<std::string> &explicitStructs,
+                                         std::vector<SemanticDiagnosticRecord> *transformDiagnosticRecords,
+                                         bool &definitionTransformError);
   bool buildParameters();
   bool inferUnknownReturnKinds();
   bool inferUnknownReturnKindsLegacy();
