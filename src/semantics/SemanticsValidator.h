@@ -129,6 +129,12 @@ private:
                                                  const std::string &helperName,
                                                  const std::string &namespacePrefix,
                                                  const std::vector<std::string> *definitionTemplateArgs);
+  bool isStringStatementExpr(const Expr &arg,
+                             const std::vector<ParameterInfo> &params,
+                             const std::unordered_map<std::string, BindingInfo> &locals);
+  bool isPrintableStatementExpr(const Expr &arg,
+                                const std::vector<ParameterInfo> &params,
+                                const std::unordered_map<std::string, BindingInfo> &locals);
   bool allowMathBareName(const std::string &name) const;
   bool hasAnyMathImport() const;
   bool isEntryArgsName(const std::string &name) const;

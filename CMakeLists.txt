@@ -117,6 +117,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorStatementContainerHelpers.cpp
   src/semantics/SemanticsValidatorStatementControlFlow.cpp
   src/semantics/SemanticsValidatorStatementLoopCountStep.cpp
+  src/semantics/SemanticsValidatorStatementPrintability.cpp
   src/semantics/SemanticsValidatorStatementReturns.cpp
   src/semantics/SemanticsValidatorStatementVectorHelpers.cpp
   src/semantics/SemanticsValidatorStatement.cpp
