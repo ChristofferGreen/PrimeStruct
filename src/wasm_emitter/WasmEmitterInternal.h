@@ -267,4 +267,21 @@ void emitWasiPathOpen(uint32_t pathPtr,
                       const WasmRuntimeContext &runtime,
                       std::vector<uint8_t> &out);
 
+bool emitSimpleInstruction(const IrInstruction &inst,
+                           const WasmLocalLayout &localLayout,
+                           const std::vector<WasmFunctionType> &functionTypes,
+                           const WasmRuntimeContext &runtime,
+                           std::vector<uint8_t> &out,
+                           std::string &error,
+                           const std::string &functionName);
+
+bool emitInstructionRange(const IrFunction &function,
+                          size_t start,
+                          size_t end,
+                          const WasmLocalLayout &localLayout,
+                          const std::vector<WasmFunctionType> &functionTypes,
+                          const WasmRuntimeContext &runtime,
+                          std::vector<uint8_t> &out,
+                          std::string &error);
+
 } // namespace primec

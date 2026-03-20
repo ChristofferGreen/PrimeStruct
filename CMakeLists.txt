@@ -267,6 +267,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/native_emitter/NativeEmitterHelpers.cpp
   src/native_emitter/NativeEmitterEmit.cpp
   src/wasm_emitter/WasmEmitter.cpp
+  src/wasm_emitter/WasmEmitterControlFlow.cpp
   src/wasm_emitter/WasmEmitterRuntimeContext.cpp
   src/wasm_emitter/WasmEmitterSections.cpp
   src/wasm_emitter/WasmEmitterWasiHelpers.cpp
