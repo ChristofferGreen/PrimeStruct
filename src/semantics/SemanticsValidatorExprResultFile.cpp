@@ -34,7 +34,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     }
     return returnKindForTypeName(binding.typeName);
   };
-  auto isStringExpr = [&](const Expr &arg) -> bool {
+  auto defaultIsStringExpr = [&](const Expr &arg) -> bool {
     if (arg.kind == Expr::Kind::StringLiteral) {
       return true;
     }
@@ -45,6 +45,10 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     return arg.kind == Expr::Kind::Call &&
            resolveCallCollectionTypePath(arg, params, locals, collectionTypePath) &&
            collectionTypePath == "/string";
+  };
+  auto isStringExpr = [&](const Expr &arg) -> bool {
+    return context.isStringExpr != nullptr ? context.isStringExpr(arg)
+                                           : defaultIsStringExpr(arg);
   };
   auto isIntegerExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);

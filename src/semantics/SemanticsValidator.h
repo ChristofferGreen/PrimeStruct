@@ -210,6 +210,7 @@ private:
                                  size_t statementIndex);
   struct ExprResultFileBuiltinContext {
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
+    std::function<bool(const Expr &)> isStringExpr;
   };
   bool validateExprResultFileBuiltins(const std::vector<ParameterInfo> &params,
                                       const std::unordered_map<std::string, BindingInfo> &locals,
