@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "primec/Ir.h"
+
 namespace primec {
 
 inline constexpr uint8_t WasmFunctionKind = 0x00;
@@ -197,5 +199,11 @@ bool encodeCodeSection(const std::vector<WasmCodeBody> &bodies,
 bool encodeDataSection(const std::vector<WasmDataSegment> &segments,
                        std::vector<uint8_t> &payload,
                        std::string &error);
+
+bool buildWasiRuntimeContext(const IrModule &module,
+                             std::vector<WasmImport> &imports,
+                             std::vector<WasmFunctionType> &types,
+                             WasmRuntimeContext &runtime,
+                             std::string &error);
 
 } // namespace primec
