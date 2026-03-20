@@ -78,6 +78,23 @@ private:
   ReturnKind inferReferenceTargetKind(const std::string &templateArg, const std::string &namespacePrefix) const;
   ReturnKind inferUninitializedTargetKind(const std::string &templateArg,
                                           const std::string &namespacePrefix) const;
+  bool resolveInferArgsPackCountTarget(const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       const Expr &target,
+                                       std::string &elemType) const;
+  bool extractInferExperimentalMapFieldTypes(const BindingInfo &binding,
+                                             std::string &keyTypeOut,
+                                             std::string &valueTypeOut) const;
+  bool resolveInferExperimentalMapTarget(const std::vector<ParameterInfo> &params,
+                                         const std::unordered_map<std::string, BindingInfo> &locals,
+                                         const Expr &target,
+                                         std::string &keyTypeOut,
+                                         std::string &valueTypeOut);
+  bool resolveInferExperimentalMapValueTarget(const std::vector<ParameterInfo> &params,
+                                              const std::unordered_map<std::string, BindingInfo> &locals,
+                                              const Expr &target,
+                                              std::string &keyTypeOut,
+                                              std::string &valueTypeOut);
   bool inferBindingTypeFromInitializer(const Expr &initializer,
                                        const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,
