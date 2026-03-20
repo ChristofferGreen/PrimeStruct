@@ -13,6 +13,9 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool isMapTryAtCallName(const Expr &expr) {
+  if (expr.isMethodCall && expr.name == "tryAt") {
+    return true;
+  }
   if (isSimpleCallName(expr, "tryAt")) {
     return true;
   }
@@ -23,7 +26,11 @@ bool isMapTryAtCallName(const Expr &expr) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return normalized == "map/tryAt" || normalized == "std/collections/map/tryAt";
+  return normalized == "map/tryAt" || normalized == "std/collections/map/tryAt" ||
+         normalized == "std/collections/mapTryAt" ||
+         normalized == "std/collections/experimental_map/mapTryAt" ||
+         normalized.rfind("std/collections/mapTryAt__", 0) == 0 ||
+         normalized.rfind("std/collections/experimental_map/mapTryAt__", 0) == 0;
 }
 
 } // namespace
@@ -250,6 +257,28 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
         out.hasValue = local.resultHasValue;
         out.valueKind = local.resultValueKind;
         out.errorType = local.resultErrorType;
+        return true;
+      }
+    }
+  }
+  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && expr.name == "tryAt") {
+    const Definition *methodCallee = resolveMethod(expr);
+    if (methodCallee == nullptr) {
+      LocalInfo::ValueKind builtinTryAtKind = LocalInfo::ValueKind::Unknown;
+      bool methodResolved = false;
+      if (resolveMethodCallReturnKind(expr,
+                                      localsIn,
+                                      resolveMethodCall,
+                                      resolveDefinitionCall,
+                                      lookupReturnInfo,
+                                      false,
+                                      builtinTryAtKind,
+                                      &methodResolved) &&
+          methodResolved && builtinTryAtKind != LocalInfo::ValueKind::Unknown) {
+        out.isResult = true;
+        out.hasValue = true;
+        out.valueKind = builtinTryAtKind;
+        out.errorType = "ContainerError";
         return true;
       }
     }

@@ -6,6 +6,118 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo &info) {
+  if (target.kind != Expr::Kind::Call || target.isBinding || target.isMethodCall) {
+    return false;
+  }
+
+  std::string normalizedName = target.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  auto matchesPath = [&](const std::string &basePath) {
+    return normalizedName == basePath || normalizedName.rfind(basePath + "__", 0) == 0;
+  };
+  auto isDirectMapConstructor = [&]() {
+    return matchesPath("std/collections/map/map") ||
+           matchesPath("std/collections/mapNew") ||
+           matchesPath("std/collections/mapSingle") ||
+           matchesPath("std/collections/mapDouble") ||
+           matchesPath("std/collections/mapPair") ||
+           matchesPath("std/collections/mapTriple") ||
+           matchesPath("std/collections/mapQuad") ||
+           matchesPath("std/collections/mapQuint") ||
+           matchesPath("std/collections/mapSext") ||
+           matchesPath("std/collections/mapSept") ||
+           matchesPath("std/collections/mapOct") ||
+           matchesPath("std/collections/experimental_map/mapNew") ||
+           matchesPath("std/collections/experimental_map/mapSingle") ||
+           matchesPath("std/collections/experimental_map/mapDouble") ||
+           matchesPath("std/collections/experimental_map/mapPair") ||
+           matchesPath("std/collections/experimental_map/mapTriple") ||
+           matchesPath("std/collections/experimental_map/mapQuad") ||
+           matchesPath("std/collections/experimental_map/mapQuint") ||
+           matchesPath("std/collections/experimental_map/mapSext") ||
+           matchesPath("std/collections/experimental_map/mapSept") ||
+           matchesPath("std/collections/experimental_map/mapOct") ||
+           isSimpleCallName(target, "mapNew") ||
+           isSimpleCallName(target, "mapSingle") ||
+           isSimpleCallName(target, "mapDouble") ||
+           isSimpleCallName(target, "mapPair") ||
+           isSimpleCallName(target, "mapTriple") ||
+           isSimpleCallName(target, "mapQuad") ||
+           isSimpleCallName(target, "mapQuint") ||
+           isSimpleCallName(target, "mapSext") ||
+           isSimpleCallName(target, "mapSept") ||
+           isSimpleCallName(target, "mapOct");
+  };
+  auto inferLiteralKind = [&](const Expr &valueExpr, LocalInfo::ValueKind &kindOut) {
+    kindOut = LocalInfo::ValueKind::Unknown;
+    if (valueExpr.kind == Expr::Kind::Literal) {
+      kindOut = LocalInfo::ValueKind::Int32;
+      return true;
+    }
+    if (valueExpr.kind == Expr::Kind::BoolLiteral) {
+      kindOut = LocalInfo::ValueKind::Bool;
+      return true;
+    }
+    if (valueExpr.kind == Expr::Kind::FloatLiteral) {
+      kindOut = valueExpr.floatWidth == 64 ? LocalInfo::ValueKind::Float64 : LocalInfo::ValueKind::Float32;
+      return true;
+    }
+    if (valueExpr.kind == Expr::Kind::StringLiteral) {
+      kindOut = LocalInfo::ValueKind::String;
+      return true;
+    }
+    return false;
+  };
+
+  if (!isDirectMapConstructor()) {
+    return false;
+  }
+
+  if (target.templateArgs.size() == 2) {
+    info.isMapTarget = true;
+    info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
+    info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
+    return true;
+  }
+
+  if (target.args.empty() || (target.args.size() % 2) != 0) {
+    return false;
+  }
+
+  LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  for (size_t i = 0; i < target.args.size(); i += 2) {
+    LocalInfo::ValueKind currentKeyKind = LocalInfo::ValueKind::Unknown;
+    LocalInfo::ValueKind currentValueKind = LocalInfo::ValueKind::Unknown;
+    if (!inferLiteralKind(target.args[i], currentKeyKind) ||
+        !inferLiteralKind(target.args[i + 1], currentValueKind)) {
+      return false;
+    }
+    if (keyKind == LocalInfo::ValueKind::Unknown) {
+      keyKind = currentKeyKind;
+    } else if (keyKind != currentKeyKind) {
+      return false;
+    }
+    if (valueKind == LocalInfo::ValueKind::Unknown) {
+      valueKind = currentValueKind;
+    } else if (valueKind != currentValueKind) {
+      return false;
+    }
+  }
+
+  info.isMapTarget = true;
+  info.mapKeyKind = keyKind;
+  info.mapValueKind = valueKind;
+  return true;
+}
+
+} // namespace
+
 MapAccessTargetInfo resolveMapAccessTargetInfo(
     const Expr &target,
     const LocalMap &localsIn,
@@ -75,6 +187,9 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       info.isMapTarget = true;
       info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
       info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
+      return info;
+    }
+    if (inferDirectMapConstructorTargetInfo(target, info)) {
       return info;
     }
     if (resolveCallMapAccessTargetInfo) {

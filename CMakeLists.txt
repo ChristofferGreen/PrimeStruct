@@ -508,12 +508,26 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     if (suite STREQUAL "primestruct.semantics.operators")
-      add_test(NAME "${testName}_matrix_and_shape_rules"
+      add_test(NAME "${testName}_matrix_and_shape_rules_core"
                COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
                        "--test-suite=${suite}"
                        "--source-file=*test_semantics_entry_operators.h"
                        "--order-by=file"
                        "--first=1"
+                       "--last=5")
+      add_test(NAME "${testName}_matrix_and_shape_rules_shapes"
+               COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
+                       "--test-suite=${suite}"
+                       "--source-file=*test_semantics_entry_operators.h"
+                       "--order-by=file"
+                       "--first=6"
+                       "--last=10")
+      add_test(NAME "${testName}_matrix_and_shape_rules_products"
+               COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
+                       "--test-suite=${suite}"
+                       "--source-file=*test_semantics_entry_operators.h"
+                       "--order-by=file"
+                       "--first=11"
                        "--last=15")
       add_test(NAME "${testName}_scalar_and_mixed_numeric_rules"
                COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
@@ -522,7 +536,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        "--order-by=file"
                        "--first=16"
                        "--last=29")
-      set_tests_properties("${testName}_matrix_and_shape_rules" PROPERTIES RUN_SERIAL TRUE TIMEOUT 900)
+      set_tests_properties("${testName}_matrix_and_shape_rules_core" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
+      set_tests_properties("${testName}_matrix_and_shape_rules_shapes" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
+      set_tests_properties("${testName}_matrix_and_shape_rules_products" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
       set_tests_properties("${testName}_scalar_and_mixed_numeric_rules" PROPERTIES RUN_SERIAL TRUE TIMEOUT 900)
     else()
       add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests> "--test-suite=${suite}")

@@ -2,6 +2,46 @@
 
 namespace primec::semantics {
 
+bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo> &params,
+                                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                                 const Expr &expr) {
+  if (expr.args.size() != 1) {
+    error_ = "field access requires a receiver";
+    return false;
+  }
+  if (!expr.templateArgs.empty()) {
+    error_ = "field access does not accept template arguments";
+    return false;
+  }
+  if (hasNamedArguments(expr.argNames)) {
+    error_ = "field access does not accept named arguments";
+    return false;
+  }
+  if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    error_ = "field access does not accept block arguments";
+    return false;
+  }
+  std::string typeReceiverPath;
+  const bool typeNamespaceReceiver =
+      isTypeNamespaceFieldReceiver(params, locals, expr.args.front(), typeReceiverPath);
+  if (!typeNamespaceReceiver && !validateExpr(params, locals, expr.args.front())) {
+    return false;
+  }
+  BindingInfo fieldBinding;
+  if (!resolveStructFieldBinding(params, locals, expr.args.front(), expr.name, fieldBinding)) {
+    if (error_.empty()) {
+      std::string receiverStructPath;
+      if (!resolveStructFieldReceiverPath(params, locals, expr.args.front(), receiverStructPath)) {
+        error_ = "field access requires struct receiver";
+      } else {
+        error_ = "unknown field: " + expr.name;
+      }
+    }
+    return false;
+  }
+  return true;
+}
+
 bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<ParameterInfo> &params,
                                                         const std::unordered_map<std::string, BindingInfo> &locals,
                                                         const Expr &receiverExpr,

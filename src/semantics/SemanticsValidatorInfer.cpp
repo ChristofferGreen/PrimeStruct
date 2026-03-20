@@ -2134,7 +2134,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
 
     std::string resolvedCallee = resolveCalleePath(expr);
     std::string canonicalExperimentalMapHelperResolved;
-    if (!expr.isMethodCall && defMap_.count(resolvedCallee) == 0 &&
+    if (defMap_.count(resolvedCallee) == 0 &&
         canonicalizeExperimentalMapHelperResolvedPath(resolvedCallee, canonicalExperimentalMapHelperResolved)) {
       resolvedCallee = canonicalExperimentalMapHelperResolved;
     }
@@ -2287,57 +2287,63 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string methodResolved;
       if (resolveMethodCallPath(expr.name, methodResolved)) {
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
-        if (methodResolved == "/file_error/why" || methodResolved == "/FileError/why") {
+        std::string logicalMethodResolved = methodResolved;
+        std::string canonicalExperimentalMapHelperResolved;
+        if (canonicalizeExperimentalMapHelperResolvedPath(
+                methodResolved, canonicalExperimentalMapHelperResolved)) {
+          logicalMethodResolved = canonicalExperimentalMapHelperResolved;
+        }
+        if (logicalMethodResolved == "/file_error/why" || logicalMethodResolved == "/FileError/why") {
           return ReturnKind::String;
         }
-        if ((methodResolved == "/std/collections/map/count" &&
+        if ((logicalMethodResolved == "/std/collections/map/count" &&
              hasImportedDefinitionPath("/std/collections/map/count")) ||
-            (methodResolved == "/std/collections/map/contains" &&
+            (logicalMethodResolved == "/std/collections/map/contains" &&
              hasImportedDefinitionPath("/std/collections/map/contains")) ||
-            (methodResolved == "/std/collections/map/tryAt" &&
+            (logicalMethodResolved == "/std/collections/map/tryAt" &&
              hasImportedDefinitionPath("/std/collections/map/tryAt")) ||
-            (methodResolved == "/std/collections/map/at" &&
+            (logicalMethodResolved == "/std/collections/map/at" &&
              hasImportedDefinitionPath("/std/collections/map/at")) ||
-            (methodResolved == "/std/collections/map/at_unsafe" &&
+            (logicalMethodResolved == "/std/collections/map/at_unsafe" &&
              hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) {
           ReturnKind builtinMethodKind = ReturnKind::Unknown;
           if (resolveBuiltinCollectionMethodReturnKind(
-                  methodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
+                  logicalMethodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
             return builtinMethodKind;
           }
         }
         std::string builtinMapKeyType;
         std::string builtinMapValueType;
-        if (((methodResolved == "/std/collections/map/count" &&
+        if (((logicalMethodResolved == "/std/collections/map/count" &&
               !hasDeclaredDefinitionPath("/map/count") &&
               !hasDefinitionPath("/map/count") &&
               !hasImportedDefinitionPath("/std/collections/map/count")) ||
-             (methodResolved == "/std/collections/map/contains" &&
+             (logicalMethodResolved == "/std/collections/map/contains" &&
               !hasDeclaredDefinitionPath("/map/contains") &&
               !hasDefinitionPath("/map/contains") &&
               !hasImportedDefinitionPath("/std/collections/map/contains")) ||
-             (methodResolved == "/std/collections/map/tryAt" &&
+             (logicalMethodResolved == "/std/collections/map/tryAt" &&
               !hasDeclaredDefinitionPath("/map/tryAt") &&
               !hasDefinitionPath("/map/tryAt") &&
               !hasImportedDefinitionPath("/std/collections/map/tryAt")) ||
-             (methodResolved == "/std/collections/map/at" &&
+             (logicalMethodResolved == "/std/collections/map/at" &&
               !hasDeclaredDefinitionPath("/map/at") &&
               !hasDefinitionPath("/map/at") &&
               !hasImportedDefinitionPath("/std/collections/map/at")) ||
-             (methodResolved == "/std/collections/map/at_unsafe" &&
+             (logicalMethodResolved == "/std/collections/map/at_unsafe" &&
               !hasDeclaredDefinitionPath("/map/at_unsafe") &&
               !hasDefinitionPath("/map/at_unsafe") &&
               !hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) &&
-            !hasDeclaredDefinitionPath(methodResolved) &&
-            !hasDefinitionPath(methodResolved) &&
+            !hasDeclaredDefinitionPath(logicalMethodResolved) &&
+            !hasDefinitionPath(logicalMethodResolved) &&
             !resolveMapTarget(expr.args.front(), builtinMapKeyType, builtinMapValueType)) {
           error_ = "unknown method: " + methodResolved;
           return ReturnKind::Unknown;
         }
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
-        if (!hasDefinitionPath(methodResolved) &&
+        if (!hasDefinitionPath(logicalMethodResolved) &&
             resolveBuiltinCollectionMethodReturnKind(
-                methodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
+                logicalMethodResolved, expr.args.front(), builtinCollectionDispatchResolvers, builtinMethodKind)) {
           return builtinMethodKind;
         }
         if (!hasDefinitionPath(methodResolved) && !hasImportedDefinitionPath(methodResolved)) {

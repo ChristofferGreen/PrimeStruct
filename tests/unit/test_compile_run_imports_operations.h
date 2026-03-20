@@ -141,7 +141,7 @@ TEST_CASE("compiles and runs experimental map helper receivers in C++ emitter") 
   expectExperimentalMapHelperReceiverConformance("exe");
 }
 
-TEST_CASE("rejects direct-constructor experimental map method receivers in C++ emitter") {
+TEST_CASE("runs direct-constructor experimental map method receivers in C++ emitter") {
   expectExperimentalMapMethodReceiverConformance("exe");
 }
 

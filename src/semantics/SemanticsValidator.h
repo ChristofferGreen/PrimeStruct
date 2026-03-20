@@ -301,6 +301,10 @@ private:
       const std::unordered_map<std::string, BindingInfo> &locals,
       const Expr &expr,
       bool &handledOut);
+  bool validateExprFieldAccess(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr);
   std::string normalizeCollectionMethodName(const std::string &methodName) const;
   std::string inferPointerLikeCallReturnType(
       const Expr &receiverExpr,

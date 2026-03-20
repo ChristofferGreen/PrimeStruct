@@ -150,6 +150,15 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   };
 
   std::string builtinName;
+  auto isExplicitMapAccessHelperPath = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+      return false;
+    }
+    const std::string resolved = resolveCalleePath(candidate);
+    return resolved == "/map/at" || resolved == "/map/at_unsafe" ||
+           resolved == "/std/collections/map/at" ||
+           resolved == "/std/collections/map/at_unsafe";
+  };
   if (getBuiltinConvertName(expr, builtinName)) {
     handledOut = true;
     if (expr.templateArgs.size() != 1) {
@@ -222,6 +231,11 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   }
 
   if (getBuiltinMemoryName(expr, builtinName)) {
+    if (isExplicitMapAccessHelperPath(expr) ||
+        ((builtinName == "at" || builtinName == "at_unsafe") &&
+         expr.args.size() == 2 && expr.templateArgs.size() == 2)) {
+      return true;
+    }
     handledOut = true;
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = builtinName + " does not accept block arguments";

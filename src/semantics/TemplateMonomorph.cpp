@@ -2432,6 +2432,13 @@ bool rewriteExpr(Expr &expr,
         expr.templateArgs.empty() && isExplicitCollectionCompatibilityAliasPath(originalResolvedPath) &&
         preferredPath != originalResolvedPath && ctx.templateDefs.count(preferredPath) > 0;
     const bool resolvedWasTemplate = ctx.templateDefs.count(resolvedPath) > 0;
+    const bool isBuiltinMapCountPath =
+        resolvedPath == "/std/collections/map/count" || resolvedPath == "/map/count";
+    const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
+    if (!expr.templateArgs.empty() && !resolvedWasTemplate && !isKnownDef && isBuiltinMapCountPath) {
+      error = "count does not accept template arguments";
+      return false;
+    }
     if (!expr.templateArgs.empty() && !resolvedWasTemplate) {
       if (!shouldPreserveCompatibilityTemplatePath(resolvedPath, ctx) &&
           !shouldPreserveCanonicalMapTemplatePath(resolvedPath, ctx)) {
@@ -2455,7 +2462,6 @@ bool rewriteExpr(Expr &expr,
       expr.namespacePrefix.clear();
     }
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
-    const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
     if (isTemplateDef) {
       if (expr.templateArgs.empty()) {
         auto defIt = ctx.sourceDefs.find(resolvedPath);

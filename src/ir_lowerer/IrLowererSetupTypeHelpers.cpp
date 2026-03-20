@@ -2173,8 +2173,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         },
         [&](const Expr &expr) { return inferStructExprPathForCall(expr, visitedDefs); });
   };
-  if (resolvedDef == nullptr && typeName.empty() && resolvedTypePath.empty() &&
-      receiver->kind == Expr::Kind::Call) {
+  if (resolvedDef == nullptr && resolvedTypePath.empty() && receiver->kind == Expr::Kind::Call) {
     std::string nestedError = lookupError;
     const Definition *receiverDef = nullptr;
     std::string receiverPath = resolveExprPath(*receiver);

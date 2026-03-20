@@ -727,17 +727,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (target.kind != Expr::Kind::Call) {
       return false;
     }
-    std::string collectionTypePath;
-    if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        collectionTypePath == "/map") {
-      std::vector<std::string> args;
-      if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
-          args.size() == 2) {
-        keyTypeOut = args[0];
-        valueTypeOut = args[1];
-        return true;
-      }
-    }
     auto defIt = defMap_.find(resolveCalleePath(target));
     if (defIt == defMap_.end() || !defIt->second) {
       return false;
@@ -761,21 +750,21 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return extractAnyMapKeyValueTypes(fieldBinding, keyType, valueType);
     }
     if (target.kind == Expr::Kind::Call) {
+      std::string elemType;
+      if ((resolveIndexedArgsPackElementType(target, elemType) ||
+           resolveDereferencedIndexedArgsPackElementType(target, elemType) ||
+           resolveWrappedIndexedArgsPackElementType(target, elemType)) &&
+          extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType)) {
+        return true;
+      }
       std::string accessName;
       if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
         if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(target)) {
-          std::string elemType;
           if (resolveArgsPackAccessTarget(*accessReceiver, elemType) &&
               extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType)) {
             return true;
           }
         }
-      }
-      std::string elemType;
-      if ((resolveDereferencedIndexedArgsPackElementType(target, elemType) ||
-           resolveWrappedIndexedArgsPackElementType(target, elemType)) &&
-          extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType)) {
-        return true;
       }
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
@@ -1103,7 +1092,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (elemBase == "vector" || elemBase == "array" || elemBase == "soa_vector") {
         return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
       }
-      if (elemBase == "map") {
+      if (isMapCollectionTypeName(elemBase)) {
         return setCollectionMethodTarget(preferredMapMethodTarget(receiverExpr, normalizedMethodName));
       }
       if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
@@ -1130,19 +1119,25 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.args.size() != 2) {
       return false;
     }
-    std::string accessName;
-    if (!getBuiltinArrayAccessName(receiverExpr, accessName)) {
-      return false;
-    }
-    const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(receiverExpr);
-    if (accessReceiver == nullptr) {
-      return false;
-    }
     std::string indexedElemType;
     std::string keyType;
     std::string valueType;
-    if (!resolveArgsPackAccessTarget(*accessReceiver, indexedElemType) ||
-        !extractMapKeyValueTypesFromTypeText(indexedElemType, keyType, valueType)) {
+    const bool resolvedIndexedMapType =
+        ((resolveIndexedArgsPackElementType(receiverExpr, indexedElemType) ||
+          resolveWrappedIndexedArgsPackElementType(receiverExpr, indexedElemType) ||
+          resolveDereferencedIndexedArgsPackElementType(receiverExpr, indexedElemType)) &&
+         extractMapKeyValueTypesFromTypeText(indexedElemType, keyType, valueType));
+    const bool resolvedReceiverPackType = [&]() {
+      std::string accessName;
+      if (!getBuiltinArrayAccessName(receiverExpr, accessName)) {
+        return false;
+      }
+      const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(receiverExpr);
+      return accessReceiver != nullptr &&
+             resolveArgsPackAccessTarget(*accessReceiver, indexedElemType) &&
+             extractMapKeyValueTypesFromTypeText(indexedElemType, keyType, valueType);
+    }();
+    if (!resolvedIndexedMapType && !resolvedReceiverPackType) {
       return false;
     }
     resolvedOut = preferredMapMethodTarget(receiverExpr, helperName);
@@ -1321,7 +1316,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             if (elemBase == "vector" || elemBase == "array" || elemBase == "soa_vector") {
               return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
             }
-            if (elemBase == "map") {
+            if (isMapCollectionTypeName(elemBase)) {
               if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
                 return true;
               }
@@ -1460,7 +1455,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     isBuiltinOut = true;
     return true;
   }
-  if (normalizeBindingTypeName(typeName) == "map" &&
+  if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&
       (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
        normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
        normalizedMethodName == "at_unsafe")) {

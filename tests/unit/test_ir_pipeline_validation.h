@@ -9452,6 +9452,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("const std::string directRemovedMapCompatibilityPath =") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("return validateExprFieldAccess(params, locals, expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("field access requires a receiver") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") ==
@@ -9743,6 +9747,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprResultFileSource.find("Result.map2 requires exactly three arguments") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceFieldReceiver") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::validateExprFieldAccess") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find(
             "bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterInfo> &params,") !=

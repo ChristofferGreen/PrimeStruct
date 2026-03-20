@@ -1191,7 +1191,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /array/push") != std::string::npos);
+  CHECK(readFile(outPath).find("push is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("rejects native stdlib canonical vector helper method-precedence forwarding") {

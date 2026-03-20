@@ -528,41 +528,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return "";
     };
     if (expr.isFieldAccess) {
-      if (expr.args.size() != 1) {
-        error_ = "field access requires a receiver";
-        return false;
-      }
-      if (!expr.templateArgs.empty()) {
-        error_ = "field access does not accept template arguments";
-        return false;
-      }
-      if (hasNamedArguments(expr.argNames)) {
-        error_ = "field access does not accept named arguments";
-        return false;
-      }
-      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error_ = "field access does not accept block arguments";
-        return false;
-      }
-      std::string typeReceiverPath;
-      const bool typeNamespaceReceiver =
-          this->isTypeNamespaceFieldReceiver(params, locals, expr.args.front(), typeReceiverPath);
-      if (!typeNamespaceReceiver && !validateExpr(params, locals, expr.args.front())) {
-        return false;
-      }
-      BindingInfo fieldBinding;
-      if (!this->resolveStructFieldBinding(params, locals, expr.args.front(), expr.name, fieldBinding)) {
-        if (error_.empty()) {
-          std::string receiverStructPath;
-          if (!this->resolveStructFieldReceiverPath(params, locals, expr.args.front(), receiverStructPath)) {
-            error_ = "field access requires struct receiver";
-          } else {
-            error_ = "unknown field: " + expr.name;
-          }
-        }
-        return false;
-      }
-      return true;
+      return validateExprFieldAccess(params, locals, expr);
     }
     std::string accessHelperName;
     std::string namespacedCollection;
@@ -1672,9 +1638,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (handledGpuBufferBuiltin) {
         return true;
       }
-      if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" ||
-                             resolved == "/soa_vector/count" || resolved == "/string/count" ||
-                             resolved == "/map/count" || resolved == "/std/collections/map/count")) {
+      std::string logicalResolvedMethod = resolved;
+      if (resolvedMethod) {
+        std::string canonicalExperimentalMapHelperResolved;
+        if (this->canonicalizeExperimentalMapHelperResolvedPath(
+                resolved, canonicalExperimentalMapHelperResolved)) {
+          logicalResolvedMethod = canonicalExperimentalMapHelperResolved;
+        }
+      }
+      if (resolvedMethod && (logicalResolvedMethod == "/array/count" || logicalResolvedMethod == "/vector/count" ||
+                             logicalResolvedMethod == "/soa_vector/count" || logicalResolvedMethod == "/string/count" ||
+                             logicalResolvedMethod == "/map/count" ||
+                             logicalResolvedMethod == "/std/collections/map/count")) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;
@@ -1687,7 +1662,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = "argument count mismatch for builtin count";
           return false;
         }
-        if (resolved == "/map/count" || resolved == "/std/collections/map/count") {
+        if (logicalResolvedMethod == "/map/count" ||
+            logicalResolvedMethod == "/std/collections/map/count") {
           if (!resolveMapTarget(expr.args.front())) {
             if (!validateExpr(params, locals, expr.args.front())) {
               return false;
@@ -1697,6 +1673,63 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         }
         if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        return true;
+      }
+      if (expr.isMethodCall && resolvedMethod &&
+          (logicalResolvedMethod == "/std/collections/map/contains" ||
+           logicalResolvedMethod == "/std/collections/map/tryAt" ||
+           logicalResolvedMethod == "/std/collections/map/at" ||
+           logicalResolvedMethod == "/std/collections/map/at_unsafe")) {
+        const std::string helperName =
+            logicalResolvedMethod.substr(logicalResolvedMethod.find_last_of('/') + 1);
+        if (!expr.templateArgs.empty()) {
+          error_ = helperName + " does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = helperName + " does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 2) {
+          error_ = "argument count mismatch for builtin " + helperName;
+          return false;
+        }
+        const Expr &receiverExpr = expr.args.front();
+        const Expr &keyExpr = expr.args[1];
+        std::string mapKeyType;
+        if (!this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType)) {
+          if (!validateExpr(params, locals, receiverExpr)) {
+            return false;
+          }
+          error_ = helperName + " requires map target";
+          return false;
+        }
+        if (!mapKeyType.empty()) {
+          if (normalizeBindingTypeName(mapKeyType) == "string") {
+            if (!this->isStringExprForArgumentValidation(
+                    keyExpr, builtinCollectionDispatchResolvers)) {
+              error_ = helperName + " requires string map key";
+              return false;
+            }
+          } else {
+            ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+            if (keyKind != ReturnKind::Unknown) {
+              if (resolveStringTarget(keyExpr)) {
+                error_ = helperName + " requires map key type " + mapKeyType;
+                return false;
+              }
+              ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
+              if (candidateKind != ReturnKind::Unknown && candidateKind != keyKind) {
+                error_ = helperName + " requires map key type " + mapKeyType;
+                return false;
+              }
+            }
+          }
+        }
+        if (!validateExpr(params, locals, receiverExpr) ||
+            !validateExpr(params, locals, keyExpr)) {
           return false;
         }
         return true;

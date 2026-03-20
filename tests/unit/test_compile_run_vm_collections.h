@@ -878,7 +878,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_array_namespaced_vector_mutator_alias_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /array/push") != std::string::npos);
+  CHECK(readFile(outPath).find("push is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib canonical vector helper method-precedence forwarding") {

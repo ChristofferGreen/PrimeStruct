@@ -4948,6 +4948,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced map count builtin rejects template args without imported helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(/std/collections/map/count<i32, i32>(values))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced map count builtin rejects template args through compile pipeline") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(/std/collections/map/count<i32, i32>(values))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgramForCompileTarget(source, "/main", "vm", "", error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map contains requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

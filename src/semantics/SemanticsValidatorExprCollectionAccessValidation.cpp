@@ -171,7 +171,6 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
          context.isMapLikeBareAccessReceiverTarget(expr.args[1]))) {
       return true;
     }
-    handledOut = true;
     if (!context.shouldBuiltinValidateBareMapAccessCall) {
       Expr rewrittenMapHelperCall;
       if (context.tryRewriteBareMapHelperCall != nullptr &&
@@ -252,6 +251,15 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         isExperimentalMap = reorderedExperimentalMap;
       }
     }
+    const bool isExplicitMapAccessHelper =
+        resolved == "/map/at" || resolved == "/map/at_unsafe" ||
+        resolved == "/std/collections/map/at" ||
+        resolved == "/std/collections/map/at_unsafe";
+    if (!expr.templateArgs.empty() &&
+        (isMap || isExperimentalMap || isExplicitMapAccessHelper)) {
+      return true;
+    }
+    handledOut = true;
     if (isExperimentalMap) {
       error_ = builtinName + " requires integer index";
       return false;
