@@ -267,6 +267,13 @@ void emitWasiPathOpen(uint32_t pathPtr,
                       const WasmRuntimeContext &runtime,
                       std::vector<uint8_t> &out);
 
+bool emitIoInstruction(const IrInstruction &inst,
+                       const WasmLocalLayout &localLayout,
+                       const WasmRuntimeContext &runtime,
+                       std::vector<uint8_t> &out,
+                       std::string &error,
+                       const std::string &functionName);
+
 bool emitSimpleInstruction(const IrInstruction &inst,
                            const WasmLocalLayout &localLayout,
                            const std::vector<WasmFunctionType> &functionTypes,

@@ -269,6 +269,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/wasm_emitter/WasmEmitter.cpp
   src/wasm_emitter/WasmEmitterControlFlow.cpp
   src/wasm_emitter/WasmEmitterFunctionBodies.cpp
+  src/wasm_emitter/WasmEmitterIo.cpp
   src/wasm_emitter/WasmEmitterModule.cpp
   src/wasm_emitter/WasmEmitterRuntimeContext.cpp
   src/wasm_emitter/WasmEmitterSections.cpp
