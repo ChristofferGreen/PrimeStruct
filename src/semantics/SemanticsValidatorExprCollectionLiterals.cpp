@@ -12,52 +12,34 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     const Expr &expr,
     bool &handledOut) {
   handledOut = false;
-  auto isStringExpr = [&](const Expr &arg) -> bool {
-    if (arg.kind == Expr::Kind::StringLiteral) {
-      return true;
-    }
-    if (inferExprReturnKind(arg, params, locals) == ReturnKind::String) {
-      return true;
-    }
-    std::string collectionTypePath;
-    return arg.kind == Expr::Kind::Call &&
-           resolveCallCollectionTypePath(arg, params, locals, collectionTypePath) &&
-           collectionTypePath == "/string";
-  };
-
-  auto validateCollectionElementType = [&](const Expr &arg,
-                                           const std::string &typeName,
-                                           const std::string &errorPrefix) {
-    const std::string normalizedType = normalizeBindingTypeName(typeName);
-    if (normalizedType == "string") {
-      if (!isStringExpr(arg)) {
-        error_ = errorPrefix + typeName;
-        return false;
-      }
-      return true;
-    }
-    ReturnKind expectedKind = returnKindForTypeName(normalizedType);
-    if (expectedKind == ReturnKind::Unknown) {
-      return true;
-    }
-    if (isStringExpr(arg)) {
-      error_ = errorPrefix + typeName;
-      return false;
-    }
-    ReturnKind argKind = inferExprReturnKind(arg, params, locals);
-    if (argKind != ReturnKind::Unknown && argKind != expectedKind) {
-      error_ = errorPrefix + typeName;
-      return false;
-    }
-    return true;
-  };
-
   std::string builtinName;
   if (!getBuiltinCollectionName(expr, builtinName)) {
     return true;
   }
 
   handledOut = true;
+  const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{
+      .resolveBindingTarget =
+          [&](const Expr &target, BindingInfo &bindingOut) -> bool {
+            if (!(target.kind == Expr::Kind::Call && target.isFieldAccess &&
+                  target.args.size() == 1)) {
+              return false;
+            }
+            return resolveStructFieldBinding(params, locals, target.args.front(),
+                                             target.name, bindingOut);
+          },
+      .inferCallBinding =
+          [&](const Expr &target, BindingInfo &bindingOut) -> bool {
+            if (target.kind != Expr::Kind::Call) {
+              return false;
+            }
+            auto defIt = defMap_.find(resolveCalleePath(target));
+            return defIt != defMap_.end() && defIt->second != nullptr &&
+                   inferDefinitionReturnBinding(*defIt->second, bindingOut);
+          }};
+  const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
+      makeBuiltinCollectionDispatchResolvers(params, locals,
+                                            builtinCollectionDispatchResolverAdapters);
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
     error_ = builtinName + " literal does not accept block arguments";
     return false;
@@ -119,23 +101,29 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
       !expr.templateArgs.empty()) {
     const std::string &elemType = expr.templateArgs.front();
     for (const auto &arg : expr.args) {
-      if (!validateCollectionElementType(
-              arg, elemType,
-              builtinName + " literal requires element type ")) {
+      if (!this->validateCollectionElementType(
+              arg, elemType, builtinName + " literal requires element type ",
+              params, locals, builtinCollectionDispatchResolvers)) {
         return false;
       }
     }
   }
   if (builtinName == "map" && expr.templateArgs.size() == 2) {
+    if (!validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)) {
+      return false;
+    }
     const std::string &keyType = expr.templateArgs[0];
     const std::string &valueType = expr.templateArgs[1];
     for (size_t i = 0; i + 1 < expr.args.size(); i += 2) {
-      if (!validateCollectionElementType(expr.args[i], keyType,
-                                         "map literal requires key type ")) {
+      if (!this->validateCollectionElementType(
+              expr.args[i], keyType, "map literal requires key type ", params,
+              locals, builtinCollectionDispatchResolvers)) {
         return false;
       }
-      if (!validateCollectionElementType(expr.args[i + 1], valueType,
-                                         "map literal requires value type ")) {
+      if (!this->validateCollectionElementType(
+              expr.args[i + 1], valueType,
+              "map literal requires value type ", params, locals,
+              builtinCollectionDispatchResolvers)) {
         return false;
       }
     }

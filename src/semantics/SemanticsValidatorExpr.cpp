@@ -3576,98 +3576,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (getBuiltinCollectionName(expr, builtinName)) {
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = builtinName + " literal does not accept block arguments";
-          return false;
-        }
-        if (builtinName == "soa_vector") {
-          if (expr.templateArgs.size() != 1) {
-            error_ = "soa_vector literal requires exactly one template argument";
-            return false;
-          }
-          if (!isSoaVectorStructElementType(expr.templateArgs.front(), expr.namespacePrefix, structNames_,
-                                            importAliases_)) {
-            error_ = "soa_vector literal requires struct element type";
-            return false;
-          }
-          if (!validateSoaVectorElementFieldEnvelopes(expr.templateArgs.front(), expr.namespacePrefix)) {
-            return false;
-          }
-          if (!expr.args.empty() && currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
-            error_ = "soa_vector literal requires heap_alloc effect";
-            return false;
-          }
-        }
-        if (builtinName == "vector" && !expr.args.empty()) {
-          if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
-            error_ = "vector literal requires heap_alloc effect";
-            return false;
-          }
-        }
-        if (builtinName == "array" || builtinName == "vector" || builtinName == "soa_vector") {
-          if (expr.templateArgs.size() != 1) {
-            if (builtinName == "array" && expr.templateArgs.size() > 1) {
-              error_ = "array<T, N> is unsupported; use array<T> (runtime-count array)";
-              return false;
-            }
-            error_ = builtinName + " literal requires exactly one template argument";
-            return false;
-          }
-        } else {
-          if (expr.templateArgs.size() != 2) {
-            error_ = "map literal requires exactly two template arguments";
-            return false;
-          }
-          if (expr.args.size() % 2 != 0) {
-            error_ = "map literal requires an even number of arguments";
-            return false;
-          }
-        }
-        for (const auto &arg : expr.args) {
-          if (!validateExpr(params, locals, arg)) {
-            return false;
-          }
-        }
-        if ((builtinName == "array" || builtinName == "vector" || builtinName == "soa_vector") &&
-            !expr.templateArgs.empty()) {
-          const std::string &elemType = expr.templateArgs.front();
-          for (const auto &arg : expr.args) {
-            if (!this->validateCollectionElementType(arg,
-                                                     elemType,
-                                                     builtinName + " literal requires element type ",
-                                                     params,
-                                                     locals,
-                                                     builtinCollectionDispatchResolvers)) {
-              return false;
-            }
-          }
-        }
-        if (builtinName == "map" && expr.templateArgs.size() == 2) {
-          if (!validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)) {
-            return false;
-          }
-          const std::string &keyType = expr.templateArgs[0];
-          const std::string &valueType = expr.templateArgs[1];
-          for (size_t i = 0; i + 1 < expr.args.size(); i += 2) {
-            if (!this->validateCollectionElementType(expr.args[i],
-                                                     keyType,
-                                                     "map literal requires key type ",
-                                                     params,
-                                                     locals,
-                                                     builtinCollectionDispatchResolvers)) {
-              return false;
-            }
-            if (!this->validateCollectionElementType(expr.args[i + 1],
-                                                     valueType,
-                                                     "map literal requires value type ",
-                                                     params,
-                                                     locals,
-                                                     builtinCollectionDispatchResolvers)) {
-              return false;
-            }
-          }
-        }
+      bool handledCollectionLiteralBuiltin = false;
+      if (!validateExprCollectionLiteralBuiltins(params, locals, expr,
+                                                handledCollectionLiteralBuiltin)) {
+        return false;
+      }
+      if (handledCollectionLiteralBuiltin) {
         return true;
       }
       if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&

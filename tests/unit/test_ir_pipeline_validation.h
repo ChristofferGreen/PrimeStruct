@@ -9248,6 +9248,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidation.cpp";
   const std::filesystem::path semanticsExprCollectionPredicatesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionPredicates.cpp";
+  const std::filesystem::path semanticsExprCollectionLiteralsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionLiterals.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPointerLike.cpp";
   const std::filesystem::path semanticsExprReceiverPathsPath =
@@ -9264,6 +9266,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionPredicatesPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
   REQUIRE(std::filesystem::exists(semanticsExprReceiverPathsPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
@@ -9276,6 +9279,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprArgumentValidationSource = readText(semanticsExprArgumentValidationPath);
   const std::string semanticsExprCollectionPredicatesSource = readText(semanticsExprCollectionPredicatesPath);
+  const std::string semanticsExprCollectionLiteralsSource = readText(semanticsExprCollectionLiteralsPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
   const std::string semanticsExprReceiverPathsSource = readText(semanticsExprReceiverPathsPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
@@ -9367,6 +9371,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("this->resolveRemovedMapBodyArgumentTarget(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("validateExprCollectionLiteralBuiltins(params, locals, expr,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getBuiltinCollectionName(expr, builtinName)) {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (!resolveExprVectorHelperCall(params,") != std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool {") ==
@@ -9543,6 +9551,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find(
             "bool SemanticsValidator::validateCollectionElementType") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find(
+            "bool SemanticsValidator::validateExprCollectionLiteralBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find("validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find("this->validateCollectionElementType(") !=
         std::string::npos);
   CHECK(semanticsExprPointerLikeSource.find("std::string SemanticsValidator::normalizeCollectionMethodName") !=
         std::string::npos);
