@@ -4462,7 +4462,26 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /array/push") != std::string::npos);
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
+}
+
+TEST_CASE("vector mutator alias block args keep builtin diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /vector/push(values, 2i32) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push does not accept block arguments") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector helper duplicate named args stay statement-only in expressions") {

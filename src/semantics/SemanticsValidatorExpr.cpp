@@ -297,39 +297,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return hasDefinitionPath("/std/collections/vector/" + namespacedHelper) ||
              hasDefinitionPath("/vector/" + namespacedHelper);
     };
-    auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
-      if (candidate.kind != Expr::Kind::Call) {
-        return false;
-      }
-      auto matchesHelper = [&](const char *helper) -> bool {
-        return isVectorBuiltinName(candidate, helper);
-      };
-      if (matchesHelper("push")) {
-        nameOut = "push";
-        return true;
-      }
-      if (matchesHelper("pop")) {
-        nameOut = "pop";
-        return true;
-      }
-      if (matchesHelper("reserve")) {
-        nameOut = "reserve";
-        return true;
-      }
-      if (matchesHelper("clear")) {
-        nameOut = "clear";
-        return true;
-      }
-      if (matchesHelper("remove_at")) {
-        nameOut = "remove_at";
-        return true;
-      }
-      if (matchesHelper("remove_swap")) {
-        nameOut = "remove_swap";
-        return true;
-      }
-      return false;
-    };
     auto resolveVectorHelperMethodTarget = [&](const Expr &receiver,
                                                const std::string &helperName,
                                                std::string &resolvedOut) -> bool {
@@ -393,115 +360,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
-    auto getDirectVectorHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-        return "";
-      }
-      std::string normalized = candidate.name;
-      if (!normalized.empty() && normalized.front() == '/') {
-        normalized.erase(normalized.begin());
-      }
-      std::string normalizedPrefix = candidate.namespacePrefix;
-      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-        normalizedPrefix.erase(normalizedPrefix.begin());
-      }
-      std::string helperName;
-      if (normalized.rfind("vector/", 0) == 0) {
-        helperName = normalized.substr(std::string("vector/").size());
-      } else if (normalizedPrefix == "vector") {
-        helperName = normalized;
-      } else if (resolveCalleePath(candidate).rfind("/vector/", 0) == 0) {
-        helperName = resolveCalleePath(candidate).substr(std::string("/vector/").size());
-      } else {
-        return "";
-      }
-      if (helperName != "count" && helperName != "capacity" && helperName != "at" &&
-          helperName != "at_unsafe" && helperName != "push" && helperName != "pop" &&
-          helperName != "reserve" && helperName != "clear" && helperName != "remove_at" &&
-          helperName != "remove_swap") {
-        return "";
-      }
-      const std::string removedPath = "/vector/" + helperName;
-      return hasDefinitionPath(removedPath) ? "" : removedPath;
-    };
-    auto preferVectorStdlibHelperPath = [&](const std::string &path) -> std::string {
-      auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
-        return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-               suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-               suffix != "remove_at" && suffix != "remove_swap";
-      };
-      auto allowsVectorStdlibCompatibilitySuffix = [](const std::string &suffix) {
-        return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-               suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-               suffix != "remove_at" && suffix != "remove_swap";
-      };
-      std::string preferred = path;
-      if (preferred.rfind("/array/", 0) == 0 && !hasDefinitionPath(preferred)) {
-        const std::string suffix = preferred.substr(std::string("/array/").size());
-        if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-          const std::string vectorAlias = "/vector/" + suffix;
-          if (hasDefinitionPath(vectorAlias)) {
-            return vectorAlias;
-          }
-          const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-          if (hasDefinitionPath(stdlibAlias)) {
-            return stdlibAlias;
-          }
-        }
-      }
-      if (preferred.rfind("/vector/", 0) == 0 && !hasDefinitionPath(preferred)) {
-        const std::string suffix = preferred.substr(std::string("/vector/").size());
-        if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-          const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-          if (hasDefinitionPath(stdlibAlias)) {
-            preferred = stdlibAlias;
-          } else {
-            if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-              const std::string arrayAlias = "/array/" + suffix;
-              if (hasDefinitionPath(arrayAlias)) {
-                preferred = arrayAlias;
-              }
-            }
-          }
-        }
-      }
-      if (preferred.rfind("/std/collections/vector/", 0) == 0 && !hasDefinitionPath(preferred)) {
-        const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-        if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-          const std::string vectorAlias = "/vector/" + suffix;
-          if (hasDefinitionPath(vectorAlias)) {
-            preferred = vectorAlias;
-          } else {
-            if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-              const std::string arrayAlias = "/array/" + suffix;
-              if (hasDefinitionPath(arrayAlias)) {
-                preferred = arrayAlias;
-              }
-            }
-          }
-        }
-      }
-      if (preferred.rfind("/map/", 0) == 0 && !hasDefinitionPath(preferred)) {
-        const std::string suffix = preferred.substr(std::string("/map/").size());
-        if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
-          const std::string stdlibAlias = "/std/collections/map/" + suffix;
-          if (hasDefinitionPath(stdlibAlias)) {
-            preferred = stdlibAlias;
-          }
-        }
-      }
-      if (preferred.rfind("/std/collections/map/", 0) == 0 && !hasDefinitionPath(preferred)) {
-        const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-        if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-            suffix != "at" && suffix != "at_unsafe") {
-          const std::string mapAlias = "/map/" + suffix;
-          if (hasDefinitionPath(mapAlias)) {
-            preferred = mapAlias;
-          }
-        }
-      }
-      return preferred;
-    };
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
     size_t vectorHelperCallReceiverIndex = 0;
@@ -519,7 +377,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
            namespacedHelper == "remove_swap");
       const bool hasImportedStdNamespacedVectorCanonicalHelper =
           isStdNamespacedVectorCanonicalHelperCall && hasImportedDefinitionPath(resolved);
-      const std::string removedVectorCompatibilityPath = getDirectVectorHelperCompatibilityPath(expr);
+      const std::string removedVectorCompatibilityPath =
+          this->getDirectVectorHelperCompatibilityPath(expr);
       if (!removedVectorCompatibilityPath.empty()) {
         error_ = "unknown call target: " + removedVectorCompatibilityPath;
         return false;
@@ -1686,7 +1545,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     if (!expr.isMethodCall) {
-      const std::string removedVectorCompatibilityPath = getDirectVectorHelperCompatibilityPath(expr);
+      const std::string removedVectorCompatibilityPath =
+          this->getDirectVectorHelperCompatibilityPath(expr);
       if (!removedVectorCompatibilityPath.empty()) {
         error_ = "unknown call target: " + removedVectorCompatibilityPath;
         return false;
@@ -3598,59 +3458,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           return defMap_.find(resolved) == defMap_.end();
         };
-        auto resolveLegacyVectorHelperName = [&](std::string &nameOut) -> bool {
-          if (isSimpleCallName(expr, "push")) {
-            nameOut = "push";
-            return true;
-          }
-          if (isSimpleCallName(expr, "pop")) {
-            nameOut = "pop";
-            return true;
-          }
-          if (isSimpleCallName(expr, "reserve")) {
-            nameOut = "reserve";
-            return true;
-          }
-          if (isSimpleCallName(expr, "clear")) {
-            nameOut = "clear";
-            return true;
-          }
-          if (isSimpleCallName(expr, "remove_at")) {
-            nameOut = "remove_at";
-            return true;
-          }
-          if (isSimpleCallName(expr, "remove_swap")) {
-            nameOut = "remove_swap";
-            return true;
-          }
-          if (expr.name.empty()) {
-            return false;
-          }
-          std::string normalized = expr.name;
-          if (!normalized.empty() && normalized.front() == '/') {
-            normalized.erase(normalized.begin());
-          }
-          if (normalized.rfind("vector/", 0) != 0) {
-            if (normalized.rfind("array/", 0) == 0) {
-              normalized = normalized.substr(std::string("array/").size());
-            } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
-              normalized = normalized.substr(std::string("std/collections/vector/").size());
-            } else {
-              return false;
-            }
-          } else {
-            normalized = normalized.substr(std::string("vector/").size());
-          }
-          if (normalized == "push" || normalized == "pop" || normalized == "reserve" || normalized == "clear" ||
-              normalized == "remove_at" || normalized == "remove_swap") {
-            nameOut = normalized;
-            return true;
-          }
-          return false;
-        };
         auto isLegacyVectorHelperBuiltinCall = [&]() {
           std::string helperName;
-          if (!resolveLegacyVectorHelperName(helperName)) {
+          if (!getVectorStatementHelperName(expr, helperName)) {
             return false;
           }
           const bool isStdNamespacedVectorCanonicalHelperCall =
@@ -3674,7 +3484,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         };
         const bool isLegacyVectorHelperBuiltin = isLegacyVectorHelperBuiltinCall();
         std::string vectorHelperName;
-        if (isLegacyVectorHelperBuiltin && resolveLegacyVectorHelperName(vectorHelperName)) {
+        if (isLegacyVectorHelperBuiltin && getVectorStatementHelperName(expr, vectorHelperName)) {
           error_ = vectorHelperName + " is only supported as a statement";
           return false;
         }
