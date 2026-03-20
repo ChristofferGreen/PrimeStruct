@@ -9,105 +9,6 @@ namespace primec::semantics {
 ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
                                                    const std::vector<ParameterInfo> &params,
                                                    const std::unordered_map<std::string, BindingInfo> &locals) {
-  auto combineNumeric = [&](ReturnKind left, ReturnKind right) -> ReturnKind {
-    if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
-      return ReturnKind::Unknown;
-    }
-    if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::String ||
-        right == ReturnKind::String || left == ReturnKind::Void || right == ReturnKind::Void ||
-        left == ReturnKind::Array || right == ReturnKind::Array) {
-      return ReturnKind::Unknown;
-    }
-    if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
-      return ReturnKind::Float64;
-    }
-    if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
-      return ReturnKind::Float32;
-    }
-    if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
-      return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
-    }
-    if (left == ReturnKind::Int64 || right == ReturnKind::Int64) {
-      if ((left == ReturnKind::Int64 || left == ReturnKind::Int) &&
-          (right == ReturnKind::Int64 || right == ReturnKind::Int)) {
-        return ReturnKind::Int64;
-      }
-      return ReturnKind::Unknown;
-    }
-    if (left == ReturnKind::Int && right == ReturnKind::Int) {
-      return ReturnKind::Int;
-    }
-    return ReturnKind::Unknown;
-  };
-  auto isStructTypeName = [&](const std::string &typeName, const std::string &namespacePrefix) -> bool {
-    if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
-      return false;
-    }
-    std::string resolved = resolveTypePath(typeName, namespacePrefix);
-    if (structNames_.count(resolved) > 0) {
-      return true;
-    }
-    auto importIt = importAliases_.find(typeName);
-    if (importIt != importAliases_.end()) {
-      return structNames_.count(importIt->second) > 0;
-    }
-    return false;
-  };
-  auto referenceTargetKind = [&](const std::string &templateArg, const std::string &namespacePrefix) -> ReturnKind {
-    if (templateArg.empty()) {
-      return ReturnKind::Unknown;
-    }
-    ReturnKind kind = returnKindForTypeName(templateArg);
-    if (kind != ReturnKind::Unknown) {
-      return kind;
-    }
-    if (isStructTypeName(templateArg, namespacePrefix)) {
-      return ReturnKind::Array;
-    }
-    std::string base;
-    std::string arg;
-    if (splitTemplateTypeName(templateArg, base, arg) && normalizeBindingTypeName(base) == "array") {
-      std::vector<std::string> args;
-      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
-        return ReturnKind::Array;
-      }
-    }
-    if (splitTemplateTypeName(templateArg, base, arg) && isMapCollectionTypeName(base)) {
-      std::vector<std::string> args;
-      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
-        return ReturnKind::Array;
-      }
-    }
-    return ReturnKind::Unknown;
-  };
-  auto uninitializedTargetKind = [&](const std::string &templateArg, const std::string &namespacePrefix) -> ReturnKind {
-    if (templateArg.empty()) {
-      return ReturnKind::Unknown;
-    }
-    ReturnKind kind = returnKindForTypeName(templateArg);
-    if (kind != ReturnKind::Unknown) {
-      return kind;
-    }
-    if (isStructTypeName(templateArg, namespacePrefix)) {
-      return ReturnKind::Array;
-    }
-    std::string base;
-    std::string arg;
-    if (splitTemplateTypeName(templateArg, base, arg) && normalizeBindingTypeName(base) == "array") {
-      std::vector<std::string> args;
-      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
-        return ReturnKind::Array;
-      }
-    }
-    if (splitTemplateTypeName(templateArg, base, arg) && isMapCollectionTypeName(base)) {
-      std::vector<std::string> args;
-      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
-        return ReturnKind::Array;
-      }
-    }
-    return ReturnKind::Unknown;
-  };
-
   if (expr.isLambda) {
     return ReturnKind::Unknown;
   }
@@ -136,7 +37,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
       if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
-        ReturnKind refKind = referenceTargetKind(paramBinding->typeTemplateArg, expr.namespacePrefix);
+        ReturnKind refKind = inferReferenceTargetKind(paramBinding->typeTemplateArg, expr.namespacePrefix);
         if (refKind != ReturnKind::Unknown) {
           return refKind;
         }
@@ -147,7 +48,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           !paramBinding->typeTemplateArg.empty()) {
         return ReturnKind::Array;
       }
-      if (isStructTypeName(paramBinding->typeName, expr.namespacePrefix)) {
+      if (isInferStructTypeName(paramBinding->typeName, expr.namespacePrefix)) {
         return ReturnKind::Array;
       }
       return returnKindForTypeName(paramBinding->typeName);
@@ -157,7 +58,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Unknown;
     }
     if (it->second.typeName == "Reference" && !it->second.typeTemplateArg.empty()) {
-      ReturnKind refKind = referenceTargetKind(it->second.typeTemplateArg, expr.namespacePrefix);
+      ReturnKind refKind = inferReferenceTargetKind(it->second.typeTemplateArg, expr.namespacePrefix);
       if (refKind != ReturnKind::Unknown) {
         return refKind;
       }
@@ -168,7 +69,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         !it->second.typeTemplateArg.empty()) {
       return ReturnKind::Array;
     }
-    if (isStructTypeName(it->second.typeName, expr.namespacePrefix)) {
+    if (isInferStructTypeName(it->second.typeName, expr.namespacePrefix)) {
       return ReturnKind::Array;
     }
     return returnKindForTypeName(it->second.typeName);
@@ -320,7 +221,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Unknown;
       }
       if (resolved && binding.typeName == "uninitialized" && !binding.typeTemplateArg.empty()) {
-        ReturnKind kind = uninitializedTargetKind(binding.typeTemplateArg, storage.namespacePrefix);
+        ReturnKind kind = inferUninitializedTargetKind(binding.typeTemplateArg, storage.namespacePrefix);
         if (kind != ReturnKind::Unknown) {
           return kind;
         }
@@ -650,7 +551,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (const BindingInfo *paramBinding = findParamBinding(params, pointerExpr.name)) {
           if ((paramBinding->typeName == "Pointer" || paramBinding->typeName == "Reference") &&
               !paramBinding->typeTemplateArg.empty()) {
-            return referenceTargetKind(paramBinding->typeTemplateArg, pointerExpr.namespacePrefix);
+            return inferReferenceTargetKind(paramBinding->typeTemplateArg, pointerExpr.namespacePrefix);
           }
           return ReturnKind::Unknown;
         }
@@ -658,7 +559,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (it != locals.end()) {
           if ((it->second.typeName == "Pointer" || it->second.typeName == "Reference") &&
               !it->second.typeTemplateArg.empty()) {
-            return referenceTargetKind(it->second.typeTemplateArg, pointerExpr.namespacePrefix);
+            return inferReferenceTargetKind(it->second.typeTemplateArg, pointerExpr.namespacePrefix);
           }
         }
         return ReturnKind::Unknown;
@@ -672,21 +573,21 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           }
           if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
             if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
-              return referenceTargetKind(paramBinding->typeTemplateArg, target.namespacePrefix);
+              return inferReferenceTargetKind(paramBinding->typeTemplateArg, target.namespacePrefix);
             }
             return returnKindForTypeName(paramBinding->typeName);
           }
           auto it = locals.find(target.name);
           if (it != locals.end()) {
             if (it->second.typeName == "Reference" && !it->second.typeTemplateArg.empty()) {
-              return referenceTargetKind(it->second.typeTemplateArg, target.namespacePrefix);
+              return inferReferenceTargetKind(it->second.typeTemplateArg, target.namespacePrefix);
             }
             return returnKindForTypeName(it->second.typeName);
           }
         }
         if (getBuiltinMemoryName(pointerExpr, pointerName)) {
           if (pointerName == "alloc" && pointerExpr.templateArgs.size() == 1 && pointerExpr.args.size() == 1) {
-            return referenceTargetKind(pointerExpr.templateArgs.front(), pointerExpr.namespacePrefix);
+            return inferReferenceTargetKind(pointerExpr.templateArgs.front(), pointerExpr.namespacePrefix);
           }
           if (pointerName == "realloc" && pointerExpr.args.size() == 2) {
             return pointerTargetKind(pointerExpr.args.front());
@@ -2603,13 +2504,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (builtinName == "lerp" && expr.args.size() == 3) {
         ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
-        result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
-        result = combineNumeric(result, inferExprReturnKind(expr.args[2], params, locals));
+        result = combineInferredNumericKinds(result, inferExprReturnKind(expr.args[1], params, locals));
+        result = combineInferredNumericKinds(result, inferExprReturnKind(expr.args[2], params, locals));
         return result;
       }
       if (builtinName == "pow" && expr.args.size() == 2) {
         ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
-        result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
+        result = combineInferredNumericKinds(result, inferExprReturnKind(expr.args[1], params, locals));
         return result;
       }
       if (expr.args.empty()) {
@@ -2645,15 +2546,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       ReturnKind left = inferExprReturnKind(expr.args[0], params, locals);
       ReturnKind right = inferExprReturnKind(expr.args[1], params, locals);
-      return combineNumeric(left, right);
+      return combineInferredNumericKinds(left, right);
     }
     if (getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name))) {
       if (expr.args.size() != 3) {
         return ReturnKind::Unknown;
       }
       ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
-      result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
-      result = combineNumeric(result, inferExprReturnKind(expr.args[2], params, locals));
+      result = combineInferredNumericKinds(result, inferExprReturnKind(expr.args[1], params, locals));
+      result = combineInferredNumericKinds(result, inferExprReturnKind(expr.args[2], params, locals));
       return result;
     }
     if (getBuiltinMinMaxName(expr, builtinName, allowMathBareName(expr.name))) {
@@ -2661,7 +2562,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Unknown;
       }
       ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
-      result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
+      result = combineInferredNumericKinds(result, inferExprReturnKind(expr.args[1], params, locals));
       return result;
     }
     if (getBuiltinAbsSignName(expr, builtinName, allowMathBareName(expr.name))) {
