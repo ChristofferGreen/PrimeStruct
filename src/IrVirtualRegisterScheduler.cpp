@@ -133,6 +133,7 @@ bool isSchedulingBarrierOpcode(IrOpcode op) {
     case IrOpcode::FileWriteI64:
     case IrOpcode::FileWriteU64:
     case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteStringDynamic:
     case IrOpcode::FileWriteByte:
     case IrOpcode::FileWriteNewline:
       return true;

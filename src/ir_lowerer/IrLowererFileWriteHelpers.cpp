@@ -170,6 +170,16 @@ bool emitFileWriteStep(const Expr &arg,
   }
 
   const LocalInfo::ValueKind kind = inferExprKind(arg);
+  if (kind == LocalInfo::ValueKind::String) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+    if (!emitExpr(arg)) {
+      return false;
+    }
+    emitInstruction(IrOpcode::FileWriteStringDynamic, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+    return true;
+  }
+
   IrOpcode writeOp = IrOpcode::FileWriteI32;
   if (!resolveFileWriteValueOpcode(kind, writeOp)) {
     error = "file write requires integer/bool or string arguments";

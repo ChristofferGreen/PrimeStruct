@@ -124,7 +124,8 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
           inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintStringDynamic ||
           inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe ||
           inst.op == IrOpcode::FileWriteI32 || inst.op == IrOpcode::FileWriteI64 ||
-          inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteByte ||
+          inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteStringDynamic ||
+          inst.op == IrOpcode::FileWriteByte ||
           inst.op == IrOpcode::FileWriteNewline) {
         layout.needsPrintScratch = true;
       }
@@ -655,6 +656,12 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
         size_t fixupIndex = emitter.emitFileWriteStringPlaceholder(
             module.stringTable[static_cast<size_t>(inst.imm)].size(), layout.scratchOffset);
         stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
+        break;
+      }
+      case IrOpcode::FileWriteStringDynamic: {
+        size_t fixupIndex = emitter.emitFileWriteStringDynamicPlaceholder(
+            stringTableOffsetDelta, stringOffsetTableSize);
+        stringTableFixups.push_back(fixupIndex);
         break;
       }
       case IrOpcode::FileWriteByte:

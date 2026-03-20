@@ -160,6 +160,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "FileWriteU64";
       case IrOpcode::FileWriteString:
         return "FileWriteString";
+      case IrOpcode::FileWriteStringDynamic:
+        return "FileWriteStringDynamic";
       case IrOpcode::FileWriteByte:
         return "FileWriteByte";
       case IrOpcode::FileWriteNewline:
@@ -386,6 +388,7 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::FileWriteI32:
       case IrOpcode::FileWriteI64:
       case IrOpcode::FileWriteU64:
+      case IrOpcode::FileWriteStringDynamic:
       case IrOpcode::FileWriteByte:
         return -1;
       case IrOpcode::Call:

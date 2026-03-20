@@ -1175,6 +1175,26 @@ bool executeImpl(const IrModule &module,
         ip += 1;
         break;
       }
+      case IrOpcode::FileWriteStringDynamic: {
+        if (stack.size() < 2) {
+          error = "IR stack underflow on file write";
+          return false;
+        }
+        uint64_t stringIndex = stack.back();
+        stack.pop_back();
+        if (stringIndex >= module.stringTable.size()) {
+          error = "invalid string index in IR";
+          return false;
+        }
+        uint64_t handle = stack.back();
+        stack.pop_back();
+        int fd = static_cast<int>(handle & 0xffffffffu);
+        const std::string &text = module.stringTable[static_cast<size_t>(stringIndex)];
+        uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
+        stack.push_back(static_cast<uint64_t>(err));
+        ip += 1;
+        break;
+      }
       case IrOpcode::FileWriteByte: {
         if (stack.size() < 2) {
           error = "IR stack underflow on file write";
@@ -2635,6 +2655,26 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       stack_.pop_back();
       const int fd = static_cast<int>(handle & 0xffffffffu);
       const std::string &text = module_->stringTable[static_cast<size_t>(inst.imm)];
+      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return finishStep(StepOutcome::Continue);
+    }
+    case IrOpcode::FileWriteStringDynamic: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on file write";
+        return finishFault();
+      }
+      const uint64_t stringIndex = stack_.back();
+      stack_.pop_back();
+      if (stringIndex >= module_->stringTable.size()) {
+        error = "invalid string index in IR";
+        return finishFault();
+      }
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      const std::string &text = module_->stringTable[static_cast<size_t>(stringIndex)];
       const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;

@@ -118,6 +118,7 @@ enum class IrOpcode : uint8_t {
   HeapAlloc,
   HeapFree,
   HeapRealloc,
+  FileWriteStringDynamic,
 };
 
 enum class IrStructFieldCategory : uint8_t {

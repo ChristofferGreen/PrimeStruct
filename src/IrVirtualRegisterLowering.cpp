@@ -150,6 +150,7 @@ bool stackEffectForOpcode(IrOpcode op, StackEffect &out, std::string &error) {
     case IrOpcode::FileWriteI32:
     case IrOpcode::FileWriteI64:
     case IrOpcode::FileWriteU64:
+    case IrOpcode::FileWriteStringDynamic:
     case IrOpcode::FileWriteByte:
       out = {2, 1, 0};
       return true;

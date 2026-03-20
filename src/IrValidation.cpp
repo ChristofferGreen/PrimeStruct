@@ -9,7 +9,7 @@ namespace primec {
 namespace {
 
 constexpr uint8_t MinOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
-constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::HeapRealloc);
+constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::FileWriteStringDynamic);
 constexpr uint64_t MaxGlslLocalIndex = 1023;
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
@@ -98,6 +98,7 @@ bool isGlslOpcodeAllowed(IrOpcode op) {
     case IrOpcode::FileWriteI64:
     case IrOpcode::FileWriteU64:
     case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteStringDynamic:
     case IrOpcode::FileWriteByte:
     case IrOpcode::FileWriteNewline:
     case IrOpcode::PushF32:
@@ -243,6 +244,7 @@ bool isWasmOpcodeAllowedWasi(IrOpcode op) {
     case IrOpcode::FileWriteI64:
     case IrOpcode::FileWriteU64:
     case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteStringDynamic:
     case IrOpcode::FileWriteByte:
     case IrOpcode::FileWriteNewline:
     case IrOpcode::JumpIfZero:
@@ -283,6 +285,7 @@ bool isWasiOnlyOpcode(IrOpcode op) {
     case IrOpcode::FileWriteI64:
     case IrOpcode::FileWriteU64:
     case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteStringDynamic:
     case IrOpcode::FileWriteByte:
     case IrOpcode::FileWriteNewline:
       return true;

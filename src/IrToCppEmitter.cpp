@@ -982,6 +982,21 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::FileWriteStringDynamic:
+      emitStackUnderflowGuard(2, "file write");
+      out << "        uint64_t fileStringDynamicIndex = stack[--sp];\n";
+      out << "        if (fileStringDynamicIndex >= ps_string_table_count) {\n";
+      out << "          std::cerr << \"invalid string index in IR\\n\";\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      out << "        uint64_t fileStringDynamicHandle = stack[--sp];\n";
+      out << "        int fileStringDynamicFd = static_cast<int>(fileStringDynamicHandle & 0xffffffffu);\n";
+      out << "        stack[sp++] = static_cast<uint64_t>(psWriteAll(fileStringDynamicFd, "
+             "ps_string_table[fileStringDynamicIndex], "
+             "std::char_traits<char>::length(ps_string_table[fileStringDynamicIndex])));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::FileWriteByte:
       emitStackUnderflowGuard(2, "file write");
       out << "        uint8_t fileByteValue = static_cast<uint8_t>(stack[--sp] & 0xffu);\n";

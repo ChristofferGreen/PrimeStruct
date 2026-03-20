@@ -548,6 +548,7 @@ TEST_CASE("wasm emitter maps wasi file open write flush close and error paths") 
   module.stringTable.push_back(outName);
   module.stringTable.push_back(missingName);
   module.stringTable.push_back("payload");
+  module.stringTable.push_back("tail");
 
   primec::IrFunction mainFn;
   mainFn.name = "/main";
@@ -555,6 +556,10 @@ TEST_CASE("wasm emitter maps wasi file open write flush close and error paths") 
   mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
   mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
   mainFn.instructions.push_back({primec::IrOpcode::FileWriteString, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI64, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::FileWriteStringDynamic, 0});
   mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
   mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
   mainFn.instructions.push_back({primec::IrOpcode::FileFlush, 0});
@@ -620,7 +625,7 @@ TEST_CASE("wasm emitter maps wasi file open write flush close and error paths") 
                                quoteShellArg(wasmPath.string()) + " > " + quoteShellArg(runOutPath.string());
     CHECK(runCommand(runCmd) == 0);
     CHECK(readFileText(runOutPath.string()).find("1") != std::string::npos);
-    CHECK(readFileText(outFilePath.string()) == "payload");
+    CHECK(readFileText(outFilePath.string()) == "payloadtail");
   }
 }
 

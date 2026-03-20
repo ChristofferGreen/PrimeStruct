@@ -524,6 +524,7 @@ bool opcodeNeedsWasiRuntime(IrOpcode op) {
     case IrOpcode::FileWriteI64:
     case IrOpcode::FileWriteU64:
     case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteStringDynamic:
     case IrOpcode::FileWriteByte:
     case IrOpcode::FileWriteNewline:
       return true;
@@ -554,13 +555,15 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
         inst.op == IrOpcode::FileOpenAppendDynamic ||
         inst.op == IrOpcode::FileReadByte || inst.op == IrOpcode::FileClose || inst.op == IrOpcode::FileFlush ||
         inst.op == IrOpcode::FileWriteI32 ||
-        inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteString ||
+        inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 ||
+        inst.op == IrOpcode::FileWriteString || inst.op == IrOpcode::FileWriteStringDynamic ||
         inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
       layout.hasFileHelpers = true;
     }
     if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
         inst.op == IrOpcode::PrintStringDynamic || inst.op == IrOpcode::FileWriteI32 ||
-        inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64) {
+        inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 ||
+        inst.op == IrOpcode::FileWriteStringDynamic) {
       layout.hasFileNumericHelpers = true;
     }
   }
@@ -1075,7 +1078,8 @@ bool buildWasiRuntimeContext(const IrModule &module,
           inst.op == IrOpcode::FileOpenAppendDynamic ||
           inst.op == IrOpcode::FileReadByte || inst.op == IrOpcode::FileClose || inst.op == IrOpcode::FileFlush ||
           inst.op == IrOpcode::FileWriteI32 ||
-          inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteString ||
+          inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 ||
+          inst.op == IrOpcode::FileWriteString || inst.op == IrOpcode::FileWriteStringDynamic ||
           inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
         runtime.hasFileOps = true;
       }
@@ -1083,7 +1087,8 @@ bool buildWasiRuntimeContext(const IrModule &module,
         runtime.hasFileReadOps = true;
       }
       if (inst.op == IrOpcode::FileWriteI32 || inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 ||
-          inst.op == IrOpcode::FileWriteString || inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
+          inst.op == IrOpcode::FileWriteString || inst.op == IrOpcode::FileWriteStringDynamic ||
+          inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
         runtime.hasFileWriteOps = true;
       }
     }
@@ -1855,6 +1860,36 @@ bool emitSimpleInstruction(const IrInstruction &inst,
                                       runtime.stringLens[static_cast<size_t>(inst.imm)],
                                       runtime,
                                       out);
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorMask), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpEnd);
+      return true;
+    }
+    case IrOpcode::FileWriteStringDynamic: {
+      if (!runtime.enabled || !runtime.hasFileWriteOps || !localLayout.hasFileHelpers || !localLayout.hasFileNumericHelpers) {
+        error = "wasm emitter missing dynamic file write runtime support in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileDigitsValueLocal, out);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorBit), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmValueTypeI32);
+      emitWasiWriteDynamicStringFromI64Local(localLayout.fileHandleLocal,
+                                             localLayout.fileDigitsValueLocal,
+                                             runtime,
+                                             out);
       out.push_back(WasmOpElse);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileHandleLocal, out);

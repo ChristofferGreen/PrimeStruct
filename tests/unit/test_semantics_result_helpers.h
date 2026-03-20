@@ -161,9 +161,11 @@ TEST_CASE("stdlib File helpers cover imported method and slash-call wrappers") {
 import /std/file/*
 
 [effects(file_write), return<void>]
-write_out([File<Write>] file, [array<i32>] bytes) {
+write_out([File<Write>] file, [array<i32>] bytes, [string] text) {
   [Result<FileError>] directWrite{/File/write<Write, i32>(file, 65i32)}
   [Result<FileError>] directWriteLine{/File/write_line<Write, i32>(file, 7i32)}
+  [Result<FileError>] directTextWrite{/File/write<Write, string>(file, text)}
+  [Result<FileError>] directTextWriteLine{/File/write_line<Write, string>(file, text)}
   [Result<FileError>] methodByte{file.write_byte(65i32)}
   [Result<FileError>] directBytes{/File/write_bytes(file, bytes)}
   [Result<FileError>] methodFlush{file.flush()}

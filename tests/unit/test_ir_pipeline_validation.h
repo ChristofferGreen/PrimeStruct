@@ -50719,6 +50719,31 @@ TEST_CASE("ir lowerer file write helpers emit write steps") {
   CHECK(instructions[3].imm == 8);
 
   instructions.clear();
+  emitExprCalled = false;
+  CHECK(primec::ir_lowerer::emitFileWriteStep(
+      arg,
+      3,
+      6,
+      [](const primec::Expr &, int32_t &, size_t &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::ValueKind::String; },
+      [&](const primec::Expr &) {
+        emitExprCalled = true;
+        emitInstruction(primec::IrOpcode::LoadLocal, 11);
+        return true;
+      },
+      emitInstruction,
+      error));
+  CHECK(emitExprCalled);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 3);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].imm == 11);
+  CHECK(instructions[2].op == primec::IrOpcode::FileWriteStringDynamic);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 6);
+
+  instructions.clear();
   error.clear();
   CHECK_FALSE(primec::ir_lowerer::emitFileWriteStep(
       arg,
@@ -51855,9 +51880,10 @@ TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
       primec::IrOpcode::HeapAlloc,
       primec::IrOpcode::HeapFree,
       primec::IrOpcode::HeapRealloc,
+      primec::IrOpcode::FileWriteStringDynamic,
   };
 
-  CHECK(expected.size() == static_cast<size_t>(static_cast<uint8_t>(primec::IrOpcode::HeapRealloc)));
+  CHECK(expected.size() == static_cast<size_t>(static_cast<uint8_t>(primec::IrOpcode::FileWriteStringDynamic)));
   for (size_t i = 0; i < expected.size(); ++i) {
     const auto expectedValue = static_cast<uint8_t>(i + 1);
     CHECK(static_cast<uint8_t>(expected[i]) == expectedValue);

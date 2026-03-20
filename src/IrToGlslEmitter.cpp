@@ -600,6 +600,13 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::FileWriteStringDynamic:
+      out << "        // GLSL backend cannot write files; consume string index/handle and push deterministic success code.\n";
+      out << "        sp -= 2;\n";
+      out << "        stack[sp++] = 0;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::FileWriteByte:
       out << "        // GLSL backend cannot write files; consume byte/handle and push deterministic success code.\n";
       out << "        sp -= 2;\n";

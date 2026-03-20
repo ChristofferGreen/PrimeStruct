@@ -1310,6 +1310,49 @@ log_file_error([FileError] err) {
   CHECK(readFile(filePath) == "6566\nCDE");
 }
 
+TEST_CASE("vm uses stdlib File string helper wrappers") {
+  const std::string filePath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_string_helpers.txt").string();
+  const auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string source = R"(
+import /std/file/*
+
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [File<Write>] file{ File<Write>("__PATH__"utf8)? }
+  [string] text{"alpha"utf8}
+  /File/write<Write, string>(file, text)?
+  /File/write_line<Write, string>(file, "omega"utf8)?
+  file.close()?
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(Result.why(fileErrorStatus(err)))
+}
+)";
+  std::string program = source;
+  const std::string placeholder = "__PATH__";
+  const size_t pathPos = program.find(placeholder);
+  REQUIRE(pathPos != std::string::npos);
+  program.replace(pathPos, placeholder.size(), escape(filePath));
+  const std::string srcPath = writeTemp("vm_stdlib_file_string_helpers.prime", program);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(filePath) == "alphaomega\n");
+}
+
 TEST_CASE("vm supports graphics-style int return propagation with on_error") {
   const std::string source = R"(
 [struct]

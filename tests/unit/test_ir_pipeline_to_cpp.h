@@ -309,11 +309,16 @@ TEST_CASE("ir to cpp emitter writes file io opcodes") {
   module.entryIndex = 0;
   module.stringTable.push_back("/tmp/ir_to_cpp_file_io.txt");
   module.stringTable.push_back("hello");
+  module.stringTable.push_back("world");
   primec::IrFunction fn;
   fn.name = "/main";
   fn.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
   fn.instructions.push_back({primec::IrOpcode::Dup, 0});
   fn.instructions.push_back({primec::IrOpcode::FileWriteString, 1});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, 2});
+  fn.instructions.push_back({primec::IrOpcode::FileWriteStringDynamic, 0});
   fn.instructions.push_back({primec::IrOpcode::Pop, 0});
   fn.instructions.push_back({primec::IrOpcode::Dup, 0});
   fn.instructions.push_back({primec::IrOpcode::FileFlush, 0});
@@ -328,6 +333,10 @@ TEST_CASE("ir to cpp emitter writes file io opcodes") {
   CHECK(error.empty());
   CHECK(cpp.find("static uint32_t psWriteAll(int fd, const void *data, std::size_t size)") != std::string::npos);
   CHECK(cpp.find("int fileFd = ::open(ps_string_table[0], fileOpenFlags, 0644);") != std::string::npos);
+  CHECK(cpp.find("if (fileStringDynamicIndex >= ps_string_table_count)") != std::string::npos);
+  CHECK(cpp.find("psWriteAll(fileStringDynamicFd, ps_string_table[fileStringDynamicIndex], "
+                 "std::char_traits<char>::length(ps_string_table[fileStringDynamicIndex]))") !=
+        std::string::npos);
   CHECK(cpp.find("int flushRc = ::fsync(flushFd);") != std::string::npos);
   CHECK(cpp.find("int closeRc = ::close(closeFd);") != std::string::npos);
 }
