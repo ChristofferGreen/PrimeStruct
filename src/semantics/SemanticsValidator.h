@@ -678,6 +678,13 @@ private:
                                     const std::vector<Expr> *enclosingStatements,
                                     size_t statementIndex,
                                     bool &handled);
+  bool validateReturnStatement(const std::vector<ParameterInfo> &params,
+                               std::unordered_map<std::string, BindingInfo> &locals,
+                               const Expr &stmt,
+                               ReturnKind returnKind,
+                               bool allowReturn,
+                               bool *sawReturn,
+                               const std::string &namespacePrefix);
   bool validateVectorStatementHelper(const std::vector<ParameterInfo> &params,
                                      const std::unordered_map<std::string, BindingInfo> &locals,
                                      const Expr &stmt,
