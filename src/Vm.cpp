@@ -1,13 +1,10 @@
 #include "primec/Vm.h"
 
 #include "VmHeapHelpers.h"
+#include "VmIoHelpers.h"
 
 #include <algorithm>
-#include <cerrno>
-#include <cstdio>
 #include <cstring>
-#include <fcntl.h>
-#include <unistd.h>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -81,23 +78,6 @@ bool executeImpl(const IrModule &module,
   entryFrame.function = &module.functions[entryFrame.functionIndex];
   entryFrame.locals.assign(localCounts[entryFrame.functionIndex], 0);
   frames.push_back(std::move(entryFrame));
-  auto writeAll = [&](int fd, const void *data, size_t size) -> int {
-    const char *cursor = static_cast<const char *>(data);
-    size_t remaining = size;
-    while (remaining > 0) {
-      ssize_t wrote = ::write(fd, cursor, remaining);
-      if (wrote < 0) {
-        return errno == 0 ? EIO : errno;
-      }
-      if (wrote == 0) {
-        return EIO;
-      }
-      remaining -= static_cast<size_t>(wrote);
-      cursor += wrote;
-    }
-    return 0;
-  };
-
   while (!frames.empty()) {
     Frame &frame = frames.back();
     const IrFunction &fn = *frame.function;
@@ -837,146 +817,50 @@ bool executeImpl(const IrModule &module,
         break;
       }
       case IrOpcode::PrintI32: {
-        if (stack.empty()) {
-          error = "IR stack underflow on print";
+        if (!vm_detail::handlePrintOpcode(module, inst, stack, args, error)) {
           return false;
-        }
-        int32_t value = static_cast<int32_t>(stack.back());
-        stack.pop_back();
-        uint64_t flags = decodePrintFlags(inst.imm);
-        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-        bool newline = (flags & PrintFlagNewline) != 0;
-        std::string text = std::to_string(value);
-        std::fwrite(text.data(), 1, text.size(), out);
-        if (newline) {
-          std::fputc('\n', out);
         }
         ip += 1;
         break;
       }
       case IrOpcode::PrintI64: {
-        if (stack.empty()) {
-          error = "IR stack underflow on print";
+        if (!vm_detail::handlePrintOpcode(module, inst, stack, args, error)) {
           return false;
-        }
-        int64_t value = static_cast<int64_t>(stack.back());
-        stack.pop_back();
-        uint64_t flags = decodePrintFlags(inst.imm);
-        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-        bool newline = (flags & PrintFlagNewline) != 0;
-        std::string text = std::to_string(value);
-        std::fwrite(text.data(), 1, text.size(), out);
-        if (newline) {
-          std::fputc('\n', out);
         }
         ip += 1;
         break;
       }
       case IrOpcode::PrintU64: {
-        if (stack.empty()) {
-          error = "IR stack underflow on print";
+        if (!vm_detail::handlePrintOpcode(module, inst, stack, args, error)) {
           return false;
-        }
-        uint64_t value = stack.back();
-        stack.pop_back();
-        uint64_t flags = decodePrintFlags(inst.imm);
-        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-        bool newline = (flags & PrintFlagNewline) != 0;
-        std::string text = std::to_string(value);
-        std::fwrite(text.data(), 1, text.size(), out);
-        if (newline) {
-          std::fputc('\n', out);
         }
         ip += 1;
         break;
       }
       case IrOpcode::PrintString: {
-        uint64_t stringIndex = decodePrintStringIndex(inst.imm);
-        if (stringIndex >= module.stringTable.size()) {
-          error = "invalid string index in IR";
+        if (!vm_detail::handlePrintOpcode(module, inst, stack, args, error)) {
           return false;
-        }
-        uint64_t flags = decodePrintFlags(inst.imm);
-        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-        bool newline = (flags & PrintFlagNewline) != 0;
-        const std::string &text = module.stringTable[static_cast<size_t>(stringIndex)];
-        std::fwrite(text.data(), 1, text.size(), out);
-        if (newline) {
-          std::fputc('\n', out);
         }
         ip += 1;
         break;
       }
       case IrOpcode::PrintStringDynamic: {
-        if (stack.empty()) {
-          error = "IR stack underflow on print";
+        if (!vm_detail::handlePrintOpcode(module, inst, stack, args, error)) {
           return false;
-        }
-        uint64_t stringIndex = stack.back();
-        stack.pop_back();
-        if (stringIndex >= module.stringTable.size()) {
-          error = "invalid string index in IR";
-          return false;
-        }
-        uint64_t flags = decodePrintFlags(inst.imm);
-        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-        bool newline = (flags & PrintFlagNewline) != 0;
-        const std::string &text = module.stringTable[static_cast<size_t>(stringIndex)];
-        std::fwrite(text.data(), 1, text.size(), out);
-        if (newline) {
-          std::fputc('\n', out);
         }
         ip += 1;
         break;
       }
       case IrOpcode::PrintArgv: {
-        if (stack.empty()) {
-          error = "IR stack underflow on print";
+        if (!vm_detail::handlePrintOpcode(module, inst, stack, args, error)) {
           return false;
-        }
-        if (!args) {
-          error = "VM missing argv data for PrintArgv";
-          return false;
-        }
-        int64_t index = static_cast<int64_t>(stack.back());
-        stack.pop_back();
-        if (index < 0 || static_cast<size_t>(index) >= args->size()) {
-          error = "invalid argv index in IR";
-          return false;
-        }
-        uint64_t flags = decodePrintFlags(inst.imm);
-        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-        bool newline = (flags & PrintFlagNewline) != 0;
-        std::string_view text = (*args)[static_cast<size_t>(index)];
-        std::fwrite(text.data(), 1, text.size(), out);
-        if (newline) {
-          std::fputc('\n', out);
         }
         ip += 1;
         break;
       }
       case IrOpcode::PrintArgvUnsafe: {
-        if (stack.empty()) {
-          error = "IR stack underflow on print";
+        if (!vm_detail::handlePrintOpcode(module, inst, stack, args, error)) {
           return false;
-        }
-        if (!args) {
-          error = "VM missing argv data for PrintArgvUnsafe";
-          return false;
-        }
-        int64_t index = static_cast<int64_t>(stack.back());
-        stack.pop_back();
-        if (index < 0 || static_cast<size_t>(index) >= args->size()) {
-          ip += 1;
-          break;
-        }
-        uint64_t flags = decodePrintFlags(inst.imm);
-        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-        bool newline = (flags & PrintFlagNewline) != 0;
-        std::string_view text = (*args)[static_cast<size_t>(index)];
-        std::fwrite(text.data(), 1, text.size(), out);
-        if (newline) {
-          std::fputc('\n', out);
         }
         ip += 1;
         break;
@@ -984,229 +868,88 @@ bool executeImpl(const IrModule &module,
       case IrOpcode::FileOpenRead:
       case IrOpcode::FileOpenWrite:
       case IrOpcode::FileOpenAppend: {
-        if (inst.imm >= module.stringTable.size()) {
-          error = "invalid string index in IR";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        const std::string &path = module.stringTable[static_cast<size_t>(inst.imm)];
-        int flags = O_RDONLY;
-        int mode = 0644;
-        if (inst.op == IrOpcode::FileOpenWrite) {
-          flags = O_WRONLY | O_CREAT | O_TRUNC;
-        } else if (inst.op == IrOpcode::FileOpenAppend) {
-          flags = O_WRONLY | O_CREAT | O_APPEND;
-        }
-        int fd = ::open(path.c_str(), flags, mode);
-        uint64_t packed = 0;
-        if (fd < 0) {
-          uint32_t err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
-          packed = (static_cast<uint64_t>(err) << 32);
-        } else {
-          packed = static_cast<uint64_t>(static_cast<uint32_t>(fd));
-        }
-        stack.push_back(packed);
         ip += 1;
         break;
       }
       case IrOpcode::FileOpenReadDynamic:
       case IrOpcode::FileOpenWriteDynamic:
       case IrOpcode::FileOpenAppendDynamic: {
-        if (stack.empty()) {
-          error = "IR stack underflow on file open";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        uint64_t stringIndex = stack.back();
-        stack.pop_back();
-        if (stringIndex >= module.stringTable.size()) {
-          error = "invalid string index in IR";
-          return false;
-        }
-        const std::string &path = module.stringTable[static_cast<size_t>(stringIndex)];
-        int flags = O_RDONLY;
-        int mode = 0644;
-        if (inst.op == IrOpcode::FileOpenWriteDynamic) {
-          flags = O_WRONLY | O_CREAT | O_TRUNC;
-        } else if (inst.op == IrOpcode::FileOpenAppendDynamic) {
-          flags = O_WRONLY | O_CREAT | O_APPEND;
-        }
-        int fd = ::open(path.c_str(), flags, mode);
-        uint64_t packed = 0;
-        if (fd < 0) {
-          uint32_t err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
-          packed = (static_cast<uint64_t>(err) << 32);
-        } else {
-          packed = static_cast<uint64_t>(static_cast<uint32_t>(fd));
-        }
-        stack.push_back(packed);
         ip += 1;
         break;
       }
       case IrOpcode::FileClose: {
-        if (stack.empty()) {
-          error = "IR stack underflow on file close";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        int rc = ::close(fd);
-        uint32_t err = (rc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
       case IrOpcode::FileReadByte: {
-        if (stack.empty()) {
-          error = "IR stack underflow on file read";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        if (inst.imm >= locals.size()) {
-          error = "invalid local index in IR";
-          return false;
-        }
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        uint8_t value = 0;
-        ssize_t rc = ::read(fd, &value, 1);
-        uint32_t err = 0u;
-        if (rc < 0) {
-          err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
-        } else if (rc == 0) {
-          err = FileReadEofCode;
-        } else {
-          locals[static_cast<size_t>(inst.imm)] = static_cast<uint64_t>(value);
-        }
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
       case IrOpcode::FileFlush: {
-        if (stack.empty()) {
-          error = "IR stack underflow on file flush";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        int rc = ::fsync(fd);
-        uint32_t err = (rc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
       case IrOpcode::FileWriteI32: {
-        if (stack.size() < 2) {
-          error = "IR stack underflow on file write";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        int64_t value = static_cast<int64_t>(static_cast<int32_t>(stack.back()));
-        stack.pop_back();
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        std::string text = std::to_string(value);
-        uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
       case IrOpcode::FileWriteI64: {
-        if (stack.size() < 2) {
-          error = "IR stack underflow on file write";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        int64_t value = static_cast<int64_t>(stack.back());
-        stack.pop_back();
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        std::string text = std::to_string(value);
-        uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
       case IrOpcode::FileWriteU64: {
-        if (stack.size() < 2) {
-          error = "IR stack underflow on file write";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        uint64_t value = stack.back();
-        stack.pop_back();
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        std::string text = std::to_string(static_cast<unsigned long long>(value));
-        uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
       case IrOpcode::FileWriteString: {
-        if (stack.empty()) {
-          error = "IR stack underflow on file write";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        if (inst.imm >= module.stringTable.size()) {
-          error = "invalid string index in IR";
-          return false;
-        }
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        const std::string &text = module.stringTable[static_cast<size_t>(inst.imm)];
-        uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
       case IrOpcode::FileWriteStringDynamic: {
-        if (stack.size() < 2) {
-          error = "IR stack underflow on file write";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        uint64_t stringIndex = stack.back();
-        stack.pop_back();
-        if (stringIndex >= module.stringTable.size()) {
-          error = "invalid string index in IR";
-          return false;
-        }
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        const std::string &text = module.stringTable[static_cast<size_t>(stringIndex)];
-        uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
       case IrOpcode::FileWriteByte: {
-        if (stack.size() < 2) {
-          error = "IR stack underflow on file write";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        uint8_t value = static_cast<uint8_t>(stack.back() & 0xffu);
-        stack.pop_back();
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        uint32_t err = static_cast<uint32_t>(writeAll(fd, &value, 1));
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
       case IrOpcode::FileWriteNewline: {
-        if (stack.empty()) {
-          error = "IR stack underflow on file write";
+        if (!vm_detail::handleFileOpcode(module, inst, stack, locals, error)) {
           return false;
         }
-        uint64_t handle = stack.back();
-        stack.pop_back();
-        int fd = static_cast<int>(handle & 0xffffffffu);
-        char newline = '\n';
-        uint32_t err = static_cast<uint32_t>(writeAll(fd, &newline, 1));
-        stack.push_back(static_cast<uint64_t>(err));
         ip += 1;
         break;
       }
@@ -1351,22 +1094,6 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     error = "debug session has no active module";
     return StepOutcome::Fault;
   }
-  auto writeAll = [&](int fd, const void *data, size_t size) -> int {
-    const char *cursor = static_cast<const char *>(data);
-    size_t remaining = size;
-    while (remaining > 0) {
-      ssize_t wrote = ::write(fd, cursor, remaining);
-      if (wrote < 0) {
-        return errno == 0 ? EIO : errno;
-      }
-      if (wrote == 0) {
-        return EIO;
-      }
-      remaining -= static_cast<size_t>(wrote);
-      cursor += wrote;
-    }
-    return 0;
-  };
   if (frames_.empty()) {
     error = "debug session has no active frame";
     return StepOutcome::Fault;
@@ -2170,146 +1897,50 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintI32: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on print";
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
         return finishFault();
-      }
-      const int32_t value = static_cast<int32_t>(stack_.back());
-      stack_.pop_back();
-      const uint64_t flags = decodePrintFlags(inst.imm);
-      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-      const bool newline = (flags & PrintFlagNewline) != 0;
-      const std::string text = std::to_string(value);
-      std::fwrite(text.data(), 1, text.size(), out);
-      if (newline) {
-        std::fputc('\n', out);
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintI64: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on print";
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
         return finishFault();
-      }
-      const int64_t value = static_cast<int64_t>(stack_.back());
-      stack_.pop_back();
-      const uint64_t flags = decodePrintFlags(inst.imm);
-      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-      const bool newline = (flags & PrintFlagNewline) != 0;
-      const std::string text = std::to_string(value);
-      std::fwrite(text.data(), 1, text.size(), out);
-      if (newline) {
-        std::fputc('\n', out);
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintU64: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on print";
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
         return finishFault();
-      }
-      const uint64_t value = stack_.back();
-      stack_.pop_back();
-      const uint64_t flags = decodePrintFlags(inst.imm);
-      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-      const bool newline = (flags & PrintFlagNewline) != 0;
-      const std::string text = std::to_string(value);
-      std::fwrite(text.data(), 1, text.size(), out);
-      if (newline) {
-        std::fputc('\n', out);
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintString: {
-      const uint64_t stringIndex = decodePrintStringIndex(inst.imm);
-      if (stringIndex >= module_->stringTable.size()) {
-        error = "invalid string index in IR";
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
         return finishFault();
-      }
-      const uint64_t flags = decodePrintFlags(inst.imm);
-      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-      const bool newline = (flags & PrintFlagNewline) != 0;
-      const std::string &text = module_->stringTable[static_cast<size_t>(stringIndex)];
-      std::fwrite(text.data(), 1, text.size(), out);
-      if (newline) {
-        std::fputc('\n', out);
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintStringDynamic: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on print";
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
         return finishFault();
-      }
-      const uint64_t stringIndex = stack_.back();
-      stack_.pop_back();
-      if (stringIndex >= module_->stringTable.size()) {
-        error = "invalid string index in IR";
-        return finishFault();
-      }
-      const uint64_t flags = decodePrintFlags(inst.imm);
-      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-      const bool newline = (flags & PrintFlagNewline) != 0;
-      const std::string &text = module_->stringTable[static_cast<size_t>(stringIndex)];
-      std::fwrite(text.data(), 1, text.size(), out);
-      if (newline) {
-        std::fputc('\n', out);
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintArgv: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on print";
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
         return finishFault();
-      }
-      if (!args_) {
-        error = "VM missing argv data for PrintArgv";
-        return finishFault();
-      }
-      const int64_t index = static_cast<int64_t>(stack_.back());
-      stack_.pop_back();
-      if (index < 0 || static_cast<size_t>(index) >= args_->size()) {
-        error = "invalid argv index in IR";
-        return finishFault();
-      }
-      const uint64_t flags = decodePrintFlags(inst.imm);
-      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-      const bool newline = (flags & PrintFlagNewline) != 0;
-      const std::string_view text = (*args_)[static_cast<size_t>(index)];
-      std::fwrite(text.data(), 1, text.size(), out);
-      if (newline) {
-        std::fputc('\n', out);
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintArgvUnsafe: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on print";
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
         return finishFault();
-      }
-      if (!args_) {
-        error = "VM missing argv data for PrintArgvUnsafe";
-        return finishFault();
-      }
-      const int64_t index = static_cast<int64_t>(stack_.back());
-      stack_.pop_back();
-      if (index < 0 || static_cast<size_t>(index) >= args_->size()) {
-        ip += 1;
-        return finishStep(StepOutcome::Continue);
-      }
-      const uint64_t flags = decodePrintFlags(inst.imm);
-      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
-      const bool newline = (flags & PrintFlagNewline) != 0;
-      const std::string_view text = (*args_)[static_cast<size_t>(index)];
-      std::fwrite(text.data(), 1, text.size(), out);
-      if (newline) {
-        std::fputc('\n', out);
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
@@ -2317,229 +1948,88 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend: {
-      if (inst.imm >= module_->stringTable.size()) {
-        error = "invalid string index in IR";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      const std::string &path = module_->stringTable[static_cast<size_t>(inst.imm)];
-      int flags = O_RDONLY;
-      const int mode = 0644;
-      if (inst.op == IrOpcode::FileOpenWrite) {
-        flags = O_WRONLY | O_CREAT | O_TRUNC;
-      } else if (inst.op == IrOpcode::FileOpenAppend) {
-        flags = O_WRONLY | O_CREAT | O_APPEND;
-      }
-      const int fd = ::open(path.c_str(), flags, mode);
-      uint64_t packed = 0;
-      if (fd < 0) {
-        const uint32_t err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
-        packed = static_cast<uint64_t>(err) << 32;
-      } else {
-        packed = static_cast<uint64_t>(static_cast<uint32_t>(fd));
-      }
-      stack_.push_back(packed);
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileOpenReadDynamic:
     case IrOpcode::FileOpenWriteDynamic:
     case IrOpcode::FileOpenAppendDynamic: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on file open";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      uint64_t stringIndex = stack_.back();
-      stack_.pop_back();
-      if (stringIndex >= module_->stringTable.size()) {
-        error = "invalid string index in IR";
-        return finishFault();
-      }
-      const std::string &path = module_->stringTable[static_cast<size_t>(stringIndex)];
-      int flags = O_RDONLY;
-      const int mode = 0644;
-      if (inst.op == IrOpcode::FileOpenWriteDynamic) {
-        flags = O_WRONLY | O_CREAT | O_TRUNC;
-      } else if (inst.op == IrOpcode::FileOpenAppendDynamic) {
-        flags = O_WRONLY | O_CREAT | O_APPEND;
-      }
-      const int fd = ::open(path.c_str(), flags, mode);
-      uint64_t packed = 0;
-      if (fd < 0) {
-        const uint32_t err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
-        packed = static_cast<uint64_t>(err) << 32;
-      } else {
-        packed = static_cast<uint64_t>(static_cast<uint32_t>(fd));
-      }
-      stack_.push_back(packed);
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileClose: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on file close";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      const int rc = ::close(fd);
-      const uint32_t err = (rc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileReadByte: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on file read";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      if (inst.imm >= locals.size()) {
-        error = "invalid local index in IR";
-        return finishFault();
-      }
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      uint8_t value = 0;
-      const ssize_t rc = ::read(fd, &value, 1);
-      uint32_t err = 0u;
-      if (rc < 0) {
-        err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
-      } else if (rc == 0) {
-        err = FileReadEofCode;
-      } else {
-        locals[static_cast<size_t>(inst.imm)] = static_cast<uint64_t>(value);
-      }
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileFlush: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on file flush";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      const int rc = ::fsync(fd);
-      const uint32_t err = (rc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteI32: {
-      if (stack_.size() < 2) {
-        error = "IR stack underflow on file write";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      const int64_t value = static_cast<int64_t>(static_cast<int32_t>(stack_.back()));
-      stack_.pop_back();
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      const std::string text = std::to_string(value);
-      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteI64: {
-      if (stack_.size() < 2) {
-        error = "IR stack underflow on file write";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      const int64_t value = static_cast<int64_t>(stack_.back());
-      stack_.pop_back();
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      const std::string text = std::to_string(value);
-      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteU64: {
-      if (stack_.size() < 2) {
-        error = "IR stack underflow on file write";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      const uint64_t value = stack_.back();
-      stack_.pop_back();
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      const std::string text = std::to_string(static_cast<unsigned long long>(value));
-      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteString: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on file write";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      if (inst.imm >= module_->stringTable.size()) {
-        error = "invalid string index in IR";
-        return finishFault();
-      }
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      const std::string &text = module_->stringTable[static_cast<size_t>(inst.imm)];
-      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteStringDynamic: {
-      if (stack_.size() < 2) {
-        error = "IR stack underflow on file write";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      const uint64_t stringIndex = stack_.back();
-      stack_.pop_back();
-      if (stringIndex >= module_->stringTable.size()) {
-        error = "invalid string index in IR";
-        return finishFault();
-      }
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      const std::string &text = module_->stringTable[static_cast<size_t>(stringIndex)];
-      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteByte: {
-      if (stack_.size() < 2) {
-        error = "IR stack underflow on file write";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      const uint8_t value = static_cast<uint8_t>(stack_.back() & 0xffu);
-      stack_.pop_back();
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      const uint32_t err = static_cast<uint32_t>(writeAll(fd, &value, 1));
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteNewline: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on file write";
+      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
         return finishFault();
       }
-      const uint64_t handle = stack_.back();
-      stack_.pop_back();
-      const int fd = static_cast<int>(handle & 0xffffffffu);
-      const char newline = '\n';
-      const uint32_t err = static_cast<uint32_t>(writeAll(fd, &newline, 1));
-      stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
