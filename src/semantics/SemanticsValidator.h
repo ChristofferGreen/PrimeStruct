@@ -36,6 +36,7 @@ private:
                                          std::unordered_set<std::string> &explicitStructs,
                                          std::vector<SemanticDiagnosticRecord> *transformDiagnosticRecords,
                                          bool &definitionTransformError);
+  bool buildImportAliases();
   bool buildParameters();
   bool inferUnknownReturnKinds();
   bool inferUnknownReturnKindsLegacy();
