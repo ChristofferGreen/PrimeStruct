@@ -282,6 +282,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/VmDebugSession.cpp
   src/VmDebugSessionInstruction.cpp
   src/VmDebugSessionSetup.cpp
+  src/VmExecution.cpp
   src/VmHeapHelpers.cpp
   src/VmIoHelpers.cpp
   src/VmDebugAdapter.cpp
