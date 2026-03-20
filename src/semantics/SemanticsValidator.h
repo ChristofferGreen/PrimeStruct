@@ -685,6 +685,14 @@ private:
                                bool allowReturn,
                                bool *sawReturn,
                                const std::string &namespacePrefix);
+  bool validateStatementBodyArguments(const std::vector<ParameterInfo> &params,
+                                      std::unordered_map<std::string, BindingInfo> &locals,
+                                      const Expr &stmt,
+                                      ReturnKind returnKind,
+                                      const std::string &namespacePrefix,
+                                      const std::vector<Expr> *enclosingStatements,
+                                      size_t statementIndex,
+                                      bool &handled);
   bool validateVectorStatementHelper(const std::vector<ParameterInfo> &params,
                                      const std::unordered_map<std::string, BindingInfo> &locals,
                                      const Expr &stmt,
