@@ -163,6 +163,14 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
        context.hasStdNamespacedMapAccessDefinition) &&
       !(context.isStdNamespacedVectorAccessCall &&
         hasNamedArguments(expr.argNames))) {
+    if (!expr.isMethodCall &&
+        context.shouldBuiltinValidateBareMapAccessCall &&
+        context.isMapLikeBareAccessReceiverTarget != nullptr &&
+        expr.args.size() == 2 &&
+        (context.isMapLikeBareAccessReceiverTarget(expr.args.front()) ||
+         context.isMapLikeBareAccessReceiverTarget(expr.args[1]))) {
+      return true;
+    }
     handledOut = true;
     if (!context.shouldBuiltinValidateBareMapAccessCall) {
       Expr rewrittenMapHelperCall;
@@ -204,31 +212,49 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
               context.resolveStringTarget(candidate));
     };
     std::string mapKeyType;
+    std::string mapValueType;
     auto isMapTarget = [&](const Expr &candidate, std::string &mapKeyTypeOut) {
       return context.resolveMapKeyType != nullptr &&
              context.resolveMapKeyType(candidate, mapKeyTypeOut);
     };
     bool isArrayOrString = isArrayOrStringTarget(expr.args.front(), elemType);
     bool isMap = isMapTarget(expr.args.front(), mapKeyType);
+    bool isExperimentalMap =
+        context.resolveExperimentalMapTarget != nullptr &&
+        context.resolveExperimentalMapTarget(expr.args.front(), mapKeyType,
+                                             mapValueType);
     const bool shouldProbeReorderedReceiver =
         expr.args.size() == 2 &&
         (expr.args.front().kind == Expr::Kind::Literal ||
          expr.args.front().kind == Expr::Kind::BoolLiteral ||
          expr.args.front().kind == Expr::Kind::FloatLiteral ||
          expr.args.front().kind == Expr::Kind::StringLiteral ||
-         (expr.args.front().kind == Expr::Kind::Name && !isArrayOrString && !isMap));
-    if (!isArrayOrString && !isMap && shouldProbeReorderedReceiver) {
+         (expr.args.front().kind == Expr::Kind::Name && !isArrayOrString &&
+          !isMap && !isExperimentalMap));
+    if (!isArrayOrString && !isMap && !isExperimentalMap &&
+        shouldProbeReorderedReceiver) {
       std::string reorderedElemType;
       std::string reorderedMapKeyType;
+      std::string reorderedMapValueType;
       const bool reorderedArrayOrString = isArrayOrStringTarget(expr.args[1], reorderedElemType);
       const bool reorderedMap = isMapTarget(expr.args[1], reorderedMapKeyType);
-      if (reorderedArrayOrString || reorderedMap) {
+      const bool reorderedExperimentalMap =
+          context.resolveExperimentalMapTarget != nullptr &&
+          context.resolveExperimentalMapTarget(expr.args[1], reorderedMapKeyType,
+                                               reorderedMapValueType);
+      if (reorderedArrayOrString || reorderedMap || reorderedExperimentalMap) {
         indexArgIndex = 0;
         elemType = reorderedElemType;
         mapKeyType = reorderedMapKeyType;
+        mapValueType = reorderedMapValueType;
         isArrayOrString = reorderedArrayOrString;
         isMap = reorderedMap;
+        isExperimentalMap = reorderedExperimentalMap;
       }
+    }
+    if (isExperimentalMap) {
+      error_ = builtinName + " requires integer index";
+      return false;
     }
     if (!isArrayOrString && !isMap) {
       if (!validateExpr(params, locals, expr.args.front())) {

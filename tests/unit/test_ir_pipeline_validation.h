@@ -9248,6 +9248,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidation.cpp";
   const std::filesystem::path semanticsExprCollectionPredicatesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionPredicates.cpp";
+  const std::filesystem::path semanticsExprCollectionAccessValidationPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccessValidation.cpp";
   const std::filesystem::path semanticsExprCollectionLiteralsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionLiterals.cpp";
   const std::filesystem::path semanticsExprNamedArgumentBuiltinsPath =
@@ -9278,6 +9280,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionPredicatesPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
@@ -9297,6 +9300,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprArgumentValidationSource = readText(semanticsExprArgumentValidationPath);
   const std::string semanticsExprCollectionPredicatesSource = readText(semanticsExprCollectionPredicatesPath);
+  const std::string semanticsExprCollectionAccessValidationSource =
+      readText(semanticsExprCollectionAccessValidationPath);
   const std::string semanticsExprCollectionLiteralsSource = readText(semanticsExprCollectionLiteralsPath);
   const std::string semanticsExprNamedArgumentBuiltinsSource = readText(semanticsExprNamedArgumentBuiltinsPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
@@ -9410,6 +9415,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprMapSoaBuiltins(") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("validateExprCollectionAccessFallbacks(") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("mapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("mapSoaBuiltinContext.bareMapHelperOperandIndices =") !=
@@ -9506,6 +9513,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("auto isSupportedIndexKind = [&](ReturnKind kind) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("collectionAccessValidationContext.resolveExperimentalMapTarget =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto getRemovedVectorAccessBuiltinName = [&](const Expr &candidate, std::string &helperOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("unknown call target: /std/collections/map/\" + builtinName") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("to_soa requires vector target") ==
         std::string::npos);
@@ -9649,6 +9662,15 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find(
             "bool SemanticsValidator::validateCollectionElementType") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "bool SemanticsValidator::validateExprCollectionAccessFallbacks") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "requires array, vector, map, or string target") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "unknown call target: /std/collections/map/") !=
         std::string::npos);
   CHECK(semanticsExprCollectionLiteralsSource.find(
             "bool SemanticsValidator::validateExprCollectionLiteralBuiltins") !=

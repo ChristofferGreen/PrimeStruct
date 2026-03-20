@@ -274,9 +274,12 @@ private:
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &)> resolveMapKeyType;
+    std::function<bool(const Expr &, std::string &, std::string &)>
+        resolveExperimentalMapTarget;
     std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
+    std::function<bool(const Expr &)> isMapLikeBareAccessReceiverTarget;
     std::function<bool(const std::string &)> isNonCollectionStructAccessTarget;
     std::function<bool(const Expr &, const std::string &, Expr &)> tryRewriteBareMapHelperCall;
   };
