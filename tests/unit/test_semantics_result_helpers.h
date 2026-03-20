@@ -170,6 +170,7 @@ write_out([File<Write>] file, [array<i32>] bytes, [string] text) {
   [Result<FileError>] directBytes{/File/write_bytes(file, bytes)}
   [Result<FileError>] methodFlush{file.flush()}
   [Result<FileError>] directFlush{/File/flush(file)}
+  [Result<FileError>] directClose{/File/close<Write>(file)}
   return()
 }
 
@@ -205,6 +206,25 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /File/write") != std::string::npos);
+}
+
+TEST_CASE("stdlib File close slash-call helper requires explicit template args") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(file_write), return<void>]
+write_out([File<Write>] file) {
+  /File/close(file)
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /File/close") != std::string::npos);
 }
 
 TEST_CASE("stdlib image error result helpers construct status and value results") {

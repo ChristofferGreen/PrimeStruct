@@ -27,3 +27,8 @@
 /File/flush<Mode>([File<Mode>] self) {
   return(/file/flush(self))
 }
+
+[public effects(file_write), return<Result<FileError>>]
+/File/close<Mode>([File<Mode>] self) {
+  return(self.close())
+}
