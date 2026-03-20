@@ -1937,122 +1937,42 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return true;
       }
-      if (!resolvedMethod &&
-          (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
-          it == defMap_.end()) {
-        const std::string helperName = isSimpleCallName(expr, "to_soa") ? "to_soa" : "to_aos";
-        if (!expr.templateArgs.empty()) {
-          error_ = helperName + " does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = helperName + " does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 1) {
-          error_ = "argument count mismatch for builtin " + helperName;
-          return false;
-        }
-        std::string elemType;
-        const bool targetValid =
-            helperName == "to_soa" ? resolveVectorTarget(expr.args.front(), elemType)
-                                   : resolveSoaVectorTarget(expr.args.front(), elemType);
-        if (!targetValid) {
-          error_ = helperName == "to_soa" ? "to_soa requires vector target"
-                                           : "to_aos requires soa_vector target";
-          return false;
-        }
-        if (!validateExpr(params, locals, expr.args.front())) {
-          return false;
-        }
-        return true;
-      }
-      if (resolvedMethod &&
-          (resolved == "/soa_vector/get" || resolved == "/soa_vector/ref")) {
-        const std::string helperName = resolved == "/soa_vector/ref" ? "ref" : "get";
-        if (!expr.templateArgs.empty()) {
-          error_ = helperName + " does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = helperName + " does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 2) {
-          error_ = "argument count mismatch for builtin " + helperName;
-          return false;
-        }
-        std::string elemType;
-        if (!resolveSoaVectorTarget(expr.args.front(), elemType)) {
-          error_ = helperName + " requires soa_vector target";
-          return false;
-        }
-        if (!isIntegerExpr(expr.args[1], params, locals)) {
-          error_ = helperName + " requires integer index";
-          return false;
-        }
-        for (const auto &arg : expr.args) {
-          if (!validateExpr(params, locals, arg)) {
-            return false;
-          }
-        }
-        return true;
-      }
-      if (resolvedMethod && resolved.rfind("/soa_vector/field_view/", 0) == 0) {
-        if (hasNamedArguments(expr.argNames) &&
-            !this->isNamedArgsPackMethodAccessCall(expr, builtinCollectionDispatchResolvers) &&
-            !this->isNamedArgsPackWrappedFileBuiltinAccessCall(expr, builtinCollectionDispatchResolvers)) {
-          error_ = "named arguments not supported for builtin calls";
-          return false;
-        }
-        if (!expr.templateArgs.empty()) {
-          error_ = expr.name + " does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = expr.name + " does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 1) {
-          error_ = expr.name + " does not accept arguments";
-          return false;
-        }
-        std::string elemType;
-        if (!resolveSoaVectorTarget(expr.args.front(), elemType)) {
-          error_ = "soa_vector field view requires soa_vector target";
-          return false;
-        }
-        error_ = "soa_vector field views are not implemented yet: " + expr.name;
+      ExprMapSoaBuiltinContext mapSoaBuiltinContext;
+      mapSoaBuiltinContext.resolveMapKeyType =
+          [&](const Expr &target, std::string &mapKeyTypeOut) {
+            return this->resolveMapKeyType(
+                target, builtinCollectionDispatchResolvers, mapKeyTypeOut);
+          };
+      mapSoaBuiltinContext.resolveVectorTarget =
+          [&](const Expr &target, std::string &elemTypeOut) {
+            return resolveVectorTarget(target, elemTypeOut);
+          };
+      mapSoaBuiltinContext.resolveSoaVectorTarget =
+          [&](const Expr &target, std::string &elemTypeOut) {
+            return resolveSoaVectorTarget(target, elemTypeOut);
+          };
+      mapSoaBuiltinContext.resolveStringTarget =
+          [&](const Expr &target) {
+            return this->isStringExprForArgumentValidation(
+                target, builtinCollectionDispatchResolvers);
+          };
+      mapSoaBuiltinContext.isNamedArgsPackMethodAccessCall =
+          [&](const Expr &target) {
+            return this->isNamedArgsPackMethodAccessCall(
+                target, builtinCollectionDispatchResolvers);
+          };
+      mapSoaBuiltinContext.isNamedArgsPackWrappedFileBuiltinAccessCall =
+          [&](const Expr &target) {
+            return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
+                target, builtinCollectionDispatchResolvers);
+          };
+      bool handledMapSoaBuiltin = false;
+      if (!validateExprMapSoaBuiltins(
+              params, locals, expr, resolved, resolvedMethod,
+              mapSoaBuiltinContext, handledMapSoaBuiltin)) {
         return false;
       }
-      if (!resolvedMethod && (expr.name == "get" || expr.name == "ref") && it == defMap_.end()) {
-        const std::string helperName = expr.name;
-        if (!expr.templateArgs.empty()) {
-          error_ = helperName + " does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = helperName + " does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 2) {
-          error_ = "argument count mismatch for builtin " + helperName;
-          return false;
-        }
-        std::string elemType;
-        if (!resolveSoaVectorTarget(expr.args.front(), elemType)) {
-          error_ = helperName + " requires soa_vector target";
-          return false;
-        }
-        if (!isIntegerExpr(expr.args[1], params, locals)) {
-          error_ = helperName + " requires integer index";
-          return false;
-        }
-        for (const auto &arg : expr.args) {
-          if (!validateExpr(params, locals, arg)) {
-            return false;
-          }
-        }
+      if (handledMapSoaBuiltin) {
         return true;
       }
       std::string builtinName;
