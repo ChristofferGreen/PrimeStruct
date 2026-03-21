@@ -173,6 +173,10 @@ TEST_CASE("compiles and runs experimental map inserts in C++ emitter") {
   expectExperimentalMapInsertConformance("exe");
 }
 
+TEST_CASE("compiles and runs experimental map ownership-sensitive values in C++ emitter") {
+  expectExperimentalMapOwnershipConformance("exe");
+}
+
 TEST_CASE("rejects experimental map bracket access in C++ emitter") {
   expectExperimentalMapIndexConformance("exe");
 }

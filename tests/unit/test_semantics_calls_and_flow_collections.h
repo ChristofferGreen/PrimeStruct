@@ -319,6 +319,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental map ownership-sensitive values validate through experimental storage") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+
+[struct]
+Owned() {
+  [i32 mut] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, other.value)
+    assign(other.value, 0i32)
+  }
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned(4i32))}
+  mapInsert<string, Owned>(values, "right"raw_utf8, Owned(7i32))
+  mapInsert<string, Owned>(values, "left"raw_utf8, Owned(9i32))
+  [Reference<Map<string, Owned>> mut] ref{location(values)}
+  mapInsertRef<string, Owned>(ref, "third"raw_utf8, Owned(11i32))
+  return(plus(mapCount<string, Owned>(values),
+              plus(mapAt<string, Owned>(values, "left"raw_utf8).value,
+                   plus(mapAtRef<string, Owned>(ref, "right"raw_utf8).value,
+                        mapAtUnsafeRef<string, Owned>(ref, "third"raw_utf8).value))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
   const std::string source = R"(
 import /std/collections/experimental_map/*

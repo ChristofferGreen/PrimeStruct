@@ -354,6 +354,57 @@ inline std::string makeExperimentalMapInsertConformanceSource() {
   return source;
 }
 
+inline std::string makeExperimentalMapOwnershipConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[struct]\n";
+  source += "Tracked() {\n";
+  source += "  [Reference<i32> mut] drops\n";
+  source += "  [i32 mut] value{0i32}\n";
+  source += "  [bool mut] armed{true}\n\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this.drops, other.drops)\n";
+  source += "    assign(this.value, other.value)\n";
+  source += "    assign(this.armed, other.armed)\n";
+  source += "    assign(other.armed, false)\n";
+  source += "  }\n\n";
+  source += "  Destroy() {\n";
+  source += "    if(this.armed,\n";
+  source += "       then() { increment(dereference(this.drops)) },\n";
+  source += "       else() { })\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<void>]\n";
+  source += "destroyTrackedMap([Reference<i32>] drops) {\n";
+  source +=
+      "  [Map<string, Tracked>] values{mapPair<string, Tracked>(\"left\"raw_utf8, Tracked(drops, 1i32), "
+      "\"right\"raw_utf8, Tracked(drops, 2i32))}\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "overwriteTrackedMap([Reference<i32>] drops) {\n";
+  source +=
+      "  [Map<string, Tracked> mut] values{mapSingle<string, Tracked>(\"left\"raw_utf8, Tracked(drops, 4i32))}\n";
+  source += "  mapInsert<string, Tracked>(values, \"left\"raw_utf8, Tracked(drops, 9i32))\n";
+  source += "  [Reference<Map<string, Tracked>> mut] ref{location(values)}\n";
+  source += "  mapInsertRef<string, Tracked>(ref, \"right\"raw_utf8, Tracked(drops, 7i32))\n";
+  source += "  mapInsertRef<string, Tracked>(ref, \"right\"raw_utf8, Tracked(drops, 11i32))\n";
+  source += "  return(plus(mapCountRef<string, Tracked>(ref),\n";
+  source += "      plus(mapAt<string, Tracked>(values, \"left\"raw_utf8).value,\n";
+  source += "           mapAtUnsafeRef<string, Tracked>(ref, \"right\"raw_utf8).value)))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [i32 mut] destroyDrops{0i32}\n";
+  source += "  destroyTrackedMap(location(destroyDrops))\n";
+  source += "  [i32 mut] overwriteDrops{0i32}\n";
+  source += "  [i32] overwriteScore{overwriteTrackedMap(location(overwriteDrops))}\n";
+  source += "  return(plus(destroyDrops, plus(overwriteDrops, overwriteScore)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapIndexConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1689,6 +1740,13 @@ inline void expectExperimentalMapInsertConformance(const std::string &emitMode) 
                                             emitMode,
                                             36,
                                             "3\n9\n13\n11\n");
+}
+
+inline void expectExperimentalMapOwnershipConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(makeExperimentalMapOwnershipConformanceSource(),
+                                  "experimental_map_ownership",
+                                  emitMode,
+                                  28);
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {

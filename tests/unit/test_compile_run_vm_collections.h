@@ -2168,6 +2168,10 @@ TEST_CASE("runs vm experimental map inserts") {
   expectExperimentalMapInsertConformance("vm");
 }
 
+TEST_CASE("runs vm experimental map ownership-sensitive values") {
+  expectExperimentalMapOwnershipConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map bracket access") {
   expectExperimentalMapIndexConformance("vm");
 }
