@@ -2258,6 +2258,18 @@ TEST_CASE("rejects vm stdlib wrapper vector constructor auto inference mismatch"
   expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("vm");
 }
 
+TEST_CASE("runs vm stdlib wrapper vector constructor receivers") {
+  expectStdlibWrapperVectorConstructorReceiverConformance("vm");
+}
+
+TEST_CASE("rejects vm stdlib wrapper vector helper receiver mismatch") {
+  expectStdlibWrapperVectorConstructorHelperReceiverMismatchReject("vm");
+}
+
+TEST_CASE("rejects vm stdlib wrapper vector method receiver mismatch") {
+  expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("vm");
+}
+
 TEST_CASE("runs vm canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("vm");
 }

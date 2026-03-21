@@ -379,6 +379,51 @@ inline std::string makeStdlibWrapperVectorConstructorAutoInferenceMismatchSource
   return source;
 }
 
+inline std::string makeStdlibWrapperVectorConstructorReceiverConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [i32] directHelperCount{/std/collections/vector/count(/std/collections/vectorPair(11i32, 13i32))}\n";
+  source += "  [i32] directHelperValue{/std/collections/vector/at(/std/collections/vectorPair(17i32, 19i32), 1i32)}\n";
+  source += "  [i32] wrappedHelperValue{vectorAt<i32>(wrapValues(/std/collections/vectorPair(23i32, 29i32)), 0i32)}\n";
+  source += "  [i32] directMethodCount{/std/collections/vectorPair(31i32, 37i32).count()}\n";
+  source += "  [i32] directMethodValue{/std/collections/vectorPair(41i32, 43i32).at_unsafe(1i32)}\n";
+  source += "  [i32] wrappedMethodValue{wrapValues(/std/collections/vectorPair(47i32, 53i32)).at(0i32)}\n";
+  source += "  return(plus(plus(directHelperCount, directHelperValue),\n";
+  source += "      plus(plus(wrappedHelperValue, directMethodCount),\n";
+  source += "          plus(directMethodValue, wrappedMethodValue))))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeStdlibWrapperVectorConstructorHelperReceiverMismatchSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  return(/std/collections/vector/count(/std/collections/vectorPair(2i32, false)))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeStdlibWrapperVectorConstructorMethodReceiverMismatchSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  return(/std/collections/vectorPair(2i32, false).count())\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorNamespaceNamedArgsSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -999,6 +1044,32 @@ inline void expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject(cons
   expectVectorConformanceCompileReject(
       makeStdlibWrapperVectorConstructorAutoInferenceMismatchSource(),
       "vector_wrapper_constructor_auto_inference_mismatch_" + emitMode,
+      emitMode,
+      "/std/collections/vectorPair",
+      "implicit template arguments conflict");
+}
+
+inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
+      "vector_wrapper_constructor_receiver_" + emitMode,
+      emitMode,
+      136);
+}
+
+inline void expectStdlibWrapperVectorConstructorHelperReceiverMismatchReject(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(
+      makeStdlibWrapperVectorConstructorHelperReceiverMismatchSource(),
+      "vector_wrapper_constructor_helper_receiver_mismatch_" + emitMode,
+      emitMode,
+      "/std/collections/vectorPair",
+      "implicit template arguments conflict");
+}
+
+inline void expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(
+      makeStdlibWrapperVectorConstructorMethodReceiverMismatchSource(),
+      "vector_wrapper_constructor_method_receiver_mismatch_" + emitMode,
       emitMode,
       "/std/collections/vectorPair",
       "implicit template arguments conflict");

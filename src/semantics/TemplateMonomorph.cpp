@@ -2940,6 +2940,11 @@ bool rewriteExpr(Expr &expr,
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
       }
+      if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
+        if (!rewriteNestedExperimentalVectorConstructorValue(*receiverExpr)) {
+          return false;
+        }
+      }
     }
     const std::string originalResolvedPath = resolvedPath;
     const std::string preferredPath = preferVectorStdlibHelperPath(resolvedPath, ctx.sourceDefs);
@@ -3124,6 +3129,9 @@ bool rewriteExpr(Expr &expr,
   if (expr.isMethodCall) {
     if (!expr.args.empty()) {
       if (!rewriteNestedExperimentalMapConstructorValue(expr.args.front())) {
+        return false;
+      }
+      if (!rewriteNestedExperimentalVectorConstructorValue(expr.args.front())) {
         return false;
       }
     }

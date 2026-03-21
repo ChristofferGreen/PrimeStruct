@@ -38,6 +38,9 @@ inline void expectVmSharedStdlibVectorConformanceHarness() {
     expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject(emitMode);
     expectStdlibWrapperVectorConstructorAutoInferenceConformance(emitMode);
     expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject(emitMode);
+    expectStdlibWrapperVectorConstructorReceiverConformance(emitMode);
+    expectStdlibWrapperVectorConstructorHelperReceiverMismatchReject(emitMode);
+    expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject(emitMode);
     expectCanonicalVectorNamespaceExplicitVectorBindingConformance(emitMode);
     expectCanonicalVectorNamespaceNamedArgsConformance(emitMode);
     expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(emitMode);

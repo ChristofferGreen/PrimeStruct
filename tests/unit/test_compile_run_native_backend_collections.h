@@ -2701,6 +2701,18 @@ TEST_CASE("rejects native stdlib wrapper vector constructor auto inference misma
   expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("native");
 }
 
+TEST_CASE("compiles and runs native stdlib wrapper vector constructor receivers") {
+  expectStdlibWrapperVectorConstructorReceiverConformance("native");
+}
+
+TEST_CASE("rejects native stdlib wrapper vector helper receiver mismatch") {
+  expectStdlibWrapperVectorConstructorHelperReceiverMismatchReject("native");
+}
+
+TEST_CASE("rejects native stdlib wrapper vector method receiver mismatch") {
+  expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("native");
+}
+
 TEST_CASE("compiles and runs native canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("native");
 }

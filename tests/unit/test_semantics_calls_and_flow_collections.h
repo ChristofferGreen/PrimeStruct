@@ -5144,6 +5144,166 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
 }
 
+TEST_CASE("canonical vector helpers accept direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32 mut] total{plus(/std/collections/vector/count(/std/collections/vectorPair(11i32, 13i32)),
+                       /std/collections/vector/at(/std/collections/vectorPair(17i32, 19i32), 1i32))}
+  assign(total, plus(total, vectorAt<i32>(/std/collections/vectorPair(23i32, 29i32), 0i32)))
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical vector helpers keep mismatch diagnostics on direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/count(/std/collections/vectorPair(2i32, false)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+}
+
+TEST_CASE("experimental vector methods accept direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32 mut] total{plus(/std/collections/vectorPair(31i32, 37i32).count(),
+                       /std/collections/vectorPair(41i32, 43i32).at_unsafe(1i32))}
+  assign(total, plus(total, /std/collections/vectorPair(47i32, 53i32).at(0i32)))
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental vector methods keep mismatch diagnostics on direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vectorPair(2i32, false).count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped canonical vector helpers accept direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32 mut] total{plus(/std/collections/vector/count(wrapValues(/std/collections/vectorPair(11i32, 13i32))),
+                       /std/collections/vector/at(wrapValues(/std/collections/vectorPair(17i32, 19i32)), 1i32))}
+  assign(total, plus(total, vectorAt<i32>(wrapValues(/std/collections/vectorPair(23i32, 29i32)), 0i32)))
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped canonical vector helpers keep mismatch diagnostics on direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/count(wrapValues(/std/collections/vectorPair(2i32, false))))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+}
+
+TEST_CASE("helper-wrapped experimental vector methods accept direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32 mut] total{plus(wrapValues(/std/collections/vectorPair(31i32, 37i32)).count(),
+                       wrapValues(/std/collections/vectorPair(41i32, 43i32)).at_unsafe(1i32))}
+  assign(total, plus(total, wrapValues(/std/collections/vectorPair(47i32, 53i32)).at(0i32)))
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped experimental vector methods keep mismatch diagnostics on direct constructor receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapValues(/std/collections/vectorPair(2i32, false)).count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map constructor resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
