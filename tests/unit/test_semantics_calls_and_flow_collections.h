@@ -4938,6 +4938,48 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib wrapper vector helpers accept explicit Vector bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  vectorReserve<i32>(values, 6i32)
+  vectorPush<i32>(values, 6i32)
+  [i32 mut] total{plus(vectorCount<i32>(values), vectorCapacity<i32>(values))}
+  assign(total, plus(total, vectorAt<i32>(values, 0i32)))
+  assign(total, plus(total, vectorAtUnsafe<i32>(values, 2i32)))
+  vectorPop<i32>(values)
+  vectorRemoveAt<i32>(values, 0i32)
+  vectorPush<i32>(values, 9i32)
+  vectorRemoveSwap<i32>(values, 0i32)
+  vectorClear<i32>(values)
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib wrapper vector helpers reject explicit Vector type mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  return(vectorCount<bool>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mismatch") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map constructor resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*

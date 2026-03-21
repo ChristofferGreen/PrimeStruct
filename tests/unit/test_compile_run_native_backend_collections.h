@@ -2677,6 +2677,14 @@ TEST_CASE("compiles and runs native canonical namespaced vector helpers on expli
   expectCanonicalVectorNamespaceExplicitVectorBindingConformance("native");
 }
 
+TEST_CASE("compiles and runs native stdlib wrapper vector helpers on explicit Vector bindings") {
+  expectStdlibWrapperVectorHelperExplicitVectorBindingConformance("native");
+}
+
+TEST_CASE("rejects native stdlib wrapper vector helper explicit Vector mismatch") {
+  expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject("native");
+}
+
 TEST_CASE("compiles and runs native canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("native");
 }

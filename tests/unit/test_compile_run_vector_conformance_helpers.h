@@ -235,6 +235,43 @@ inline std::string makeCanonicalVectorNamespaceExplicitVectorBindingSource() {
   return source;
 }
 
+inline std::string makeStdlibWrapperVectorHelperExplicitVectorBindingSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}\n";
+  source += "  vectorReserve<i32>(values, 6i32)\n";
+  source += "  vectorPush<i32>(values, 6i32)\n";
+  source += "  [i32 mut] total{plus(vectorCount<i32>(values), vectorCapacity<i32>(values))}\n";
+  source += "  assign(total, plus(total, vectorAt<i32>(values, 0i32)))\n";
+  source += "  assign(total, plus(total, vectorAtUnsafe<i32>(values, 2i32)))\n";
+  source += "  vectorPop<i32>(values)\n";
+  source += "  assign(total, plus(total, vectorCount<i32>(values)))\n";
+  source += "  vectorRemoveAt<i32>(values, 0i32)\n";
+  source += "  assign(total, plus(total, vectorAt<i32>(values, 0i32)))\n";
+  source += "  vectorPush<i32>(values, 9i32)\n";
+  source += "  vectorRemoveSwap<i32>(values, 0i32)\n";
+  source += "  assign(total, plus(total, vectorAtUnsafe<i32>(values, 0i32)))\n";
+  source += "  vectorClear<i32>(values)\n";
+  source += "  return(plus(total, vectorCount<i32>(values)))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeStdlibWrapperVectorHelperExplicitVectorBindingMismatchSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}\n";
+  source += "  return(vectorCount<bool>(values))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorNamespaceNamedArgsSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -809,6 +846,22 @@ inline void expectCanonicalVectorNamespaceExplicitVectorBindingConformance(const
       "vector_namespace_canonical_explicit_vector_binding_" + emitMode,
       emitMode,
       109);
+}
+
+inline void expectStdlibWrapperVectorHelperExplicitVectorBindingConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeStdlibWrapperVectorHelperExplicitVectorBindingSource(),
+      "vector_wrapper_explicit_vector_binding_" + emitMode,
+      emitMode,
+      35);
+}
+
+inline void expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(
+      makeStdlibWrapperVectorHelperExplicitVectorBindingMismatchSource(),
+      "vector_wrapper_explicit_vector_binding_mismatch_" + emitMode,
+      emitMode,
+      "mismatch");
 }
 
 inline void expectCanonicalVectorNamespaceNamedArgsConformance(const std::string &emitMode) {

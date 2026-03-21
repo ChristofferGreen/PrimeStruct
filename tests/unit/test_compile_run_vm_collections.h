@@ -2234,6 +2234,14 @@ TEST_CASE("runs vm canonical namespaced vector helpers on explicit Vector bindin
   expectCanonicalVectorNamespaceExplicitVectorBindingConformance("vm");
 }
 
+TEST_CASE("runs vm stdlib wrapper vector helpers on explicit Vector bindings") {
+  expectStdlibWrapperVectorHelperExplicitVectorBindingConformance("vm");
+}
+
+TEST_CASE("rejects vm stdlib wrapper vector helper explicit Vector mismatch") {
+  expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject("vm");
+}
+
 TEST_CASE("runs vm canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("vm");
 }

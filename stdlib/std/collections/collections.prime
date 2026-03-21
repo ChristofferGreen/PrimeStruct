@@ -46,53 +46,53 @@ namespace std {
   }
 
   [public return<i32>]
-  vectorCount<T>([vector<T>] values) {
-    return(count(values))
+  vectorCount<T>([auto] values) {
+    return(/std/collections/vector/count<T>(values))
   }
 
   [public return<i32>]
-  vectorCapacity<T>([vector<T>] values) {
-    return(capacity(values))
+  vectorCapacity<T>([auto] values) {
+    return(/std/collections/vector/capacity<T>(values))
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPush<T>([vector<T> mut] values, [T] value) {
-    push(values, value)
+  vectorPush<T>([auto mut] values, [T] value) {
+    /std/collections/vector/push<T>(values, value)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPop<T>([vector<T> mut] values) {
-    pop(values)
+  vectorPop<T>([auto mut] values) {
+    /std/collections/vector/pop<T>(values)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorReserve<T>([vector<T> mut] values, [i32] capacity) {
-    reserve(values, capacity)
+  vectorReserve<T>([auto mut] values, [i32] capacity) {
+    /std/collections/vector/reserve<T>(values, capacity)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorClear<T>([vector<T> mut] values) {
-    clear(values)
+  vectorClear<T>([auto mut] values) {
+    /std/collections/vector/clear<T>(values)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorRemoveAt<T>([vector<T> mut] values, [i32] index) {
-    remove_at(values, index)
+  vectorRemoveAt<T>([auto mut] values, [i32] index) {
+    /std/collections/vector/remove_at<T>(values, index)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorRemoveSwap<T>([vector<T> mut] values, [i32] index) {
-    remove_swap(values, index)
+  vectorRemoveSwap<T>([auto mut] values, [i32] index) {
+    /std/collections/vector/remove_swap<T>(values, index)
   }
 
   [public return<T>]
-  vectorAt<T>([vector<T>] values, [i32] index) {
-    return(at(values, index))
+  vectorAt<T>([auto] values, [i32] index) {
+    return(/std/collections/vector/at<T>(values, index))
   }
 
   [public return<T>]
-  vectorAtUnsafe<T>([vector<T>] values, [i32] index) {
-    return(at_unsafe(values, index))
+  vectorAtUnsafe<T>([auto] values, [i32] index) {
+    return(/std/collections/vector/at_unsafe<T>(values, index))
   }
 
   [public return<map<K, V>>]
