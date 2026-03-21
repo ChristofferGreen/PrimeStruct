@@ -215,6 +215,47 @@ TEST_CASE("native uses stdlib File string helper wrappers") {
   CHECK(readFile(outPath) == "alphaomega\n");
 }
 
+TEST_CASE("native uses stdlib File multi-value helper wrappers") {
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_multi_helpers.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(outPath);
+  const std::string source =
+      "import /std/file/*\n"
+      "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] file{ File<Write>(\"" + escapedPath + "\"utf8)? }\n"
+      "  /File/write<Write, string, i32, string>(file, \"alpha\"utf8, 7i32, \"omega\"utf8)?\n"
+      "  /File/write_line<Write, i32, string, i32, string, i32>(file, 255i32, \" \"utf8, 0i32, \" \"utf8, 0i32)?\n"
+      "  file.write(\"left\"utf8, 1i32, \"right\"utf8)?\n"
+      "  file.write_line()?\n"
+      "  /File/close<Write>(file)?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(Result.why(fileErrorStatus(err)))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("native_stdlib_file_multi_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_multi_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+  CHECK(readFile(outPath) == "alpha7omega255 0 0\nleft1right\n");
+}
+
 TEST_CASE("native resolves templated helper overload families by exact arity") {
   const std::string source = R"(
 [struct]

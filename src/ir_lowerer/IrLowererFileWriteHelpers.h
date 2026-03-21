@@ -25,6 +25,7 @@ using InferExprKindWithLocalsForWriteFn =
     std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using EmitExprWithLocalsForWriteFn = std::function<bool(const Expr &, const LocalMap &)>;
 using IsEntryArgsNameWithLocalsForWriteFn = std::function<bool(const Expr &, const LocalMap &)>;
+using ShouldBypassBuiltinFileMethodWithLocalsFn = std::function<bool(const Expr &, const LocalMap &)>;
 
 enum class FileHandleMethodCallEmitResult {
   NotMatched,
@@ -110,6 +111,7 @@ bool emitFileWriteBytesLoop(const Expr &bytesExpr,
 FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
     const Expr &expr,
     const LocalMap &localsIn,
+    const ShouldBypassBuiltinFileMethodWithLocalsFn &shouldBypassBuiltin,
     const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
     const InferExprKindWithLocalsForWriteFn &inferExprKind,
     const EmitExprWithLocalsForWriteFn &emitExpr,

@@ -191,6 +191,35 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib File multi-value helpers cover imported method and slash-call wrappers") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(file_write), return<void>]
+write_out([File<Write>] file) {
+  [Result<FileError>] directWrite{/File/write<Write, string, i32, string>(file, "alpha"utf8, 7i32, "omega"utf8)}
+  [Result<FileError>] directWriteLine{/File/write_line<Write, i32, string, i32, string, i32>(
+      file,
+      255i32,
+      " "utf8,
+      0i32,
+      " "utf8,
+      0i32)}
+  [Result<FileError>] methodWrite{file.write("left"utf8, 1i32, "right"utf8)}
+  [Result<FileError>] methodWriteLine{file.write_line()}
+  return()
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib File text slash-call helpers require stdlib import") {
   const std::string source = R"(
 [effects(file_write), return<void>]

@@ -405,6 +405,7 @@ bool emitFileWriteBytesLoop(const Expr &bytesExpr,
 FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
     const Expr &expr,
     const LocalMap &localsIn,
+    const ShouldBypassBuiltinFileMethodWithLocalsFn &shouldBypassBuiltin,
     const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
     const InferExprKindWithLocalsForWriteFn &inferExprKind,
     const EmitExprWithLocalsForWriteFn &emitExpr,
@@ -486,6 +487,11 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
         emitInstruction,
         error);
   };
+
+  if ((expr.name == "write" || expr.name == "write_line") && shouldBypassBuiltin &&
+      shouldBypassBuiltin(expr, localsIn)) {
+    return FileHandleMethodCallEmitResult::NotMatched;
+  }
 
   if (expr.name == "write" || expr.name == "write_line") {
     if (!emitFileWriteCall(expr,

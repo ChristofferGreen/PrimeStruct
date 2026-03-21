@@ -2971,6 +2971,67 @@ TEST_CASE("C++ emitter helper prefers stdlib File flush helper when present") {
   CHECK(resolved == "/File/flush");
 }
 
+TEST_CASE("C++ emitter helper prefers stdlib File multi-value helpers when present") {
+  auto makeFileMethodCall = [](const std::string &methodName, size_t valueCount) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodName;
+
+    primec::Expr receiver;
+    receiver.kind = primec::Expr::Kind::Name;
+    receiver.name = "file";
+    call.args.push_back(receiver);
+    call.argNames.push_back(std::nullopt);
+
+    for (size_t i = 0; i < valueCount; ++i) {
+      primec::Expr value;
+      value.kind = primec::Expr::Kind::Literal;
+      value.literalValue = static_cast<uint64_t>(i);
+      call.args.push_back(value);
+      call.argNames.push_back(std::nullopt);
+    }
+    return call;
+  };
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "File";
+  receiverInfo.typeTemplateArg = "Write";
+  localTypes.emplace("file", receiverInfo);
+
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved;
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::Expr writeCall = makeFileMethodCall("write", 3);
+  CHECK(primec::emitter::resolveMethodCallPath(
+      writeCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/file/write");
+
+  primec::Expr writeLineCall = makeFileMethodCall("write_line", 0);
+  CHECK(primec::emitter::resolveMethodCallPath(
+      writeLineCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/file/write_line");
+
+  primec::Definition fileWriteDef;
+  fileWriteDef.fullPath = "/File/write";
+  defMap.emplace(fileWriteDef.fullPath, &fileWriteDef);
+  primec::Definition fileWriteLineDef;
+  fileWriteLineDef.fullPath = "/File/write_line";
+  defMap.emplace(fileWriteLineDef.fullPath, &fileWriteLineDef);
+
+  CHECK(primec::emitter::resolveMethodCallPath(
+      writeCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/File/write");
+  CHECK(primec::emitter::resolveMethodCallPath(
+      writeLineCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/File/write_line");
+}
+
 TEST_CASE("C++ emitter helper rejects bare vector access methods without helper metadata") {
   auto expectRejected = [&](const char *receiverMethodName) {
     primec::Expr receiverCall;

@@ -51661,6 +51661,7 @@ TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
   CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
             writeExpr,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
@@ -51696,6 +51697,7 @@ TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
   CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
             readExpr,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
@@ -51728,6 +51730,7 @@ TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
   CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
             badWriteByteExpr,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
@@ -51751,6 +51754,7 @@ TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
   CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
             unknownMethodExpr,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
@@ -51776,6 +51780,7 @@ TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
   CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
             nonFileExpr,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
@@ -51823,6 +51828,7 @@ TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
   CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
             borrowedWriteExpr,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
@@ -51871,6 +51877,7 @@ TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
   CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
             pointerWriteExpr,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },

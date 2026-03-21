@@ -589,6 +589,18 @@
         const auto fileHandleCallResult = ir_lowerer::tryEmitFileHandleMethodCall(
             expr,
             localsIn,
+            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+              if (!callExpr.args.empty() && callExpr.args.front().kind == Expr::Kind::Name &&
+                  callExpr.args.front().name == "self" && localMap.find("self") != localMap.end()) {
+                return false;
+              }
+              const Definition *callee = resolveMethodCallDefinition(callExpr, localMap);
+              if (callee == nullptr) {
+                return false;
+              }
+              return callee->fullPath.rfind("/File/write", 0) == 0 ||
+                     callee->fullPath.rfind("/File/write_line", 0) == 0;
+            },
             [&](const Expr &valueExpr,
                 const ir_lowerer::LocalMap &localMap,
                 int32_t &stringIndexOut,

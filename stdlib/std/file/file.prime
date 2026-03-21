@@ -4,13 +4,80 @@
 }
 
 [public effects(file_write), return<Result<FileError>>]
+/File/write<Mode>([File<Mode>] self) {
+  return(self.write())
+}
+
+[public effects(file_write), return<Result<FileError>>]
 /File/write<Mode, T>([File<Mode>] self, [T] value) {
   return(self.write(value))
 }
 
 [public effects(file_write), return<Result<FileError>>]
+/File/write<Mode, A, B>([File<Mode>] self, [A] first, [B] second) {
+  return(self.write(first, second))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write<Mode, A, B, C>([File<Mode>] self, [A] first, [B] second, [C] third) {
+  return(self.write(first, second, third))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write<Mode, A, B, C, D>([File<Mode>] self, [A] first, [B] second, [C] third, [D] fourth) {
+  return(self.write(first, second, third, fourth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write<Mode, A, B, C, D, E>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth,
+    [E] fifth) {
+  return(self.write(first, second, third, fourth, fifth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write_line<Mode>([File<Mode>] self) {
+  return(self.write_line())
+}
+
+[public effects(file_write), return<Result<FileError>>]
 /File/write_line<Mode, T>([File<Mode>] self, [T] value) {
   return(self.write_line(value))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write_line<Mode, A, B>([File<Mode>] self, [A] first, [B] second) {
+  return(self.write_line(first, second))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write_line<Mode, A, B, C>([File<Mode>] self, [A] first, [B] second, [C] third) {
+  return(self.write_line(first, second, third))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write_line<Mode, A, B, C, D>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth) {
+  return(self.write_line(first, second, third, fourth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write_line<Mode, A, B, C, D, E>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth,
+    [E] fifth) {
+  return(self.write_line(first, second, third, fourth, fifth))
 }
 
 [public effects(file_write), return<Result<FileError>>]

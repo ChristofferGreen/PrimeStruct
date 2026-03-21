@@ -748,13 +748,14 @@ sum_two_files([string] a, [string] b) {
   - `read_byte(...)` reports deterministic end-of-file as `EOF`.
   - Import `/std/file/*` for the current stdlib-authored file helper layer:
     `fileReadEof()`, `fileErrorStatus(err)`, `fileErrorIsEof(err)`, `fileErrorResult<T>(err)`,
-    `/File/read_byte(...)`, explicit single-value `/File/write<Mode, T>(...)` and
-    `/File/write_line<Mode, T>(...)`,
+    `/File/read_byte(...)`, zero-to-five-value heterogenous `/File/write(...)` and
+    `/File/write_line(...)` overload families,
     `/File/write_byte(...)`, `/File/write_bytes(...)`, `/File/flush(...)`, and
     explicit slash-call `/File/close<Mode>(...)`.
-    Imported method/free-call sugar now prefers those `.prime` wrappers for the fixed-signature file helpers,
-    while `File<Mode>(path)`, multi-value `write(...)` / `write_line(...)`, and
-    receiver syntax `file.close()` remain builtin substrate for now.
+    Imported method/free-call sugar now prefers those `.prime` wrappers for `read_byte`, `write`,
+    `write_line`, `write_byte`, `write_bytes`, and `flush` across that current zero-to-five-value
+    overload family, while `File<Mode>(path)`, wider multi-value `write(...)` / `write_line(...)`
+    arities, and receiver syntax `file.close()` remain builtin substrate for now.
   - The stdlib file layer also defines `/FileError/why([FileError] err)` as the public wrapper over the
     intrinsic file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned
     helper surface while platform-specific code-to-string translation stays builtin substrate.
