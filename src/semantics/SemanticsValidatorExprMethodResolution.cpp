@@ -1498,6 +1498,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
     return true;
   }
+  const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+  if (!explicitVectorHelperPath.empty() &&
+      explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
+      normalizedMethodName == "count" &&
+      (normalizedTypeName == "string" || normalizedTypeName == "array" ||
+       isMapCollectionTypeName(normalizedTypeName))) {
+    resolvedOut = explicitVectorHelperPath;
+    isBuiltinOut = false;
+    return true;
+  }
   if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&
       (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
        normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||

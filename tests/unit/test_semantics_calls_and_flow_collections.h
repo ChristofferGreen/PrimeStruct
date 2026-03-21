@@ -10420,6 +10420,38 @@ main() {
   CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector count method accepts same-path helpers on local non-vector receivers") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([map<i32, i32>] values) {
+  return(31i32)
+}
+
+[return<int>]
+/std/collections/vector/count([array<i32>] values) {
+  return(32i32)
+}
+
+[return<int>]
+/std/collections/vector/count([string] values) {
+  return(33i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  [string] text{"abc"raw_utf8}
+  return(plus(plus(values./std/collections/vector/count(),
+                    items./std/collections/vector/count()),
+              text./std/collections/vector/count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector count method rejects map receiver without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -10429,8 +10461,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method rejects array receiver without helper") {
@@ -10442,8 +10474,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method rejects string receiver without helper") {
@@ -10455,8 +10487,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity method rejects wrapper map receiver without helper") {
