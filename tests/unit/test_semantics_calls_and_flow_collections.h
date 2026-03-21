@@ -2908,6 +2908,69 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical vector helpers route experimental vector receivers onto stdlib vector storage") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[struct]
+Owned() {
+  [i32 mut] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, other.value)
+    assign(other.value, 0i32)
+  }
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<Vector<Owned>>]
+wrapValues() {
+  return(vectorPair<Owned>(Owned(10i32), Owned(20i32)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<Owned> mut] values{wrapValues()}
+  /std/collections/vectorPush<Owned>(values, Owned(30i32))
+  /std/collections/vectorReserve<Owned>(values, 6i32)
+  [i32 mut] total{/std/collections/vectorCount<Owned>(values)}
+  assign(total, plus(total, /std/collections/vectorCapacity<Owned>(values)))
+  assign(total, plus(total, /std/collections/vectorAt<Owned>(values, 0i32).value))
+  assign(total, plus(total, /std/collections/vectorAtUnsafe<Owned>(values, 2i32).value))
+  /std/collections/vector/push<Owned>(values, Owned(40i32))
+  assign(total, plus(total, /std/collections/vector/count<Owned>(values)))
+  assign(total, plus(total, values.at(3i32).value))
+  /std/collections/vector/remove_at<Owned>(values, 1i32)
+  /std/collections/vectorRemoveSwap<Owned>(values, 0i32)
+  values.pop()
+  /std/collections/vector/clear<Owned>(values)
+  return(plus(total, values.count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical vector helpers still require stdlib imports for experimental vector receivers") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32>] values{vectorPair<i32>(4i32, 5i32)}
+  return(/std/collections/vector/count<i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("push on mutable vector field access reports vector-binding diagnostics") {
   const std::string source = R"(
 import /std/collections/*

@@ -510,6 +510,8 @@ private:
     std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorValueTarget;
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveBufferTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
@@ -531,6 +533,12 @@ private:
   std::string specializedExperimentalMapHelperTarget(std::string_view helperName,
                                                      const std::string &keyType,
                                                      const std::string &valueType) const;
+  std::string preferredCanonicalExperimentalVectorHelperTarget(std::string_view helperName) const;
+  std::string specializedExperimentalVectorHelperTarget(std::string_view helperName,
+                                                        const std::string &elemType) const;
+  bool canonicalExperimentalVectorHelperPath(const std::string &resolvedPath,
+                                             std::string &canonicalPathOut,
+                                             std::string &helperNameOut) const;
   std::string preferredBareVectorHelperTarget(std::string_view helperName) const;
   bool tryRewriteBareMapHelperCall(const Expr &candidate,
                                    std::string_view helperName,
@@ -541,6 +549,10 @@ private:
                                       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                                       Expr &rewrittenOut) const;
   bool tryRewriteCanonicalExperimentalMapHelperCall(
+      const Expr &candidate,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      Expr &rewrittenOut) const;
+  bool tryRewriteCanonicalExperimentalVectorHelperCall(
       const Expr &candidate,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       Expr &rewrittenOut) const;
@@ -611,6 +623,10 @@ private:
   bool isBuiltinCollectionLiteralExpr(const Expr &candidate) const;
   bool isStringExprForArgumentValidation(const Expr &arg,
                                          const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  bool extractExperimentalVectorElementTypeFromStructPath(const std::string &structPath,
+                                                          std::string &elemTypeOut) const;
+  bool extractExperimentalVectorElementType(const BindingInfo &binding,
+                                            std::string &elemTypeOut) const;
   bool extractExperimentalMapFieldTypesFromStructPath(const std::string &structPath,
                                                       std::string &keyTypeOut,
                                                       std::string &valueTypeOut) const;

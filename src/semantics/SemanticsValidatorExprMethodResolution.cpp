@@ -661,49 +661,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         if (normalizedResolvedPath.rfind("std/collections/experimental_map/Map__", 0) != 0) {
           return false;
         }
-        auto defIt = defMap_.find(resolvedPath);
-        if (defIt == defMap_.end() || !defIt->second) {
-          return false;
-        }
-        std::string keysElementType;
-        std::string payloadsElementType;
-        for (const auto &fieldExpr : defIt->second->statements) {
-          if (!fieldExpr.isBinding) {
-            continue;
-          }
-          BindingInfo fieldInfo;
-          std::optional<std::string> restrictType;
-          std::string parseError;
-          if (!parseBindingInfo(fieldExpr,
-                                defIt->second->namespacePrefix,
-                                structNames_,
-                                importAliases_,
-                                fieldInfo,
-                                restrictType,
-                                parseError)) {
-            continue;
-          }
-          if (normalizeBindingTypeName(fieldInfo.typeName) != "vector" ||
-              fieldInfo.typeTemplateArg.empty()) {
-            continue;
-          }
-          std::vector<std::string> fieldArgs;
-          if (!splitTopLevelTemplateArgs(fieldInfo.typeTemplateArg, fieldArgs) ||
-              fieldArgs.size() != 1) {
-            continue;
-          }
-          if (fieldExpr.name == "keys") {
-            keysElementType = fieldArgs.front();
-          } else if (fieldExpr.name == "payloads") {
-            payloadsElementType = fieldArgs.front();
-          }
-        }
-        if (keysElementType.empty() || payloadsElementType.empty()) {
-          return false;
-        }
-        keyTypeOut = keysElementType;
-        valueTypeOut = payloadsElementType;
-        return true;
+        return extractExperimentalMapFieldTypesFromStructPath(resolvedPath, keyTypeOut, valueTypeOut);
       }
     };
 

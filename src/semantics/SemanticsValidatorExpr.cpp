@@ -378,6 +378,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         this->canonicalizeExperimentalMapHelperResolvedPath(resolved, canonicalExperimentalMapHelperResolved)) {
       resolved = canonicalExperimentalMapHelperResolved;
     }
+    Expr rewrittenCanonicalExperimentalVectorHelperCall;
+    if (this->tryRewriteCanonicalExperimentalVectorHelperCall(
+            expr, builtinCollectionDispatchResolvers, rewrittenCanonicalExperimentalVectorHelperCall)) {
+      return validateExpr(params, locals, rewrittenCanonicalExperimentalVectorHelperCall);
+    }
     Expr rewrittenCanonicalExperimentalMapHelperCall;
     if (this->tryRewriteCanonicalExperimentalMapHelperCall(
             expr, builtinCollectionDispatchResolvers, rewrittenCanonicalExperimentalMapHelperCall)) {

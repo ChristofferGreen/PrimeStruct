@@ -761,6 +761,10 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
   if (value == "std/collections/vector") {
     return "vector";
   }
+  if (value == "std/collections/experimental_vector/Vector" ||
+      value.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+    return "vector";
+  }
   if (value == "std/collections/map") {
     return "map";
   }
@@ -1772,6 +1776,58 @@ bool rewriteExpr(Expr &expr,
     }
     return resolvesExperimentalMapValueTypeText(args.front(), mapping, allowedParams, namespacePrefix, ctx);
   };
+  auto resolvesExperimentalVectorValueTypeText = [&](const std::string &typeText) {
+    std::string normalizedType = normalizeBindingTypeName(typeText);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      std::string normalizedBase = normalizeBindingTypeName(base);
+      if (!normalizedBase.empty() && normalizedBase.front() == '/') {
+        normalizedBase.erase(normalizedBase.begin());
+      }
+      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+        return false;
+      }
+      if ((normalizedBase == "Vector" ||
+           normalizedBase == "std/collections/experimental_vector/Vector") &&
+          !argText.empty()) {
+        std::vector<std::string> args;
+        return splitTopLevelTemplateArgs(argText, args) && args.size() == 1;
+      }
+    }
+    std::string resolvedPath = normalizedType;
+    if (!resolvedPath.empty() && resolvedPath.front() != '/') {
+      resolvedPath.insert(resolvedPath.begin(), '/');
+    }
+    std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+    if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
+      normalizedResolvedPath.erase(normalizedResolvedPath.begin());
+    }
+    return normalizedResolvedPath.rfind("std/collections/experimental_vector/Vector__", 0) == 0;
+  };
+  auto resolvesExperimentalVectorValueReceiver = [&](const Expr *receiverExpr) {
+    if (receiverExpr == nullptr) {
+      return false;
+    }
+    auto unwrapBindingTypeText = [&](const BindingInfo &binding) -> std::string {
+      if (binding.typeName == "Reference" || binding.typeName == "Pointer") {
+        return {};
+      }
+      std::string typeText = binding.typeName;
+      if (!binding.typeTemplateArg.empty()) {
+        typeText += "<" + binding.typeTemplateArg + ">";
+      }
+      return typeText;
+    };
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
+        resolvesExperimentalVectorValueTypeText(unwrapBindingTypeText(receiverInfo))) {
+      return true;
+    }
+    const std::string inferredReceiverType =
+        inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare);
+    return resolvesExperimentalVectorValueTypeText(inferredReceiverType);
+  };
   auto canonicalMapHelperUnknownTargetPath = [&](const std::string &resolvedPath) -> std::string {
     if (resolvedPath == "/std/collections/map/count" || resolvedPath == "/map/count" ||
         resolvedPath == "/std/collections/mapCount") {
@@ -1839,12 +1895,28 @@ bool rewriteExpr(Expr &expr,
         if (!extractExplicitBindingType(fieldExpr, fieldBinding)) {
           continue;
         }
-        if (normalizeBindingTypeName(fieldBinding.typeName) != "vector" || fieldBinding.typeTemplateArg.empty()) {
-          continue;
-        }
         std::vector<std::string> fieldArgs;
-        if (!splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, fieldArgs) || fieldArgs.size() != 1) {
-          continue;
+        const std::string normalizedFieldType = normalizeBindingTypeName(fieldBinding.typeName);
+        if (normalizedFieldType == "vector" && !fieldBinding.typeTemplateArg.empty()) {
+          if (!splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, fieldArgs) ||
+              fieldArgs.size() != 1) {
+            continue;
+          }
+        } else {
+          std::string fieldBase;
+          std::string fieldArgText;
+          if (!splitTemplateTypeName(normalizedFieldType, fieldBase, fieldArgText)) {
+            continue;
+          }
+          fieldBase = normalizeBindingTypeName(fieldBase);
+          if (fieldBase != "Vector" &&
+              fieldBase != "std/collections/experimental_vector/Vector") {
+            continue;
+          }
+          if (!splitTopLevelTemplateArgs(fieldArgText, fieldArgs) ||
+              fieldArgs.size() != 1) {
+            continue;
+          }
         }
         if (fieldExpr.name == "keys") {
           keyType = fieldArgs.front();
@@ -1888,6 +1960,49 @@ bool rewriteExpr(Expr &expr,
     }
     if (path == "/std/collections/map/at_unsafe") {
       return "/std/collections/experimental_map/mapAtUnsafe";
+    }
+    return {};
+  };
+  auto experimentalVectorHelperPathForCanonicalHelper = [&](const std::string &path) -> std::string {
+    if (path == "/std/collections/vector/count" || path == "/vector/count" ||
+        path == "/std/collections/vectorCount") {
+      return "/std/collections/experimental_vector/vectorCount";
+    }
+    if (path == "/std/collections/vector/capacity" || path == "/vector/capacity" ||
+        path == "/std/collections/vectorCapacity") {
+      return "/std/collections/experimental_vector/vectorCapacity";
+    }
+    if (path == "/std/collections/vector/push" || path == "/vector/push" ||
+        path == "/std/collections/vectorPush") {
+      return "/std/collections/experimental_vector/vectorPush";
+    }
+    if (path == "/std/collections/vector/pop" || path == "/vector/pop" ||
+        path == "/std/collections/vectorPop") {
+      return "/std/collections/experimental_vector/vectorPop";
+    }
+    if (path == "/std/collections/vector/reserve" || path == "/vector/reserve" ||
+        path == "/std/collections/vectorReserve") {
+      return "/std/collections/experimental_vector/vectorReserve";
+    }
+    if (path == "/std/collections/vector/clear" || path == "/vector/clear" ||
+        path == "/std/collections/vectorClear") {
+      return "/std/collections/experimental_vector/vectorClear";
+    }
+    if (path == "/std/collections/vector/remove_at" || path == "/vector/remove_at" ||
+        path == "/std/collections/vectorRemoveAt") {
+      return "/std/collections/experimental_vector/vectorRemoveAt";
+    }
+    if (path == "/std/collections/vector/remove_swap" || path == "/vector/remove_swap" ||
+        path == "/std/collections/vectorRemoveSwap") {
+      return "/std/collections/experimental_vector/vectorRemoveSwap";
+    }
+    if (path == "/std/collections/vector/at" || path == "/vector/at" ||
+        path == "/std/collections/vectorAt") {
+      return "/std/collections/experimental_vector/vectorAt";
+    }
+    if (path == "/std/collections/vector/at_unsafe" || path == "/vector/at_unsafe" ||
+        path == "/std/collections/vectorAtUnsafe") {
+      return "/std/collections/experimental_vector/vectorAtUnsafe";
     }
     return {};
   };
@@ -2163,6 +2278,87 @@ bool rewriteExpr(Expr &expr,
     }
     return false;
   };
+  auto resolveExperimentalVectorValueReceiverTemplateArgs = [&](const Expr *receiverExpr,
+                                                                std::vector<std::string> &templateArgsOut) {
+    templateArgsOut.clear();
+    if (receiverExpr == nullptr) {
+      return false;
+    }
+    auto extractArgsFromTypeText = [&](const std::string &typeText) {
+      std::string normalizedType = normalizeBindingTypeName(typeText);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        std::string normalizedBase = normalizeBindingTypeName(base);
+        if (!normalizedBase.empty() && normalizedBase.front() == '/') {
+          normalizedBase.erase(normalizedBase.begin());
+        }
+        if ((normalizedBase == "Vector" ||
+             normalizedBase == "std/collections/experimental_vector/Vector") &&
+            !argText.empty()) {
+          return splitTopLevelTemplateArgs(argText, templateArgsOut) &&
+                 templateArgsOut.size() == 1;
+        }
+      }
+      std::string resolvedPath = normalizedType;
+      if (!resolvedPath.empty() && resolvedPath.front() != '/') {
+        resolvedPath.insert(resolvedPath.begin(), '/');
+      }
+      std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+      if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
+        normalizedResolvedPath.erase(normalizedResolvedPath.begin());
+      }
+      if (normalizedResolvedPath.rfind("std/collections/experimental_vector/Vector__", 0) != 0) {
+        return false;
+      }
+      auto defIt = ctx.sourceDefs.find(resolvedPath);
+      if (defIt == ctx.sourceDefs.end()) {
+        return false;
+      }
+      for (const auto &fieldExpr : defIt->second.statements) {
+        if (!fieldExpr.isBinding || fieldExpr.name != "data") {
+          continue;
+        }
+        BindingInfo fieldBinding;
+        if (!extractExplicitBindingType(fieldExpr, fieldBinding)) {
+          continue;
+        }
+        if (normalizeBindingTypeName(fieldBinding.typeName) != "Pointer" ||
+            fieldBinding.typeTemplateArg.empty()) {
+          continue;
+        }
+        std::string pointeeBase;
+        std::string pointeeArgText;
+        if (!splitTemplateTypeName(normalizeBindingTypeName(fieldBinding.typeTemplateArg),
+                                   pointeeBase,
+                                   pointeeArgText) ||
+            normalizeBindingTypeName(pointeeBase) != "uninitialized") {
+          continue;
+        }
+        return splitTopLevelTemplateArgs(pointeeArgText, templateArgsOut) &&
+               templateArgsOut.size() == 1;
+      }
+      return false;
+    };
+
+    BindingInfo receiverInfo;
+    auto unwrapBindingTypeText = [&](const BindingInfo &binding) -> std::string {
+      if (binding.typeName == "Reference" || binding.typeName == "Pointer") {
+        return {};
+      }
+      std::string typeText = binding.typeName;
+      if (!binding.typeTemplateArg.empty()) {
+        typeText += "<" + binding.typeTemplateArg + ">";
+      }
+      return typeText;
+    };
+    if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
+        extractArgsFromTypeText(unwrapBindingTypeText(receiverInfo))) {
+      return true;
+    }
+    return extractArgsFromTypeText(
+        inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
+  };
   auto resolveDereferenceBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (target.kind != Expr::Kind::Call || target.args.size() != 1) {
       return false;
@@ -2422,6 +2618,19 @@ bool rewriteExpr(Expr &expr,
         }
       }
     }
+    const std::string experimentalVectorPath = experimentalVectorHelperPathForCanonicalHelper(resolvedPath);
+    if (!experimentalVectorPath.empty() && ctx.sourceDefs.count(experimentalVectorPath) > 0 &&
+        resolvesExperimentalVectorValueReceiver(mapHelperReceiverExpr(expr))) {
+      resolvedPath = experimentalVectorPath;
+      expr.name = experimentalVectorPath;
+      expr.namespacePrefix.clear();
+      if (expr.templateArgs.empty()) {
+        std::vector<std::string> receiverTemplateArgs;
+        if (resolveExperimentalVectorValueReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+          expr.templateArgs = std::move(receiverTemplateArgs);
+        }
+      }
+    }
     const std::string originalResolvedPath = resolvedPath;
     const std::string preferredPath = preferVectorStdlibHelperPath(resolvedPath, ctx.sourceDefs);
     if (preferredPath != resolvedPath && ctx.sourceDefs.count(preferredPath) > 0) {
@@ -2576,6 +2785,21 @@ bool rewriteExpr(Expr &expr,
     const bool methodCallSyntax = expr.isMethodCall;
     std::string methodPath;
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
+      const std::string experimentalVectorMethodPath =
+          experimentalVectorHelperPathForCanonicalHelper(methodPath);
+      if (!experimentalVectorMethodPath.empty() &&
+          ctx.sourceDefs.count(experimentalVectorMethodPath) > 0 &&
+          resolvesExperimentalVectorValueReceiver(mapHelperReceiverExpr(expr))) {
+        methodPath = experimentalVectorMethodPath;
+        if (expr.templateArgs.empty()) {
+          std::vector<std::string> receiverTemplateArgs;
+          if (resolveExperimentalVectorValueReceiverTemplateArgs(
+                  mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+            expr.templateArgs = std::move(receiverTemplateArgs);
+            allConcrete = true;
+          }
+        }
+      }
       const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;
       if (!expr.templateArgs.empty() && !methodWasTemplate) {
         if (!shouldPreserveCompatibilityTemplatePath(methodPath, ctx) &&

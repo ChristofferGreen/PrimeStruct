@@ -262,6 +262,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;
     const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;
     const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;
+    Expr rewrittenCanonicalExperimentalVectorHelperCall;
+    if (this->tryRewriteCanonicalExperimentalVectorHelperCall(
+            expr, builtinCollectionDispatchResolvers, rewrittenCanonicalExperimentalVectorHelperCall)) {
+      return inferExprReturnKind(rewrittenCanonicalExperimentalVectorHelperCall, params, locals);
+    }
     auto resolveExperimentalMapTarget = [&](const Expr &target,
                                             std::string &keyTypeOut,
                                             std::string &valueTypeOut) -> bool {

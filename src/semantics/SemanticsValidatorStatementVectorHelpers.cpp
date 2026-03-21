@@ -180,7 +180,22 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         bindingOut = &*resolvedVectorBindingStorage;
         return true;
       }
-      return false;
+      BindingInfo inferredBinding;
+      inferredBinding.typeName = normalizedType;
+      if (splitTemplateTypeName(normalizedType, base, arg)) {
+        inferredBinding.typeName = normalizeBindingTypeName(base);
+        inferredBinding.typeTemplateArg = arg;
+      }
+      std::string elemType;
+      if (!extractExperimentalVectorElementType(inferredBinding, elemType)) {
+        return false;
+      }
+      resolvedVectorBindingStorage.emplace();
+      resolvedVectorBindingStorage->typeName = "vector";
+      resolvedVectorBindingStorage->typeTemplateArg = elemType;
+      resolvedVectorBindingStorage->isMutable = isMutable;
+      bindingOut = &*resolvedVectorBindingStorage;
+      return true;
     };
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *binding = resolveNamedBinding(target.name)) {
@@ -338,6 +353,29 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
                                            const std::string &helperName,
                                            std::string &resolvedOut) -> bool {
     resolvedOut.clear();
+    auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
+                                                 std::string &elemTypeOut) -> bool {
+      std::string receiverTypeText;
+      return inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
+             [&]() {
+               BindingInfo inferredBinding;
+               std::string base;
+               std::string arg;
+               const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
+               if (splitTemplateTypeName(normalizedType, base, arg)) {
+                 inferredBinding.typeName = normalizeBindingTypeName(base);
+                 inferredBinding.typeTemplateArg = arg;
+               } else {
+                 inferredBinding.typeName = normalizedType;
+               }
+               return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
+             }();
+    };
+    std::string experimentalElemType;
+    if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
+      resolvedOut = preferredCanonicalExperimentalVectorHelperTarget(helperName);
+      return true;
+    }
     const BindingInfo *vectorBinding = nullptr;
     if (resolveVectorBinding(receiver, vectorBinding) && vectorBinding != nullptr &&
         (vectorBinding->typeName == "vector" || vectorBinding->typeName == "soa_vector")) {

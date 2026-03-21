@@ -563,6 +563,44 @@ inline std::string makeExperimentalVectorRemovalConformanceSource() {
   return source;
 }
 
+inline std::string makeExperimentalVectorCanonicalHelperRoutingSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[struct]\n";
+  source += "Mover() {\n";
+  source += "  [i32 mut] value{0i32}\n\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this.value, other.value)\n";
+  source += "    assign(other.value, 0i32)\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<Vector<Mover>>]\n";
+  source += "wrapValues() {\n";
+  source += "  return(vectorPair<Mover>(Mover(10i32), Mover(20i32)))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<Mover> mut] values{wrapValues()}\n";
+  source += "  /std/collections/vectorPush<Mover>(values, Mover(30i32))\n";
+  source += "  /std/collections/vectorReserve<Mover>(values, 6i32)\n";
+  source += "  [i32 mut] total{/std/collections/vectorCount<Mover>(values)}\n";
+  source += "  assign(total, plus(total, /std/collections/vectorCapacity<Mover>(values)))\n";
+  source += "  assign(total, plus(total, /std/collections/vectorAt<Mover>(values, 0i32).value))\n";
+  source += "  assign(total, plus(total, /std/collections/vectorAtUnsafe<Mover>(values, 2i32).value))\n";
+  source += "  /std/collections/vector/push<Mover>(values, Mover(40i32))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/count<Mover>(values)))\n";
+  source += "  assign(total, plus(total, values.at(3i32).value))\n";
+  source += "  /std/collections/vector/remove_at<Mover>(values, 1i32)\n";
+  source += "  /std/collections/vectorRemoveSwap<Mover>(values, 0i32)\n";
+  source += "  values.pop()\n";
+  source += "  /std/collections/vector/clear<Mover>(values)\n";
+  source += "  return(plus(total, values.count()))\n";
+  source += "}\n";
+  return source;
+}
+
 inline void expectVectorConformanceProgramRuns(const std::string &source,
                                                const std::string &nameStem,
                                                const std::string &emitMode,
@@ -581,6 +619,13 @@ inline void expectVectorConformanceProgramRuns(const std::string &source,
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(quoteShellArg(exePath)) == expectedExitCode);
+}
+
+inline void expectExperimentalVectorCanonicalHelperRoutingConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(makeExperimentalVectorCanonicalHelperRoutingSource(),
+                                     "experimental_vector_canonical_helper_routing_" + emitMode,
+                                     emitMode,
+                                     93);
 }
 
 inline void expectVectorVmProgramRunsWithOutput(const std::string &source,

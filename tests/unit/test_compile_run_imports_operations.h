@@ -265,6 +265,10 @@ TEST_CASE("compiles and runs experimental vector helper runtime contracts in C++
 TEST_CASE("compiles and runs experimental vector ownership-sensitive helpers in C++ emitter") {
   expectExperimentalVectorOwnershipContracts("exe");
 }
+
+TEST_CASE("compiles and runs canonical vector helpers on experimental vector receivers in C++ emitter") {
+  expectExperimentalVectorCanonicalHelperRoutingConformance("exe");
+}
 TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") {
   SUBCASE("call") {
     expectVectorPopEmptyRuntimeContract("exe", false);

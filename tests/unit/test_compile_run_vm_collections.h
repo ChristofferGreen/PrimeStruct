@@ -2244,6 +2244,10 @@ TEST_CASE("runs vm experimental vector ownership-sensitive helpers") {
   expectExperimentalVectorOwnershipContracts("vm");
 }
 
+TEST_CASE("runs vm canonical vector helpers on experimental vector receivers") {
+  expectExperimentalVectorCanonicalHelperRoutingConformance("vm");
+}
+
 TEST_CASE("runs vm vector pop empty runtime contract") {
   SUBCASE("call") {
     expectVectorPopEmptyRuntimeContract("vm", false);

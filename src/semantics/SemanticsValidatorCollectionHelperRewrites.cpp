@@ -176,8 +176,86 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
     return false;
   }
   rewrittenOut = candidate;
-  rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
+  if (dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
+      dispatchResolvers.resolveExperimentalVectorValueTarget(candidate.args[receiverIndex], elemType)) {
+    rewrittenOut.name = specializedExperimentalVectorHelperTarget(helperName, elemType);
+    rewrittenOut.templateArgs.clear();
+  } else {
+    rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
+  }
   rewrittenOut.namespacePrefix.clear();
+  return true;
+}
+
+bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
+    const Expr &candidate,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+    Expr &rewrittenOut) const {
+  if (candidate.kind != Expr::Kind::Call || candidate.args.empty() ||
+      dispatchResolvers.resolveExperimentalVectorTarget == nullptr ||
+      dispatchResolvers.resolveExperimentalVectorValueTarget == nullptr) {
+    return false;
+  }
+
+  std::string canonicalPath;
+  std::string helperName;
+  Expr canonicalCandidate = candidate;
+  if (candidate.isMethodCall) {
+    std::string normalizedMethod = candidate.name;
+    if (!normalizedMethod.empty() && normalizedMethod.front() == '/') {
+      normalizedMethod.erase(normalizedMethod.begin());
+    }
+    if (normalizedMethod != "count" && normalizedMethod != "capacity" &&
+        normalizedMethod != "push" && normalizedMethod != "pop" &&
+        normalizedMethod != "reserve" && normalizedMethod != "clear" &&
+        normalizedMethod != "remove_at" && normalizedMethod != "remove_swap" &&
+        normalizedMethod != "at" && normalizedMethod != "at_unsafe") {
+      return false;
+    }
+    helperName = normalizedMethod;
+    canonicalPath = "/std/collections/vector/" + normalizedMethod;
+    canonicalCandidate.isMethodCall = false;
+    canonicalCandidate.name = canonicalPath;
+    canonicalCandidate.namespacePrefix.clear();
+  } else if (!canonicalExperimentalVectorHelperPath(resolveCalleePath(candidate),
+                                                    canonicalPath,
+                                                    helperName)) {
+    return false;
+  }
+
+  const size_t receiverIndex =
+      candidate.isMethodCall ? 0 : mapHelperReceiverIndex(canonicalCandidate, dispatchResolvers);
+  if (receiverIndex >= canonicalCandidate.args.size()) {
+    return false;
+  }
+  const Expr &receiverExpr = canonicalCandidate.args[receiverIndex];
+  if (candidate.isMethodCall &&
+      receiverExpr.kind == Expr::Kind::Call &&
+      !receiverExpr.isBinding &&
+      !receiverExpr.isMethodCall) {
+    return false;
+  }
+  if (!candidate.isMethodCall &&
+      !candidate.templateArgs.empty() &&
+      receiverExpr.kind == Expr::Kind::Call &&
+      !receiverExpr.isBinding &&
+      !receiverExpr.isMethodCall) {
+    return false;
+  }
+
+  std::string elemType;
+  if (!dispatchResolvers.resolveExperimentalVectorValueTarget(receiverExpr, elemType)) {
+    return false;
+  }
+  rewrittenOut = canonicalCandidate;
+  if (rewrittenOut.templateArgs.empty()) {
+    rewrittenOut.templateArgs = {elemType};
+  }
+  if (!candidate.isMethodCall) {
+    rewrittenOut.name = specializedExperimentalVectorHelperTarget(helperName, elemType);
+    rewrittenOut.namespacePrefix.clear();
+    rewrittenOut.templateArgs.clear();
+  }
   return true;
 }
 

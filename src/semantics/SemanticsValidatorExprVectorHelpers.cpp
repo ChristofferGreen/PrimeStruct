@@ -32,7 +32,11 @@ bool isVectorHelperReceiverName(const Expr &candidate,
       typeName = normalizeBindingTypeName(it->second.typeName);
     }
   }
-  return typeName == "vector" || typeName == "soa_vector";
+  return typeName == "vector" || typeName == "soa_vector" || typeName == "Vector" ||
+         typeName == "/std/collections/experimental_vector/Vector" ||
+         typeName == "std/collections/experimental_vector/Vector" ||
+         typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+         typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
 void appendUniqueIndex(std::vector<size_t> &indices, size_t index, size_t limit) {
@@ -76,6 +80,29 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     const std::string &helperName,
     std::string &resolvedOut) {
   resolvedOut.clear();
+  auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
+                                               std::string &elemTypeOut) -> bool {
+    std::string receiverTypeText;
+    if (!inferQueryExprTypeText(candidate, params, locals, receiverTypeText)) {
+      return false;
+    }
+    BindingInfo inferredBinding;
+    std::string base;
+    std::string argText;
+    const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      inferredBinding.typeName = normalizeBindingTypeName(base);
+      inferredBinding.typeTemplateArg = argText;
+    } else {
+      inferredBinding.typeName = normalizedType;
+    }
+    return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
+  };
+  std::string experimentalElemType;
+  if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
+    resolvedOut = preferredCanonicalExperimentalVectorHelperTarget(helperName);
+    return true;
+  }
   auto resolveReceiverTypePath = [&](const std::string &typeName,
                                      const std::string &namespacePrefix) -> std::string {
     if (typeName.empty()) {

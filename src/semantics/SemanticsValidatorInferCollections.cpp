@@ -38,7 +38,38 @@ constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = 
      {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef"}, 4},
     {"at_unsafe", "/std/collections/map/at_unsafe", "/map/at_unsafe", "/std/collections/mapAtUnsafe",
      "/std/collections/experimental_map/mapAtUnsafe", true, false,
-     {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef"}, 4},
+    {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef"}, 4},
+};
+
+struct ExperimentalVectorHelperDescriptor {
+  std::string_view helperName;
+  std::string_view canonicalPath;
+  std::string_view aliasPath;
+  std::string_view wrapperPath;
+  std::string_view experimentalPath;
+};
+
+constexpr ExperimentalVectorHelperDescriptor kExperimentalVectorHelperDescriptors[] = {
+    {"count", "/std/collections/vector/count", "/vector/count", "/std/collections/vectorCount",
+     "/std/collections/experimental_vector/vectorCount"},
+    {"capacity", "/std/collections/vector/capacity", "/vector/capacity", "/std/collections/vectorCapacity",
+     "/std/collections/experimental_vector/vectorCapacity"},
+    {"push", "/std/collections/vector/push", "/vector/push", "/std/collections/vectorPush",
+     "/std/collections/experimental_vector/vectorPush"},
+    {"pop", "/std/collections/vector/pop", "/vector/pop", "/std/collections/vectorPop",
+     "/std/collections/experimental_vector/vectorPop"},
+    {"reserve", "/std/collections/vector/reserve", "/vector/reserve", "/std/collections/vectorReserve",
+     "/std/collections/experimental_vector/vectorReserve"},
+    {"clear", "/std/collections/vector/clear", "/vector/clear", "/std/collections/vectorClear",
+     "/std/collections/experimental_vector/vectorClear"},
+    {"remove_at", "/std/collections/vector/remove_at", "/vector/remove_at", "/std/collections/vectorRemoveAt",
+     "/std/collections/experimental_vector/vectorRemoveAt"},
+    {"remove_swap", "/std/collections/vector/remove_swap", "/vector/remove_swap",
+     "/std/collections/vectorRemoveSwap", "/std/collections/experimental_vector/vectorRemoveSwap"},
+    {"at", "/std/collections/vector/at", "/vector/at", "/std/collections/vectorAt",
+     "/std/collections/experimental_vector/vectorAt"},
+    {"at_unsafe", "/std/collections/vector/at_unsafe", "/vector/at_unsafe", "/std/collections/vectorAtUnsafe",
+     "/std/collections/experimental_vector/vectorAtUnsafe"},
 };
 
 enum class RemovedCollectionHelperFamily {
@@ -123,6 +154,15 @@ std::string_view trimLeadingSlash(std::string_view text) {
 
 const ExperimentalMapHelperDescriptor *findExperimentalMapHelperByName(std::string_view helperName) {
   for (const auto &descriptor : kExperimentalMapHelperDescriptors) {
+    if (descriptor.helperName == helperName) {
+      return &descriptor;
+    }
+  }
+  return nullptr;
+}
+
+const ExperimentalVectorHelperDescriptor *findExperimentalVectorHelperByName(std::string_view helperName) {
+  for (const auto &descriptor : kExperimentalVectorHelperDescriptors) {
     if (descriptor.helperName == helperName) {
       return &descriptor;
     }
@@ -260,6 +300,12 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       typePath == "std/collections/vector") {
     return "/vector";
   }
+  if (typePath == "/std/collections/experimental_vector/Vector" ||
+      typePath == "std/collections/experimental_vector/Vector" ||
+      typePath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+      typePath.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+    return "/vector";
+  }
   if (typePath == "/soa_vector" || typePath == "soa_vector") {
     return "/soa_vector";
   }
@@ -333,6 +379,68 @@ std::string SemanticsValidator::preferredCanonicalExperimentalMapHelperTarget(st
     return "/std/collections/experimental_map/" + std::string(helperName);
   }
   return std::string(descriptor->experimentalPath);
+}
+
+std::string SemanticsValidator::preferredCanonicalExperimentalVectorHelperTarget(
+    std::string_view helperName) const {
+  const ExperimentalVectorHelperDescriptor *descriptor =
+      findExperimentalVectorHelperByName(helperName);
+  if (descriptor == nullptr) {
+    return "/std/collections/experimental_vector/" + std::string(helperName);
+  }
+  return std::string(descriptor->experimentalPath);
+}
+
+std::string SemanticsValidator::specializedExperimentalVectorHelperTarget(
+    std::string_view helperName,
+    const std::string &elemType) const {
+  auto fnv1a64 = [](const std::string &text) {
+    uint64_t hash = 1469598103934665603ULL;
+    for (unsigned char ch : text) {
+      hash ^= static_cast<uint64_t>(ch);
+      hash *= 1099511628211ULL;
+    }
+    return hash;
+  };
+  auto stripWhitespace = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (unsigned char ch : text) {
+      if (!std::isspace(ch)) {
+        out.push_back(static_cast<char>(ch));
+      }
+    }
+    return out;
+  };
+
+  const std::string basePath = preferredCanonicalExperimentalVectorHelperTarget(helperName);
+  std::ostringstream specializedPath;
+  specializedPath << basePath
+                  << "__t"
+                  << std::hex
+                  << fnv1a64(stripWhitespace(joinTemplateArgs({elemType})));
+  if (defMap_.count(specializedPath.str()) > 0) {
+    return specializedPath.str();
+  }
+  return basePath;
+}
+
+bool SemanticsValidator::canonicalExperimentalVectorHelperPath(
+    const std::string &resolvedPath,
+    std::string &canonicalPathOut,
+    std::string &helperNameOut) const {
+  canonicalPathOut.clear();
+  helperNameOut.clear();
+  for (const auto &descriptor : kExperimentalVectorHelperDescriptors) {
+    if (matchesResolvedPath(resolvedPath, descriptor.canonicalPath) ||
+        matchesResolvedPath(resolvedPath, descriptor.aliasPath) ||
+        matchesResolvedPath(resolvedPath, descriptor.wrapperPath)) {
+      canonicalPathOut = descriptor.canonicalPath;
+      helperNameOut = descriptor.helperName;
+      return true;
+    }
+  }
+  return false;
 }
 
 bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &resolvedPath,
@@ -1497,10 +1605,14 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     elemTypeOut = binding.typeTemplateArg;
     return true;
   };
-  auto resolveVectorBinding = [](const BindingInfo &binding, std::string &elemTypeOut) -> bool {
+  auto resolveVectorBinding = [this](const BindingInfo &binding, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     if (binding.typeName != "vector" || binding.typeTemplateArg.empty()) {
-      return false;
+      const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+      if (normalizedType == "Reference" || normalizedType == "Pointer") {
+        return false;
+      }
+      return extractExperimentalVectorElementType(binding, elemTypeOut);
     }
     elemTypeOut = binding.typeTemplateArg;
     return true;
@@ -1559,6 +1671,8 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorValueTarget;
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveBufferTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
@@ -1690,6 +1804,35 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       return resolveVectorBinding(binding, elemType);
     }
     return false;
+  };
+  state->resolveExperimentalVectorTarget =
+      [=, this](const Expr &target, std::string &elemTypeOut) -> bool {
+    elemTypeOut.clear();
+    BindingInfo binding;
+    if (resolveBindingTarget(target, binding)) {
+      return extractExperimentalVectorElementType(binding, elemTypeOut);
+    }
+    return target.kind == Expr::Kind::Call &&
+           inferCallBinding(target, binding) &&
+           extractExperimentalVectorElementType(binding, elemTypeOut);
+  };
+  state->resolveExperimentalVectorValueTarget =
+      [=, this](const Expr &target, std::string &elemTypeOut) -> bool {
+    auto extractValueBinding = [&](const BindingInfo &binding) {
+      const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+      if (normalizedType == "Reference" || normalizedType == "Pointer") {
+        return false;
+      }
+      return extractExperimentalVectorElementType(binding, elemTypeOut);
+    };
+    elemTypeOut.clear();
+    BindingInfo binding;
+    if (resolveBindingTarget(target, binding)) {
+      return extractValueBinding(binding);
+    }
+    return target.kind == Expr::Kind::Call &&
+           inferCallBinding(target, binding) &&
+           extractValueBinding(binding);
   };
   state->resolveSoaVectorTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
     BindingInfo binding;
@@ -2103,6 +2246,8 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
           state->resolveArgsPackAccessTarget,
           state->resolveArrayTarget,
           state->resolveVectorTarget,
+          state->resolveExperimentalVectorTarget,
+          state->resolveExperimentalVectorValueTarget,
           state->resolveSoaVectorTarget,
           state->resolveBufferTarget,
           state->resolveStringTarget,
@@ -2142,6 +2287,10 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
     }
     if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
       return "/" + base;
+    }
+    if ((base == "Vector" || base == "std/collections/experimental_vector/Vector") &&
+        args.size() == 1) {
+      return "/vector";
     }
     if (isMapCollectionTypeName(base) && args.size() == 2) {
       return "/map";
@@ -2200,7 +2349,10 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
       return false;
     }
     base = normalizeBindingTypeName(base);
-    if (base == expectedBase || (expectedBase == "map" && isMapCollectionTypeName(base))) {
+    if (base == expectedBase ||
+        (expectedBase == "vector" &&
+         (base == "Vector" || base == "std/collections/experimental_vector/Vector")) ||
+        (expectedBase == "map" && isMapCollectionTypeName(base))) {
       return splitTopLevelTemplateArgs(arg, argsOut);
     }
     std::vector<std::string> args;
