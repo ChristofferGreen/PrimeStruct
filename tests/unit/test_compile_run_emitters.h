@@ -10911,7 +10911,29 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("C++ emitter lowers bare vector count methods without helper to deleted stub") {
+TEST_CASE("C++ emitter keeps bare vector count methods on same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(14i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_vector_count_method_same_path.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_count_method_same_path_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 14);
+}
+
+TEST_CASE("C++ emitter rejects bare vector count methods without helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -10921,13 +10943,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_count_method_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_count_method_deleted_stub.cpp").string();
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_count_method_deleted_stub.txt").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_count_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_count_method_helper(values)") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects bare vector count methods without helper in C++ emitter") {
@@ -10945,7 +10966,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper vector count methods without helper in C++ emitter") {

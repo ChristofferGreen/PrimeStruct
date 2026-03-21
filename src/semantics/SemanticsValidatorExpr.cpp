@@ -757,6 +757,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             !keepBuiltinIndexedArgsPackMapMethod) {
           isBuiltinMethod = false;
         }
+        if (isBuiltinMethod && resolved == "/vector/count" &&
+            defMap_.find(resolved) == defMap_.end() &&
+            !hasImportedDefinitionPath(resolved) &&
+            expr.args.front().kind == Expr::Kind::Name) {
+          std::string elemType;
+          if (resolveVectorTarget(expr.args.front(), elemType)) {
+            error_ = "unknown method: /vector/count";
+            return false;
+          }
+        }
         if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
             isVectorBuiltinName(expr, "capacity") && !isStdNamespacedVectorCapacityCall) {
           promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
