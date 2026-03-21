@@ -10442,6 +10442,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector capacity method rejects wrapper map receiver without helper") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity method rejects wrapper map receiver without helper") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("array namespaced slash method spelling rejects statement body arguments") {
   const std::string source = R"(
 [return<int>]

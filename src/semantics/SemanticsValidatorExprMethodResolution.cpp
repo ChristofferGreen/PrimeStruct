@@ -115,6 +115,24 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
 
   const std::string explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName);
+  auto explicitVectorMethodPath = [&](const std::string &rawMethodName) -> std::string {
+    std::string candidate = rawMethodName;
+    if (!candidate.empty() && candidate.front() == '/') {
+      candidate.erase(candidate.begin());
+    }
+    std::string normalizedPrefix = callNamespacePrefix;
+    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+      normalizedPrefix.erase(normalizedPrefix.begin());
+    }
+    if (normalizedPrefix == "vector" || normalizedPrefix == "std/collections/vector") {
+      return "/" + normalizedPrefix + "/" + candidate;
+    }
+    if (candidate.rfind("vector/", 0) == 0 || candidate.rfind("std/collections/vector/", 0) == 0) {
+      return "/" + candidate;
+    }
+    return "";
+  };
+  const std::string explicitVectorHelperPath = explicitVectorMethodPath(methodName);
   std::string normalizedMethodName = methodName;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
@@ -1395,6 +1413,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     if (resolveExplicitDirectCallReturnMethodTarget(receiver)) {
+      return true;
+    }
+  }
+  if (receiver.kind == Expr::Kind::Call) {
+    std::string receiverCollectionTypePath;
+    if (normalizedMethodName == "capacity" && !explicitVectorHelperPath.empty() &&
+        resolveCallCollectionTypePath(receiver, params, locals, receiverCollectionTypePath) &&
+        receiverCollectionTypePath != "/vector" && receiverCollectionTypePath != "/soa_vector") {
+      resolvedOut = explicitVectorHelperPath;
+      isBuiltinOut = false;
       return true;
     }
   }
