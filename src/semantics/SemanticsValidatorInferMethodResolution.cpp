@@ -214,6 +214,28 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return false;
   };
+  auto setIndexedArgsPackMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
+    if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.args.size() != 2) {
+      return false;
+    }
+    std::string accessName;
+    if (!getBuiltinArrayAccessName(receiverExpr, accessName)) {
+      return false;
+    }
+    const Expr *accessReceiver = this->resolveBuiltinAccessReceiverExpr(receiverExpr);
+    if (accessReceiver == nullptr) {
+      return false;
+    }
+    std::string indexedElemType;
+    std::string keyType;
+    std::string valueType;
+    if (!resolveArgsPackAccessTarget(*accessReceiver, indexedElemType) ||
+        !extractMapKeyValueTypesFromTypeText(indexedElemType, keyType, valueType)) {
+      return false;
+    }
+    resolvedOut = preferredMapMethodTargetForCall(receiverExpr, helperName);
+    return true;
+  };
   auto shouldPreferStructReturnMethodTargetForCall = [&](const Expr &receiverExpr) {
     return receiverExpr.kind == Expr::Kind::Call &&
            !receiverExpr.isBinding &&
@@ -333,7 +355,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = resolvedReceiverPath + "/" + normalizedMethodName;
       return true;
     }
-    const std::string resolvedType = resolveStructTypePath(receiver.name, receiver.namespacePrefix);
+    const std::string resolvedType = resolveStructTypePathForMethod(receiver.name, receiver.namespacePrefix);
     if (!resolvedType.empty()) {
       resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
@@ -364,6 +386,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = "/string/count";
         return true;
       }
+      if (setIndexedArgsPackMapMethodTarget(receiver, "count")) {
+        return true;
+      }
     }
     if (normalizedMethodName == "capacity" && resolveVectorTarget(receiver, elemType)) {
       resolvedOut = preferVectorStdlibHelperPath("/vector/capacity");
@@ -376,6 +401,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt") &&
         resolveMapTarget(receiver, keyType, valueType)) {
       resolvedOut = preferredMapMethodTargetForCall(receiver, normalizedMethodName);
+      return true;
+    }
+    if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt") &&
+        setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
       return true;
     }
     if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
@@ -393,6 +422,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
       if (resolveStringTarget(receiver)) {
         resolvedOut = "/string/" + normalizedMethodName;
+        return true;
+      }
+      if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
         return true;
       }
     }
@@ -512,7 +544,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
     return true;
   }
-  std::string resolvedType = resolveStructTypePath(typeName, expr.namespacePrefix);
+  std::string resolvedType = resolveStructTypePathForMethod(typeName, expr.namespacePrefix);
   if (resolvedType.empty()) {
     resolvedType = resolveTypePath(typeName, expr.namespacePrefix);
   }

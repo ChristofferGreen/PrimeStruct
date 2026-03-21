@@ -267,11 +267,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
                                             std::string &valueTypeOut) -> bool {
       return resolveInferExperimentalMapTarget(params, locals, target, keyTypeOut, valueTypeOut);
     };
-    auto resolveExperimentalMapValueTarget = [&](const Expr &target,
-                                                 std::string &keyTypeOut,
-                                                 std::string &valueTypeOut) -> bool {
-      return resolveInferExperimentalMapValueTarget(params, locals, target, keyTypeOut, valueTypeOut);
-    };
     std::function<ReturnKind(const Expr &)> pointerTargetKind = [&](const Expr &pointerExpr) -> ReturnKind {
       if (pointerExpr.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, pointerExpr.name)) {

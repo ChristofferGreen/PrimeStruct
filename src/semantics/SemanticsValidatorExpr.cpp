@@ -1363,7 +1363,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (normalized.rfind("vector/", 0) == 0) {
           normalized = normalized.substr(std::string("vector/").size());
         } else if (normalized.rfind("array/", 0) == 0) {
-          normalized = normalized.substr(std::string("array/").size());
+          const std::string helperName = normalized.substr(std::string("array/").size());
+          const std::string canonicalPath = "/std/collections/vector/" + helperName;
+          if (hasDefinitionPath(canonicalPath) || hasImportedDefinitionPath(canonicalPath)) {
+            return false;
+          }
+          normalized = helperName;
         } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
           normalized = normalized.substr(std::string("std/collections/vector/").size());
         }

@@ -541,6 +541,12 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
   }
 
   const std::string helperName = removedPath.substr(removedPath.find_last_of('/') + 1);
+  if (removedPath.rfind("/array/", 0) == 0) {
+    const std::string canonicalPath = "/std/collections/vector/" + helperName;
+    if (hasDefinitionPath(canonicalPath) || hasImportedDefinitionPath(canonicalPath)) {
+      return false;
+    }
+  }
   const RemovedCollectionHelperDescriptor *descriptor =
       findRemovedCollectionHelper(RemovedCollectionHelperFamily::VectorLike, helperName);
   if (descriptor == nullptr || !descriptor->statementOnly) {

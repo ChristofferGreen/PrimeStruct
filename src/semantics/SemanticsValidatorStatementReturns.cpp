@@ -54,7 +54,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                                                  ReturnKind returnKind,
                                                  bool allowReturn,
                                                  bool *sawReturn,
-                                                 const std::string &namespacePrefix) {
+                                                 const std::string &) {
   if (hasNamedArguments(stmt.argNames)) {
     error_ = "named arguments not supported for builtin calls";
     return false;

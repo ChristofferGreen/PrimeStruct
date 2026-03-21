@@ -127,6 +127,48 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     return true;
   };
 
+  auto validateMethodMapAccessBuiltin = [&](const std::string &helperName) -> bool {
+    if (!expr.templateArgs.empty()) {
+      error_ = helperName + " does not accept template arguments";
+      return false;
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      error_ = helperName + " does not accept block arguments";
+      return false;
+    }
+    if (expr.args.size() != 2) {
+      error_ = "argument count mismatch for builtin " + helperName;
+      return false;
+    }
+    std::string mapKeyType;
+    if (!(context.resolveMapKeyType != nullptr &&
+          context.resolveMapKeyType(expr.args.front(), mapKeyType))) {
+      if (!validateExpr(params, locals, expr.args.front())) {
+        return false;
+      }
+      error_ = helperName + " requires map target";
+      return false;
+    }
+    if (!validateMapKeyExpr(helperName, expr.args[1], mapKeyType)) {
+      return false;
+    }
+    if (!validateExpr(params, locals, expr.args.front()) ||
+        !validateExpr(params, locals, expr.args[1])) {
+      return false;
+    }
+    return true;
+  };
+
+  if (expr.isMethodCall && resolvedMethod &&
+      (resolved == "/map/at" || resolved == "/map/at_unsafe" ||
+       resolved == "/std/collections/map/at" ||
+       resolved == "/std/collections/map/at_unsafe")) {
+    handledOut = true;
+    const std::string helperName =
+        resolved.find("unsafe") != std::string::npos ? "at_unsafe" : "at";
+    return validateMethodMapAccessBuiltin(helperName);
+  }
+
   if (!resolvedMethod && resolvedMissing &&
       !(context.isStdNamespacedVectorAccessCall &&
         hasNamedArguments(expr.argNames))) {

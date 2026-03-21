@@ -10236,6 +10236,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
     }
     return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   };
+  auto readTexts = [&](const std::vector<std::filesystem::path> &paths) {
+    std::string combined;
+    for (const auto &path : paths) {
+      combined += readText(path);
+      combined.push_back('\n');
+    }
+    return combined;
+  };
   const std::filesystem::path repoRoot =
       std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
                                                              : std::filesystem::path("..");
@@ -10253,6 +10261,16 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferControlFlow.cpp";
   const std::filesystem::path semanticsInferDefinitionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferDefinition.cpp";
+  const std::filesystem::path semanticsInferGraphPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferGraph.cpp";
+  const std::filesystem::path semanticsInferMethodResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferMethodResolution.cpp";
+  const std::filesystem::path semanticsInferStructReturnPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferStructReturn.cpp";
+  const std::filesystem::path semanticsInferTargetResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
+  const std::filesystem::path semanticsInferUtilityPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferUtility.cpp";
   const std::filesystem::path semanticsCollectionHelperRewritesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   REQUIRE(std::filesystem::exists(semanticsInferPath));
@@ -10262,8 +10280,28 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsInferDefinitionPath));
+  REQUIRE(std::filesystem::exists(semanticsInferGraphPath));
+  REQUIRE(std::filesystem::exists(semanticsInferMethodResolutionPath));
+  REQUIRE(std::filesystem::exists(semanticsInferStructReturnPath));
+  REQUIRE(std::filesystem::exists(semanticsInferTargetResolutionPath));
+  REQUIRE(std::filesystem::exists(semanticsInferUtilityPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
+  const std::string semanticsInferCombinedSource = readTexts({
+      semanticsInferPath,
+      semanticsInferCollectionCountCapacityPath,
+      semanticsInferCollectionDirectCountCapacityPath,
+      semanticsInferCollectionDispatchPath,
+      semanticsInferCollectionsPath,
+      semanticsInferControlFlowPath,
+      semanticsInferDefinitionPath,
+      semanticsInferGraphPath,
+      semanticsInferMethodResolutionPath,
+      semanticsInferStructReturnPath,
+      semanticsInferTargetResolutionPath,
+      semanticsInferUtilityPath,
+      semanticsCollectionHelperRewritesPath,
+  });
   const std::string semanticsInferCollectionCountCapacitySource =
       readText(semanticsInferCollectionCountCapacityPath);
   const std::string semanticsInferCollectionDirectCountCapacitySource =
@@ -10273,44 +10311,44 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
-  CHECK(semanticsInferSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
-  CHECK(semanticsInferSource.find("inferControlFlowExprReturnKind(expr, params, locals, handledControlFlow);") !=
+  CHECK(semanticsInferCombinedSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("inferControlFlowExprReturnKind(expr, params, locals, handledControlFlow);") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers") !=
+  CHECK(semanticsInferCombinedSource.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;") !=
+  CHECK(semanticsInferCombinedSource.find("BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") !=
+  CHECK(semanticsInferCombinedSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
-  CHECK(semanticsInferSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
+  CHECK(semanticsInferCombinedSource.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
+  CHECK(semanticsInferCombinedSource.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveWrappedIndexedArgsPackElementType =") !=
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveWrappedIndexedArgsPackElementType =") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
+  CHECK(semanticsInferCombinedSource.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;") !=
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
+  CHECK(semanticsInferCombinedSource.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
+  CHECK(semanticsInferCombinedSource.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("return SemanticsValidator::resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, argsOut);") !=
+  CHECK(semanticsInferCombinedSource.find("return SemanticsValidator::resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, argsOut);") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
@@ -10343,23 +10381,23 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,") ==
         std::string::npos);
-  CHECK(semanticsInferSource.find("resolveBuiltinCollectionMethodReturnKind(") != std::string::npos);
-  CHECK(semanticsInferSource.find("resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)") !=
+  CHECK(semanticsInferCombinedSource.find("resolveBuiltinCollectionMethodReturnKind(") != std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("builtinCollectionCountCapacityDispatchContext, builtinCollectionKind))") !=
+  CHECK(semanticsInferCombinedSource.find("builtinCollectionCountCapacityDispatchContext, builtinCollectionKind))") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("inferBuiltinCollectionDirectCountCapacityReturnKind(") != std::string::npos);
-  CHECK(semanticsInferSource.find("handledDirectBuiltinCountCapacity") != std::string::npos);
-  CHECK(semanticsInferSource.find("DefinitionReturnInferenceState inferenceState;") != std::string::npos);
-  CHECK(semanticsInferSource.find("inferDefinitionStatementReturns(def, defParams, stmt, locals, inferenceState)") !=
+  CHECK(semanticsInferCombinedSource.find("inferBuiltinCollectionDirectCountCapacityReturnKind(") != std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("handledDirectBuiltinCountCapacity") != std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("DefinitionReturnInferenceState inferenceState;") != std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("inferDefinitionStatementReturns(def, defParams, stmt, locals, inferenceState)") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("recordDefinitionInferredReturn(def, &stmt, defParams, locals, inferenceState)") !=
+  CHECK(semanticsInferCombinedSource.find("recordDefinitionInferredReturn(def, &stmt, defParams, locals, inferenceState)") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("resolveMethodCallPath(\"count\"") == std::string::npos);
   CHECK(semanticsInferSource.find("resolveMethodCallPath(\"capacity\"") == std::string::npos);
-  CHECK(semanticsInferSource.find("methodRemovedCollectionCompatibilityPath(candidate, params, locals)") !=
+  CHECK(semanticsInferCombinedSource.find("methodRemovedCollectionCompatibilityPath(") !=
         std::string::npos);
-  CHECK(semanticsInferSource.find("preferVectorStdlibHelperPath(resolveCalleePath(expr))") !=
+  CHECK(semanticsInferCombinedSource.find("preferVectorStdlibHelperPath(resolveCalleePath(expr))") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("auto preferVectorStdlibHelperPathForCall = [&](const std::string &path)") ==
         std::string::npos);
@@ -10448,25 +10486,45 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
     }
     return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   };
+  auto readTexts = [&](const std::vector<std::filesystem::path> &paths) {
+    std::string combined;
+    for (const auto &path : paths) {
+      combined += readText(path);
+      combined.push_back('\n');
+    }
+    return combined;
+  };
   const std::filesystem::path repoRoot =
       std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
                                                              : std::filesystem::path("..");
 
   const std::filesystem::path semanticsPassesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPasses.cpp";
+  const std::filesystem::path semanticsPassesDefinitionsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorPassesDefinitions.cpp";
   const std::filesystem::path semanticsPassesEffectsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesEffects.cpp";
   const std::filesystem::path semanticsPassesDiagnosticsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesDiagnostics.cpp";
+  const std::filesystem::path semanticsPassesExecutionsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorPassesExecutions.cpp";
   REQUIRE(std::filesystem::exists(semanticsPassesPath));
+  REQUIRE(std::filesystem::exists(semanticsPassesDefinitionsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesEffectsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesDiagnosticsPath));
+  REQUIRE(std::filesystem::exists(semanticsPassesExecutionsPath));
   const std::string semanticsPassesSource = readText(semanticsPassesPath);
+  const std::string semanticsPassesCombinedSource = readTexts({
+      semanticsPassesPath,
+      semanticsPassesDefinitionsPath,
+      semanticsPassesExecutionsPath,
+      semanticsPassesDiagnosticsPath,
+  });
   const std::string semanticsPassesEffectsSource = readText(semanticsPassesEffectsPath);
   const std::string semanticsPassesDiagnosticsSource = readText(semanticsPassesDiagnosticsPath);
 
-  CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateDefinitions()") != std::string::npos);
-  CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateExecutions()") != std::string::npos);
+  CHECK(semanticsPassesCombinedSource.find("bool SemanticsValidator::validateDefinitions()") != std::string::npos);
+  CHECK(semanticsPassesCombinedSource.find("bool SemanticsValidator::validateExecutions()") != std::string::npos);
   CHECK(semanticsPassesSource.find("bool SemanticsValidator::resolveExecutionEffects(") == std::string::npos);
   CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateCapabilitiesSubset(") == std::string::npos);
   CHECK(semanticsPassesSource.find("std::unordered_set<std::string> SemanticsValidator::resolveEffects(") ==
@@ -10475,9 +10533,9 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesSource.find("void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(") ==
         std::string::npos);
-  CHECK(semanticsPassesSource.find("collectDefinitionIntraBodyCallDiagnostics(def, intraDefinitionRecords);") !=
+  CHECK(semanticsPassesCombinedSource.find("collectDefinitionIntraBodyCallDiagnostics(def, intraDefinitionRecords);") !=
         std::string::npos);
-  CHECK(semanticsPassesSource.find("collectExecutionIntraBodyCallDiagnostics(exec, intraExecutionRecords);") !=
+  CHECK(semanticsPassesCombinedSource.find("collectExecutionIntraBodyCallDiagnostics(exec, intraExecutionRecords);") !=
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("void expandEffectImplications(") != std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("std::unordered_set<std::string> SemanticsValidator::resolveEffects(") !=
@@ -10896,17 +10954,30 @@ TEST_CASE("vm heap helpers source delegation stays stable") {
     }
     return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   };
+  auto readTexts = [&](const std::vector<std::filesystem::path> &paths) {
+    std::string combined;
+    for (const auto &path : paths) {
+      combined += readText(path);
+      combined.push_back('\n');
+    }
+    return combined;
+  };
   const std::filesystem::path repoRoot =
       std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
                                                             : std::filesystem::path("..");
 
   const std::filesystem::path vmPath = repoRoot / "src" / "Vm.cpp";
+  const std::filesystem::path vmExecutionPath = repoRoot / "src" / "VmExecution.cpp";
+  const std::filesystem::path vmDebugSessionInstructionPath =
+      repoRoot / "src" / "VmDebugSessionInstruction.cpp";
   const std::filesystem::path vmHeapHelpersPath = repoRoot / "src" / "VmHeapHelpers.cpp";
   const std::filesystem::path vmHeapHelpersHeaderPath = repoRoot / "src" / "VmHeapHelpers.h";
   REQUIRE(std::filesystem::exists(vmPath));
+  REQUIRE(std::filesystem::exists(vmExecutionPath));
+  REQUIRE(std::filesystem::exists(vmDebugSessionInstructionPath));
   REQUIRE(std::filesystem::exists(vmHeapHelpersPath));
   REQUIRE(std::filesystem::exists(vmHeapHelpersHeaderPath));
-  const std::string vmSource = readText(vmPath);
+  const std::string vmSource = readTexts({vmPath, vmExecutionPath, vmDebugSessionInstructionPath});
   const std::string vmHeapHelpersSource = readText(vmHeapHelpersPath);
   const std::string vmHeapHelpersHeaderSource = readText(vmHeapHelpersHeaderPath);
 

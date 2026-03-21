@@ -1900,11 +1900,10 @@ inline void expectExperimentalMapHelperReceiverConformance(const std::string &em
 }
 
 inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapMethodReceiverConformanceSource(),
-                                            "map_experimental_method_receiver",
-                                            emitMode,
-                                            21,
-                                            "");
+  expectMapConformanceCompileReject(makeExperimentalMapMethodReceiverConformanceSource(),
+                                    "map_experimental_method_receiver",
+                                    emitMode,
+                                    "unknown call target: /std/collections/experimental_map/map");
 }
 
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {

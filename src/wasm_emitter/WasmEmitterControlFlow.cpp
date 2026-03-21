@@ -5,6 +5,7 @@ namespace primec {
 namespace {
 
 constexpr uint8_t WasmBlockTypeVoid = 0x40;
+constexpr uint8_t WasmOpIf = 0x04;
 constexpr uint8_t WasmOpElse = 0x05;
 constexpr uint8_t WasmOpEnd = 0x0b;
 constexpr uint8_t WasmOpBlock = 0x02;

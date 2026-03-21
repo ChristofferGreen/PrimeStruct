@@ -727,7 +727,40 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (target.kind != Expr::Kind::Call) {
       return false;
     }
-    auto defIt = defMap_.find(resolveCalleePath(target));
+    const std::string resolvedTarget = resolveCalleePath(target);
+    auto matchesPath = [&](std::string_view basePath) {
+      return resolvedTarget == basePath || resolvedTarget.rfind(std::string(basePath) + "__t", 0) == 0;
+    };
+    if (matchesPath("/std/collections/map/map") ||
+        matchesPath("/std/collections/mapNew") ||
+        matchesPath("/std/collections/mapSingle") ||
+        matchesPath("/std/collections/mapDouble") ||
+        matchesPath("/std/collections/mapPair") ||
+        matchesPath("/std/collections/mapTriple") ||
+        matchesPath("/std/collections/mapQuad") ||
+        matchesPath("/std/collections/mapQuint") ||
+        matchesPath("/std/collections/mapSext") ||
+        matchesPath("/std/collections/mapSept") ||
+        matchesPath("/std/collections/mapOct") ||
+        matchesPath("/std/collections/experimental_map/mapNew") ||
+        matchesPath("/std/collections/experimental_map/mapSingle") ||
+        matchesPath("/std/collections/experimental_map/mapDouble") ||
+        matchesPath("/std/collections/experimental_map/mapPair") ||
+        matchesPath("/std/collections/experimental_map/mapTriple") ||
+        matchesPath("/std/collections/experimental_map/mapQuad") ||
+        matchesPath("/std/collections/experimental_map/mapQuint") ||
+        matchesPath("/std/collections/experimental_map/mapSext") ||
+        matchesPath("/std/collections/experimental_map/mapSept") ||
+        matchesPath("/std/collections/experimental_map/mapOct")) {
+      std::vector<std::string> args;
+      if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
+          args.size() == 2) {
+        keyTypeOut = args[0];
+        valueTypeOut = args[1];
+        return true;
+      }
+    }
+    auto defIt = defMap_.find(resolvedTarget);
     if (defIt == defMap_.end() || !defIt->second) {
       return false;
     }
@@ -1179,6 +1212,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
        normalizedMethodName == "at_unsafe") &&
       isDirectMapConstructorReceiverCall(receiver)) {
+    std::string keyType;
+    std::string valueType;
+    if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
+      error_ = "unknown call target: " +
+               preferredCanonicalExperimentalMapHelperTarget(normalizedMethodName);
+      return false;
+    }
     return setCollectionMethodTarget(preferredMapMethodTarget(receiver, normalizedMethodName));
   }
   if (normalizedMethodName == "count") {

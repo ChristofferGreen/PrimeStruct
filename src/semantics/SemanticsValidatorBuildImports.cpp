@@ -32,14 +32,6 @@ bool SemanticsValidator::buildImportAliases() {
     return false;
   };
 
-  auto isMathBuiltinName = [&](const std::string &name) -> bool {
-    Expr probe;
-    probe.name = name;
-    std::string builtinName;
-    return getBuiltinMathName(probe, builtinName, true) || getBuiltinClampName(probe, builtinName, true) ||
-           getBuiltinMinMaxName(probe, builtinName, true) || getBuiltinAbsSignName(probe, builtinName, true) ||
-           getBuiltinSaturateName(probe, builtinName, true) || isBuiltinMathConstant(name, true);
-  };
   const auto isGeneratedTemplateSpecializationName = [](const std::string &name) {
     const size_t marker = name.rfind("__t");
     if (marker == std::string::npos || marker + 3 >= name.size()) {
