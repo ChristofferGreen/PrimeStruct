@@ -273,6 +273,55 @@ bool isExperimentalMapConstructorHelperPath(const std::string &resolvedPath) {
          matchesPath("/std/collections/experimental_map/mapOct");
 }
 
+std::string experimentalVectorConstructorInferencePath(const std::string &resolvedPath) {
+  auto matchesPath = [&](std::string_view basePath) {
+    return resolvedPath == basePath || resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
+  };
+  if (matchesPath("/std/collections/vectorNew")) {
+    return "/std/collections/experimental_vector/vectorNew";
+  }
+  if (matchesPath("/std/collections/vectorSingle")) {
+    return "/std/collections/experimental_vector/vectorSingle";
+  }
+  if (matchesPath("/std/collections/vectorPair")) {
+    return "/std/collections/experimental_vector/vectorPair";
+  }
+  if (matchesPath("/std/collections/vectorTriple")) {
+    return "/std/collections/experimental_vector/vectorTriple";
+  }
+  if (matchesPath("/std/collections/vectorQuad")) {
+    return "/std/collections/experimental_vector/vectorQuad";
+  }
+  if (matchesPath("/std/collections/vectorQuint")) {
+    return "/std/collections/experimental_vector/vectorQuint";
+  }
+  if (matchesPath("/std/collections/vectorSext")) {
+    return "/std/collections/experimental_vector/vectorSext";
+  }
+  if (matchesPath("/std/collections/vectorSept")) {
+    return "/std/collections/experimental_vector/vectorSept";
+  }
+  if (matchesPath("/std/collections/vectorOct")) {
+    return "/std/collections/experimental_vector/vectorOct";
+  }
+  return {};
+}
+
+bool isExperimentalVectorConstructorHelperPath(const std::string &resolvedPath) {
+  auto matchesPath = [&](std::string_view basePath) {
+    return resolvedPath == basePath || resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
+  };
+  return matchesPath("/std/collections/experimental_vector/vectorNew") ||
+         matchesPath("/std/collections/experimental_vector/vectorSingle") ||
+         matchesPath("/std/collections/experimental_vector/vectorPair") ||
+         matchesPath("/std/collections/experimental_vector/vectorTriple") ||
+         matchesPath("/std/collections/experimental_vector/vectorQuad") ||
+         matchesPath("/std/collections/experimental_vector/vectorQuint") ||
+         matchesPath("/std/collections/experimental_vector/vectorSext") ||
+         matchesPath("/std/collections/experimental_vector/vectorSept") ||
+         matchesPath("/std/collections/experimental_vector/vectorOct");
+}
+
 bool resolvesExperimentalVectorValueTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   std::string base;
@@ -301,6 +350,29 @@ bool resolvesExperimentalVectorValueTypeText(const std::string &typeText) {
     normalizedResolvedPath.erase(normalizedResolvedPath.begin());
   }
   return normalizedResolvedPath.rfind("std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+bool extractVectorValueTypeFromTypeText(const std::string &typeText, std::string &valueTypeOut) {
+  valueTypeOut.clear();
+  std::string normalizedType = normalizeBindingTypeName(typeText);
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizedType, base, argText) || argText.empty()) {
+    return false;
+  }
+  const std::string normalizedBase = normalizeBindingTypeName(base);
+  if (normalizedBase != "vector" &&
+      normalizedBase != "Vector" &&
+      normalizedBase != "/std/collections/experimental_vector/Vector" &&
+      normalizedBase != "std/collections/experimental_vector/Vector") {
+    return false;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+    return false;
+  }
+  valueTypeOut = args.front();
+  return true;
 }
 
 uint64_t fnv1a64(const std::string &text) {

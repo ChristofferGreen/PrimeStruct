@@ -74,6 +74,15 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
       return "/std/collections/experimental_map/Map<" + joinTemplateArgs(expr.templateArgs) + ">";
     }
   }
+  if (!expr.isMethodCall && expr.templateArgs.size() == 1) {
+    const std::string experimentalPath = experimentalVectorConstructorInferencePath(resolved);
+    if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
+      return "/std/collections/experimental_vector/Vector<" + joinTemplateArgs(expr.templateArgs) + ">";
+    }
+    if (isExperimentalVectorConstructorHelperPath(resolved)) {
+      return "/std/collections/experimental_vector/Vector<" + joinTemplateArgs(expr.templateArgs) + ">";
+    }
+  }
   if (!expr.isMethodCall && expr.templateArgs.empty()) {
     const std::string experimentalPath = experimentalMapConstructorInferencePath(resolved);
     if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
@@ -118,12 +127,67 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
         }
       }
     }
+    const std::string experimentalVectorPath = experimentalVectorConstructorInferencePath(resolved);
+    if (!experimentalVectorPath.empty() && ctx.sourceDefs.count(experimentalVectorPath) > 0) {
+      const auto defIt = ctx.sourceDefs.find(resolved);
+      if (defIt != ctx.sourceDefs.end()) {
+        std::vector<std::string> inferredArgs;
+        std::string inferError;
+        if (inferImplicitTemplateArgs(defIt->second,
+                                      expr,
+                                      locals,
+                                      {},
+                                      SubstMap{},
+                                      {},
+                                      namespacePrefix,
+                                      const_cast<Context &>(ctx),
+                                      allowMathBare,
+                                      inferredArgs,
+                                      inferError) &&
+            inferredArgs.size() == 1) {
+          return "/std/collections/experimental_vector/Vector<" + joinTemplateArgs(inferredArgs) + ">";
+        }
+      }
+    }
+    if (isExperimentalVectorConstructorHelperPath(resolved)) {
+      const auto defIt = ctx.sourceDefs.find(resolved);
+      if (defIt != ctx.sourceDefs.end()) {
+        std::vector<std::string> inferredArgs;
+        std::string inferError;
+        if (inferImplicitTemplateArgs(defIt->second,
+                                      expr,
+                                      locals,
+                                      {},
+                                      SubstMap{},
+                                      {},
+                                      namespacePrefix,
+                                      const_cast<Context &>(ctx),
+                                      allowMathBare,
+                                      inferredArgs,
+                                      inferError) &&
+            inferredArgs.size() == 1) {
+          return "/std/collections/experimental_vector/Vector<" + joinTemplateArgs(inferredArgs) + ">";
+        }
+      }
+    }
   }
   const auto defIt = ctx.sourceDefs.find(resolved);
   if (defIt == ctx.sourceDefs.end()) {
     return {};
   }
   if (!expr.isMethodCall) {
+    const std::string experimentalVectorPath = experimentalVectorConstructorInferencePath(resolved);
+    if (!experimentalVectorPath.empty() && ctx.sourceDefs.count(experimentalVectorPath) > 0) {
+      for (const auto &transform : defIt->second.transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string valueType;
+        if (extractVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
+          return "/std/collections/experimental_vector/Vector<" + valueType + ">";
+        }
+      }
+    }
     const std::string experimentalPath = experimentalMapConstructorInferencePath(resolved);
     if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
       for (const auto &transform : defIt->second.transforms) {

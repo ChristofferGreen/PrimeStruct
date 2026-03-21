@@ -327,6 +327,58 @@ inline std::string makeStdlibWrapperVectorConstructorExplicitVectorBindingMismat
   return source;
 }
 
+inline std::string makeStdlibWrapperVectorConstructorAutoInferenceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[return<auto> effects(heap_alloc)]\n";
+  source += "buildValues([bool] wrapped) {\n";
+  source += "  if(wrapped,\n";
+  source += "    then() {\n";
+  source += "      return(wrapValues(/std/collections/vectorPair(11i32, 13i32)))\n";
+  source += "    },\n";
+  source += "    else() {\n";
+  source += "      return(/std/collections/vectorSingle(19i32))\n";
+  source += "    })\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [auto mut] values{/std/collections/vectorNew<i32>()}\n";
+  source += "  /std/collections/vector/push<i32>(values, 3i32)\n";
+  source += "  /std/collections/vector/push<i32>(values, 5i32)\n";
+  source += "  [auto mut] wrapped{buildValues(true)}\n";
+  source += "  /std/collections/vector/push<i32>(wrapped, 17i32)\n";
+  source += "  [auto] single{buildValues(false)}\n";
+  source += "  return(plus(/std/collections/vector/count<i32>(values),\n";
+  source += "      plus(/std/collections/vector/at<i32>(values, 0i32),\n";
+  source += "          plus(/std/collections/vector/count<i32>(wrapped),\n";
+  source += "              plus(/std/collections/vector/at<i32>(wrapped, 1i32),\n";
+  source += "                  plus(/std/collections/vector/at_unsafe<i32>(wrapped, 2i32),\n";
+  source += "                      /std/collections/vector/at<i32>(single, 0i32))))))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeStdlibWrapperVectorConstructorAutoInferenceMismatchSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [auto] values{wrapValues(/std/collections/vectorPair(2i32, false))}\n";
+  source += "  return(0i32)\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorNamespaceNamedArgsSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -933,6 +985,23 @@ inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchRej
       "vector_wrapper_constructor_explicit_vector_binding_mismatch_" + emitMode,
       emitMode,
       "mismatch");
+}
+
+inline void expectStdlibWrapperVectorConstructorAutoInferenceConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeStdlibWrapperVectorConstructorAutoInferenceSource(),
+      "vector_wrapper_constructor_auto_inference_" + emitMode,
+      emitMode,
+      57);
+}
+
+inline void expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(
+      makeStdlibWrapperVectorConstructorAutoInferenceMismatchSource(),
+      "vector_wrapper_constructor_auto_inference_mismatch_" + emitMode,
+      emitMode,
+      "/std/collections/vectorPair",
+      "implicit template arguments conflict");
 }
 
 inline void expectCanonicalVectorNamespaceNamedArgsConformance(const std::string &emitMode) {

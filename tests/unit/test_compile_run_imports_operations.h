@@ -209,6 +209,14 @@ TEST_CASE("rejects stdlib wrapper vector constructor explicit Vector mismatch in
   expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject("exe");
 }
 
+TEST_CASE("compiles and runs stdlib wrapper vector constructors on inferred auto bindings in C++ emitter") {
+  expectStdlibWrapperVectorConstructorAutoInferenceConformance("exe");
+}
+
+TEST_CASE("rejects stdlib wrapper vector constructor auto inference mismatch in C++ emitter") {
+  expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("exe");
+}
+
 TEST_CASE("compiles and runs canonical namespaced vector constructor temporaries in C++ emitter") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("exe");
 }

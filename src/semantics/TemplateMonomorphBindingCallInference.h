@@ -71,6 +71,21 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
       return true;
     }
   }
+  if (!initializer.isMethodCall && initializer.templateArgs.size() == 1) {
+    const std::string experimentalPath = experimentalVectorConstructorInferencePath(resolved);
+    if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
+      handledOut = true;
+      infoOut.typeName = "/std/collections/experimental_vector/Vector";
+      infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+      return true;
+    }
+    if (isExperimentalVectorConstructorHelperPath(resolved)) {
+      handledOut = true;
+      infoOut.typeName = "/std/collections/experimental_vector/Vector";
+      infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+      return true;
+    }
+  }
   if (!initializer.isMethodCall && initializer.templateArgs.empty()) {
     const std::string experimentalPath = experimentalMapConstructorInferencePath(resolved);
     if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
@@ -161,6 +176,93 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
               extractMapKeyValueTypesFromTypeText(transform.templateArgs.front(), keyType, valueType)) {
             infoOut.typeName = "/std/collections/experimental_map/Map";
             infoOut.typeTemplateArg = joinTemplateArgs({keyType, valueType});
+            return true;
+          }
+        }
+      }
+    }
+    const std::string experimentalVectorPath = experimentalVectorConstructorInferencePath(resolved);
+    if (!experimentalVectorPath.empty() && ctx.sourceDefs.count(experimentalVectorPath) > 0) {
+      auto defIt = ctx.sourceDefs.find(resolved);
+      if (defIt != ctx.sourceDefs.end()) {
+        std::vector<std::string> inferredArgs;
+        std::string inferError;
+        if (inferImplicitTemplateArgs(defIt->second,
+                                      initializer,
+                                      locals,
+                                      params,
+                                      SubstMap{},
+                                      {},
+                                      initializer.namespacePrefix,
+                                      ctx,
+                                      allowMathBare,
+                                      inferredArgs,
+                                      inferError) &&
+            inferredArgs.size() == 1) {
+          infoOut.typeName = "/std/collections/experimental_vector/Vector";
+          infoOut.typeTemplateArg = joinTemplateArgs(inferredArgs);
+          return true;
+        }
+        if (!inferError.empty()) {
+          handledOut = true;
+          return false;
+        }
+        defIt = ctx.sourceDefs.find(resolved);
+        if (defIt == ctx.sourceDefs.end()) {
+          handledOut = true;
+          return false;
+        }
+        for (const auto &transform : defIt->second.transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string valueType;
+          if (extractVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
+            infoOut.typeName = "/std/collections/experimental_vector/Vector";
+            infoOut.typeTemplateArg = valueType;
+            return true;
+          }
+        }
+      }
+    }
+    if (isExperimentalVectorConstructorHelperPath(resolved)) {
+      auto defIt = ctx.sourceDefs.find(resolved);
+      if (defIt != ctx.sourceDefs.end()) {
+        std::vector<std::string> inferredArgs;
+        std::string inferError;
+        if (inferImplicitTemplateArgs(defIt->second,
+                                      initializer,
+                                      locals,
+                                      params,
+                                      SubstMap{},
+                                      {},
+                                      initializer.namespacePrefix,
+                                      ctx,
+                                      allowMathBare,
+                                      inferredArgs,
+                                      inferError) &&
+            inferredArgs.size() == 1) {
+          infoOut.typeName = "/std/collections/experimental_vector/Vector";
+          infoOut.typeTemplateArg = joinTemplateArgs(inferredArgs);
+          return true;
+        }
+        if (!inferError.empty()) {
+          handledOut = true;
+          return false;
+        }
+        defIt = ctx.sourceDefs.find(resolved);
+        if (defIt == ctx.sourceDefs.end()) {
+          handledOut = true;
+          return false;
+        }
+        for (const auto &transform : defIt->second.transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string valueType;
+          if (extractVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
+            infoOut.typeName = "/std/collections/experimental_vector/Vector";
+            infoOut.typeTemplateArg = valueType;
             return true;
           }
         }

@@ -2693,6 +2693,14 @@ TEST_CASE("rejects native stdlib wrapper vector constructor explicit Vector mism
   expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject("native");
 }
 
+TEST_CASE("compiles and runs native stdlib wrapper vector constructors on inferred auto bindings") {
+  expectStdlibWrapperVectorConstructorAutoInferenceConformance("native");
+}
+
+TEST_CASE("rejects native stdlib wrapper vector constructor auto inference mismatch") {
+  expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("native");
+}
+
 TEST_CASE("compiles and runs native canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("native");
 }

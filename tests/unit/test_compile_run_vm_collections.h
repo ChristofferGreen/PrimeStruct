@@ -2250,6 +2250,14 @@ TEST_CASE("rejects vm stdlib wrapper vector constructor explicit Vector mismatch
   expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject("vm");
 }
 
+TEST_CASE("runs vm stdlib wrapper vector constructors on inferred auto bindings") {
+  expectStdlibWrapperVectorConstructorAutoInferenceConformance("vm");
+}
+
+TEST_CASE("rejects vm stdlib wrapper vector constructor auto inference mismatch") {
+  expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("vm");
+}
+
 TEST_CASE("runs vm canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("vm");
 }

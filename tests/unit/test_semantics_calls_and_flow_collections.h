@@ -5048,6 +5048,102 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
+TEST_CASE("stdlib wrapper vector constructors infer experimental auto locals and auto returns") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[return<auto> effects(heap_alloc)]
+buildValues([bool] wrapped) {
+  if(wrapped,
+    then() {
+      return(/std/collections/vectorPair(11i32, 13i32))
+    },
+    else() {
+      return(/std/collections/vectorSingle(19i32))
+    })
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{/std/collections/vectorNew<i32>()}
+  /std/collections/vector/push<i32>(values, 3i32)
+  [auto mut] built{buildValues(true)}
+  /std/collections/vector/push<i32>(built, 17i32)
+  [auto] single{buildValues(false)}
+  return(plus(/std/collections/vector/count<i32>(values),
+      plus(/std/collections/vector/at<i32>(built, 2i32),
+          /std/collections/vector/at_unsafe<i32>(single, 0i32))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped vector constructors infer experimental auto locals") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{wrapValues(/std/collections/vectorPair(4i32, 7i32))}
+  /std/collections/vector/push<i32>(values, 9i32)
+  return(plus(/std/collections/vector/count<i32>(values), /std/collections/vector/at_unsafe<i32>(values, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("helper-wrapped vector constructor auto inference keeps template conflict diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] values{wrapValues(/std/collections/vectorPair(2i32, false))}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+}
+
+TEST_CASE("implicit vector constructor auto inference keeps template conflict diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] values{/std/collections/vectorPair(2i32, false)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map constructor resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
