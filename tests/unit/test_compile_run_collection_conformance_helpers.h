@@ -32,6 +32,7 @@ inline void expectVmSharedStdlibVectorConformanceHarness() {
     expectVectorTypeMismatchReject(emitMode, "/std/collections/*");
     expectVectorPopTypeMismatchReject(emitMode, "/std/collections/*");
     expectVectorPushTypeMismatchReject(emitMode, "/std/collections/*");
+    expectCanonicalVectorNamespaceExplicitVectorBindingConformance(emitMode);
     expectCanonicalVectorNamespaceNamedArgsConformance(emitMode);
     expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(emitMode);
     expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject(emitMode);

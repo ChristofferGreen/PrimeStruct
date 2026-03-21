@@ -207,6 +207,34 @@ inline std::string makeCanonicalVectorNamespaceConformanceSource() {
   return source;
 }
 
+inline std::string makeCanonicalVectorNamespaceExplicitVectorBindingSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32> mut] grown{/std/collections/vector/vector<i32>()}\n";
+  source += "  /std/collections/vector/reserve<i32>(grown, 2i32)\n";
+  source += "  [i32] reserved{/std/collections/vector/capacity<i32>(grown)}\n";
+  source += "  /std/collections/vector/push(grown, 11i32)\n";
+  source += "  /std/collections/vector/push(grown, 22i32)\n";
+  source += "  /std/collections/vector/push(grown, 33i32)\n";
+  source += "  [i32 mut] total{plus(reserved, /std/collections/vector/count<i32>(grown))}\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at<i32>(grown, 0i32)))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(grown, 1i32)))\n";
+  source += "  [Vector<i32> mut] shaped{/std/collections/vector/vector<i32>(10i32, 20i32, 30i32, 40i32)}\n";
+  source += "  /std/collections/vector/remove_at<i32>(shaped, 1i32)\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at<i32>(shaped, 1i32)))\n";
+  source += "  /std/collections/vector/remove_swap<i32>(shaped, 0i32)\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(shaped, 0i32)))\n";
+  source += "  /std/collections/vector/pop<i32>(shaped)\n";
+  source += "  assign(total, plus(total, /std/collections/vector/count<i32>(shaped)))\n";
+  source += "  /std/collections/vector/clear<i32>(shaped)\n";
+  source += "  return(plus(total, /std/collections/vector/count<i32>(shaped)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorNamespaceNamedArgsSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -771,6 +799,14 @@ inline void expectCanonicalVectorNamespaceConformance(const std::string &emitMod
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorNamespaceConformanceSource(),
       "vector_namespace_canonical_" + emitMode,
+      emitMode,
+      109);
+}
+
+inline void expectCanonicalVectorNamespaceExplicitVectorBindingConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorNamespaceExplicitVectorBindingSource(),
+      "vector_namespace_canonical_explicit_vector_binding_" + emitMode,
       emitMode,
       109);
 }

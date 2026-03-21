@@ -2230,6 +2230,10 @@ TEST_CASE("runs vm canonical namespaced vector helpers") {
   expectCanonicalVectorNamespaceConformance("vm");
 }
 
+TEST_CASE("runs vm canonical namespaced vector helpers on explicit Vector bindings") {
+  expectCanonicalVectorNamespaceExplicitVectorBindingConformance("vm");
+}
+
 TEST_CASE("runs vm canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("vm");
 }

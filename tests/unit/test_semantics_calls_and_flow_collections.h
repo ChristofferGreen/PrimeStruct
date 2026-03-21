@@ -4916,6 +4916,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector helpers accept explicit Vector bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  /std/collections/vector/push(values, 6i32)
+  [i32] c{/std/collections/vector/count(values)}
+  [i32] k{/std/collections/vector/capacity(values)}
+  [i32] first{/std/collections/vector/at(values, 0i32)}
+  [i32] second{/std/collections/vector/at_unsafe(values, 2i32)}
+  /std/collections/vector/pop(values)
+  return(plus(plus(plus(c, k), plus(first, second)), /std/collections/vector/count(values)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced map constructor resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*

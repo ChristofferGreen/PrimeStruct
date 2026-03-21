@@ -189,6 +189,10 @@ TEST_CASE("compiles and runs canonical namespaced vector helpers in C++ emitter"
   expectCanonicalVectorNamespaceConformance("exe");
 }
 
+TEST_CASE("compiles and runs canonical namespaced vector helpers on explicit Vector bindings in C++ emitter") {
+  expectCanonicalVectorNamespaceExplicitVectorBindingConformance("exe");
+}
+
 TEST_CASE("compiles and runs canonical namespaced vector constructor temporaries in C++ emitter") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("exe");
 }

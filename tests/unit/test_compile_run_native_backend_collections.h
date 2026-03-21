@@ -2673,6 +2673,10 @@ TEST_CASE("compiles and runs native canonical namespaced vector helpers") {
   expectCanonicalVectorNamespaceConformance("native");
 }
 
+TEST_CASE("compiles and runs native canonical namespaced vector helpers on explicit Vector bindings") {
+  expectCanonicalVectorNamespaceExplicitVectorBindingConformance("native");
+}
+
 TEST_CASE("compiles and runs native canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("native");
 }
