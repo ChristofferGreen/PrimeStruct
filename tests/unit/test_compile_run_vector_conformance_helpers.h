@@ -272,6 +272,61 @@ inline std::string makeStdlibWrapperVectorHelperExplicitVectorBindingMismatchSou
   return source;
 }
 
+inline std::string makeStdlibWrapperVectorConstructorExplicitVectorBindingSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[return<Vector<i32>> effects(heap_alloc)]\n";
+  source += "buildValues() {\n";
+  source += "  return(/std/collections/vectorPair<i32>(2i32, 4i32))\n";
+  source += "}\n\n";
+  source += "[return<i32> effects(heap_alloc)]\n";
+  source += "scoreValues([Vector<i32>] values) {\n";
+  source += "  return(plus(/std/collections/vector/count<i32>(values), /std/collections/vector/at_unsafe<i32>(values, 1i32)))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32> mut] direct{/std/collections/vectorPair<i32>(4i32, 5i32)}\n";
+  source += "  [Vector<i32>] wrapped{wrapValues(/std/collections/vectorSingle<i32>(6i32))}\n";
+  source += "  [Vector<i32> mut] assigned{/std/collections/vectorNew<i32>()}\n";
+  source += "  assign(assigned, buildValues())\n";
+  source += "  /std/collections/vector/push<i32>(direct, 7i32)\n";
+  source += "  [i32 mut] total{scoreValues(/std/collections/vectorPair<i32>(1i32, 3i32))}\n";
+  source += "  assign(total, plus(total, /std/collections/vector/count<i32>(direct)))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at<i32>(direct, 0i32)))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(direct, 2i32)))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at<i32>(wrapped, 0i32)))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/count<i32>(assigned)))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(assigned, 1i32)))\n";
+  source += "  return(total)\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeStdlibWrapperVectorConstructorExplicitVectorBindingMismatchSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[return<Vector<i32>> effects(heap_alloc)]\n";
+  source += "buildValues() {\n";
+  source += "  return(/std/collections/vectorPair<i32>(2i32, false))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32>] values{wrapValues(buildValues())}\n";
+  source += "  return(/std/collections/vector/count<i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorNamespaceNamedArgsSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -860,6 +915,22 @@ inline void expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject(c
   expectVectorConformanceCompileReject(
       makeStdlibWrapperVectorHelperExplicitVectorBindingMismatchSource(),
       "vector_wrapper_explicit_vector_binding_mismatch_" + emitMode,
+      emitMode,
+      "mismatch");
+}
+
+inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeStdlibWrapperVectorConstructorExplicitVectorBindingSource(),
+      "vector_wrapper_constructor_explicit_vector_binding_" + emitMode,
+      emitMode,
+      31);
+}
+
+inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(
+      makeStdlibWrapperVectorConstructorExplicitVectorBindingMismatchSource(),
+      "vector_wrapper_constructor_explicit_vector_binding_mismatch_" + emitMode,
       emitMode,
       "mismatch");
 }

@@ -201,6 +201,14 @@ TEST_CASE("rejects stdlib wrapper vector helper explicit Vector mismatch in C++ 
   expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject("exe");
 }
 
+TEST_CASE("compiles and runs stdlib wrapper vector constructors on explicit Vector bindings in C++ emitter") {
+  expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance("exe");
+}
+
+TEST_CASE("rejects stdlib wrapper vector constructor explicit Vector mismatch in C++ emitter") {
+  expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject("exe");
+}
+
 TEST_CASE("compiles and runs canonical namespaced vector constructor temporaries in C++ emitter") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("exe");
 }

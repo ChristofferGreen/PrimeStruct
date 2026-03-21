@@ -4980,6 +4980,74 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
+TEST_CASE("stdlib wrapper vector constructors accept explicit Vector destinations") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[return<Vector<i32>> effects(heap_alloc)]
+buildValues() {
+  return(/std/collections/vectorPair<i32>(2i32, 4i32))
+}
+
+[return<i32> effects(heap_alloc)]
+scoreValues([Vector<i32>] values) {
+  return(plus(/std/collections/vector/count<i32>(values), /std/collections/vector/at_unsafe<i32>(values, 1i32)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] direct{/std/collections/vectorPair<i32>(4i32, 5i32)}
+  [Vector<i32>] wrapped{wrapValues(/std/collections/vectorSingle<i32>(6i32))}
+  [Vector<i32> mut] assigned{/std/collections/vectorNew<i32>()}
+  assign(assigned, buildValues())
+  /std/collections/vector/push<i32>(direct, 7i32)
+  [i32 mut] total{scoreValues(/std/collections/vectorPair<i32>(1i32, 3i32))}
+  assign(total, plus(total, /std/collections/vector/count<i32>(direct)))
+  assign(total, plus(total, /std/collections/vector/at<i32>(direct, 0i32)))
+  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(direct, 2i32)))
+  assign(total, plus(total, /std/collections/vector/at<i32>(wrapped, 0i32)))
+  assign(total, plus(total, /std/collections/vector/count<i32>(assigned)))
+  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(assigned, 1i32)))
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib wrapper vector constructors keep mismatch diagnostics on explicit Vector destinations") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[return<Vector<i32>> effects(heap_alloc)]
+buildValues() {
+  return(/std/collections/vectorPair<i32>(2i32, false))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32>] values{wrapValues(buildValues())}
+  return(/std/collections/vector/count<i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mismatch") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map constructor resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
