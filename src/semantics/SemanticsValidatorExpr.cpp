@@ -791,8 +791,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         resolved = methodResolved;
         resolvedMethod = false;
       }
-    } else if (isDirectStdNamespacedVectorCountWrapperMapTarget) {
-      error_ = "template arguments required for /std/collections/vector/count";
+    } else if (isDirectStdNamespacedVectorCountWrapperMapTarget &&
+               !hasDeclaredDefinitionPath("/std/collections/vector/count")) {
+      error_ = "unknown call target: /std/collections/vector/count";
       return false;
     } else if (!expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
                defMap_.find("/std/collections/vector/count") == defMap_.end() &&
