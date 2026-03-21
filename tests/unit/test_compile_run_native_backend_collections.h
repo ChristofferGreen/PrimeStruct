@@ -2679,8 +2679,8 @@ TEST_CASE("compiles and runs native experimental vector helper runtime contracts
   expectExperimentalVectorRuntimeContracts("native");
 }
 
-TEST_CASE("rejects native experimental vector ownership-sensitive helpers") {
-  expectExperimentalVectorOwnershipRejects("native");
+TEST_CASE("compiles and runs native experimental vector ownership-sensitive helpers") {
+  expectExperimentalVectorOwnershipContracts("native");
 }
 TEST_CASE("compiles and runs native vector pop empty runtime contract") {
   SUBCASE("call") {

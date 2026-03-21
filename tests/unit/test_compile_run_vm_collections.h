@@ -2236,8 +2236,8 @@ TEST_CASE("runs vm experimental vector helper runtime contracts") {
   expectExperimentalVectorRuntimeContracts("vm");
 }
 
-TEST_CASE("rejects vm experimental vector ownership-sensitive helpers") {
-  expectExperimentalVectorOwnershipRejects("vm");
+TEST_CASE("runs vm experimental vector ownership-sensitive helpers") {
+  expectExperimentalVectorOwnershipContracts("vm");
 }
 
 TEST_CASE("runs vm vector pop empty runtime contract") {

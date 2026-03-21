@@ -5,7 +5,7 @@ namespace std {
   Vector<T>() {
     [public i32] count
     [public i32] capacity
-    [public Pointer<T>] data{/std/collections/experimental_buffer_checked/bufferAlloc<T>(1i32)}
+    [public Pointer<uninitialized<T>>] data{/std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
     [bool mut] ownsData{true}
 
     [mut]
@@ -20,13 +20,63 @@ namespace std {
     Destroy() {
       if(this.ownsData,
          then() {
-           /std/collections/experimental_buffer_checked/bufferFree<T>(this.data)
+           vectorDropRange<T>(this, this.count)
+           /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(this.data)
            assign(this.ownsData, false)
            assign(this.count, 0i32)
            assign(this.capacity, 0i32)
          },
          else() { })
     }
+  }
+
+  [return<Pointer<uninitialized<T>>>]
+  vectorSlotUnsafe<T>([Vector<T>] values, [i32] index) {
+    return(/std/collections/experimental_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
+  }
+
+  [return<void>]
+  vectorInitSlot<T>([Vector<T> mut] values, [i32] index, [T] value) {
+    [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
+    init(dereference(slot), value)
+  }
+
+  [return<void>]
+  vectorDropSlot<T>([Vector<T> mut] values, [i32] index) {
+    [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
+    drop(dereference(slot))
+  }
+
+  [return<T>]
+  vectorTakeSlot<T>([Vector<T> mut] values, [i32] index) {
+    [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
+    return(take(dereference(slot)))
+  }
+
+  [return<T>]
+  vectorBorrowSlot<T>([Vector<T>] values, [i32] index) {
+    [Pointer<uninitialized<T>>] slot{vectorSlotUnsafe<T>(values, index)}
+    return(borrow(dereference(slot)))
+  }
+
+  [return<void>]
+  vectorDropRange<T>([Vector<T> mut] values, [i32] limit) {
+    [i32 mut] index{0i32}
+    while(less_than(index, limit), do() {
+      vectorDropSlot<T>(values, index)
+      increment(index)
+    })
+  }
+
+  [effects(heap_alloc), return<void>]
+  vectorMovePrefixToBuffer<T>([Pointer<uninitialized<T>> mut] dst, [Vector<T> mut] values, [i32] limit) {
+    [i32 mut] index{0i32}
+    while(less_than(index, limit), do() {
+      [Pointer<uninitialized<T>> mut] nextSlot{
+          /std/collections/experimental_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
+      init(dereference(nextSlot), vectorTakeSlot<T>(values, index))
+      increment(index)
+    })
   }
 
   [effects(heap_alloc), return<Vector<T>>]
@@ -38,83 +88,8 @@ namespace std {
     return(Vector<T>(
         count,
         capacity,
-        /std/collections/experimental_buffer_checked/bufferAlloc<T>(allocCount),
+        /std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
         true))
-  }
-
-  [return<void>]
-  vectorWrite<T>([Vector<T> mut] values, [i32] index, [T] value) {
-    /std/collections/experimental_buffer_unchecked/bufferWriteUnsafe<T>(values.data, index, value)
-  }
-
-  [effects(heap_alloc), return<void>]
-  vectorValidateConstructorElementType<T>([T] value) {
-    if(false,
-       then() {
-         [vector<T> mut] guard{/vector/vector<T>(value)}
-         clear(guard)
-       },
-       else() { })
-  }
-
-  [effects(heap_alloc), return<void>]
-  vectorValidatePushElementType<T>([T] value) {
-    if(false,
-       then() {
-         [vector<T> mut] guard{/vector/vector<T>()}
-         push(guard, value)
-       },
-       else() { })
-  }
-
-  [effects(heap_alloc), return<void>]
-  vectorValidateReserveElementType<T>([i32] capacity) {
-    if(false,
-       then() {
-         [vector<T> mut] guard{/vector/vector<T>()}
-         reserve(guard, capacity)
-       },
-       else() { })
-  }
-
-  [effects(heap_alloc), return<void>]
-  vectorValidatePopElementType<T>() {
-    if(false,
-       then() {
-         [vector<T> mut] guard{/vector/vector<T>()}
-         pop(guard)
-       },
-       else() { })
-  }
-
-  [effects(heap_alloc), return<void>]
-  vectorValidateClearElementType<T>() {
-    if(false,
-       then() {
-         [vector<T> mut] guard{/vector/vector<T>()}
-         clear(guard)
-       },
-       else() { })
-  }
-
-  [effects(heap_alloc), return<void>]
-  vectorValidateRemoveAtElementType<T>([i32] index) {
-    if(false,
-       then() {
-         [vector<T> mut] guard{/vector/vector<T>()}
-         remove_at(guard, index)
-       },
-       else() { })
-  }
-
-  [effects(heap_alloc), return<void>]
-  vectorValidateRemoveSwapElementType<T>([i32] index) {
-    if(false,
-       then() {
-         [vector<T> mut] guard{/vector/vector<T>()}
-         remove_swap(guard, index)
-       },
-       else() { })
   }
 
   [return<void>]
@@ -135,7 +110,11 @@ namespace std {
          if(equal(allocCount, 0i32),
             then() { assign(allocCount, 1i32) },
             else() { })
-         assign(values.data, /std/collections/experimental_buffer_checked/bufferGrow<T>(values.data, allocCount))
+         [Pointer<uninitialized<T>> mut] grown{
+             /std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
+         vectorMovePrefixToBuffer<T>(grown, values, values.count)
+         /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(values.data)
+         assign(values.data, grown)
          assign(values.capacity, capacity)
        },
        else() { })
@@ -144,13 +123,10 @@ namespace std {
   [public effects(heap_alloc), return<Vector<T>>]
   vector<T>([args<T>] values) {
     [i32] valueCount{count(values)}
-    if(greater_than(valueCount, 0i32),
-       then() { vectorValidateConstructorElementType<T>(values[0i32]) },
-       else() { })
     [Vector<T> mut] out{vectorAlloc<T>(valueCount, valueCount)}
     [i32 mut] index{0i32}
     while(less_than(index, valueCount), do() {
-      vectorWrite<T>(out, index, values[index])
+      vectorInitSlot<T>(out, index, values[index])
       increment(index)
     })
     return(out)
@@ -213,13 +189,11 @@ namespace std {
 
   [public effects(heap_alloc), return<void>]
   vectorReserve<T>([Vector<T> mut] values, [i32] capacity) {
-    vectorValidateReserveElementType<T>(capacity)
     vectorReserveInternal<T>(values, capacity)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorPush<T>([Vector<T> mut] values, [T] value) {
-    vectorValidatePushElementType<T>(value)
     if(equal(values.count, values.capacity),
        then() {
          [i32 mut] nextCapacity{values.capacity}
@@ -229,35 +203,38 @@ namespace std {
          vectorReserveInternal<T>(values, nextCapacity)
        },
        else() { })
-    vectorWrite<T>(values, values.count, value)
+    vectorInitSlot<T>(values, values.count, value)
     assign(values.count, plus(values.count, 1i32))
   }
 
   [public effects(heap_alloc), return<void>]
   vectorPop<T>([Vector<T> mut] values) {
-    vectorValidatePopElementType<T>()
     if(equal(values.count, 0i32),
        then() {
          [vector<T> mut] empty{/vector/vector<T>()}
          pop(empty)
        },
-       else() { assign(values.count, minus(values.count, 1i32)) })
+       else() {
+         [i32] lastIndex{minus(values.count, 1i32)}
+         vectorDropSlot<T>(values, lastIndex)
+         assign(values.count, lastIndex)
+       })
   }
 
   [public effects(heap_alloc), return<void>]
   vectorClear<T>([Vector<T> mut] values) {
-    vectorValidateClearElementType<T>()
+    vectorDropRange<T>(values, values.count)
     assign(values.count, 0i32)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveAt<T>([Vector<T> mut] values, [i32] index) {
-    vectorValidateRemoveAtElementType<T>(index)
     vectorCheckIndex<T>(values, index)
     [i32] lastIndex{minus(values.count, 1i32)}
+    vectorDropSlot<T>(values, index)
     [i32 mut] current{index}
     while(less_than(current, lastIndex), do() {
-      vectorWrite<T>(values, current, vectorAtUnsafe<T>(values, plus(current, 1i32)))
+      vectorInitSlot<T>(values, current, vectorTakeSlot<T>(values, plus(current, 1i32)))
       increment(current)
     })
     assign(values.count, lastIndex)
@@ -265,24 +242,26 @@ namespace std {
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveSwap<T>([Vector<T> mut] values, [i32] index) {
-    vectorValidateRemoveSwapElementType<T>(index)
     vectorCheckIndex<T>(values, index)
     [i32] lastIndex{minus(values.count, 1i32)}
     if(less_than(index, lastIndex),
-       then() { vectorWrite<T>(values, index, vectorAtUnsafe<T>(values, lastIndex)) },
-       else() { })
+       then() {
+         vectorDropSlot<T>(values, index)
+         vectorInitSlot<T>(values, index, vectorTakeSlot<T>(values, lastIndex))
+       },
+       else() { vectorDropSlot<T>(values, lastIndex) })
     assign(values.count, lastIndex)
   }
 
   [public return<T>]
   vectorAt<T>([Vector<T>] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
-    return(/std/collections/experimental_buffer_unchecked/bufferReadUnsafe<T>(values.data, index))
+    return(vectorBorrowSlot<T>(values, index))
   }
 
   [public return<T>]
   vectorAtUnsafe<T>([Vector<T>] values, [i32] index) {
-    return(/std/collections/experimental_buffer_unchecked/bufferReadUnsafe<T>(values.data, index))
+    return(vectorBorrowSlot<T>(values, index))
   }
   }
   }

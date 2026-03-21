@@ -2836,6 +2836,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental vector ownership-sensitive helpers accept non-trivial elements") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[struct]
+Owned() {
+  [i32 mut] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, other.value)
+    assign(other.value, 0i32)
+  }
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<Owned> mut] values{vectorPair<Owned>(Owned(10i32), Owned(20i32))}
+  vectorPush<Owned>(values, Owned(30i32))
+  vectorReserve<Owned>(values, 6i32)
+  [i32] picked{plus(vectorAt<Owned>(values, 0i32).value, vectorAtUnsafe<Owned>(values, 2i32).value)}
+  vectorPop<Owned>(values)
+  vectorRemoveAt<Owned>(values, 0i32)
+  vectorRemoveSwap<Owned>(values, 0i32)
+  vectorClear<Owned>(values)
+  return(picked)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("push on mutable vector field access reports vector-binding diagnostics") {
   const std::string source = R"(
 import /std/collections/*

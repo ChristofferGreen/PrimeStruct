@@ -463,45 +463,102 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
   return source;
 }
 
-inline std::string makeExperimentalVectorOwnershipRejectSource(const std::string &mode) {
+inline std::string makeExperimentalVectorOwnedDropConformanceSource() {
+  std::string source;
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[struct]\n";
+  source += "Tracked() {\n";
+  source += "  [Reference<i32> mut] drops\n";
+  source += "  [i32 mut] value{0i32}\n";
+  source += "  [bool mut] armed{true}\n\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this.drops, other.drops)\n";
+  source += "    assign(this.value, other.value)\n";
+  source += "    assign(this.armed, other.armed)\n";
+  source += "    assign(other.armed, false)\n";
+  source += "  }\n\n";
+  source += "  Destroy() {\n";
+  source += "    if(this.armed,\n";
+  source += "       then() { increment(dereference(this.drops)) },\n";
+  source += "       else() { })\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<void>]\n";
+  source += "destroy_pair([Reference<i32>] drops) {\n";
+  source += "  [Vector<Tracked>] values{vectorPair<Tracked>(Tracked(drops, 1i32), Tracked(drops, 2i32))}\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [i32 mut] destroyDrops{0i32}\n";
+  source += "  destroy_pair(location(destroyDrops))\n";
+  source += "  [i32 mut] popDrops{0i32}\n";
+  source += "  [Vector<Tracked> mut] popped{vectorSingle<Tracked>(Tracked(location(popDrops), 3i32))}\n";
+  source += "  vectorPop<Tracked>(popped)\n";
+  source += "  [i32 mut] clearDrops{0i32}\n";
+  source += "  [Vector<Tracked> mut] cleared{vectorPair<Tracked>(Tracked(location(clearDrops), 4i32), "
+            "Tracked(location(clearDrops), 5i32))}\n";
+  source += "  vectorClear<Tracked>(cleared)\n";
+  source += "  return(plus(destroyDrops, plus(popDrops, clearDrops)))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeExperimentalVectorRelocationConformanceSource() {
+  std::string source;
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[struct]\n";
+  source += "Mover() {\n";
+  source += "  [i32 mut] value{0i32}\n\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this.value, other.value)\n";
+  source += "    assign(other.value, 0i32)\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<Mover> mut] values{vectorNew<Mover>()}\n";
+  source += "  vectorPush<Mover>(values, Mover(11i32))\n";
+  source += "  vectorReserve<Mover>(values, 4i32)\n";
+  source += "  vectorPush<Mover>(values, Mover(22i32))\n";
+  source += "  vectorPush<Mover>(values, Mover(33i32))\n";
+  source += "  return(plus(vectorCapacity<Mover>(values),\n";
+  source += "      plus(vectorCount<Mover>(values),\n";
+  source += "          plus(vectorAt<Mover>(values, 0i32).value,\n";
+  source += "              plus(vectorAtUnsafe<Mover>(values, 1i32).value,\n";
+  source += "                   vectorAt<Mover>(values, 2i32).value)))))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeExperimentalVectorRemovalConformanceSource() {
   std::string source;
   source += "import /std/collections/experimental_vector/*\n\n";
   source += "[struct]\n";
   source += "Owned() {\n";
-  source += "  [i32] value{1i32}\n\n";
+  source += "  [i32 mut] value{0i32}\n\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this.value, other.value)\n";
+  source += "    assign(other.value, 0i32)\n";
+  source += "  }\n\n";
   source += "  Destroy() {\n";
   source += "  }\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  if (mode == "constructor") {
-    source += "  [Vector<Owned>] values{vectorSingle<Owned>(Owned())}\n";
-    source += "  return(vectorCount<Owned>(values))\n";
-  } else if (mode == "push") {
-    source += "  [Vector<Owned> mut] values{vectorNew<Owned>()}\n";
-    source += "  vectorPush<Owned>(values, Owned())\n";
-    source += "  return(vectorCount<Owned>(values))\n";
-  } else if (mode == "reserve") {
-    source += "  [Vector<Owned> mut] values{vectorNew<Owned>()}\n";
-    source += "  vectorReserve<Owned>(values, 4i32)\n";
-    source += "  return(vectorCapacity<Owned>(values))\n";
-  } else if (mode == "pop") {
-    source += "  [Vector<Owned> mut] values{vectorSingle<Owned>(Owned())}\n";
-    source += "  vectorPop<Owned>(values)\n";
-    source += "  return(vectorCount<Owned>(values))\n";
-  } else if (mode == "clear") {
-    source += "  [Vector<Owned> mut] values{vectorSingle<Owned>(Owned())}\n";
-    source += "  vectorClear<Owned>(values)\n";
-    source += "  return(vectorCount<Owned>(values))\n";
-  } else if (mode == "remove_at") {
-    source += "  [Vector<Owned> mut] values{vectorPair<Owned>(Owned(), Owned())}\n";
-    source += "  vectorRemoveAt<Owned>(values, 0i32)\n";
-    source += "  return(vectorCount<Owned>(values))\n";
-  } else {
-    source += "  [Vector<Owned> mut] values{vectorPair<Owned>(Owned(), Owned())}\n";
-    source += "  vectorRemoveSwap<Owned>(values, 0i32)\n";
-    source += "  return(vectorCount<Owned>(values))\n";
-  }
+  source += "  [Vector<Owned> mut] values{vectorQuad<Owned>(Owned(10i32), Owned(20i32), Owned(30i32), Owned(40i32))}\n";
+  source += "  vectorRemoveAt<Owned>(values, 1i32)\n";
+  source += "  [i32] afterRemoveAt{plus(vectorCount<Owned>(values),\n";
+  source += "      plus(vectorAt<Owned>(values, 0i32).value,\n";
+  source += "          plus(vectorAtUnsafe<Owned>(values, 1i32).value,\n";
+  source += "               vectorAt<Owned>(values, 2i32).value)))}\n";
+  source += "  vectorRemoveSwap<Owned>(values, 0i32)\n";
+  source += "  return(plus(afterRemoveAt,\n";
+  source += "      plus(vectorCount<Owned>(values),\n";
+  source += "          plus(vectorAt<Owned>(values, 0i32).value,\n";
+  source += "               vectorAtUnsafe<Owned>(values, 1i32).value))))\n";
   source += "}\n";
   return source;
 }
@@ -917,23 +974,19 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
   CHECK(readFile(errPath) == expectedError);
 }
 
-inline void expectExperimentalVectorOwnershipReject(const std::string &emitMode,
-                                                    const std::string &mode,
-                                                    const std::string &expectedError) {
-  const std::string source = makeExperimentalVectorOwnershipRejectSource(mode);
-  const std::string srcPath = writeTemp("experimental_vector_ownership_" + mode + "_" + emitMode + ".prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       ("primec_experimental_vector_ownership_" + mode + "_" + emitMode + "_out.txt"))
-          .string();
-
-  const std::string command = emitMode == "vm"
-                                  ? "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
-                                        quoteShellArg(outPath) + " 2>&1"
-                                  : "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                        " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(command) == 2);
-  CHECK(readFile(outPath).find(expectedError) != std::string::npos);
+inline void expectExperimentalVectorOwnershipConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(makeExperimentalVectorOwnedDropConformanceSource(),
+                                     "experimental_vector_owned_drop_" + emitMode,
+                                     emitMode,
+                                     5);
+  expectVectorConformanceProgramRuns(makeExperimentalVectorRelocationConformanceSource(),
+                                     "experimental_vector_owned_relocation_" + emitMode,
+                                     emitMode,
+                                     73);
+  expectVectorConformanceProgramRuns(makeExperimentalVectorRemovalConformanceSource(),
+                                     "experimental_vector_owned_removal_" + emitMode,
+                                     emitMode,
+                                     155);
 }
 
 inline void expectExperimentalVectorVariadicConstructorConformance(const std::string &emitMode) {
