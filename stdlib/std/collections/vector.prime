@@ -1,3 +1,8 @@
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>([args<T>] values) {
+  return(/std/collections/experimental_vector/vector<T>([spread] values))
+}
+
 [public return<i32>]
 /std/collections/vector/count<T>([vector<T>] values) {
   return(/std/collections/vectorCount<T>(values))

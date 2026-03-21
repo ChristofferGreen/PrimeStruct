@@ -179,4 +179,4 @@ bool SemanticsValidator::buildDefinitionMaps() {
   return buildParameters();
 }
 
-} // namespace primec::semantics
+}  // namespace primec::semantics

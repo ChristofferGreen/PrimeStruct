@@ -185,7 +185,7 @@ inline std::string makeCanonicalVectorNamespaceConformanceSource() {
   source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [vector<i32> mut] grown{/std/collections/vector/vector<i32>()}\n";
+  source += "  [auto mut] grown{/std/collections/vector/vector<i32>()}\n";
   source += "  /std/collections/vector/reserve<i32>(grown, 2i32)\n";
   source += "  [i32] reserved{/std/collections/vector/capacity<i32>(grown)}\n";
   source += "  /std/collections/vector/push(grown, 11i32)\n";
@@ -194,8 +194,7 @@ inline std::string makeCanonicalVectorNamespaceConformanceSource() {
   source += "  [i32 mut] total{plus(reserved, /std/collections/vector/count<i32>(grown))}\n";
   source += "  assign(total, plus(total, /std/collections/vector/at<i32>(grown, 0i32)))\n";
   source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(grown, 1i32)))\n";
-  source +=
-      "  [vector<i32> mut] shaped{/std/collections/vector/vector<i32>(10i32, 20i32, 30i32, 40i32)}\n";
+  source += "  [auto mut] shaped{/std/collections/vector/vector<i32>(10i32, 20i32, 30i32, 40i32)}\n";
   source += "  /std/collections/vector/remove_at<i32>(shaped, 1i32)\n";
   source += "  assign(total, plus(total, /std/collections/vector/at<i32>(shaped, 1i32)))\n";
   source += "  /std/collections/vector/remove_swap<i32>(shaped, 0i32)\n";
@@ -213,7 +212,7 @@ inline std::string makeCanonicalVectorNamespaceNamedArgsSource() {
   source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [vector<i32>] values{/std/collections/vector/vector<i32>([second] 5i32, [first] 4i32)}\n";
+  source += "  [auto] values{/std/collections/vector/vector<i32>([second] 5i32, [first] 4i32)}\n";
   source += "  return(plus(/std/collections/vector/count<i32>(values),\n";
   source += "      plus(/std/collections/vector/at<i32>(values, 0i32),\n";
   source += "          /std/collections/vector/at_unsafe<i32>(values, 1i32))))\n";
@@ -226,7 +225,7 @@ inline std::string makeCanonicalVectorNamespaceTypeMismatchRejectSource() {
   source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, false)}\n";
+  source += "  [auto] values{/std/collections/vector/vector<i32>(1i32, false)}\n";
   source += "  return(/std/collections/vector/count<i32>(values))\n";
   source += "}\n";
   return source;
@@ -234,6 +233,17 @@ inline std::string makeCanonicalVectorNamespaceTypeMismatchRejectSource() {
 
 inline std::string makeCanonicalVectorNamespaceImportRequirementSource() {
   std::string source;
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [auto] values{/std/collections/vector/vector<i32>(4i32, 5i32)}\n";
+  source += "  return(count(values))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalVectorNamespaceExplicitBindingRejectSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}\n";
@@ -420,7 +430,7 @@ inline std::string makeCanonicalVectorNamespaceCountShadowSource() {
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32)}\n";
+  source += "  [vector<i32>] values{vector<i32>(1i32, 2i32)}\n";
   source += "  return(/std/collections/vector/count<i32>(values))\n";
   source += "}\n";
   return source;
@@ -435,9 +445,22 @@ inline std::string makeCanonicalVectorNamespacePushShadowSource() {
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [vector<i32> mut] values{/std/collections/vector/vector<i32>(1i32)}\n";
+  source += "  [vector<i32> mut] values{vector<i32>(1i32)}\n";
   source += "  /std/collections/vector/push(values, 5i32)\n";
   source += "  return(plus(count(values), at(values, 0i32)))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalVectorNamespaceTemporaryReceiverSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [i32] callCount{/std/collections/vector/count(/std/collections/vector/vector<i32>(4i32, 5i32, 6i32))}\n";
+  source += "  [i32] methodCount{/std/collections/vector/vector<i32>(7i32, 8i32).count()}\n";
+  source += "  [i32] tail{/std/collections/vector/vector<i32>(9i32, 10i32).at_unsafe(1i32)}\n";
+  source += "  return(plus(plus(callCount, methodCount), tail))\n";
   source += "}\n";
   return source;
 }
@@ -765,6 +788,28 @@ inline void expectCanonicalVectorNamespaceVmImportRequirement() {
                                        "/std/collections/vector/vector");
 }
 
+inline void expectCanonicalVectorNamespaceExplicitBindingReject(const std::string &emitMode) {
+  const std::string source = makeCanonicalVectorNamespaceExplicitBindingRejectSource();
+  const std::string srcPath = writeTemp("vector_namespace_canonical_binding_reject_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_vector_namespace_canonical_binding_reject_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find("mismatch") != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("mismatch") != std::string::npos);
+}
+
 inline void expectCanonicalVectorCountNamedArgsConformance(const std::string &emitMode) {
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorCountNamedArgsSource(),
@@ -985,6 +1030,14 @@ inline void expectCanonicalVectorNamespacePushShadow(const std::string &emitMode
       "vector_namespace_canonical_push_shadow_" + emitMode,
       emitMode,
       99);
+}
+
+inline void expectCanonicalVectorNamespaceTemporaryReceiverConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorNamespaceTemporaryReceiverSource(),
+      "vector_namespace_canonical_temporary_receiver_" + emitMode,
+      emitMode,
+      15);
 }
 
 inline void expectVectorHelperRuntimeContract(const std::string &emitMode,

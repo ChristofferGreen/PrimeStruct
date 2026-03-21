@@ -480,6 +480,12 @@ std::string typeNameForValueKind(LocalInfo::ValueKind kind) {
 }
 
 std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
+  if (base == "Vector" || base == "std/collections/experimental_vector/Vector" ||
+      base == "/std/collections/experimental_vector/Vector" ||
+      base.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+      base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+    return "vector";
+  }
   if (base == "/map" || base == "std/collections/map" || base == "/std/collections/map") {
     return "map";
   }

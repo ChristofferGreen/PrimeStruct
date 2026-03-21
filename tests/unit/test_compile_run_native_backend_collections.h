@@ -189,7 +189,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   /std/collections/vector/push(values, 6i32)
   [i32] countValue{/std/collections/vector/count(values)}
   [i32] capacityValue{/std/collections/vector/capacity(values)}
@@ -335,7 +335,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   [i32] headValue{/array/at(values, 1i32)}
   return(headValue)
 }
@@ -358,7 +358,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   [i32] tailValue{/array/at_unsafe(values, 1i32)}
   return(tailValue)
 }
@@ -383,7 +383,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   return(/array/count(values))
 }
 )";
@@ -1153,7 +1153,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   return(/array/capacity(values))
 }
 )";
@@ -1176,7 +1176,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   /array/push(values, 6i32)
   return(0i32)
 }
@@ -2671,6 +2671,14 @@ TEST_CASE("compiles and runs native shared vector conformance harness for stdlib
 
 TEST_CASE("compiles and runs native canonical namespaced vector helpers") {
   expectCanonicalVectorNamespaceConformance("native");
+}
+
+TEST_CASE("compiles and runs native canonical namespaced vector constructor temporaries") {
+  expectCanonicalVectorNamespaceTemporaryReceiverConformance("native");
+}
+
+TEST_CASE("rejects native canonical namespaced vector explicit builtin bindings") {
+  expectCanonicalVectorNamespaceExplicitBindingReject("native");
 }
 
 TEST_CASE("rejects native canonical namespaced vector mutators without imported helpers") {

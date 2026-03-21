@@ -16,7 +16,10 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
       if (!splitTopLevelTemplateArgs(argText, args)) {
         return false;
       }
-      return ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) ||
+      const std::string normalizedCollectionType = normalizeCollectionTypePath(base);
+      return (((base == "array" || base == "vector" || base == "soa_vector") ||
+               normalizedCollectionType == "/vector") &&
+              args.size() == 1) ||
              (isMapCollectionTypeName(base) && args.size() == 2);
     };
 
@@ -35,7 +38,10 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
       if (!splitTopLevelTemplateArgs(argText, args)) {
         return false;
       }
-      if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+      const std::string normalizedCollectionType = normalizeCollectionTypePath(base);
+      if (((base == "array" || base == "vector" || base == "soa_vector") ||
+           normalizedCollectionType == "/vector") &&
+          args.size() == 1) {
         bindingOut.typeName = base;
         bindingOut.typeTemplateArg = argText;
         return true;

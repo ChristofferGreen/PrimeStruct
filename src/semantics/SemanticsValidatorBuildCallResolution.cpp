@@ -90,6 +90,9 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     };
     std::string helperPath;
     if (resolvedPath == "/std/collections/vector/vector") {
+      if (defMap_.count(resolvedPath) > 0 && !hasNamedArguments(expr.argNames)) {
+        return resolvedPath;
+      }
       helperPath = vectorConstructorHelperPath();
     } else if (resolvedPath == "/std/collections/map/map") {
       helperPath = mapConstructorHelperPath();

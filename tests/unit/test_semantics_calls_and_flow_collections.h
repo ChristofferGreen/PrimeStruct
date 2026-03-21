@@ -4790,8 +4790,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
-  return(count(values))
+  [auto] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  return(/std/collections/vector/count(values))
 }
 )";
   std::string error;
@@ -4805,8 +4805,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>([first] 4i32, [second] 5i32)}
-  return(count(values))
+  [auto] values{/std/collections/vector/vector<i32>([first] 4i32, [second] 5i32)}
+  return(/std/collections/vector/count(values))
 }
 )";
   std::string error;
@@ -4814,11 +4814,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector constructor rejects explicit builtin vector binding") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mismatch") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector constructor requires imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [auto] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   return(count(values))
 }
 )";
