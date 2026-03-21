@@ -10491,6 +10491,77 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector capacity method accepts same-path helpers on local non-vector receivers") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/capacity([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity([array<i32>] values) {
+  return(42i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity([string] values) {
+  return(43i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  [string] text{"abc"raw_utf8}
+  return(plus(plus(values./std/collections/vector/capacity(),
+                    items./std/collections/vector/capacity()),
+              text./std/collections/vector/capacity()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector capacity method rejects map receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method rejects array receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(values./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method rejects string receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector capacity method rejects wrapper map receiver without helper") {
   const std::string source = R"(
 [return<map<i32, i32>>]

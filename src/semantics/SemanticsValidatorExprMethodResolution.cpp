@@ -1501,7 +1501,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
   if (!explicitVectorHelperPath.empty() &&
       explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
-      normalizedMethodName == "count" &&
+      (normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
       (normalizedTypeName == "string" || normalizedTypeName == "array" ||
        isMapCollectionTypeName(normalizedTypeName))) {
     resolvedOut = explicitVectorHelperPath;

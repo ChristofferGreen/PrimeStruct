@@ -11499,6 +11499,89 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter keeps local canonical slash-method vector capacity on same-path helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/vector/capacity([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/vector/capacity([array<i32>] values) {
+  return(42i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/vector/capacity([string] values) {
+  return(43i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  [string] text{"abc"raw_utf8}
+  return(plus(plus(values./std/collections/vector/capacity(),
+                    items./std/collections/vector/capacity()),
+              text./std/collections/vector/capacity()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_canonical_slash_vector_capacity_same_path.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_local_canonical_slash_vector_capacity_same_path_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 126);
+}
+
+TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity on map receiver before emission") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./std/collections/vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_canonical_slash_vector_capacity_map_deleted_stub.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_local_canonical_slash_vector_capacity_map_deleted_stub.txt")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/capacity") !=
+        std::string::npos);
+}
+
+TEST_CASE("rejects local canonical slash-method vector capacity on string receiver in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./std/collections/vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_canonical_slash_vector_capacity_string_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_local_canonical_slash_vector_capacity_string_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
+        std::string::npos);
+}
+
 TEST_CASE("compiles and runs vector namespaced count capacity slash methods through explicit alias helpers in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
