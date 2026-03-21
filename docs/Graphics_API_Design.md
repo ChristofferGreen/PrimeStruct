@@ -23,6 +23,10 @@ type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)` entry
 point for the locked v1 vertex wire type. The non-Result
 `Frame.render_pass(...)` plus `RenderPass.draw_mesh(...)` / `RenderPass.end()`
 path preserves deterministic zero-token / no-op fallback on invalid handles,
+and canonical plus experimental `Buffer<T>` now also expose `.prime`-authored
+`load(index)` / `store(index, value)` compute-storage wrappers alongside the
+existing `count()` / `empty()` / `is_valid()` / `readback()` / `allocate(...)`
+/ `upload(...)` helper surface,
 and the first real native-desktop host/runtime path now consumes a
 deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via
 the macOS host `--gfx` mode) emitted by the shared spinning-cube `.prime`
@@ -183,8 +187,12 @@ Buffer.count(self) -> i32
 Buffer.empty(self) -> bool
 Buffer.is_valid(self) -> bool
 Buffer.readback(self) -> array<T>
+Buffer.load(self, [index] i32) -> T
+Buffer.store(self, [index] i32, [value] T) -> void
 /std/gfx/Buffer/allocate<T>(count) -> Buffer<T>
 /std/gfx/Buffer/upload(values) -> Buffer<T>
+/std/gfx/Buffer/load(self, index) -> T
+/std/gfx/Buffer/store(self, index, value) -> void
 ```
 
 ### Locked Profile-Deduction Rule

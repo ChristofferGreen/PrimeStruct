@@ -591,6 +591,52 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib gfx Buffer compute access helpers cover experimental method and slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[compute workgroup_size(1, 1, 1)]
+/copy_values([Buffer<i32>] input, [Buffer<i32>] output) {
+  [i32] viaMethod{input.load(0i32)}
+  [i32] viaDirect{/std/gfx/experimental/Buffer/load(input, 0i32)}
+  output.store(0i32, viaMethod)
+  /std/gfx/experimental/Buffer/store(output, 1i32, viaDirect)
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical stdlib gfx Buffer compute access helpers cover method and slash-call wrappers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[compute workgroup_size(1, 1, 1)]
+/copy_values([Buffer<i32>] input, [Buffer<i32>] output) {
+  [i32] viaMethod{input.load(0i32)}
+  [i32] viaDirect{/std/gfx/Buffer/load(input, 0i32)}
+  output.store(0i32, viaMethod)
+  /std/gfx/Buffer/store(output, 1i32, viaDirect)
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib gfx Buffer allocation helpers cover experimental slash-call wrappers") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -696,6 +742,42 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/gfx/Buffer/readback") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer load slash-call helpers require stdlib import") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop([Buffer<i32>] data) {
+  [i32] value{/std/gfx/Buffer/load(data, 0i32)}
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/gfx/Buffer/load") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer store slash-call helpers require stdlib import") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop([Buffer<i32>] data) {
+  /std/gfx/Buffer/store(data, 0i32, 1i32)
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/gfx/Buffer/store") != std::string::npos);
 }
 
 TEST_CASE("canonical stdlib gfx Buffer allocate slash-call helpers require stdlib import") {

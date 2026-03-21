@@ -1,5 +1,16 @@
 #include "SemanticsValidator.h"
 
+#include <string_view>
+
+namespace {
+
+bool isStdlibBufferStoreWrapperDefinitionPath(std::string_view path) {
+  return path.rfind("/std/gfx/Buffer/store", 0) == 0 ||
+         path.rfind("/std/gfx/experimental/Buffer/store", 0) == 0;
+}
+
+} // namespace
+
 namespace primec::semantics {
 
 bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
@@ -241,7 +252,8 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
 
   if (isSimpleCallName(stmt, "buffer_store")) {
     handled = true;
-    if (!currentValidationContext_.definitionIsCompute) {
+    if (!currentValidationContext_.definitionIsCompute &&
+        !isStdlibBufferStoreWrapperDefinitionPath(currentValidationContext_.definitionPath)) {
       error_ = "buffer_store requires a compute definition";
       return false;
     }

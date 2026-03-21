@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -16,6 +17,16 @@ bool isNumericOrBoolReturnKind(ReturnKind kind) {
   return kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
          kind == ReturnKind::UInt64 || kind == ReturnKind::Float32 ||
          kind == ReturnKind::Float64 || kind == ReturnKind::Bool;
+}
+
+bool isStdlibBufferLoadWrapperDefinitionPath(std::string_view path) {
+  return path.rfind("/std/gfx/Buffer/load", 0) == 0 ||
+         path.rfind("/std/gfx/experimental/Buffer/load", 0) == 0;
+}
+
+bool isStdlibBufferStoreWrapperDefinitionPath(std::string_view path) {
+  return path.rfind("/std/gfx/Buffer/store", 0) == 0 ||
+         path.rfind("/std/gfx/experimental/Buffer/store", 0) == 0;
 }
 
 } // namespace
@@ -379,7 +390,8 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
   }
   if (isSimpleCallName(expr, "buffer_load")) {
     handledOut = true;
-    if (!currentValidationContext_.definitionIsCompute) {
+    if (!currentValidationContext_.definitionIsCompute &&
+        !isStdlibBufferLoadWrapperDefinitionPath(currentValidationContext_.definitionPath)) {
       error_ = "buffer_load requires a compute definition";
       return false;
     }
@@ -418,7 +430,8 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
   }
   if (isSimpleCallName(expr, "buffer_store")) {
     handledOut = true;
-    if (!currentValidationContext_.definitionIsCompute) {
+    if (!currentValidationContext_.definitionIsCompute &&
+        !isStdlibBufferStoreWrapperDefinitionPath(currentValidationContext_.definitionPath)) {
       error_ = "buffer_store requires a compute definition";
       return false;
     }

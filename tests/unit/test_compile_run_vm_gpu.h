@@ -31,6 +31,60 @@ main() {
   CHECK(runCommand(runCmd) == 14);
 }
 
+TEST_CASE("runs vm with canonical stdlib Buffer compute access helpers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[compute workgroup_size(1, 1, 1)]
+/copy_values([Buffer<i32>] input, [Buffer<i32>] output) {
+  [i32] viaMethod{input.load(0i32)}
+  [i32] viaDirect{/std/gfx/Buffer/load(input, 0i32)}
+  output.store(0i32, viaMethod)
+  /std/gfx/Buffer/store(output, 1i32, viaDirect)
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32)}
+  [Buffer<i32>] input{/std/gfx/Buffer/upload(values)}
+  [Buffer<i32>] output{Buffer<i32>(2i32)}
+  /std/gpu/dispatch(/copy_values, 1i32, 1i32, 1i32, input, output)
+  [array<i32>] result{output.readback()}
+  return(plus(result[0i32], result[1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_gfx_buffer_compute_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 8);
+}
+
+TEST_CASE("runs vm with experimental stdlib Buffer compute access helpers") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[compute workgroup_size(1, 1, 1)]
+/copy_values([Buffer<i32>] input, [Buffer<i32>] output) {
+  [i32] viaMethod{input.load(0i32)}
+  [i32] viaDirect{/std/gfx/experimental/Buffer/load(input, 0i32)}
+  output.store(0i32, viaMethod)
+  /std/gfx/experimental/Buffer/store(output, 1i32, viaDirect)
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  [array<i32>] values{array<i32>(5i32)}
+  [Buffer<i32>] input{/std/gfx/experimental/Buffer/upload(values)}
+  [Buffer<i32>] output{Buffer<i32>(2i32)}
+  /std/gpu/dispatch(/copy_values, 1i32, 1i32, 1i32, input, output)
+  [array<i32>] result{output.readback()}
+  return(plus(result[0i32], result[1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_compute_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 10);
+}
+
 TEST_CASE("runs vm with gpu dispatch fallback and variadic Buffer packs") {
   const std::string source = R"(
 [compute workgroup_size(1, 1, 1)]

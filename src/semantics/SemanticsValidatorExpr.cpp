@@ -1353,6 +1353,21 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (!resolvedMethod && resolved == "/file_error/why" && defMap_.find(resolved) == defMap_.end()) {
       resolvedMethod = true;
     }
+    const bool isStdlibBufferLoadWrapperCall =
+        resolved.rfind("/std/gfx/Buffer/load", 0) == 0 ||
+        resolved.rfind("/std/gfx/experimental/Buffer/load", 0) == 0;
+    const bool isStdlibBufferStoreWrapperCall =
+        resolved.rfind("/std/gfx/Buffer/store", 0) == 0 ||
+        resolved.rfind("/std/gfx/experimental/Buffer/store", 0) == 0;
+    if (!currentValidationContext_.definitionIsCompute &&
+        (defMap_.find(resolved) != defMap_.end() ||
+         hasDeclaredDefinitionPath(resolved) ||
+         hasImportedDefinitionPath(resolved)) &&
+        (isStdlibBufferLoadWrapperCall || isStdlibBufferStoreWrapperCall)) {
+      error_ = isStdlibBufferLoadWrapperCall ? "buffer_load requires a compute definition"
+                                             : "buffer_store requires a compute definition";
+      return false;
+    }
 
     if (hasNamedArguments(expr.argNames)) {
       auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {

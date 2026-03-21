@@ -290,6 +290,21 @@ main() {
   CHECK(error.find("buffer_load requires a compute definition") != std::string::npos);
 }
 
+TEST_CASE("canonical stdlib gfx Buffer load helper requires compute definition") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch) return<i32>]
+main() {
+  [Buffer<i32>] data{ Buffer<i32>(1i32) }
+  return(data.load(0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer_load requires a compute definition") != std::string::npos);
+}
+
 TEST_CASE("std gpu global_id requires compute definition") {
   const std::string source = R"(
 [return<i32>]
@@ -494,6 +509,22 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("buffer_store value type mismatch") != std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx Buffer store helper requires compute definition") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  [Buffer<i32>] data{ Buffer<i32>(1i32) }
+  data.store(0i32, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer_store requires a compute definition") != std::string::npos);
 }
 
 TEST_CASE("std gpu compute builtins validate") {

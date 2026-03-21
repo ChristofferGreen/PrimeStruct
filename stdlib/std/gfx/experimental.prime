@@ -249,6 +249,17 @@ namespace std {
     return(/std/gpu/readback(self))
   }
 
+  [public return<T>]
+  /Buffer/load<T>([Buffer<T>] self, [i32] index) {
+    return(/std/gpu/buffer_load(self, index))
+  }
+
+  [public return<void>]
+  /Buffer/store<T>([Buffer<T>] self, [i32] index, [T] value) {
+    /std/gpu/buffer_store(self, index, value)
+    return()
+  }
+
   [public effects(gpu_dispatch), return<Buffer<T>>]
   /Buffer/allocate<T>([i32] count) {
     return(/std/gpu/buffer<T>(count))
