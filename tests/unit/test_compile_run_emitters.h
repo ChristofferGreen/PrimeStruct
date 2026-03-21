@@ -12100,6 +12100,72 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/clear") != std::string::npos);
 }
 
+TEST_CASE("rejects explicit canonical vector push method without imported helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values./std/collections/vector/push(4i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_explicit_vector_push_canonical_method_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_explicit_vector_push_canonical_method_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/push") != std::string::npos);
+}
+
+TEST_CASE("rejects explicit canonical vector pop method without imported helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values./std/collections/vector/pop()
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_explicit_vector_pop_canonical_method_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_explicit_vector_pop_canonical_method_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/pop") != std::string::npos);
+}
+
+TEST_CASE("rejects explicit canonical vector reserve method without imported helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values./std/collections/vector/reserve(9i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_explicit_vector_reserve_canonical_method_deleted_stub_exe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_explicit_vector_reserve_canonical_method_deleted_stub.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/reserve") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs explicit canonical vector mutator method helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]

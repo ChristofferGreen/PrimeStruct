@@ -4493,6 +4493,48 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/clear") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector push method requires imported stdlib helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values./std/collections/vector/push(3i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/push") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector pop method requires imported stdlib helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values./std/collections/vector/pop()
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/pop") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector reserve method requires imported stdlib helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values./std/collections/vector/reserve(4i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/reserve") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector remove_at method requires imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
