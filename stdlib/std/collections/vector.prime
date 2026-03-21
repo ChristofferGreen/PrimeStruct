@@ -3,6 +3,62 @@
   return(/std/collections/experimental_vector/vector<T>([spread] values))
 }
 
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>([T] value) {
+  return(/std/collections/experimental_vector/vectorSingle<T>(value))
+}
+
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>([T] first, [T] second) {
+  return(/std/collections/experimental_vector/vectorPair<T>(first, second))
+}
+
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>([T] first, [T] second, [T] third) {
+  return(/std/collections/experimental_vector/vectorTriple<T>(first, second, third))
+}
+
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>([T] first, [T] second, [T] third, [T] fourth) {
+  return(/std/collections/experimental_vector/vectorQuad<T>(first, second, third, fourth))
+}
+
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth) {
+  return(/std/collections/experimental_vector/vectorQuint<T>(first, second, third, fourth, fifth))
+}
+
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth) {
+  return(/std/collections/experimental_vector/vectorSext<T>(first, second, third, fourth, fifth, sixth))
+}
+
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>(
+    [T] first,
+    [T] second,
+    [T] third,
+    [T] fourth,
+    [T] fifth,
+    [T] sixth,
+    [T] seventh) {
+  return(/std/collections/experimental_vector/vectorSept<T>(first, second, third, fourth, fifth, sixth, seventh))
+}
+
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>(
+    [T] first,
+    [T] second,
+    [T] third,
+    [T] fourth,
+    [T] fifth,
+    [T] sixth,
+    [T] seventh,
+    [T] eighth) {
+  return(
+      /std/collections/experimental_vector/vectorOct<T>(first, second, third, fourth, fifth, sixth, seventh, eighth))
+}
+
 [public return<i32>]
 /std/collections/vector/count<T>([vector<T>] values) {
   return(/std/collections/vectorCount<T>(values))

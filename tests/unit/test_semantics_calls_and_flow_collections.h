@@ -4814,6 +4814,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector constructor supports named-argument temporary receivers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(/std/collections/vector/count(/std/collections/vector/vector<i32>([second] 5i32, [first] 4i32)),
+              /std/collections/vector/vector<i32>([second] 8i32, [first] 7i32).count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector constructor rejects explicit builtin vector binding") {
   const std::string source = R"(
 import /std/collections/*
@@ -4821,6 +4836,21 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mismatch") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector constructor rejects named-argument explicit builtin vector binding") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{/std/collections/vector/vector<i32>([second] 5i32, [first] 4i32)}
   return(count(values))
 }
 )";

@@ -220,6 +220,19 @@ inline std::string makeCanonicalVectorNamespaceNamedArgsSource() {
   return source;
 }
 
+inline std::string makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [i32] callCount{/std/collections/vector/count(/std/collections/vector/vector<i32>([second] 5i32, [first] 4i32))}\n";
+  source += "  [i32] methodCount{/std/collections/vector/vector<i32>([second] 8i32, [first] 7i32).count()}\n";
+  source += "  [i32] tail{/std/collections/vector/vector<i32>([second] 12i32, [first] 11i32).at_unsafe(1i32)}\n";
+  source += "  return(plus(plus(callCount, methodCount), tail))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorNamespaceTypeMismatchRejectSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -227,6 +240,17 @@ inline std::string makeCanonicalVectorNamespaceTypeMismatchRejectSource() {
   source += "main() {\n";
   source += "  [auto] values{/std/collections/vector/vector<i32>(1i32, false)}\n";
   source += "  return(/std/collections/vector/count<i32>(values))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalVectorNamespaceNamedArgsExplicitBindingRejectSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32>] values{/std/collections/vector/vector<i32>([second] 5i32, [first] 4i32)}\n";
+  source += "  return(count(values))\n";
   source += "}\n";
   return source;
 }
@@ -759,6 +783,14 @@ inline void expectCanonicalVectorNamespaceNamedArgsConformance(const std::string
       11);
 }
 
+inline void expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
+      "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
+      emitMode,
+      16);
+}
+
 inline void expectCanonicalVectorNamespaceTypeMismatchReject(const std::string &emitMode) {
   const std::string source = makeCanonicalVectorNamespaceTypeMismatchRejectSource();
   const std::string srcPath = writeTemp("vector_namespace_canonical_type_mismatch_" + emitMode + ".prime", source);
@@ -794,6 +826,29 @@ inline void expectCanonicalVectorNamespaceExplicitBindingReject(const std::strin
   const std::string outPath =
       (std::filesystem::temp_directory_path() /
        ("primec_vector_namespace_canonical_binding_reject_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                               quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find("mismatch") != std::string::npos);
+    return;
+  }
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("mismatch") != std::string::npos);
+}
+
+inline void expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject(const std::string &emitMode) {
+  const std::string source = makeCanonicalVectorNamespaceNamedArgsExplicitBindingRejectSource();
+  const std::string srcPath =
+      writeTemp("vector_namespace_canonical_named_args_binding_reject_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       ("primec_vector_namespace_canonical_named_args_binding_reject_" + emitMode + "_out.txt"))
           .string();
 
   if (emitMode == "vm") {

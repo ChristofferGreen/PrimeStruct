@@ -2681,6 +2681,14 @@ TEST_CASE("rejects native canonical namespaced vector explicit builtin bindings"
   expectCanonicalVectorNamespaceExplicitBindingReject("native");
 }
 
+TEST_CASE("compiles and runs native canonical namespaced vector named-argument temporaries") {
+  expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance("native");
+}
+
+TEST_CASE("rejects native canonical namespaced vector named-argument explicit builtin bindings") {
+  expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject("native");
+}
+
 TEST_CASE("rejects native canonical namespaced vector mutators without imported helpers") {
   expectCanonicalVectorClearImportRequirement("native");
   expectCanonicalVectorRemoveAtImportRequirement("native");

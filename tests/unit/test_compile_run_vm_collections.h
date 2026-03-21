@@ -2238,6 +2238,14 @@ TEST_CASE("rejects vm canonical namespaced vector explicit builtin bindings") {
   expectCanonicalVectorNamespaceExplicitBindingReject("vm");
 }
 
+TEST_CASE("runs vm canonical namespaced vector named-argument temporaries") {
+  expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance("vm");
+}
+
+TEST_CASE("rejects vm canonical namespaced vector named-argument explicit builtin bindings") {
+  expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject("vm");
+}
+
 TEST_CASE("rejects vm canonical namespaced vector mutators without imported helpers") {
   expectCanonicalVectorClearImportRequirement("vm");
   expectCanonicalVectorRemoveAtImportRequirement("vm");

@@ -1267,8 +1267,7 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     if (expr.isMethodCall) {
       return resolvedPath;
     }
-    if (resolvedPath == "/std/collections/vector/vector" && ctx.sourceDefs.count(resolvedPath) > 0 &&
-        !hasNamedArguments(expr.argNames)) {
+    if (resolvedPath == "/std/collections/vector/vector" && ctx.sourceDefs.count(resolvedPath) > 0) {
       return resolvedPath;
     }
     auto vectorConstructorHelperPath = [&]() -> std::string {

@@ -197,6 +197,14 @@ TEST_CASE("rejects canonical namespaced vector explicit builtin bindings in C++ 
   expectCanonicalVectorNamespaceExplicitBindingReject("exe");
 }
 
+TEST_CASE("compiles and runs canonical namespaced vector named-argument temporaries in C++ emitter") {
+  expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance("exe");
+}
+
+TEST_CASE("rejects canonical namespaced vector named-argument explicit builtin bindings in C++ emitter") {
+  expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject("exe");
+}
+
 TEST_CASE("rejects canonical namespaced vector mutators without imported helpers in C++ emitter") {
   expectCanonicalVectorClearImportRequirement("exe");
   expectCanonicalVectorRemoveAtImportRequirement("exe");
