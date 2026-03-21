@@ -599,7 +599,8 @@
                 return false;
               }
               return callee->fullPath.rfind("/File/write", 0) == 0 ||
-                     callee->fullPath.rfind("/File/write_line", 0) == 0;
+                     callee->fullPath.rfind("/File/write_line", 0) == 0 ||
+                     callee->fullPath.rfind("/File/close", 0) == 0;
             },
             [&](const Expr &valueExpr,
                 const ir_lowerer::LocalMap &localMap,

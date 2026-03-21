@@ -1290,7 +1290,7 @@ main() {
   file.write_byte(67i32)?
   /File/write_bytes(file, bytes)?
   /File/flush(file)?
-  /File/close<Write>(file)?
+  file.close()?
   return(Result.ok())
 }
 
@@ -1331,7 +1331,7 @@ import /std/file/*
 main() {
   [File<Write>] file{ File<Write>("__PATH__"utf8)? }
   /File/write<Write, string>(file, "alpha"utf8)?
-  /File/close<Write>(file)?
+  file.close()?
   /File/write<Write, string>(file, "beta"utf8)
   return(Result.ok())
 }
@@ -1375,7 +1375,7 @@ main() {
   [string] text{"alpha"utf8}
   /File/write<Write, string>(file, text)?
   /File/write_line<Write, string>(file, "omega"utf8)?
-  /File/close<Write>(file)?
+  file.close()?
   return(Result.ok())
 }
 
@@ -1419,7 +1419,7 @@ main() {
   /File/write_line<Write, i32, string, i32, string, i32>(file, 255i32, " "utf8, 0i32, " "utf8, 0i32)?
   file.write("left"utf8, 1i32, "right"utf8)?
   file.write_line()?
-  /File/close<Write>(file)?
+  file.close()?
   return(Result.ok())
 }
 

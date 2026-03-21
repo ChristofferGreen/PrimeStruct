@@ -2971,6 +2971,44 @@ TEST_CASE("C++ emitter helper prefers stdlib File flush helper when present") {
   CHECK(resolved == "/File/flush");
 }
 
+TEST_CASE("C++ emitter helper prefers stdlib File close helper when present") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "close";
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "file";
+  call.args.push_back(receiver);
+  call.argNames.push_back(std::nullopt);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "File";
+  receiverInfo.typeTemplateArg = "Write";
+  localTypes.emplace("file", receiverInfo);
+
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+  std::string resolved;
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/file/close");
+
+  primec::Definition fileCloseDef;
+  fileCloseDef.fullPath = "/File/close";
+  defMap.emplace(fileCloseDef.fullPath, &fileCloseDef);
+
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/File/close");
+}
+
 TEST_CASE("C++ emitter helper prefers stdlib File multi-value helpers when present") {
   auto makeFileMethodCall = [](const std::string &methodName, size_t valueCount) {
     primec::Expr call;

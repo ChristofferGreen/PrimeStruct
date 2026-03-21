@@ -751,11 +751,11 @@ sum_two_files([string] a, [string] b) {
     `/File/read_byte(...)`, zero-to-five-value heterogenous `/File/write(...)` and
     `/File/write_line(...)` overload families,
     `/File/write_byte(...)`, `/File/write_bytes(...)`, `/File/flush(...)`, and
-    explicit slash-call `/File/close<Mode>(...)`.
+    `/File/close<Mode>(...)`.
     Imported method/free-call sugar now prefers those `.prime` wrappers for `read_byte`, `write`,
-    `write_line`, `write_byte`, `write_bytes`, and `flush` across that current zero-to-five-value
-    overload family, while `File<Mode>(path)`, wider multi-value `write(...)` / `write_line(...)`
-    arities, and receiver syntax `file.close()` remain builtin substrate for now.
+    `write_line`, `write_byte`, `write_bytes`, `flush`, and `close` across that current
+    zero-to-five-value overload family, while `File<Mode>(path)` and wider multi-value
+    `write(...)` / `write_line(...)` arities remain builtin substrate for now.
   - The stdlib file layer also defines `/FileError/why([FileError] err)` as the public wrapper over the
     intrinsic file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned
     helper surface while platform-specific code-to-string translation stays builtin substrate.

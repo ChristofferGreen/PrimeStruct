@@ -417,6 +417,10 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
   if (!expr.isMethodCall || expr.args.empty()) {
     return FileHandleMethodCallEmitResult::NotMatched;
   }
+  if ((expr.name == "write" || expr.name == "write_line" || expr.name == "close") && shouldBypassBuiltin &&
+      shouldBypassBuiltin(expr, localsIn)) {
+    return FileHandleMethodCallEmitResult::NotMatched;
+  }
   int32_t handleIndex = -1;
   const Expr &receiverExpr = expr.args.front();
   if (receiverExpr.kind == Expr::Kind::Name) {
@@ -487,11 +491,6 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
         emitInstruction,
         error);
   };
-
-  if ((expr.name == "write" || expr.name == "write_line") && shouldBypassBuiltin &&
-      shouldBypassBuiltin(expr, localsIn)) {
-    return FileHandleMethodCallEmitResult::NotMatched;
-  }
 
   if (expr.name == "write" || expr.name == "write_line") {
     if (!emitFileWriteCall(expr,

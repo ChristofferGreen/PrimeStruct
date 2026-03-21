@@ -51686,6 +51686,39 @@ TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
   instructions.clear();
   emitExprCalls = 0;
   nextLocal = 20;
+  primec::Expr closeExpr;
+  closeExpr.kind = primec::Expr::Kind::Call;
+  closeExpr.name = "close";
+  closeExpr.isMethodCall = true;
+  closeExpr.args = {receiver};
+  CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
+            closeExpr,
+            locals,
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &) {
+              return callExpr.name == "close";
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [&]() { return nextLocal++; },
+            emitInstruction,
+            getInstructionCount,
+            patchInstructionImm,
+            error) == Result::NotMatched);
+  CHECK(emitExprCalls == 0);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  emitExprCalls = 0;
+  nextLocal = 20;
   primec::Expr readExpr;
   readExpr.kind = primec::Expr::Kind::Call;
   readExpr.name = "read_byte";

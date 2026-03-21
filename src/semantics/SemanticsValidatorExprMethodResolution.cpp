@@ -238,7 +238,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
   auto preferredFileMethodTarget = [&](std::string_view helperName) {
     const std::string builtinPath = "/file/" + std::string(helperName);
-    if (helperName != "write" && helperName != "write_line") {
+    if (helperName != "write" && helperName != "write_line" && helperName != "close") {
       return builtinPath;
     }
     const std::string stdlibPath = "/File/" + std::string(helperName);

@@ -170,6 +170,7 @@ write_out([File<Write>] file, [array<i32>] bytes, [string] text) {
   [Result<FileError>] directBytes{/File/write_bytes(file, bytes)}
   [Result<FileError>] methodFlush{file.flush()}
   [Result<FileError>] directFlush{/File/flush(file)}
+  [Result<FileError>] methodClose{file.close()}
   [Result<FileError>] directClose{/File/close<Write>(file)}
   return()
 }
