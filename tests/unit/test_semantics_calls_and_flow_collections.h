@@ -13986,6 +13986,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced count slash method accepts same-path helper on map target") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([map<i32, i32>] values) {
+  return(47i32)
+}
+
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./vector/count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced count slash method map target without helper reports unknown method") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count slash method string target without helper reports unknown method") {
   const std::string source = R"(
 [return<string>]

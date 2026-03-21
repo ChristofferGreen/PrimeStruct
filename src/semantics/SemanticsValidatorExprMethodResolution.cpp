@@ -1418,9 +1418,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (receiver.kind == Expr::Kind::Call) {
     std::string receiverCollectionTypePath;
-    if (normalizedMethodName == "capacity" && !explicitVectorHelperPath.empty() &&
+    if (!explicitVectorHelperPath.empty() &&
         resolveCallCollectionTypePath(receiver, params, locals, receiverCollectionTypePath) &&
-        receiverCollectionTypePath != "/vector" && receiverCollectionTypePath != "/soa_vector") {
+        ((normalizedMethodName == "capacity" &&
+          receiverCollectionTypePath != "/vector" && receiverCollectionTypePath != "/soa_vector") ||
+         (normalizedMethodName == "count" &&
+          receiverCollectionTypePath == "/map"))) {
       resolvedOut = explicitVectorHelperPath;
       isBuiltinOut = false;
       return true;

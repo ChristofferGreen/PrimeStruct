@@ -8212,7 +8212,7 @@ main() {
   CHECK(runCommand(exePath) == 97);
 }
 
-TEST_CASE("C++ emitter lowers alias slash-method vector count on map receiver to deleted stub") {
+TEST_CASE("C++ emitter rejects alias slash-method vector count on map receiver before emission") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -8228,18 +8228,16 @@ main() {
       writeTemp("compile_cpp_alias_slash_vector_count_map_deleted_stub.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_alias_slash_vector_count_map_deleted_stub.cpp")
+       "primec_cpp_alias_slash_vector_count_map_deleted_stub.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_count_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_count_method_helper(wrapMap())") != std::string::npos);
-  CHECK(output.find("ps_map_count(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects alias slash-method vector count builtin fallback on map receiver in C++ emitter") {
+TEST_CASE("rejects alias slash-method vector count on map receiver in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -8261,7 +8259,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_count_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps alias slash-method vector count same-path helper on array receiver") {
