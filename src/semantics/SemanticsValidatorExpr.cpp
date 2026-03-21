@@ -794,6 +794,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     } else if (isDirectStdNamespacedVectorCountWrapperMapTarget) {
       error_ = "template arguments required for /std/collections/vector/count";
       return false;
+    } else if (!expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
+               defMap_.find("/std/collections/vector/count") == defMap_.end() &&
+               !hasImportedDefinitionPath("/std/collections/vector/count")) {
+      std::string elemType;
+      if (resolveStringTarget(expr.args.front()) || resolveArrayTarget(expr.args.front(), elemType)) {
+        error_ = "unknown call target: /std/collections/vector/count";
+        return false;
+      }
     }
     Expr rewrittenVectorHelperCall;
     if (this->tryRewriteBareVectorHelperCall(
