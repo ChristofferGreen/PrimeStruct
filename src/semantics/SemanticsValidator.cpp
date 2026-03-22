@@ -116,12 +116,19 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
       const auto bindingIt = graphLocalAutoBindings_.find(
           graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
       if (bindingIt != graphLocalAutoBindings_.end()) {
+        std::string initializerQueryTypeText;
+        if (const auto queryIt = graphLocalAutoQueryTypeTexts_.find(
+                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+            queryIt != graphLocalAutoQueryTypeTexts_.end()) {
+          initializerQueryTypeText = queryIt->second;
+        }
         entries.push_back(LocalAutoBindingSnapshotEntry{
             scopePath,
             expr.name,
             sourceLine,
             sourceColumn,
             bindingIt->second,
+            std::move(initializerQueryTypeText),
         });
       }
     }

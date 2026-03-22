@@ -30,6 +30,7 @@ public:
     int sourceLine = 0;
     int sourceColumn = 0;
     BindingInfo binding;
+    std::string initializerQueryTypeText;
   };
 
   SemanticsValidator(const Program &program,
@@ -1379,6 +1380,7 @@ private:
   std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_map<std::string, BindingInfo> returnBindings_;
   std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;
+  std::unordered_map<std::string, std::string> graphLocalAutoQueryTypeTexts_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;

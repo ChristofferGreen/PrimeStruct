@@ -14,6 +14,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   returnStructs_.clear();
   returnBindings_.clear();
   structNames_.clear();
+  graphLocalAutoQueryTypeTexts_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();
   definitionValidationContexts_.clear();

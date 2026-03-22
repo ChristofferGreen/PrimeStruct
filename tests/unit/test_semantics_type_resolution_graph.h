@@ -307,6 +307,7 @@ main() {
 
   const auto &entry = requireLocalBindingSnapshotEntry(snapshot, "/main", "values");
   CHECK(entry.bindingTypeText == "array<i32>");
+  CHECK(entry.initializerQueryTypeText == "array<i32>");
 }
 
 TEST_CASE("type resolution graph dump stays stable for a simple call chain") {

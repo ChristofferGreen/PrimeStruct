@@ -368,6 +368,7 @@ bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
         entry.sourceLine,
         entry.sourceColumn,
         bindingTypeTextForSnapshot(entry.binding),
+        entry.initializerQueryTypeText,
     });
   }
   return true;

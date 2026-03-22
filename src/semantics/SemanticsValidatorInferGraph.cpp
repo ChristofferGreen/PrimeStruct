@@ -54,6 +54,7 @@ bool SemanticsValidator::inferUnknownReturnKinds() {
 
 bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   graphLocalAutoBindings_.clear();
+  graphLocalAutoQueryTypeTexts_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
   const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
 
@@ -302,6 +303,17 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         const std::string bindingKey =
             graphLocalAutoBindingKey(def.fullPath, sourceLine, sourceColumn);
         graphLocalAutoBindings_.try_emplace(bindingKey, binding);
+        std::string initializerQueryTypeText;
+        if (expr.args.size() == 1 &&
+            withPreservedError([&]() {
+              return inferQueryExprTypeText(
+                  expr.args.front(), defParams, activeLocals, initializerQueryTypeText);
+            }) &&
+            !initializerQueryTypeText.empty()) {
+          graphLocalAutoQueryTypeTexts_[bindingKey] = initializerQueryTypeText;
+        } else {
+          graphLocalAutoQueryTypeTexts_.erase(bindingKey);
+        }
       }
       activeLocals.emplace(expr.name, std::move(binding));
       return;
