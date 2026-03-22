@@ -785,6 +785,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(semanticsValidate.find("computeTypeResolutionQueryCallSnapshotForTesting(") != std::string::npos);
   CHECK(semanticsValidate.find("computeTypeResolutionCallBindingSnapshotForTesting(") != std::string::npos);
   CHECK(semanticsValidate.find("computeTypeResolutionQueryReceiverBindingSnapshotForTesting(") != std::string::npos);
+  CHECK(semanticsValidate.find("runTypeResolutionSnapshot(") != std::string::npos);
   CHECK(semanticsValidate.find("prepareProgramForTypeResolutionAnalysis(") != std::string::npos);
   CHECK(semanticsValidate.find("validator.returnResolutionSnapshotForTesting()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.localAutoBindingSnapshotForTesting()") != std::string::npos);

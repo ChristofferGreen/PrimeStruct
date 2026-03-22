@@ -63,6 +63,28 @@ std::string bindingTypeTextForSnapshot(const BindingInfo &binding) {
   return binding.typeName + "<" + binding.typeTemplateArg + ">";
 }
 
+template <typename CaptureFn>
+bool runTypeResolutionSnapshot(
+    Program &program,
+    const std::string &entryPath,
+    std::string &error,
+    const std::vector<std::string> &semanticTransforms,
+    CaptureFn &&capture) {
+  error.clear();
+  if (!semantics::prepareProgramForTypeResolutionAnalysis(
+          program, entryPath, semanticTransforms, error)) {
+    return false;
+  }
+
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  semantics::SemanticsValidator validator(program, entryPath, error, defaults, defaults, nullptr, false);
+  if (!validator.run()) {
+    return false;
+  }
+  capture(validator);
+  return true;
+}
+
 } // namespace
 }
 
@@ -315,29 +337,18 @@ bool semantics::computeTypeResolutionReturnSnapshotForTesting(
     TypeResolutionReturnSnapshot &out,
     const std::vector<std::string> &semanticTransforms) {
   out = {};
-  error.clear();
-  if (!semantics::prepareProgramForTypeResolutionAnalysis(
-          program, entryPath, semanticTransforms, error)) {
-    return false;
-  }
-
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  semantics::SemanticsValidator validator(program, entryPath, error, defaults, defaults, nullptr, false);
-  if (!validator.run()) {
-    return false;
-  }
-
-  const auto entries = validator.returnResolutionSnapshotForTesting();
-  out.entries.reserve(entries.size());
-  for (const auto &entry : entries) {
-    out.entries.push_back(TypeResolutionReturnSnapshotEntry{
-        entry.definitionPath,
-        returnKindSnapshotName(entry.kind),
-        entry.structPath,
-        bindingTypeTextForSnapshot(entry.binding),
-    });
-  }
-  return true;
+  return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
+    const auto entries = validator.returnResolutionSnapshotForTesting();
+    out.entries.reserve(entries.size());
+    for (const auto &entry : entries) {
+      out.entries.push_back(TypeResolutionReturnSnapshotEntry{
+          entry.definitionPath,
+          returnKindSnapshotName(entry.kind),
+          entry.structPath,
+          bindingTypeTextForSnapshot(entry.binding),
+      });
+    }
+  });
 }
 
 bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
@@ -347,31 +358,20 @@ bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
     TypeResolutionLocalBindingSnapshot &out,
     const std::vector<std::string> &semanticTransforms) {
   out = {};
-  error.clear();
-  if (!semantics::prepareProgramForTypeResolutionAnalysis(
-          program, entryPath, semanticTransforms, error)) {
-    return false;
-  }
-
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  semantics::SemanticsValidator validator(program, entryPath, error, defaults, defaults, nullptr, false);
-  if (!validator.run()) {
-    return false;
-  }
-
-  const auto entries = validator.localAutoBindingSnapshotForTesting();
-  out.entries.reserve(entries.size());
-  for (const auto &entry : entries) {
-    out.entries.push_back(TypeResolutionLocalBindingSnapshotEntry{
-        entry.scopePath,
-        entry.bindingName,
-        entry.sourceLine,
-        entry.sourceColumn,
-        bindingTypeTextForSnapshot(entry.binding),
-        entry.initializerQueryTypeText,
-    });
-  }
-  return true;
+  return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
+    const auto entries = validator.localAutoBindingSnapshotForTesting();
+    out.entries.reserve(entries.size());
+    for (const auto &entry : entries) {
+      out.entries.push_back(TypeResolutionLocalBindingSnapshotEntry{
+          entry.scopePath,
+          entry.bindingName,
+          entry.sourceLine,
+          entry.sourceColumn,
+          bindingTypeTextForSnapshot(entry.binding),
+          entry.initializerQueryTypeText,
+      });
+    }
+  });
 }
 
 bool semantics::computeTypeResolutionQueryCallSnapshotForTesting(
@@ -381,31 +381,20 @@ bool semantics::computeTypeResolutionQueryCallSnapshotForTesting(
     TypeResolutionQueryCallSnapshot &out,
     const std::vector<std::string> &semanticTransforms) {
   out = {};
-  error.clear();
-  if (!semantics::prepareProgramForTypeResolutionAnalysis(
-          program, entryPath, semanticTransforms, error)) {
-    return false;
-  }
-
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  semantics::SemanticsValidator validator(program, entryPath, error, defaults, defaults, nullptr, false);
-  if (!validator.run()) {
-    return false;
-  }
-
-  const auto entries = validator.queryCallTypeSnapshotForTesting();
-  out.entries.reserve(entries.size());
-  for (const auto &entry : entries) {
-    out.entries.push_back(TypeResolutionQueryCallSnapshotEntry{
-        entry.scopePath,
-        entry.callName,
-        entry.resolvedPath,
-        entry.sourceLine,
-        entry.sourceColumn,
-        entry.typeText,
-    });
-  }
-  return true;
+  return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
+    const auto entries = validator.queryCallTypeSnapshotForTesting();
+    out.entries.reserve(entries.size());
+    for (const auto &entry : entries) {
+      out.entries.push_back(TypeResolutionQueryCallSnapshotEntry{
+          entry.scopePath,
+          entry.callName,
+          entry.resolvedPath,
+          entry.sourceLine,
+          entry.sourceColumn,
+          entry.typeText,
+      });
+    }
+  });
 }
 
 bool semantics::computeTypeResolutionCallBindingSnapshotForTesting(
@@ -415,31 +404,20 @@ bool semantics::computeTypeResolutionCallBindingSnapshotForTesting(
     TypeResolutionCallBindingSnapshot &out,
     const std::vector<std::string> &semanticTransforms) {
   out = {};
-  error.clear();
-  if (!semantics::prepareProgramForTypeResolutionAnalysis(
-          program, entryPath, semanticTransforms, error)) {
-    return false;
-  }
-
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  semantics::SemanticsValidator validator(program, entryPath, error, defaults, defaults, nullptr, false);
-  if (!validator.run()) {
-    return false;
-  }
-
-  const auto entries = validator.callBindingSnapshotForTesting();
-  out.entries.reserve(entries.size());
-  for (const auto &entry : entries) {
-    out.entries.push_back(TypeResolutionCallBindingSnapshotEntry{
-        entry.scopePath,
-        entry.callName,
-        entry.resolvedPath,
-        entry.sourceLine,
-        entry.sourceColumn,
-        bindingTypeTextForSnapshot(entry.binding),
-    });
-  }
-  return true;
+  return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
+    const auto entries = validator.callBindingSnapshotForTesting();
+    out.entries.reserve(entries.size());
+    for (const auto &entry : entries) {
+      out.entries.push_back(TypeResolutionCallBindingSnapshotEntry{
+          entry.scopePath,
+          entry.callName,
+          entry.resolvedPath,
+          entry.sourceLine,
+          entry.sourceColumn,
+          bindingTypeTextForSnapshot(entry.binding),
+      });
+    }
+  });
 }
 
 bool semantics::computeTypeResolutionQueryReceiverBindingSnapshotForTesting(
@@ -449,31 +427,20 @@ bool semantics::computeTypeResolutionQueryReceiverBindingSnapshotForTesting(
     TypeResolutionQueryReceiverBindingSnapshot &out,
     const std::vector<std::string> &semanticTransforms) {
   out = {};
-  error.clear();
-  if (!semantics::prepareProgramForTypeResolutionAnalysis(
-          program, entryPath, semanticTransforms, error)) {
-    return false;
-  }
-
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  semantics::SemanticsValidator validator(program, entryPath, error, defaults, defaults, nullptr, false);
-  if (!validator.run()) {
-    return false;
-  }
-
-  const auto entries = validator.queryReceiverBindingSnapshotForTesting();
-  out.entries.reserve(entries.size());
-  for (const auto &entry : entries) {
-    out.entries.push_back(TypeResolutionQueryReceiverBindingSnapshotEntry{
-        entry.scopePath,
-        entry.callName,
-        entry.resolvedPath,
-        entry.sourceLine,
-        entry.sourceColumn,
-        bindingTypeTextForSnapshot(entry.receiverBinding),
-    });
-  }
-  return true;
+  return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
+    const auto entries = validator.queryReceiverBindingSnapshotForTesting();
+    out.entries.reserve(entries.size());
+    for (const auto &entry : entries) {
+      out.entries.push_back(TypeResolutionQueryReceiverBindingSnapshotEntry{
+          entry.scopePath,
+          entry.callName,
+          entry.resolvedPath,
+          entry.sourceLine,
+          entry.sourceColumn,
+          bindingTypeTextForSnapshot(entry.receiverBinding),
+      });
+    }
+  });
 }
 
 } // namespace primec

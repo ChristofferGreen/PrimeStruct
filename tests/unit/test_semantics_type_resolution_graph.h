@@ -570,4 +570,27 @@ TEST_CASE("type resolution return snapshot shares template-specialization prepar
   CHECK(mainEntry.bindingTypeText == "i32");
 }
 
+TEST_CASE("type resolution call binding snapshot shares template-specialization preparation") {
+  const std::string source =
+      "[return<auto>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<auto>]\n"
+      "main() {\n"
+      "  [i32] value{id(1i32)}\n"
+      "  return(value)\n"
+      "}\n";
+
+  std::string error;
+  primec::semantics::TypeResolutionCallBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionCallBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &entry = requireCallBindingSnapshotEntry(snapshot, "/main", "/id__t25a78a513414c3bf");
+  CHECK(entry.bindingTypeText == "i32");
+}
+
 TEST_SUITE_END();
