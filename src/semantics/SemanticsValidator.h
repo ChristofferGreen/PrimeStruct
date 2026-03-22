@@ -31,6 +31,7 @@ public:
     int sourceColumn = 0;
     BindingInfo binding;
     std::string initializerResolvedPath;
+    BindingInfo initializerReceiverBinding;
     std::string initializerQueryTypeText;
     bool initializerResultHasValue = false;
     std::string initializerResultValueType;
@@ -1442,6 +1443,7 @@ private:
   std::unordered_map<std::string, BindingInfo> returnBindings_;
   std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;
   std::unordered_map<std::string, std::string> graphLocalAutoResolvedPaths_;
+  std::unordered_map<std::string, BindingInfo> graphLocalAutoReceiverBindings_;
   std::unordered_map<std::string, std::string> graphLocalAutoQueryTypeTexts_;
   std::unordered_map<std::string, ResultTypeInfo> graphLocalAutoResultTypes_;
   std::unordered_set<std::string> structNames_;

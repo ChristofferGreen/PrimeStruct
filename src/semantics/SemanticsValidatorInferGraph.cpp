@@ -55,6 +55,7 @@ bool SemanticsValidator::inferUnknownReturnKinds() {
 bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   graphLocalAutoBindings_.clear();
   graphLocalAutoResolvedPaths_.clear();
+  graphLocalAutoReceiverBindings_.clear();
   graphLocalAutoQueryTypeTexts_.clear();
   graphLocalAutoResultTypes_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
@@ -311,6 +312,27 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
           graphLocalAutoResolvedPaths_[bindingKey] = initializerResolvedPath;
         } else {
           graphLocalAutoResolvedPaths_.erase(bindingKey);
+        }
+        const bool receiverQueryCandidate =
+            expr.args.size() == 1 &&
+            expr.args.front().kind == Expr::Kind::Call &&
+            !expr.args.front().args.empty() &&
+            (!initializerResolvedPath.empty() &&
+             (expr.args.front().isMethodCall ||
+              initializerResolvedPath.rfind("/std/collections/", 0) == 0 ||
+              initializerResolvedPath.rfind("/array/", 0) == 0 ||
+              initializerResolvedPath.rfind("/vector/", 0) == 0 ||
+              initializerResolvedPath.rfind("/map/", 0) == 0));
+        BindingInfo initializerReceiverBinding;
+        if (receiverQueryCandidate &&
+            withPreservedError([&]() {
+              return inferBindingTypeFromInitializer(
+                  expr.args.front().args.front(), defParams, activeLocals, initializerReceiverBinding);
+            }) &&
+            !initializerReceiverBinding.typeName.empty()) {
+          graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerReceiverBinding);
+        } else {
+          graphLocalAutoReceiverBindings_.erase(bindingKey);
         }
         std::string initializerQueryTypeText;
         if (expr.args.size() == 1 &&

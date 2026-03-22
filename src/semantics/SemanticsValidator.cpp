@@ -122,6 +122,12 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             pathIt != graphLocalAutoResolvedPaths_.end()) {
           initializerResolvedPath = pathIt->second;
         }
+        BindingInfo initializerReceiverBinding;
+        if (const auto receiverIt = graphLocalAutoReceiverBindings_.find(
+                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+            receiverIt != graphLocalAutoReceiverBindings_.end()) {
+          initializerReceiverBinding = receiverIt->second;
+        }
         std::string initializerQueryTypeText;
         if (const auto queryIt = graphLocalAutoQueryTypeTexts_.find(
                 graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
@@ -145,6 +151,7 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             sourceColumn,
             bindingIt->second,
             std::move(initializerResolvedPath),
+            std::move(initializerReceiverBinding),
             std::move(initializerQueryTypeText),
             initializerResultHasValue,
             std::move(initializerResultValueType),

@@ -369,6 +369,7 @@ bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
           entry.sourceColumn,
           bindingTypeTextForSnapshot(entry.binding),
           entry.initializerResolvedPath,
+          bindingTypeTextForSnapshot(entry.initializerReceiverBinding),
           entry.initializerQueryTypeText,
           entry.initializerResultHasValue,
           entry.initializerResultValueType,

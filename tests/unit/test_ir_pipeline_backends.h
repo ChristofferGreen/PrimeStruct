@@ -639,6 +639,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("std::unordered_map<std::string, std::string> graphLocalAutoResolvedPaths_;") !=
         std::string::npos);
+  CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> graphLocalAutoReceiverBindings_;") !=
+        std::string::npos);
   CHECK(validatorHeader.find("std::unordered_map<std::string, std::string> graphLocalAutoQueryTypeTexts_;") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::unordered_map<std::string, ResultTypeInfo> graphLocalAutoResultTypes_;") !=
@@ -1180,6 +1182,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, binding);") !=
         std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoResolvedPaths_[bindingKey] = initializerResolvedPath;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerReceiverBinding);") !=
         std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoQueryTypeTexts_[bindingKey] = initializerQueryTypeText;") !=
         std::string::npos);

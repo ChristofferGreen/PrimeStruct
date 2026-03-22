@@ -363,6 +363,7 @@ main() {
   const auto &entry = requireLocalBindingSnapshotEntry(snapshot, "/main", "values");
   CHECK(entry.bindingTypeText == "array<i32>");
   CHECK(entry.initializerResolvedPath.empty());
+  CHECK(entry.initializerReceiverBindingTypeText.empty());
   CHECK(entry.initializerQueryTypeText == "array<i32>");
   CHECK(!entry.initializerResultHasValue);
   CHECK(entry.initializerResultValueTypeText.empty());
@@ -393,6 +394,7 @@ main() {
   const auto &entry = requireLocalBindingSnapshotEntry(snapshot, "/main", "selected");
   CHECK(entry.bindingTypeText == "Result<i32, ContainerError>");
   CHECK(entry.initializerResolvedPath == "/std/collections/map/tryAt");
+  CHECK(entry.initializerReceiverBindingTypeText == "Map<string, i32>");
   CHECK(entry.initializerQueryTypeText == "Result<i32, ContainerError>");
   CHECK(entry.initializerResultHasValue);
   CHECK(entry.initializerResultValueTypeText == "i32");
