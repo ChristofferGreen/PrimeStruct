@@ -420,6 +420,7 @@ private:
       const std::string &resolved,
       const ExprLateCallCompatibilityContext &context,
       bool &handledOut);
+  struct ExprArgumentValidationContext;
   struct ExprLateMapAccessBuiltinContext {
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
     bool shouldBuiltinValidateBareMapContainsCall = false;
@@ -432,6 +433,20 @@ private:
       const Expr &expr,
       const std::string &resolved,
       const ExprLateMapAccessBuiltinContext &context,
+      bool &handledOut);
+  struct ExprResolvedStructConstructorContext {
+    bool isResolvedStructConstructorCall = false;
+    const Definition *resolvedDefinition = nullptr;
+    const ExprArgumentValidationContext *argumentValidationContext = nullptr;
+    const std::string *diagnosticResolved = nullptr;
+    const std::string *zeroArgDiagnostic = nullptr;
+  };
+  bool validateExprResolvedStructConstructorCall(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      const ExprResolvedStructConstructorContext &context,
       bool &handledOut);
   struct ExprCollectionAccessValidationContext {
     bool isStdNamespacedVectorAccessCall = false;

@@ -683,11 +683,50 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct constructor accepts named arguments while skipping static fields") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [static i32] shared{1i32}
+  [i32] value{2i32}
+  [i32] count{3i32}
+}
+
+[return<int>]
+main() {
+  thing([count] 4i32, [value] 5i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("struct constructor rejects extra arguments") {
   const std::string source = R"(
 [struct]
 thing() {
   [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  thing(1i32, 2i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+}
+
+TEST_CASE("struct constructor keeps argument mismatch when static fields are skipped") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [static i32] shared{1i32}
+  [i32] value{2i32}
 }
 
 [return<int>]

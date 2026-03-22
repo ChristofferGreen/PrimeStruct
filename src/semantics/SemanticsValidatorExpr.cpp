@@ -1589,92 +1589,28 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         .locals = &locals,
         .dispatchResolvers = &builtinCollectionDispatchResolvers,
     };
-    if (calleeParams.empty() && structNames_.count(resolved) > 0) {
-      if (expr.args.empty() && !hasNamedArguments(expr.argNames) && !expr.hasBodyArguments &&
-          expr.bodyArguments.empty()) {
-        if (const std::string diagnostic = experimentalGfxUnavailableConstructorDiagnostic(expr, resolved);
-            !diagnostic.empty()) {
-          error_ = diagnostic;
-          return false;
-        }
-      }
-      std::vector<ParameterInfo> fieldParams;
-      fieldParams.reserve(it->second->statements.size());
-      auto isStaticField = [](const Expr &stmt) -> bool {
-        for (const auto &transform : stmt.transforms) {
-          if (transform.name == "static") {
-            return true;
-          }
-        }
-        return false;
-      };
-      bool hasMissingDefaults = false;
-      for (const auto &stmt : it->second->statements) {
-        if (!stmt.isBinding) {
-          error_ = "struct definitions may only contain field bindings: " + resolved;
-          return false;
-        }
-        if (isStaticField(stmt)) {
-          continue;
-        }
-        ParameterInfo field;
-        field.name = stmt.name;
-        if (!SemanticsValidator::resolveStructFieldBinding(*it->second, stmt, field.binding)) {
-          return false;
-        }
-        if (stmt.args.size() == 1) {
-          field.defaultExpr = &stmt.args.front();
-        } else {
-          hasMissingDefaults = true;
-        }
-        fieldParams.push_back(field);
-      }
-      if (hasMissingDefaults && expr.args.empty() && !hasNamedArguments(expr.argNames)) {
-        if (hasStructZeroArgConstructor(resolved)) {
-          return true;
-        }
-      }
-      if (!validateNamedArgumentsAgainstParams(fieldParams, expr.argNames, error_)) {
-        if (error_.find("argument count mismatch") != std::string::npos) {
-          error_ = "argument count mismatch for " + diagnosticResolved;
-        }
-        return false;
-      }
-      std::vector<const Expr *> orderedArgs;
-      std::string orderError;
-      if (!buildOrderedArguments(fieldParams, expr.args, expr.argNames, orderedArgs, orderError)) {
-        if (orderError.find("argument count mismatch") != std::string::npos) {
-          error_ = "argument count mismatch for " + diagnosticResolved;
-        } else {
-          error_ = orderError;
-        }
-        return false;
-      }
-      std::unordered_set<const Expr *> explicitArgs;
-      explicitArgs.reserve(expr.args.size());
-      for (const auto &arg : expr.args) {
-        explicitArgs.insert(&arg);
-      }
-      for (const auto *arg : orderedArgs) {
-        if (!arg || explicitArgs.count(arg) == 0) {
-          continue;
-        }
-        if (!validateExpr(params, locals, *arg)) {
-          return false;
-        }
-      }
-      for (size_t argIndex = 0; argIndex < orderedArgs.size() && argIndex < fieldParams.size(); ++argIndex) {
-        const Expr *arg = orderedArgs[argIndex];
-        if (arg == nullptr || explicitArgs.count(arg) == 0) {
-          continue;
-        }
-        const ParameterInfo &fieldParam = fieldParams[argIndex];
-        const std::string expectedTypeText = this->expectedBindingTypeText(fieldParam.binding);
-        if (!this->validateArgumentTypeAgainstParam(
-                *arg, fieldParam, fieldParam.binding.typeName, expectedTypeText, argumentValidationContext)) {
-          return false;
-        }
-      }
+    std::string resolvedStructConstructorZeroArgDiagnostic;
+    if (calleeParams.empty() && structNames_.count(resolved) > 0 &&
+        expr.args.empty() && !hasNamedArguments(expr.argNames) &&
+        !expr.hasBodyArguments && expr.bodyArguments.empty()) {
+      resolvedStructConstructorZeroArgDiagnostic =
+          experimentalGfxUnavailableConstructorDiagnostic(expr, resolved);
+    }
+    ExprResolvedStructConstructorContext resolvedStructConstructorContext{
+        .isResolvedStructConstructorCall =
+            calleeParams.empty() && structNames_.count(resolved) > 0,
+        .resolvedDefinition = it->second,
+        .argumentValidationContext = &argumentValidationContext,
+        .diagnosticResolved = &diagnosticResolved,
+        .zeroArgDiagnostic = &resolvedStructConstructorZeroArgDiagnostic,
+    };
+    bool handledResolvedStructConstructor = false;
+    if (!validateExprResolvedStructConstructorCall(
+            params, locals, expr, resolved, resolvedStructConstructorContext,
+            handledResolvedStructConstructor)) {
+      return false;
+    }
+    if (handledResolvedStructConstructor) {
       return true;
     }
     Expr reorderedCallExpr;

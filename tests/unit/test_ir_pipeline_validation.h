@@ -9276,6 +9276,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprGpuBuffer.cpp";
   const std::filesystem::path semanticsExprScalarPointerMemoryPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprScalarPointerMemory.cpp";
+  const std::filesystem::path semanticsExprStructConstructorsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprStructConstructors.cpp";
   const std::filesystem::path semanticsExprMapSoaBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMapSoaBuiltins.cpp";
   const std::filesystem::path semanticsExprResultFilePath =
@@ -9304,6 +9306,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(semanticsExprGpuBufferPath));
   REQUIRE(std::filesystem::exists(semanticsExprScalarPointerMemoryPath));
+  REQUIRE(std::filesystem::exists(semanticsExprStructConstructorsPath));
   REQUIRE(std::filesystem::exists(semanticsExprMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
@@ -9333,6 +9336,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
   const std::string semanticsExprGpuBufferSource = readText(semanticsExprGpuBufferPath);
   const std::string semanticsExprScalarPointerMemorySource = readText(semanticsExprScalarPointerMemoryPath);
+  const std::string semanticsExprStructConstructorsSource = readText(semanticsExprStructConstructorsPath);
   const std::string semanticsExprMapSoaBuiltinsSource = readText(semanticsExprMapSoaBuiltinsPath);
   const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
@@ -9356,6 +9360,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find(
             "validateExprLateMapAccessBuiltins(\n"
             "              params, locals, expr, resolved,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprResolvedStructConstructorCall(\n"
+            "            params, locals, expr, resolved, resolvedStructConstructorContext,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") !=
         std::string::npos);
@@ -9517,6 +9525,16 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "isSimpleCallName(expr, \"tryAt\") && !shouldBuiltinValidateBareMapTryAtCall") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("fieldParams.reserve(it->second->statements.size());") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "auto isStaticField = [](const Expr &stmt) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "struct definitions may only contain field bindings: \" + resolved") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (hasStructZeroArgConstructor(resolved)) {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "lateMapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
@@ -9842,6 +9860,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
             "tryAt requires map target") !=
+        std::string::npos);
+  CHECK(semanticsExprStructConstructorsSource.find(
+            "bool SemanticsValidator::validateExprResolvedStructConstructorCall") !=
+        std::string::npos);
+  CHECK(semanticsExprStructConstructorsSource.find(
+            "fieldParams.reserve(context.resolvedDefinition->statements.size());") !=
+        std::string::npos);
+  CHECK(semanticsExprStructConstructorsSource.find(
+            "struct definitions may only contain field bindings: ") !=
+        std::string::npos);
+  CHECK(semanticsExprStructConstructorsSource.find(
+            "if (hasStructZeroArgConstructor(resolved)) {") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
             "bool SemanticsValidator::validateExprMutationBorrowBuiltins") !=
