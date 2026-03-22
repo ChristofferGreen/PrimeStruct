@@ -496,4 +496,28 @@ bool semantics::computeTypeResolutionQueryReceiverBindingSnapshotForTesting(
   });
 }
 
+bool semantics::computeTypeResolutionOnErrorSnapshotForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    TypeResolutionOnErrorSnapshot &out,
+    const std::vector<std::string> &semanticTransforms) {
+  out.entries.clear();
+  return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
+    const auto entries = validator.onErrorSnapshotForTesting();
+    out.entries.reserve(entries.size());
+    for (const auto &entry : entries) {
+      out.entries.push_back(TypeResolutionOnErrorSnapshotEntry{
+          entry.definitionPath,
+          entry.handlerPath,
+          entry.errorType,
+          entry.boundArgCount,
+          entry.returnResultHasValue,
+          entry.returnResultValueType,
+          entry.returnResultErrorType,
+      });
+    }
+  });
+}
+
 } // namespace primec

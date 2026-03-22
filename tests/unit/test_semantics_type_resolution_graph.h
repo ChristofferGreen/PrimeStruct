@@ -102,6 +102,16 @@ const primec::semantics::TypeResolutionQueryReceiverBindingSnapshotEntry &requir
   return *it;
 }
 
+const primec::semantics::TypeResolutionOnErrorSnapshotEntry &requireOnErrorSnapshotEntry(
+    const primec::semantics::TypeResolutionOnErrorSnapshot &snapshot,
+    const std::string &definitionPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.definitionPath == definitionPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 size_t requireTopologicalComponentIndex(const primec::semantics::CondensationDagSnapshot &dag, uint32_t componentId) {
   const auto it = std::find(dag.topologicalComponentIds.begin(), dag.topologicalComponentIds.end(), componentId);
   REQUIRE(it != dag.topologicalComponentIds.end());
@@ -550,6 +560,45 @@ main() {
   const auto &tryAtEntry =
       requireQueryReceiverBindingSnapshotEntry(snapshot, "/main", "/std/collections/map/tryAt");
   CHECK(tryAtEntry.receiverBindingTypeText == "Map<string, i32>");
+}
+
+TEST_CASE("type resolution on_error snapshot keeps result and int handler context") {
+  const std::string source = R"(
+[return<void>]
+unexpectedError([ContainerError] err) {
+}
+
+[return<auto> on_error<ContainerError, /unexpectedError>]
+counted() {
+  return(plus(1i32, 2i32))
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc) on_error<ContainerError, /unexpectedError>]
+main() {
+  return(/std/collections/map/tryAt(/std/collections/mapPair("left"raw_utf8, 4i32), "left"raw_utf8))
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionOnErrorSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionOnErrorSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &countedEntry = requireOnErrorSnapshotEntry(snapshot, "/counted");
+  CHECK(countedEntry.handlerPath == "/unexpectedError");
+  CHECK(countedEntry.errorTypeText == "ContainerError");
+  CHECK(countedEntry.boundArgCount == 0);
+  CHECK(!countedEntry.returnResultHasValue);
+  CHECK(countedEntry.returnResultValueTypeText.empty());
+  CHECK(countedEntry.returnResultErrorTypeText.empty());
+
+  const auto &mainEntry = requireOnErrorSnapshotEntry(snapshot, "/main");
+  CHECK(mainEntry.handlerPath == "/unexpectedError");
+  CHECK(mainEntry.errorTypeText == "ContainerError");
+  CHECK(mainEntry.boundArgCount == 0);
+  CHECK(mainEntry.returnResultHasValue);
+  CHECK(mainEntry.returnResultValueTypeText == "int");
+  CHECK(mainEntry.returnResultErrorTypeText == "ContainerError");
 }
 
 TEST_CASE("type resolution graph dump stays stable for a simple call chain") {

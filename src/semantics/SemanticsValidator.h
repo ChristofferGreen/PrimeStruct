@@ -85,6 +85,16 @@ public:
     BindingInfo receiverBinding;
   };
 
+  struct OnErrorSnapshotEntry {
+    std::string definitionPath;
+    std::string handlerPath;
+    std::string errorType;
+    size_t boundArgCount = 0;
+    bool returnResultHasValue = false;
+    std::string returnResultValueType;
+    std::string returnResultErrorType;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
@@ -101,6 +111,7 @@ public:
   std::vector<QueryResultTypeSnapshotEntry> queryResultTypeSnapshotForTesting();
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
+  std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
 
 private:
   void forEachLocalAwareSnapshotCall(

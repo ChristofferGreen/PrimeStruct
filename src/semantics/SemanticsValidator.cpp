@@ -444,6 +444,59 @@ SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
   return entries;
 }
 
+std::vector<SemanticsValidator::OnErrorSnapshotEntry>
+SemanticsValidator::onErrorSnapshotForTesting() {
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  std::vector<OnErrorSnapshotEntry> entries;
+  entries.reserve(program_.definitions.size());
+  for (const auto &def : program_.definitions) {
+    std::optional<OnErrorHandler> onErrorHandler;
+    if (!withPreservedError([&]() {
+          return parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, onErrorHandler);
+        }) ||
+        !onErrorHandler.has_value()) {
+      continue;
+    }
+
+    ResultTypeInfo resultInfo;
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      if (withPreservedError([&]() {
+            return resolveResultTypeFromTypeName(transform.templateArgs.front(), resultInfo);
+          }) &&
+          resultInfo.isResult) {
+        break;
+      }
+      resultInfo = {};
+    }
+
+    entries.push_back(OnErrorSnapshotEntry{
+        def.fullPath,
+        onErrorHandler->handlerPath,
+        onErrorHandler->errorType,
+        onErrorHandler->boundArgs.size(),
+        resultInfo.hasValue,
+        resultInfo.valueType,
+        resultInfo.errorType,
+    });
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    return left.definitionPath < right.definitionPath;
+  });
+  return entries;
+}
+
 void SemanticsValidator::forEachLocalAwareSnapshotCall(
     const std::function<void(const Definition &,
                              const std::vector<ParameterInfo> &,
