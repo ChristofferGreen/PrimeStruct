@@ -173,7 +173,6 @@ struct TypeResolverPipelineSnapshot {
 };
 
 TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::string &source,
-                                                            const std::string &typeResolver,
                                                             const std::string &entry = "/main") {
   TypeResolverPipelineSnapshot snapshot;
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
@@ -191,7 +190,6 @@ TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::string &
   options.inputPath = tempPath.string();
   options.entryPath = entry;
   options.emitKind = "vm";
-  options.typeResolver = typeResolver;
   options.collectDiagnostics = true;
   options.defaultEffects = {"io_out", "io_err"};
   options.entryDefaultEffects = options.defaultEffects;

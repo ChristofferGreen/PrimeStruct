@@ -30,8 +30,7 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        const std::vector<std::string> &defaultEffects,
                                        const std::vector<std::string> &entryDefaultEffects,
                                        SemanticDiagnosticInfo *diagnosticInfo,
-                                       bool collectDiagnostics,
-                                       const std::string &typeResolver)
+                                       bool collectDiagnostics)
     : program_(program),
       entryPath_(entryPath),
       error_(error),
@@ -39,8 +38,7 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       entryDefaultEffects_(entryDefaultEffects),
       diagnosticInfo_(diagnosticInfo),
       diagnosticSink_(diagnosticInfo),
-      collectDiagnostics_(collectDiagnostics),
-      graphTypeResolverEnabled_(typeResolver == "graph") {
+      collectDiagnostics_(collectDiagnostics) {
   diagnosticSink_.reset();
   auto registerMathImport = [&](const std::string &importPath) {
     if (importPath == "/std/math/*") {

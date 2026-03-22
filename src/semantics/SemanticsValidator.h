@@ -23,8 +23,7 @@ public:
                      const std::vector<std::string> &defaultEffects,
                      const std::vector<std::string> &entryDefaultEffects,
                      SemanticDiagnosticInfo *diagnosticInfo,
-                     bool collectDiagnostics,
-                     const std::string &typeResolver);
+                     bool collectDiagnostics);
 
   bool run();
 
@@ -43,7 +42,6 @@ private:
   bool validateLifecycleHelperDefinitions();
   bool buildParameters();
   bool inferUnknownReturnKinds();
-  bool inferUnknownReturnKindsLegacy();
   bool inferUnknownReturnKindsGraph();
   void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);
   bool validateTraitConstraints();
@@ -1352,7 +1350,6 @@ private:
   SemanticDiagnosticInfo *diagnosticInfo_ = nullptr;
   DiagnosticSink diagnosticSink_;
   bool collectDiagnostics_ = false;
-  bool graphTypeResolverEnabled_ = false;
   bool allowRecursiveReturnInference_ = true;
   bool deferUnknownReturnInferenceErrors_ = false;
 

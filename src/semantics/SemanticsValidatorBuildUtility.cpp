@@ -60,7 +60,7 @@ std::string SemanticsValidator::typeNameForReturnKind(ReturnKind kind) const {
 bool SemanticsValidator::lookupGraphLocalAutoBinding(const std::string &scopePath,
                                                      const Expr &bindingExpr,
                                                      BindingInfo &bindingOut) const {
-  if (!graphTypeResolverEnabled_ || scopePath.empty()) {
+  if (scopePath.empty()) {
     return false;
   }
   const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(bindingExpr);

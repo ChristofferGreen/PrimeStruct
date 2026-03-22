@@ -46,8 +46,7 @@ bool validateProgramThroughCompilePipeline(const std::string &source,
                                            const std::string &emitKind,
                                            const std::string &wasmProfile,
                                            std::string &error,
-                                           primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr,
-                                           const std::string &typeResolver = "graph") {
+                                           primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
   const std::filesystem::path tempPath = makeTempSemanticSourcePath();
   {
     std::ofstream file(tempPath);
@@ -67,7 +66,6 @@ bool validateProgramThroughCompilePipeline(const std::string &source,
   options.entryDefaultEffects = entryDefaultEffects;
   options.dumpStage = "ast_semantic";
   options.collectDiagnostics = diagnosticInfo != nullptr;
-  options.typeResolver = typeResolver;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
   primec::CompilePipelineOutput output;
@@ -145,20 +143,6 @@ bool validateProgramWithDefaults(const std::string &source,
                                  const std::vector<std::string> &defaultEffects,
                                  std::string &error) {
   return validateProgramWithDefaults(source, entry, defaultEffects, defaultEffects, error);
-}
-
-bool validateProgramWithTypeResolver(const std::string &source,
-                                     const std::string &entry,
-                                     const std::string &typeResolver,
-                                     std::string &error) {
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  if (usesStdImportPipeline(source)) {
-    return validateProgramThroughCompilePipeline(
-        source, entry, defaults, defaults, "native", "wasi", error, nullptr, typeResolver);
-  }
-  auto program = parseProgram(source);
-  primec::Semantics semantics;
-  return semantics.validate(program, entry, error, defaults, defaults, {}, nullptr, false, typeResolver);
 }
 
 bool validateProgramCollectingDiagnostics(const std::string &source,

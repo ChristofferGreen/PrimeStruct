@@ -18,8 +18,7 @@ public:
                 const std::vector<std::string> &entryDefaultEffects,
                 const std::vector<std::string> &semanticTransforms = {},
                 SemanticDiagnosticInfo *diagnosticInfo = nullptr,
-                bool collectDiagnostics = false,
-                const std::string &typeResolver = "graph") const;
+                bool collectDiagnostics = false) const;
 };
 
 } // namespace primec

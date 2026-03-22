@@ -82,7 +82,7 @@ primec::Definition makeDefinition(const std::string &fullPath,
 bool validateProgram(primec::Program &program, const std::string &entry, std::string &error) {
   primec::Semantics semantics;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  return semantics.validate(program, entry, error, defaults, defaults, {}, nullptr, false, "legacy");
+  return semantics.validate(program, entry, error, defaults, defaults);
 }
 
 bool validateSourceProgram(const std::string &source, const std::string &entry, std::string &error) {
@@ -94,7 +94,7 @@ bool validateSourceProgram(const std::string &source, const std::string &entry, 
   }
   primec::Semantics semantics;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  return semantics.validate(program, entry, error, defaults, defaults, {}, nullptr, false, "graph");
+  return semantics.validate(program, entry, error, defaults, defaults);
 }
 } // namespace
 

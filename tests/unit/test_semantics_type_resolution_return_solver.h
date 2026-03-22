@@ -18,7 +18,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", error));
+  CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
 
@@ -30,7 +30,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "graph", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error == "return type inference cycle requires explicit annotation on /main");
 }
 
@@ -52,7 +52,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "graph", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error == "return type inference cycle requires explicit annotations on /alpha, /beta");
 }
 
@@ -64,7 +64,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "graph", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unable to infer return type on /main") != std::string::npos);
 }
 
@@ -78,7 +78,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "graph", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("conflicting return types on /main") != std::string::npos);
 }
 
@@ -100,13 +100,9 @@ main() {
   return(pair.value)
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver infers direct-call auto binding from collection-return helper") {
@@ -122,13 +118,9 @@ main() {
   return(count(values))
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver infers block-valued auto binding from helper-returned struct") {
@@ -153,13 +145,9 @@ main() {
   return(pair.value)
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver infers control-flow auto binding from helper-returned collection") {
@@ -184,13 +172,9 @@ main() {
   return(count(values))
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver infers omitted struct field envelope from block-valued helper") {
@@ -225,13 +209,9 @@ main() {
   return(shape.center.getX())
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver infers omitted struct field envelope from control-flow helper") {
@@ -271,13 +251,9 @@ main() {
   return(shape.center.getX())
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver preserves ambiguous omitted struct field envelope diagnostic") {
@@ -306,14 +282,9 @@ main() {
   return(0i32)
 }
 )";
-  std::string graphError;
-  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.find("unresolved or ambiguous omitted struct field envelope: /Shape/center") !=
-        std::string::npos);
-
-  std::string legacyError;
-  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.find("unresolved or ambiguous omitted struct field envelope: /Shape/center") !=
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unresolved or ambiguous omitted struct field envelope: /Shape/center") !=
         std::string::npos);
 }
 
@@ -344,13 +315,9 @@ main() {
   return(count(wrapValues()))
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver answers result queries through shared return-binding inference") {
@@ -381,13 +348,9 @@ main() {
   return(count(values))
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver answers map receiver queries through shared type-text helper") {
@@ -405,13 +368,9 @@ main() {
   return(Result.ok(total))
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver infers map value return kinds through shared infer helper") {
@@ -433,13 +392,9 @@ main() {
   return(pickLeft())
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver preserves nested string helper inference through shared collection receiver classifiers") {
@@ -467,13 +422,9 @@ main() {
               plus(vectorScore(), mapScore())))
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver infers auto return kinds through shared collection receiver classifiers") {
@@ -501,13 +452,9 @@ main() {
               plus(vectorScore(), mapScore())))
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("graph type resolver shares borrowed indexed collection plumbing for soa_vector auto returns") {
@@ -526,16 +473,12 @@ main() {
   return(0i32)
 }
 )";
-  std::string graphError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "graph", graphError));
-  CHECK(graphError.empty());
-
-  std::string legacyError;
-  CHECK(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.empty());
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("default semantics path uses graph resolver while legacy remains available for rollback") {
+TEST_CASE("default semantics path carries grounded mutual recursion") {
   const std::string source = R"(
 [return<auto>]
 alpha([bool] done{false}) {
@@ -560,10 +503,6 @@ main() {
   std::string defaultError;
   CHECK(validateProgram(source, "/main", defaultError));
   CHECK(defaultError.empty());
-
-  std::string legacyError;
-  CHECK_FALSE(validateProgramWithTypeResolver(source, "/main", "legacy", legacyError));
-  CHECK(legacyError.find("return type inference requires explicit annotation") != std::string::npos);
 }
 
 TEST_SUITE_END();

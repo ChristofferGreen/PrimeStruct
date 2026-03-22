@@ -1,12 +1,14 @@
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.type_resolution_parity");
 
-TEST_CASE("legacy and graph type resolvers keep diagnostics and vm ir aligned on parity corpus") {
-  struct ParityCase {
+TEST_CASE("default type resolver keeps vm pipeline behavior stable across graph corpus") {
+  struct GraphCase {
     std::string name;
     std::string source;
+    bool expectSuccess = false;
+    std::string errorSubstring;
   };
 
-  const std::vector<ParityCase> cases = {
+  const std::vector<GraphCase> cases = {
       {
           "acyclic_call_chain",
           R"(
@@ -25,6 +27,7 @@ main() {
   return(wrap())
 }
 )",
+          true,
       },
       {
           "unresolved_auto",
@@ -34,6 +37,8 @@ main() {
   [i32] value{1i32}
 }
 )",
+          false,
+          "unable to infer return type on /main",
       },
       {
           "conflicting_branch_returns",
@@ -45,6 +50,8 @@ main() {
     else(){ return(1.5f) })
 }
 )",
+          false,
+          "conflicting return types on /main",
       },
       {
           "direct_call_local_auto_struct",
@@ -65,6 +72,7 @@ main() {
   return(pair.value)
 }
 )",
+          true,
       },
       {
           "direct_call_local_auto_collection",
@@ -80,6 +88,7 @@ main() {
   return(count(values))
 }
 )",
+          true,
       },
       {
           "block_local_auto_struct",
@@ -104,6 +113,7 @@ main() {
   return(pair.value)
 }
 )",
+          true,
       },
       {
           "if_local_auto_collection",
@@ -128,6 +138,7 @@ main() {
   return(count(values))
 }
 )",
+          true,
       },
       {
           "ambiguous_omitted_field_envelope",
@@ -156,6 +167,8 @@ main() {
   return(0i32)
 }
 )",
+          false,
+          "unresolved or ambiguous omitted struct field envelope: /Shape/center",
       },
       {
           "query_collection_return_binding",
@@ -185,6 +198,7 @@ main() {
   return(count(wrapValues()))
 }
 )",
+          true,
       },
       {
           "query_result_return_binding",
@@ -215,6 +229,7 @@ main() {
   return(count(values))
 }
 )",
+          true,
       },
       {
           "query_map_receiver_type_text",
@@ -232,6 +247,7 @@ main() {
   return(Result.ok(total))
 }
 )",
+          true,
       },
       {
           "infer_map_value_return_kind",
@@ -253,6 +269,7 @@ main() {
   return(pickLeft())
 }
 )",
+          true,
       },
       {
           "shared_collection_receiver_classifiers",
@@ -280,6 +297,7 @@ main() {
               plus(vectorScore(), mapScore())))
 }
 )",
+          true,
       },
       {
           "auto_collection_receiver_classifiers",
@@ -307,6 +325,7 @@ main() {
               plus(vectorScore(), mapScore())))
 }
 )",
+          true,
       },
       {
           "borrowed_soa_vector_auto_return",
@@ -325,19 +344,25 @@ main() {
   return(0i32)
 }
 )",
+          true,
       },
   };
 
-  for (const ParityCase &testCase : cases) {
+  for (const GraphCase &testCase : cases) {
     CAPTURE(testCase.name);
-    const TypeResolverPipelineSnapshot legacy = runTypeResolverPipelineSnapshot(testCase.source, "legacy");
-    const TypeResolverPipelineSnapshot graph = runTypeResolverPipelineSnapshot(testCase.source, "graph");
+    const TypeResolverPipelineSnapshot snapshot = runTypeResolverPipelineSnapshot(testCase.source);
 
-    CHECK(graph.ok == legacy.ok);
-    CHECK(graph.errorStage == legacy.errorStage);
-    CHECK(graph.error == legacy.error);
-    CHECK(graph.diagnosticSnapshot == legacy.diagnosticSnapshot);
-    CHECK(graph.serializedIr == legacy.serializedIr);
+    CHECK(snapshot.ok == testCase.expectSuccess);
+    if (testCase.expectSuccess) {
+      CHECK(snapshot.errorStage == primec::CompilePipelineErrorStage::None);
+      CHECK(snapshot.error.empty());
+      CHECK_FALSE(snapshot.serializedIr.empty());
+    } else {
+      CHECK_FALSE(snapshot.error.empty());
+      CHECK(snapshot.error.find(testCase.errorSubstring) != std::string::npos);
+      CHECK(snapshot.diagnosticSnapshot.find(testCase.errorSubstring) != std::string::npos);
+      CHECK(snapshot.serializedIr.empty());
+    }
   }
 }
 
@@ -359,14 +384,9 @@ main() {
 }
 )";
 
-  const TypeResolverPipelineSnapshot legacy = runTypeResolverPipelineSnapshot(source, "legacy");
-  const TypeResolverPipelineSnapshot graph = runTypeResolverPipelineSnapshot(source, "graph");
-
-  CHECK_FALSE(legacy.ok);
-  CHECK(legacy.error.find("return type inference requires explicit annotation") != std::string::npos);
+  const TypeResolverPipelineSnapshot graph = runTypeResolverPipelineSnapshot(source);
 
   CHECK_FALSE(graph.ok);
-  CHECK(graph.errorStage == legacy.errorStage);
   CHECK(graph.error == "return type inference cycle requires explicit annotations on /alpha, /beta");
   CHECK(graph.serializedIr.empty());
   CHECK(graph.diagnosticSnapshot.find(
@@ -398,12 +418,7 @@ main() {
 }
 )";
 
-  const TypeResolverPipelineSnapshot legacy = runTypeResolverPipelineSnapshot(source, "legacy");
-  const TypeResolverPipelineSnapshot graph = runTypeResolverPipelineSnapshot(source, "graph");
-
-  CHECK_FALSE(legacy.ok);
-  CHECK(legacy.error.find("return type inference requires explicit annotation on /beta") != std::string::npos);
-  CHECK(legacy.serializedIr.empty());
+  const TypeResolverPipelineSnapshot graph = runTypeResolverPipelineSnapshot(source);
 
   CHECK(graph.ok);
   CHECK(graph.errorStage == primec::CompilePipelineErrorStage::None);

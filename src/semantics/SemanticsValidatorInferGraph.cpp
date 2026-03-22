@@ -49,22 +49,7 @@ std::string formatReturnInferenceCycleDiagnostic(const std::vector<const Definit
 } // namespace
 
 bool SemanticsValidator::inferUnknownReturnKinds() {
-  if (graphTypeResolverEnabled_) {
-    return inferUnknownReturnKindsGraph();
-  }
-  return inferUnknownReturnKindsLegacy();
-}
-
-bool SemanticsValidator::inferUnknownReturnKindsLegacy() {
-  graphLocalAutoBindings_.clear();
-  for (const auto &def : program_.definitions) {
-    if (returnKinds_[def.fullPath] == ReturnKind::Unknown) {
-      if (!inferDefinitionReturnKind(def)) {
-        return false;
-      }
-    }
-  }
-  return true;
+  return inferUnknownReturnKindsGraph();
 }
 
 bool SemanticsValidator::inferUnknownReturnKindsGraph() {
