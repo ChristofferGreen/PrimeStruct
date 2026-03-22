@@ -673,7 +673,9 @@ for(
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
   - Nested `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` expressions now preserve enough
     `Result` metadata for downstream `Result.error(...)`, `Result.why(...)`, `try(...)`, and `[auto]` bindings on the
-    semantics side, with the current lambda-backed execution slice materialized on the C++ emitter path.
+    semantics side. Lambda-backed execution now covers `Result.map(...)` on IR-backed native/VM paths for the current
+    `i32`/`bool`/`string` payload subset as well as the C++ emitter path, while `Result.and_then(...)` and
+    `Result.map2(...)` execution remains on the C++ emitter path.
   - Direct `Result.ok(...)` expressions now participate in that same metadata flow, including `Result.and_then(...)`
     lambdas that return `Result.ok(...)` and need to inherit the input `Result` error domain instead of depending on
     an unrelated outer context.

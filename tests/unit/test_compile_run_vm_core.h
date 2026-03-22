@@ -1281,6 +1281,43 @@ main() {
   CHECK(readFile(outPath) == "EOF\nEOF\nEOF\nEOF\nEOF\nEOF\nEOF\nEOF\n");
 }
 
+TEST_CASE("vm supports Result.map on IR-backed path") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] ok{Result.ok(2i32)}
+  [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
+  [Result<i32, FileError>] mappedOk{
+    Result.map(ok, []([i32] value) { return(multiply(value, 4i32)) })
+  }
+  [Result<i32, FileError>] mappedFailed{
+    Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) })
+  }
+  if(Result.error(mappedOk)) {
+    return(1i32)
+  }
+  if(not(Result.error(mappedFailed))) {
+    return(2i32)
+  }
+  print_line(Result.why(mappedFailed))
+  return(try(mappedOk))
+}
+)";
+  const std::string srcPath = writeTemp("vm_result_map_ir_backed.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_map_ir_backed_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 8);
+  CHECK(readFile(outPath) == "EOF\n");
+}
+
 TEST_CASE("vm uses stdlib File helper wrappers") {
   const std::string filePath =
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_helpers.txt").string();
