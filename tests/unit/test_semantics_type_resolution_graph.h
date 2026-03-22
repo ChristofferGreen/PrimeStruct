@@ -371,4 +371,32 @@ TEST_CASE("type resolution graph dump stays stable for template specialization e
   CHECK(requireTypeResolutionGraphDump(source, "/main") == expected);
 }
 
+TEST_CASE("type resolution return snapshot shares template-specialization preparation") {
+  const std::string source =
+      "[return<auto>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<auto>]\n"
+      "main() {\n"
+      "  [auto] value{id(1i32)}\n"
+      "  return(value)\n"
+      "}\n";
+
+  std::string error;
+  primec::semantics::TypeResolutionReturnSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionReturnSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &specialized = requireReturnSnapshotEntry(snapshot, "/id__t25a78a513414c3bf");
+  CHECK(specialized.returnKind == "i32");
+  CHECK(specialized.bindingTypeText == "i32");
+
+  const auto &mainEntry = requireReturnSnapshotEntry(snapshot, "/main");
+  CHECK(mainEntry.returnKind == "i32");
+  CHECK(mainEntry.bindingTypeText == "i32");
+}
+
 TEST_SUITE_END();

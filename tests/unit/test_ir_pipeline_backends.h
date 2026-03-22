@@ -278,6 +278,8 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
   std::filesystem::path graphHeaderPath = cwd / "src" / "semantics" / "TypeResolutionGraph.h";
   std::filesystem::path graphSourcePath = cwd / "src" / "semantics" / "TypeResolutionGraph.cpp";
+  std::filesystem::path graphPrepHeaderPath = cwd / "src" / "semantics" / "TypeResolutionGraphPreparation.h";
+  std::filesystem::path graphPrepSourcePath = cwd / "src" / "semantics" / "TypeResolutionGraphPreparation.cpp";
   std::filesystem::path pipelinePath = cwd / "src" / "CompilePipeline.cpp";
   std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
   std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
@@ -286,6 +288,8 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
     testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
     graphHeaderPath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.h";
     graphSourcePath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.cpp";
+    graphPrepHeaderPath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraphPreparation.h";
+    graphPrepSourcePath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraphPreparation.cpp";
     pipelinePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
     primecMainPath = cwd.parent_path() / "src" / "main.cpp";
     primevmMainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
@@ -294,6 +298,8 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   REQUIRE(std::filesystem::exists(testApiPath));
   REQUIRE(std::filesystem::exists(graphHeaderPath));
   REQUIRE(std::filesystem::exists(graphSourcePath));
+  REQUIRE(std::filesystem::exists(graphPrepHeaderPath));
+  REQUIRE(std::filesystem::exists(graphPrepSourcePath));
   REQUIRE(std::filesystem::exists(pipelinePath));
   REQUIRE(std::filesystem::exists(primecMainPath));
   REQUIRE(std::filesystem::exists(primevmMainPath));
@@ -302,9 +308,12 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   const std::string testApi = readTextFile(testApiPath);
   const std::string graphHeader = readTextFile(graphHeaderPath);
   const std::string graphSource = readTextFile(graphSourcePath);
+  const std::string graphPrepHeader = readTextFile(graphPrepHeaderPath);
+  const std::string graphPrepSource = readTextFile(graphPrepSourcePath);
   const std::string pipeline = readTextFile(pipelinePath);
   const std::string primecMain = readTextFile(primecMainPath);
   const std::string primevmMain = readTextFile(primevmMainPath);
+  CHECK(cmake.find("src/semantics/TypeResolutionGraphPreparation.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/TypeResolutionGraph.cpp") != std::string::npos);
   CHECK(cmake.find("primestruct.semantics.type_resolution_graph") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshotNode") != std::string::npos);
@@ -324,11 +333,13 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(graphHeader.find("buildTypeResolutionGraphForProgram") != std::string::npos);
   CHECK(graphHeader.find("computeTypeResolutionDependencyDag") != std::string::npos);
   CHECK(graphHeader.find("formatTypeResolutionGraph") != std::string::npos);
+  CHECK(graphPrepHeader.find("prepareProgramForTypeResolutionAnalysis") != std::string::npos);
+  CHECK(graphPrepSource.find("prepareProgramForTypeResolutionAnalysis") != std::string::npos);
   CHECK(graphSource.find("TypeResolutionGraphBuilder") != std::string::npos);
-  CHECK(graphSource.find("monomorphizeTemplates(program, entryPath, error)") != std::string::npos);
-  CHECK(graphSource.find("rewriteConvertConstructors(program, error)") != std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraph(program)") != std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraphForProgram(std::move(program), entryPath") != std::string::npos);
+  CHECK(graphSource.find("prepareProgramForTypeResolutionAnalysis(program, entryPath, semanticTransforms, error)") !=
+        std::string::npos);
   CHECK(graphSource.find("computeTypeResolutionDependencyDag(const TypeResolutionGraph &graph)") !=
         std::string::npos);
   CHECK(graphSource.find("out = formatTypeResolutionGraph(graph);") != std::string::npos);
@@ -731,6 +742,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("auto bindingIt = returnBindings_.find(def.fullPath);") != std::string::npos);
   CHECK(semanticsValidate.find("computeTypeResolutionReturnSnapshotForTesting(") != std::string::npos);
+  CHECK(semanticsValidate.find("prepareProgramForTypeResolutionAnalysis(") != std::string::npos);
   CHECK(semanticsValidate.find("validator.returnResolutionSnapshotForTesting()") != std::string::npos);
   CHECK(validatorExprMain.find("auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {") ==
         std::string::npos);

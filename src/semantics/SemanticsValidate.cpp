@@ -7,6 +7,7 @@
 #include "SemanticsValidateReflectionMetadata.h"
 #include "SemanticsValidateTransforms.h"
 #include "SemanticsValidator.h"
+#include "TypeResolutionGraphPreparation.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -315,22 +316,8 @@ bool semantics::computeTypeResolutionReturnSnapshotForTesting(
     const std::vector<std::string> &semanticTransforms) {
   out = {};
   error.clear();
-  if (!semantics::applySemanticTransforms(program, semanticTransforms, error)) {
-    return false;
-  }
-  if (!semantics::rewriteExperimentalGfxConstructors(program, error)) {
-    return false;
-  }
-  if (!semantics::rewriteReflectionGeneratedHelpers(program, error)) {
-    return false;
-  }
-  if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
-    return false;
-  }
-  if (!semantics::rewriteReflectionMetadataQueries(program, error)) {
-    return false;
-  }
-  if (!semantics::rewriteConvertConstructors(program, error)) {
+  if (!semantics::prepareProgramForTypeResolutionAnalysis(
+          program, entryPath, semanticTransforms, error)) {
     return false;
   }
 

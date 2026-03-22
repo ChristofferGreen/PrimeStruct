@@ -2,11 +2,7 @@
 
 #include "CondensationDag.h"
 #include "SemanticsHelpers.h"
-#include "SemanticsValidateConvertConstructors.h"
-#include "SemanticsValidateExperimentalGfxConstructors.h"
-#include "SemanticsValidateReflectionGeneratedHelpers.h"
-#include "SemanticsValidateReflectionMetadata.h"
-#include "SemanticsValidateTransforms.h"
+#include "TypeResolutionGraphPreparation.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 
 #include <optional>
@@ -18,8 +14,6 @@
 #include <vector>
 
 namespace primec::semantics {
-
-bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error);
 
 namespace {
 
@@ -420,31 +414,6 @@ private:
   }
 };
 
-bool prepareProgramForTypeResolutionGraph(Program &program,
-                                          const std::string &entryPath,
-                                          const std::vector<std::string> &semanticTransforms,
-                                          std::string &error) {
-  if (!applySemanticTransforms(program, semanticTransforms, error)) {
-    return false;
-  }
-  if (!rewriteExperimentalGfxConstructors(program, error)) {
-    return false;
-  }
-  if (!rewriteReflectionGeneratedHelpers(program, error)) {
-    return false;
-  }
-  if (!monomorphizeTemplates(program, entryPath, error)) {
-    return false;
-  }
-  if (!rewriteReflectionMetadataQueries(program, error)) {
-    return false;
-  }
-  if (!rewriteConvertConstructors(program, error)) {
-    return false;
-  }
-  return true;
-}
-
 } // namespace
 
 std::string_view typeResolutionNodeKindName(TypeResolutionNodeKind kind) {
@@ -481,7 +450,7 @@ bool buildTypeResolutionGraphForProgram(Program program,
                                         TypeResolutionGraph &out) {
   error.clear();
   out = {};
-  if (!prepareProgramForTypeResolutionGraph(program, entryPath, semanticTransforms, error)) {
+  if (!prepareProgramForTypeResolutionAnalysis(program, entryPath, semanticTransforms, error)) {
     return false;
   }
   out = buildTypeResolutionGraph(program);

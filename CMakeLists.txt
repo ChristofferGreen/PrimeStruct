@@ -46,6 +46,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorph.cpp
   src/semantics/CondensationDag.cpp
   src/semantics/StronglyConnectedComponents.cpp
+  src/semantics/TypeResolutionGraphPreparation.cpp
   src/semantics/TypeResolutionGraph.cpp
   src/semantics/SemanticsValidate.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
