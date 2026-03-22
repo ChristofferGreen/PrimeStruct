@@ -837,9 +837,69 @@
           if (callExpr.args.size() != expectedArgCount) {
             return false;
           }
-          const auto targetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn);
-          if (!targetInfo.isVectorTarget) {
+          std::vector<std::string> receiverCollectionArgs;
+          bool knownVectorCallReceiver = false;
+          if (callExpr.args.front().kind == Expr::Kind::Call) {
+            const Expr &receiverCallExpr = callExpr.args.front();
+            knownVectorCallReceiver =
+                receiverCallExpr.name.rfind("/std/collections/vector/vector", 0) == 0 ||
+                receiverCallExpr.name.rfind("/std/collections/experimental_vector/vector", 0) == 0 ||
+                receiverCallExpr.name.rfind("/vector/vector", 0) == 0;
+            std::string receiverCollectionName;
+            if (getBuiltinCollectionName(receiverCallExpr, receiverCollectionName) &&
+                receiverCollectionName == "vector" &&
+                receiverCallExpr.templateArgs.size() == 1) {
+              receiverCollectionArgs = receiverCallExpr.templateArgs;
+              knownVectorCallReceiver = true;
+            } else if (const Definition *receiverDef = resolveDefinitionCall(receiverCallExpr)) {
+              if (!ir_lowerer::inferDeclaredReturnCollection(
+                      *receiverDef, receiverCollectionName, receiverCollectionArgs) ||
+                  receiverCollectionName != "vector" || receiverCollectionArgs.size() != 1) {
+                receiverCollectionArgs.clear();
+              } else {
+                knownVectorCallReceiver = true;
+              }
+            }
+          }
+          const auto targetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(
+              callExpr.args.front(),
+              localsIn,
+              [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
+                targetInfoOut = {};
+                const Definition *callee = resolveDefinitionCall(targetCallExpr);
+                if (callee == nullptr) {
+                  return false;
+                }
+                std::string collectionName;
+                std::vector<std::string> collectionArgs;
+                if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
+                  return false;
+                }
+                if ((collectionName != "array" && collectionName != "vector") || collectionArgs.size() != 1) {
+                  return false;
+                }
+                targetInfoOut.isArrayOrVectorTarget = true;
+                targetInfoOut.isVectorTarget = (collectionName == "vector");
+                targetInfoOut.elemKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+                return true;
+              });
+          if (!targetInfo.isVectorTarget && !knownVectorCallReceiver) {
             return false;
+          }
+          if (knownVectorCallReceiver) {
+            auto tryRewriteNamespace = [&](const std::string &namespacePrefix) {
+              Expr candidate = callExpr;
+              candidate.isMethodCall = false;
+              candidate.namespacePrefix = namespacePrefix;
+              candidate.name = helperName;
+              if (candidate.templateArgs.empty() && !receiverCollectionArgs.empty()) {
+                candidate.templateArgs = receiverCollectionArgs;
+              }
+              rewrittenExpr = std::move(candidate);
+              return true;
+            };
+            return tryRewriteNamespace("/std/collections/vector") ||
+                   tryRewriteNamespace("/vector");
           }
           rewrittenExpr = callExpr;
           rewrittenExpr.isMethodCall = false;

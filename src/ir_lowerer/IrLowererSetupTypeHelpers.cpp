@@ -12,6 +12,104 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string stripGeneratedHelperSuffix(std::string helperName) {
+  const size_t generatedSuffix = helperName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    helperName.erase(generatedSuffix);
+  }
+  return helperName;
+}
+
+bool resolveExperimentalVectorHelperAliasName(std::string helperName, std::string &helperNameOut) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "vectorCount") {
+    helperNameOut = "count";
+    return true;
+  }
+  if (helperName == "vectorCapacity") {
+    helperNameOut = "capacity";
+    return true;
+  }
+  if (helperName == "vectorAt") {
+    helperNameOut = "at";
+    return true;
+  }
+  if (helperName == "vectorAtUnsafe") {
+    helperNameOut = "at_unsafe";
+    return true;
+  }
+  if (helperName == "vectorPush") {
+    helperNameOut = "push";
+    return true;
+  }
+  if (helperName == "vectorPop") {
+    helperNameOut = "pop";
+    return true;
+  }
+  if (helperName == "vectorReserve") {
+    helperNameOut = "reserve";
+    return true;
+  }
+  if (helperName == "vectorClear") {
+    helperNameOut = "clear";
+    return true;
+  }
+  if (helperName == "vectorRemoveAt") {
+    helperNameOut = "remove_at";
+    return true;
+  }
+  if (helperName == "vectorRemoveSwap") {
+    helperNameOut = "remove_swap";
+    return true;
+  }
+  return false;
+}
+
+bool resolveStdCollectionsVectorWrapperAliasName(std::string helperName, std::string &helperNameOut) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "vectorCount") {
+    helperNameOut = "count";
+    return true;
+  }
+  if (helperName == "vectorCapacity") {
+    helperNameOut = "capacity";
+    return true;
+  }
+  if (helperName == "vectorAt") {
+    helperNameOut = "at";
+    return true;
+  }
+  if (helperName == "vectorAtUnsafe") {
+    helperNameOut = "at_unsafe";
+    return true;
+  }
+  if (helperName == "vectorPush") {
+    helperNameOut = "push";
+    return true;
+  }
+  if (helperName == "vectorPop") {
+    helperNameOut = "pop";
+    return true;
+  }
+  if (helperName == "vectorReserve") {
+    helperNameOut = "reserve";
+    return true;
+  }
+  if (helperName == "vectorClear") {
+    helperNameOut = "clear";
+    return true;
+  }
+  if (helperName == "vectorRemoveAt") {
+    helperNameOut = "remove_at";
+    return true;
+  }
+  if (helperName == "vectorRemoveSwap") {
+    helperNameOut = "remove_swap";
+    return true;
+  }
+  return false;
+}
+
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
   return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
          suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
@@ -41,23 +139,33 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string vectorPrefix = "vector/";
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
+  const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
+  const std::string collectionsVectorWrapperPrefix = "std/collections/vector";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(vectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }
     return true;
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(arrayPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }
     return true;
   }
+  if (normalized.rfind(collectionsVectorWrapperPrefix, 0) == 0 &&
+      normalized.rfind(stdVectorPrefix, 0) != 0) {
+    return resolveStdCollectionsVectorWrapperAliasName(
+        normalized.substr(collectionsVectorWrapperPrefix.size()), helperNameOut);
+  }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
+  }
+  if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
+    return resolveExperimentalVectorHelperAliasName(normalized.substr(experimentalVectorPrefix.size()), helperNameOut);
   }
   return false;
 }
@@ -89,7 +197,9 @@ std::string normalizeCollectionHelperPath(const std::string &path) {
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/vector/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/experimental_vector/", 0) == 0 ||
+        normalizedPath.rfind("map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
@@ -108,14 +218,19 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
   const std::string vectorPrefix = "vector/";
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
+  const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
-    return isRemovedVectorCompatibilityHelper(normalized.substr(vectorPrefix.size()));
+    return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size())));
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
-    return isRemovedVectorCompatibilityHelper(normalized.substr(arrayPrefix.size()));
+    return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size())));
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    return isRemovedVectorCompatibilityHelper(normalized.substr(stdVectorPrefix.size()));
+    return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size())));
+  }
+  if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
+    std::string helperName;
+    return resolveExperimentalVectorHelperAliasName(normalized.substr(experimentalVectorPrefix.size()), helperName);
   }
   return false;
 }

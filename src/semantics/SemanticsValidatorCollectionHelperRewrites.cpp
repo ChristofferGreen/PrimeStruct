@@ -64,7 +64,7 @@ std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view he
     return canonical;
   }
   const std::string alias = "/map/" + std::string(helperName);
-  if (hasDeclaredDefinitionPath(alias) || hasImportedDefinitionPath(alias)) {
+  if (hasDeclaredDefinitionPath(alias)) {
     return alias;
   }
   return canonical;
@@ -175,15 +175,15 @@ std::string SemanticsValidator::specializedExperimentalMapHelperTarget(
 }
 
 std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view helperName) const {
+  const std::string alias = "/vector/" + std::string(helperName);
+  if (hasDeclaredDefinitionPath(alias)) {
+    return alias;
+  }
   const std::string canonical = "/std/collections/vector/" + std::string(helperName);
   if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
     return canonical;
   }
-  const std::string alias = "/vector/" + std::string(helperName);
-  if (hasDeclaredDefinitionPath(alias) || hasImportedDefinitionPath(alias)) {
-    return alias;
-  }
-  return canonical;
+  return alias;
 }
 
 bool SemanticsValidator::tryRewriteBareMapHelperCall(
@@ -258,10 +258,21 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
   if (!resolvesBuiltinVector && !resolvesExperimentalVector) {
     return false;
   }
+  auto preferredBareVectorDirectHelperTarget = [&](std::string_view helper) {
+    const std::string alias = "/vector/" + std::string(helper);
+    if (hasDeclaredDefinitionPath(alias)) {
+      return alias;
+    }
+    const std::string canonical = "/std/collections/vector/" + std::string(helper);
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   rewrittenOut = candidate;
   if (resolvesExperimentalVector) {
     const std::string preferredHelperPath =
-        preferredBareVectorHelperTarget(helperName);
+        preferredBareVectorDirectHelperTarget(helperName);
     if (hasImportedDefinitionPath(preferredHelperPath) ||
         hasDeclaredDefinitionPath(preferredHelperPath)) {
       rewrittenOut.name = preferredHelperPath;
@@ -283,7 +294,7 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
          experimentalHelperPath.find("__t") != std::string::npos &&
          defMap_.count(experimentalHelperPath) > 0);
     if (!hasVisibleExperimentalVectorHelperPath) {
-      rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
+      rewrittenOut.name = preferredBareVectorDirectHelperTarget(helperName);
     } else if (receiverIndex == 0 && !hasNamedArguments(candidate.argNames)) {
       rewrittenOut.isMethodCall = true;
       rewrittenOut.name = std::string(helperName);
@@ -297,7 +308,7 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
       }
     }
   } else {
-    rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
+    rewrittenOut.name = preferredBareVectorDirectHelperTarget(helperName);
   }
   rewrittenOut.namespacePrefix.clear();
   return true;

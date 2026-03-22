@@ -10,6 +10,14 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string stripGeneratedHelperSuffix(std::string helperName) {
+  const size_t generatedSuffix = helperName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    helperName.erase(generatedSuffix);
+  }
+  return helperName;
+}
+
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
          helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
@@ -108,8 +116,30 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string vectorPrefix = "vector/";
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
+  const std::string collectionsVectorWrapperPrefix = "std/collections/vector";
+  const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
+  auto resolveCollectionsVectorAlias = [&](std::string helperName) {
+    helperName = stripGeneratedHelperSuffix(std::move(helperName));
+    if (helperName == "vectorCount") {
+      helperNameOut = "count";
+      return true;
+    }
+    if (helperName == "vectorCapacity") {
+      helperNameOut = "capacity";
+      return true;
+    }
+    if (helperName == "vectorAt") {
+      helperNameOut = "at";
+      return true;
+    }
+    if (helperName == "vectorAtUnsafe") {
+      helperNameOut = "at_unsafe";
+      return true;
+    }
+    return false;
+  };
   if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(vectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
     if (helperNameOut == "count" || helperNameOut == "capacity") {
       return true;
     }
@@ -119,14 +149,22 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     return true;
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(arrayPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }
     return true;
   }
+  if (normalized.rfind(collectionsVectorWrapperPrefix, 0) == 0 &&
+      normalized.rfind(stdVectorPrefix, 0) != 0) {
+    return resolveCollectionsVectorAlias(normalized.substr(collectionsVectorWrapperPrefix.size()));
+  }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
+    return true;
+  }
+  if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
+    return resolveCollectionsVectorAlias(normalized.substr(experimentalVectorPrefix.size()));
     return true;
   }
   return false;

@@ -149,8 +149,29 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     return kind == ReturnKind::String || arg.kind == Expr::Kind::StringLiteral;
   };
+  auto setMapKeyMismatchError = [&](const std::string &helperName,
+                                    const Expr &,
+                                    const std::string &mapKeyType) {
+    const bool isExplicitCanonicalMapAccessCall =
+        !expr.isMethodCall &&
+        ((resolved == "/std/collections/map/at" ||
+          resolved == "/std/collections/map/at_unsafe") ||
+         expr.name.rfind("/std/collections/map/", 0) == 0 ||
+         expr.namespacePrefix == "/std/collections/map" ||
+         expr.namespacePrefix == "std/collections/map");
+    if (isExplicitCanonicalMapAccessCall) {
+      error_ = "argument type mismatch for " + resolved + " parameter key";
+      return;
+    }
+    if (normalizeBindingTypeName(mapKeyType) == "string") {
+      error_ = helperName + " requires string map key";
+    } else {
+      error_ = helperName + " requires map key type " + mapKeyType;
+    }
+  };
 
   auto validateMapKeyExpr = [&](const std::string &helperName,
+                                const Expr &receiverExpr,
                                 const Expr &keyExpr,
                                 const std::string &mapKeyType) -> bool {
     if (mapKeyType.empty()) {
@@ -158,7 +179,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     if (normalizeBindingTypeName(mapKeyType) == "string") {
       if (!isStringExpr(keyExpr)) {
-        error_ = helperName + " requires string map key";
+        setMapKeyMismatchError(helperName, receiverExpr, mapKeyType);
         return false;
       }
       return true;
@@ -169,12 +190,12 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     if (context.resolveStringTarget != nullptr &&
         context.resolveStringTarget(keyExpr)) {
-      error_ = helperName + " requires map key type " + mapKeyType;
+      setMapKeyMismatchError(helperName, receiverExpr, mapKeyType);
       return false;
     }
     ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
     if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-      error_ = helperName + " requires map key type " + mapKeyType;
+      setMapKeyMismatchError(helperName, receiverExpr, mapKeyType);
       return false;
     }
     return true;
@@ -202,7 +223,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       error_ = helperName + " requires map target";
       return false;
     }
-    if (!validateMapKeyExpr(helperName, expr.args[1], mapKeyType)) {
+    if (!validateMapKeyExpr(helperName, expr.args.front(), expr.args[1], mapKeyType)) {
       return false;
     }
     if (!validateExpr(params, locals, expr.args.front()) ||
@@ -431,6 +452,14 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       }
     }
     const Expr &receiverExpr = expr.args[indexArgIndex == 0 ? 1 : 0];
+    std::string vectorElemType;
+    const bool isDirectVectorReceiver =
+        context.resolveVectorTarget != nullptr &&
+        context.resolveVectorTarget(receiverExpr, vectorElemType);
+    std::string experimentalVectorElemType;
+    const bool isDirectExperimentalVectorReceiver =
+        context.resolveExperimentalVectorValueTarget != nullptr &&
+        context.resolveExperimentalVectorValueTarget(receiverExpr, experimentalVectorElemType);
     std::string receiverBuiltinCollection;
     if (getBuiltinCollectionName(receiverExpr, receiverBuiltinCollection)) {
       if (receiverBuiltinCollection == "map" &&
@@ -466,6 +495,19 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return true;
     }
     handledOut = true;
+    const bool isStdlibVectorAccessWrapperDefinition =
+        currentValidationContext_.definitionPath.rfind("/std/collections/", 0) == 0 ||
+        currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+        currentValidationContext_.definitionPath.rfind("/std/image/", 0) == 0;
+    if (!expr.isMethodCall &&
+        (isDirectVectorReceiver || isDirectExperimentalVectorReceiver) &&
+        !isStdlibVectorAccessWrapperDefinition &&
+        !hasDeclaredDefinitionPath("/vector/" + builtinName) &&
+        !hasDeclaredDefinitionPath("/std/collections/vector/" + builtinName) &&
+        !hasImportedDefinitionPath("/std/collections/vector/" + builtinName)) {
+      error_ = "unknown call target: /std/collections/vector/" + builtinName;
+      return false;
+    }
     if (!isArrayOrString && !isMap && !isExperimentalMap) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
@@ -529,7 +571,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         error_ = builtinName + " requires integer index [collection]";
         return false;
       }
-    } else if (!validateMapKeyExpr(builtinName, expr.args[indexArgIndex], mapKeyType)) {
+    } else if (!validateMapKeyExpr(builtinName, receiverExpr, expr.args[indexArgIndex], mapKeyType)) {
       return false;
     }
 

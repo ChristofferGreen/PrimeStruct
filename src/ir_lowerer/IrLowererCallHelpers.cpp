@@ -22,6 +22,96 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
   return helperName;
 }
 
+bool resolveExperimentalVectorHelperAliasName(std::string helperName, std::string &helperNameOut) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "vectorCount") {
+    helperNameOut = "count";
+    return true;
+  }
+  if (helperName == "vectorCapacity") {
+    helperNameOut = "capacity";
+    return true;
+  }
+  if (helperName == "vectorAt") {
+    helperNameOut = "at";
+    return true;
+  }
+  if (helperName == "vectorAtUnsafe") {
+    helperNameOut = "at_unsafe";
+    return true;
+  }
+  if (helperName == "vectorPush") {
+    helperNameOut = "push";
+    return true;
+  }
+  if (helperName == "vectorPop") {
+    helperNameOut = "pop";
+    return true;
+  }
+  if (helperName == "vectorReserve") {
+    helperNameOut = "reserve";
+    return true;
+  }
+  if (helperName == "vectorClear") {
+    helperNameOut = "clear";
+    return true;
+  }
+  if (helperName == "vectorRemoveAt") {
+    helperNameOut = "remove_at";
+    return true;
+  }
+  if (helperName == "vectorRemoveSwap") {
+    helperNameOut = "remove_swap";
+    return true;
+  }
+  return false;
+}
+
+bool resolveStdCollectionsVectorWrapperAliasName(std::string helperName, std::string &helperNameOut) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "vectorCount") {
+    helperNameOut = "count";
+    return true;
+  }
+  if (helperName == "vectorCapacity") {
+    helperNameOut = "capacity";
+    return true;
+  }
+  if (helperName == "vectorAt") {
+    helperNameOut = "at";
+    return true;
+  }
+  if (helperName == "vectorAtUnsafe") {
+    helperNameOut = "at_unsafe";
+    return true;
+  }
+  if (helperName == "vectorPush") {
+    helperNameOut = "push";
+    return true;
+  }
+  if (helperName == "vectorPop") {
+    helperNameOut = "pop";
+    return true;
+  }
+  if (helperName == "vectorReserve") {
+    helperNameOut = "reserve";
+    return true;
+  }
+  if (helperName == "vectorClear") {
+    helperNameOut = "clear";
+    return true;
+  }
+  if (helperName == "vectorRemoveAt") {
+    helperNameOut = "remove_at";
+    return true;
+  }
+  if (helperName == "vectorRemoveSwap") {
+    helperNameOut = "remove_swap";
+    return true;
+  }
+  return false;
+}
+
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
          helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
@@ -46,7 +136,27 @@ bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
          matchesPath("/std/collections/vector/reserve") ||
          matchesPath("/std/collections/vector/clear") ||
          matchesPath("/std/collections/vector/remove_at") ||
-         matchesPath("/std/collections/vector/remove_swap");
+         matchesPath("/std/collections/vector/remove_swap") ||
+         matchesPath("/std/collections/vectorCount") ||
+         matchesPath("/std/collections/vectorCapacity") ||
+         matchesPath("/std/collections/vectorAt") ||
+         matchesPath("/std/collections/vectorAtUnsafe") ||
+         matchesPath("/std/collections/vectorPush") ||
+         matchesPath("/std/collections/vectorPop") ||
+         matchesPath("/std/collections/vectorReserve") ||
+         matchesPath("/std/collections/vectorClear") ||
+         matchesPath("/std/collections/vectorRemoveAt") ||
+         matchesPath("/std/collections/vectorRemoveSwap") ||
+         matchesPath("/std/collections/experimental_vector/vectorCount") ||
+         matchesPath("/std/collections/experimental_vector/vectorCapacity") ||
+         matchesPath("/std/collections/experimental_vector/vectorAt") ||
+         matchesPath("/std/collections/experimental_vector/vectorAtUnsafe") ||
+         matchesPath("/std/collections/experimental_vector/vectorPush") ||
+         matchesPath("/std/collections/experimental_vector/vectorPop") ||
+         matchesPath("/std/collections/experimental_vector/vectorReserve") ||
+         matchesPath("/std/collections/experimental_vector/vectorClear") ||
+         matchesPath("/std/collections/experimental_vector/vectorRemoveAt") ||
+         matchesPath("/std/collections/experimental_vector/vectorRemoveSwap");
 }
 
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
@@ -60,6 +170,8 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   constexpr std::string_view vectorPrefix = "vector/";
   constexpr std::string_view arrayPrefix = "array/";
   constexpr std::string_view stdVectorPrefix = "std/collections/vector/";
+  constexpr std::string_view experimentalVectorPrefix = "std/collections/experimental_vector/";
+  constexpr std::string_view collectionsVectorWrapperPrefix = "std/collections/vector";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
     if (helperNameOut == "count" || helperNameOut == "capacity") {
@@ -77,9 +189,18 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     }
     return true;
   }
+  if (normalized.rfind(collectionsVectorWrapperPrefix, 0) == 0 &&
+      normalized.rfind(stdVectorPrefix, 0) != 0) {
+    return resolveStdCollectionsVectorWrapperAliasName(
+        std::string(normalized.substr(collectionsVectorWrapperPrefix.size())), helperNameOut);
+  }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
+  }
+  if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
+    return resolveExperimentalVectorHelperAliasName(
+        std::string(normalized.substr(experimentalVectorPrefix.size())), helperNameOut);
   }
   return false;
 }

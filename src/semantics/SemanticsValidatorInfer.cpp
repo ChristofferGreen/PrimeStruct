@@ -663,7 +663,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         resolved = methodPath;
         hasResolvedPath = true;
       } else if (resolveVectorTarget(expr.args.front(), elemType)) {
-        const std::string methodPath = preferVectorStdlibHelperPath("/vector/count");
+        const std::string methodPath = preferredBareVectorHelperTarget("count");
         if (!hasDefinitionPath(methodPath)) {
           return ReturnKind::Int;
         }
@@ -694,7 +694,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1) {
       std::string elemType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
-        const std::string methodPath = preferVectorStdlibHelperPath("/vector/capacity");
+        const std::string methodPath = preferredBareVectorHelperTarget("capacity");
         if (!hasDefinitionPath(methodPath)) {
           return ReturnKind::Int;
         }

@@ -55,6 +55,11 @@ void appendUniqueIndex(std::vector<size_t> &indices, size_t index, size_t limit)
 
 bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *helper) const {
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
+    if (path.rfind("/vector/", 0) == 0 &&
+        defMap_.count(path) == 0 &&
+        !hasDeclaredDefinitionPath(path)) {
+      return false;
+    }
     if (hasImportedDefinitionPath(path)) {
       return true;
     }
@@ -192,10 +197,16 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       (helperName == "count" || helperName == "capacity" ||
        helperName == "at" || helperName == "at_unsafe")) {
     std::string collectionTypePath;
-    if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath) &&
-        collectionTypePath == "/vector") {
-      resolvedOut = preferredBareVectorHelperTarget(helperName);
-      return true;
+    if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
+      if (collectionTypePath == "/vector") {
+        resolvedOut = preferredBareVectorHelperTarget(helperName);
+        return true;
+      }
+      if (collectionTypePath == "/map" &&
+          (helperName == "count" || helperName == "at" || helperName == "at_unsafe")) {
+        resolvedOut = preferredBareMapHelperTarget(helperName);
+        return true;
+      }
     }
   }
   auto resolveReceiverTypePath = [&](const std::string &typeName,
@@ -231,6 +242,11 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     const std::string resolvedType = resolveReceiverTypePath(typeName, receiver.namespacePrefix);
     if (resolvedType.empty()) {
       return false;
+    }
+    if (resolvedType == "/map" &&
+        (helperName == "count" || helperName == "at" || helperName == "at_unsafe")) {
+      resolvedOut = preferredBareMapHelperTarget(helperName);
+      return true;
     }
     resolvedOut = resolvedType + "/" + helperName;
     return true;
@@ -291,6 +307,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     return true;
   }
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
+    if (path.rfind("/vector/", 0) == 0 &&
+        defMap_.count(path) == 0 &&
+        !hasDeclaredDefinitionPath(path)) {
+      return false;
+    }
     if (hasImportedDefinitionPath(path)) {
       return true;
     }
@@ -387,6 +408,12 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   const bool isStdNamespacedVectorCanonicalHelperCall =
       !expr.isMethodCall && resolved.rfind("/std/collections/vector/", 0) == 0 &&
       isVectorCompatibilityHelperName(namespacedHelper);
+  const bool isExplicitStdNamespacedVectorCompatibilityMethod =
+      expr.isMethodCall &&
+      (resolved == "/std/collections/vector/count" ||
+       resolved == "/std/collections/vector/capacity" ||
+       resolved == "/std/collections/vector/at" ||
+       resolved == "/std/collections/vector/at_unsafe");
   const bool hasVisibleStdNamespacedVectorCanonicalHelper =
       isStdNamespacedVectorCanonicalHelperCall && hasVisibleDefinitionPath(resolved);
   const bool allowStdNamespacedUserReceiverProbe =
@@ -403,6 +430,9 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       !allowStdNamespacedUserReceiverProbe) {
     error_ = "unknown call target: " + resolved;
     return false;
+  }
+  if (isExplicitStdNamespacedVectorCompatibilityMethod) {
+    return true;
   }
   if (isStdNamespacedVectorCanonicalHelperCall &&
       expr.args.size() == 1 &&
@@ -466,12 +496,25 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       const Expr &receiverCandidate = expr.args[receiverIndex];
       std::string methodTarget;
       if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, vectorHelper, methodTarget)) {
-        methodTarget = preferVectorStdlibHelperPath(methodTarget);
+        if (!expr.isMethodCall) {
+          methodTarget = preferVectorStdlibHelperPath(methodTarget);
+        }
       }
       if (hasVisibleDefinitionPath(methodTarget)) {
         resolved = methodTarget;
         resolvedReceiverIndex = receiverIndex;
         break;
+      }
+    }
+  }
+
+  if (defMap_.find(resolved) == defMap_.end()) {
+    if (resolved.rfind("/vector/", 0) == 0) {
+      const std::string helperSuffix = resolved.substr(std::string("/vector/").size());
+      const std::string canonicalResolved = "/std/collections/vector/" + helperSuffix;
+      if (defMap_.find(canonicalResolved) != defMap_.end() ||
+          hasImportedDefinitionPath(canonicalResolved)) {
+        resolved = canonicalResolved;
       }
     }
   }

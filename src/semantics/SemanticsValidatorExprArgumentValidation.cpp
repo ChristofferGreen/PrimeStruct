@@ -90,8 +90,16 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
     return true;
   }
   if (arg.kind == Expr::Kind::Call) {
+    const std::string resolvedPath = resolveCalleePath(arg);
+    const bool treatAsBuiltinAccess =
+        defMap_.find(resolvedPath) == defMap_.end() ||
+        resolvedPath.rfind("/std/collections/vector/at", 0) == 0 ||
+        resolvedPath == "/map/at" ||
+        resolvedPath == "/map/at_unsafe" ||
+        resolvedPath == "/std/collections/map/at" ||
+        resolvedPath == "/std/collections/map/at_unsafe";
     std::string accessName;
-    if (defMap_.find(resolveCalleePath(arg)) == defMap_.end() &&
+    if (treatAsBuiltinAccess &&
         getBuiltinArrayAccessName(arg, accessName) &&
         arg.args.size() == 2) {
       std::string mapValueType;

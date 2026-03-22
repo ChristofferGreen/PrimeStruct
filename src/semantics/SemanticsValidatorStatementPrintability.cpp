@@ -30,6 +30,9 @@ ReturnKind returnKindForStatementBinding(const BindingInfo &binding) {
 bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
                                                const std::vector<ParameterInfo> &params,
                                                const std::unordered_map<std::string, BindingInfo> &locals) {
+  BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters;
+  const auto builtinCollectionDispatchResolvers = makeBuiltinCollectionDispatchResolvers(
+      params, locals, builtinCollectionDispatchResolverAdapters);
   std::function<bool(const Expr &, const std::unordered_map<std::string, BindingInfo> &)> isStringExprRef;
   auto resolveArrayTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
@@ -76,6 +79,17 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
       return true;
     }
     if (target.kind == Expr::Kind::Call) {
+      std::string collectionTypePath;
+      if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
+          (collectionTypePath == "/array" || collectionTypePath == "/vector")) {
+        std::vector<std::string> templateArgs;
+        const std::string expectedBase = collectionTypePath == "/array" ? "array" : "vector";
+        if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, templateArgs) &&
+            templateArgs.size() == 1) {
+          elemTypeOut = templateArgs.front();
+          return true;
+        }
+      }
       std::string collection;
       if (defMap_.find(resolveCalleePath(target)) != defMap_.end()) {
         return false;
@@ -212,9 +226,20 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
              isStringExprRef(*thenValue, thenLocals) &&
              isStringExprRef(*elseValue, elseLocals);
     }
+    if (this->isStringExprForArgumentValidation(candidate, builtinCollectionDispatchResolvers)) {
+      return true;
+    }
     if (candidate.kind == Expr::Kind::Call) {
+      const std::string resolvedPath = resolveCalleePath(candidate);
+      const bool treatAsBuiltinAccess =
+          defMap_.find(resolvedPath) == defMap_.end() ||
+          resolvedPath.rfind("/std/collections/vector/at", 0) == 0 ||
+          resolvedPath == "/map/at" ||
+          resolvedPath == "/map/at_unsafe" ||
+          resolvedPath == "/std/collections/map/at" ||
+          resolvedPath == "/std/collections/map/at_unsafe";
       std::string accessName;
-      if (defMap_.find(resolveCalleePath(candidate)) == defMap_.end() &&
+      if (treatAsBuiltinAccess &&
           getBuiltinArrayAccessName(candidate, accessName) &&
           candidate.args.size() == 2) {
         std::string elemType;
@@ -227,6 +252,11 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
             normalizeBindingTypeName(mapValueType) == "string") {
           return true;
         }
+      }
+      std::string inferredTypeText;
+      if (inferQueryExprTypeText(candidate, params, candidateLocals, inferredTypeText) &&
+          normalizeBindingTypeName(inferredTypeText) == "string") {
+        return true;
       }
       if (inferExprReturnKind(candidate, params, candidateLocals) == ReturnKind::String) {
         return true;

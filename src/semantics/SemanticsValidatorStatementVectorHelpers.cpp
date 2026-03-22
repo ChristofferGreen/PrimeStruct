@@ -46,6 +46,11 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
 
 std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &path) const {
   auto hasVisibleDefinitionPath = [&](const std::string &candidate) {
+    if ((candidate.rfind("/vector/", 0) == 0 || candidate.rfind("/map/", 0) == 0) &&
+        defMap_.count(candidate) == 0 &&
+        !hasDeclaredDefinitionPath(candidate)) {
+      return false;
+    }
     return hasImportedDefinitionPath(candidate) || defMap_.count(candidate) > 0;
   };
   std::string preferred = path;

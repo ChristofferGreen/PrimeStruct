@@ -65,6 +65,64 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
   return helperName;
 }
 
+bool resolveStdCollectionsVectorWrapperAliasName(std::string helperName, std::string &helperNameOut) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "vectorPush") {
+    helperNameOut = "push";
+    return true;
+  }
+  if (helperName == "vectorPop") {
+    helperNameOut = "pop";
+    return true;
+  }
+  if (helperName == "vectorReserve") {
+    helperNameOut = "reserve";
+    return true;
+  }
+  if (helperName == "vectorClear") {
+    helperNameOut = "clear";
+    return true;
+  }
+  if (helperName == "vectorRemoveAt") {
+    helperNameOut = "remove_at";
+    return true;
+  }
+  if (helperName == "vectorRemoveSwap") {
+    helperNameOut = "remove_swap";
+    return true;
+  }
+  return false;
+}
+
+bool resolveExperimentalVectorMutatorAliasName(std::string helperName, std::string &helperNameOut) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "vectorPush") {
+    helperNameOut = "push";
+    return true;
+  }
+  if (helperName == "vectorPop") {
+    helperNameOut = "pop";
+    return true;
+  }
+  if (helperName == "vectorReserve") {
+    helperNameOut = "reserve";
+    return true;
+  }
+  if (helperName == "vectorClear") {
+    helperNameOut = "clear";
+    return true;
+  }
+  if (helperName == "vectorRemoveAt") {
+    helperNameOut = "remove_at";
+    return true;
+  }
+  if (helperName == "vectorRemoveSwap") {
+    helperNameOut = "remove_swap";
+    return true;
+  }
+  return false;
+}
+
 bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -75,13 +133,24 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
   }
   const std::string vectorPrefix = "vector/";
   const std::string stdVectorPrefix = "std/collections/vector/";
+  const std::string collectionsVectorWrapperPrefix = "std/collections/vector";
+  const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
     return true;
   }
+  if (normalized.rfind(collectionsVectorWrapperPrefix, 0) == 0 &&
+      normalized.rfind(stdVectorPrefix, 0) != 0) {
+    return resolveStdCollectionsVectorWrapperAliasName(
+        normalized.substr(collectionsVectorWrapperPrefix.size()), helperNameOut);
+  }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
+  }
+  if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
+    return resolveExperimentalVectorMutatorAliasName(
+        normalized.substr(experimentalVectorPrefix.size()), helperNameOut);
   }
   return false;
 }

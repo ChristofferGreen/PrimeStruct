@@ -5,24 +5,6 @@ namespace primec::semantics {
 bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &resolvedPath,
                                                             BindingInfo &bindingOut) const {
   auto inferDeclaredCollectionBinding = [&](const Definition &definition) -> bool {
-    auto isSupportedCollectionType = [&](const std::string &typeName) -> bool {
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(normalizeBindingTypeName(typeName), base, argText)) {
-        return false;
-      }
-      base = normalizeBindingTypeName(base);
-      std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(argText, args)) {
-        return false;
-      }
-      const std::string normalizedCollectionType = normalizeCollectionTypePath(base);
-      return (((base == "array" || base == "vector" || base == "soa_vector") ||
-               normalizedCollectionType == "/vector") &&
-              args.size() == 1) ||
-             (isMapCollectionTypeName(base) && args.size() == 2);
-    };
-
     for (const auto &transform : definition.transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
         continue;
