@@ -1355,6 +1355,47 @@ main() {
   CHECK(readFile(outPath) == "EOF\n");
 }
 
+TEST_CASE("vm supports Result.map2 on IR-backed path") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int> effects(io_out)]
+main() {
+  [Result<i32, ContainerError>] first{Result.ok(2i32)}
+  [Result<i32, ContainerError>] second{Result.ok(3i32)}
+  [Result<i32, ContainerError>] leftFailed{/ContainerError/result<i32>(/ContainerError/missing_key())}
+  [Result<i32, ContainerError>] rightFailed{/ContainerError/result<i32>(/ContainerError/empty())}
+  [Result<i32, ContainerError>] summed{
+    Result.map2(first, second, []([i32] left, [i32] right) { return(plus(left, right)) })
+  }
+  [Result<i32, ContainerError>] firstError{
+    Result.map2(leftFailed, rightFailed, []([i32] left, [i32] right) { return(plus(left, right)) })
+  }
+  [Result<i32, ContainerError>] secondError{
+    Result.map2(first, rightFailed, []([i32] left, [i32] right) { return(plus(left, right)) })
+  }
+  if(Result.error(summed)) {
+    return(1i32)
+  }
+  if(not(Result.error(firstError))) {
+    return(2i32)
+  }
+  if(not(Result.error(secondError))) {
+    return(3i32)
+  }
+  print_line(Result.why(firstError))
+  print_line(Result.why(secondError))
+  return(try(summed))
+}
+)";
+  const std::string srcPath = writeTemp("vm_result_map2_ir_backed.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_map2_ir_backed_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 5);
+  CHECK(readFile(outPath) == "container missing key\ncontainer empty\n");
+}
+
 TEST_CASE("vm uses stdlib File helper wrappers") {
   const std::string filePath =
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_helpers.txt").string();

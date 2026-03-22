@@ -222,6 +222,58 @@ main() {
   CHECK(error.find("native backend only supports Result.ok with 32-bit or string values") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer supports Result.map2 builtin lambdas") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [Result<i32, FileError>] first{Result.ok(2i32)}
+  [Result<i32, FileError>] second{Result.ok(3i32)}
+  [Result<i32, FileError>] summed{
+    Result.map2(first, second, []([i32] left, [i32] right) { return(plus(left, right)) })
+  }
+  return(try(summed))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
+}
+
+TEST_CASE("ir lowerer rejects Result.map2 wide payloads") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [Result<i32, FileError>] first{Result.ok(2i32)}
+  [Result<i32, FileError>] second{Result.ok(3i32)}
+  [Result<i64, FileError>] summed{
+    Result.map2(first, second, []([i32] left, [i32] right) { return(3i64) })
+  }
+  if(Result.error(summed), then(){ return(1i32) }, else(){ return(0i32) })
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("IR backends only support Result.map2 with 32-bit or string values") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer accepts move builtin") {
   const std::string source = R"(
 [return<int>]
