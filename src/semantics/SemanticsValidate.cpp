@@ -397,6 +397,29 @@ bool semantics::computeTypeResolutionQueryCallSnapshotForTesting(
   });
 }
 
+bool semantics::computeTypeResolutionQueryBindingSnapshotForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    TypeResolutionQueryBindingSnapshot &out,
+    const std::vector<std::string> &semanticTransforms) {
+  out.entries.clear();
+  return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
+    const auto entries = validator.queryBindingSnapshotForTesting();
+    out.entries.reserve(entries.size());
+    for (const auto &entry : entries) {
+      out.entries.push_back(TypeResolutionQueryBindingSnapshotEntry{
+          entry.scopePath,
+          entry.callName,
+          entry.resolvedPath,
+          entry.sourceLine,
+          entry.sourceColumn,
+          bindingTypeTextForSnapshot(entry.binding),
+      });
+    }
+  });
+}
+
 bool semantics::computeTypeResolutionCallBindingSnapshotForTesting(
     Program program,
     const std::string &entryPath,

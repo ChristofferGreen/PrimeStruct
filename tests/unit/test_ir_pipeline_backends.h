@@ -325,6 +325,8 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(testApi.find("struct TypeResolutionLocalBindingSnapshot") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionQueryCallSnapshotEntry") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionQueryCallSnapshot") != std::string::npos);
+  CHECK(testApi.find("struct TypeResolutionQueryBindingSnapshotEntry") != std::string::npos);
+  CHECK(testApi.find("struct TypeResolutionQueryBindingSnapshot") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionCallBindingSnapshotEntry") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionCallBindingSnapshot") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionQueryReceiverBindingSnapshotEntry") != std::string::npos);
@@ -335,6 +337,7 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(testApi.find("computeTypeResolutionReturnSnapshotForTesting") != std::string::npos);
   CHECK(testApi.find("computeTypeResolutionLocalBindingSnapshotForTesting") != std::string::npos);
   CHECK(testApi.find("computeTypeResolutionQueryCallSnapshotForTesting") != std::string::npos);
+  CHECK(testApi.find("computeTypeResolutionQueryBindingSnapshotForTesting") != std::string::npos);
   CHECK(testApi.find("computeTypeResolutionCallBindingSnapshotForTesting") != std::string::npos);
   CHECK(testApi.find("computeTypeResolutionQueryReceiverBindingSnapshotForTesting") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionNodeKind") != std::string::npos);
@@ -604,6 +607,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("struct ReturnResolutionSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("struct LocalAutoBindingSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("struct QueryCallTypeSnapshotEntry {") != std::string::npos);
+  CHECK(validatorHeader.find("struct QueryBindingSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("struct CallBindingSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("struct QueryReceiverBindingSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;") !=
@@ -611,6 +615,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::vector<QueryCallTypeSnapshotEntry> queryCallTypeSnapshotForTesting();") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("std::vector<QueryBindingSnapshotEntry> queryBindingSnapshotForTesting();") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();") !=
         std::string::npos);
@@ -763,6 +769,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::queryCallTypeSnapshotForTesting()") !=
         std::string::npos);
+  CHECK(validatorCore.find("SemanticsValidator::queryBindingSnapshotForTesting()") !=
+        std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::callBindingSnapshotForTesting()") !=
         std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::queryReceiverBindingSnapshotForTesting()") !=
@@ -785,6 +793,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(semanticsValidate.find("computeTypeResolutionReturnSnapshotForTesting(") != std::string::npos);
   CHECK(semanticsValidate.find("computeTypeResolutionLocalBindingSnapshotForTesting(") != std::string::npos);
   CHECK(semanticsValidate.find("computeTypeResolutionQueryCallSnapshotForTesting(") != std::string::npos);
+  CHECK(semanticsValidate.find("computeTypeResolutionQueryBindingSnapshotForTesting(") != std::string::npos);
   CHECK(semanticsValidate.find("computeTypeResolutionCallBindingSnapshotForTesting(") != std::string::npos);
   CHECK(semanticsValidate.find("computeTypeResolutionQueryReceiverBindingSnapshotForTesting(") != std::string::npos);
   CHECK(semanticsValidate.find("runTypeResolutionSnapshot(") != std::string::npos);
@@ -792,6 +801,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(semanticsValidate.find("validator.returnResolutionSnapshotForTesting()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.localAutoBindingSnapshotForTesting()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.queryCallTypeSnapshotForTesting()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.queryBindingSnapshotForTesting()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.callBindingSnapshotForTesting()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.queryReceiverBindingSnapshotForTesting()") != std::string::npos);
   CHECK(validatorExprMain.find("auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {") ==
@@ -1756,6 +1766,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   CHECK(semanticsTestApi.find("computeTypeResolutionReturnSnapshotForTesting") != std::string::npos);
   CHECK(semanticsTestApi.find("computeTypeResolutionLocalBindingSnapshotForTesting") != std::string::npos);
   CHECK(semanticsTestApi.find("computeTypeResolutionQueryCallSnapshotForTesting") != std::string::npos);
+  CHECK(semanticsTestApi.find("computeTypeResolutionQueryBindingSnapshotForTesting") != std::string::npos);
   CHECK(semanticsTestApi.find("computeTypeResolutionCallBindingSnapshotForTesting") != std::string::npos);
   CHECK(semanticsTestApi.find("computeTypeResolutionQueryReceiverBindingSnapshotForTesting") != std::string::npos);
 

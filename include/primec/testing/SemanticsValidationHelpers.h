@@ -100,6 +100,19 @@ struct TypeResolutionQueryCallSnapshot {
   std::vector<TypeResolutionQueryCallSnapshotEntry> entries;
 };
 
+struct TypeResolutionQueryBindingSnapshotEntry {
+  std::string scopePath;
+  std::string callName;
+  std::string resolvedPath;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  std::string bindingTypeText;
+};
+
+struct TypeResolutionQueryBindingSnapshot {
+  std::vector<TypeResolutionQueryBindingSnapshotEntry> entries;
+};
+
 struct TypeResolutionCallBindingSnapshotEntry {
   std::string scopePath;
   std::string callName;
@@ -169,6 +182,12 @@ bool computeTypeResolutionQueryCallSnapshotForTesting(
     const std::string &entryPath,
     std::string &error,
     TypeResolutionQueryCallSnapshot &out,
+    const std::vector<std::string> &semanticTransforms = {});
+bool computeTypeResolutionQueryBindingSnapshotForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    TypeResolutionQueryBindingSnapshot &out,
     const std::vector<std::string> &semanticTransforms = {});
 bool computeTypeResolutionCallBindingSnapshotForTesting(
     Program program,
