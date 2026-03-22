@@ -161,6 +161,7 @@ struct TypeResolutionQueryReceiverBindingSnapshot {
 
 struct TypeResolutionOnErrorSnapshotEntry {
   std::string definitionPath;
+  std::string returnKindText;
   std::string handlerPath;
   std::string errorTypeText;
   size_t boundArgCount = 0;
@@ -175,6 +176,7 @@ struct TypeResolutionOnErrorSnapshot {
 
 struct TypeResolutionValidationContextSnapshotEntry {
   std::string definitionPath;
+  std::string returnKindText;
   bool definitionIsCompute = false;
   bool definitionIsUnsafe = false;
   std::vector<std::string> activeEffects;

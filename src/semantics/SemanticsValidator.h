@@ -87,6 +87,7 @@ public:
 
   struct OnErrorSnapshotEntry {
     std::string definitionPath;
+    ReturnKind returnKind = ReturnKind::Unknown;
     std::string handlerPath;
     std::string errorType;
     size_t boundArgCount = 0;
@@ -97,6 +98,7 @@ public:
 
   struct ValidationContextSnapshotEntry {
     std::string definitionPath;
+    ReturnKind returnKind = ReturnKind::Unknown;
     bool definitionIsCompute = false;
     bool definitionIsUnsafe = false;
     std::vector<std::string> activeEffects;

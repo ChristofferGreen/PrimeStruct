@@ -509,6 +509,7 @@ bool semantics::computeTypeResolutionOnErrorSnapshotForTesting(
     for (const auto &entry : entries) {
       out.entries.push_back(TypeResolutionOnErrorSnapshotEntry{
           entry.definitionPath,
+          returnKindSnapshotName(entry.returnKind),
           entry.handlerPath,
           entry.errorType,
           entry.boundArgCount,
@@ -533,6 +534,7 @@ bool semantics::computeTypeResolutionValidationContextSnapshotForTesting(
     for (const auto &entry : entries) {
       out.entries.push_back(TypeResolutionValidationContextSnapshotEntry{
           entry.definitionPath,
+          returnKindSnapshotName(entry.returnKind),
           entry.definitionIsCompute,
           entry.definitionIsUnsafe,
           entry.activeEffects,

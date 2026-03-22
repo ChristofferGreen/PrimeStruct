@@ -453,9 +453,14 @@ SemanticsValidator::onErrorSnapshotForTesting() {
     if (!context.onError.has_value()) {
       continue;
     }
+    ReturnKind returnKind = ReturnKind::Unknown;
+    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
+      returnKind = returnKindIt->second;
+    }
 
     entries.push_back(OnErrorSnapshotEntry{
         def.fullPath,
+        returnKind,
         context.onError->handlerPath,
         context.onError->errorType,
         context.onError->boundArgs.size(),
@@ -477,12 +482,17 @@ SemanticsValidator::validationContextSnapshotForTesting() const {
   entries.reserve(program_.definitions.size());
   for (const auto &def : program_.definitions) {
     const auto &context = buildDefinitionValidationContext(def);
+    ReturnKind returnKind = ReturnKind::Unknown;
+    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
+      returnKind = returnKindIt->second;
+    }
     std::vector<std::string> activeEffects(context.activeEffects.begin(), context.activeEffects.end());
     std::sort(activeEffects.begin(), activeEffects.end());
     activeEffects.erase(std::unique(activeEffects.begin(), activeEffects.end()), activeEffects.end());
 
     entries.push_back(ValidationContextSnapshotEntry{
         def.fullPath,
+        returnKind,
         context.definitionIsCompute,
         context.definitionIsUnsafe,
         std::move(activeEffects),

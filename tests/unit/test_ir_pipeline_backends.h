@@ -337,6 +337,7 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(testApi.find("struct TypeResolutionOnErrorSnapshot") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionValidationContextSnapshotEntry") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionValidationContextSnapshot") != std::string::npos);
+  CHECK(testApi.find("std::string returnKindText;") != std::string::npos);
   CHECK(testApi.find("buildTypeResolutionGraphForTesting") != std::string::npos);
   CHECK(testApi.find("computeTypeResolutionDependencyDagForTesting") != std::string::npos);
   CHECK(testApi.find("dumpTypeResolutionGraphForTesting") != std::string::npos);
@@ -622,6 +623,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("struct QueryReceiverBindingSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("struct OnErrorSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("struct ValidationContextSnapshotEntry {") != std::string::npos);
+  CHECK(validatorHeader.find("ReturnKind returnKind = ReturnKind::Unknown;") != std::string::npos);
   CHECK(validatorHeader.find("std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;") !=
@@ -810,6 +812,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorCore.find("SemanticsValidator::validationContextSnapshotForTesting() const") !=
         std::string::npos);
   CHECK(validatorCore.find("const auto &context = buildDefinitionValidationContext(def);") !=
+        std::string::npos);
+  CHECK(validatorCore.find("if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {") !=
         std::string::npos);
   CHECK(validatorCore.find("context.onError->handlerPath") != std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::forEachLocalAwareSnapshotCall(") !=

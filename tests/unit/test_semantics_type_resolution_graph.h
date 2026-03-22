@@ -634,6 +634,7 @@ main() {
   CHECK(error.empty());
 
   const auto &countedEntry = requireOnErrorSnapshotEntry(snapshot, "/counted");
+  CHECK(countedEntry.returnKindText == "i32");
   CHECK(countedEntry.handlerPath == "/unexpectedError");
   CHECK(countedEntry.errorTypeText == "ContainerError");
   CHECK(countedEntry.boundArgCount == 0);
@@ -642,6 +643,7 @@ main() {
   CHECK(countedEntry.returnResultErrorTypeText.empty());
 
   const auto &mainEntry = requireOnErrorSnapshotEntry(snapshot, "/main");
+  CHECK(mainEntry.returnKindText == "array");
   CHECK(mainEntry.handlerPath == "/unexpectedError");
   CHECK(mainEntry.errorTypeText == "ContainerError");
   CHECK(mainEntry.boundArgCount == 0);
@@ -680,6 +682,7 @@ main() {
   CHECK(error.empty());
 
   const auto &defaultsEntry = requireValidationContextSnapshotEntry(snapshot, "/defaults");
+  CHECK(defaultsEntry.returnKindText == "void");
   CHECK(!defaultsEntry.definitionIsCompute);
   CHECK(!defaultsEntry.definitionIsUnsafe);
   CHECK(defaultsEntry.activeEffects == std::vector<std::string>({"io_err", "io_out"}));
@@ -687,6 +690,7 @@ main() {
   CHECK(!defaultsEntry.hasOnError);
 
   const auto &kernelEntry = requireValidationContextSnapshotEntry(snapshot, "/kernel");
+  CHECK(kernelEntry.returnKindText == "void");
   CHECK(kernelEntry.definitionIsCompute);
   CHECK(!kernelEntry.definitionIsUnsafe);
   CHECK(kernelEntry.activeEffects == std::vector<std::string>({"io_err"}));
@@ -694,6 +698,7 @@ main() {
   CHECK(!kernelEntry.hasOnError);
 
   const auto &scratchEntry = requireValidationContextSnapshotEntry(snapshot, "/scratch");
+  CHECK(scratchEntry.returnKindText == "void");
   CHECK(!scratchEntry.definitionIsCompute);
   CHECK(scratchEntry.definitionIsUnsafe);
   CHECK(scratchEntry.activeEffects == std::vector<std::string>({"heap_alloc"}));
@@ -701,6 +706,7 @@ main() {
   CHECK(!scratchEntry.hasOnError);
 
   const auto &mainEntry = requireValidationContextSnapshotEntry(snapshot, "/main");
+  CHECK(mainEntry.returnKindText == "array");
   CHECK(!mainEntry.definitionIsCompute);
   CHECK(!mainEntry.definitionIsUnsafe);
   CHECK(mainEntry.activeEffects == std::vector<std::string>({"io_err", "io_out"}));
