@@ -315,6 +315,8 @@ private:
     bool hasStdNamespacedMapAccessDefinition = false;
     bool shouldBuiltinValidateBareMapAccessCall = false;
     std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
+    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorValueTarget;
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &)> resolveMapKeyType;

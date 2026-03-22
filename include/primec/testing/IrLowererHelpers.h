@@ -1981,12 +1981,39 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::vector<IrInstruction> &instructions,
     std::string &error);
+inline DirectCallStatementEmitResult tryEmitDirectCallStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::vector<IrInstruction> &instructions,
+    std::string &error) {
+  return tryEmitDirectCallStatement(
+      stmt,
+      localsIn,
+      isArrayCountCall,
+      isStringCountCall,
+      isVectorCapacityCall,
+      [](const Expr &, const LocalMap &) { return true; },
+      resolveMethodCallDefinition,
+      resolveDefinitionCall,
+      getReturnInfo,
+      emitInlineDefinitionCall,
+      instructions,
+      error);
+}
 AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
     const Expr &stmt,
     const LocalMap &localsIn,

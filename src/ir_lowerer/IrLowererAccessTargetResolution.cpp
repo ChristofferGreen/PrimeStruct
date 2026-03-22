@@ -334,7 +334,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.isArrayOrVectorTarget = true;
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = false;
-        info.isArgsPackTarget = true;
+        info.isArgsPackTarget = false;
         info.argsPackElementKind = localInfo.argsPackElementKind;
         info.elemSlotCount = localInfo.structSlotCount;
         info.structTypeName = localInfo.structTypeName;
@@ -345,7 +345,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = true;
         info.isSoaVector = localInfo.isSoaVector;
-        info.isArgsPackTarget = true;
+        info.isArgsPackTarget = false;
         info.argsPackElementKind = localInfo.argsPackElementKind;
         info.elemSlotCount = localInfo.structSlotCount;
         info.structTypeName = localInfo.structTypeName;
@@ -357,7 +357,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = localInfo.referenceToVector;
         info.isSoaVector = localInfo.isSoaVector;
-        info.isArgsPackTarget = true;
+        info.isArgsPackTarget = false;
         info.argsPackElementKind = localInfo.argsPackElementKind;
         info.elemSlotCount = localInfo.structSlotCount;
         info.structTypeName = localInfo.structTypeName;
@@ -369,7 +369,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = localInfo.pointerToVector;
         info.isSoaVector = localInfo.isSoaVector;
-        info.isArgsPackTarget = true;
+        info.isArgsPackTarget = false;
         info.argsPackElementKind = localInfo.argsPackElementKind;
         info.elemSlotCount = localInfo.structSlotCount;
         info.structTypeName = localInfo.structTypeName;

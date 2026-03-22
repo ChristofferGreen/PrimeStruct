@@ -1,5 +1,6 @@
 import /std/math/*
 import /std/file/*
+import /std/collections/*
 
 [public return<string>]
 /ImageError/why([/std/image/ImageError] err) {
@@ -199,7 +200,7 @@ namespace std {
   resetReadOutputs([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels) {
     assign(width, 0i32)
     assign(height, 0i32)
-    clear(pixels)
+    /std/collections/vector/clear(pixels)
   }
 
   [return<bool>]
@@ -502,17 +503,17 @@ namespace std {
   pngAppendVectorBytes([vector<i32>] bytes, [vector<i32> mut] out) {
     [i32 mut] index{0i32}
     while(less_than(index, count(bytes)), do() {
-      push(out, bytes[index])
+      /std/collections/vector/push(out, bytes[index])
       increment(index)
     })
   }
 
   [effects(heap_alloc), return<void>]
   pngAppendU32Be([i32] value, [vector<i32> mut] out) {
-    push(out, divide(value, 16777216i32))
-    push(out, pngMod(divide(value, 65536i32), 256i32))
-    push(out, pngMod(divide(value, 256i32), 256i32))
-    push(out, pngMod(value, 256i32))
+    /std/collections/vector/push(out, divide(value, 16777216i32))
+    /std/collections/vector/push(out, pngMod(divide(value, 65536i32), 256i32))
+    /std/collections/vector/push(out, pngMod(divide(value, 256i32), 256i32))
+    /std/collections/vector/push(out, pngMod(value, 256i32))
   }
 
   [return<u64>]
@@ -1136,15 +1137,15 @@ namespace std {
     [i32 mut] pixelCount{0i32}
     if(not(imageRgbWritePixelCount(width, height, pixelCount)),
        then() {
-         clear(pixels)
+         /std/collections/vector/clear(pixels)
          return(1i32)
        },
        else() { })
-    clear(pixels)
-    reserve(pixels, pixelCount)
+    /std/collections/vector/clear(pixels)
+    /std/collections/vector/reserve(pixels, pixelCount)
     [i32 mut] pixelIndex{0i32}
     while(less_than(pixelIndex, pixelCount), do() {
-      push(pixels, 0i32)
+      /std/collections/vector/push(pixels, 0i32)
       increment(pixelIndex)
     })
     return(0i32)
@@ -1153,7 +1154,7 @@ namespace std {
   [effects(heap_alloc), return<int>]
   pngDecodeRows([vector<i32>] rawBytes, [i32 mut] offset, [i32] width, [i32] height, [i32] bitDepth, [i32] colorType,
                 [vector<i32>] paletteBytes, [vector<i32> mut] pixels) {
-    clear(pixels)
+    /std/collections/vector/clear(pixels)
     if(or(less_than(offset, 0i32), greater_than(offset, count(rawBytes))),
        then() { return(1i32) },
        else() { })
@@ -1161,24 +1162,24 @@ namespace std {
     [i32 mut] pixelCount{0i32}
     if(not(imageRgbWritePixelCount(width, height, pixelCount)),
        then() {
-         clear(pixels)
+         /std/collections/vector/clear(pixels)
          return(1i32)
        },
        else() { })
-    reserve(pixels, pixelCount)
+    /std/collections/vector/reserve(pixels, pixelCount)
 
     [i32] bytesPerPixel{pngFilterBytesPerPixel(bitDepth, colorType)}
     [i32 mut] scanlineBytes{0i32}
     if(not(pngScanlineBytesValid(width, bitDepth, colorType, scanlineBytes)),
        then() {
-         clear(pixels)
+         /std/collections/vector/clear(pixels)
          return(1i32)
        },
        else() { })
     [i64] requiredRowBytesWide{multiply(convert<i64>(height), plus(convert<i64>(scanlineBytes), 1i64))}
     if(or(less_equal(requiredRowBytesWide, 0i64), greater_than(requiredRowBytesWide, 2147483647i64)),
        then() {
-         clear(pixels)
+         /std/collections/vector/clear(pixels)
          return(1i32)
        },
        else() { })
@@ -1195,12 +1196,12 @@ namespace std {
                  not_equal(filterType, 3i32)),
              not_equal(filterType, 4i32)),
          then() {
-           clear(pixels)
+           /std/collections/vector/clear(pixels)
            return(1i32)
          },
          else() { })
       assign(offset, plus(offset, 1i32))
-      clear(rowBytes)
+      /std/collections/vector/clear(rowBytes)
 
       [i32 mut] byteIndex{0i32}
       while(less_than(byteIndex, scanlineBytes), do() {
@@ -1237,7 +1238,7 @@ namespace std {
              assign(reconstructed, pngMod(plus(reconstructed, pngPaethPredictor(leftByte, upByte, upLeftByte)), 256i32))
            },
            else() { })
-        push(rowBytes, reconstructed)
+        /std/collections/vector/push(rowBytes, reconstructed)
         increment(byteIndex)
       })
 
@@ -1249,21 +1250,21 @@ namespace std {
              if(equal(colorType, 0i32),
                 then() {
                   [i32] grayByte{pngScalePackedSampleToByte(sample, bitDepth)}
-                  push(pixels, grayByte)
-                  push(pixels, grayByte)
-                  push(pixels, grayByte)
+                  /std/collections/vector/push(pixels, grayByte)
+                  /std/collections/vector/push(pixels, grayByte)
+                  /std/collections/vector/push(pixels, grayByte)
                 },
                 else() {
                   [i32] paletteOffset{multiply(sample, 3i32)}
                   if(greater_equal(plus(paletteOffset, 2i32), count(paletteBytes)),
                      then() {
-                       clear(pixels)
+                       /std/collections/vector/clear(pixels)
                        return(1i32)
                      },
                      else() { })
-                  push(pixels, paletteBytes[paletteOffset])
-                  push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
-                  push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
+                  /std/collections/vector/push(pixels, paletteBytes[paletteOffset])
+                  /std/collections/vector/push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
+                  /std/collections/vector/push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
                 })
              increment(pixelIndex)
            })
@@ -1275,17 +1276,17 @@ namespace std {
              if(equal(colorType, 0i32),
                 then() {
                   [i32] grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
-                  push(pixels, grayByte)
-                  push(pixels, grayByte)
-                  push(pixels, grayByte)
+                  /std/collections/vector/push(pixels, grayByte)
+                  /std/collections/vector/push(pixels, grayByte)
+                  /std/collections/vector/push(pixels, grayByte)
                 },
                 else() {
                   if(equal(colorType, 4i32),
                      then() {
                        [i32] grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
-                       push(pixels, grayByte)
-                       push(pixels, grayByte)
-                       push(pixels, grayByte)
+                       /std/collections/vector/push(pixels, grayByte)
+                       /std/collections/vector/push(pixels, grayByte)
+                       /std/collections/vector/push(pixels, grayByte)
                      },
                      else() {
                        if(equal(colorType, 3i32),
@@ -1293,28 +1294,28 @@ namespace std {
                             [i32] paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
                             if(greater_equal(plus(paletteOffset, 2i32), count(paletteBytes)),
                                then() {
-                                 clear(pixels)
+                                 /std/collections/vector/clear(pixels)
                                  return(1i32)
                                },
                                else() { })
-                            push(pixels, paletteBytes[paletteOffset])
-                            push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
-                            push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
+                            /std/collections/vector/push(pixels, paletteBytes[paletteOffset])
+                            /std/collections/vector/push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
+                            /std/collections/vector/push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
                           },
                           else() {
-                            push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth))
-                            push(pixels, pngScanlineChannelByte(rowBytes, plus(pixelByteIndex, channelByteStride), bitDepth))
-                            push(pixels, pngScanlineChannelByte(rowBytes, plus(pixelByteIndex, multiply(channelByteStride, 2i32)), bitDepth))
+                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth))
+                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, plus(pixelByteIndex, channelByteStride), bitDepth))
+                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, plus(pixelByteIndex, multiply(channelByteStride, 2i32)), bitDepth))
                           })
                      })
                 })
              assign(pixelByteIndex, plus(pixelByteIndex, bytesPerPixel))
            })
          })
-      clear(previousRowBytes)
+      /std/collections/vector/clear(previousRowBytes)
       [i32 mut] previousRowIndex{0i32}
       while(less_than(previousRowIndex, scanlineBytes), do() {
-        push(previousRowBytes, rowBytes[previousRowIndex])
+        /std/collections/vector/push(previousRowBytes, rowBytes[previousRowIndex])
         increment(previousRowIndex)
       })
       assign(offset, plus(offset, scanlineBytes))
@@ -1346,7 +1347,7 @@ namespace std {
       if(not_equal(status, 0i32),
          then() { return(status) },
          else() { })
-      push(bytes, byte)
+      /std/collections/vector/push(bytes, byte)
       assign(remaining, minus(remaining, 1i32))
     })
     return(0i32)
@@ -1488,7 +1489,7 @@ namespace std {
 
   [effects(heap_alloc)]
   pngBuildFixedLiteralLengths([vector<i32> mut] lengths) {
-    clear(lengths)
+    /std/collections/vector/clear(lengths)
     [i32 mut] symbol{0i32}
     while(less_than(symbol, 288i32), do() {
       [i32 mut] codeLength{8i32}
@@ -1503,17 +1504,17 @@ namespace std {
                    else() { assign(codeLength, 8i32) })
               })
          })
-      push(lengths, codeLength)
+      /std/collections/vector/push(lengths, codeLength)
       increment(symbol)
     })
   }
 
   [effects(heap_alloc)]
   pngBuildFixedDistanceLengths([vector<i32> mut] lengths) {
-    clear(lengths)
+    /std/collections/vector/clear(lengths)
     [i32 mut] symbol{0i32}
     while(less_than(symbol, 32i32), do() {
-      push(lengths, 5i32)
+      /std/collections/vector/push(lengths, 5i32)
       increment(symbol)
     })
   }
@@ -1598,14 +1599,14 @@ namespace std {
                                [i32] codeLengthCodeCount, [i32] literalCount, [i32] distanceCount,
                                [vector<i32> mut] literalLengthsLow, [vector<i32> mut] literalLengthsHigh,
                                [vector<i32> mut] distanceLengths) {
-    clear(literalLengthsLow)
-    clear(literalLengthsHigh)
-    clear(distanceLengths)
+    /std/collections/vector/clear(literalLengthsLow)
+    /std/collections/vector/clear(literalLengthsHigh)
+    /std/collections/vector/clear(distanceLengths)
 
     [vector<i32> mut] codeLengthLengths{vector<i32>()}
     [i32 mut] codeLengthIndex{0i32}
     while(less_than(codeLengthIndex, 19i32), do() {
-      push(codeLengthLengths, 0i32)
+      /std/collections/vector/push(codeLengthLengths, 0i32)
       increment(codeLengthIndex)
     })
 
@@ -1644,10 +1645,10 @@ namespace std {
            if(less_than(position, literalCount),
               then() {
                 if(less_than(position, 256i32),
-                   then() { push(literalLengthsLow, symbol) },
-                   else() { push(literalLengthsHigh, symbol) })
+                   then() { /std/collections/vector/push(literalLengthsLow, symbol) },
+                   else() { /std/collections/vector/push(literalLengthsHigh, symbol) })
               },
-              else() { push(distanceLengths, symbol) })
+              else() { /std/collections/vector/push(distanceLengths, symbol) })
            assign(previousLength, symbol)
            increment(position)
          },
@@ -1671,10 +1672,10 @@ namespace std {
                   if(less_than(position, literalCount),
                      then() {
                        if(less_than(position, 256i32),
-                          then() { push(literalLengthsLow, previousLength) },
-                          else() { push(literalLengthsHigh, previousLength) })
+                          then() { /std/collections/vector/push(literalLengthsLow, previousLength) },
+                          else() { /std/collections/vector/push(literalLengthsHigh, previousLength) })
                      },
-                     else() { push(distanceLengths, previousLength) })
+                     else() { /std/collections/vector/push(distanceLengths, previousLength) })
                   increment(position)
                   increment(repeatIndex)
                 })
@@ -1696,10 +1697,10 @@ namespace std {
                        if(less_than(position, literalCount),
                           then() {
                             if(less_than(position, 256i32),
-                               then() { push(literalLengthsLow, 0i32) },
-                               else() { push(literalLengthsHigh, 0i32) })
+                               then() { /std/collections/vector/push(literalLengthsLow, 0i32) },
+                               else() { /std/collections/vector/push(literalLengthsHigh, 0i32) })
                           },
-                          else() { push(distanceLengths, 0i32) })
+                          else() { /std/collections/vector/push(distanceLengths, 0i32) })
                        assign(previousLength, 0i32)
                        increment(position)
                        increment(repeatIndex)
@@ -1722,10 +1723,10 @@ namespace std {
                             if(less_than(position, literalCount),
                                then() {
                                  if(less_than(position, 256i32),
-                                    then() { push(literalLengthsLow, 0i32) },
-                                    else() { push(literalLengthsHigh, 0i32) })
+                                    then() { /std/collections/vector/push(literalLengthsLow, 0i32) },
+                                    else() { /std/collections/vector/push(literalLengthsHigh, 0i32) })
                                },
-                               else() { push(distanceLengths, 0i32) })
+                               else() { /std/collections/vector/push(distanceLengths, 0i32) })
                             assign(previousLength, 0i32)
                             increment(position)
                             increment(repeatIndex)
@@ -1934,7 +1935,7 @@ namespace std {
        else() { })
     [i32 mut] copyIndex{0i32}
     while(less_than(copyIndex, length), do() {
-      push(output, output[minus(count(output), distance)])
+      /std/collections/vector/push(output, output[minus(count(output), distance)])
       increment(copyIndex)
     })
     return(0i32)
@@ -1966,7 +1967,7 @@ namespace std {
        else() { })
     [i32 mut] blockIndex{0i32}
     while(less_than(blockIndex, blockLen), do() {
-      push(output, compressed[plus(byteIndex, blockIndex)])
+      /std/collections/vector/push(output, compressed[plus(byteIndex, blockIndex)])
       increment(blockIndex)
     })
     assign(byteIndex, plus(byteIndex, blockLen))
@@ -1987,7 +1988,7 @@ namespace std {
          then() { return(1i32) },
          else() { })
       if(less_than(symbol, 256i32),
-         then() { push(output, symbol) },
+         then() { /std/collections/vector/push(output, symbol) },
          else() {
            if(equal(symbol, 256i32),
               then() { return(0i32) },
@@ -2168,7 +2169,7 @@ namespace std {
          then() { return(1i32) },
          else() { })
       if(less_than(symbol, 256i32),
-         then() { push(output, symbol) },
+         then() { /std/collections/vector/push(output, symbol) },
          else() {
            if(equal(symbol, 256i32),
               then() { return(0i32) },
@@ -2266,7 +2267,7 @@ namespace std {
          then() { return(1i32) },
          else() { })
       if(less_than(symbol, 256i32),
-         then() { push(output, symbol) },
+         then() { /std/collections/vector/push(output, symbol) },
          else() {
            if(equal(symbol, 256i32),
               then() { return(0i32) },
@@ -2328,7 +2329,7 @@ namespace std {
 
   [effects(heap_alloc), return<int>]
   pngInflateDeflateBlocks([vector<i32>] compressed, [vector<i32> mut] output) {
-    clear(output)
+    /std/collections/vector/clear(output)
     [i32] compressedCount{count(compressed)}
     if(less_than(compressedCount, 7i32),
        then() { return(1i32) },
@@ -2397,7 +2398,7 @@ namespace std {
   [effects(heap_alloc), return<int>]
   pngDecodeScanlines([vector<i32>] rawBytes, [i32] width, [i32] height, [i32] bitDepth, [i32] colorType,
                      [i32] interlace, [vector<i32>] paletteBytes, [vector<i32> mut] pixels) {
-    clear(pixels)
+    /std/collections/vector/clear(pixels)
     if(and(not_equal(colorType, 0i32),
            and(not_equal(colorType, 2i32),
                and(not_equal(colorType, 3i32), and(not_equal(colorType, 4i32), not_equal(colorType, 6i32))))),
@@ -2421,7 +2422,7 @@ namespace std {
          [i32] rowStatus{pngDecodeRows(rawBytes, offset, width, height, bitDepth, colorType, paletteBytes, pixels)}
          if(not_equal(rowStatus, 0i32),
             then() {
-              clear(pixels)
+              /std/collections/vector/clear(pixels)
               return(rowStatus)
             },
             else() { })
@@ -2433,7 +2434,7 @@ namespace std {
 	         [i32] initStatus{pngInitRgbPixels(width, height, pixels)}
 	         if(not_equal(initStatus, 0i32),
 	            then() {
-	              clear(pixels)
+	              /std/collections/vector/clear(pixels)
 	              return(1i32)
 	            },
 	            else() { })
@@ -2451,7 +2452,7 @@ namespace std {
                 [i32] passStatus{pngDecodeRows(rawBytes, offset, passWidth, passHeight, bitDepth, colorType, paletteBytes, passPixels)}
                 if(not_equal(passStatus, 0i32),
                    then() {
-                     clear(pixels)
+                     /std/collections/vector/clear(pixels)
                      return(passStatus)
                    },
                    else() { })
@@ -2477,7 +2478,7 @@ namespace std {
        })
     if(not_equal(offset, count(rawBytes)),
        then() {
-         clear(pixels)
+         /std/collections/vector/clear(pixels)
          return(1i32)
        },
        else() { })
@@ -2545,7 +2546,7 @@ namespace std {
                   return(1i32)
                 },
                 else() { })
-             push(pixels, component)
+             /std/collections/vector/push(pixels, component)
              increment(index)
            })
          },
@@ -2554,7 +2555,7 @@ namespace std {
            if(not_equal(status, 0i32),
               then() { return(1i32) },
               else() { })
-           push(pixels, component)
+           /std/collections/vector/push(pixels, component)
            assign(index, 1i32)
            while(less_than(index, pixelCount), do() {
              assign(status, ppmReadByteStatus(file, component))
@@ -2564,7 +2565,7 @@ namespace std {
                   return(1i32)
                 },
                 else() { })
-             push(pixels, component)
+             /std/collections/vector/push(pixels, component)
              increment(index)
            })
          })
@@ -2679,11 +2680,11 @@ namespace std {
              [vector<i32> mut] ihdrBytes{vector<i32>()}
              pngAppendU32Be(parsedWidth, ihdrBytes)
              pngAppendU32Be(parsedHeight, ihdrBytes)
-             push(ihdrBytes, bitDepth)
-             push(ihdrBytes, colorType)
-             push(ihdrBytes, 0i32)
-             push(ihdrBytes, 0i32)
-             push(ihdrBytes, interlace)
+             /std/collections/vector/push(ihdrBytes, bitDepth)
+             /std/collections/vector/push(ihdrBytes, colorType)
+             /std/collections/vector/push(ihdrBytes, 0i32)
+             /std/collections/vector/push(ihdrBytes, 0i32)
+             /std/collections/vector/push(ihdrBytes, interlace)
              if(not(pngChunkCrcMatches(typeA, typeB, typeC, typeD, ihdrBytes, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD)),
                 then() { return(1i32) },
                 else() { })
@@ -2732,7 +2733,7 @@ namespace std {
                         greater_than(count(chunkBytes), 768i32)),
                      then() { return(1i32) },
                      else() { })
-                  clear(plteBytes)
+                  /std/collections/vector/clear(plteBytes)
                   pngAppendVectorBytes(chunkBytes, plteBytes)
                 },
                 else() { })

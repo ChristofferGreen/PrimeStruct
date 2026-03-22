@@ -74,7 +74,7 @@ bool isIgnorableImportToken(TokenKind kind) {
   return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
 }
 
-std::vector<std::string> collectStdImportPaths(const std::string &source) {
+std::vector<std::string> collectImportPaths(const std::string &source, bool stdOnly) {
   std::vector<std::string> imports;
   Lexer lexer(source);
   const std::vector<Token> tokens = lexer.tokenize();
@@ -103,13 +103,21 @@ std::vector<std::string> collectStdImportPaths(const std::string &source) {
       } else {
         ++cursor;
       }
-      if (path.rfind("/std/", 0) == 0 || path == "/std") {
+      if (!stdOnly || path.rfind("/std/", 0) == 0 || path == "/std") {
         imports.push_back(std::move(path));
       }
       cursor = skipIgnorableTokens(cursor);
     }
   }
   return imports;
+}
+
+std::vector<std::string> collectStdImportPaths(const std::string &source) {
+  return collectImportPaths(source, true);
+}
+
+std::vector<std::string> collectSourceImportPaths(const std::string &source) {
+  return collectImportPaths(source, false);
 }
 
 std::string normalizeStdlibAutoIncludeKey(const std::string &importPath) {
@@ -380,9 +388,12 @@ bool runCompilePipeline(const Options &options,
     return false;
   }
 
+  const std::vector<std::string> sourceImports = collectSourceImportPaths(source);
+  const std::vector<std::string> sourceStdImports = collectStdImportPaths(source);
+  output.program.sourceImports = sourceImports;
+
   if (shouldAutoIncludeStdlib(source)) {
-    const std::vector<std::string> sourceImports = collectStdImportPaths(source);
-    if (!appendStdlibModuleSources(options.importPaths, sourceImports, source, error)) {
+    if (!appendStdlibModuleSources(options.importPaths, sourceStdImports, source, error)) {
       errorStage = CompilePipelineErrorStage::Import;
       diagnosticSink.setSummary(error);
       return false;
@@ -458,6 +469,7 @@ bool runCompilePipeline(const Options &options,
     }
     return false;
   }
+  output.program.sourceImports = sourceImports;
 
   if (dumpStage != DumpStage::None && dumpStage != DumpStage::AstSemantic && dumpStage != DumpStage::TypeGraph) {
     if (dumpStage == DumpStage::Ast) {

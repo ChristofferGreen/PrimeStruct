@@ -207,6 +207,14 @@ bool SemanticsValidator::validateVectorDiscardHelperElementType(const BindingInf
                                                                 const std::string &helperName,
                                                                 const std::string &namespacePrefix,
                                                                 const std::vector<std::string> *definitionTemplateArgs) {
+  std::string experimentalElemType;
+  if (extractExperimentalVectorElementType(binding, experimentalElemType)) {
+    return true;
+  }
+  if (currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+      namespacePrefix.rfind("/std/collections/experimental_vector", 0) == 0) {
+    return true;
+  }
   if (binding.typeTemplateArg.empty()) {
     return true;
   }
@@ -240,6 +248,14 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
     const std::string &helperName,
     const std::string &namespacePrefix,
     const std::vector<std::string> *definitionTemplateArgs) {
+  std::string experimentalElemType;
+  if (extractExperimentalVectorElementType(binding, experimentalElemType)) {
+    return true;
+  }
+  if (currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+      namespacePrefix.rfind("/std/collections/experimental_vector", 0) == 0) {
+    return true;
+  }
   if (binding.typeTemplateArg.empty()) {
     return true;
   }

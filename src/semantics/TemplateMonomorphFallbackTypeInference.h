@@ -226,6 +226,25 @@ bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
   if (typeText.empty()) {
     return false;
   }
+  std::string normalizedInput = normalizeBindingTypeName(typeText);
+  std::string inputBase;
+  std::string inputArgText;
+  if (splitTemplateTypeName(normalizedInput, inputBase, inputArgText)) {
+    std::string normalizedInputBase = normalizeBindingTypeName(inputBase);
+    if (!normalizedInputBase.empty() && normalizedInputBase.front() == '/') {
+      normalizedInputBase.erase(normalizedInputBase.begin());
+    }
+    if (normalizedInputBase != "Map" && normalizedInputBase != "std/collections/experimental_map/Map") {
+      return false;
+    }
+  } else {
+    if (!normalizedInput.empty() && normalizedInput.front() == '/') {
+      normalizedInput.erase(normalizedInput.begin());
+    }
+    if (normalizedInput.rfind("std/collections/experimental_map/Map__", 0) != 0) {
+      return false;
+    }
+  }
   std::string localError;
   ResolvedType resolvedType = resolveTypeString(typeText, mapping, allowedParams, namespacePrefix, ctx, localError);
   if (!localError.empty()) {

@@ -51,8 +51,7 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
         bindingOut.typeTemplateArg = argText;
         return true;
       }
-      if ((base == "Reference" || base == "Pointer") && args.size() == 1 &&
-          isSupportedCollectionType(args.front())) {
+      if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
         bindingOut.typeName = base;
         bindingOut.typeTemplateArg = args.front();
         return true;
@@ -61,6 +60,10 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
     }
     return false;
   };
+
+  if (resolvedPath.empty()) {
+    return false;
+  }
 
   const auto defIt = defMap_.find(resolvedPath);
   const auto directStructIt = returnStructs_.find(resolvedPath);
@@ -80,6 +83,29 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
     bindingOut.typeName = directStructIt->second;
     bindingOut.typeTemplateArg.clear();
     return true;
+  }
+
+  if (defIt != defMap_.end() && defIt->second != nullptr) {
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string normalizedReturnTypeText = normalizeBindingTypeName(transform.templateArgs.front());
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(normalizedReturnTypeText, base, argText)) {
+        continue;
+      }
+      if (normalizeCollectionTypePath(normalizedReturnTypeText).empty() &&
+          normalizeBindingTypeName(normalizedReturnTypeText) != "Pointer" &&
+          normalizeBindingTypeName(normalizedReturnTypeText) != "Reference" &&
+          returnKindForTypeName(normalizedReturnTypeText) == ReturnKind::Unknown) {
+        bindingOut.typeName = normalizedReturnTypeText;
+        bindingOut.typeTemplateArg.clear();
+        return true;
+      }
+      break;
+    }
   }
 
   const auto kindIt = returnKinds_.find(resolvedPath);

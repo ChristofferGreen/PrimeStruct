@@ -1,4 +1,5 @@
 import /std/math/*
+import /std/collections/*
 
 namespace std {
   namespace ui {
@@ -78,7 +79,7 @@ namespace std {
     [effects(heap_alloc), return<void>]
     append_word([CommandList mut] self, [i32] value) {
       [vector<i32> mut] records{self.records}
-      push(records, value)
+      /std/collections/vector/push(records, value)
       assign(self.records, records)
     }
 
@@ -253,10 +254,10 @@ namespace std {
     serialize([CommandList] self) {
       [vector<i32> mut] words{vector<i32>()}
       [i32] len{count(self.records)}
-      push(words, 1i32)
-      push(words, self.commandCount)
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, self.commandCount)
       for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-        push(words, self.records[index])
+        /std/collections/vector/push(words, self.records[index])
       }
       return(words)
     }
@@ -266,7 +267,7 @@ namespace std {
     [effects(heap_alloc), return<void>]
     append_word([HtmlCommandList mut] self, [i32] value) {
       [vector<i32> mut] records{self.records}
-      push(records, value)
+      /std/collections/vector/push(records, value)
       assign(self.records, records)
     }
 
@@ -438,10 +439,10 @@ namespace std {
     serialize([HtmlCommandList] self) {
       [vector<i32> mut] words{vector<i32>()}
       [i32] len{count(self.records)}
-      push(words, 1i32)
-      push(words, self.commandCount)
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, self.commandCount)
       for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-        push(words, self.records[index])
+        /std/collections/vector/push(words, self.records[index])
       }
       return(words)
     }
@@ -451,7 +452,7 @@ namespace std {
     [effects(heap_alloc), return<void>]
     append_word([UiEventStream mut] self, [i32] value) {
       [vector<i32> mut] records{self.records}
-      push(records, value)
+      /std/collections/vector/push(records, value)
       assign(self.records, records)
     }
 
@@ -614,10 +615,10 @@ namespace std {
     serialize([UiEventStream] self) {
       [vector<i32> mut] words{vector<i32>()}
       [i32] len{count(self.records)}
-      push(words, 1i32)
-      push(words, self.eventCount)
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, self.eventCount)
       for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-        push(words, self.records[index])
+        /std/collections/vector/push(words, self.records[index])
       }
       return(words)
     }
@@ -646,18 +647,18 @@ namespace std {
       [vector<i32> mut] rectWidths{self.rectWidths}
       [vector<i32> mut] rectHeights{self.rectHeights}
       [i32] nodeId{count(kinds)}
-      push(kinds, kind)
-      push(parentIndices, parentIndex)
-      push(paddingPxs, paddingPx)
-      push(gapPxs, gapPx)
-      push(minWidths, minWidth)
-      push(minHeights, minHeight)
-      push(measuredWidths, 0i32)
-      push(measuredHeights, 0i32)
-      push(rectXs, 0i32)
-      push(rectYs, 0i32)
-      push(rectWidths, 0i32)
-      push(rectHeights, 0i32)
+      /std/collections/vector/push(kinds, kind)
+      /std/collections/vector/push(parentIndices, parentIndex)
+      /std/collections/vector/push(paddingPxs, paddingPx)
+      /std/collections/vector/push(gapPxs, gapPx)
+      /std/collections/vector/push(minWidths, minWidth)
+      /std/collections/vector/push(minHeights, minHeight)
+      /std/collections/vector/push(measuredWidths, 0i32)
+      /std/collections/vector/push(measuredHeights, 0i32)
+      /std/collections/vector/push(rectXs, 0i32)
+      /std/collections/vector/push(rectYs, 0i32)
+      /std/collections/vector/push(rectWidths, 0i32)
+      /std/collections/vector/push(rectHeights, 0i32)
       assign(self.kinds, kinds)
       assign(self.parentIndices, parentIndices)
       assign(self.paddingPxs, paddingPxs)
@@ -866,17 +867,17 @@ namespace std {
     serialize([LayoutTree] self) {
       [vector<i32> mut] words{vector<i32>()}
       [i32] totalNodes{count(self.kinds)}
-      push(words, 1i32)
-      push(words, totalNodes)
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, totalNodes)
       for([i32 mut] nodeId{0i32}, less_than(nodeId, totalNodes), assign(nodeId, plus(nodeId, 1i32))) {
-        push(words, self.kinds[nodeId])
-        push(words, self.parentIndices[nodeId])
-        push(words, self.measuredWidths[nodeId])
-        push(words, self.measuredHeights[nodeId])
-        push(words, self.rectXs[nodeId])
-        push(words, self.rectYs[nodeId])
-        push(words, self.rectWidths[nodeId])
-        push(words, self.rectHeights[nodeId])
+        /std/collections/vector/push(words, self.kinds[nodeId])
+        /std/collections/vector/push(words, self.parentIndices[nodeId])
+        /std/collections/vector/push(words, self.measuredWidths[nodeId])
+        /std/collections/vector/push(words, self.measuredHeights[nodeId])
+        /std/collections/vector/push(words, self.rectXs[nodeId])
+        /std/collections/vector/push(words, self.rectYs[nodeId])
+        /std/collections/vector/push(words, self.rectWidths[nodeId])
+        /std/collections/vector/push(words, self.rectHeights[nodeId])
       }
       return(words)
     }

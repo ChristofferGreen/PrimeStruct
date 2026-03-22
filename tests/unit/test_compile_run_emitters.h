@@ -4890,7 +4890,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("count does not accept template arguments") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vector namespaced count capacity aliases through explicit alias helpers in C++ emitter") {
@@ -8104,7 +8104,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps local canonical slash-method vector count on same-path helpers") {
+TEST_CASE("C++ emitter rejects duplicate local canonical slash-method vector count overloads") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
@@ -8133,14 +8133,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_same_path.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_local_canonical_slash_vector_count_same_path_exe")
+       "primec_cpp_local_canonical_slash_vector_count_same_path_err.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 96);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("duplicate definition: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects local canonical slash-method vector count on map receiver before emission") {
@@ -11499,7 +11500,7 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps local canonical slash-method vector capacity on same-path helpers") {
+TEST_CASE("C++ emitter rejects duplicate local canonical slash-method vector capacity overloads") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/vector/capacity([map<i32, i32>] values) {
@@ -11528,14 +11529,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_capacity_same_path.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (std::filesystem::temp_directory_path() /
-       "primec_cpp_local_canonical_slash_vector_capacity_same_path_exe")
+       "primec_cpp_local_canonical_slash_vector_capacity_same_path_err.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 126);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("duplicate definition: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity on map receiver before emission") {

@@ -14,45 +14,39 @@
 namespace primec::ir_lowerer {
 
 namespace {
+std::string stripGeneratedHelperSuffix(std::string helperName) {
+  const size_t generatedSuffix = helperName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    helperName.erase(generatedSuffix);
+  }
+  return helperName;
+}
+
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
          helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
          helperName == "remove_at" || helperName == "remove_swap";
 }
 
-bool isExplicitVectorHelperFallbackPath(const Expr &expr) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
-    return false;
-  }
-  std::string normalizedPath = expr.name;
-  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("vector/", 0) == 0 || normalizedPath.rfind("std/collections/vector/", 0) == 0) {
-      normalizedPath.insert(normalizedPath.begin(), '/');
-    }
-  }
-  return normalizedPath == "/vector/count" || normalizedPath == "/vector/capacity" || normalizedPath == "/vector/at" ||
-         normalizedPath == "/vector/at_unsafe" || normalizedPath == "/vector/push" ||
-         normalizedPath == "/vector/pop" || normalizedPath == "/vector/reserve" || normalizedPath == "/vector/clear" ||
-         normalizedPath == "/vector/remove_at" || normalizedPath == "/vector/remove_swap" ||
-         normalizedPath == "/std/collections/vector/count" ||
-         normalizedPath == "/std/collections/vector/capacity" || normalizedPath == "/std/collections/vector/at" ||
-         normalizedPath == "/std/collections/vector/at_unsafe" ||
-         normalizedPath == "/std/collections/vector/push" || normalizedPath == "/std/collections/vector/pop" ||
-         normalizedPath == "/std/collections/vector/reserve" || normalizedPath == "/std/collections/vector/clear" ||
-         normalizedPath == "/std/collections/vector/remove_at" ||
-         normalizedPath == "/std/collections/vector/remove_swap";
-}
-
 bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
-  return path == "/vector/count" || path == "/vector/capacity" || path == "/vector/at" ||
-         path == "/vector/at_unsafe" || path == "/vector/push" || path == "/vector/pop" ||
-         path == "/vector/reserve" || path == "/vector/clear" || path == "/vector/remove_at" ||
-         path == "/vector/remove_swap" || path == "/std/collections/vector/count" ||
-         path == "/std/collections/vector/capacity" || path == "/std/collections/vector/at" ||
-         path == "/std/collections/vector/at_unsafe" || path == "/std/collections/vector/push" ||
-         path == "/std/collections/vector/pop" || path == "/std/collections/vector/reserve" ||
-         path == "/std/collections/vector/clear" || path == "/std/collections/vector/remove_at" ||
-         path == "/std/collections/vector/remove_swap";
+  auto matchesPath = [&](std::string_view basePath) {
+    return path == basePath || path.rfind(std::string(basePath) + "__t", 0) == 0;
+  };
+  return matchesPath("/vector/count") || matchesPath("/vector/capacity") ||
+         matchesPath("/vector/at") || matchesPath("/vector/at_unsafe") ||
+         matchesPath("/vector/push") || matchesPath("/vector/pop") ||
+         matchesPath("/vector/reserve") || matchesPath("/vector/clear") ||
+         matchesPath("/vector/remove_at") || matchesPath("/vector/remove_swap") ||
+         matchesPath("/std/collections/vector/count") ||
+         matchesPath("/std/collections/vector/capacity") ||
+         matchesPath("/std/collections/vector/at") ||
+         matchesPath("/std/collections/vector/at_unsafe") ||
+         matchesPath("/std/collections/vector/push") ||
+         matchesPath("/std/collections/vector/pop") ||
+         matchesPath("/std/collections/vector/reserve") ||
+         matchesPath("/std/collections/vector/clear") ||
+         matchesPath("/std/collections/vector/remove_at") ||
+         matchesPath("/std/collections/vector/remove_swap");
 }
 
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
@@ -67,7 +61,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   constexpr std::string_view arrayPrefix = "array/";
   constexpr std::string_view stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(vectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
     if (helperNameOut == "count" || helperNameOut == "capacity") {
       return true;
     }
@@ -77,14 +71,14 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     return true;
   }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(arrayPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }
     return true;
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
   }
   return false;
@@ -106,8 +100,6 @@ bool isArgsPackParam(const Expr &param) {
   return false;
 }
 
-std::string normalizeMapImportAliasPath(const std::string &path);
-
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
     return true;
@@ -127,11 +119,11 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   constexpr std::string_view mapPrefix = "map/";
   constexpr std::string_view stdMapPrefix = "std/collections/map/";
   if (normalized.rfind(mapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(mapPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(mapPrefix.size()));
     return true;
   }
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdMapPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdMapPrefix.size()));
     return true;
   }
   return false;
@@ -143,28 +135,6 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   }
   std::string aliasName;
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
-}
-
-bool isExplicitMapHelperFallbackPath(const Expr &expr) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
-    return false;
-  }
-  const std::string normalizedPath = normalizeMapImportAliasPath(expr.name);
-  return normalizedPath == "/map/count" || normalizedPath == "/map/at" || normalizedPath == "/map/at_unsafe" ||
-         normalizedPath == "/std/collections/map/count" || normalizedPath == "/std/collections/map/at" ||
-         normalizedPath == "/std/collections/map/at_unsafe";
-}
-
-std::string normalizeMapImportAliasPath(const std::string &path) {
-  if (path.empty() || path.front() == '/') {
-    return path;
-  }
-  constexpr std::string_view mapPrefix = "map/";
-  constexpr std::string_view stdMapPrefix = "std/collections/map/";
-  if (path.rfind(mapPrefix, 0) == 0 || path.rfind(stdMapPrefix, 0) == 0) {
-    return "/" + path;
-  }
-  return path;
 }
 
 } // namespace
@@ -206,9 +176,6 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
   std::string &error,
   std::function<bool(const Expr &)> isCollectionAccessReceiverExpr) {
-  if (isExplicitVectorHelperFallbackPath(expr) || isExplicitMapHelperFallbackPath(expr)) {
-    return CountMethodFallbackResult::NotHandled;
-  }
   std::string normalizedVectorHelperName;
   std::string normalizedMapHelperName;
   const bool hasVectorHelperAlias = resolveVectorHelperAliasName(expr, normalizedVectorHelperName);

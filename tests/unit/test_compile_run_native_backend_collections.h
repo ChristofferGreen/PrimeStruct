@@ -1252,7 +1252,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("count does not accept template arguments") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector namespaced call aliases without alias helpers") {
@@ -4729,15 +4729,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_canonical_vector_access_unsafe_field_expression_forwarding_reject.prime", source);
-  const std::string errPath =
+      writeTemp("compile_native_canonical_vector_access_unsafe_field_expression_forwarding.prime", source);
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_canonical_vector_access_unsafe_field_expression_forwarding_reject.err")
+       "primec_native_canonical_vector_access_unsafe_field_expression_forwarding_exe")
           .string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects native map access compatibility call struct method chain with primitive receiver diagnostics") {

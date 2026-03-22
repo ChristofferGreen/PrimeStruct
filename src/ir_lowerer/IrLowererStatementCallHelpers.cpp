@@ -15,6 +15,14 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string stripGeneratedHelperSuffix(std::string helperName) {
+  const size_t generatedSuffix = helperName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    helperName.erase(generatedSuffix);
+  }
+  return helperName;
+}
+
 bool isFreeMemoryIntrinsicCall(const Expr &expr) {
   std::string builtinName;
   return expr.kind == Expr::Kind::Call && getBuiltinMemoryName(expr, builtinName) && builtinName == "free";
@@ -33,11 +41,11 @@ static bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNa
   const std::string vectorPrefix = "vector/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(vectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
     return true;
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
   }
   return false;
@@ -63,6 +71,15 @@ static bool isExplicitVectorMutatorHelperCall(const Expr &expr) {
   }
   return aliasName == "push" || aliasName == "pop" || aliasName == "reserve" || aliasName == "clear" ||
          aliasName == "remove_at" || aliasName == "remove_swap";
+}
+
+static size_t explicitVectorHelperReceiverIndex(const Expr &expr) {
+  for (size_t i = 0; i < expr.argNames.size() && i < expr.args.size(); ++i) {
+    if (expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+      return i;
+    }
+  }
+  return 0;
 }
 
 static bool isSoaVectorTargetExpr(const Expr &expr, const LocalMap &localsIn) {
@@ -466,6 +483,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
@@ -476,7 +494,16 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return DirectCallStatementEmitResult::NotMatched;
   }
 
-  const bool explicitVectorMutatorHelperCall = isExplicitVectorMutatorHelperCall(stmt);
+  bool explicitVectorMutatorHelperCall = isExplicitVectorMutatorHelperCall(stmt);
+  auto explicitVectorHelperUsesBuiltinVectorReceiver = [&](const Expr &callExpr) {
+    if (!explicitVectorMutatorHelperCall || callExpr.args.empty()) {
+      return false;
+    }
+    const size_t receiverIndex = explicitVectorHelperReceiverIndex(callExpr);
+    const auto targetInfo = resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex], localsIn);
+    return targetInfo.isVectorTarget &&
+           (targetInfo.structTypeName.empty() || targetInfo.structTypeName == "/vector");
+  };
   auto rewriteBareVectorMethodMutatorToDirectCall = [&](const Expr &callExpr, Expr &rewrittenExpr) {
     if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty() ||
         !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
@@ -503,10 +530,37 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return true;
   };
   Expr directStmt = stmt;
+  bool rewrittenExplicitVectorMutatorToBuiltinCall = false;
   Expr rewrittenBareVectorMethodStmt;
   if (!explicitVectorMutatorHelperCall &&
       rewriteBareVectorMethodMutatorToDirectCall(stmt, rewrittenBareVectorMethodStmt)) {
     directStmt = rewrittenBareVectorMethodStmt;
+  }
+  if (explicitVectorMutatorHelperCall && explicitVectorHelperUsesBuiltinVectorReceiver(directStmt)) {
+    std::string helperName;
+    if (resolveVectorHelperAliasName(directStmt, helperName)) {
+      const size_t receiverIndex = explicitVectorHelperReceiverIndex(directStmt);
+      directStmt.name = helperName;
+      directStmt.namespacePrefix.clear();
+      if (receiverIndex < directStmt.args.size() && receiverIndex != 0) {
+        std::swap(directStmt.args[0], directStmt.args[receiverIndex]);
+        if (directStmt.argNames.size() < directStmt.args.size()) {
+          directStmt.argNames.resize(directStmt.args.size());
+        }
+        std::swap(directStmt.argNames[0], directStmt.argNames[receiverIndex]);
+      }
+      if (hasNamedArguments(directStmt.argNames)) {
+        directStmt.argNames.clear();
+      }
+      explicitVectorMutatorHelperCall = false;
+      rewrittenExplicitVectorMutatorToBuiltinCall = true;
+    }
+  }
+  if (rewrittenExplicitVectorMutatorToBuiltinCall) {
+    if (!emitExpr(directStmt, localsIn)) {
+      return DirectCallStatementEmitResult::Error;
+    }
+    return DirectCallStatementEmitResult::Emitted;
   }
 
   if (!explicitVectorMutatorHelperCall &&

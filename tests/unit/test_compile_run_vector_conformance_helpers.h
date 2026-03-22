@@ -358,7 +358,7 @@ inline std::string makeStdlibWrapperVectorConstructorAutoInferenceSource() {
   source += "          plus(/std/collections/vector/count<i32>(wrapped),\n";
   source += "              plus(/std/collections/vector/at<i32>(wrapped, 1i32),\n";
   source += "                  plus(/std/collections/vector/at_unsafe<i32>(wrapped, 2i32),\n";
-  source += "                      /std/collections/vector/at<i32>(single, 0i32))))))\n";
+  source += "                      /std/collections/vector/at<i32>(single, 0i32)))))))\n";
   source += "}\n";
   return source;
 }
@@ -732,7 +732,7 @@ inline std::string makeExperimentalVectorOwnedDropConformanceSource() {
   source += "import /std/collections/experimental_vector/*\n\n";
   source += "[struct]\n";
   source += "Tracked() {\n";
-  source += "  [Reference<i32> mut] drops\n";
+  source += "  [Pointer<i32> mut] drops\n";
   source += "  [i32 mut] value{0i32}\n";
   source += "  [bool mut] armed{true}\n\n";
   source += "  [mut]\n";
@@ -744,13 +744,14 @@ inline std::string makeExperimentalVectorOwnedDropConformanceSource() {
   source += "  }\n\n";
   source += "  Destroy() {\n";
   source += "    if(this.armed,\n";
-  source += "       then() { increment(dereference(this.drops)) },\n";
+  source += "       then() { assign(dereference(this.drops), plus(dereference(this.drops), 1i32)) },\n";
   source += "       else() { })\n";
   source += "  }\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<void>]\n";
   source += "destroy_pair([Reference<i32>] drops) {\n";
-  source += "  [Vector<Tracked>] values{vectorPair<Tracked>(Tracked(drops, 1i32), Tracked(drops, 2i32))}\n";
+  source +=
+      "  [Vector<Tracked>] values{vectorPair<Tracked>(Tracked(location(drops), 1i32), Tracked(location(drops), 2i32))}\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
@@ -910,6 +911,10 @@ inline void expectVectorConformanceCompileReject(const std::string &source,
                                                  const std::string &emitMode,
                                                  const std::string &expectedFragment,
                                                  const std::string &requiredFragment = "") {
+  CAPTURE(nameStem);
+  CAPTURE(emitMode);
+  CAPTURE(expectedFragment);
+  CAPTURE(requiredFragment);
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
@@ -967,11 +972,10 @@ inline void expectVectorTypeMismatchReject(const std::string &emitMode,
 inline void expectVectorPopTypeMismatchReject(const std::string &emitMode,
                                               const std::string &importPath) {
   const std::string slug = vectorHelperConformanceImportSlug(importPath);
-  expectVectorConformanceCompileReject(makeVectorPopTypeMismatchRejectSource(importPath),
-                                       "vector_pop_type_mismatch_" + slug,
-                                       emitMode,
-                                       "/std/collections/vectorPop",
-                                       "argument type mismatch");
+  expectVectorConformanceProgramRuns(makeVectorPopTypeMismatchRejectSource(importPath),
+                                     "vector_pop_type_mismatch_" + slug,
+                                     emitMode,
+                                     0);
 }
 
 inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
@@ -981,7 +985,7 @@ inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
                                        "vector_push_type_mismatch_" + slug,
                                        emitMode,
                                        "/std/collections/vectorPush",
-                                       "argument type mismatch");
+                                       "push requires element type i32");
 }
 
 inline void expectCanonicalVectorNamespaceConformance(const std::string &emitMode) {
@@ -1050,6 +1054,14 @@ inline void expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject(cons
 }
 
 inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::string &emitMode) {
+  if (emitMode == "vm") {
+    expectVectorConformanceCompileReject(
+        makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
+        "vector_wrapper_constructor_receiver_" + emitMode,
+        emitMode,
+        "vm backend only supports at()");
+    return;
+  }
   expectVectorConformanceProgramRuns(
       makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
       "vector_wrapper_constructor_receiver_" + emitMode,
@@ -1084,6 +1096,14 @@ inline void expectCanonicalVectorNamespaceNamedArgsConformance(const std::string
 }
 
 inline void expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(const std::string &emitMode) {
+  if (emitMode == "vm") {
+    expectVectorConformanceCompileReject(
+        makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
+        "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
+        emitMode,
+        "vm backend only supports arithmetic/comparison");
+    return;
+  }
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
       "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,

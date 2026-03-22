@@ -6,6 +6,15 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool usesBuiltinVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo) {
+  return targetInfo.isVectorTarget &&
+         (targetInfo.structTypeName.empty() || targetInfo.structTypeName == "/vector");
+}
+
+} // namespace
+
 MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::string &accessName,
     const Expr &targetExpr,
@@ -335,15 +344,22 @@ bool emitArrayVectorIndexedAccess(
       arrayVectorTargetInfo.isArgsPackTarget &&
       (arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
        arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Reference);
+  const bool targetUsesVectorStorageLayout =
+      arrayVectorTargetInfo.isVectorTarget && !arrayVectorTargetInfo.isArgsPackTarget;
+  const bool loadElementValue =
+      arrayVectorTargetInfo.structTypeName.empty() ||
+      usesBuiltinVectorValueStorage(arrayVectorTargetInfo) ||
+      isWrappedStructArgsPackTarget;
+
   emitArrayVectorAccessLoad(
       accessName,
       ptrLocal,
       indexLocal,
       indexKind,
-      arrayVectorTargetInfo.isVectorTarget,
+      targetUsesVectorStorageLayout,
       1,
       (arrayVectorTargetInfo.elemSlotCount > 0) ? arrayVectorTargetInfo.elemSlotCount : 1,
-      arrayVectorTargetInfo.structTypeName.empty() || isWrappedStructArgsPackTarget,
+      loadElementValue,
       allocTempLocal,
       emitArrayIndexOutOfBounds,
       instructionCount,

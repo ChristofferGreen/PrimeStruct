@@ -73,6 +73,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,

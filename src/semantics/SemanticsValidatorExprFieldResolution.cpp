@@ -187,26 +187,26 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
     return true;
   };
   auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        if (paramBinding->typeName == "vector" && !paramBinding->typeTemplateArg.empty()) {
-          elemType = paramBinding->typeTemplateArg;
-          return true;
-        }
-        return false;
-      }
-      auto it = locals.find(target.name);
-      if (it != locals.end() && it->second.typeName == "vector" &&
-          !it->second.typeTemplateArg.empty()) {
-        elemType = it->second.typeTemplateArg;
+    auto resolveVectorBinding = [&](const BindingInfo &binding) -> bool {
+      if (binding.typeName == "vector" && !binding.typeTemplateArg.empty()) {
+        elemType = binding.typeTemplateArg;
         return true;
       }
-      return false;
+      const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+      if (normalizedType == "Reference" || normalizedType == "Pointer") {
+        return false;
+      }
+      return extractExperimentalVectorElementType(binding, elemType);
+    };
+    if (target.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+        return resolveVectorBinding(*paramBinding);
+      }
+      auto it = locals.find(target.name);
+      return it != locals.end() && resolveVectorBinding(it->second);
     }
     BindingInfo fieldBinding;
-    if (resolveFieldBindingTarget(target, fieldBinding) &&
-        fieldBinding.typeName == "vector" && !fieldBinding.typeTemplateArg.empty()) {
-      elemType = fieldBinding.typeTemplateArg;
+    if (resolveFieldBindingTarget(target, fieldBinding) && resolveVectorBinding(fieldBinding)) {
       return true;
     }
     if (target.kind != Expr::Kind::Call) {

@@ -40,8 +40,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   const bool isStdNamespacedVectorAccessCall =
       hasBuiltinAccessSpelling && !expr.isMethodCall &&
       resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
-  const bool hasStdNamespacedVectorAccessDefinition =
-      isStdNamespacedVectorAccessCall && hasImportedDefinitionPath(resolveCalleePath(expr));
   const bool isStdNamespacedMapAccessCall =
       hasBuiltinAccessSpelling && !expr.isMethodCall &&
       (resolveCalleePath(expr).rfind("/std/collections/map/at", 0) == 0 ||
@@ -92,7 +90,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       !isMapNamespacedAccessCompatibilityCall(expr);
   const bool isBuiltinAccessName =
       hasBuiltinAccessSpelling &&
-      (!isStdNamespacedVectorAccessCall || hasStdNamespacedVectorAccessDefinition) &&
+      !isStdNamespacedVectorAccessCall &&
       !isStdNamespacedMapAccessCall && !isResolvedMapAccessCall;
   const bool isNamespacedVectorAccessCall =
       !isStdNamespacedVectorAccessCall && isBuiltinAccessName &&
@@ -175,10 +173,56 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       usedMethodTarget = true;
       bool isBuiltinMethod = false;
       std::string methodResolved;
-      if (!resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate, accessHelperName,
+      bool resolvedVectorAccessMethod = false;
+      if ((accessHelperName == "at" || accessHelperName == "at_unsafe") &&
+          resolveVectorHelperMethodTarget(params, locals, receiverCandidate,
+                                          accessHelperName, methodResolved)) {
+        if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+            !hasDeclaredDefinitionPath(methodResolved) &&
+            !hasImportedDefinitionPath(methodResolved)) {
+          const std::string canonicalVectorMethodTarget =
+              "/std/collections/vector/" + accessHelperName;
+          if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+              hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
+            methodResolved = canonicalVectorMethodTarget;
+          } else {
+            const std::string aliasVectorMethodTarget =
+                "/vector/" + accessHelperName;
+            if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
+                hasImportedDefinitionPath(aliasVectorMethodTarget)) {
+              methodResolved = aliasVectorMethodTarget;
+            }
+          }
+        }
+        methodResolved = preferVectorStdlibHelperPath(methodResolved);
+        if (hasDeclaredDefinitionPath(methodResolved) ||
+            hasImportedDefinitionPath(methodResolved)) {
+          isBuiltinMethod = false;
+          resolvedVectorAccessMethod = true;
+        }
+      }
+      if (!resolvedVectorAccessMethod &&
+          !resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate, accessHelperName,
                                methodResolved, isBuiltinMethod)) {
         (void)validateExpr(params, locals, receiverCandidate);
         return false;
+      }
+      if (!isBuiltinMethod &&
+          methodResolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
+          !hasDeclaredDefinitionPath(methodResolved) &&
+          !hasImportedDefinitionPath(methodResolved)) {
+        const std::string canonicalVectorMethodTarget =
+            "/std/collections/vector/" + accessHelperName;
+        if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+            hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
+          methodResolved = canonicalVectorMethodTarget;
+        } else {
+          const std::string aliasVectorMethodTarget = "/vector/" + accessHelperName;
+          if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
+              hasImportedDefinitionPath(aliasVectorMethodTarget)) {
+            methodResolved = aliasVectorMethodTarget;
+          }
+        }
       }
       if ((accessHelperName == "at" || accessHelperName == "at_unsafe") &&
           context.resolveMapTarget(receiverCandidate) &&
@@ -186,7 +230,9 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         methodResolved = "/map/" + accessHelperName;
         isBuiltinMethod = false;
       }
-      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+      if (!isBuiltinMethod &&
+          !hasDeclaredDefinitionPath(methodResolved) &&
+          !hasImportedDefinitionPath(methodResolved)) {
         error_ = "unknown method: " + methodResolved;
         return false;
       }
@@ -203,8 +249,54 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         (expr.args.front().kind == Expr::Kind::Name || expr.args.front().kind == Expr::Kind::Call)) {
       bool isBuiltinMethod = false;
       std::string methodResolved;
-      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), accessHelperName,
+      bool resolvedVectorAccessMethod = false;
+      if ((accessHelperName == "at" || accessHelperName == "at_unsafe") &&
+          resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
+                                          accessHelperName, methodResolved)) {
+        if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+            !hasDeclaredDefinitionPath(methodResolved) &&
+            !hasImportedDefinitionPath(methodResolved)) {
+          const std::string canonicalVectorMethodTarget =
+              "/std/collections/vector/" + accessHelperName;
+          if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+              hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
+            methodResolved = canonicalVectorMethodTarget;
+          } else {
+            const std::string aliasVectorMethodTarget =
+                "/vector/" + accessHelperName;
+            if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
+                hasImportedDefinitionPath(aliasVectorMethodTarget)) {
+              methodResolved = aliasVectorMethodTarget;
+            }
+          }
+        }
+        methodResolved = preferVectorStdlibHelperPath(methodResolved);
+        if (hasDeclaredDefinitionPath(methodResolved) ||
+            hasImportedDefinitionPath(methodResolved)) {
+          isBuiltinMethod = false;
+          resolvedVectorAccessMethod = true;
+        }
+      }
+      if (resolvedVectorAccessMethod ||
+          resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), accessHelperName,
                               methodResolved, isBuiltinMethod)) {
+        if (!isBuiltinMethod &&
+            methodResolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
+            !hasDeclaredDefinitionPath(methodResolved) &&
+            !hasImportedDefinitionPath(methodResolved)) {
+          const std::string canonicalVectorMethodTarget =
+              "/std/collections/vector/" + accessHelperName;
+          if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+              hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
+            methodResolved = canonicalVectorMethodTarget;
+          } else {
+            const std::string aliasVectorMethodTarget = "/vector/" + accessHelperName;
+            if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
+                hasImportedDefinitionPath(aliasVectorMethodTarget)) {
+              methodResolved = aliasVectorMethodTarget;
+            }
+          }
+        }
         if ((accessHelperName == "at" || accessHelperName == "at_unsafe") &&
             context.resolveMapTarget(expr.args.front()) &&
             defMap_.find("/map/" + accessHelperName) != defMap_.end()) {
@@ -226,7 +318,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             usedMethodTarget = true;
             hasMethodReceiverIndex = true;
             methodReceiverIndex = 0;
-            if (defMap_.find(methodResolved) == defMap_.end()) {
+            if (!hasDeclaredDefinitionPath(methodResolved) &&
+                !hasImportedDefinitionPath(methodResolved)) {
               error_ = "unknown method: " + methodResolved;
               return false;
             }
@@ -264,6 +357,30 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           receiverStructPath.insert(receiverStructPath.begin(), '/');
         }
         if (!receiverStructPath.empty() && structNames_.count(receiverStructPath) > 0) {
+          if (receiverStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+            const std::string canonicalVectorMethodTarget =
+                "/std/collections/vector/" + accessHelperName;
+            const std::string aliasVectorMethodTarget =
+                "/vector/" + accessHelperName;
+            if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+                hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
+              usedMethodTarget = true;
+              hasMethodReceiverIndex = true;
+              methodReceiverIndex = 0;
+              resolved = canonicalVectorMethodTarget;
+              resolvedMethod = false;
+              return true;
+            }
+            if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
+                hasImportedDefinitionPath(aliasVectorMethodTarget)) {
+              usedMethodTarget = true;
+              hasMethodReceiverIndex = true;
+              methodReceiverIndex = 0;
+              resolved = aliasVectorMethodTarget;
+              resolvedMethod = false;
+              return true;
+            }
+          }
           error_ = "unknown method: " + receiverStructPath + "/" + accessHelperName;
           return false;
         }
@@ -300,7 +417,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       std::string methodTarget;
       if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, expr.name, methodTarget)) {
         methodTarget = preferVectorStdlibHelperPath(methodTarget);
-        if (defMap_.count(methodTarget) > 0) {
+        if (hasDeclaredDefinitionPath(methodTarget) || hasImportedDefinitionPath(methodTarget)) {
           usedMethodTarget = true;
           resolved = methodTarget;
           resolvedMethod = false;

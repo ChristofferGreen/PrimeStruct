@@ -40,6 +40,17 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     if (expr.isMethodCall) {
       return rewriteCanonicalCollectionHelperPath(resolvedPath);
     }
+    auto hasDefinitionFamilyPath = [&](const std::string &path) {
+      if (defMap_.count(path) > 0) {
+        return true;
+      }
+      for (const auto &def : program_.definitions) {
+        if (def.fullPath == path) {
+          return true;
+        }
+      }
+      return false;
+    };
     auto vectorConstructorHelperPath = [&]() -> std::string {
       switch (expr.args.size()) {
       case 0:
@@ -90,18 +101,12 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     };
     std::string helperPath;
     if (resolvedPath == "/std/collections/vector/vector") {
-      if (defMap_.count(resolvedPath) > 0) {
+      if (hasDefinitionFamilyPath(resolvedPath) || hasImportedDefinitionPath(resolvedPath)) {
         return resolvedPath;
       }
       helperPath = vectorConstructorHelperPath();
     } else if (resolvedPath == "/std/collections/map/map") {
       helperPath = mapConstructorHelperPath();
-    } else if (resolvedPath == "/vector/vector" &&
-               defMap_.count("/std/collections/vector/vector") > 0) {
-      return "/std/collections/vector/vector";
-    } else if (resolvedPath == "/map/map" &&
-               defMap_.count("/std/collections/map/map") > 0) {
-      return "/std/collections/map/map";
     }
     if (!helperPath.empty() && defMap_.count(helperPath) > 0) {
       return helperPath;

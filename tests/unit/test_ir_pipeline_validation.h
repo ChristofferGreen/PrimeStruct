@@ -9456,7 +9456,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("field access requires a receiver") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
+  CHECK(semanticsExprSource.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("resolveExperimentalMapTarget(target, keyType, valueType)) {") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") ==
         std::string::npos);
@@ -14530,8 +14532,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
               return true;
             },
             error) == Result::Emitted);
-  CHECK(canonicalMapCountResolveMethodCalls == 0);
-  CHECK(canonicalMapCountResolveDefinitionCalls == 1);
+  CHECK(canonicalMapCountResolveMethodCalls == 1);
+  CHECK(canonicalMapCountResolveDefinitionCalls == 0);
   CHECK(canonicalMapCountEmitCalls == 1);
 
   primec::Expr explicitVectorCountCall = countCall;
@@ -14557,11 +14559,11 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
               ++explicitVectorCountEmitCalls;
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error == "stale");
-  CHECK(explicitVectorCountResolveMethodCalls == 0);
-  CHECK(explicitVectorCountResolveDefinitionCalls == 1);
-  CHECK(explicitVectorCountEmitCalls == 0);
+  CHECK(explicitVectorCountResolveMethodCalls == 1);
+  CHECK(explicitVectorCountResolveDefinitionCalls == 0);
+  CHECK(explicitVectorCountEmitCalls == 1);
 
   primec::Definition vectorAccessDef;
   vectorAccessDef.fullPath = "/std/collections/vector/at";
@@ -14589,15 +14591,15 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             },
             [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
               ++explicitVectorAtEmitCalls;
-              CHECK(callExpr.name == "/std/collections/vector/at");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(resolvedCallee.fullPath == "/std/collections/vector/at");
+              CHECK(callExpr.name == "at");
+              CHECK(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/pkg/helper");
               return true;
             },
             error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(explicitVectorAtResolveMethodCalls == 0);
-  CHECK(explicitVectorAtResolveDefinitionCalls == 1);
+  CHECK(explicitVectorAtResolveMethodCalls == 1);
+  CHECK(explicitVectorAtResolveDefinitionCalls == 0);
   CHECK(explicitVectorAtEmitCalls == 1);
 
   primec::Expr canonicalPushCall = countCall;
@@ -14624,11 +14626,11 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
               ++canonicalPushEmitCalls;
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error == "stale");
-  CHECK(canonicalPushResolveMethodCalls == 0);
-  CHECK(canonicalPushResolveDefinitionCalls == 1);
-  CHECK(canonicalPushEmitCalls == 0);
+  CHECK(canonicalPushResolveMethodCalls == 1);
+  CHECK(canonicalPushResolveDefinitionCalls == 0);
+  CHECK(canonicalPushEmitCalls == 1);
 
   primec::Definition vectorPushDef;
   vectorPushDef.fullPath = "/std/collections/vector/push";
@@ -14653,15 +14655,15 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             },
             [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
               ++canonicalPushDirectEmitCalls;
-              CHECK(callExpr.name == "/std/collections/vector/push");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(resolvedCallee.fullPath == "/std/collections/vector/push");
+              CHECK(callExpr.name == "push");
+              CHECK(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/pkg/helper");
               return true;
             },
             error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(canonicalPushDirectResolveMethodCalls == 0);
-  CHECK(canonicalPushDirectResolveDefinitionCalls == 1);
+  CHECK(canonicalPushDirectResolveMethodCalls == 1);
+  CHECK(canonicalPushDirectResolveDefinitionCalls == 0);
   CHECK(canonicalPushDirectEmitCalls == 1);
 
   int secondResolveMethodCalls = 0;
@@ -15115,11 +15117,11 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               ++explicitVectorCountLocalEmitCalls;
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error == "stale");
-  CHECK(explicitVectorCountLocalResolveMethodCalls == 0);
-  CHECK(explicitVectorCountLocalResolveDefinitionCalls == 1);
-  CHECK(explicitVectorCountLocalEmitCalls == 0);
+  CHECK(explicitVectorCountLocalResolveMethodCalls == 1);
+  CHECK(explicitVectorCountLocalResolveDefinitionCalls == 0);
+  CHECK(explicitVectorCountLocalEmitCalls == 1);
 
   primec::Expr canonicalPushCall;
   canonicalPushCall.kind = primec::Expr::Kind::Call;
@@ -15147,11 +15149,11 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               ++canonicalPushLocalEmitCalls;
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error == "stale");
-  CHECK(canonicalPushLocalResolveMethodCalls == 0);
-  CHECK(canonicalPushLocalResolveDefinitionCalls == 1);
-  CHECK(canonicalPushLocalEmitCalls == 0);
+  CHECK(canonicalPushLocalResolveMethodCalls == 1);
+  CHECK(canonicalPushLocalResolveDefinitionCalls == 0);
+  CHECK(canonicalPushLocalEmitCalls == 1);
 
   primec::Expr plainCall;
   plainCall.kind = primec::Expr::Kind::Call;
@@ -15340,7 +15342,10 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   auto resolveArrayVectorAccessTargetInfo =
       [](const primec::Expr &, ArrayVectorAccessTargetInfo &) { return false; };
 
-  auto expectNotHandled = [&](const char *helperName, const std::vector<primec::Expr> &args) {
+  auto expectDispatch = [&](const char *helperName,
+                            const std::vector<primec::Expr> &args,
+                            Result expectedResult,
+                            const std::string &expectedError) {
     primec::Expr callExpr;
     callExpr.kind = primec::Expr::Kind::Call;
     callExpr.name = helperName;
@@ -15374,17 +15379,31 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
               instructionCount,
               emitInstruction,
               patchInstructionImm,
-              error) == Result::NotHandled);
-    CHECK(error == "stale");
-    CHECK(instructions.empty());
+              error) == expectedResult);
+    CHECK(error == expectedError);
+    if (expectedResult == Result::NotHandled) {
+      CHECK(instructions.empty());
+    } else {
+      CHECK_FALSE(instructions.empty());
+    }
   };
 
-  expectNotHandled("/map/count", {mapName});
-  expectNotHandled("/std/collections/map/count", {mapName});
-  expectNotHandled("/map/at", {mapName, keyName});
-  expectNotHandled("/std/collections/map/at", {mapName, keyName});
-  expectNotHandled("/map/at_unsafe", {mapName, keyName});
-  expectNotHandled("/std/collections/map/at_unsafe", {mapName, keyName});
+  expectDispatch("/map/count", {mapName}, Result::Emitted, "stale");
+  expectDispatch("/std/collections/map/count", {mapName}, Result::Emitted, "stale");
+  expectDispatch(
+      "/map/at", {mapName, keyName}, Result::Error, "native backend requires map lookup key type to match map key type");
+  expectDispatch("/std/collections/map/at",
+                 {mapName, keyName},
+                 Result::Error,
+                 "native backend requires map lookup key type to match map key type");
+  expectDispatch("/map/at_unsafe",
+                 {mapName, keyName},
+                 Result::Error,
+                 "native backend requires map lookup key type to match map key type");
+  expectDispatch("/std/collections/map/at_unsafe",
+                 {mapName, keyName},
+                 Result::Error,
+                 "native backend requires map lookup key type to match map key type");
 }
 
 TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out of native builtin emission") {
@@ -15443,7 +15462,11 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
         return true;
       };
 
-  auto expectNotHandled = [&](const char *helperName, const std::vector<primec::Expr> &args) {
+  auto expectDispatch = [&](const char *helperName,
+                            const std::vector<primec::Expr> &args,
+                            Result expectedResult,
+                            const std::string &expectedError,
+                            bool expectInstructions) {
     primec::Expr callExpr;
     callExpr.kind = primec::Expr::Kind::Call;
     callExpr.name = helperName;
@@ -15477,19 +15500,35 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
               instructionCount,
               emitInstruction,
               patchInstructionImm,
-              error) == Result::NotHandled);
-    CHECK(error == "stale");
-    CHECK(instructions.empty());
+              error) == expectedResult);
+    CHECK(error == expectedError);
+    CHECK(instructions.empty() != expectInstructions);
   };
 
-  expectNotHandled("/vector/count", {valuesName});
-  expectNotHandled("/std/collections/vector/count", {valuesName});
-  expectNotHandled("/vector/capacity", {valuesName});
-  expectNotHandled("/std/collections/vector/capacity", {valuesName});
-  expectNotHandled("/vector/at", {valuesName, indexName});
-  expectNotHandled("/std/collections/vector/at", {valuesName, indexName});
-  expectNotHandled("/vector/at_unsafe", {valuesName, indexName});
-  expectNotHandled("/std/collections/vector/at_unsafe", {valuesName, indexName});
+  expectDispatch("/vector/count", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/std/collections/vector/count", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/vector/capacity", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/std/collections/vector/capacity", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/vector/at",
+                 {valuesName, indexName},
+                 Result::Error,
+                 "native backend requires integer indices for at",
+                 false);
+  expectDispatch("/std/collections/vector/at",
+                 {valuesName, indexName},
+                 Result::Error,
+                 "native backend requires integer indices for at",
+                 false);
+  expectDispatch("/vector/at_unsafe",
+                 {valuesName, indexName},
+                 Result::Error,
+                 "native backend requires integer indices for at_unsafe",
+                 false);
+  expectDispatch("/std/collections/vector/at_unsafe",
+                 {valuesName, indexName},
+                 Result::Error,
+                 "native backend requires integer indices for at_unsafe",
+                 false);
 
   primec::Expr bareCountCall;
   bareCountCall.kind = primec::Expr::Kind::Call;
@@ -15525,9 +15564,9 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCountError) == Result::Error);
-  CHECK(bareCountError == "count requires array, vector, map, or string target");
-  CHECK(instructions.empty());
+            bareCountError) == Result::Emitted);
+  CHECK(bareCountError == "stale");
+  CHECK_FALSE(instructions.empty());
 
   primec::Expr bareCapacityCall;
   bareCapacityCall.kind = primec::Expr::Kind::Call;
@@ -15563,9 +15602,9 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCapacityError) == Result::Error);
-  CHECK(bareCapacityError == "capacity requires vector target");
-  CHECK(instructions.empty());
+            bareCapacityError) == Result::Emitted);
+  CHECK(bareCapacityError == "stale");
+  CHECK_FALSE(instructions.empty());
 }
 
 TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
@@ -15804,8 +15843,8 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::NotHandled);
-  CHECK(error == "stale");
+            error) == Result::Error);
+  CHECK(error == "count requires array, vector, map, or string target");
   CHECK(instructions.empty());
 
   primec::Expr soaStdlibAliasCountCall = soaCountCall;
@@ -15838,9 +15877,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error == "stale");
-  CHECK(instructions.empty());
+  CHECK_FALSE(instructions.empty());
 
   primec::Expr soaGetCall;
   soaGetCall.kind = primec::Expr::Kind::Call;
@@ -18525,10 +18564,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(aliasCountResolveCalls == 0);
-  CHECK(aliasCountEmitCalls == 0);
+  CHECK(aliasCountResolveCalls == 1);
+  CHECK(aliasCountEmitCalls == 1);
 
   primec::Expr canonicalCountCall = countCall;
   canonicalCountCall.name = "/std/collections/vector/count";
@@ -18551,10 +18590,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(canonicalCountResolveCalls == 0);
-  CHECK(canonicalCountEmitCalls == 0);
+  CHECK(canonicalCountResolveCalls == 1);
+  CHECK(canonicalCountEmitCalls == 1);
 
   primec::Expr aliasMapCountCall = countCall;
   aliasMapCountCall.name = "/std/collections/map/count";
@@ -18577,10 +18616,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(aliasMapCountResolveCalls == 0);
-  CHECK(aliasMapCountEmitCalls == 0);
+  CHECK(aliasMapCountResolveCalls == 1);
+  CHECK(aliasMapCountEmitCalls == 1);
 
   primec::Expr capacityCall;
   capacityCall.kind = primec::Expr::Kind::Call;
@@ -18631,10 +18670,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(canonicalCapacityResolveCalls == 0);
-  CHECK(canonicalCapacityEmitCalls == 0);
+  CHECK(canonicalCapacityResolveCalls == 1);
+  CHECK(canonicalCapacityEmitCalls == 1);
 
   primec::Expr indexArg;
   indexArg.kind = primec::Expr::Kind::Literal;
@@ -18690,10 +18729,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(canonicalAtResolveCalls == 0);
-  CHECK(canonicalAtEmitCalls == 0);
+  CHECK(canonicalAtResolveCalls == 1);
+  CHECK(canonicalAtEmitCalls == 1);
 
   primec::Expr aliasAtCall = atCall;
   aliasAtCall.name = "/vector/at";
@@ -18706,20 +18745,20 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
             [&](const primec::Expr &methodExpr) -> const primec::Definition * {
               ++aliasAtResolveCalls;
               CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
+              CHECK(methodExpr.name == "/vector/at");
               return &callee;
             },
             [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
               ++aliasAtEmitCalls;
               CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
+              CHECK(methodExpr.name == "/vector/at");
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(aliasAtResolveCalls == 0);
-  CHECK(aliasAtEmitCalls == 0);
+  CHECK(aliasAtResolveCalls == 1);
+  CHECK(aliasAtEmitCalls == 1);
 
   primec::Expr aliasMapAtCall = atCall;
   aliasMapAtCall.name = "/map/at";
@@ -18742,10 +18781,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(aliasMapAtResolveCalls == 0);
-  CHECK(aliasMapAtEmitCalls == 0);
+  CHECK(aliasMapAtResolveCalls == 1);
+  CHECK(aliasMapAtEmitCalls == 1);
 
   primec::Expr reorderedAtCall = atCall;
   reorderedAtCall.args = {indexArg, targetArg};
@@ -18966,10 +19005,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(canonicalAtUnsafeResolveCalls == 0);
-  CHECK(canonicalAtUnsafeEmitCalls == 0);
+  CHECK(canonicalAtUnsafeResolveCalls == 1);
+  CHECK(canonicalAtUnsafeEmitCalls == 1);
 
   primec::Expr reorderedAtUnsafeStringCall = atUnsafeCall;
   reorderedAtUnsafeStringCall.args = {stringKeyArg, targetArg};
@@ -19032,10 +19071,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(canonicalMapAtUnsafeResolveCalls == 0);
-  CHECK(canonicalMapAtUnsafeEmitCalls == 0);
+  CHECK(canonicalMapAtUnsafeResolveCalls == 2);
+  CHECK(canonicalMapAtUnsafeEmitCalls == 1);
 
   primec::Expr tempReceiver;
   tempReceiver.kind = primec::Expr::Kind::Call;
@@ -19156,10 +19195,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(canonicalPushResolveCalls == 0);
-  CHECK(canonicalPushEmitCalls == 0);
+  CHECK(canonicalPushResolveCalls == 2);
+  CHECK(canonicalPushEmitCalls == 1);
 
   primec::Expr canonicalClearCall;
   canonicalClearCall.kind = primec::Expr::Kind::Call;
@@ -19184,10 +19223,10 @@ TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(canonicalClearResolveCalls == 0);
-  CHECK(canonicalClearEmitCalls == 0);
+  CHECK(canonicalClearResolveCalls == 1);
+  CHECK(canonicalClearEmitCalls == 1);
 
   primec::Expr boolArg;
   boolArg.kind = primec::Expr::Kind::BoolLiteral;
@@ -27214,7 +27253,7 @@ TEST_CASE("ir lowerer inline param helper emits non-struct parameter flow") {
   CHECK(instructions[4].imm == 11u);
   CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[5].imm == 90u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[6].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[6].imm == 40u);
   CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[7].imm == 15u);
@@ -37587,12 +37626,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-              CHECK(false);
-              return false;
-            },
-            [&](primec::IrOpcode, uint64_t) { CHECK(false); },
-            error) == Result::NotHandled);
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](primec::IrOpcode, uint64_t) {},
+            error) == Result::Error);
   CHECK(error == "stale");
   CHECK(instructions.empty());
 
@@ -37616,10 +37652,10 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::NotHandled);
-  CHECK(capacityEmitExprCalls == 0);
+            error) == Result::Emitted);
+  CHECK(capacityEmitExprCalls == 1);
   CHECK(error.empty());
-  CHECK(instructions.empty());
+  CHECK_FALSE(instructions.empty());
 
   instructions.clear();
   error.clear();
@@ -37635,7 +37671,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::NotHandled);
+            error) == Result::Error);
   CHECK(instructions.empty());
 
   instructions.clear();
@@ -49956,10 +49992,10 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::NotMatched);
+            error) == EmitResult::Emitted);
   CHECK(error.empty());
-  CHECK(instructions.empty());
-  CHECK(vectorMethodProbeCalls == 1);
+  CHECK_FALSE(instructions.empty());
+  CHECK(vectorMethodProbeCalls == 0);
 
   primec::Expr stdlibAliasPushCall = pushCall;
   stdlibAliasPushCall.name = "/std/collections/vector/push";
@@ -49986,10 +50022,10 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::NotMatched);
+            error) == EmitResult::Emitted);
   CHECK(error.empty());
-  CHECK(instructions.empty());
-  CHECK(vectorMethodProbeCalls == 1);
+  CHECK_FALSE(instructions.empty());
+  CHECK(vectorMethodProbeCalls == 0);
 
   primec::Expr positionalReorderedPushCall = pushCall;
   positionalReorderedPushCall.args = {value, target};

@@ -171,8 +171,11 @@ bool validateBuiltinMapKeyType(const BindingInfo &binding,
 
 bool isMapCollectionTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
-  return normalized == "map" || normalized == "std/collections/map" || normalized == "Map" ||
-         normalized == "std/collections/experimental_map/Map";
+  return normalized == "map" || normalized == "/map" ||
+         normalized == "std/collections/map" || normalized == "/std/collections/map" ||
+         normalized == "Map" || normalized == "/Map" ||
+         normalized == "std/collections/experimental_map/Map" ||
+         normalized == "/std/collections/experimental_map/Map";
 }
 
 bool returnsMapCollectionType(const std::string &typeText) {
@@ -470,15 +473,26 @@ ReturnKind returnKindForTypeName(const std::string &name) {
       }
     }
   }
-  if (splitTemplateTypeName(name, base, arg) && base == "array") {
+  if (splitTemplateTypeName(name, base, arg)) {
     std::vector<std::string> args;
-    if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+    if (!splitTopLevelTemplateArgs(arg, args)) {
+      return ReturnKind::Unknown;
+    }
+    const bool isVectorLike =
+        (base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" ||
+         base == "Vector" || base == "std/collections/experimental_vector/Vector" ||
+         base == "/std/collections/experimental_vector/Vector" ||
+         base.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+         base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+    if (isVectorLike && args.size() == 1) {
       return ReturnKind::Array;
     }
-  }
-  if (splitTemplateTypeName(name, base, arg) && base == "Buffer") {
-    std::vector<std::string> args;
-    if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+    const bool isMapLike =
+        (base == "map" || base == "Map" || base == "std/collections/experimental_map/Map" ||
+         base == "/std/collections/experimental_map/Map" ||
+         base.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
+         base.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+    if (isMapLike && args.size() == 2) {
       return ReturnKind::Array;
     }
   }
@@ -601,8 +615,32 @@ ReturnKind getReturnKind(const Definition &def,
     }
     const std::string &typeName = transform.templateArgs.front();
     if (containsUninitializedType(typeName)) {
-      error = "uninitialized storage is not allowed as return type on " + def.fullPath;
-      return ReturnKind::Unknown;
+      auto extractTopLevelUninitializedReturnTarget =
+          [&](const std::string &typeText, std::string &innerTypeOut) -> bool {
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(typeText, base, argText)) {
+          return false;
+        }
+        if (normalizeBindingTypeName(base) != "uninitialized") {
+          return false;
+        }
+        innerTypeOut = argText;
+        return !innerTypeOut.empty();
+      };
+      std::string returnBase;
+      std::string returnArgText;
+      std::string wrappedTargetType;
+      const bool allowWrappedUninitializedReturn =
+          splitTemplateTypeName(typeName, returnBase, returnArgText) &&
+          (normalizeBindingTypeName(returnBase) == "Pointer" ||
+           normalizeBindingTypeName(returnBase) == "Reference") &&
+          extractTopLevelUninitializedReturnTarget(returnArgText, wrappedTargetType) &&
+          !containsUninitializedType(wrappedTargetType);
+      if (!allowWrappedUninitializedReturn) {
+        error = "uninitialized storage is not allowed as return type on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
     }
     if (typeName == "auto") {
       if (sawReturn) {
@@ -638,6 +676,14 @@ ReturnKind getReturnKind(const Definition &def,
       }
       std::string base;
       std::string arg;
+      if (splitTemplateTypeName(normalizedType, base, arg) && normalizeBindingTypeName(base) == "uninitialized") {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          error = "uninitialized return type requires exactly one template argument on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        return resolveReturnTypeKind(args.front());
+      }
       if (splitTemplateTypeName(normalizedType, base, arg) && (base == "Reference" || base == "Pointer")) {
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {

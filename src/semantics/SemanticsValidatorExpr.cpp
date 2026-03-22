@@ -214,7 +214,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (suffix != std::string::npos) {
         canonicalPath.erase(suffix);
       }
-      for (const auto &importPath : program_.imports) {
+      const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
+      for (const auto &importPath : importPaths) {
         if (importPath == canonicalPath) {
           return true;
         }
@@ -229,6 +230,71 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     };
     auto hasDefinitionPath = [&](const std::string &path) {
       return this->hasDefinitionPath(path);
+    };
+    auto hasVisibleCanonicalVectorHelperPath = [&](const std::string &path) {
+      if (hasImportedDefinitionPath(path)) {
+        return true;
+      }
+      if (defMap_.count(path) == 0) {
+        return false;
+      }
+      auto paramsIt = paramsByDef_.find(path);
+      if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
+        std::string experimentalElemType;
+        if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
+          return false;
+        }
+      }
+      return true;
+    };
+    auto isExperimentalMapTypeText = [&](const std::string &typeText) {
+      std::string normalizedType = normalizeBindingTypeName(typeText);
+      while (true) {
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(normalizedType, base, argText)) {
+          return false;
+        }
+        base = normalizeBindingTypeName(base);
+        if (base == "Map" || base == "/Map" ||
+            base == "std/collections/experimental_map/Map" ||
+            base == "/std/collections/experimental_map/Map") {
+          std::vector<std::string> parts;
+          return splitTopLevelTemplateArgs(argText, parts) && parts.size() == 2;
+        }
+        if (base == "Reference" || base == "Pointer") {
+          std::vector<std::string> parts;
+          if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 1) {
+            return false;
+          }
+          normalizedType = normalizeBindingTypeName(parts.front());
+          continue;
+        }
+        return false;
+      }
+    };
+    auto isExperimentalMapReceiverExpr = [&](const Expr &candidate) {
+      std::string receiverTypeText;
+      if (inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
+          isExperimentalMapTypeText(receiverTypeText)) {
+        return true;
+      }
+      if (candidate.kind != Expr::Kind::Call) {
+        return false;
+      }
+      auto defIt = defMap_.find(resolveCalleePath(candidate));
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        return false;
+      }
+      BindingInfo inferredReturn;
+      if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+        return false;
+      }
+      const std::string inferredTypeText =
+          inferredReturn.typeTemplateArg.empty()
+              ? inferredReturn.typeName
+              : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
+      return isExperimentalMapTypeText(inferredTypeText);
     };
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
@@ -329,11 +395,31 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;
     const auto &resolveExperimentalMapTarget =
         builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;
+    auto isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call) {
+        return false;
+      }
+      auto defIt = defMap_.find(resolveCalleePath(candidate));
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        return false;
+      }
+      BindingInfo inferredReturn;
+      if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+        return false;
+      }
+      return inferredReturn.typeName == "Pointer" || inferredReturn.typeName == "Reference";
+    };
     std::function<bool(const Expr &)> resolveMapTarget;
     resolveMapTarget = [&](const Expr &target) -> bool {
       std::string keyType;
       std::string valueType;
-      return resolveMapTargetWithTypes(target, keyType, valueType);
+      if (resolveMapTargetWithTypes(target, keyType, valueType) ||
+          resolveExperimentalMapTarget(target, keyType, valueType)) {
+        return true;
+      }
+      std::string inferredTypeText;
+      return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
+             returnsMapCollectionType(inferredTypeText);
     };
     const bool shouldBuiltinValidateBareMapCountCall = true;
     const bool shouldBuiltinValidateBareMapContainsCall = true;
@@ -365,7 +451,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
       }
-      if (earlyPointerBuiltin == "dereference" && !isPointerLikeExpr(expr.args.front(), params, locals)) {
+      if (earlyPointerBuiltin == "dereference" &&
+          !isPointerLikeExpr(expr.args.front(), params, locals) &&
+          !isDeclaredPointerLikeCall(expr.args.front())) {
         error_ = "dereference requires a pointer or reference";
         return false;
       }
@@ -395,21 +483,43 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "unknown call target: " + borrowedCanonicalExperimentalMapHelperPath;
       return false;
     }
+    if (expr.isMethodCall &&
+        expr.args.size() == 1 &&
+        (expr.name == "count" || expr.name == "capacity")) {
+      std::string receiverCollectionTypePath;
+      if (expr.args.front().kind == Expr::Kind::Call &&
+          resolveCallCollectionTypePath(expr.args.front(), params, locals, receiverCollectionTypePath) &&
+          receiverCollectionTypePath == "/vector") {
+        Expr rewrittenHelperCall = expr;
+        rewrittenHelperCall.isMethodCall = false;
+        rewrittenHelperCall.namespacePrefix.clear();
+        rewrittenHelperCall.name = preferVectorStdlibHelperPath("/vector/" + expr.name);
+        return validateExpr(params, locals, rewrittenHelperCall);
+      }
+    }
     if (!expr.isMethodCall) {
       std::string builtinAccessName;
-      if (getBuiltinArrayAccessName(expr, builtinAccessName) && expr.args.size() == 2) {
-        std::string keyType;
-        std::string valueType;
-        if (resolveExperimentalMapTarget(expr.args.front(), keyType, valueType)) {
-          error_ = builtinAccessName + " requires integer index";
-          return false;
-        }
+      std::string receiverTypeText;
+      if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
+          expr.args.size() == 2 &&
+          ((builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget != nullptr &&
+            (builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget(
+                 expr.args.front(), receiverTypeText, borrowedCanonicalExperimentalMapHelperPath) ||
+             builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget(
+                 expr.args[1], receiverTypeText, borrowedCanonicalExperimentalMapHelperPath))) ||
+           isExperimentalMapReceiverExpr(expr.args.front()) ||
+           isExperimentalMapReceiverExpr(expr.args[1]))) {
+        error_ = "unknown call target: /std/collections/map/" + builtinAccessName;
+        return false;
       }
     }
     bool resolvedMethod = false;
     bool usedMethodTarget = false;
     bool hasMethodReceiverIndex = false;
     size_t methodReceiverIndex = 0;
+    auto hasResolvableDefinitionTarget = [&](const std::string &path) {
+      return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
+    };
     if (hasVectorHelperCallResolution) {
       resolved = vectorHelperCallResolvedPath;
       usedMethodTarget = true;
@@ -509,7 +619,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         return false;
       }
-      if (receiverPath == "/array" || receiverPath == "/vector" || receiverPath == "/map" || receiverPath == "/string") {
+      if (receiverPath == "/array" || receiverPath == "/vector" || receiverPath == "/map" ||
+          receiverPath == "/string" ||
+          receiverPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
         return false;
       }
       return structNames_.count(receiverPath) > 0;
@@ -618,8 +730,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool shouldAllowStdAccessCompatibilityFallback = false;
     const bool isBuiltinAccessName =
         hasBuiltinAccessSpelling &&
-        (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback ||
-         hasStdNamespacedVectorAccessDefinition) &&
+        (!isStdNamespacedVectorAccessCall || shouldAllowStdAccessCompatibilityFallback) &&
         !isStdNamespacedMapAccessCall && !isResolvedMapAccessCall;
     const bool isNamespacedVectorAccessCall =
         !isStdNamespacedVectorAccessCall && isBuiltinAccessName && isNamespacedVectorHelperCall &&
@@ -640,6 +751,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool prefersCanonicalVectorCountAliasDefinition =
         !expr.isMethodCall && resolved == "/vector/count" && !hasDefinitionPath(resolved) &&
         hasDefinitionPath("/std/collections/vector/count");
+    const bool allowStdNamespacedVectorUserReceiverProbe =
+        !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
+        isNamespacedVectorHelperCall &&
+        (namespacedHelper == "count" || namespacedHelper == "capacity");
+    if (!expr.isMethodCall && isStdNamespacedVectorCountCall &&
+        !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count") &&
+        !allowStdNamespacedVectorUserReceiverProbe) {
+      error_ = "unknown call target: /std/collections/vector/count";
+      return false;
+    }
+    if (!expr.isMethodCall && isStdNamespacedVectorCapacityCall &&
+        !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity") &&
+        !allowStdNamespacedVectorUserReceiverProbe) {
+      error_ = "unknown call target: /std/collections/vector/capacity";
+      return false;
+    }
     if (prefersCanonicalVectorCountAliasDefinition) {
       resolved = "/std/collections/vector/count";
     }
@@ -704,8 +831,67 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         methodReceiverIndex = 0;
         bool isBuiltinMethod = false;
         const bool hasBlockArgs = expr.hasBodyArguments || !expr.bodyArguments.empty();
-        if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), expr.name, resolved,
-                                 isBuiltinMethod)) {
+        std::string vectorMethodTarget;
+        const bool isVectorCompatibilityMethodName =
+            expr.name == "count" || expr.name == "capacity" || expr.name == "at" ||
+            expr.name == "at_unsafe" || expr.name == "push" || expr.name == "pop" ||
+            expr.name == "reserve" || expr.name == "clear" || expr.name == "remove_at" ||
+            expr.name == "remove_swap";
+        std::string receiverCollectionTypePath;
+        std::string experimentalVectorElemType;
+        const bool isExperimentalVectorCallReceiver =
+            builtinCollectionDispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
+            builtinCollectionDispatchResolvers.resolveExperimentalVectorValueTarget(
+                expr.args.front(), experimentalVectorElemType);
+        const std::string preferredVisibleVectorMethodTarget =
+            preferVectorStdlibHelperPath(preferredBareVectorHelperTarget(expr.name));
+        const bool hasVisiblePreferredVectorMethodTarget =
+            hasImportedDefinitionPath(preferredVisibleVectorMethodTarget) ||
+            defMap_.count(preferredVisibleVectorMethodTarget) > 0;
+        if (isVectorCompatibilityMethodName &&
+            expr.args.front().kind == Expr::Kind::Call &&
+            !expr.args.front().isBinding &&
+            !expr.args.front().isMethodCall &&
+            resolveCallCollectionTypePath(expr.args.front(), params, locals, receiverCollectionTypePath) &&
+            receiverCollectionTypePath == "/vector" &&
+            (isExperimentalVectorCallReceiver || hasVisiblePreferredVectorMethodTarget)) {
+          resolved = preferredVisibleVectorMethodTarget;
+          isBuiltinMethod = false;
+        } else if (isVectorCompatibilityMethodName &&
+            resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
+                                            vectorMethodTarget)) {
+          if (vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+              !hasImportedDefinitionPath(vectorMethodTarget) &&
+              defMap_.count(vectorMethodTarget) == 0) {
+            const std::string canonicalVectorMethodTarget =
+                "/std/collections/vector/" + expr.name;
+            if (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||
+                defMap_.count(canonicalVectorMethodTarget) > 0) {
+              vectorMethodTarget = canonicalVectorMethodTarget;
+            } else {
+              const std::string aliasVectorMethodTarget = "/vector/" + expr.name;
+              if (hasImportedDefinitionPath(aliasVectorMethodTarget) ||
+                  defMap_.count(aliasVectorMethodTarget) > 0) {
+                vectorMethodTarget = aliasVectorMethodTarget;
+              }
+            }
+          }
+          vectorMethodTarget = preferVectorStdlibHelperPath(vectorMethodTarget);
+          if (hasImportedDefinitionPath(vectorMethodTarget) ||
+              defMap_.count(vectorMethodTarget) > 0) {
+            resolved = vectorMethodTarget;
+            isBuiltinMethod = false;
+          } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
+                                          expr.name, resolved, isBuiltinMethod)) {
+            if (hasBlockArgs &&
+                resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, resolved)) {
+              isBuiltinMethod = false;
+            } else {
+              return false;
+            }
+          }
+        } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), expr.name, resolved,
+                                        isBuiltinMethod)) {
           if (hasBlockArgs &&
               resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, resolved)) {
             isBuiltinMethod = false;
@@ -721,6 +907,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             resolved = "/" + pointerLikeType + "/" + normalizeCollectionMethodName(expr.name);
             isBuiltinMethod = false;
           }
+        }
+        if (!isBuiltinMethod && isVectorCompatibilityMethodName &&
+            resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+          const std::string canonicalVectorMethodTarget =
+              "/std/collections/vector/" + expr.name;
+          if (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||
+              defMap_.count(canonicalVectorMethodTarget) > 0) {
+            resolved = canonicalVectorMethodTarget;
+          } else {
+            const std::string aliasVectorMethodTarget = "/vector/" + expr.name;
+            if (hasImportedDefinitionPath(aliasVectorMethodTarget) ||
+                defMap_.count(aliasVectorMethodTarget) > 0) {
+              resolved = aliasVectorMethodTarget;
+            }
+          }
+          resolved = preferVectorStdlibHelperPath(resolved);
         }
         bool keepBuiltinIndexedArgsPackMapMethod = false;
         keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());
@@ -757,10 +959,19 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             !keepBuiltinIndexedArgsPackMapMethod) {
           isBuiltinMethod = false;
         }
+        std::string builtinVectorReceiverCollection;
         if (isBuiltinMethod && resolved == "/vector/count" &&
             defMap_.find(resolved) == defMap_.end() &&
             !hasImportedDefinitionPath(resolved) &&
-            expr.args.front().kind == Expr::Kind::Name) {
+            !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
+            !hasImportedDefinitionPath("/std/collections/vector/count") &&
+            !hasDeclaredDefinitionPath("/std/collections/vectorCount") &&
+            !hasImportedDefinitionPath("/std/collections/vectorCount") &&
+            !hasNamedArguments(expr.argNames) &&
+            (expr.args.front().kind == Expr::Kind::Name ||
+             (expr.args.front().kind == Expr::Kind::Call &&
+              getBuiltinCollectionName(expr.args.front(), builtinVectorReceiverCollection) &&
+              builtinVectorReceiverCollection == "vector"))) {
           std::string elemType;
           if (resolveVectorTarget(expr.args.front(), elemType)) {
             error_ = "unknown method: /vector/count";
@@ -794,7 +1005,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string methodResolved;
       if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), namespacedHelper,
                               methodResolved, isBuiltinMethod) &&
-          !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
+          !isBuiltinMethod && hasResolvableDefinitionTarget(methodResolved)) {
         usedMethodTarget = true;
         hasMethodReceiverIndex = true;
         methodReceiverIndex = 0;
@@ -806,10 +1017,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "unknown call target: /std/collections/vector/count";
       return false;
     } else if (!expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
-               defMap_.find("/std/collections/vector/count") == defMap_.end() &&
+               !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
                !hasImportedDefinitionPath("/std/collections/vector/count")) {
       std::string elemType;
-      if (resolveStringTarget(expr.args.front()) || resolveArrayTarget(expr.args.front(), elemType)) {
+      if (resolveStringTarget(expr.args.front()) || resolveArrayTarget(expr.args.front(), elemType) ||
+          builtinCollectionDispatchResolvers.resolveExperimentalVectorTarget(
+              expr.args.front(), elemType)) {
         error_ = "unknown call target: /std/collections/vector/count";
         return false;
       }
@@ -866,7 +1079,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "unknown call target: /std/collections/map/count";
         return false;
       }
-      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+      if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
         error_ = "unknown method: " + methodResolved;
         return false;
       }
@@ -908,7 +1121,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "unknown call target: /std/collections/map/count";
         return false;
       }
-      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+      if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
         error_ = "unknown method: " + methodResolved;
         return false;
       }
@@ -952,17 +1165,77 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         (void)validateExpr(params, locals, expr.args.front());
         return false;
       }
-      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+      if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
         if (!isNonCollectionStructCapacityTarget(methodResolved)) {
           promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved, isBuiltinMethod, false);
         }
       }
-      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+      if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
         error_ = "unknown method: " + methodResolved;
         return false;
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
+    } else if (!expr.isMethodCall &&
+               !hasNamedArguments(expr.argNames) &&
+               expr.args.size() >= 1 &&
+               ((expr.namespacePrefix.empty() && (expr.name == "at" || expr.name == "at_unsafe")) ||
+                resolved == "/std/collections/vectorAt" ||
+                resolved == "/std/collections/vectorAtUnsafe")) {
+      const bool isUnsafeHelper =
+          expr.name == "at_unsafe" ||
+          resolved == "/std/collections/vector/at_unsafe" ||
+          resolved == "/vector/at_unsafe" ||
+          resolved == "/std/collections/vectorAtUnsafe";
+      const std::string helperName = isUnsafeHelper ? "at_unsafe" : "at";
+      auto resolvesExperimentalVectorValueReceiverForBareAccess =
+          [&](const Expr &receiverExpr, std::string &elemTypeOut) -> bool {
+        elemTypeOut.clear();
+        std::string receiverTypeText;
+        if (!inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText)) {
+          return false;
+        }
+        BindingInfo inferredBinding;
+        const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalizedType, base, argText)) {
+          inferredBinding.typeName = normalizeBindingTypeName(base);
+          inferredBinding.typeTemplateArg = argText;
+        } else {
+          inferredBinding.typeName = normalizedType;
+          inferredBinding.typeTemplateArg.clear();
+        }
+        const std::string normalizedBase = normalizeBindingTypeName(inferredBinding.typeName);
+        if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+          return false;
+        }
+        return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
+      };
+      std::string experimentalElemType;
+      if (resolvesExperimentalVectorValueReceiverForBareAccess(expr.args.front(), experimentalElemType)) {
+        Expr rewrittenMethodCall = expr;
+        rewrittenMethodCall.isMethodCall = true;
+        rewrittenMethodCall.name = helperName;
+        rewrittenMethodCall.namespacePrefix.clear();
+        return validateExpr(params, locals, rewrittenMethodCall);
+      }
+      bool isBuiltinMethod = false;
+      std::string methodResolved;
+      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), helperName,
+                              methodResolved, isBuiltinMethod) &&
+          !isBuiltinMethod && hasResolvableDefinitionTarget(methodResolved)) {
+        Expr rewrittenMethodCall = expr;
+        rewrittenMethodCall.isMethodCall = true;
+        rewrittenMethodCall.name = helperName;
+        rewrittenMethodCall.namespacePrefix.clear();
+        return validateExpr(params, locals, rewrittenMethodCall);
+      }
+      Expr rewrittenBareVectorHelperCall;
+      if (this->tryRewriteBareVectorHelperCall(
+              expr, helperName, builtinCollectionDispatchResolvers, rewrittenBareVectorHelperCall)) {
+        return validateExpr(params, locals, rewrittenBareVectorHelperCall);
+      }
     } else if (this->tryRewriteBareVectorHelperCall(
                    expr, "at", builtinCollectionDispatchResolvers, rewrittenVectorHelperCall) ||
                this->tryRewriteBareVectorHelperCall(
@@ -1074,7 +1347,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           (void)validateExpr(params, locals, receiverCandidate);
           return false;
         }
-        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+        if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
           error_ = "unknown method: " + methodResolved;
           return false;
         }
@@ -1175,7 +1448,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         std::string methodTarget;
         if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, expr.name, methodTarget)) {
           methodTarget = preferVectorStdlibHelperPath(methodTarget);
-          if (defMap_.count(methodTarget) > 0) {
+          if (hasResolvableDefinitionTarget(methodTarget)) {
             usedMethodTarget = true;
             resolved = methodTarget;
             resolvedMethod = false;
@@ -1196,7 +1469,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           (void)validateExpr(params, locals, receiverCandidate);
           return false;
         }
-        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+        if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
           error_ = "unknown method: " + methodResolved;
           return false;
         }
@@ -1219,7 +1492,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           (void)validateExpr(params, locals, receiverCandidate);
           return false;
         }
-        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+        if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
           error_ = "unknown method: " + methodResolved;
           return false;
         }
@@ -1237,10 +1510,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       const bool isExperimentalMapReceiver =
           resolveExperimentalMapTarget(receiverCandidate, keyType, valueType);
       if (isMapReceiver || isExperimentalMapReceiver) {
-        if (getBuiltinArrayAccessName(expr, accessHelperName) && isExperimentalMapReceiver) {
-          error_ = accessHelperName + " requires integer index";
-          return false;
-        }
         usedMethodTarget = true;
         bool isBuiltinMethod = false;
         std::string methodResolved;
@@ -1294,7 +1563,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                      std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe" : "at");
             return false;
           }
-        } else if (defMap_.find(methodResolved) == defMap_.end() &&
+        } else if (!hasResolvableDefinitionTarget(methodResolved) &&
                    !this->hasResolvableMapHelperPath(methodResolved)) {
           error_ = "unknown method: " + methodResolved;
           return false;
@@ -1323,7 +1592,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else if (!resolvedMethod && !this->shouldPreserveRemovedCollectionHelperPath(resolved)) {
         resolved = preferVectorStdlibHelperPath(resolved);
       }
-      if (resolvedMethod || defMap_.find(resolved) == defMap_.end()) {
+      if (resolvedMethod || !hasResolvableDefinitionTarget(resolved)) {
         error_ = "block arguments require a definition target: " + resolved;
         return false;
       }
@@ -1420,7 +1689,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       };
       std::string vectorHelperName;
       if (resolveVectorMutatorName(expr.name, vectorHelperName) &&
-          (resolvedMethod || defMap_.find(resolved) == defMap_.end())) {
+          (resolvedMethod || !hasVectorHelperCallResolution) &&
+          !hasResolvableDefinitionTarget(resolved)) {
         error_ = vectorHelperName + " is only supported as a statement";
         return false;
       }
@@ -1929,6 +2199,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       collectionAccessValidationContext.resolveArgsPackAccessTarget =
           [&](const Expr &target, std::string &elemTypeOut) {
             return resolveArgsPackAccessTarget(target, elemTypeOut);
+          };
+      collectionAccessValidationContext.resolveVectorTarget =
+          [&](const Expr &target, std::string &elemTypeOut) {
+            return resolveVectorTarget(target, elemTypeOut);
+          };
+      collectionAccessValidationContext.resolveExperimentalVectorValueTarget =
+          [&](const Expr &target, std::string &elemTypeOut) {
+            return builtinCollectionDispatchResolvers
+                .resolveExperimentalVectorValueTarget != nullptr &&
+                   builtinCollectionDispatchResolvers
+                       .resolveExperimentalVectorValueTarget(target, elemTypeOut);
           };
       collectionAccessValidationContext.resolveArrayTarget =
           [&](const Expr &target, std::string &elemTypeOut) {

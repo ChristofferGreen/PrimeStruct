@@ -159,7 +159,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       if (suffix != std::string::npos) {
         canonicalPath.erase(suffix);
       }
-      for (const auto &importPath : program_.imports) {
+      const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
+      for (const auto &importPath : importPaths) {
         if (importPath == canonicalPath) {
           return true;
         }
@@ -239,11 +240,57 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return inferExprReturnKind(candidate, paramsIn, localsIn) == ReturnKind::String;
   };
+  auto collectionRepresentation = [&](const std::string &typeName,
+                                      const std::string &typeTemplateArg) -> std::string {
+    std::string normalizedType = normalizeBindingTypeName(typeName);
+    std::string base = normalizedType;
+    std::string argText = typeTemplateArg;
+    if (argText.empty()) {
+      std::string splitBase;
+      std::string splitArgText;
+      if (splitTemplateTypeName(normalizedType, splitBase, splitArgText)) {
+        base = normalizeBindingTypeName(splitBase);
+        argText = splitArgText;
+      }
+    }
+    if (base == "vector") {
+      return "builtin_vector";
+    }
+    if (base == "Vector" || base == "/std/collections/experimental_vector/Vector" ||
+        base == "std/collections/experimental_vector/Vector" ||
+        base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+        base.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+      return "experimental_vector";
+    }
+    return {};
+  };
 
   if (!hasExplicitType || explicitAutoType) {
     (void)inferBindingTypeFromInitializer(initializer, params, locals, info, &stmt);
   } else {
     const std::string expectedType = normalizeBindingTypeName(info.typeName);
+    const std::string expectedRepresentation =
+        collectionRepresentation(info.typeName, info.typeTemplateArg);
+    auto isExplicitCanonicalVectorConstructor = [&](const Expr &candidate) {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+        return false;
+      }
+      if (candidate.name == "/std/collections/vector/vector" ||
+          candidate.name == "std/collections/vector/vector") {
+        return true;
+      }
+      std::string normalizedPrefix = candidate.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
+      return normalizedPrefix == "std/collections/vector" && candidate.name == "vector";
+    };
+    if (expectedRepresentation == "builtin_vector" &&
+        isExplicitCanonicalVectorConstructor(initializer) &&
+        hasImportedDefinitionPath("/std/collections/vector/vector")) {
+        error_ = "binding initializer type mismatch";
+        return false;
+    }
     ResultTypeInfo resultInfo;
     if (expectedType != "Result" &&
         resolveResultTypeForExpr(initializer, params, locals, resultInfo) &&
@@ -257,6 +304,40 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return false;
       }
     } else {
+      BindingInfo initializerBindingInfo;
+      const bool hasInitializerBindingInfo =
+          inferBindingTypeFromInitializer(initializer, params, locals, initializerBindingInfo, &stmt);
+      std::string initializerTypeText;
+      if (inferQueryExprTypeText(initializer, params, locals, initializerTypeText)) {
+        std::string actualRepresentation =
+            collectionRepresentation(initializerTypeText, {});
+        const std::string initializerBindingRepresentation =
+            hasInitializerBindingInfo
+                ? collectionRepresentation(initializerBindingInfo.typeName, initializerBindingInfo.typeTemplateArg)
+                : std::string{};
+        if (actualRepresentation.empty()) {
+          actualRepresentation = initializerBindingRepresentation;
+        } else if (!expectedRepresentation.empty() &&
+                   !initializerBindingRepresentation.empty() &&
+                   initializerBindingRepresentation == expectedRepresentation) {
+          actualRepresentation = initializerBindingRepresentation;
+        }
+        if (!expectedRepresentation.empty() &&
+            !actualRepresentation.empty() &&
+            expectedRepresentation != actualRepresentation) {
+          error_ = "binding initializer type mismatch";
+          return false;
+        }
+      } else if (hasInitializerBindingInfo) {
+        const std::string actualRepresentation =
+            collectionRepresentation(initializerBindingInfo.typeName, initializerBindingInfo.typeTemplateArg);
+        if (!expectedRepresentation.empty() &&
+            !actualRepresentation.empty() &&
+            expectedRepresentation != actualRepresentation) {
+          error_ = "binding initializer type mismatch";
+          return false;
+        }
+      }
       const ReturnKind expectedKind = returnKindForTypeName(expectedType);
       if (expectedKind != ReturnKind::Unknown && initKind != ReturnKind::Unknown) {
         if (!isSoftwareNumericBindingCompatible(expectedKind, initKind) &&

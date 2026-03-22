@@ -45,7 +45,56 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     bindingOut.typeTemplateArg = resultInfo.valueType + ", " + resultInfo.errorType;
     return true;
   };
+  auto inferUninitializedTakeBorrowBinding = [&]() -> bool {
+    if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall ||
+        initializer.args.size() != 1 ||
+        (!isSimpleCallName(initializer, "take") &&
+         !isSimpleCallName(initializer, "borrow"))) {
+      return false;
+    }
+    BindingInfo storageBinding;
+    bool resolvedStorage = false;
+    if (!resolveUninitializedStorageBinding(params,
+                                           locals,
+                                           initializer.args.front(),
+                                           storageBinding,
+                                           resolvedStorage) ||
+        !resolvedStorage || storageBinding.typeName != "uninitialized" ||
+        storageBinding.typeTemplateArg.empty()) {
+      return false;
+    }
+    return assignBindingTypeFromText(storageBinding.typeTemplateArg);
+  };
   auto canonicalizeInferredCollectionBinding = [&](const Expr *sourceExpr) -> bool {
+    auto canonicalizeResolvedPath = [](std::string path) {
+      const size_t suffix = path.find("__t");
+      if (suffix != std::string::npos) {
+        path.erase(suffix);
+      }
+      return path;
+    };
+    auto preferResolvedCollectionBinding = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call) {
+        return false;
+      }
+      std::string builtinCollectionName;
+      if (getBuiltinCollectionName(candidate, builtinCollectionName)) {
+        return false;
+      }
+      const std::string resolvedCandidate = canonicalizeResolvedPath(resolveCalleePath(candidate));
+      if (resolvedCandidate.empty()) {
+        return false;
+      }
+      BindingInfo resolvedBinding;
+      if (!inferResolvedDirectCallBindingType(resolvedCandidate, resolvedBinding)) {
+        return false;
+      }
+      if (normalizeCollectionTypePath(bindingTypeText(resolvedBinding)).empty()) {
+        return false;
+      }
+      bindingOut = std::move(resolvedBinding);
+      return true;
+    };
     auto isResolvedMapConstructorPath = [](std::string resolvedPath) {
       const size_t specializationSuffix = resolvedPath.find("__t");
       if (specializationSuffix != std::string::npos) {
@@ -108,11 +157,47 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       bindingOut.typeTemplateArg = keyTypeText + ", " + valueTypeText;
       return true;
     };
+    auto applySourceExprCollectionTemplateArgs = [&](const Expr &candidate) -> bool {
+      std::vector<std::string> collectionArgs;
+      if (resolveCallCollectionTemplateArgs(candidate,
+                                           bindingOut.typeName,
+                                           params,
+                                           locals,
+                                           collectionArgs) &&
+          !collectionArgs.empty()) {
+        bindingOut.typeTemplateArg = joinTemplateArgs(collectionArgs);
+        return true;
+      }
+      std::string collectionName;
+      if (!getBuiltinCollectionName(candidate, collectionName)) {
+        return false;
+      }
+      if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+          candidate.templateArgs.size() == 1) {
+        bindingOut.typeName = collectionName;
+        bindingOut.typeTemplateArg = candidate.templateArgs.front();
+        return true;
+      }
+      if (collectionName == "map" && candidate.templateArgs.size() == 2) {
+        bindingOut.typeName = "map";
+        bindingOut.typeTemplateArg = joinTemplateArgs(candidate.templateArgs);
+        return true;
+      }
+      return false;
+    };
     if (sourceExpr != nullptr && sourceExpr->kind == Expr::Kind::Call &&
         inferDirectMapConstructorBinding(*sourceExpr)) {
       return true;
     }
+    if (sourceExpr != nullptr && preferResolvedCollectionBinding(*sourceExpr)) {
+      return true;
+    }
     const std::string normalizedBindingType = normalizeBindingTypeName(bindingOut.typeName);
+    if ((normalizedBindingType == "Vector" && !bindingOut.typeTemplateArg.empty()) ||
+        normalizedBindingType.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+        normalizedBindingType.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+      return true;
+    }
     if ((normalizedBindingType == "Map" && !bindingOut.typeTemplateArg.empty()) ||
         normalizedBindingType.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
         normalizedBindingType.rfind("std/collections/experimental_map/Map__", 0) == 0) {
@@ -126,35 +211,15 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       std::string inferredTypeText;
       if (inferQueryExprTypeText(*sourceExpr, params, locals, inferredTypeText) &&
           assignBindingTypeFromText(inferredTypeText)) {
+        (void)applySourceExprCollectionTemplateArgs(*sourceExpr);
         return true;
       }
     }
     bindingOut.typeName = normalizedCollectionType.substr(1);
     bindingOut.typeTemplateArg.clear();
     if (sourceExpr != nullptr && sourceExpr->kind == Expr::Kind::Call) {
-      std::vector<std::string> collectionArgs;
-      if (resolveCallCollectionTemplateArgs(*sourceExpr,
-                                           bindingOut.typeName,
-                                           params,
-                                           locals,
-                                           collectionArgs) &&
-          !collectionArgs.empty()) {
-        bindingOut.typeTemplateArg = joinTemplateArgs(collectionArgs);
+      if (applySourceExprCollectionTemplateArgs(*sourceExpr)) {
         return true;
-      }
-      std::string collectionName;
-      if (getBuiltinCollectionName(*sourceExpr, collectionName)) {
-        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
-            sourceExpr->templateArgs.size() == 1) {
-          bindingOut.typeName = collectionName;
-          bindingOut.typeTemplateArg = sourceExpr->templateArgs.front();
-          return true;
-        }
-        if (collectionName == "map" && sourceExpr->templateArgs.size() == 2) {
-          bindingOut.typeName = "map";
-          bindingOut.typeTemplateArg = joinTemplateArgs(sourceExpr->templateArgs);
-          return true;
-        }
       }
     }
     return true;
@@ -208,7 +273,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       normalizedPrefix.erase(normalizedPrefix.begin());
     }
     if (normalizedName == "vector/vector" ||
-        (normalizedPrefix == "vector" && normalizedName == "vector")) {
+        normalizedName == "vector" ||
+        (normalizedPrefix == "vector" && normalizedName == "vector") ||
+        (normalizedPrefix == "std/collections/vector" && normalizedName == "vector")) {
       return true;
     }
     if ((normalizedPrefix == "std/collections/map" &&
@@ -246,6 +313,30 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     }
     bindingOut = {};
   }
+  auto hasDirectExperimentalVectorImport = [&]() {
+    const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
+    for (const auto &importPath : importPaths) {
+      if (importPath == "/std/collections/experimental_vector/*" ||
+          importPath == "/std/collections/experimental_vector/vector" ||
+          importPath == "/std/collections/experimental_vector") {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (initializer.kind == Expr::Kind::Call &&
+      !initializer.isMethodCall &&
+      initializer.templateArgs.size() == 1 &&
+      resolveCalleePath(initializer) == "/vector") {
+    if (!hasDirectExperimentalVectorImport()) {
+      bindingOut.typeName = "vector";
+      bindingOut.typeTemplateArg = initializer.templateArgs.front();
+      return true;
+    }
+    bindingOut.typeName = "Vector";
+    bindingOut.typeTemplateArg = initializer.templateArgs.front();
+    return true;
+  }
   auto inferTryInitializerBinding = [&]() -> bool {
     if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall || !isSimpleCallName(initializer, "try") ||
         initializer.args.size() != 1 || !initializer.templateArgs.empty() || initializer.hasBodyArguments ||
@@ -259,6 +350,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     }
     return assignBindingTypeFromText(resultInfo.valueType);
   };
+  if (inferUninitializedTakeBorrowBinding()) {
+    return true;
+  }
   auto inferDirectResultOkBinding = [&]() -> bool {
     if (initializer.kind != Expr::Kind::Call || !initializer.isMethodCall || initializer.name != "ok" ||
         initializer.templateArgs.size() != 0 || initializer.hasBodyArguments || !initializer.bodyArguments.empty()) {
@@ -774,14 +868,6 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
         }
       }
 
-      if ((normalizedPrefix == "vector" && normalizedName == "vector") ||
-          normalizedName == "vector/vector") {
-        const std::string canonical = "/std/collections/vector/vector";
-        if (defMap_.count(canonical) > 0) {
-          return canonical;
-        }
-      }
-
       return {};
     };
     const std::string preferredResolvedInitializer = preferredResolvedInitializerPath();
@@ -791,6 +877,25 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       }
       if (inferDeclaredDirectCallBinding(preferredResolvedInitializer)) {
         return true;
+      }
+    }
+    if (initializerExprForInference != nullptr &&
+        !isUnresolvedActiveInferenceCall(*initializerExprForInference)) {
+      std::string builtinCollectionName;
+      const bool isBuiltinCollectionCall =
+          getBuiltinCollectionName(*initializerExprForInference, builtinCollectionName);
+      std::string resolvedInferencePath = resolveCalleePath(*initializerExprForInference);
+      const size_t suffix = resolvedInferencePath.find("__t");
+      if (suffix != std::string::npos) {
+        resolvedInferencePath.erase(suffix);
+      }
+      if (!isBuiltinCollectionCall && !resolvedInferencePath.empty()) {
+        BindingInfo resolvedCollectionBinding;
+        if (inferResolvedDirectCallBindingType(resolvedInferencePath, resolvedCollectionBinding) &&
+            !normalizeCollectionTypePath(bindingTypeText(resolvedCollectionBinding)).empty()) {
+          bindingOut = std::move(resolvedCollectionBinding);
+          return true;
+        }
       }
     }
     std::string inferredTypeText;
@@ -848,6 +953,15 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       if (!inferredStruct.empty()) {
         const std::string normalizedCollectionType = normalizeCollectionTypePath(inferredStruct);
         if (!normalizedCollectionType.empty()) {
+          const bool keepExperimentalCollectionPath =
+              inferredStruct == "/std/collections/experimental_vector/Vector" ||
+              inferredStruct.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+              inferredStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+          if (keepExperimentalCollectionPath) {
+            bindingOut.typeName = inferredStruct;
+            bindingOut.typeTemplateArg.clear();
+            return true;
+          }
           if (initializerExprForInference != nullptr &&
               !isUnresolvedActiveInferenceCall(*initializerExprForInference)) {
             std::string inferredTypeText;

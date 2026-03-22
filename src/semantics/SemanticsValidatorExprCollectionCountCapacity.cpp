@@ -16,6 +16,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     bool &hasMethodReceiverIndex,
     size_t &methodReceiverIndex) {
   handledOut = false;
+  auto hasResolvableDefinitionPath = [&](const std::string &path) {
+    return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
+  };
 
   auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
     if (defMap_.find(path) == defMap_.end()) {
@@ -171,6 +174,20 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         context.resolveMapTarget(expr.args.front())) {
       methodResolved = "/std/collections/map/count";
       isBuiltinMethod = true;
+    } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "count",
+                                               methodResolved)) {
+      methodResolved = preferVectorStdlibHelperPath(methodResolved);
+      if (hasResolvableDefinitionPath(methodResolved)) {
+        isBuiltinMethod = false;
+      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "count",
+                                      methodResolved, isBuiltinMethod)) {
+        if (!resolveBodyArgumentCountTarget()) {
+          (void)validateExpr(params, locals, expr.args.front());
+          return false;
+        }
+        error_.clear();
+        isBuiltinMethod = false;
+      }
     } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "count",
                                     methodResolved, isBuiltinMethod)) {
       if (!resolveBodyArgumentCountTarget()) {
@@ -201,7 +218,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       error_ = "unknown call target: /std/collections/map/count";
       return false;
     }
-    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       error_ = "unknown method: " + methodResolved;
       return false;
     }
@@ -250,8 +267,18 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     methodReceiverIndex = 0;
     bool isBuiltinMethod = false;
     std::string methodResolved;
-    if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "capacity",
-                             methodResolved, isBuiltinMethod)) {
+    if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
+                                        methodResolved)) {
+      methodResolved = preferVectorStdlibHelperPath(methodResolved);
+      if (hasResolvableDefinitionPath(methodResolved)) {
+        isBuiltinMethod = false;
+      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "capacity",
+                                      methodResolved, isBuiltinMethod)) {
+        (void)validateExpr(params, locals, expr.args.front());
+        return false;
+      }
+    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "capacity",
+                                    methodResolved, isBuiltinMethod)) {
       (void)validateExpr(params, locals, expr.args.front());
       return false;
     }
@@ -259,7 +286,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
-    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       if (requireSingleArg &&
           (context.isNonCollectionStructCapacityTarget == nullptr ||
            !context.isNonCollectionStructCapacityTarget(methodResolved))) {
@@ -269,7 +296,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         }
       }
     }
-    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       error_ = "unknown method: " + methodResolved;
       return false;
     }

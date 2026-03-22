@@ -75,6 +75,7 @@ struct Execution {
 };
 
 struct Program {
+  std::vector<std::string> sourceImports;
   std::vector<std::string> imports;
   std::vector<Definition> definitions;
   std::vector<Execution> executions;

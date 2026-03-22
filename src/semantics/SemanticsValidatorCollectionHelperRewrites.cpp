@@ -60,11 +60,11 @@ bool SemanticsValidator::bareMapHelperOperandIndices(
 
 std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view helperName) const {
   const std::string canonical = "/std/collections/map/" + std::string(helperName);
-  if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+  if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
     return canonical;
   }
   const std::string alias = "/map/" + std::string(helperName);
-  if (hasDefinitionPath(alias)) {
+  if (hasDeclaredDefinitionPath(alias) || hasImportedDefinitionPath(alias)) {
     return alias;
   }
   return canonical;
@@ -92,26 +92,95 @@ std::string SemanticsValidator::specializedExperimentalMapHelperTarget(
     }
     return out;
   };
+  const std::string currentNamespacePrefix = [&]() -> std::string {
+    if (currentValidationContext_.definitionPath.empty()) {
+      return {};
+    }
+    const size_t slash = currentValidationContext_.definitionPath.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      return {};
+    }
+    return currentValidationContext_.definitionPath.substr(0, slash);
+  }();
+  std::function<std::string(const std::string &)> canonicalizeTypeText =
+      [&](const std::string &typeText) -> std::string {
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    if (normalizedType.empty()) {
+      return normalizedType;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args)) {
+        return normalizedType;
+      }
+      for (std::string &arg : args) {
+        arg = canonicalizeTypeText(arg);
+      }
+      std::string canonicalBase = normalizeBindingTypeName(base);
+      if (!canonicalBase.empty() && canonicalBase.front() != '/' &&
+          std::isupper(static_cast<unsigned char>(canonicalBase.front()))) {
+        std::string resolved = resolveStructTypePath(canonicalBase, currentNamespacePrefix, structNames_);
+        if (resolved.empty()) {
+          resolved = resolveTypePath(canonicalBase, currentNamespacePrefix);
+        }
+        if (!resolved.empty()) {
+          canonicalBase = resolved;
+        }
+      }
+      return canonicalBase + "<" + joinTemplateArgs(args) + ">";
+    }
+    if (!normalizedType.empty() && normalizedType.front() != '/' &&
+        std::isupper(static_cast<unsigned char>(normalizedType.front()))) {
+      std::string resolved = resolveStructTypePath(normalizedType, currentNamespacePrefix, structNames_);
+      if (resolved.empty()) {
+        resolved = resolveTypePath(normalizedType, currentNamespacePrefix);
+      }
+      if (!resolved.empty()) {
+        return resolved;
+      }
+    }
+    return normalizedType;
+  };
 
   const std::string basePath = preferredCanonicalExperimentalMapHelperTarget(helperName);
   std::ostringstream specializedPath;
   specializedPath << basePath
                   << "__t"
                   << std::hex
-                  << fnv1a64(stripWhitespace(joinTemplateArgs({keyType, valueType})));
+                  << fnv1a64(stripWhitespace(joinTemplateArgs(
+                      {canonicalizeTypeText(keyType), canonicalizeTypeText(valueType)})));
   if (defMap_.count(specializedPath.str()) > 0) {
     return specializedPath.str();
+  }
+  const std::string canonicalKeyType = canonicalizeTypeText(keyType);
+  const std::string canonicalValueType = canonicalizeTypeText(valueType);
+  const std::string specializationPrefix = basePath + "__t";
+  for (const auto &[path, params] : paramsByDef_) {
+    if (path.rfind(specializationPrefix, 0) != 0 || params.empty()) {
+      continue;
+    }
+    std::string candidateKeyType;
+    std::string candidateValueType;
+    if (!extractMapKeyValueTypes(params.front().binding, candidateKeyType, candidateValueType)) {
+      continue;
+    }
+    if (canonicalizeTypeText(candidateKeyType) == canonicalKeyType &&
+        canonicalizeTypeText(candidateValueType) == canonicalValueType) {
+      return path;
+    }
   }
   return basePath;
 }
 
 std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view helperName) const {
   const std::string canonical = "/std/collections/vector/" + std::string(helperName);
-  if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+  if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
     return canonical;
   }
   const std::string alias = "/vector/" + std::string(helperName);
-  if (hasDefinitionPath(alias)) {
+  if (hasDeclaredDefinitionPath(alias) || hasImportedDefinitionPath(alias)) {
     return alias;
   }
   return canonical;
@@ -143,7 +212,11 @@ bool SemanticsValidator::tryRewriteBareMapHelperCall(
   if (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
       dispatchResolvers.resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType)) {
     rewrittenOut.name = specializedExperimentalMapHelperTarget(helperName, keyType, valueType);
-    rewrittenOut.templateArgs.clear();
+    if (rewrittenOut.name.find("__t") != std::string::npos) {
+      rewrittenOut.templateArgs.clear();
+    } else if (rewrittenOut.templateArgs.empty()) {
+      rewrittenOut.templateArgs = {keyType, valueType};
+    }
   } else {
     rewrittenOut.name = preferredBareMapHelperTarget(helperName);
   }
@@ -160,26 +233,69 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
       dispatchResolvers.resolveVectorTarget == nullptr) {
     return false;
   }
-  if (candidate.name != helperName || candidate.name.find('/') != std::string::npos ||
-      !candidate.namespacePrefix.empty()) {
+  const bool isBareHelperSpelling =
+      candidate.name == helperName &&
+      candidate.name.find('/') == std::string::npos &&
+      candidate.namespacePrefix.empty();
+  if (!isBareHelperSpelling) {
     return false;
   }
-  if (defMap_.find("/" + std::string(helperName)) != defMap_.end()) {
+  const std::string directHelperPath = "/" + std::string(helperName);
+  if (hasDeclaredDefinitionPath(directHelperPath) || hasImportedDefinitionPath(directHelperPath)) {
     return false;
   }
   const size_t receiverIndex = mapHelperReceiverIndex(candidate, dispatchResolvers);
   if (receiverIndex >= candidate.args.size()) {
     return false;
   }
-  std::string elemType;
-  if (!dispatchResolvers.resolveVectorTarget(candidate.args[receiverIndex], elemType)) {
+  std::string builtinElemType;
+  const bool resolvesBuiltinVector =
+      dispatchResolvers.resolveVectorTarget(candidate.args[receiverIndex], builtinElemType);
+  std::string experimentalElemType;
+  const bool resolvesExperimentalVector =
+      dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
+      dispatchResolvers.resolveExperimentalVectorValueTarget(candidate.args[receiverIndex], experimentalElemType);
+  if (!resolvesBuiltinVector && !resolvesExperimentalVector) {
     return false;
   }
   rewrittenOut = candidate;
-  if (dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
-      dispatchResolvers.resolveExperimentalVectorValueTarget(candidate.args[receiverIndex], elemType)) {
-    rewrittenOut.name = specializedExperimentalVectorHelperTarget(helperName, elemType);
-    rewrittenOut.templateArgs.clear();
+  if (resolvesExperimentalVector) {
+    const std::string preferredHelperPath =
+        preferredBareVectorHelperTarget(helperName);
+    if (hasImportedDefinitionPath(preferredHelperPath) ||
+        hasDeclaredDefinitionPath(preferredHelperPath)) {
+      rewrittenOut.name = preferredHelperPath;
+      rewrittenOut.namespacePrefix.clear();
+      return true;
+    }
+    const std::string experimentalHelperPath =
+        specializedExperimentalVectorHelperTarget(helperName, experimentalElemType);
+    const std::string experimentalBasePath =
+        preferredCanonicalExperimentalVectorHelperTarget(helperName);
+    const bool hasVisibleExperimentalVectorHelperBase =
+        hasImportedDefinitionPath(experimentalBasePath) ||
+        hasDeclaredDefinitionPath(experimentalBasePath);
+    const bool hasVisibleExperimentalVectorHelperPath =
+        hasVisibleExperimentalVectorHelperBase ||
+        hasImportedDefinitionPath(experimentalHelperPath) ||
+        hasDeclaredDefinitionPath(experimentalHelperPath) ||
+        (hasVisibleExperimentalVectorHelperBase &&
+         experimentalHelperPath.find("__t") != std::string::npos &&
+         defMap_.count(experimentalHelperPath) > 0);
+    if (!hasVisibleExperimentalVectorHelperPath) {
+      rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
+    } else if (receiverIndex == 0 && !hasNamedArguments(candidate.argNames)) {
+      rewrittenOut.isMethodCall = true;
+      rewrittenOut.name = std::string(helperName);
+      rewrittenOut.namespacePrefix.clear();
+    } else {
+      rewrittenOut.name = experimentalHelperPath;
+      if (rewrittenOut.name.find("__t") != std::string::npos) {
+        rewrittenOut.templateArgs.clear();
+      } else if (rewrittenOut.templateArgs.empty()) {
+        rewrittenOut.templateArgs = {experimentalElemType};
+      }
+    }
   } else {
     rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
   }
@@ -214,9 +330,11 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
     }
     helperName = normalizedMethod;
     canonicalPath = "/std/collections/vector/" + normalizedMethod;
+    const size_t lastSlash = canonicalPath.find_last_of('/');
     canonicalCandidate.isMethodCall = false;
-    canonicalCandidate.name = canonicalPath;
-    canonicalCandidate.namespacePrefix.clear();
+    canonicalCandidate.name = normalizedMethod;
+    canonicalCandidate.namespacePrefix =
+        lastSlash == std::string::npos ? std::string() : canonicalPath.substr(0, lastSlash);
   } else if (!canonicalExperimentalVectorHelperPath(resolveCalleePath(candidate),
                                                     canonicalPath,
                                                     helperName)) {
@@ -229,12 +347,6 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
     return false;
   }
   const Expr &receiverExpr = canonicalCandidate.args[receiverIndex];
-  if (candidate.isMethodCall &&
-      receiverExpr.kind == Expr::Kind::Call &&
-      !receiverExpr.isBinding &&
-      !receiverExpr.isMethodCall) {
-    return false;
-  }
   if (!candidate.isMethodCall &&
       !candidate.templateArgs.empty() &&
       receiverExpr.kind == Expr::Kind::Call &&
@@ -242,20 +354,43 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
       !receiverExpr.isMethodCall) {
     return false;
   }
+  auto hasVisibleCanonicalVectorHelperPath = [&](const std::string &path) {
+    if (hasImportedDefinitionPath(path)) {
+      return true;
+    }
+    if (defMap_.count(path) == 0) {
+      return false;
+    }
+    if (path.rfind("/std/collections/vector/", 0) == 0) {
+      auto paramsIt = paramsByDef_.find(path);
+      if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
+        std::string experimentalElemType;
+        if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
 
   std::string elemType;
   if (!dispatchResolvers.resolveExperimentalVectorValueTarget(receiverExpr, elemType)) {
     return false;
   }
+  if (!hasVisibleCanonicalVectorHelperPath(canonicalPath)) {
+    return false;
+  }
+  if (candidate.isMethodCall) {
+    rewrittenOut = canonicalCandidate;
+    return true;
+  }
+  const bool alreadyCanonicalDirectCall =
+      resolveCalleePath(candidate) == canonicalPath &&
+      !candidate.isMethodCall;
+  if (alreadyCanonicalDirectCall) {
+    return false;
+  }
   rewrittenOut = canonicalCandidate;
-  if (rewrittenOut.templateArgs.empty()) {
-    rewrittenOut.templateArgs = {elemType};
-  }
-  if (!candidate.isMethodCall) {
-    rewrittenOut.name = specializedExperimentalVectorHelperTarget(helperName, elemType);
-    rewrittenOut.namespacePrefix.clear();
-    rewrittenOut.templateArgs.clear();
-  }
   return true;
 }
 
@@ -283,9 +418,11 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     }
     helperName = normalizedMethod;
     canonicalPath = "/std/collections/map/" + normalizedMethod;
+    const size_t lastSlash = canonicalPath.find_last_of('/');
     canonicalCandidate.isMethodCall = false;
-    canonicalCandidate.name = canonicalPath;
-    canonicalCandidate.namespacePrefix.clear();
+    canonicalCandidate.name = normalizedMethod;
+    canonicalCandidate.namespacePrefix =
+        lastSlash == std::string::npos ? std::string() : canonicalPath.substr(0, lastSlash);
   } else if (!canonicalExperimentalMapHelperPath(resolveCalleePath(candidate), canonicalPath, helperName)) {
     return false;
   }
@@ -323,7 +460,9 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
   if (!candidate.isMethodCall) {
     rewrittenOut.name = specializedExperimentalMapHelperTarget(helperName, keyType, valueType);
     rewrittenOut.namespacePrefix.clear();
-    rewrittenOut.templateArgs.clear();
+    if (rewrittenOut.name.find("__t") != std::string::npos) {
+      rewrittenOut.templateArgs.clear();
+    }
   }
   return true;
 }
@@ -352,7 +491,7 @@ bool SemanticsValidator::explicitCanonicalExperimentalMapBorrowedHelperPath(
 }
 
 bool SemanticsValidator::hasResolvableMapHelperPath(const std::string &path) const {
-  return hasDefinitionPath(path) || hasImportedDefinitionPath(path);
+  return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
 }
 
 bool SemanticsValidator::resolveMapKeyType(

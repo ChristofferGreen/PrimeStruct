@@ -56,61 +56,6 @@ bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
   return false;
 }
 
-bool isPlainVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
-  if (target.kind == Expr::Kind::Name) {
-    auto it = localsIn.find(target.name);
-    return it != localsIn.end() &&
-           (it->second.kind == LocalInfo::Kind::Vector ||
-            (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector && !it->second.isSoaVector) ||
-            (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector && !it->second.isSoaVector));
-  }
-  if (target.kind == Expr::Kind::Call) {
-    if (isSimpleCallName(target, "dereference") && target.args.size() == 1) {
-      const Expr &derefTarget = target.args.front();
-      if (derefTarget.kind == Expr::Kind::Name) {
-        auto it = localsIn.find(derefTarget.name);
-        return it != localsIn.end() &&
-               (((it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
-                 (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector)) &&
-                !it->second.isSoaVector);
-      }
-
-      std::string accessName;
-      if (getBuiltinArrayAccessName(derefTarget, accessName) && derefTarget.args.size() == 2 &&
-          derefTarget.args.front().kind == Expr::Kind::Name) {
-        auto localIt = localsIn.find(derefTarget.args.front().name);
-        return localIt != localsIn.end() && localIt->second.isArgsPack &&
-               (((localIt->second.argsPackElementKind == LocalInfo::Kind::Reference) &&
-                 localIt->second.referenceToVector) ||
-                ((localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer) &&
-                 localIt->second.pointerToVector)) &&
-               !localIt->second.isSoaVector;
-      }
-      return false;
-    }
-
-    std::string accessName;
-    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
-        target.args.front().kind == Expr::Kind::Name) {
-      auto localIt = localsIn.find(target.args.front().name);
-      return localIt != localsIn.end() && localIt->second.isArgsPack &&
-             ((localIt->second.argsPackElementKind == LocalInfo::Kind::Vector) ||
-              ((localIt->second.argsPackElementKind == LocalInfo::Kind::Reference) &&
-               localIt->second.referenceToVector) ||
-              ((localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer) &&
-               localIt->second.pointerToVector)) &&
-             !localIt->second.isSoaVector;
-    }
-
-    std::string collection;
-    if (!getBuiltinCollectionName(target, collection)) {
-      return false;
-    }
-    return collection == "vector" && target.templateArgs.size() == 1;
-  }
-  return false;
-}
-
 bool isDereferencedCollectionCountTarget(const Expr &countExpr, const Expr &target, const LocalMap &localsIn) {
   if (!(target.kind == Expr::Kind::Call && isSimpleCallName(target, "dereference") && target.args.size() == 1)) {
     return false;
@@ -534,13 +479,13 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         }()));
 
   const bool blocksBareVectorCountCall =
-      isSimpleCallName(expr, "count") && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
-      (isPlainVectorCountTarget(expr.args.front(), localsIn) ||
-       (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn)));
+      expr.kind == Expr::Kind::Call && expr.name == "count" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
+      (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn) &&
+       !isVectorCountTarget(expr.args.front(), localsIn));
   const bool blocksBareVectorCapacityCall =
-      isSimpleCallName(expr, "capacity") && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
-      ((isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)) ||
-       (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)));
+      expr.kind == Expr::Kind::Call && expr.name == "capacity" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
+      (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn) &&
+       !(isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)));
   if (blocksBareVectorCountCall || blocksBareVectorCapacityCall) {
     return CountAccessCallEmitResult::NotHandled;
   }

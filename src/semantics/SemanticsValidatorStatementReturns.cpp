@@ -54,7 +54,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                                                  ReturnKind returnKind,
                                                  bool allowReturn,
                                                  bool *sawReturn,
-                                                 const std::string &) {
+                                                 const std::string &namespacePrefix) {
   if (hasNamedArguments(stmt.argNames)) {
     error_ = "named arguments not supported for builtin calls";
     return false;
@@ -150,7 +150,26 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         return false;
       }
     }
-    if (returnKind != ReturnKind::Unknown) {
+    bool validatedPointerLikeReturn = false;
+    auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
+    if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
+      BindingInfo declaredReturnBinding;
+      if (inferDefinitionReturnBinding(*currentDefIt->second, declaredReturnBinding) &&
+          (declaredReturnBinding.typeName == "Pointer" ||
+           declaredReturnBinding.typeName == "Reference")) {
+        BindingInfo actualReturnBinding;
+        if (!inferBindingTypeFromInitializer(stmt.args.front(), params, locals, actualReturnBinding) ||
+            actualReturnBinding.typeName != declaredReturnBinding.typeName ||
+            !errorTypesMatch(actualReturnBinding.typeTemplateArg,
+                             declaredReturnBinding.typeTemplateArg,
+                             namespacePrefix)) {
+          error_ = "return type mismatch: expected " + declaredReturnBinding.typeName;
+          return false;
+        }
+        validatedPointerLikeReturn = true;
+      }
+    }
+    if (!validatedPointerLikeReturn && returnKind != ReturnKind::Unknown) {
       ReturnKind exprKind = inferExprReturnKind(stmt.args.front(), params, locals);
       if (returnKind == ReturnKind::Array) {
         auto structIt = returnStructs_.find(currentValidationContext_.definitionPath);
@@ -162,6 +181,10 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             }
             if (normalizedTypePath.rfind("std/collections/experimental_map/Map__", 0) == 0) {
               return "/map";
+            }
+            if (normalizedTypePath == "std/collections/experimental_vector/Vector" ||
+                normalizedTypePath.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+              return "/vector";
             }
             if (typePath == "/array" || typePath == "array") {
               return "/array";
@@ -179,16 +202,50 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (typePath == "/string" || typePath == "string") {
               return "/string";
             }
-            return "";
-          };
-          std::string actualStruct = inferStructReturnPath(stmt.args.front(), params, locals);
-          const std::string normalizedExpectedStruct = normalizeCollectionStructPath(structIt->second);
-          const std::string normalizedActualStruct = normalizeCollectionStructPath(actualStruct);
-          if (actualStruct.empty() ||
-              (actualStruct != structIt->second &&
-               (normalizedExpectedStruct.empty() || normalizedExpectedStruct != normalizedActualStruct))) {
-            std::string expectedType = structIt->second;
-            if (expectedType == "/array" || expectedType == "/vector" || expectedType == "/map" ||
+              return "";
+            };
+            std::string actualStruct = inferStructReturnPath(stmt.args.front(), params, locals);
+            if (actualStruct.empty()) {
+              BindingInfo actualReturnBinding;
+              if (inferBindingTypeFromInitializer(stmt.args.front(), params, locals, actualReturnBinding)) {
+                if (!actualReturnBinding.typeTemplateArg.empty()) {
+                  actualStruct = resolveStructTypePath(
+                      actualReturnBinding.typeName + "<" + actualReturnBinding.typeTemplateArg + ">",
+                      namespacePrefix,
+                      structNames_);
+                } else if (!actualReturnBinding.typeName.empty()) {
+                  actualStruct = resolveStructTypePath(
+                      actualReturnBinding.typeName,
+                      namespacePrefix,
+                      structNames_);
+                  if (actualStruct.empty() && actualReturnBinding.typeName.front() == '/') {
+                    actualStruct = actualReturnBinding.typeName;
+                  }
+                }
+              }
+            }
+            if (actualStruct.empty()) {
+              std::string inferredTypeText;
+              if (inferQueryExprTypeText(stmt.args.front(), params, locals, inferredTypeText) &&
+                  !inferredTypeText.empty()) {
+                actualStruct = resolveStructTypePath(
+                    inferredTypeText,
+                    namespacePrefix,
+                    structNames_);
+              }
+            }
+            const std::string normalizedExpectedStruct = normalizeCollectionStructPath(structIt->second);
+            const std::string normalizedActualStruct = normalizeCollectionStructPath(actualStruct);
+            const std::string resolvedExpectedStruct =
+                resolveStructTypePath(structIt->second, namespacePrefix, structNames_);
+            const std::string resolvedActualStruct =
+                resolveStructTypePath(actualStruct, namespacePrefix, structNames_);
+            if (actualStruct.empty() ||
+                ((actualStruct != structIt->second &&
+                  (resolvedExpectedStruct.empty() || resolvedExpectedStruct != resolvedActualStruct)) &&
+                 (normalizedExpectedStruct.empty() || normalizedExpectedStruct != normalizedActualStruct))) {
+              std::string expectedType = structIt->second;
+              if (expectedType == "/array" || expectedType == "/vector" || expectedType == "/map" ||
                 expectedType == "/string") {
               expectedType.erase(0, 1);
             }

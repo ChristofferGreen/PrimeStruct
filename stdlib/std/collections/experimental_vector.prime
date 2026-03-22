@@ -8,6 +8,26 @@ namespace std {
     [public Pointer<uninitialized<T>>] data{/std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
     [bool mut] ownsData{true}
 
+    [return<i32>]
+    field_count() {
+      return(this.count)
+    }
+
+    [return<i32>]
+    field_capacity() {
+      return(this.capacity)
+    }
+
+    [mut return<void>]
+    set_field_count([i32] value) {
+      assign(this.count, value)
+    }
+
+    [mut return<void>]
+    set_field_capacity([i32] value) {
+      assign(this.capacity, value)
+    }
+
     [mut]
     Move([Reference<Self>] other) {
       assign(this.count, other.count)
@@ -94,17 +114,17 @@ namespace std {
 
   [return<void>]
   vectorCheckIndex<T>([Vector<T>] values, [i32] index) {
-    if(not(less_than(index, values.count)),
+    if(not(less_than(index, values.field_count())),
        then() {
          [vector<T>] empty{/vector/vector<T>()}
-         at(empty, index)
+         empty[index]
        },
        else() { })
   }
 
   [effects(heap_alloc), return<void>]
   vectorReserveInternal<T>([Vector<T> mut] values, [i32] capacity) {
-    if(greater_than(capacity, values.capacity),
+    if(greater_than(capacity, values.field_capacity()),
        then() {
          [i32 mut] allocCount{capacity}
          if(equal(allocCount, 0i32),
@@ -112,10 +132,10 @@ namespace std {
             else() { })
          [Pointer<uninitialized<T>> mut] grown{
              /std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
-         vectorMovePrefixToBuffer<T>(grown, values, values.count)
+         vectorMovePrefixToBuffer<T>(grown, values, values.field_count())
          /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(values.data)
          assign(values.data, grown)
-         assign(values.capacity, capacity)
+         values.set_field_capacity(capacity)
        },
        else() { })
   }
@@ -179,12 +199,12 @@ namespace std {
 
   [public return<i32>]
   vectorCount<T>([Vector<T>] values) {
-    return(values.count)
+    return(values.field_count())
   }
 
   [public return<i32>]
   vectorCapacity<T>([Vector<T>] values) {
-    return(values.capacity)
+    return(values.field_capacity())
   }
 
   [public effects(heap_alloc), return<void>]
@@ -194,63 +214,62 @@ namespace std {
 
   [public effects(heap_alloc), return<void>]
   vectorPush<T>([Vector<T> mut] values, [T] value) {
-    if(equal(values.count, values.capacity),
+    if(equal(values.field_count(), values.field_capacity()),
        then() {
-         [i32 mut] nextCapacity{values.capacity}
+         [i32 mut] nextCapacity{values.field_capacity()}
          if(equal(nextCapacity, 0i32),
             then() { assign(nextCapacity, 1i32) },
             else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
          vectorReserveInternal<T>(values, nextCapacity)
        },
        else() { })
-    vectorInitSlot<T>(values, values.count, value)
-    assign(values.count, plus(values.count, 1i32))
+    vectorInitSlot<T>(values, values.field_count(), value)
+    values.set_field_count(plus(values.field_count(), 1i32))
   }
 
   [public effects(heap_alloc), return<void>]
   vectorPop<T>([Vector<T> mut] values) {
-    if(equal(values.count, 0i32),
+    if(equal(values.field_count(), 0i32),
        then() {
-         [vector<T> mut] empty{/vector/vector<T>()}
-         pop(empty)
+         vectorCheckIndex<T>(values, 0i32)
        },
        else() {
-         [i32] lastIndex{minus(values.count, 1i32)}
+         [i32] lastIndex{minus(values.field_count(), 1i32)}
          vectorDropSlot<T>(values, lastIndex)
-         assign(values.count, lastIndex)
+         values.set_field_count(lastIndex)
        })
   }
 
   [public effects(heap_alloc), return<void>]
   vectorClear<T>([Vector<T> mut] values) {
-    vectorDropRange<T>(values, values.count)
-    assign(values.count, 0i32)
+    vectorDropRange<T>(values, values.field_count())
+    values.set_field_count(0i32)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveAt<T>([Vector<T> mut] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
-    [i32] lastIndex{minus(values.count, 1i32)}
+    [i32] lastIndex{minus(values.field_count(), 1i32)}
     vectorDropSlot<T>(values, index)
     [i32 mut] current{index}
     while(less_than(current, lastIndex), do() {
       vectorInitSlot<T>(values, current, vectorTakeSlot<T>(values, plus(current, 1i32)))
       increment(current)
     })
-    assign(values.count, lastIndex)
+    values.set_field_count(lastIndex)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveSwap<T>([Vector<T> mut] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
-    [i32] lastIndex{minus(values.count, 1i32)}
+    [i32] lastIndex{minus(values.field_count(), 1i32)}
     if(less_than(index, lastIndex),
        then() {
          vectorDropSlot<T>(values, index)
          vectorInitSlot<T>(values, index, vectorTakeSlot<T>(values, lastIndex))
        },
        else() { vectorDropSlot<T>(values, lastIndex) })
-    assign(values.count, lastIndex)
+    values.set_field_count(lastIndex)
   }
 
   [public return<T>]

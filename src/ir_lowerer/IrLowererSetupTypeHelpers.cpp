@@ -835,12 +835,13 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
   typeNameOut.clear();
   resolvedTypePathOut.clear();
 
+  if (!localInfo.structTypeName.empty()) {
+    resolvedTypePathOut = localInfo.structTypeName;
+    return true;
+  }
+
   if (localInfo.kind == LocalInfo::Kind::Array) {
-    if (!localInfo.structTypeName.empty()) {
-      resolvedTypePathOut = localInfo.structTypeName;
-    } else {
-      typeNameOut = "array";
-    }
+    typeNameOut = "array";
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Vector) {
@@ -874,6 +875,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
   }
   if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) {
     typeNameOut = "map";
+    return true;
+  }
+  if (localInfo.kind == LocalInfo::Kind::Reference && !localInfo.structTypeName.empty()) {
+    resolvedTypePathOut = localInfo.structTypeName;
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Pointer || localInfo.kind == LocalInfo::Kind::Reference) {

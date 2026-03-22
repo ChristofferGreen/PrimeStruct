@@ -181,6 +181,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           }
           return true;
         }
+        const std::string expectedStruct =
+            resolveStructTypePath(expectedTrim, namespacePrefix, structNames_);
+        const std::string actualStruct =
+            resolveStructTypePath(actualTrim, namespacePrefix, structNames_);
+        if (!expectedStruct.empty() && expectedStruct == actualStruct) {
+          return true;
+        }
         return errorTypesMatch(expectedTrim, actualTrim, namespacePrefix);
       };
       auto inferValueTypeString = [&](const Expr &value, std::string &typeOut) -> bool {
@@ -195,12 +202,16 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
             return true;
           }
         }
-        if (inferExprReturnKind(value, params, locals) == ReturnKind::Array) {
-          std::string structPath = inferStructReturnPath(value, params, locals);
-          if (!structPath.empty()) {
-            typeOut = structPath;
-            return true;
-          }
+        std::string inferredTypeText;
+        if (inferQueryExprTypeText(value, params, locals, inferredTypeText) &&
+            !inferredTypeText.empty()) {
+          typeOut = normalizeBindingTypeName(inferredTypeText);
+          return true;
+        }
+        std::string structPath = inferStructReturnPath(value, params, locals);
+        if (!structPath.empty()) {
+          typeOut = structPath;
+          return true;
         }
         return false;
       };

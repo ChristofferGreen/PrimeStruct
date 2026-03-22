@@ -57,6 +57,14 @@ bool checkedSubU64(uint64_t lhs, uint64_t rhs, uint64_t &out) {
 enum class SignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 enum class UnsignedLiteralIntegerEvalResult { NotFoldable, Value, Overflow };
 
+std::string stripGeneratedHelperSuffix(std::string helperName) {
+  const size_t generatedSuffix = helperName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    helperName.erase(generatedSuffix);
+  }
+  return helperName;
+}
+
 bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -68,11 +76,11 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
   const std::string vectorPrefix = "vector/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(vectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
     return true;
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdVectorPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
   }
   return false;
@@ -286,6 +294,32 @@ bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
   instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(destBaseLocal)});
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
   return emitStructCopyFromPtrs(instructions, destPtrLocal, srcPtrLocal, slotCount);
+}
+
+void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+                                        int32_t srcPtrLocal,
+                                        const std::string &structPath) {
+  auto emitStoreFalseAtOffset = [&](uint64_t offsetBytes) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal));
+    if (offsetBytes != 0) {
+      emitInstruction(IrOpcode::PushI64, offsetBytes);
+      emitInstruction(IrOpcode::AddI64, 0);
+    }
+    emitInstruction(IrOpcode::PushI32, 0);
+    emitInstruction(IrOpcode::StoreIndirect, 0);
+    emitInstruction(IrOpcode::Pop, 0);
+  };
+
+  if (structPath == "/std/collections/experimental_vector/Vector" ||
+      structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+    emitStoreFalseAtOffset(3ull * IrSlotBytes);
+    return;
+  }
+
+  if (structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+    emitStoreFalseAtOffset(3ull * IrSlotBytes);
+    emitStoreFalseAtOffset(7ull * IrSlotBytes);
+  }
 }
 
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,
@@ -649,6 +683,12 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   if (!resolveVectorMutatorName(stmt, vectorHelper)) {
     return VectorStatementHelperEmitResult::NotMatched;
   }
+  const bool explicitVectorHelperPath =
+      !stmt.isMethodCall &&
+      (stmt.name.rfind("/std/collections/vector/", 0) == 0 || stmt.name.rfind("/vector/", 0) == 0);
+  Expr normalizedStmt = stmt;
+  const Expr *activeStmt = &stmt;
+  bool useBuiltinCompatibilityStmt = false;
 
   auto isMutableVectorTargetExpr = [&](const Expr &expr) {
     auto classifyVectorLocal = [&](const LocalInfo &localInfo, bool fromArgsPack) {
@@ -763,6 +803,22 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       if (receiverIndex >= stmt.args.size()) {
         continue;
       }
+      if (explicitVectorHelperPath && isMutableVectorTargetExpr(stmt.args[receiverIndex])) {
+        normalizedStmt = stmt;
+        if (receiverIndex != 0) {
+          std::swap(normalizedStmt.args[0], normalizedStmt.args[receiverIndex]);
+          if (normalizedStmt.argNames.size() < normalizedStmt.args.size()) {
+            normalizedStmt.argNames.resize(normalizedStmt.args.size());
+          }
+          std::swap(normalizedStmt.argNames[0], normalizedStmt.argNames[receiverIndex]);
+        }
+        if (hasNamedArguments(normalizedStmt.argNames)) {
+          normalizedStmt.argNames.clear();
+        }
+        activeStmt = &normalizedStmt;
+        useBuiltinCompatibilityStmt = true;
+        break;
+      }
       Expr methodStmt = stmt;
       methodStmt.isMethodCall = true;
       methodStmt.name = vectorHelper;
@@ -779,20 +835,21 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     }
   }
 
-  if (isUserDefinedVectorHelperCall(stmt)) {
+  const Expr &callStmt = *activeStmt;
+  if (!useBuiltinCompatibilityStmt && isUserDefinedVectorHelperCall(stmt)) {
     return VectorStatementHelperEmitResult::NotMatched;
   }
-  if (!stmt.templateArgs.empty()) {
+  if (!callStmt.templateArgs.empty()) {
     error = vectorHelper + " does not accept template arguments";
     return VectorStatementHelperEmitResult::Error;
   }
-  if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+  if (callStmt.hasBodyArguments || !callStmt.bodyArguments.empty()) {
     error = vectorHelper + " does not accept block arguments";
     return VectorStatementHelperEmitResult::Error;
   }
 
   const size_t expectedArgs = (vectorHelper == "pop" || vectorHelper == "clear") ? 1 : 2;
-  if (stmt.args.size() != expectedArgs) {
+  if (callStmt.args.size() != expectedArgs) {
     if (expectedArgs == 1) {
       error = vectorHelper + " requires exactly one argument";
     } else {
@@ -801,7 +858,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     return VectorStatementHelperEmitResult::Error;
   }
 
-  const Expr &target = stmt.args.front();
+  const Expr &target = callStmt.args.front();
   if (!isMutableVectorTargetExpr(target)) {
     error = vectorHelper + " requires mutable vector binding";
     return VectorStatementHelperEmitResult::Error;
@@ -1015,12 +1072,12 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   };
 
   if (vectorHelper == "reserve") {
-    LocalInfo::ValueKind capacityKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
+    LocalInfo::ValueKind capacityKind = normalizeIndexKind(inferExprKind(callStmt.args[1], localsIn));
     if (!isSupportedIndexKind(capacityKind)) {
       error = "reserve requires integer capacity";
       return VectorStatementHelperEmitResult::Error;
     }
-    const Expr &desiredExpr = stmt.args[1];
+    const Expr &desiredExpr = callStmt.args[1];
     int64_t signedDesired = 0;
     uint64_t unsignedDesired = 0;
     const SignedLiteralIntegerEvalResult signedEvalResult = tryEvaluateSignedLiteralIntegerExpr(desiredExpr, signedDesired);
@@ -1052,7 +1109,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     }
 
     const int32_t desiredLocal = allocTempLocal();
-    if (!emitExpr(stmt.args[1], localsIn)) {
+    if (!emitExpr(callStmt.args[1], localsIn)) {
       return VectorStatementHelperEmitResult::Error;
     }
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(desiredLocal)});
@@ -1113,7 +1170,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
 
     const size_t pushBodyIndex = instructions.size();
     const int32_t valueLocal = allocTempLocal();
-    if (!emitExpr(stmt.args[1], localsIn)) {
+    if (!emitExpr(callStmt.args[1], localsIn)) {
       return VectorStatementHelperEmitResult::Error;
     }
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
@@ -1195,7 +1252,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     return VectorStatementHelperEmitResult::Emitted;
   }
 
-  LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
+  LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(callStmt.args[1], localsIn));
   if (!isSupportedIndexKind(indexKind)) {
     error = vectorHelper + " requires integer index";
     return VectorStatementHelperEmitResult::Error;
@@ -1210,7 +1267,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   IrOpcode mulOp = (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::MulI32 : IrOpcode::MulI64;
 
   const int32_t indexLocal = allocTempLocal();
-  if (!emitExpr(stmt.args[1], localsIn)) {
+  if (!emitExpr(callStmt.args[1], localsIn)) {
     return VectorStatementHelperEmitResult::Error;
   }
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});

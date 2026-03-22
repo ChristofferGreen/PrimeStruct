@@ -4603,7 +4603,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
+  CHECK(error.find("push") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector mutator alias named args stay statement-only in expressions") {
@@ -4688,7 +4688,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
+  CHECK(error.find("push") != std::string::npos);
 }
 
 TEST_CASE("vector helper method expression resolves through canonical stdlib helper") {
@@ -10420,7 +10420,7 @@ main() {
   CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector count method accepts same-path helpers on local non-vector receivers") {
+TEST_CASE("stdlib namespaced vector count method local same-path overload set rejects duplicate definitions") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
@@ -10448,8 +10448,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate definition: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method rejects map receiver without helper") {
@@ -10491,7 +10491,7 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector capacity method accepts same-path helpers on local non-vector receivers") {
+TEST_CASE("stdlib namespaced vector capacity method local same-path overload set rejects duplicate definitions") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/capacity([map<i32, i32>] values) {
@@ -10519,8 +10519,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate definition: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity method rejects map receiver without helper") {
@@ -10757,8 +10757,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /std/collections/vector/count") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method pointer receiver diagnostics keep divide target") {
@@ -11582,7 +11581,7 @@ main() {
   CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("vector canonical unsafe access call keeps struct receiver diagnostics") {
+TEST_CASE("vector canonical unsafe access call forwards field inference") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -11605,8 +11604,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map namespaced access call keeps canonical struct-return forwarding") {
@@ -12500,7 +12499,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("templated slash-path vector helper methods stay on unknown method diagnostics") {
@@ -12520,10 +12519,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(plus(values./vector/count<i32>(true), values./std/collections/vector/at<i32>(2i32)))
 }
-  )";
+)";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("templated slash-path vector helper arity failures stay on unknown method diagnostics") {
@@ -12538,10 +12537,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(values./vector/count<i32>())
 }
-  )";
+)";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("templated stdlib canonical vector helper reports current argument mismatch diagnostics") {

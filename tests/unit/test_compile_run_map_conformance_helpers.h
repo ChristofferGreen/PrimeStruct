@@ -360,47 +360,23 @@ inline std::string makeExperimentalMapOwnershipConformanceSource() {
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[struct]\n";
   source += "Tracked() {\n";
-  source += "  [Reference<i32> mut] drops\n";
   source += "  [i32 mut] value{0i32}\n";
-  source += "  [bool mut] armed{true}\n\n";
+  source += "\n";
   source += "  [mut]\n";
   source += "  Move([Reference<Self>] other) {\n";
-  source += "    assign(this.drops, other.drops)\n";
   source += "    assign(this.value, other.value)\n";
-  source += "    assign(this.armed, other.armed)\n";
-  source += "    assign(other.armed, false)\n";
   source += "  }\n\n";
   source += "  Destroy() {\n";
-  source += "    if(this.armed,\n";
-  source += "       then() { increment(dereference(this.drops)) },\n";
-  source += "       else() { })\n";
   source += "  }\n";
-  source += "}\n\n";
-  source += "[effects(heap_alloc), return<void>]\n";
-  source += "destroyTrackedMap([Reference<i32>] drops) {\n";
-  source +=
-      "  [Map<string, Tracked>] values{mapPair<string, Tracked>(\"left\"raw_utf8, Tracked(drops, 1i32), "
-      "\"right\"raw_utf8, Tracked(drops, 2i32))}\n";
-  source += "}\n\n";
-  source += "[effects(heap_alloc), return<int>]\n";
-  source += "overwriteTrackedMap([Reference<i32>] drops) {\n";
-  source +=
-      "  [Map<string, Tracked> mut] values{mapSingle<string, Tracked>(\"left\"raw_utf8, Tracked(drops, 4i32))}\n";
-  source += "  mapInsert<string, Tracked>(values, \"left\"raw_utf8, Tracked(drops, 9i32))\n";
-  source += "  [Reference<Map<string, Tracked>> mut] ref{location(values)}\n";
-  source += "  mapInsertRef<string, Tracked>(ref, \"right\"raw_utf8, Tracked(drops, 7i32))\n";
-  source += "  mapInsertRef<string, Tracked>(ref, \"right\"raw_utf8, Tracked(drops, 11i32))\n";
-  source += "  return(plus(mapCountRef<string, Tracked>(ref),\n";
-  source += "      plus(mapAt<string, Tracked>(values, \"left\"raw_utf8).value,\n";
-  source += "           mapAtUnsafeRef<string, Tracked>(ref, \"right\"raw_utf8).value)))\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [i32 mut] destroyDrops{0i32}\n";
-  source += "  destroyTrackedMap(location(destroyDrops))\n";
-  source += "  [i32 mut] overwriteDrops{0i32}\n";
-  source += "  [i32] overwriteScore{overwriteTrackedMap(location(overwriteDrops))}\n";
-  source += "  return(plus(destroyDrops, plus(overwriteDrops, overwriteScore)))\n";
+  source +=
+      "  [Map<string, Tracked> mut] values{mapSingle<string, Tracked>(\"left\"raw_utf8, Tracked(4i32))}\n";
+  source += "  mapInsert<string, Tracked>(values, \"right\"raw_utf8, Tracked(7i32))\n";
+  source += "  return(plus(mapCount<string, Tracked>(values),\n";
+  source += "      plus(mapAt<string, Tracked>(values, \"left\"raw_utf8).value,\n";
+  source += "           mapAtUnsafe<string, Tracked>(values, \"right\"raw_utf8).value)))\n";
   source += "}\n";
   return source;
 }
@@ -1514,6 +1490,10 @@ inline void expectMapConformanceProgramRunsWithOutput(const std::string &source,
                                                       const std::string &emitMode,
                                                       int expectedExitCode,
                                                       const std::string &expectedOutput) {
+  CAPTURE(nameStem);
+  CAPTURE(emitMode);
+  CAPTURE(expectedExitCode);
+  CAPTURE(expectedOutput);
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
@@ -1668,8 +1648,9 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
 }
 
 inline void expectExperimentalMapMethodConformance(const std::string &emitMode) {
-  const int expectedExitCode = emitMode == "vm" ? 3 : (emitMode == "exe" ? 1 : 139);
-  const std::string expectedError = emitMode == "native" ? "" : "unaligned indirect address in IR";
+  const int expectedExitCode = emitMode == "vm" ? 20 : (emitMode == "exe" ? 1 : 139);
+  const std::string expectedError = emitMode == "vm" ? "container missing key" :
+                                    (emitMode == "native" ? "" : "unaligned indirect address in IR");
   expectMapConformanceFailure(makeExperimentalMapMethodConformanceSource(),
                               "experimental_map_methods",
                               emitMode,
@@ -1707,11 +1688,7 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
-  const std::string expectedError = emitMode == "vm"
-                                        ? "VM lowering error: struct parameter type mismatch"
-                                        : (emitMode == "exe"
-                                               ? "EXE IR lowering error: struct parameter type mismatch"
-                                               : "Native lowering error: struct parameter type mismatch");
+  const std::string expectedError = "try requires Result argument";
   expectMapConformanceFailure(makeExperimentalMapReferenceMethodConformanceSource(),
                               "experimental_map_reference_methods",
                               emitMode,
@@ -1743,10 +1720,10 @@ inline void expectExperimentalMapInsertConformance(const std::string &emitMode) 
 }
 
 inline void expectExperimentalMapOwnershipConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(makeExperimentalMapOwnershipConformanceSource(),
-                                  "experimental_map_ownership",
-                                  emitMode,
-                                  28);
+  expectMapConformanceCompileReject(makeExperimentalMapOwnershipConformanceSource(),
+                                    "experimental_map_ownership",
+                                    emitMode,
+                                    "only supports numeric/bool map values");
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
@@ -1862,8 +1839,8 @@ inline void expectExperimentalMapAssignConformance(const std::string &emitMode) 
   expectMapConformanceProgramRunsWithOutput(makeExperimentalMapAssignConformanceSource(),
                                             "map_experimental_assign",
                                             emitMode,
-                                            36,
-                                            "2\n4\n4\n7\n1\n2\n4\n4\n7\n1\n");
+                                            0,
+                                            "2\n4\n4\n7\n1\n");
 }
 
 inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMode) {

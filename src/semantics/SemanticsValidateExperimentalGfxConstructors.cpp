@@ -382,6 +382,22 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         expr.templateArgs.clear();
         return true;
       }
+      if ((expr.name == "/std/gfx/Buffer/load" || expr.name == "/std/gfx/experimental/Buffer/load") &&
+          hasImportedDefinitionPath(expr.name)) {
+        expr.name = "buffer_load";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        expr.isMethodCall = false;
+        return true;
+      }
+      if ((expr.name == "/std/gfx/Buffer/store" || expr.name == "/std/gfx/experimental/Buffer/store") &&
+          hasImportedDefinitionPath(expr.name)) {
+        expr.name = "buffer_store";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        expr.isMethodCall = false;
+        return true;
+      }
       const std::string directReceiverPath =
           expr.args.empty() ? std::string() : resolveBufferStructPath(expr.args.front(), namespacePrefix, locals);
       const bool isDirectCanonicalBuffer = directReceiverPath == "/std/gfx/Buffer";
@@ -437,6 +453,20 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
             expr.namespacePrefix.clear();
             expr.templateArgs.clear();
             return true;
+        }
+        if ((isCanonicalBuffer || isExperimentalBuffer || isKnownBuffer) && expr.name == "load" && expr.args.size() == 2) {
+          expr.isMethodCall = false;
+          expr.name = "buffer_load";
+          expr.namespacePrefix.clear();
+          expr.templateArgs.clear();
+          return true;
+        }
+        if ((isCanonicalBuffer || isExperimentalBuffer || isKnownBuffer) && expr.name == "store" && expr.args.size() == 3) {
+          expr.isMethodCall = false;
+          expr.name = "buffer_store";
+          expr.namespacePrefix.clear();
+          expr.templateArgs.clear();
+          return true;
         }
         if ((isCanonicalBuffer || isExperimentalBuffer || isKnownBuffer) && expr.name == "count" && expr.args.size() == 1) {
           if (std::optional<Expr> elementCountExpr = resolveRawBufferFieldExpr(expr.args.front(), locals, "elementCount")) {

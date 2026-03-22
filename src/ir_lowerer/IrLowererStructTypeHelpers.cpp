@@ -22,9 +22,34 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
   return path;
 }
 
-bool isVectorTypeName(const std::string &typeName) {
+bool isBuiltinVectorTypeName(const std::string &typeName) {
   return typeName == "vector" || typeName == "/vector" || typeName == "std/collections/vector" ||
          typeName == "/std/collections/vector";
+}
+
+bool isExperimentalVectorTypeName(const std::string &typeName) {
+  return typeName == "Vector" || typeName == "std/collections/experimental_vector/Vector" ||
+         typeName == "/std/collections/experimental_vector/Vector" ||
+         typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+bool isVectorTypeName(const std::string &typeName) {
+  return isBuiltinVectorTypeName(typeName) || isExperimentalVectorTypeName(typeName);
+}
+
+std::string normalizeVectorStructPath(const std::string &typeName) {
+  if (isBuiltinVectorTypeName(typeName)) {
+    return "/vector";
+  }
+  if (typeName == "Vector") {
+    return "/std/collections/experimental_vector/Vector";
+  }
+  if (typeName == "std/collections/experimental_vector/Vector" ||
+      typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+    return "/" + typeName;
+  }
+  return typeName;
 }
 
 } // namespace
@@ -541,6 +566,28 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     std::unordered_set<std::string> &layoutStack,
     StructSlotLayoutInfo &out,
     std::string &error) {
+  if (isBuiltinVectorTypeName(structPath)) {
+    StructSlotLayoutInfo layout;
+    layout.structPath = normalizeVectorStructPath(structPath);
+    layout.totalSlots = 3;
+    layout.fields.push_back({"count", 0, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"capacity", 1, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"data", 2, 1, LocalInfo::ValueKind::Int64, ""});
+    out = layout;
+    return true;
+  }
+  if (isExperimentalVectorTypeName(structPath)) {
+    StructSlotLayoutInfo layout;
+    layout.structPath = normalizeVectorStructPath(structPath);
+    layout.totalSlots = 4;
+    layout.fields.push_back({"count", 0, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"capacity", 1, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"data", 2, 1, LocalInfo::ValueKind::Int64, ""});
+    layout.fields.push_back({"ownsData", 3, 1, LocalInfo::ValueKind::Bool, ""});
+    out = layout;
+    return true;
+  }
+
   auto cached = layoutCache.find(structPath);
   if (cached != layoutCache.end()) {
     out = cached->second;
@@ -603,8 +650,8 @@ bool resolveStructSlotLayoutFromDefinitionFields(
           return false;
         }
         info.valueKind = elementKind;
-        info.structPath = "/vector";
-        info.slotCount = 3;
+        info.structPath = normalizeVectorStructPath(binding.typeName);
+        info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
       } else if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
         info.valueKind = LocalInfo::ValueKind::Int64;
         info.slotCount = 1;
@@ -614,6 +661,24 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         return false;
       }
     } else {
+      std::string inlineTemplateBase;
+      std::string inlineTemplateArg;
+      if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
+          isVectorTypeName(inlineTemplateBase)) {
+        info.valueKind = valueKindFromTypeName(inlineTemplateArg);
+        info.structPath = normalizeVectorStructPath(inlineTemplateBase);
+        info.slotCount = isExperimentalVectorTypeName(inlineTemplateBase) ? 4 : 3;
+        layout.fields.push_back(info);
+        offset += info.slotCount;
+        continue;
+      }
+      if (isVectorTypeName(binding.typeName)) {
+        info.structPath = normalizeVectorStructPath(binding.typeName);
+        info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
+        layout.fields.push_back(info);
+        offset += info.slotCount;
+        continue;
+      }
       LocalInfo::ValueKind kind = valueKindFromTypeName(binding.typeName);
       if (kind != LocalInfo::ValueKind::Unknown) {
         info.valueKind = kind;
@@ -938,10 +1003,6 @@ void applyStructValueInfoFromBinding(const Expr &expr,
     return;
   }
 
-  if (info.kind != LocalInfo::Kind::Value) {
-    return;
-  }
-
   std::string resolved;
   if (resolveStructTypeName(typeName, expr.namespacePrefix, resolved)) {
     info.structTypeName = resolved;
@@ -1117,6 +1178,9 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
   auto localIt = localsIn.find(expr.name);
   if (localIt == localsIn.end()) {
     return "";
+  }
+  if (!localIt->second.structTypeName.empty()) {
+    return localIt->second.structTypeName;
   }
   if (localIt->second.kind == LocalInfo::Kind::Vector) {
     return "/vector";

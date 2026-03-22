@@ -543,8 +543,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_namespaced_map_at_alias_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("vm backend only supports arithmetic/comparison") != std::string::npos);
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm stdlib namespaced map at unsafe fallback without import") {
@@ -570,8 +570,8 @@ main() {
        "primec_vm_stdlib_namespaced_map_at_unsafe_alias_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("vm backend only supports arithmetic/comparison") != std::string::npos);
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm bare map count through canonical helper") {
@@ -932,7 +932,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("count does not accept template arguments") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector namespaced call aliases without alias definitions") {
@@ -1623,7 +1623,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_count_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm with vector method call") {
@@ -1668,8 +1668,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_literal_unsafe.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 7);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_unsafe_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports at()") != std::string::npos);
 }
 
 TEST_CASE("runs vm bare vector at through imported stdlib helper") {
@@ -1861,6 +1864,23 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("runs vm with bare vector access through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32, 4i32)}
+  return(plus(
+      plus(vectorAt<i32>(values, 0i32), vectorAtUnsafe<i32>(values, 1i32)),
+      plus(/std/collections/vector/at<i32>(values, 2i32), /std/collections/vector/at_unsafe<i32>(values, 3i32))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_access_helper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 10);
+}
+
 TEST_CASE("rejects vm bare vector count without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -1891,7 +1911,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper temporary vector count method without helper") {
@@ -4224,14 +4244,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_vector_access_unsafe_field_expression_forwarding_reject.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_canonical_vector_access_unsafe_field_expression_forwarding_reject.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+      writeTemp("vm_canonical_vector_access_unsafe_field_expression_forwarding.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map access compatibility call struct method chain with primitive receiver diagnostics") {

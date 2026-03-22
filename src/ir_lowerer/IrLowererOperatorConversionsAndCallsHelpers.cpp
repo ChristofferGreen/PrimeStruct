@@ -12,6 +12,15 @@
 namespace primec::ir_lowerer {
 namespace {
 
+bool isVectorStructPath(const std::string &structPath) {
+  return structPath == "/vector" || structPath == "/std/collections/experimental_vector/Vector" ||
+         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+bool areCompatibleStructPaths(const std::string &lhs, const std::string &rhs) {
+  return lhs == rhs || (isVectorStructPath(lhs) && isVectorStructPath(rhs));
+}
+
 std::string inferPointerStructTypePath(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -552,9 +561,6 @@ bool emitConversionsAndCallsOperatorExpr(
             if (!resolveStructSlotCount(resolvedStructType, slotCountMultiplier)) {
               return false;
             }
-          } else if (targetKind == LocalInfo::ValueKind::String) {
-            error = "native backend does not support alloc target type: " + targetTypeName;
-            return false;
           }
 
           if (slotCountMultiplier != 1) {
@@ -976,7 +982,7 @@ bool emitConversionsAndCallsOperatorExpr(
             }
             if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
               std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
-              if (rhsStruct.empty() || rhsStruct != it->second.structTypeName) {
+              if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, it->second.structTypeName)) {
                 error = "assign requires matching struct value";
                 return false;
               }
@@ -1178,7 +1184,7 @@ bool emitConversionsAndCallsOperatorExpr(
             instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
             if (!fieldStructPath.empty()) {
               const std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
-              if (rhsStruct.empty() || rhsStruct != fieldStructPath) {
+              if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, fieldStructPath)) {
                 error = "assign requires matching struct value";
                 return false;
               }

@@ -5,6 +5,35 @@
 #include <vector>
 
 namespace primec::semantics {
+namespace {
+
+bool isCanonicalMapTypeText(const std::string &typeText) {
+  std::string normalizedType = normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(normalizedType, base, arg)) {
+      return false;
+    }
+    base = normalizeBindingTypeName(base);
+    if (base == "map" || base == "/map" ||
+        base == "std/collections/map" || base == "/std/collections/map") {
+      std::vector<std::string> args;
+      return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
+    }
+    if (base == "Reference" || base == "Pointer") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+        return false;
+      }
+      normalizedType = normalizeBindingTypeName(args.front());
+      continue;
+    }
+    return false;
+  }
+}
+
+} // namespace
 
 const Expr *SemanticsValidator::resolveBuiltinAccessReceiverExpr(const Expr &accessExpr) const {
   if (accessExpr.kind != Expr::Kind::Call || accessExpr.args.size() != 2) {
@@ -97,11 +126,8 @@ bool SemanticsValidator::isMapLikeBareAccessReceiver(
     const BuiltinCollectionDispatchResolvers &dispatchResolvers) {
   std::string keyType;
   std::string valueType;
-  if ((dispatchResolvers.resolveMapTarget != nullptr &&
-       dispatchResolvers.resolveMapTarget(candidate, keyType, valueType)) ||
-      (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
-       dispatchResolvers.resolveExperimentalMapTarget(candidate, keyType,
-                                                     valueType))) {
+  if (dispatchResolvers.resolveMapTarget != nullptr &&
+      dispatchResolvers.resolveMapTarget(candidate, keyType, valueType)) {
     return true;
   }
   if (candidate.kind != Expr::Kind::Call) {
@@ -120,20 +146,20 @@ bool SemanticsValidator::isMapLikeBareAccessReceiver(
               ? inferredReturn.typeName
               : inferredReturn.typeName + "<" +
                     inferredReturn.typeTemplateArg + ">";
-      if (returnsMapCollectionType(inferredTypeText)) {
+      if (isCanonicalMapTypeText(inferredTypeText)) {
         return true;
       }
     }
     for (const auto &transform : defIt->second->transforms) {
       if (transform.name == "return" && transform.templateArgs.size() == 1 &&
-          returnsMapCollectionType(transform.templateArgs.front())) {
+          isCanonicalMapTypeText(transform.templateArgs.front())) {
         return true;
       }
     }
   }
   std::string receiverTypeText;
   return inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
-         returnsMapCollectionType(receiverTypeText);
+         isCanonicalMapTypeText(receiverTypeText);
 }
 
 bool SemanticsValidator::isArrayNamespacedVectorCountCompatibilityCall(

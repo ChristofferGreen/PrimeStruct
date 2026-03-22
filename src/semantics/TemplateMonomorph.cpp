@@ -57,6 +57,19 @@ ResolvedType resolveTypeString(std::string input,
                                Context &ctx,
                                std::string &error);
 
+ResolvedType resolveTypeStringImpl(std::string input,
+                                   const SubstMap &mapping,
+                                   const std::unordered_set<std::string> &allowedParams,
+                                   const std::string &namespacePrefix,
+                                   Context &ctx,
+                                   std::string &error,
+                                   std::unordered_set<std::string> &substitutionStack);
+
+bool isGeneratedTemplateSpecializationPath(std::string_view path);
+bool isEnclosingTemplateParamName(const std::string &name,
+                                  const std::string &namespacePrefix,
+                                  const Context &ctx);
+
 bool inferImplicitTemplateArgs(const Definition &def,
                                const Expr &callExpr,
                                const LocalTypeMap &locals,
@@ -116,6 +129,20 @@ bool isBuiltinCollectionTemplateBase(const std::string &name, size_t argumentCou
     return true;
   }
   return normalized == "map" && argumentCount == 2;
+}
+
+bool importPathCoversTarget(const std::string &importPath, const std::string &targetPath) {
+  if (importPath.empty() || importPath.front() != '/') {
+    return false;
+  }
+  if (importPath == targetPath) {
+    return true;
+  }
+  if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+    const std::string prefix = importPath.substr(0, importPath.size() - 2);
+    return targetPath == prefix || targetPath.rfind(prefix + "/", 0) == 0;
+  }
+  return false;
 }
 
 bool isStructDefinition(const Definition &def) {
@@ -408,6 +435,50 @@ bool isPathPrefix(const std::string &prefix, const std::string &path) {
   return path[prefix.size()] == '/';
 }
 
+bool isGeneratedTemplateSpecializationPath(std::string_view path) {
+  const size_t marker = path.rfind("__t");
+  if (marker == std::string::npos || marker + 3 >= path.size()) {
+    return false;
+  }
+  for (size_t i = marker + 3; i < path.size(); ++i) {
+    if (!std::isxdigit(static_cast<unsigned char>(path[i]))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool isEnclosingTemplateParamName(const std::string &name,
+                                  const std::string &namespacePrefix,
+                                  const Context &ctx) {
+  std::string prefix = namespacePrefix;
+  while (!prefix.empty()) {
+    auto matchesDefinitionParams = [&](const std::string &path) {
+      auto it = ctx.sourceDefs.find(path);
+      if (it == ctx.sourceDefs.end()) {
+        return false;
+      }
+      return std::find(it->second.templateArgs.begin(), it->second.templateArgs.end(), name) !=
+             it->second.templateArgs.end();
+    };
+    if (matchesDefinitionParams(prefix)) {
+      return true;
+    }
+    if (isGeneratedTemplateSpecializationPath(prefix)) {
+      const size_t marker = prefix.rfind("__t");
+      if (marker != std::string::npos && matchesDefinitionParams(prefix.substr(0, marker))) {
+        return true;
+      }
+    }
+    const size_t slash = prefix.find_last_of('/');
+    if (slash == std::string::npos) {
+      break;
+    }
+    prefix.erase(slash);
+  }
+  return false;
+}
+
 std::string replacePathPrefix(const std::string &path, const std::string &prefix, const std::string &replacement) {
   if (!isPathPrefix(prefix, path)) {
     return path;
@@ -419,10 +490,19 @@ std::string replacePathPrefix(const std::string &path, const std::string &prefix
 }
 
 bool hasMathImport(const Context &ctx) {
-  for (const auto &importPath : ctx.program.imports) {
-    if (importPath.rfind("/std/math/", 0) == 0 && importPath.size() > 10) {
-      return true;
+  auto includesMathImport = [](const std::vector<std::string> &importPaths) {
+    for (const auto &importPath : importPaths) {
+      if (importPath.rfind("/std/math/", 0) == 0 && importPath.size() > 10) {
+        return true;
+      }
     }
+    return false;
+  };
+  if (includesMathImport(ctx.program.sourceImports)) {
+    return true;
+  }
+  if (includesMathImport(ctx.program.imports)) {
+    return true;
   }
   return false;
 }
@@ -512,8 +592,22 @@ bool replaceBindingTypeTransform(Expr &binding, const std::string &typeName, std
 }
 
 bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &error) {
+  auto isStdlibCollectionWrapperImplicitAutoSurface = [](std::string_view path) {
+    return path == "/std/collections/vectorCount" ||
+           path == "/std/collections/vectorCapacity" ||
+           path == "/std/collections/vectorPush" ||
+           path == "/std/collections/vectorPop" ||
+           path == "/std/collections/vectorReserve" ||
+           path == "/std/collections/vectorClear" ||
+           path == "/std/collections/vectorRemoveAt" ||
+           path == "/std/collections/vectorRemoveSwap" ||
+           path == "/std/collections/vectorAt" ||
+           path == "/std/collections/vectorAtUnsafe";
+  };
   for (auto &def : program.definitions) {
     std::vector<std::string> implicitParams;
+    const bool allowTemplatedImplicitAutoParams =
+        isStdlibCollectionWrapperImplicitAutoSurface(def.fullPath);
     if (!def.templateArgs.empty()) {
       for (const auto &param : def.parameters) {
         if (!param.isBinding) {
@@ -524,12 +618,16 @@ bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &err
           error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
           return false;
         }
-        if (extractExplicitBindingType(param, info) && info.typeName == "auto") {
+        if (extractExplicitBindingType(param, info) &&
+            info.typeName == "auto" &&
+            !allowTemplatedImplicitAutoParams) {
           error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
           return false;
         }
       }
-      continue;
+      if (!allowTemplatedImplicitAutoParams) {
+        continue;
+      }
     }
     size_t autoIndex = 0;
     for (auto &param : def.parameters) {
@@ -863,11 +961,17 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
   if (value == "std/collections/vector") {
     return "vector";
   }
+  if (value == "Vector" || value.rfind("Vector__", 0) == 0) {
+    return "vector";
+  }
   if (value == "std/collections/experimental_vector/Vector" ||
       value.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
     return "vector";
   }
   if (value == "std/collections/map") {
+    return "map";
+  }
+  if (value == "Map" || value.rfind("Map__", 0) == 0) {
     return "map";
   }
   if (value == "std/collections/experimental_map/Map") {
@@ -1008,6 +1112,24 @@ bool inferImplicitTemplateArgs(const Definition &def,
   }
   std::unordered_map<std::string, std::string> inferred;
   inferred.reserve(def.templateArgs.size());
+  if (!callExpr.templateArgs.empty()) {
+    if (callExpr.templateArgs.size() > def.templateArgs.size()) {
+      error = "template argument count mismatch for " + def.fullPath;
+      return false;
+    }
+    for (size_t i = 0; i < callExpr.templateArgs.size(); ++i) {
+      ResolvedType resolvedArg =
+          resolveTypeString(callExpr.templateArgs[i], mapping, allowedParams, namespacePrefix, ctx, error);
+      if (!error.empty()) {
+        return false;
+      }
+      if (!resolvedArg.concrete) {
+        error = "implicit template arguments must be concrete on " + def.fullPath;
+        return false;
+      }
+      inferred.emplace(def.templateArgs[i], resolvedArg.text);
+    }
+  }
   std::vector<ParameterInfo> callParams;
   callParams.reserve(def.parameters.size());
   for (const auto &paramExpr : def.parameters) {
@@ -1148,12 +1270,13 @@ bool inferImplicitTemplateArgs(const Definition &def,
   return true;
 }
 
-ResolvedType resolveTypeString(std::string input,
-                               const SubstMap &mapping,
-                               const std::unordered_set<std::string> &allowedParams,
-                               const std::string &namespacePrefix,
-                               Context &ctx,
-                               std::string &error) {
+ResolvedType resolveTypeStringImpl(std::string input,
+                                   const SubstMap &mapping,
+                                   const std::unordered_set<std::string> &allowedParams,
+                                   const std::string &namespacePrefix,
+                                   Context &ctx,
+                                   std::string &error,
+                                   std::unordered_set<std::string> &substitutionStack) {
   ResolvedType result;
   std::string trimmed = trimWhitespace(input);
   if (trimmed.empty()) {
@@ -1168,11 +1291,25 @@ ResolvedType resolveTypeString(std::string input,
   }
   auto mapIt = mapping.find(trimmed);
   if (mapIt != mapping.end()) {
-    return resolveTypeString(mapIt->second, mapping, allowedParams, namespacePrefix, ctx, error);
+    const std::string mapped = trimWhitespace(mapIt->second);
+    if (mapped == trimmed || !substitutionStack.insert(trimmed).second) {
+      result.text = trimmed;
+      result.concrete = !isEnclosingTemplateParamName(trimmed, namespacePrefix, ctx);
+      return result;
+    }
+    ResolvedType resolved =
+        resolveTypeStringImpl(mapIt->second, mapping, allowedParams, namespacePrefix, ctx, error, substitutionStack);
+    substitutionStack.erase(trimmed);
+    return resolved;
   }
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(trimmed, base, argText)) {
+    if (isEnclosingTemplateParamName(trimmed, namespacePrefix, ctx)) {
+      result.text = trimmed;
+      result.concrete = false;
+      return result;
+    }
     std::string resolvedPath = resolveNameToPath(trimmed, namespacePrefix, ctx.importAliases, ctx.sourceDefs);
     if (ctx.templateDefs.count(resolvedPath) > 0) {
       error = "template arguments required for " + resolvedPath;
@@ -1201,7 +1338,8 @@ ResolvedType resolveTypeString(std::string input,
   resolvedArgs.reserve(args.size());
   bool allConcrete = true;
   for (const auto &arg : args) {
-    ResolvedType resolved = resolveTypeString(arg, mapping, allowedParams, namespacePrefix, ctx, error);
+    ResolvedType resolved =
+        resolveTypeStringImpl(arg, mapping, allowedParams, namespacePrefix, ctx, error, substitutionStack);
     if (!error.empty()) {
       result.text.clear();
       result.concrete = false;
@@ -1241,6 +1379,58 @@ ResolvedType resolveTypeString(std::string input,
   result.text = specializedPath;
   result.concrete = true;
   return result;
+}
+
+ResolvedType resolveTypeString(std::string input,
+                               const SubstMap &mapping,
+                               const std::unordered_set<std::string> &allowedParams,
+                               const std::string &namespacePrefix,
+                               Context &ctx,
+                               std::string &error) {
+  std::unordered_set<std::string> substitutionStack;
+  return resolveTypeStringImpl(input, mapping, allowedParams, namespacePrefix, ctx, error, substitutionStack);
+}
+
+bool typeTextReferencesTemplateParam(const std::string &typeText,
+                                     const std::unordered_set<std::string> &templateParams) {
+  const std::string trimmed = trimWhitespace(typeText);
+  if (trimmed.empty()) {
+    return false;
+  }
+  if (templateParams.count(trimmed) > 0) {
+    return true;
+  }
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimmed, base, argText)) {
+    return false;
+  }
+  if (typeTextReferencesTemplateParam(base, templateParams)) {
+    return true;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(argText, args)) {
+    return false;
+  }
+  for (const auto &arg : args) {
+    if (typeTextReferencesTemplateParam(arg, templateParams)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool inferredTemplateArgsAreConcrete(const Definition &def, const std::vector<std::string> &args) {
+  if (def.templateArgs.empty()) {
+    return true;
+  }
+  std::unordered_set<std::string> templateParams(def.templateArgs.begin(), def.templateArgs.end());
+  for (const auto &arg : args) {
+    if (typeTextReferencesTemplateParam(arg, templateParams)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool rewriteTransforms(std::vector<Transform> &transforms,
@@ -1369,7 +1559,8 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     if (expr.isMethodCall) {
       return resolvedPath;
     }
-    if (resolvedPath == "/std/collections/vector/vector" && ctx.sourceDefs.count(resolvedPath) > 0) {
+    if (resolvedPath == "/std/collections/vector/vector" &&
+        (ctx.sourceDefs.count(resolvedPath) > 0 || ctx.helperOverloads.count(resolvedPath) > 0)) {
       return resolvedPath;
     }
     auto vectorConstructorHelperPath = [&]() -> std::string {
@@ -1437,6 +1628,12 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   if (expr.name.empty()) {
     return "";
   }
+  std::string builtinCollection;
+  if (!expr.isMethodCall &&
+      getBuiltinCollectionName(expr, builtinCollection) &&
+      expr.name == builtinCollection) {
+    return finalizeResolvedPath("/" + builtinCollection);
+  }
   if (!expr.name.empty() && expr.name[0] == '/') {
     return finalizeResolvedPath(expr.name);
   }
@@ -1494,7 +1691,11 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
   HelperFamily family = HelperFamily::None;
   if (def.fullPath.rfind("/std/collections/vector/", 0) == 0) {
     family = HelperFamily::Vector;
+  } else if (def.fullPath.rfind("/std/collections/experimental_vector/", 0) == 0) {
+    family = HelperFamily::Vector;
   } else if (def.fullPath.rfind("/std/collections/map/", 0) == 0) {
+    family = HelperFamily::Map;
+  } else if (def.fullPath.rfind("/std/collections/experimental_map/", 0) == 0) {
     family = HelperFamily::Map;
   } else if (def.fullPath.rfind("/map/", 0) == 0) {
     family = HelperFamily::Map;
@@ -1571,6 +1772,61 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
   }
   if (orderedArgs.empty() || orderedArgs.front() == nullptr) {
     return false;
+  }
+  auto tryInferReceiverTemplateArgs = [&](const Expr &receiverExpr) -> bool {
+    auto inferFromTypeText = [&](std::string receiverTypeText) -> bool {
+      if (receiverTypeText.empty()) {
+        return false;
+      }
+      while (true) {
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
+          const std::string normalizedType = normalizeCollectionReceiverTypeName(receiverTypeText);
+          if (family == HelperFamily::Vector && normalizedType == "string" &&
+              (helperName == "at" || helperName == "at_unsafe")) {
+            outArgs = {"i32"};
+            return true;
+          }
+          return false;
+        }
+        const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+        std::vector<std::string> receiverArgs;
+        if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+          if (!splitTopLevelTemplateArgs(argText, receiverArgs) || receiverArgs.size() != 1) {
+            return false;
+          }
+          receiverTypeText = receiverArgs.front();
+          continue;
+        }
+        if (!splitTopLevelTemplateArgs(argText, receiverArgs)) {
+          return false;
+        }
+        if (family == HelperFamily::Vector &&
+            (normalizedBase == "vector" || normalizedBase == "soa_vector") &&
+            receiverArgs.size() == 1) {
+          outArgs = {receiverArgs.front()};
+          return true;
+        }
+        if (family == HelperFamily::Map && normalizedBase == "map" &&
+            receiverArgs.size() == 2) {
+          outArgs = receiverArgs;
+          return true;
+        }
+        return false;
+      }
+    };
+
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
+        inferFromTypeText(bindingTypeToString(receiverInfo))) {
+      return true;
+    }
+    return inferFromTypeText(
+        inferExprTypeTextForTemplatedVectorFallback(receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
+  };
+  if (tryInferReceiverTemplateArgs(*orderedArgs.front())) {
+    return true;
   }
 
   std::string receiverArgType;
@@ -1808,8 +2064,82 @@ bool rewriteExpr(Expr &expr,
     }
     return normalizeCollectionReceiverTypeName(inferredReceiverType) == "map";
   };
+  auto resolvesBuiltinVectorReceiver = [&](const Expr *receiverExpr) {
+    if (receiverExpr == nullptr) {
+      return false;
+    }
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo)) {
+      std::string receiverType = normalizeCollectionReceiverTypeName(receiverInfo.typeName);
+      if ((receiverType == "Reference" || receiverType == "Pointer") && !receiverInfo.typeTemplateArg.empty()) {
+        std::string innerBase;
+        std::string innerArgText;
+        if (splitTemplateTypeName(receiverInfo.typeTemplateArg, innerBase, innerArgText)) {
+          receiverType = normalizeCollectionReceiverTypeName(innerBase);
+        }
+      }
+      if (receiverType == "vector") {
+        return true;
+      }
+    }
+    const std::string inferredReceiverType =
+        inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare);
+    if (inferredReceiverType.empty()) {
+      return false;
+    }
+    std::string receiverBase;
+    std::string receiverArgText;
+    if (splitTemplateTypeName(inferredReceiverType, receiverBase, receiverArgText)) {
+      return normalizeCollectionReceiverTypeName(receiverBase) == "vector";
+    }
+    return normalizeCollectionReceiverTypeName(inferredReceiverType) == "vector";
+  };
+  auto resolvesExperimentalVectorValueReceiverEarly = [&](const Expr *receiverExpr) {
+    if (receiverExpr == nullptr) {
+      return false;
+    }
+    auto unwrapBindingTypeText = [&](const BindingInfo &binding) -> std::string {
+      if (binding.typeName == "Reference" || binding.typeName == "Pointer") {
+        return {};
+      }
+      std::string typeText = binding.typeName;
+      if (!binding.typeTemplateArg.empty()) {
+        typeText += "<" + binding.typeTemplateArg + ">";
+      }
+      return typeText;
+    };
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
+        resolvesExperimentalVectorValueTypeText(unwrapBindingTypeText(receiverInfo))) {
+      return true;
+    }
+    const std::string inferredReceiverType =
+        inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare);
+    return resolvesExperimentalVectorValueTypeText(inferredReceiverType);
+  };
   auto shouldDeferStdlibCollectionHelperTemplateRewrite = [&](const std::string &path) {
+    auto hasVisibleStdCollectionsImportForPathEarly = [&](const std::string &candidatePath) {
+      if (candidatePath.rfind("/std/collections/", 0) != 0) {
+        return true;
+      }
+      const auto &importPaths =
+          ctx.program.sourceImports.empty() ? ctx.program.imports : ctx.program.sourceImports;
+      for (const auto &importPath : importPaths) {
+        if (importPathCoversTarget(importPath, candidatePath)) {
+          return true;
+        }
+      }
+      return false;
+    };
     if (!expr.templateArgs.empty() || !isCanonicalStdlibCollectionHelperPath(path)) {
+      return false;
+    }
+    if (hasVisibleStdCollectionsImportForPathEarly(path) && ctx.templateDefs.count(path) > 0) {
+      if (path.rfind("/std/collections/vector/", 0) == 0 &&
+          !resolvesBuiltinVectorReceiver(mapHelperReceiverExpr(expr)) &&
+          !resolvesExperimentalVectorValueReceiverEarly(mapHelperReceiverExpr(expr))) {
+        return true;
+      }
       return false;
     }
     if (isCanonicalBuiltinMapHelperPath(path)) {
@@ -1933,6 +2263,84 @@ bool rewriteExpr(Expr &expr,
     if (receiverExpr == nullptr) {
       return false;
     }
+    auto extractExperimentalVectorElementTypeFromTypeText = [&](const std::string &typeText,
+                                                                std::string &valueTypeOut) {
+      valueTypeOut.clear();
+      std::string normalizedType = normalizeBindingTypeName(typeText);
+      while (true) {
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+          std::string normalizedBase = normalizeBindingTypeName(base);
+          if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+            std::vector<std::string> args;
+            if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+              return false;
+            }
+            normalizedType = normalizeBindingTypeName(args.front());
+            continue;
+          }
+          if (!normalizedBase.empty() && normalizedBase.front() == '/') {
+            normalizedBase.erase(normalizedBase.begin());
+          }
+          if ((normalizedBase == "Vector" ||
+               normalizedBase == "std/collections/experimental_vector/Vector") &&
+              !argText.empty()) {
+            std::vector<std::string> args;
+            if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+              return false;
+            }
+            valueTypeOut = args.front();
+            return true;
+          }
+        }
+
+        std::string resolvedPath = normalizedType;
+        if (!resolvedPath.empty() && resolvedPath.front() != '/') {
+          resolvedPath.insert(resolvedPath.begin(), '/');
+        }
+        std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+        if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
+          normalizedResolvedPath.erase(normalizedResolvedPath.begin());
+        }
+        if (normalizedResolvedPath.rfind("std/collections/experimental_vector/Vector__", 0) != 0) {
+          return false;
+        }
+        auto defIt = ctx.sourceDefs.find(resolvedPath);
+        if (defIt == ctx.sourceDefs.end()) {
+          return false;
+        }
+        for (const auto &fieldExpr : defIt->second.statements) {
+          if (!fieldExpr.isBinding || fieldExpr.name != "data") {
+            continue;
+          }
+          BindingInfo fieldBinding;
+          if (!extractExplicitBindingType(fieldExpr, fieldBinding)) {
+            continue;
+          }
+          if (normalizeBindingTypeName(fieldBinding.typeName) != "Pointer" ||
+              fieldBinding.typeTemplateArg.empty()) {
+            continue;
+          }
+          std::string pointeeBase;
+          std::string pointeeArgText;
+          if (!splitTemplateTypeName(normalizeBindingTypeName(fieldBinding.typeTemplateArg),
+                                     pointeeBase,
+                                     pointeeArgText) ||
+              normalizeBindingTypeName(pointeeBase) != "uninitialized") {
+            continue;
+          }
+          std::vector<std::string> pointeeArgs;
+          if (!splitTopLevelTemplateArgs(pointeeArgText, pointeeArgs) ||
+              pointeeArgs.size() != 1) {
+            continue;
+          }
+          valueTypeOut = pointeeArgs.front();
+          return true;
+        }
+        return false;
+      }
+    };
     auto extractArgsFromTypeText = [&](const std::string &typeText) {
       std::string normalizedType = normalizeBindingTypeName(typeText);
       std::string base;
@@ -1971,33 +2379,14 @@ bool rewriteExpr(Expr &expr,
         if (!extractExplicitBindingType(fieldExpr, fieldBinding)) {
           continue;
         }
-        std::vector<std::string> fieldArgs;
-        const std::string normalizedFieldType = normalizeBindingTypeName(fieldBinding.typeName);
-        if (normalizedFieldType == "vector" && !fieldBinding.typeTemplateArg.empty()) {
-          if (!splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, fieldArgs) ||
-              fieldArgs.size() != 1) {
-            continue;
-          }
-        } else {
-          std::string fieldBase;
-          std::string fieldArgText;
-          if (!splitTemplateTypeName(normalizedFieldType, fieldBase, fieldArgText)) {
-            continue;
-          }
-          fieldBase = normalizeBindingTypeName(fieldBase);
-          if (fieldBase != "Vector" &&
-              fieldBase != "std/collections/experimental_vector/Vector") {
-            continue;
-          }
-          if (!splitTopLevelTemplateArgs(fieldArgText, fieldArgs) ||
-              fieldArgs.size() != 1) {
-            continue;
-          }
+        std::string fieldValueType;
+        if (!extractExperimentalVectorElementTypeFromTypeText(bindingTypeToString(fieldBinding), fieldValueType)) {
+          continue;
         }
         if (fieldExpr.name == "keys") {
-          keyType = fieldArgs.front();
+          keyType = fieldValueType;
         } else if (fieldExpr.name == "payloads") {
-          valueType = fieldArgs.front();
+          valueType = fieldValueType;
         }
       }
       if (keyType.empty() || valueType.empty()) {
@@ -2010,11 +2399,13 @@ bool rewriteExpr(Expr &expr,
     if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
         normalizeBindingTypeName(receiverInfo.typeName) != "Reference" &&
         normalizeBindingTypeName(receiverInfo.typeName) != "Pointer") {
-      std::string bindingTypeText = receiverInfo.typeName;
-      if (!receiverInfo.typeTemplateArg.empty()) {
-        bindingTypeText += "<" + receiverInfo.typeTemplateArg + ">";
+      std::string keyType;
+      std::string valueType;
+      if (extractMapKeyValueTypesFromTypeText(bindingTypeToString(receiverInfo), keyType, valueType)) {
+        templateArgsOut = {keyType, valueType};
+        return true;
       }
-      if (extractArgsFromTypeText(bindingTypeText)) {
+      if (extractArgsFromTypeText(bindingTypeToString(receiverInfo))) {
         return true;
       }
     }
@@ -2082,6 +2473,34 @@ bool rewriteExpr(Expr &expr,
     }
     return {};
   };
+  auto isExperimentalVectorPublicHelperPath = [&](const std::string &path) {
+    auto matchesHelper = [&](std::string_view helperName) {
+      const std::string base = "/std/collections/experimental_vector/" + std::string(helperName);
+      return path == base || path.rfind(base + "__t", 0) == 0;
+    };
+    return matchesHelper("vectorCount") ||
+           matchesHelper("vectorCapacity") ||
+           matchesHelper("vectorPush") ||
+           matchesHelper("vectorPop") ||
+           matchesHelper("vectorReserve") ||
+           matchesHelper("vectorClear") ||
+           matchesHelper("vectorRemoveAt") ||
+           matchesHelper("vectorRemoveSwap") ||
+           matchesHelper("vectorAt") ||
+           matchesHelper("vectorAtUnsafe");
+  };
+  auto hasVisibleStdCollectionsImportForPath = [&](const std::string &path) {
+    if (path.rfind("/std/collections/", 0) != 0) {
+      return true;
+    }
+    const auto &importPaths = ctx.program.sourceImports.empty() ? ctx.program.imports : ctx.program.sourceImports;
+    for (const auto &importPath : importPaths) {
+      if (importPathCoversTarget(importPath, path)) {
+        return true;
+      }
+    }
+    return false;
+  };
   auto experimentalMapHelperPathForWrapperHelper = [&](const std::string &path) -> std::string {
     if (path == "/std/collections/mapCount") {
       return "/std/collections/experimental_map/mapCount";
@@ -2126,6 +2545,9 @@ bool rewriteExpr(Expr &expr,
   };
   auto experimentalMapConstructorRewritePath =
       [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
+    if (resolvedPath == "/map") {
+      return experimentalMapConstructorHelperPath(argumentCount);
+    }
     if (resolvedPath == "/std/collections/map/map") {
       return experimentalMapConstructorHelperPath(argumentCount);
     }
@@ -2166,8 +2588,45 @@ bool rewriteExpr(Expr &expr,
       return true;
     }
     const std::string originalPath = resolveCalleePath(valueExpr, namespacePrefix, ctx);
-    const std::string helperPath =
-        experimentalMapConstructorRewritePath(originalPath, valueExpr.args.size());
+    auto canonicalizeResolvedPath = [](std::string path) {
+      const size_t specializationSuffix = path.find("__t");
+      if (specializationSuffix != std::string::npos) {
+        path.erase(specializationSuffix);
+      }
+      return path;
+    };
+    auto isExperimentalMapEntryArgument = [&](const Expr &argExpr) {
+      if (argExpr.isSpread) {
+        return true;
+      }
+      const std::string resolvedArgPath = canonicalizeResolvedPath(resolveCalleePath(argExpr, namespacePrefix, ctx));
+      if (resolvedArgPath == "/std/collections/experimental_map/entry") {
+        return true;
+      }
+      BindingInfo argInfo;
+      if (!inferBindingTypeForMonomorph(argExpr, params, locals, allowMathBare, ctx, argInfo)) {
+        return false;
+      }
+      std::string argTypeText = argInfo.typeName;
+      if (!argInfo.typeTemplateArg.empty()) {
+        argTypeText += "<" + argInfo.typeTemplateArg + ">";
+      }
+      std::string normalizedArgType = normalizeBindingTypeName(argTypeText);
+      if (!normalizedArgType.empty() && normalizedArgType.front() == '/') {
+        normalizedArgType.erase(normalizedArgType.begin());
+      }
+      return normalizedArgType == "std/collections/experimental_map/Entry" ||
+             normalizedArgType.rfind("std/collections/experimental_map/Entry__", 0) == 0;
+    };
+    std::string helperPath = experimentalMapConstructorRewritePath(originalPath, valueExpr.args.size());
+    if ((originalPath == "/map" || originalPath == "/std/collections/map/map") &&
+        !valueExpr.args.empty()) {
+      const bool usesEntryArgs =
+          std::all_of(valueExpr.args.begin(), valueExpr.args.end(), isExperimentalMapEntryArgument);
+      if (usesEntryArgs) {
+        helperPath = "/std/collections/experimental_map/map";
+      }
+    }
     if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
       return true;
     }
@@ -2206,7 +2665,7 @@ bool rewriteExpr(Expr &expr,
                                                       ctx,
                                                       allowMathBare,
                                                       inferredArgs)) {
-          valueExpr.templateArgs = std::move(inferredArgs);
+            valueExpr.templateArgs = std::move(inferredArgs);
           } else if (!inferError.empty()) {
             error = inferError;
             const size_t helperPos = error.find(helperPath);
@@ -2222,6 +2681,10 @@ bool rewriteExpr(Expr &expr,
   };
   auto experimentalVectorConstructorRewritePath =
       [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
+    (void)argumentCount;
+    if (resolvedPath == "/vector" || resolvedPath == "/std/collections/vector/vector") {
+      return "/std/collections/experimental_vector/vector";
+    }
     if (resolvedPath == "/std/collections/vectorNew") {
       return "/std/collections/experimental_vector/vectorNew";
     }
@@ -2249,7 +2712,6 @@ bool rewriteExpr(Expr &expr,
     if (resolvedPath == "/std/collections/vectorOct") {
       return "/std/collections/experimental_vector/vectorOct";
     }
-    (void)argumentCount;
     return {};
   };
   auto rewriteCanonicalExperimentalVectorConstructorExpr = [&](Expr &valueExpr) -> bool {
@@ -2376,8 +2838,24 @@ bool rewriteExpr(Expr &expr,
       return true;
     }
     BindingInfo bindingInfo;
+    const bool hasExplicitBindingTransform = hasExplicitBindingTypeTransform(bindingExpr);
     const bool hasExplicitBindingType = extractExplicitBindingType(bindingExpr, bindingInfo);
-    if (!hasExplicitBindingType || bindingInfo.typeName == "auto") {
+    if (hasExplicitBindingType) {
+      const std::string bindingTypeText = bindingTypeToString(bindingInfo);
+      if (!resolvesExperimentalMapValueTypeText(
+              bindingTypeText, mapping, allowedParams, namespacePrefix, ctx) &&
+          unwrapCollectionReceiverEnvelope(bindingInfo.typeName, bindingInfo.typeTemplateArg) == "map") {
+        return true;
+      }
+    }
+    if (!hasExplicitBindingType) {
+      if (hasExplicitBindingTransform) {
+        return true;
+      }
+      if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), params, locals, allowMathBare, ctx, bindingInfo)) {
+        return true;
+      }
+    } else if (bindingInfo.typeName == "auto") {
       if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), params, locals, allowMathBare, ctx, bindingInfo)) {
         return true;
       }
@@ -2393,8 +2871,23 @@ bool rewriteExpr(Expr &expr,
       return true;
     }
     BindingInfo bindingInfo;
+    const bool hasExplicitBindingTransform = hasExplicitBindingTypeTransform(bindingExpr);
     const bool hasExplicitBindingType = extractExplicitBindingType(bindingExpr, bindingInfo);
-    if (!hasExplicitBindingType || bindingInfo.typeName == "auto") {
+    if (hasExplicitBindingType) {
+      const std::string bindingTypeText = bindingTypeToString(bindingInfo);
+      if (!resolvesExperimentalVectorValueTypeText(bindingTypeText) &&
+          unwrapCollectionReceiverEnvelope(bindingInfo.typeName, bindingInfo.typeTemplateArg) == "vector") {
+        return true;
+      }
+    }
+    if (!hasExplicitBindingType) {
+      if (hasExplicitBindingTransform) {
+        return true;
+      }
+      if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), params, locals, allowMathBare, ctx, bindingInfo)) {
+        return true;
+      }
+    } else if (bindingInfo.typeName == "auto") {
       if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), params, locals, allowMathBare, ctx, bindingInfo)) {
         return true;
       }
@@ -2879,9 +3372,23 @@ bool rewriteExpr(Expr &expr,
     templArg = resolvedArg.text;
   }
 
-  if (!expr.isMethodCall) {
+  if (!expr.isMethodCall && !expr.isBinding) {
     if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
       if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
+        return false;
+      }
+      if (!rewriteNestedExperimentalVectorConstructorValue(*receiverExpr)) {
+        return false;
+      }
+      if (!rewriteExpr(*receiverExpr,
+                       mapping,
+                       allowedParams,
+                       namespacePrefix,
+                       ctx,
+                       error,
+                       locals,
+                       params,
+                       allowMathBare)) {
         return false;
       }
     }
@@ -2930,6 +3437,7 @@ bool rewriteExpr(Expr &expr,
     }
     const std::string experimentalVectorPath = experimentalVectorHelperPathForCanonicalHelper(resolvedPath);
     if (!experimentalVectorPath.empty() && ctx.sourceDefs.count(experimentalVectorPath) > 0 &&
+        hasVisibleStdCollectionsImportForPath(resolvedPath) &&
         resolvesExperimentalVectorValueReceiver(mapHelperReceiverExpr(expr))) {
       resolvedPath = experimentalVectorPath;
       expr.name = experimentalVectorPath;
@@ -2945,6 +3453,30 @@ bool rewriteExpr(Expr &expr,
           return false;
         }
       }
+    }
+    if (expr.templateArgs.empty() &&
+        resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+        resolvesExperimentalMapValueReceiver(mapHelperReceiverExpr(expr))) {
+      std::vector<std::string> receiverTemplateArgs;
+      if (resolveExperimentalMapValueReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+        expr.templateArgs = std::move(receiverTemplateArgs);
+      }
+    }
+    if (expr.templateArgs.empty() &&
+        resolvedPath.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+        resolvesExperimentalVectorValueReceiver(mapHelperReceiverExpr(expr))) {
+      std::vector<std::string> receiverTemplateArgs;
+      if (resolveExperimentalVectorValueReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+        expr.templateArgs = std::move(receiverTemplateArgs);
+      }
+    }
+    if (resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+        resolvedPath.find("__t") != std::string::npos) {
+      expr.templateArgs.clear();
+    }
+    if (resolvedPath.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+        resolvedPath.find("__t") != std::string::npos) {
+      expr.templateArgs.clear();
     }
     const std::string originalResolvedPath = resolvedPath;
     const std::string preferredPath = preferVectorStdlibHelperPath(resolvedPath, ctx.sourceDefs);
@@ -2987,8 +3519,13 @@ bool rewriteExpr(Expr &expr,
     }
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
     if (isTemplateDef) {
-      if (expr.templateArgs.empty()) {
-        auto defIt = ctx.sourceDefs.find(resolvedPath);
+      auto defIt = ctx.sourceDefs.find(resolvedPath);
+      const bool shouldInferImplicitTemplateTail =
+          defIt != ctx.sourceDefs.end() &&
+          !expr.templateArgs.empty() &&
+          ctx.implicitTemplateDefs.count(resolvedPath) > 0 &&
+          expr.templateArgs.size() < defIt->second.templateArgs.size();
+      if (expr.templateArgs.empty() || shouldInferImplicitTemplateTail) {
         if (defIt != ctx.sourceDefs.end()) {
           std::vector<std::string> inferredArgs;
           if (inferImplicitTemplateArgs(defIt->second,
@@ -3005,10 +3542,6 @@ bool rewriteExpr(Expr &expr,
             expr.templateArgs = std::move(inferredArgs);
             allConcrete = true;
           } else {
-            defIt = ctx.sourceDefs.find(resolvedPath);
-            if (defIt == ctx.sourceDefs.end()) {
-              return false;
-            }
             if (error.empty() &&
                 inferStdlibCollectionHelperTemplateArgs(defIt->second,
                                                         expr,
@@ -3020,8 +3553,8 @@ bool rewriteExpr(Expr &expr,
                                                         ctx,
                                                         allowMathBare,
                                                         inferredArgs)) {
-            expr.templateArgs = std::move(inferredArgs);
-            allConcrete = true;
+              allConcrete = inferredTemplateArgsAreConcrete(defIt->second, inferredArgs);
+              expr.templateArgs = std::move(inferredArgs);
             } else if (!error.empty()) {
               return false;
             }
@@ -3140,7 +3673,11 @@ bool rewriteExpr(Expr &expr,
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
       const std::string experimentalVectorMethodPath =
           experimentalVectorHelperPathForCanonicalHelper(methodPath);
-      if (!experimentalVectorMethodPath.empty() &&
+      const bool shouldRewriteCanonicalVectorMethodToExperimental =
+          ctx.sourceDefs.count(methodPath) == 0 && ctx.helperOverloads.count(methodPath) == 0 &&
+          hasVisibleStdCollectionsImportForPath(methodPath);
+      if (shouldRewriteCanonicalVectorMethodToExperimental &&
+          !experimentalVectorMethodPath.empty() &&
           ctx.sourceDefs.count(experimentalVectorMethodPath) > 0 &&
           resolvesExperimentalVectorValueReceiver(mapHelperReceiverExpr(expr))) {
         methodPath = experimentalVectorMethodPath;
@@ -3164,6 +3701,24 @@ bool rewriteExpr(Expr &expr,
         methodPath =
             preferVectorStdlibImplicitTemplatePath(expr, methodPath, locals, params, allowMathBare, ctx, namespacePrefix);
       }
+      if (expr.templateArgs.empty() &&
+          isExperimentalVectorPublicHelperPath(methodPath) &&
+          resolvesExperimentalVectorValueReceiver(mapHelperReceiverExpr(expr))) {
+        std::vector<std::string> receiverTemplateArgs;
+        if (resolveExperimentalVectorValueReceiverTemplateArgs(
+                mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+          expr.templateArgs = std::move(receiverTemplateArgs);
+          allConcrete = true;
+        }
+      }
+      if (methodPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+          methodPath.find("__t") != std::string::npos) {
+        expr.templateArgs.clear();
+      }
+      if (methodPath.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+          methodPath.find("__t") != std::string::npos) {
+        expr.templateArgs.clear();
+      }
       if (ctx.helperOverloadInternalToPublic.count(methodPath) > 0) {
         expr.name = methodPath;
         expr.namespacePrefix.clear();
@@ -3172,8 +3727,13 @@ bool rewriteExpr(Expr &expr,
       const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
       const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;
       if (isTemplateDef) {
-        if (expr.templateArgs.empty()) {
-          auto defIt = ctx.sourceDefs.find(methodPath);
+        auto defIt = ctx.sourceDefs.find(methodPath);
+        const bool shouldInferImplicitTemplateTail =
+            defIt != ctx.sourceDefs.end() &&
+            !expr.templateArgs.empty() &&
+            ctx.implicitTemplateDefs.count(methodPath) > 0 &&
+            expr.templateArgs.size() < defIt->second.templateArgs.size();
+        if (expr.templateArgs.empty() || shouldInferImplicitTemplateTail) {
           if (defIt != ctx.sourceDefs.end()) {
             std::vector<std::string> inferredArgs;
             if (inferImplicitTemplateArgs(defIt->second,
@@ -3190,10 +3750,6 @@ bool rewriteExpr(Expr &expr,
               expr.templateArgs = std::move(inferredArgs);
               allConcrete = true;
             } else {
-              defIt = ctx.sourceDefs.find(methodPath);
-              if (defIt == ctx.sourceDefs.end()) {
-                return false;
-              }
               if (error.empty() &&
                   inferStdlibCollectionHelperTemplateArgs(defIt->second,
                                                           expr,
@@ -3205,8 +3761,8 @@ bool rewriteExpr(Expr &expr,
                                                           ctx,
                                                           allowMathBare,
                                                           inferredArgs)) {
-              expr.templateArgs = std::move(inferredArgs);
-              allConcrete = true;
+                allConcrete = inferredTemplateArgsAreConcrete(defIt->second, inferredArgs);
+                expr.templateArgs = std::move(inferredArgs);
               } else if (!error.empty()) {
                 return false;
               }
@@ -3234,7 +3790,12 @@ bool rewriteExpr(Expr &expr,
                 helperOverloadDisplayPath(methodPath, ctx);
         return false;
       }
-      auto methodDefIt = ctx.sourceDefs.find(resolveCalleePath(expr, namespacePrefix, ctx));
+      std::string rewrittenMethodPath =
+          expr.isMethodCall ? methodPath : resolveCalleePath(expr, namespacePrefix, ctx);
+      auto methodDefIt = ctx.sourceDefs.find(rewrittenMethodPath);
+      if (methodDefIt == ctx.sourceDefs.end()) {
+        methodDefIt = ctx.sourceDefs.find(resolveCalleePath(expr, namespacePrefix, ctx));
+      }
       if (methodDefIt != ctx.sourceDefs.end()) {
         if (!rewriteCanonicalExperimentalVectorConstructorArgs(methodDefIt->second, methodCallSyntax)) {
           return false;
@@ -3310,6 +3871,9 @@ bool rewriteDefinition(Definition &def,
   };
   auto experimentalMapConstructorRewritePath =
       [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
+    if (resolvedPath == "/map") {
+      return experimentalMapConstructorHelperPath(argumentCount);
+    }
     if (resolvedPath == "/std/collections/map/map") {
       return experimentalMapConstructorHelperPath(argumentCount);
     }
@@ -3350,8 +3914,46 @@ bool rewriteDefinition(Definition &def,
       return;
     }
     const std::string originalPath = resolveCalleePath(valueExpr, def.namespacePrefix, ctx);
-    const std::string helperPath =
+    auto canonicalizeResolvedPath = [](std::string path) {
+      const size_t specializationSuffix = path.find("__t");
+      if (specializationSuffix != std::string::npos) {
+        path.erase(specializationSuffix);
+      }
+      return path;
+    };
+    auto isExperimentalMapEntryArgument = [&](const Expr &argExpr) {
+      if (argExpr.isSpread) {
+        return true;
+      }
+      const std::string resolvedArgPath = canonicalizeResolvedPath(resolveCalleePath(argExpr, def.namespacePrefix, ctx));
+      if (resolvedArgPath == "/std/collections/experimental_map/entry") {
+        return true;
+      }
+      BindingInfo argInfo;
+      if (!inferBindingTypeForMonomorph(argExpr, params, locals, allowMathBare, ctx, argInfo)) {
+        return false;
+      }
+      std::string argTypeText = argInfo.typeName;
+      if (!argInfo.typeTemplateArg.empty()) {
+        argTypeText += "<" + argInfo.typeTemplateArg + ">";
+      }
+      std::string normalizedArgType = normalizeBindingTypeName(argTypeText);
+      if (!normalizedArgType.empty() && normalizedArgType.front() == '/') {
+        normalizedArgType.erase(normalizedArgType.begin());
+      }
+      return normalizedArgType == "std/collections/experimental_map/Entry" ||
+             normalizedArgType.rfind("std/collections/experimental_map/Entry__", 0) == 0;
+    };
+    std::string helperPath =
         experimentalMapConstructorRewritePath(originalPath, valueExpr.args.size());
+    if ((originalPath == "/map" || originalPath == "/std/collections/map/map") &&
+        !valueExpr.args.empty()) {
+      const bool usesEntryArgs =
+          std::all_of(valueExpr.args.begin(), valueExpr.args.end(), isExperimentalMapEntryArgument);
+      if (usesEntryArgs) {
+        helperPath = "/std/collections/experimental_map/map";
+      }
+    }
     if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
       return;
     }
@@ -3390,7 +3992,7 @@ bool rewriteDefinition(Definition &def,
                                                       ctx,
                                                       allowMathBare,
                                                       inferredArgs)) {
-          valueExpr.templateArgs = std::move(inferredArgs);
+            valueExpr.templateArgs = std::move(inferredArgs);
           } else if (!inferError.empty()) {
             error = inferError;
             const size_t helperPos = error.find(helperPath);
@@ -3405,6 +4007,9 @@ bool rewriteDefinition(Definition &def,
   auto experimentalVectorConstructorRewritePath =
       [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
     (void)argumentCount;
+    if (resolvedPath == "/vector" || resolvedPath == "/std/collections/vector/vector") {
+      return "/std/collections/experimental_vector/vector";
+    }
     if (resolvedPath == "/std/collections/vectorNew") {
       return "/std/collections/experimental_vector/vectorNew";
     }
@@ -3496,6 +4101,9 @@ bool rewriteDefinition(Definition &def,
     for (const auto &transform : def.transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
         continue;
+      }
+      if (transform.templateArgs.front() != "auto") {
+        hasExplicitNonAutoReturn = true;
       }
       if (resolvesExperimentalVectorValueTypeText(transform.templateArgs.front())) {
         return true;
@@ -3884,7 +4492,11 @@ bool instantiateTemplate(const std::string &basePath,
 
 void buildImportAliases(Context &ctx) {
   ctx.importAliases.clear();
-  for (const auto &importPath : ctx.program.imports) {
+  const auto &importPaths = ctx.program.imports;
+  auto shouldSkipWildcardAlias = [](const std::string &prefix, const std::string &remainder) {
+    return prefix == "/std/collections" && (remainder == "vector" || remainder == "map");
+  };
+  for (const auto &importPath : importPaths) {
     if (importPath.empty() || importPath[0] != '/') {
       continue;
     }
@@ -3908,6 +4520,9 @@ void buildImportAliases(Context &ctx) {
         if (remainder.empty() || remainder.find('/') != std::string::npos) {
           continue;
         }
+        if (shouldSkipWildcardAlias(prefix, remainder)) {
+          continue;
+        }
         ctx.importAliases.emplace(remainder, publicPath);
       }
       for (const auto &entry : ctx.sourceDefs) {
@@ -3920,6 +4535,9 @@ void buildImportAliases(Context &ctx) {
         }
         const std::string remainder = path.substr(scopedPrefix.size());
         if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        if (shouldSkipWildcardAlias(prefix, remainder)) {
           continue;
         }
         ctx.importAliases.emplace(remainder, path);

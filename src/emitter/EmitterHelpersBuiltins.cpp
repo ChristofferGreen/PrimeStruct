@@ -1857,6 +1857,13 @@ bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std
 bool getVectorMutatorName(const Expr &expr,
                           const std::unordered_map<std::string, std::string> &nameMap,
                           std::string &out) {
+  auto stripGeneratedHelperSuffix = [](std::string helperName) {
+    const size_t generatedSuffix = helperName.find("__");
+    if (generatedSuffix != std::string::npos) {
+      helperName.erase(generatedSuffix);
+    }
+    return helperName;
+  };
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
@@ -1869,9 +1876,9 @@ bool getVectorMutatorName(const Expr &expr,
     name.erase(0, 1);
   }
   if (name.rfind("vector/", 0) == 0) {
-    name = name.substr(std::string("vector/").size());
+    name = stripGeneratedHelperSuffix(name.substr(std::string("vector/").size()));
   } else if (name.rfind("std/collections/vector/", 0) == 0) {
-    name = name.substr(std::string("std/collections/vector/").size());
+    name = stripGeneratedHelperSuffix(name.substr(std::string("std/collections/vector/").size()));
   } else if (name.find('/') != std::string::npos) {
     return false;
   }

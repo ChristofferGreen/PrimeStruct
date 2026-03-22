@@ -13,23 +13,6 @@ bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
          helperName == "remove_at" || helperName == "remove_swap";
 }
 
-bool isExplicitVectorHelperFallbackPath(const Expr &expr) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
-    return false;
-  }
-  std::string normalizedPath = expr.name;
-  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("vector/", 0) == 0 || normalizedPath.rfind("std/collections/vector/", 0) == 0) {
-      normalizedPath.insert(normalizedPath.begin(), '/');
-    }
-  }
-  return normalizedPath == "/vector/count" || normalizedPath == "/vector/capacity" || normalizedPath == "/vector/at" ||
-         normalizedPath == "/vector/at_unsafe" || normalizedPath == "/std/collections/vector/count" ||
-         normalizedPath == "/std/collections/vector/capacity" ||
-         normalizedPath == "/std/collections/vector/at" ||
-         normalizedPath == "/std/collections/vector/at_unsafe";
-}
-
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -100,21 +83,6 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
   }
   std::string aliasName;
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
-}
-
-bool isExplicitMapHelperFallbackPath(const Expr &expr) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
-    return false;
-  }
-  std::string normalizedPath = expr.name;
-  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("map/", 0) == 0 || normalizedPath.rfind("std/collections/map/", 0) == 0) {
-      normalizedPath.insert(normalizedPath.begin(), '/');
-    }
-  }
-  return normalizedPath == "/map/count" || normalizedPath == "/map/at" || normalizedPath == "/map/at_unsafe" ||
-         normalizedPath == "/std/collections/map/count" || normalizedPath == "/std/collections/map/at" ||
-         normalizedPath == "/std/collections/map/at_unsafe";
 }
 
 } // namespace
@@ -251,10 +219,6 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     error = "native backend does not support to_aos";
     return NativeCallTailDispatchResult::Error;
   }
-  if (isExplicitVectorHelperFallbackPath(expr) || isExplicitMapHelperFallbackPath(expr)) {
-    return NativeCallTailDispatchResult::NotHandled;
-  }
-
   const auto countAccessResult = tryEmitCountAccessCall(
       expr,
       localsIn,

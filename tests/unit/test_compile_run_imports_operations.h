@@ -270,6 +270,27 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs bare vector access through imported stdlib helpers in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32, 4i32)}
+  return(plus(
+      plus(vectorAt<i32>(values, 0i32), vectorAtUnsafe<i32>(values, 1i32)),
+      plus(/std/collections/vector/at<i32>(values, 2i32), /std/collections/vector/at_unsafe<i32>(values, 3i32))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_bare_vector_access_imported.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_exe_bare_vector_access_imported_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+}
+
 TEST_CASE("rejects bare vector count without imported helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

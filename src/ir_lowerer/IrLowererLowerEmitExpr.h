@@ -172,7 +172,6 @@
         if (!expr.isMethodCall &&
             (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
             expr.args.size() == 1) {
-          const bool isBorrow = isSimpleCallName(expr, "borrow");
           const Expr &storage = expr.args.front();
           UninitializedStorageAccess access;
           bool resolved = false;
@@ -211,10 +210,6 @@
             };
             if (access.location == UninitializedStorageAccess::Location::Local) {
               const LocalInfo &storageInfo = *access.local;
-              if (isBorrow) {
-                function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(storageInfo.index)});
-                return true;
-              }
               if (!storageInfo.structTypeName.empty()) {
                 StructSlotLayout layout;
                 if (!resolveStructSlotLayout(storageInfo.structTypeName, layout)) {
@@ -247,10 +242,6 @@
               if (!emitFieldPointer(receiver, field, ptrLocal)) {
                 return false;
               }
-              if (isBorrow) {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-                return true;
-              }
               if (!field.structPath.empty()) {
                 const int32_t baseLocal = nextLocal;
                 nextLocal += field.slotCount;
@@ -274,10 +265,6 @@
               const int32_t ptrLocal = allocTempLocal();
               if (access.pointerExpr == nullptr || !emitIndirectPointer(*access.pointerExpr, ptrLocal)) {
                 return false;
-              }
-              if (isBorrow) {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-                return true;
               }
               if (!access.typeInfo.structPath.empty()) {
                 StructSlotLayout layout;
@@ -758,6 +745,82 @@
         Expr rewrittenTemporaryMapBuiltinAccessExpr;
         if (rewriteTemporaryMapBuiltinAccessToMethodExpr(expr, rewrittenTemporaryMapBuiltinAccessExpr)) {
           return emitExpr(rewrittenTemporaryMapBuiltinAccessExpr, localsIn);
+        }
+        auto rewriteBareVectorHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty() ||
+              !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
+            return false;
+          }
+          const std::string helperName = callExpr.name;
+          if (helperName != "count" && helperName != "capacity" &&
+              helperName != "at" && helperName != "at_unsafe") {
+            return false;
+          }
+          const auto targetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(
+              callExpr.args.front(),
+              localsIn,
+              [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
+                targetInfoOut = {};
+                const Definition *callee = resolveDefinitionCall(targetCallExpr);
+                if (callee == nullptr) {
+                  return false;
+                }
+                std::string collectionName;
+                std::vector<std::string> collectionArgs;
+                if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
+                  return false;
+                }
+                if ((collectionName != "array" && collectionName != "vector") || collectionArgs.size() != 1) {
+                  return false;
+                }
+                targetInfoOut.isArrayOrVectorTarget = true;
+                targetInfoOut.isVectorTarget = (collectionName == "vector");
+                targetInfoOut.elemKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+                return true;
+              });
+          if (!targetInfo.isVectorTarget) {
+            return false;
+          }
+          std::string elemTypeName;
+          if (callExpr.args.front().kind == Expr::Kind::Call) {
+            std::string receiverCollectionName;
+            if (getBuiltinCollectionName(callExpr.args.front(), receiverCollectionName) &&
+                (receiverCollectionName == "array" || receiverCollectionName == "vector") &&
+                callExpr.args.front().templateArgs.size() == 1) {
+              elemTypeName = callExpr.args.front().templateArgs.front();
+            } else if (const Definition *receiverDef = resolveDefinitionCall(callExpr.args.front())) {
+              std::string receiverCollectionNameFromDef;
+              std::vector<std::string> receiverCollectionArgs;
+              if (ir_lowerer::inferDeclaredReturnCollection(
+                      *receiverDef, receiverCollectionNameFromDef, receiverCollectionArgs) &&
+                  (receiverCollectionNameFromDef == "array" || receiverCollectionNameFromDef == "vector") &&
+                  receiverCollectionArgs.size() == 1) {
+                elemTypeName = receiverCollectionArgs.front();
+              }
+            }
+          }
+
+          auto tryRewritePath = [&](const std::string &path) {
+            Expr candidate = callExpr;
+            candidate.name = path;
+            candidate.namespacePrefix.clear();
+            candidate.isMethodCall = false;
+            if (candidate.templateArgs.empty() && !elemTypeName.empty()) {
+              candidate.templateArgs = {elemTypeName};
+            }
+            if (resolveDefinitionCall(candidate) == nullptr) {
+              return false;
+            }
+            rewrittenExpr = std::move(candidate);
+            return true;
+          };
+
+          return tryRewritePath("/std/collections/vector/" + helperName) ||
+                 tryRewritePath("/vector/" + helperName);
+        };
+        Expr rewrittenBareVectorHelperExpr;
+        if (rewriteBareVectorHelperExpr(expr, rewrittenBareVectorHelperExpr)) {
+          return emitExpr(rewrittenBareVectorHelperExpr, localsIn);
         }
         auto rewriteBareVectorMethodHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty() ||

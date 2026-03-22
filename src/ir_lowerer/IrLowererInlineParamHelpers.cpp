@@ -1,5 +1,6 @@
 #include "IrLowererInlineParamHelpers.h"
 
+#include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -457,8 +458,10 @@ bool emitInlineDefinitionCallParameters(
       if (!emitStructPointer(argExpr)) {
         return false;
       }
-      calleeLocals.emplace(param.name, paramInfo);
-      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
+      LocalInfo aliasedParamInfo = paramInfo;
+      aliasedParamInfo.kind = LocalInfo::Kind::Reference;
+      calleeLocals.emplace(param.name, aliasedParamInfo);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(aliasedParamInfo.index));
       continue;
     }
 
@@ -473,6 +476,15 @@ bool emitInlineDefinitionCallParameters(
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
       }
+      if (paramInfo.isMutable) {
+        if (!emitExpr(*orderedArg, callerLocals)) {
+          return false;
+        }
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
+        calleeLocals.emplace(param.name, paramInfo);
+        continue;
+      }
+
       StructSlotLayoutInfo layout;
       if (!resolveStructSlotLayout(paramInfo.structTypeName, layout)) {
         return false;
@@ -490,6 +502,9 @@ bool emitInlineDefinitionCallParameters(
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
       if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
         return false;
+      }
+      if (orderedArg->kind == Expr::Kind::Call) {
+        emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, paramInfo.structTypeName);
       }
       calleeLocals.emplace(param.name, paramInfo);
       continue;
@@ -516,7 +531,7 @@ bool emitInlineDefinitionCallParameters(
               return true;
             }
             if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
-              emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index));
+              emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
           }

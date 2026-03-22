@@ -661,9 +661,24 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   }
   std::string base;
   std::string arg;
-  if (splitTemplateTypeName(name, base, arg) && base == "array") {
+  if (splitTemplateTypeName(name, base, arg)) {
     std::vector<std::string> args;
-    if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+    if (!splitTopLevelTemplateArgs(arg, args)) {
+      return ReturnKind::Unknown;
+    }
+    const bool isCollectionLike =
+        ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" ||
+          base == "Vector" || base == "std/collections/experimental_vector/Vector" ||
+          base == "/std/collections/experimental_vector/Vector" ||
+          base.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+          base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
+         args.size() == 1) ||
+        ((base == "map" || base == "Map" || base == "std/collections/experimental_map/Map" ||
+          base == "/std/collections/experimental_map/Map" ||
+          base.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
+          base.rfind("/std/collections/experimental_map/Map__", 0) == 0) &&
+         args.size() == 2);
+    if (isCollectionLike) {
       return ReturnKind::Array;
     }
   }

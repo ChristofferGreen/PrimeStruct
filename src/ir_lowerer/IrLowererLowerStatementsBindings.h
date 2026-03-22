@@ -419,6 +419,12 @@
         if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
           return false;
         }
+        if (init.kind == Expr::Kind::Call) {
+          ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              srcPtrLocal,
+              structTypeName);
+        }
         localsIn.emplace(stmt.name, info);
         return true;
       }
@@ -572,52 +578,57 @@
         emittedReturnStmt = &rewrittenReturnStmt;
       }
       const Expr &returnValueExpr = emittedReturnStmt->args.front();
-      if (returnValueExpr.kind == Expr::Kind::Call) {
-        StructSlotLayout layout;
-        std::string aggregateStructPath;
-        const std::string inferredStructPath = inferStructExprPath(returnValueExpr, localsIn);
-        if (!inferredStructPath.empty() && resolveStructSlotLayout(inferredStructPath, layout)) {
-          aggregateStructPath = inferredStructPath;
+      StructSlotLayout layout;
+      std::string aggregateStructPath;
+      const std::string inferredStructPath = inferStructExprPath(returnValueExpr, localsIn);
+      if (!inferredStructPath.empty() && resolveStructSlotLayout(inferredStructPath, layout)) {
+        aggregateStructPath = inferredStructPath;
+      }
+      if (aggregateStructPath.empty()) {
+        const std::string declaredStructPath = extractDeclaredStructReturnPath();
+        if (!declaredStructPath.empty() && resolveStructSlotLayout(declaredStructPath, layout)) {
+          aggregateStructPath = declaredStructPath;
         }
-        if (aggregateStructPath.empty()) {
-          const std::string declaredStructPath = extractDeclaredStructReturnPath();
-          if (!declaredStructPath.empty() && resolveStructSlotLayout(declaredStructPath, layout)) {
-            aggregateStructPath = declaredStructPath;
-          }
+      }
+      const bool shouldStabilizeAggregateReturn =
+          !aggregateStructPath.empty() &&
+          (returnValueExpr.kind == Expr::Kind::Call || returnValueExpr.kind == Expr::Kind::Name);
+      if (shouldStabilizeAggregateReturn) {
+        const int32_t baseLocal = nextLocal;
+        nextLocal += layout.totalSlots;
+        const int32_t ptrLocal = nextLocal++;
+        function.instructions.push_back(
+            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+        const int32_t srcPtrLocal = allocTempLocal();
+        if (!emitExpr(returnValueExpr, localsIn)) {
+          return false;
         }
-        if (!aggregateStructPath.empty()) {
-          const int32_t baseLocal = nextLocal;
-          nextLocal += layout.totalSlots;
-          const int32_t ptrLocal = nextLocal++;
-          function.instructions.push_back(
-              {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-          const int32_t srcPtrLocal = allocTempLocal();
-          if (!emitExpr(returnValueExpr, localsIn)) {
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-          if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
-            return false;
-          }
-          rewrittenReturnLocals = localsIn;
-          LocalInfo returnInfo;
-          returnInfo.kind = LocalInfo::Kind::Value;
-          returnInfo.valueKind = LocalInfo::ValueKind::Int64;
-          returnInfo.structTypeName = aggregateStructPath;
-          returnInfo.index = ptrLocal;
-          const std::string tempReturnName = "__native_return_struct_" + std::to_string(ptrLocal);
-          rewrittenReturnLocals.emplace(tempReturnName, returnInfo);
-          rewrittenReturnStmt = *emittedReturnStmt;
-          Expr stableReturnValueExpr;
-          stableReturnValueExpr.kind = Expr::Kind::Name;
-          stableReturnValueExpr.name = tempReturnName;
-          rewrittenReturnStmt.args.front() = std::move(stableReturnValueExpr);
-          emittedReturnStmt = &rewrittenReturnStmt;
-          emittedReturnLocals = &rewrittenReturnLocals;
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+        if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
+          return false;
         }
+        ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            srcPtrLocal,
+            aggregateStructPath);
+        rewrittenReturnLocals = localsIn;
+        LocalInfo returnInfo;
+        returnInfo.kind = LocalInfo::Kind::Value;
+        returnInfo.valueKind = LocalInfo::ValueKind::Int64;
+        returnInfo.structTypeName = aggregateStructPath;
+        returnInfo.index = ptrLocal;
+        const std::string tempReturnName = "__native_return_struct_" + std::to_string(ptrLocal);
+        rewrittenReturnLocals.emplace(tempReturnName, returnInfo);
+        rewrittenReturnStmt = *emittedReturnStmt;
+        Expr stableReturnValueExpr;
+        stableReturnValueExpr.kind = Expr::Kind::Name;
+        stableReturnValueExpr.name = tempReturnName;
+        rewrittenReturnStmt.args.front() = std::move(stableReturnValueExpr);
+        emittedReturnStmt = &rewrittenReturnStmt;
+        emittedReturnLocals = &rewrittenReturnLocals;
       }
     }
     const auto returnResult = ir_lowerer::tryEmitReturnStatement(

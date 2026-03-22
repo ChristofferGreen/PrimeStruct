@@ -1,6 +1,8 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <cctype>
+#include <unordered_set>
 
 namespace primec::semantics {
 
@@ -45,7 +47,39 @@ bool SemanticsValidator::buildImportAliases() {
     return true;
   };
 
-  for (const auto &importPath : program_.imports) {
+  auto hasCoveringStdlibWildcardImport = [&](const std::string &importPath) {
+    if (importPath.rfind("/std/", 0) != 0) {
+      return false;
+    }
+    std::string targetPrefix = importPath;
+    if (targetPrefix.size() >= 2 && targetPrefix.compare(targetPrefix.size() - 2, 2, "/*") == 0) {
+      targetPrefix.erase(targetPrefix.size() - 2);
+    }
+    const auto &allImportPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
+    for (const auto &otherImport : allImportPaths) {
+      if (otherImport == importPath || otherImport.rfind("/std/", 0) != 0) {
+        continue;
+      }
+      std::string otherPrefix = otherImport;
+      if (otherPrefix.size() >= 2 && otherPrefix.compare(otherPrefix.size() - 2, 2, "/*") == 0) {
+        otherPrefix.erase(otherPrefix.size() - 2);
+      } else if (otherPrefix.find('/', 1) != std::string::npos) {
+        continue;
+      }
+      if (targetPrefix == otherPrefix) {
+        return true;
+      }
+      if (targetPrefix.size() > otherPrefix.size() &&
+          targetPrefix.rfind(otherPrefix, 0) == 0 &&
+          targetPrefix[otherPrefix.size()] == '/') {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
+  for (const auto &importPath : importPaths) {
     if (importPath == "/std/math") {
       if (addImportDiagnostic("import /std/math is not supported; use import /std/math/* or /std/math/<name>")) {
         return false;
@@ -71,16 +105,26 @@ bool SemanticsValidator::buildImportAliases() {
       const std::string scopedPrefix = prefix + "/";
       bool sawImmediateDefinition = false;
       bool importError = false;
-      for (const auto &def : program_.definitions) {
-        DefinitionContextScope definitionScope(*this, def);
-        if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
+      std::vector<std::string> matchingPaths;
+      matchingPaths.reserve(defMap_.size());
+      for (const auto &[path, defPtr] : defMap_) {
+        if (defPtr == nullptr || path.rfind(scopedPrefix, 0) != 0) {
           continue;
         }
-        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
+        matchingPaths.push_back(path);
+      }
+      std::sort(matchingPaths.begin(), matchingPaths.end());
+      for (const auto &path : matchingPaths) {
+        auto defIt = defMap_.find(path);
+        if (defIt == defMap_.end() || defIt->second == nullptr) {
+          continue;
+        }
+        DefinitionContextScope definitionScope(*this, *defIt->second);
+        const std::string remainder = path.substr(scopedPrefix.size());
         if (remainder.empty() || remainder.find('/') != std::string::npos) {
           continue;
         }
-        if (publicDefinitions_.count(def.fullPath) == 0) {
+        if (publicDefinitions_.count(path) == 0) {
           continue;
         }
         sawImmediateDefinition = true;
@@ -88,14 +132,14 @@ bool SemanticsValidator::buildImportAliases() {
           continue;
         }
         if (isRootBuiltinName(remainder)) {
-          if (addImportDiagnostic("import creates name conflict: " + remainder, &def)) {
+          if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
             return false;
           }
           importError = true;
           break;
         }
         if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
-          if (addImportDiagnostic("import creates name conflict: " + remainder, &def)) {
+          if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
             return false;
           }
           importError = true;
@@ -110,9 +154,9 @@ bool SemanticsValidator::buildImportAliases() {
           importError = true;
           break;
         }
-        auto [it, inserted] = importAliases_.emplace(remainder, def.fullPath);
-        if (!inserted && it->second != def.fullPath) {
-          if (addImportDiagnostic("import creates name conflict: " + remainder, &def)) {
+        auto [it, inserted] = importAliases_.emplace(remainder, path);
+        if (!inserted && it->second != path) {
+          if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
             return false;
           }
           importError = true;
@@ -123,6 +167,9 @@ bool SemanticsValidator::buildImportAliases() {
         continue;
       }
       if (!sawImmediateDefinition && prefix != "/std/math") {
+        if (hasCoveringStdlibWildcardImport(importPath)) {
+          continue;
+        }
         if (addImportDiagnostic("unknown import path: " + importPath)) {
           return false;
         }
@@ -182,6 +229,74 @@ bool SemanticsValidator::buildImportAliases() {
         return false;
       }
       continue;
+    }
+  }
+
+  if (!program_.sourceImports.empty()) {
+    std::unordered_set<std::string> directImportSet(importPaths.begin(), importPaths.end());
+    auto registerTransitiveImportAlias = [&](const std::string &importPath) {
+      if (importPath.empty() || importPath[0] != '/') {
+        return;
+      }
+      bool isWildcard = false;
+      std::string prefix;
+      if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+        isWildcard = true;
+        prefix = importPath.substr(0, importPath.size() - 2);
+      } else if (importPath.find('/', 1) == std::string::npos) {
+        isWildcard = true;
+        prefix = importPath;
+      }
+      if (isWildcard) {
+        const std::string scopedPrefix = prefix + "/";
+        std::vector<std::string> matchingPaths;
+        matchingPaths.reserve(defMap_.size());
+        for (const auto &[path, defPtr] : defMap_) {
+          if (defPtr == nullptr || path.rfind(scopedPrefix, 0) != 0) {
+            continue;
+          }
+          matchingPaths.push_back(path);
+        }
+        std::sort(matchingPaths.begin(), matchingPaths.end());
+        for (const auto &path : matchingPaths) {
+          auto defIt = defMap_.find(path);
+          if (defIt == defMap_.end() || defIt->second == nullptr || publicDefinitions_.count(path) == 0) {
+            continue;
+          }
+          const std::string remainder = path.substr(scopedPrefix.size());
+          if (remainder.empty() || remainder.find('/') != std::string::npos ||
+              isGeneratedTemplateSpecializationName(remainder) || isRootBuiltinName(remainder) ||
+              (allowMathBareName(remainder) && isMathBuiltinName(remainder))) {
+            continue;
+          }
+          const std::string rootPath = "/" + remainder;
+          if (defMap_.find(rootPath) != defMap_.end()) {
+            continue;
+          }
+          importAliases_.emplace(remainder, path);
+        }
+        return;
+      }
+      auto defIt = defMap_.find(importPath);
+      if (defIt == defMap_.end() || publicDefinitions_.count(importPath) == 0) {
+        return;
+      }
+      const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
+      if (remainder.empty() || isRootBuiltinName(remainder) ||
+          (allowMathBareName(remainder) && isMathBuiltinName(remainder))) {
+        return;
+      }
+      const std::string rootPath = "/" + remainder;
+      if (defMap_.find(rootPath) != defMap_.end()) {
+        return;
+      }
+      importAliases_.emplace(remainder, importPath);
+    };
+    for (const auto &importPath : program_.imports) {
+      if (directImportSet.count(importPath) != 0) {
+        continue;
+      }
+      registerTransitiveImportAlias(importPath);
     }
   }
 

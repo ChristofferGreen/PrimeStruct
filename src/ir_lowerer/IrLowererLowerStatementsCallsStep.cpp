@@ -101,6 +101,7 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
       [&](const Expr &callExpr, const LocalMap &callLocals) { return input.isArrayCountCall(callExpr, callLocals); },
       [&](const Expr &callExpr, const LocalMap &callLocals) { return input.isStringCountCall(callExpr, callLocals); },
       [&](const Expr &callExpr, const LocalMap &callLocals) { return input.isVectorCapacityCall(callExpr, callLocals); },
+      [&](const Expr &callExpr, const LocalMap &callLocals) { return input.emitExpr(callExpr, callLocals); },
       [&](const Expr &callExpr, const LocalMap &callLocals) {
         return input.resolveMethodCallDefinition(callExpr, callLocals);
       },

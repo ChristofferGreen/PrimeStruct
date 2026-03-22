@@ -673,7 +673,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("auto remapWrappedMapMethodBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
   CHECK(validatorExpr.find("const std::string directRemovedMapCompatibilityPath =") != std::string::npos);
-  CHECK(validatorExpr.find("return resolveMapTargetWithTypes(target, keyType, valueType);") !=
+  CHECK(validatorExpr.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("resolveExperimentalMapTarget(target, keyType, valueType)) {") !=
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveMapValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {") !=
         std::string::npos);

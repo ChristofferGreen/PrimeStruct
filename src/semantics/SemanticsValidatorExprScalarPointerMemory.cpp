@@ -120,6 +120,20 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     }
     return true;
   };
+  auto isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    auto defIt = defMap_.find(resolveCalleePath(candidate));
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    BindingInfo inferredReturn;
+    if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+      return false;
+    }
+    return inferredReturn.typeName == "Pointer" || inferredReturn.typeName == "Reference";
+  };
 
   auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {
     std::string targetBase;
@@ -158,6 +172,37 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     return resolved == "/map/at" || resolved == "/map/at_unsafe" ||
            resolved == "/std/collections/map/at" ||
            resolved == "/std/collections/map/at_unsafe";
+  };
+  auto isMapLikeCollectionExpr = [&](const Expr &candidate) -> bool {
+    std::string keyType;
+    std::string valueType;
+    if (candidate.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+        return extractMapKeyValueTypes(*paramBinding, keyType, valueType);
+      }
+      auto it = locals.find(candidate.name);
+      return it != locals.end() &&
+             extractMapKeyValueTypes(it->second, keyType, valueType);
+    }
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string collectionName;
+    if (getBuiltinCollectionName(candidate, collectionName) &&
+        collectionName == "map" && candidate.templateArgs.size() == 2) {
+      return true;
+    }
+    auto defIt = defMap_.find(resolveCalleePath(candidate));
+    if (defIt != defMap_.end() && defIt->second != nullptr) {
+      BindingInfo inferredReturn;
+      if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+          extractMapKeyValueTypes(inferredReturn, keyType, valueType)) {
+        return true;
+      }
+    }
+    std::string inferredTypeText;
+    return inferQueryExprTypeText(candidate, params, locals, inferredTypeText) &&
+           returnsMapCollectionType(inferredTypeText);
   };
   if (getBuiltinConvertName(expr, builtinName)) {
     handledOut = true;
@@ -220,7 +265,8 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       }
     }
     if (builtinName == "dereference" &&
-        !isPointerLikeExpr(expr.args.front(), params, locals)) {
+        !isPointerLikeExpr(expr.args.front(), params, locals) &&
+        !isDeclaredPointerLikeCall(expr.args.front())) {
       error_ = "dereference requires a pointer or reference";
       return false;
     }
@@ -233,7 +279,10 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   if (getBuiltinMemoryName(expr, builtinName)) {
     if (isExplicitMapAccessHelperPath(expr) ||
         ((builtinName == "at" || builtinName == "at_unsafe") &&
-         expr.args.size() == 2 && expr.templateArgs.size() == 2)) {
+         expr.args.size() == 2 &&
+         (expr.templateArgs.size() == 2 ||
+          isMapLikeCollectionExpr(expr.args.front()) ||
+          isMapLikeCollectionExpr(expr.args[1])))) {
       return true;
     }
     handledOut = true;

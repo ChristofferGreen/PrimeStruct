@@ -42,10 +42,10 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       collectDiagnostics_(collectDiagnostics),
       graphTypeResolverEnabled_(typeResolver == "graph") {
   diagnosticSink_.reset();
-  for (const auto &importPath : program_.imports) {
+  auto registerMathImport = [&](const std::string &importPath) {
     if (importPath == "/std/math/*") {
       mathImportAll_ = true;
-      continue;
+      return;
     }
     if (importPath.rfind("/std/math/", 0) == 0 && importPath.size() > 10) {
       std::string name = importPath.substr(10);
@@ -53,6 +53,12 @@ SemanticsValidator::SemanticsValidator(const Program &program,
         mathImports_.insert(std::move(name));
       }
     }
+  };
+  for (const auto &importPath : program_.sourceImports) {
+    registerMathImport(importPath);
+  }
+  for (const auto &importPath : program_.imports) {
+    registerMathImport(importPath);
   }
 }
 
@@ -315,6 +321,19 @@ bool SemanticsValidator::allowMathBareName(const std::string &name) const {
     if (currentValidationContext_.definitionPath == "/std/math" ||
         currentValidationContext_.definitionPath.rfind("/std/math/", 0) == 0) {
       return true;
+    }
+    if (currentValidationContext_.definitionPath.rfind("/std/", 0) == 0) {
+      for (const auto &importPath : program_.imports) {
+        if (importPath == "/std/math/*") {
+          return true;
+        }
+        if (importPath.rfind("/std/math/", 0) == 0 && importPath.size() > 10) {
+          const std::string importedName = importPath.substr(10);
+          if (!importedName.empty() && importedName.find('/') == std::string::npos) {
+            return true;
+          }
+        }
+      }
     }
   }
   return hasAnyMathImport();
@@ -711,8 +730,18 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     if ((resolved == "/std/collections/map/tryAt" || resolved == "/map/tryAt" || isSimpleCallName(expr, "tryAt")) &&
         !expr.args.empty()) {
+      const Expr *receiverExpr = &expr.args.front();
+      if (hasNamedArguments(expr.argNames)) {
+        for (size_t i = 0; i < expr.args.size(); ++i) {
+          if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+              *expr.argNames[i] == "values") {
+            receiverExpr = &expr.args[i];
+            break;
+          }
+        }
+      }
       std::string receiverTypeText;
-      if (resolveMapReceiverTypeText(expr.args.front(), receiverTypeText) &&
+      if (resolveMapReceiverTypeText(*receiverExpr, receiverTypeText) &&
           resolveBuiltinMapResultType(receiverTypeText)) {
         return true;
       }
@@ -749,6 +778,9 @@ bool SemanticsValidator::errorTypesMatch(const std::string &left,
     }
     if (!trimmed.empty() && trimmed[0] == '/') {
       return stripInnerWhitespace(trimmed);
+    }
+    if (auto aliasIt = importAliases_.find(trimmed); aliasIt != importAliases_.end()) {
+      return stripInnerWhitespace(aliasIt->second);
     }
     return stripInnerWhitespace(resolveTypePath(trimmed, namespacePrefix));
   };

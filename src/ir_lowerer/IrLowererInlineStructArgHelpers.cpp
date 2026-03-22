@@ -1,6 +1,17 @@
 #include "IrLowererInlineStructArgHelpers.h"
 
+#include "IrLowererFlowHelpers.h"
+
 namespace primec::ir_lowerer {
+
+namespace {
+
+bool isVectorStructPath(const std::string &structPath) {
+  return structPath == "/vector" || structPath == "/std/collections/experimental_vector/Vector" ||
+         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+} // namespace
 
 bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          const std::vector<const Expr *> &orderedArgs,
@@ -63,7 +74,8 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     }
 
     std::string argStruct = inferStructExprPath(*arg, callerLocals);
-    if (argStruct.empty() || argStruct != field.structPath) {
+    if (argStruct.empty() ||
+        (argStruct != field.structPath && !(isVectorStructPath(argStruct) && isVectorStructPath(field.structPath)))) {
       error = "struct field type mismatch";
       return false;
     }
@@ -75,6 +87,9 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
       if (!emitStructCopySlots(baseLocal + field.slotOffset, srcPtrLocal, field.slotCount)) {
         return false;
+      }
+      if (arg->kind == Expr::Kind::Call) {
+        emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, field.structPath);
       }
     } else {
       emitInstruction(IrOpcode::Pop, 0);

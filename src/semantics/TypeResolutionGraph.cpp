@@ -117,7 +117,8 @@ private:
       return false;
     };
 
-    for (const auto &importPath : program_.imports) {
+    const auto &importPaths = program_.imports;
+    for (const auto &importPath : importPaths) {
       std::string prefix;
       if (importWildcardPrefix(importPath, prefix)) {
         std::string scopedPrefix = prefix;

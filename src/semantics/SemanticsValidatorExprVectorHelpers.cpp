@@ -54,6 +54,24 @@ void appendUniqueIndex(std::vector<size_t> &indices, size_t index, size_t limit)
 } // namespace
 
 bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *helper) const {
+  auto hasVisibleDefinitionPath = [&](const std::string &path) {
+    if (hasImportedDefinitionPath(path)) {
+      return true;
+    }
+    if (defMap_.count(path) == 0) {
+      return false;
+    }
+    if (path.rfind("/std/collections/vector/", 0) == 0) {
+      auto paramsIt = paramsByDef_.find(path);
+      if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
+        std::string experimentalElemType;
+        if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
   if (isSimpleCallName(candidate, helper)) {
     return true;
   }
@@ -63,14 +81,23 @@ bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *
     return false;
   }
   if (!(namespacedCollection == "vector" && namespacedHelper == helper)) {
-    return false;
+    const std::string resolvedPath = resolveCalleePath(candidate);
+    if (resolvedPath.rfind("/std/", 0) != 0 || defMap_.count(resolvedPath) != 0) {
+      return false;
+    }
+    const std::string helperName = helper == nullptr ? std::string() : std::string(helper);
+    const size_t lastSlash = resolvedPath.find_last_of('/');
+    if (lastSlash == std::string::npos || resolvedPath.substr(lastSlash + 1) != helperName) {
+      return false;
+    }
+    return isVectorCompatibilityHelperName(helperName);
   }
   if ((namespacedHelper != "count" && namespacedHelper != "capacity") ||
       resolveCalleePath(candidate) != "/std/collections/vector/" + namespacedHelper) {
     return true;
   }
-  return defMap_.find("/std/collections/vector/" + namespacedHelper) != defMap_.end() ||
-         defMap_.find("/vector/" + namespacedHelper) != defMap_.end();
+  return hasVisibleDefinitionPath("/std/collections/vector/" + namespacedHelper) ||
+         hasVisibleDefinitionPath("/vector/" + namespacedHelper);
 }
 
 bool SemanticsValidator::resolveVectorHelperMethodTarget(
@@ -82,26 +109,94 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   resolvedOut.clear();
   auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
-    std::string receiverTypeText;
-    if (!inferQueryExprTypeText(candidate, params, locals, receiverTypeText)) {
-      return false;
-    }
     BindingInfo inferredBinding;
-    std::string base;
-    std::string argText;
-    const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
-    if (splitTemplateTypeName(normalizedType, base, argText)) {
-      inferredBinding.typeName = normalizeBindingTypeName(base);
-      inferredBinding.typeTemplateArg = argText;
-    } else {
-      inferredBinding.typeName = normalizedType;
+    if (candidate.kind == Expr::Kind::Call) {
+      const std::string resolvedCandidate = resolveCalleePath(candidate);
+      auto matchesVectorCtorPath = [&](std::string_view basePath) {
+        return resolvedCandidate == basePath ||
+               resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
+      };
+      if (matchesVectorCtorPath("/std/collections/vector/vector") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vector") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vectorNew") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vectorSingle") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vectorPair") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vectorTriple") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vectorQuad") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vectorQuint") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vectorSext") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vectorSept") ||
+          matchesVectorCtorPath("/std/collections/experimental_vector/vectorOct")) {
+        std::vector<std::string> templateArgs;
+        if (resolveCallCollectionTemplateArgs(candidate, "vector", params, locals, templateArgs) &&
+            templateArgs.size() == 1) {
+          elemTypeOut = templateArgs.front();
+          return true;
+        }
+        if (candidate.templateArgs.size() == 1) {
+          elemTypeOut = candidate.templateArgs.front();
+          return true;
+        }
+      }
     }
-    return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
+    if (candidate.kind == Expr::Kind::Call) {
+      auto defIt = defMap_.find(resolveCalleePath(candidate));
+      if (defIt != defMap_.end() && defIt->second != nullptr &&
+          inferDefinitionReturnBinding(*defIt->second, inferredBinding) &&
+          extractExperimentalVectorElementType(inferredBinding, elemTypeOut)) {
+        return true;
+      }
+      if (inferBindingTypeFromInitializer(candidate, params, locals, inferredBinding) &&
+          extractExperimentalVectorElementType(inferredBinding, elemTypeOut)) {
+        return true;
+      }
+    }
+    std::string receiverTypeText;
+    if (inferQueryExprTypeText(candidate, params, locals, receiverTypeText)) {
+      std::string base;
+      std::string argText;
+      const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        inferredBinding.typeName = normalizeBindingTypeName(base);
+        inferredBinding.typeTemplateArg = argText;
+      } else {
+        inferredBinding.typeName = normalizedType;
+        inferredBinding.typeTemplateArg.clear();
+      }
+      if (extractExperimentalVectorElementType(inferredBinding, elemTypeOut)) {
+        return true;
+      }
+    }
+    const std::string inferredStructPath = inferStructReturnPath(candidate, params, locals);
+    if (!inferredStructPath.empty()) {
+      inferredBinding.typeName = inferredStructPath;
+      inferredBinding.typeTemplateArg.clear();
+      return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
+    }
+    return false;
   };
   std::string experimentalElemType;
   if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
-    resolvedOut = preferredCanonicalExperimentalVectorHelperTarget(helperName);
+    if ((helperName == "at" || helperName == "at_unsafe") &&
+        (hasDeclaredDefinitionPath("/std/collections/vector/" + helperName) ||
+         hasImportedDefinitionPath("/std/collections/vector/" + helperName) ||
+         hasDeclaredDefinitionPath("/vector/" + helperName) ||
+         hasImportedDefinitionPath("/vector/" + helperName))) {
+      resolvedOut = preferredBareVectorHelperTarget(helperName);
+      return true;
+    }
+    resolvedOut = specializedExperimentalVectorHelperTarget(helperName, experimentalElemType);
     return true;
+  }
+  if (receiver.kind == Expr::Kind::Call &&
+      (helperName == "count" || helperName == "capacity" ||
+       helperName == "at" || helperName == "at_unsafe")) {
+    std::string collectionTypePath;
+    if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath) &&
+        collectionTypePath == "/vector") {
+      resolvedOut = preferredBareVectorHelperTarget(helperName);
+      return true;
+    }
   }
   auto resolveReceiverTypePath = [&](const std::string &typeName,
                                      const std::string &namespacePrefix) -> std::string {
@@ -146,6 +241,23 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       resolvedType = inferStructReturnPath(receiver, params, locals);
     }
     if (!resolvedType.empty()) {
+      if (isVectorCompatibilityHelperName(helperName)) {
+        BindingInfo receiverBinding;
+        receiverBinding.typeName = resolvedType;
+        std::string experimentalElemType;
+        if (extractExperimentalVectorElementType(receiverBinding, experimentalElemType)) {
+          if ((helperName == "at" || helperName == "at_unsafe") &&
+              (hasDeclaredDefinitionPath("/std/collections/vector/" + helperName) ||
+               hasImportedDefinitionPath("/std/collections/vector/" + helperName) ||
+               hasDeclaredDefinitionPath("/vector/" + helperName) ||
+               hasImportedDefinitionPath("/vector/" + helperName))) {
+            resolvedOut = preferredBareVectorHelperTarget(helperName);
+            return true;
+          }
+          resolvedOut = specializedExperimentalVectorHelperTarget(helperName, experimentalElemType);
+          return true;
+        }
+      }
       resolvedOut = resolvedType + "/" + helperName;
       return true;
     }
@@ -178,6 +290,95 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   if (!getVectorStatementHelperName(expr, vectorHelper)) {
     return true;
   }
+  auto hasVisibleDefinitionPath = [&](const std::string &path) {
+    if (hasImportedDefinitionPath(path)) {
+      return true;
+    }
+    if (defMap_.count(path) == 0) {
+      return false;
+    }
+    if (path.rfind("/std/collections/vector/", 0) == 0) {
+      auto paramsIt = paramsByDef_.find(path);
+      if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
+        std::string experimentalElemType;
+        if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+  auto classifyReceiverFamily = [&](const Expr &candidate) -> std::string {
+    BindingInfo receiverBinding;
+    auto assignBindingFromTypeText = [&](const std::string &typeText) {
+      std::string base;
+      std::string argText;
+      const std::string normalizedType = normalizeBindingTypeName(typeText);
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        receiverBinding.typeName = normalizeBindingTypeName(base);
+        receiverBinding.typeTemplateArg = argText;
+      } else {
+        receiverBinding.typeName = normalizedType;
+        receiverBinding.typeTemplateArg.clear();
+      }
+    };
+    if (candidate.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+        receiverBinding = *paramBinding;
+      } else if (auto it = locals.find(candidate.name); it != locals.end()) {
+        receiverBinding = it->second;
+      }
+    }
+    if (receiverBinding.typeName.empty()) {
+      if (!inferBindingTypeFromInitializer(candidate, params, locals, receiverBinding)) {
+        std::string receiverTypeText;
+        if (!inferQueryExprTypeText(candidate, params, locals, receiverTypeText)) {
+          return {};
+        }
+        assignBindingFromTypeText(receiverTypeText);
+      }
+    }
+    std::string elemType;
+    std::string keyType;
+    std::string valueType;
+    if (extractExperimentalVectorElementType(receiverBinding, elemType)) {
+      return "experimental_vector";
+    }
+    if (extractMapKeyValueTypes(receiverBinding, keyType, valueType)) {
+      return "map";
+    }
+    const std::string normalizedBase = normalizeBindingTypeName(receiverBinding.typeName);
+    if (normalizedBase == "vector" || normalizedBase == "soa_vector" ||
+        normalizedBase == "array" || normalizedBase == "string") {
+      return normalizedBase;
+    }
+    return {};
+  };
+  auto hasReceiverCompatibleVisibleDefinitionPath = [&](const std::string &path, const Expr &receiverExpr) {
+    if (!hasVisibleDefinitionPath(path)) {
+      return false;
+    }
+    auto paramsIt = paramsByDef_.find(path);
+    if (paramsIt == paramsByDef_.end() || paramsIt->second.empty()) {
+      return false;
+    }
+    const std::string receiverFamily = classifyReceiverFamily(receiverExpr);
+    if (receiverFamily.empty()) {
+      return false;
+    }
+    const BindingInfo &binding = paramsIt->second.front().binding;
+    std::string elemType;
+    std::string keyType;
+    std::string valueType;
+    if (extractExperimentalVectorElementType(binding, elemType)) {
+      return receiverFamily == "experimental_vector";
+    }
+    if (extractMapKeyValueTypes(binding, keyType, valueType)) {
+      return receiverFamily == "map";
+    }
+    const std::string normalizedBase = normalizeBindingTypeName(binding.typeName);
+    return normalizedBase == receiverFamily;
+  };
 
   std::string resolved = resolveCalleePath(expr);
   std::string namespacedCollection;
@@ -186,22 +387,46 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   const bool isStdNamespacedVectorCanonicalHelperCall =
       !expr.isMethodCall && resolved.rfind("/std/collections/vector/", 0) == 0 &&
       isVectorCompatibilityHelperName(namespacedHelper);
-  const bool hasImportedStdNamespacedVectorCanonicalHelper =
-      isStdNamespacedVectorCanonicalHelperCall && hasImportedDefinitionPath(resolved);
+  const bool hasVisibleStdNamespacedVectorCanonicalHelper =
+      isStdNamespacedVectorCanonicalHelperCall && hasVisibleDefinitionPath(resolved);
+  const bool allowStdNamespacedUserReceiverProbe =
+      isStdNamespacedVectorCanonicalHelperCall &&
+      (namespacedHelper == "count" || namespacedHelper == "capacity") &&
+      hasNamedArguments(expr.argNames);
   const std::string removedVectorCompatibilityPath = getDirectVectorHelperCompatibilityPath(expr);
   if (!removedVectorCompatibilityPath.empty()) {
     error_ = "unknown call target: " + removedVectorCompatibilityPath;
     return false;
   }
-  if (isStdNamespacedVectorCanonicalHelperCall && !hasImportedStdNamespacedVectorCanonicalHelper &&
-      defMap_.find(resolved) == defMap_.end()) {
+  if (isStdNamespacedVectorCanonicalHelperCall && !hasVisibleStdNamespacedVectorCanonicalHelper &&
+      !hasVisibleDefinitionPath(resolved) &&
+      !allowStdNamespacedUserReceiverProbe) {
     error_ = "unknown call target: " + resolved;
     return false;
+  }
+  if (isStdNamespacedVectorCanonicalHelperCall &&
+      expr.args.size() == 1 &&
+      !expr.hasBodyArguments &&
+      expr.bodyArguments.empty()) {
+    const Expr &receiverExpr = expr.args.front();
+    const std::string receiverFamily = classifyReceiverFamily(receiverExpr);
+    const bool builtinCompatibleReceiver =
+        receiverFamily == "vector" || receiverFamily == "experimental_vector";
+    const bool hasCompatibleDeclaredHelper =
+        defMap_.count(resolved) > 0 &&
+        hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr);
+    if (!builtinCompatibleReceiver &&
+        !hasCompatibleDeclaredHelper &&
+        !allowStdNamespacedUserReceiverProbe) {
+      error_ = "unknown call target: " + resolved;
+      return false;
+    }
   }
 
   size_t resolvedReceiverIndex = 0;
   const bool shouldProbeVectorHelperReceiver =
-      !isStdNamespacedVectorCanonicalHelperCall && defMap_.find(resolved) == defMap_.end();
+      (!isStdNamespacedVectorCanonicalHelperCall || allowStdNamespacedUserReceiverProbe) &&
+      defMap_.find(resolved) == defMap_.end();
   if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
     std::vector<size_t> receiverIndices;
     const bool hasNamedArgs = hasNamedArguments(expr.argNames);
@@ -224,6 +449,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     }
 
     const bool probePositionalReorderedReceiver =
+        !isStdNamespacedVectorCanonicalHelperCall &&
         !hasNamedArgs && expr.args.size() > 1 &&
         (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
          expr.args.front().kind == Expr::Kind::FloatLiteral ||
@@ -242,7 +468,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, vectorHelper, methodTarget)) {
         methodTarget = preferVectorStdlibHelperPath(methodTarget);
       }
-      if (defMap_.count(methodTarget) > 0) {
+      if (hasVisibleDefinitionPath(methodTarget)) {
         resolved = methodTarget;
         resolvedReceiverIndex = receiverIndex;
         break;

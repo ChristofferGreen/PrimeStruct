@@ -255,6 +255,27 @@ std::string SemanticsValidator::inferStructReturnPath(
     return {};
   };
   if (expr.kind == Expr::Kind::Call) {
+    if (!expr.isMethodCall &&
+        (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
+        expr.args.size() == 1) {
+      BindingInfo storageBinding;
+      bool resolvedStorage = false;
+      if (resolveUninitializedStorageBinding(params, locals, expr.args.front(), storageBinding, resolvedStorage) &&
+          resolvedStorage && storageBinding.typeName == "uninitialized" &&
+          !storageBinding.typeTemplateArg.empty()) {
+        if (std::string collectionPath =
+                normalizeCollectionPath(storageBinding.typeTemplateArg, std::string{});
+            !collectionPath.empty()) {
+          return collectionPath;
+        }
+        const std::string structPath =
+            resolveStructTypePath(unwrapReferencePointerTypeText(storageBinding.typeTemplateArg),
+                                  expr.namespacePrefix);
+        if (!structPath.empty()) {
+          return structPath;
+        }
+      }
+    }
     std::string pointerBuiltin;
     if (getBuiltinPointerName(expr, pointerBuiltin) && pointerBuiltin == "dereference" && expr.args.size() == 1) {
       const std::string pointeeType = resolvePointerTargetTypeText(expr.args.front());
@@ -530,6 +551,12 @@ std::string SemanticsValidator::inferStructReturnPath(
   }
 
   if (expr.kind == Expr::Kind::Call) {
+    if (isSimpleCallName(expr, "move") && expr.args.size() == 1) {
+      return inferStructReturnPath(expr.args.front(), params, locals);
+    }
+    if (isAssignCall(expr) && expr.args.size() == 2) {
+      return inferStructReturnPath(expr.args[1], params, locals);
+    }
     std::string builtinName;
     if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
         expr.args.size() == 2) {
@@ -733,6 +760,34 @@ std::string SemanticsValidator::inferStructReturnPath(
         return inferStructReturnPath(valueExpr->args.front(), params, locals);
       }
       return inferStructReturnPath(*valueExpr, params, locals);
+    }
+
+    const std::string resolvedDirectPath = resolveCalleePath(expr);
+    auto directDefIt = defMap_.find(resolvedDirectPath);
+    if (directDefIt != defMap_.end() && directDefIt->second != nullptr) {
+      for (const auto &transform : directDefIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        const std::string normalizedReturnType =
+            normalizeBindingTypeName(transform.templateArgs.front());
+        if (std::string collectionPath = normalizeCollectionTypePath(normalizedReturnType);
+            !collectionPath.empty()) {
+          return collectionPath;
+        }
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalizedReturnType, base, argText)) {
+          break;
+        }
+        if (std::string structPath =
+                resolveStructTypePath(normalizedReturnType,
+                                      directDefIt->second->namespacePrefix);
+            !structPath.empty()) {
+          return structPath;
+        }
+        break;
+      }
     }
 
     if (expr.kind == Expr::Kind::Call) {

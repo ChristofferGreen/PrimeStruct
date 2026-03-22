@@ -8,7 +8,7 @@
   return(/std/collections/mapContains<K, V>(values, key))
 }
 
-[public return<Result<V, ContainerError>>]
+[public return<Result<V, /std/collections/ContainerError>>]
 /std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
   return(/std/collections/mapTryAt<K, V>(values, key))
 }

@@ -8,6 +8,13 @@
 namespace primec::ir_lowerer {
 
 std::string normalizeCollectionBindingTypeName(const std::string &name) {
+  if (name == "/vector" || name == "std/collections/vector" || name == "/std/collections/vector" ||
+      name == "Vector" || name == "std/collections/experimental_vector/Vector" ||
+      name == "/std/collections/experimental_vector/Vector" ||
+      name.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+      name.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+    return "vector";
+  }
   if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
     return "map";
   }
