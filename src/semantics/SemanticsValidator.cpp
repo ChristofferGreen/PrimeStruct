@@ -122,6 +122,16 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             queryIt != graphLocalAutoQueryTypeTexts_.end()) {
           initializerQueryTypeText = queryIt->second;
         }
+        bool initializerResultHasValue = false;
+        std::string initializerResultValueType;
+        std::string initializerResultErrorType;
+        if (const auto resultIt = graphLocalAutoResultTypes_.find(
+                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+            resultIt != graphLocalAutoResultTypes_.end()) {
+          initializerResultHasValue = resultIt->second.hasValue;
+          initializerResultValueType = resultIt->second.valueType;
+          initializerResultErrorType = resultIt->second.errorType;
+        }
         entries.push_back(LocalAutoBindingSnapshotEntry{
             scopePath,
             expr.name,
@@ -129,6 +139,9 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             sourceColumn,
             bindingIt->second,
             std::move(initializerQueryTypeText),
+            initializerResultHasValue,
+            std::move(initializerResultValueType),
+            std::move(initializerResultErrorType),
         });
       }
     }

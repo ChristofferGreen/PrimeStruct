@@ -31,6 +31,9 @@ public:
     int sourceColumn = 0;
     BindingInfo binding;
     std::string initializerQueryTypeText;
+    bool initializerResultHasValue = false;
+    std::string initializerResultValueType;
+    std::string initializerResultErrorType;
   };
 
   struct QueryCallTypeSnapshotEntry {
@@ -1438,6 +1441,7 @@ private:
   std::unordered_map<std::string, BindingInfo> returnBindings_;
   std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;
   std::unordered_map<std::string, std::string> graphLocalAutoQueryTypeTexts_;
+  std::unordered_map<std::string, ResultTypeInfo> graphLocalAutoResultTypes_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;

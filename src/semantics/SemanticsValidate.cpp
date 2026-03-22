@@ -369,6 +369,9 @@ bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
           entry.sourceColumn,
           bindingTypeTextForSnapshot(entry.binding),
           entry.initializerQueryTypeText,
+          entry.initializerResultHasValue,
+          entry.initializerResultValueType,
+          entry.initializerResultErrorType,
       });
     }
   });

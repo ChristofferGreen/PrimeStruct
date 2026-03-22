@@ -363,6 +363,38 @@ main() {
   const auto &entry = requireLocalBindingSnapshotEntry(snapshot, "/main", "values");
   CHECK(entry.bindingTypeText == "array<i32>");
   CHECK(entry.initializerQueryTypeText == "array<i32>");
+  CHECK(!entry.initializerResultHasValue);
+  CHECK(entry.initializerResultValueTypeText.empty());
+  CHECK(entry.initializerResultErrorTypeText.empty());
+}
+
+TEST_CASE("type resolution local binding snapshot keeps local result metadata") {
+  const std::string source = R"(
+[return<auto> effects(heap_alloc)]
+selectValues() {
+  if(true,
+    then(){ return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) },
+    else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
+}
+
+[return<auto> effects(heap_alloc)]
+main() {
+  [auto] selected{/std/collections/map/tryAt(selectValues(), "left"raw_utf8)}
+  return(selected)
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &entry = requireLocalBindingSnapshotEntry(snapshot, "/main", "selected");
+  CHECK(entry.bindingTypeText == "Result<i32, ContainerError>");
+  CHECK(entry.initializerQueryTypeText == "Result<i32, ContainerError>");
+  CHECK(entry.initializerResultHasValue);
+  CHECK(entry.initializerResultValueTypeText == "i32");
+  CHECK(entry.initializerResultErrorTypeText == "ContainerError");
 }
 
 TEST_CASE("type resolution query call snapshot keeps map receiver query metadata") {

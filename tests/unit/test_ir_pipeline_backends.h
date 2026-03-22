@@ -639,6 +639,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("std::unordered_map<std::string, std::string> graphLocalAutoQueryTypeTexts_;") !=
         std::string::npos);
+  CHECK(validatorHeader.find("std::unordered_map<std::string, ResultTypeInfo> graphLocalAutoResultTypes_;") !=
+        std::string::npos);
   CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> returnBindings_;") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);
@@ -1176,6 +1178,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, binding);") !=
         std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoQueryTypeTexts_[bindingKey] = initializerQueryTypeText;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("graphLocalAutoResultTypes_[bindingKey] = std::move(initializerResultType);") !=
         std::string::npos);
   CHECK(validatorInfer.find("inferQueryExprTypeText(") != std::string::npos);
   CHECK(validatorInfer.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
