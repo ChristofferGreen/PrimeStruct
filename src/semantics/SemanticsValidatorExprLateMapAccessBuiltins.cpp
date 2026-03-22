@@ -1,0 +1,334 @@
+#include "SemanticsValidator.h"
+
+#include <string>
+#include <utility>
+
+namespace primec::semantics {
+
+bool SemanticsValidator::validateExprLateMapAccessBuiltins(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr,
+    const std::string &resolved,
+    const ExprLateMapAccessBuiltinContext &context,
+    bool &handledOut) {
+  handledOut = false;
+  if (context.dispatchResolvers == nullptr) {
+    return true;
+  }
+
+  std::string builtinName;
+  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
+      expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
+    if (!this->isMapLikeBareAccessReceiver(expr.args.front(), params, locals,
+                                           *context.dispatchResolvers) &&
+        this->isMapLikeBareAccessReceiver(expr.args[1], params, locals,
+                                          *context.dispatchResolvers)) {
+      Expr rewrittenMapAccessCall = expr;
+      std::swap(rewrittenMapAccessCall.args[0], rewrittenMapAccessCall.args[1]);
+      handledOut = true;
+      return validateExpr(params, locals, rewrittenMapAccessCall);
+    }
+  }
+
+  if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
+      !context.shouldBuiltinValidateBareMapContainsCall) {
+    Expr rewrittenMapHelperCall;
+    if (this->tryRewriteBareMapHelperCall(expr, "contains",
+                                          *context.dispatchResolvers,
+                                          rewrittenMapHelperCall)) {
+      handledOut = true;
+      return validateExpr(params, locals, rewrittenMapHelperCall);
+    }
+  }
+
+  if (!expr.isMethodCall && isSimpleCallName(expr, "tryAt") &&
+      !context.shouldBuiltinValidateBareMapTryAtCall) {
+    Expr rewrittenMapHelperCall;
+    if (this->tryRewriteBareMapHelperCall(expr, "tryAt",
+                                          *context.dispatchResolvers,
+                                          rewrittenMapHelperCall)) {
+      handledOut = true;
+      return validateExpr(params, locals, rewrittenMapHelperCall);
+    }
+  }
+
+  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
+      !context.shouldBuiltinValidateBareMapAccessCall) {
+    Expr rewrittenMapHelperCall;
+    if (this->tryRewriteBareMapHelperCall(expr, builtinName,
+                                          *context.dispatchResolvers,
+                                          rewrittenMapHelperCall)) {
+      handledOut = true;
+      return validateExpr(params, locals, rewrittenMapHelperCall);
+    }
+  }
+
+  auto resolveMapKeyTypeWithInference =
+      [&](const Expr &receiverExpr, std::string &mapKeyTypeOut) {
+        if (this->resolveMapKeyType(receiverExpr, *context.dispatchResolvers,
+                                    mapKeyTypeOut)) {
+          return true;
+        }
+        std::string receiverTypeText;
+        std::string mapValueType;
+        return inferQueryExprTypeText(receiverExpr, params, locals,
+                                      receiverTypeText) &&
+               extractMapKeyValueTypesFromTypeText(receiverTypeText,
+                                                  mapKeyTypeOut, mapValueType);
+      };
+
+  if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
+      expr.args.size() == 2 &&
+      (context.shouldBuiltinValidateBareMapContainsCall ||
+       this->isMapLikeBareAccessReceiver(
+           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
+           params, locals, *context.dispatchResolvers) ||
+       this->isIndexedArgsPackMapReceiverTarget(
+           expr.args.front(), *context.dispatchResolvers))) {
+    size_t receiverIndex = 0;
+    size_t keyIndex = 1;
+    const bool hasBareMapOperands =
+        this->bareMapHelperOperandIndices(expr, *context.dispatchResolvers,
+                                          receiverIndex, keyIndex);
+    const Expr &receiverExpr =
+        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+    const Expr &keyExpr =
+        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+    std::string mapKeyType;
+    if (!resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
+      if (!validateExpr(params, locals, receiverExpr)) {
+        return false;
+      }
+      error_ = "contains requires map target";
+      return false;
+    }
+    if (!mapKeyType.empty()) {
+      if (normalizeBindingTypeName(mapKeyType) == "string") {
+        if (!this->isStringExprForArgumentValidation(keyExpr,
+                                                     *context.dispatchResolvers)) {
+          error_ = "contains requires string map key";
+          return false;
+        }
+      } else {
+        ReturnKind keyKind =
+            returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+        if (keyKind != ReturnKind::Unknown) {
+          if (resolveStringTarget(keyExpr)) {
+            error_ = "contains requires map key type " + mapKeyType;
+            return false;
+          }
+          ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
+          if (candidateKind != ReturnKind::Unknown &&
+              candidateKind != keyKind) {
+            error_ = "contains requires map key type " + mapKeyType;
+            return false;
+          }
+        }
+      }
+    }
+    if (!validateExpr(params, locals, expr.args.front()) ||
+        !validateExpr(params, locals, expr.args[1])) {
+      return false;
+    }
+    handledOut = true;
+    return true;
+  }
+
+  if (((expr.isMethodCall && resolved == "/std/collections/map/tryAt") ||
+       (!expr.isMethodCall &&
+        (isSimpleCallName(expr, "tryAt") ||
+         resolved == "/std/collections/map/tryAt"))) &&
+      expr.args.size() == 2 &&
+      (context.shouldBuiltinValidateBareMapTryAtCall ||
+       this->isMapLikeBareAccessReceiver(
+           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
+           params, locals, *context.dispatchResolvers) ||
+       this->isIndexedArgsPackMapReceiverTarget(
+           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
+           *context.dispatchResolvers))) {
+    size_t receiverIndex = 0;
+    size_t keyIndex = 1;
+    const bool hasBareMapOperands =
+        this->bareMapHelperOperandIndices(expr, *context.dispatchResolvers,
+                                          receiverIndex, keyIndex);
+    const Expr &receiverExpr =
+        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+    const Expr &keyExpr =
+        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+    std::string mapKeyType;
+    if (!resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
+      if (!validateExpr(params, locals, receiverExpr)) {
+        return false;
+      }
+      error_ = "tryAt requires map target";
+      return false;
+    }
+    if (!mapKeyType.empty()) {
+      if (normalizeBindingTypeName(mapKeyType) == "string") {
+        if (!this->isStringExprForArgumentValidation(keyExpr,
+                                                     *context.dispatchResolvers)) {
+          error_ = "tryAt requires string map key";
+          return false;
+        }
+      } else {
+        ReturnKind keyKind =
+            returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+        if (keyKind != ReturnKind::Unknown) {
+          if (resolveStringTarget(keyExpr)) {
+            error_ = "tryAt requires map key type " + mapKeyType;
+            return false;
+          }
+          ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
+          if (candidateKind != ReturnKind::Unknown &&
+              candidateKind != keyKind) {
+            error_ = "tryAt requires map key type " + mapKeyType;
+            return false;
+          }
+        }
+      }
+    }
+    if (!validateExpr(params, locals, expr.args.front()) ||
+        !validateExpr(params, locals, expr.args[1])) {
+      return false;
+    }
+    handledOut = true;
+    return true;
+  }
+
+  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
+      expr.args.size() == 2 &&
+      (context.shouldBuiltinValidateBareMapAccessCall ||
+       this->isMapLikeBareAccessReceiver(
+           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
+           params, locals, *context.dispatchResolvers) ||
+       this->isIndexedArgsPackMapReceiverTarget(
+           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
+           *context.dispatchResolvers))) {
+    auto setMapKeyMismatch = [&](const std::string &mapKeyType) {
+      if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
+          expr.namespacePrefix == "/std/collections/map" ||
+          expr.namespacePrefix == "std/collections/map") {
+        error_ = "argument type mismatch for /std/collections/map/" +
+                 builtinName + " parameter key";
+        return;
+      }
+      if (normalizeBindingTypeName(mapKeyType) == "string") {
+        error_ = builtinName + " requires string map key";
+      } else {
+        error_ = builtinName + " requires map key type " + mapKeyType;
+      }
+    };
+
+    size_t receiverIndex = 0;
+    size_t keyIndex = 1;
+    const bool hasBareMapOperands =
+        this->bareMapHelperOperandIndices(expr, *context.dispatchResolvers,
+                                          receiverIndex, keyIndex);
+    const Expr &receiverExpr =
+        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+    const Expr &keyExpr =
+        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+    std::string mapKeyType;
+    if (resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
+      if (!mapKeyType.empty()) {
+        if (normalizeBindingTypeName(mapKeyType) == "string") {
+          if (!this->isStringExprForArgumentValidation(keyExpr,
+                                                       *context.dispatchResolvers)) {
+            setMapKeyMismatch(mapKeyType);
+            return false;
+          }
+        } else {
+          ReturnKind keyKind =
+              returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+          if (keyKind != ReturnKind::Unknown) {
+            if (resolveStringTarget(keyExpr)) {
+              setMapKeyMismatch(mapKeyType);
+              return false;
+            }
+            ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
+            if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
+              setMapKeyMismatch(mapKeyType);
+              return false;
+            }
+          }
+        }
+      }
+      if (!validateExpr(params, locals, expr.args.front()) ||
+          !validateExpr(params, locals, expr.args[1])) {
+        return false;
+      }
+      handledOut = true;
+      return true;
+    }
+  }
+
+  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
+      expr.args.size() == 2 && defMap_.find(resolved) == defMap_.end() &&
+      hasImportedDefinitionPath("/std/collections/map/" + builtinName)) {
+    auto setMapKeyMismatch = [&](const std::string &mapKeyType) {
+      if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
+          expr.namespacePrefix == "/std/collections/map" ||
+          expr.namespacePrefix == "std/collections/map") {
+        error_ = "argument type mismatch for /std/collections/map/" +
+                 builtinName + " parameter key";
+        return;
+      }
+      if (normalizeBindingTypeName(mapKeyType) == "string") {
+        error_ = builtinName + " requires string map key";
+      } else {
+        error_ = builtinName + " requires map key type " + mapKeyType;
+      }
+    };
+
+    size_t receiverIndex = 0;
+    size_t keyIndex = 1;
+    const bool hasBareMapOperands =
+        this->bareMapHelperOperandIndices(expr, *context.dispatchResolvers,
+                                          receiverIndex, keyIndex);
+    const Expr &receiverExpr =
+        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+    const Expr &keyExpr =
+        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+    std::string receiverTypeText;
+    std::string mapKeyType;
+    std::string mapValueType;
+    if (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
+        extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType,
+                                           mapValueType)) {
+      if (!mapKeyType.empty()) {
+        if (normalizeBindingTypeName(mapKeyType) == "string") {
+          if (!this->isStringExprForArgumentValidation(keyExpr,
+                                                       *context.dispatchResolvers)) {
+            setMapKeyMismatch(mapKeyType);
+            return false;
+          }
+        } else {
+          ReturnKind keyKind =
+              returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+          if (keyKind != ReturnKind::Unknown) {
+            if (resolveStringTarget(keyExpr)) {
+              setMapKeyMismatch(mapKeyType);
+              return false;
+            }
+            ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
+            if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
+              setMapKeyMismatch(mapKeyType);
+              return false;
+            }
+          }
+        }
+      }
+      if (!validateExpr(params, locals, expr.args.front()) ||
+          !validateExpr(params, locals, expr.args[1])) {
+        return false;
+      }
+      handledOut = true;
+      return true;
+    }
+  }
+
+  return true;
+}
+
+} // namespace primec::semantics

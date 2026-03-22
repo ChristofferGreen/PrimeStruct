@@ -87,6 +87,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprGpuBuffer.cpp
   src/semantics/SemanticsValidatorExprLambda.cpp
   src/semantics/SemanticsValidatorExprLateCallCompatibility.cpp
+  src/semantics/SemanticsValidatorExprLateMapAccessBuiltins.cpp
   src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp
   src/semantics/SemanticsValidatorExprMethodResolution.cpp
   src/semantics/SemanticsValidatorExprNumeric.cpp

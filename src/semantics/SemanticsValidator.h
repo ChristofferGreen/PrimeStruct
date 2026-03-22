@@ -420,6 +420,19 @@ private:
       const std::string &resolved,
       const ExprLateCallCompatibilityContext &context,
       bool &handledOut);
+  struct ExprLateMapAccessBuiltinContext {
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+    bool shouldBuiltinValidateBareMapContainsCall = false;
+    bool shouldBuiltinValidateBareMapTryAtCall = false;
+    bool shouldBuiltinValidateBareMapAccessCall = false;
+  };
+  bool validateExprLateMapAccessBuiltins(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      const ExprLateMapAccessBuiltinContext &context,
+      bool &handledOut);
   struct ExprCollectionAccessValidationContext {
     bool isStdNamespacedVectorAccessCall = false;
     bool shouldAllowStdAccessCompatibilityFallback = false;
