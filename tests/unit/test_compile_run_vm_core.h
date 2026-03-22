@@ -1929,6 +1929,34 @@ main() {
   CHECK(readFile(outPath) == "EOF\nEOF\nEOF\n");
 }
 
+TEST_CASE("vm uses stdlib FileError eof wrapper") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<int>]
+main() {
+  [FileError] eofErr{fileReadEof()}
+  [FileError] otherErr{1i32}
+  if(not(/FileError/is_eof(eofErr))) {
+    return(1i32)
+  }
+  if(not(eofErr.is_eof())) {
+    return(2i32)
+  }
+  if(/FileError/is_eof(otherErr)) {
+    return(3i32)
+  }
+  if(otherErr.is_eof()) {
+    return(4i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_file_error_is_eof.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
 TEST_CASE("vm rejects recursive calls") {
   const std::string source = R"(
 [return<int>]

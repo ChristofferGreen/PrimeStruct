@@ -155,6 +155,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib FileError eof wrapper covers direct and method access") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [FileError] eofErr{fileReadEof()}
+  [FileError] otherErr{1i32}
+  [bool] directEof{/FileError/is_eof(eofErr)}
+  [bool] methodEof{eofErr.is_eof()}
+  [bool] helperOther{fileErrorIsEof(otherErr)}
+  [bool] methodOther{otherErr.is_eof()}
+  if(and(and(directEof, methodEof), and(not(helperOther), not(methodOther))),
+     then(){ return() },
+     else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("builtin FileError why method rejects explicit arguments without imported wrapper") {
   const std::string source = R"(
 [return<void>]
@@ -168,7 +190,6 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("why does not accept arguments") != std::string::npos);
 }
-
 TEST_CASE("stdlib FileError why wrapper rejects non file errors") {
   const std::string source = R"(
 import /std/file/*
@@ -182,6 +203,21 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /FileError/why parameter err") != std::string::npos);
+}
+
+TEST_CASE("stdlib FileError eof wrapper rejects non file errors") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [bool] eof{/FileError/is_eof(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /FileError/is_eof parameter err") != std::string::npos);
 }
 
 TEST_CASE("stdlib File helpers cover imported method and slash-call wrappers") {

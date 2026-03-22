@@ -6417,6 +6417,38 @@ main() {
   CHECK(readFile(outPath) == "EOF\nEOF\nEOF\n");
 }
 
+TEST_CASE("native uses stdlib FileError eof wrapper") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<int>]
+main() {
+  [FileError] eofErr{fileReadEof()}
+  [FileError] otherErr{1i32}
+  if(not(/FileError/is_eof(eofErr))) {
+    return(1i32)
+  }
+  if(not(eofErr.is_eof())) {
+    return(2i32)
+  }
+  if(/FileError/is_eof(otherErr)) {
+    return(3i32)
+  }
+  if(otherErr.is_eof()) {
+    return(4i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_file_error_is_eof.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_error_is_eof_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 #if defined(EACCES) && defined(ENOENT) && defined(EEXIST)
 TEST_CASE("native materializes variadic FileError packs with indexed why methods") {
   const std::string source =

@@ -1793,8 +1793,16 @@ bool resolveMethodCallPath(const Expr &call,
     resolvedOut = preferredFileMethodTargetLocal(normalizedMethodName, defMap);
     return true;
   }
-  if (typeName == "FileError" && normalizedMethodName == "why") {
-    resolvedOut = defMap.find("/FileError/why") != defMap.end() ? "/FileError/why" : "/file_error/why";
+  if (typeName == "FileError" && (normalizedMethodName == "why" || normalizedMethodName == "is_eof")) {
+    if (normalizedMethodName == "why") {
+      resolvedOut = defMap.find("/FileError/why") != defMap.end() ? "/FileError/why" : "/file_error/why";
+    } else if (defMap.find("/FileError/is_eof") != defMap.end()) {
+      resolvedOut = "/FileError/is_eof";
+    } else if (defMap.find("/std/file/fileErrorIsEof") != defMap.end()) {
+      resolvedOut = "/std/file/fileErrorIsEof";
+    } else {
+      return false;
+    }
     return true;
   }
   if (typeName == "Pointer" || typeName == "Reference") {
