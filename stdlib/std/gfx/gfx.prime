@@ -1,5 +1,10 @@
 import /std/math/*
 
+[public return<string>]
+/GfxError/why([/std/gfx/GfxError] err) {
+  return(/std/gfx/GfxError/why(err))
+}
+
 namespace std {
   namespace gfx {
   [public struct]

@@ -3211,6 +3211,34 @@ main() {
         "frame_present_failed\n");
 }
 
+TEST_CASE("native uses canonical stdlib GfxError why wrapper") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int> effects(io_out)]
+main() {
+  [GfxError] err{queueSubmitFailed()}
+  print_line(/GfxError/why(err))
+  print_line(GfxError.why(err))
+  print_line(Result.why(gfxErrorStatus(err)))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_canonical_gfx_error_why_wrapper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_gfx_error_why_wrapper").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_gfx_error_why_wrapper.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) ==
+        "queue_submit_failed\n"
+        "queue_submit_failed\n"
+        "queue_submit_failed\n");
+}
+
 TEST_CASE("native uses stdlib experimental Buffer helper methods") {
   const std::string source = R"(
 import /std/gfx/experimental/*

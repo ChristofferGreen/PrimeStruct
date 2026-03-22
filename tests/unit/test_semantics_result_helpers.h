@@ -525,6 +525,27 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical stdlib gfx error why wrapper returns explicit strings") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<void>]
+main() {
+  [GfxError] err{queueSubmitFailed()}
+  [string] direct{/GfxError/why(err)}
+  [string] method{GfxError.why(err)}
+  [string] viaResult{Result.why(gfxErrorStatus(err))}
+  if(and(greater_than(count(direct), 0i32),
+         and(greater_than(count(method), 0i32), greater_than(count(viaResult), 0i32))),
+     then(){ return() },
+     else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical stdlib gfx error status helper rejects non gfx errors") {
   const std::string source = R"(
 import /std/gfx/*
@@ -539,6 +560,21 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /std/gfx/gfxErrorStatus parameter err") !=
         std::string::npos);
+}
+
+TEST_CASE("canonical stdlib gfx error why wrapper rejects non gfx errors") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<void>]
+main() {
+  [string] why{/GfxError/why(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /GfxError/why parameter err") != std::string::npos);
 }
 
 TEST_CASE("stdlib gfx Buffer helpers cover experimental method and slash-call wrappers") {

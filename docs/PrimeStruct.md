@@ -672,7 +672,7 @@ for(
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
   - Stdlib containers use `Result<ContainerError>` / `Result<T, ContainerError>` as the shared error contract; `containerErrorStatus(err)` and `containerErrorResult<T>(err)` expose the current stdlib packing helpers, `/ContainerError/why([ContainerError] err)` is the explicit public wrapper for container error strings, and unknown codes fall back to `"container error"`. On current IR-backed backends, `Result.ok(value)` supports `i32`, `bool`, and `string` payloads, so value-carrying container helpers such as `mapTryAt` can now return string values when the underlying container path supports them.
-  - Canonical and experimental stdlib gfx use `Result<GfxError>` / `Result<T, GfxError>` as their shared error contract; `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` expose the current `.prime` packing helpers for `/std/gfx/*` and `/std/gfx/experimental/*`.
+  - Canonical and experimental stdlib gfx use `Result<GfxError>` / `Result<T, GfxError>` as their shared error contract; `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` expose the current `.prime` packing helpers for `/std/gfx/*` and `/std/gfx/experimental/*`, and the canonical gfx package now also exposes `/GfxError/why([GfxError] err)` as the public root-level wrapper over the stdlib-owned error strings.
   - The postfix `?` operator unwraps a `Result` or propagates the error (see Error Handling).
     - `Result.map(result, fn)` applies `fn` to the success value (if any) and returns a new `Result`.
     - `Result.and_then(result, fn)` (a.k.a. bind) applies `fn` to the success value and flattens the result.
@@ -717,9 +717,11 @@ sum_two_files([string] a, [string] b) {
     Import `/std/image/*` to use `.prime`-authored `imageReadUnsupported()`, `imageWriteUnsupported()`,
     `imageInvalidOperation()`, `imageErrorStatus(err)`, and `imageErrorResult<T>(err)` helpers instead of
     hand-packing `ImageError` result codes, and load the public `/ImageError/why([ImageError] err)` wrapper for
-    explicit type-owned access to the current stdlib error strings. Import `/std/gfx/*` or `/std/gfx/experimental/*` to use
-    `.prime`-authored `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` helpers instead of manually packing
-    `GfxError` result codes inside graphics helpers.
+    explicit type-owned access to the current stdlib error strings. Import `/std/gfx/*` to use
+    `.prime`-authored `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` helpers plus the public
+    `/GfxError/why([GfxError] err)` wrapper, or import `/std/gfx/experimental/*` to use the same
+    result helpers without adding a duplicate root-level gfx wrapper in mixed canonical+experimental
+    import graphs.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
