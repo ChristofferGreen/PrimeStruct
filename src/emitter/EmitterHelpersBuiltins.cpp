@@ -1855,7 +1855,9 @@ bool resolveMethodCallPath(const Expr &call,
     resolvedOut = preferredFileMethodTargetLocal(normalizedMethodName, defMap);
     return true;
   }
-  if (typeName == "FileError" && (normalizedMethodName == "why" || normalizedMethodName == "is_eof")) {
+  if (typeName == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "status" || normalizedMethodName == "result")) {
     resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
     return !resolvedOut.empty();
   }

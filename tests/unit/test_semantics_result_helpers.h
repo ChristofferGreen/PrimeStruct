@@ -107,33 +107,43 @@ import /std/file/*
 
 [return<void>]
 main() {
+  [FileError] err{fileReadEof()}
   [Result<FileError>] status{fileErrorStatus(fileReadEof())}
   [Result<FileError>] typeStatus{FileError.status(fileReadEof())}
   [Result<FileError>] directStatus{/FileError/status(fileReadEof())}
+  [Result<FileError>] methodStatus{err.status()}
   [Result<i32, FileError>] valueStatus{fileErrorResult<i32>(fileReadEof())}
   [Result<i32, FileError>] typeValueStatus{FileError.result<i32>(fileReadEof())}
   [Result<i32, FileError>] directValueStatus{/FileError/result<i32>(fileReadEof())}
+  [Result<i32, FileError>] methodValueStatus{err.result<i32>()}
   [bool] directStatusError{Result.error(FileError.status(fileReadEof()))}
   [bool] rootStatusError{Result.error(/FileError/status(fileReadEof()))}
+  [bool] methodStatusDirectError{Result.error(err.status())}
   [string] directValueWhy{Result.why(FileError.result<i32>(fileReadEof()))}
   [string] rootValueWhy{Result.why(/FileError/result<i32>(fileReadEof()))}
+  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
   [bool] statusError{Result.error(status)}
   [bool] typeStatusError{Result.error(typeStatus)}
   [bool] rootDirectStatusError{Result.error(directStatus)}
+  [bool] methodStatusError{Result.error(methodStatus)}
   [bool] valueError{Result.error(valueStatus)}
   [bool] typeValueError{Result.error(typeValueStatus)}
   [bool] rootDirectValueError{Result.error(directValueStatus)}
+  [bool] methodValueError{Result.error(methodValueStatus)}
   [string] statusWhy{Result.why(status)}
   [string] typeStatusWhy{Result.why(typeStatus)}
   [string] directStatusWhy{Result.why(directStatus)}
+  [string] methodStatusWhy{Result.why(methodStatus)}
   [string] valueWhy{Result.why(valueStatus)}
   [string] typeValueWhy{Result.why(typeValueStatus)}
   [string] directValueStatusWhy{Result.why(directValueStatus)}
-  if(and(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
-                 and(directStatusError, rootStatusError)),
-             and(rootDirectStatusError, rootDirectValueError)),
+  [string] methodValueStatusWhy{Result.why(methodValueStatus)}
+  if(and(and(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+                     and(directStatusError, rootStatusError)),
+                 and(rootDirectStatusError, rootDirectValueError)),
+             and(and(methodStatusDirectError, methodStatusError), methodValueError)),
          and(eof, not(otherEof))),
      then(){ return() },
      else(){ return() })
@@ -278,6 +288,22 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /FileError/status parameter err") != std::string::npos);
+}
+
+TEST_CASE("stdlib FileError result methods reject unexpected arguments") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [FileError] err{fileReadEof()}
+  [Result<FileError>] status{err.status(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/file/FileError/status") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError eof wrapper rejects non file errors") {

@@ -682,7 +682,8 @@ for(
     through `/std/file/FileError/*` even in direct nested `Result.error(...)` / `Result.why(...)` expressions, and
     the public root-level `/FileError/status(...)`, `/FileError/result<T>(...)`, `/FileError/why(...)`,
     `/FileError/eof()`, and `/FileError/is_eof(...)` wrappers now remain as compatibility aliases over that same
-    type-owned implementation.
+    type-owned implementation, while receiver-style `err.status()` / `err.result<T>()` method sugar now routes
+    through the same stdlib-owned FileError helpers as `err.why()` / `err.is_eof()`.
   - Stdlib containers use `Result<ContainerError>` / `Result<T, ContainerError>` as the shared error contract;
     `ContainerError.status(err)` / `ContainerError.result<T>(err)` now own the type-level packing surface while
     `containerErrorStatus(err)` / `containerErrorResult<T>(err)` remain compatibility helpers,
@@ -744,9 +745,9 @@ sum_two_files([string] a, [string] b) {
     `fileErrorStatus(err)` / `fileErrorResult<T>(err)` compatibility helpers, the type-owned
     `FileError.status(err)` / `FileError.result<T>(err)` namespace surface, or the public
     `/FileError/status(err)` / `/FileError/result<T>(err)` wrappers instead of hand-packing `FileError` results or
-    hard-coding the EOF status code, plus `fileErrorIsEof(err)`, `/FileError/why([FileError] err)`,
-    `/FileError/eof()`, and `/FileError/is_eof([FileError] err)` for explicit type-owned access to the current
-    stdlib FileError helper surface.
+    hard-coding the EOF status code, plus receiver-style `err.status()` / `err.result<T>()`, `fileErrorIsEof(err)`,
+    `/FileError/why([FileError] err)`, `/FileError/eof()`, and `/FileError/is_eof([FileError] err)` for explicit
+    type-owned access to the current stdlib FileError helper surface.
     Import `/std/collections/*` to use `.prime`-authored `containerErrorStatus(err)` /
     `containerErrorResult<T>(err)` compatibility helpers, the type-owned `ContainerError.status(err)` /
     `ContainerError.result<T>(err)` namespace surface, or the public `/ContainerError/status(err)` /

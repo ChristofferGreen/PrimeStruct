@@ -6241,9 +6241,13 @@ make_value() {
 main() {
   [Result<FileError>] status{make_status()}
   [Result<i32, FileError>] valueStatus{make_value()}
+  [FileError] err{fileReadEof()}
+  [Result<FileError>] methodStatus{err.status()}
+  [Result<i32, FileError>] methodValueStatus{err.result<i32>()}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
   [bool] directStatusError{Result.error(FileError.status(fileReadEof()))}
+  [bool] methodStatusError{Result.error(err.status())}
   if(not(Result.error(status))) {
     return(1i32)
   }
@@ -6259,10 +6263,17 @@ main() {
   if(not(directStatusError)) {
     return(5i32)
   }
+  if(not(methodStatusError)) {
+    return(6i32)
+  }
   print_line(Result.why(status))
   print_line(Result.why(valueStatus))
+  print_line(Result.why(methodStatus))
+  print_line(Result.why(methodValueStatus))
   print_line(Result.why(FileError.status(fileReadEof())))
   print_line(Result.why(FileError.result<i32>(fileReadEof())))
+  print_line(Result.why(err.status()))
+  print_line(Result.why(err.result<i32>()))
   return(0i32)
 }
 )";
@@ -6276,7 +6287,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "EOF\nEOF\nEOF\nEOF\n");
+  CHECK(readFile(outPath) == "EOF\nEOF\nEOF\nEOF\nEOF\nEOF\nEOF\nEOF\n");
 }
 
 TEST_CASE("compiles and runs native direct type namespace string helpers") {

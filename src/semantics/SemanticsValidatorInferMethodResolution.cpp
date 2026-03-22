@@ -591,7 +591,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   if (typeName.empty()) {
     return false;
   }
-  if (typeName == "FileError" && (normalizedMethodName == "why" || normalizedMethodName == "is_eof")) {
+  if (typeName == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "status" || normalizedMethodName == "result")) {
     resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
     return !resolvedOut.empty();
   }
