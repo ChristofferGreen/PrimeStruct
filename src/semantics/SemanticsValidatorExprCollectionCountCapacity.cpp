@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <string>
+#include <utility>
 
 namespace primec::semantics {
 
@@ -10,12 +11,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const Expr &expr,
     const ExprCollectionCountCapacityDispatchContext &context,
     bool &handledOut,
+    std::optional<Expr> &rewrittenExprOut,
     std::string &resolved,
     bool &resolvedMethod,
     bool &usedMethodTarget,
     bool &hasMethodReceiverIndex,
     size_t &methodReceiverIndex) {
   handledOut = false;
+  rewrittenExprOut.reset();
   auto hasResolvableDefinitionPath = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
   };
@@ -57,9 +60,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return true;
   }
 
-  if (context.isDirectStdNamespacedVectorCountWrapperMapTarget) {
+  if (context.isDirectStdNamespacedVectorCountWrapperMapTarget &&
+      !hasDeclaredDefinitionPath("/std/collections/vector/count")) {
     handledOut = true;
-    error_ = "template arguments required for /std/collections/vector/count";
+    error_ = "unknown call target: /std/collections/vector/count";
     return false;
   }
 
@@ -68,7 +72,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       (context.tryRewriteBareVectorHelperCall("count", rewrittenVectorHelperCall) ||
        context.tryRewriteBareVectorHelperCall("capacity", rewrittenVectorHelperCall))) {
     handledOut = true;
-    return validateExpr(params, locals, rewrittenVectorHelperCall);
+    rewrittenExprOut = std::move(rewrittenVectorHelperCall);
+    return true;
   }
 
   if ((context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&

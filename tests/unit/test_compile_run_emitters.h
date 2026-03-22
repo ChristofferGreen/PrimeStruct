@@ -11017,6 +11017,28 @@ main() {
   CHECK(runCommand(exePath) == 14);
 }
 
+TEST_CASE("C++ emitter keeps bare vector capacity methods on same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(15i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.capacity())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_same_path.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_capacity_method_same_path_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 15);
+}
+
 TEST_CASE("C++ emitter rejects bare vector count methods without helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -11141,6 +11163,32 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects namespaced vector count on wrapper map target before emission") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/count(wrapMap()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_namespaced_vector_count_wrapper_map_target_reject.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_namespaced_vector_count_wrapper_map_target_reject.txt")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects wrapper explicit vector count alias calls without helper in C++ emitter") {

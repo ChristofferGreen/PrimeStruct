@@ -1147,29 +1147,92 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       } else {
         resolvedMethod = false;
       }
-    } else if (hasNamedArguments(expr.argNames) &&
-               expr.args.size() == 1 &&
-               defMap_.find(resolved) == defMap_.end() &&
-               isNamespacedVectorHelperCall &&
-               (namespacedHelper == "count" || namespacedHelper == "capacity")) {
-      bool isBuiltinMethod = false;
-      std::string methodResolved;
-      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), namespacedHelper,
-                              methodResolved, isBuiltinMethod) &&
-          !isBuiltinMethod && hasResolvableDefinitionTarget(methodResolved)) {
-        usedMethodTarget = true;
-        hasMethodReceiverIndex = true;
-        methodReceiverIndex = 0;
-        resolved = methodResolved;
-        resolvedMethod = false;
-      }
-    } else if (isDirectStdNamespacedVectorCountWrapperMapTarget &&
-               !hasDeclaredDefinitionPath("/std/collections/vector/count")) {
-      error_ = "unknown call target: /std/collections/vector/count";
+    }
+    ExprCollectionCountCapacityDispatchContext collectionCountCapacityDispatchContext;
+    collectionCountCapacityDispatchContext.isNamespacedVectorHelperCall =
+        isNamespacedVectorHelperCall;
+    collectionCountCapacityDispatchContext.namespacedHelper =
+        namespacedHelper;
+    collectionCountCapacityDispatchContext.isStdNamespacedVectorCountCall =
+        isStdNamespacedVectorCountCall;
+    collectionCountCapacityDispatchContext
+        .shouldBuiltinValidateStdNamespacedVectorCountCall =
+        shouldBuiltinValidateStdNamespacedVectorCountCall;
+    collectionCountCapacityDispatchContext.isStdNamespacedMapCountCall =
+        isStdNamespacedMapCountCall;
+    collectionCountCapacityDispatchContext.isNamespacedVectorCountCall =
+        isNamespacedVectorCountCall;
+    collectionCountCapacityDispatchContext.isNamespacedMapCountCall =
+        isNamespacedMapCountCall;
+    collectionCountCapacityDispatchContext
+        .isUnnamespacedMapCountFallbackCall =
+        isUnnamespacedMapCountFallbackCall;
+    collectionCountCapacityDispatchContext.isResolvedMapCountCall =
+        isResolvedMapCountCall;
+    collectionCountCapacityDispatchContext
+        .prefersCanonicalVectorCountAliasDefinition =
+        prefersCanonicalVectorCountAliasDefinition;
+    collectionCountCapacityDispatchContext
+        .isStdNamespacedVectorCapacityCall =
+        isStdNamespacedVectorCapacityCall;
+    collectionCountCapacityDispatchContext
+        .shouldBuiltinValidateStdNamespacedVectorCapacityCall =
+        shouldBuiltinValidateStdNamespacedVectorCapacityCall;
+    collectionCountCapacityDispatchContext.isNamespacedVectorCapacityCall =
+        isNamespacedVectorCapacityCall;
+    collectionCountCapacityDispatchContext
+        .isDirectStdNamespacedVectorCountWrapperMapTarget =
+        isDirectStdNamespacedVectorCountWrapperMapTarget;
+    collectionCountCapacityDispatchContext
+        .hasStdNamespacedVectorCountAliasDefinition =
+        hasStdNamespacedVectorCountAliasDefinition;
+    collectionCountCapacityDispatchContext.shouldBuiltinValidateBareMapCountCall =
+        shouldBuiltinValidateBareMapCountCall;
+    collectionCountCapacityDispatchContext.resolveMapTarget =
+        [&](const Expr &target) { return resolveMapTarget(target); };
+    collectionCountCapacityDispatchContext
+        .isArrayNamespacedVectorCountCompatibilityCall =
+        [&](const Expr &target) {
+          return this->isArrayNamespacedVectorCountCompatibilityCall(
+              target, builtinCollectionDispatchResolvers);
+        };
+    collectionCountCapacityDispatchContext.tryRewriteBareVectorHelperCall =
+        [&](const std::string &helperName, Expr &rewrittenOut) {
+          return this->tryRewriteBareVectorHelperCall(
+              expr, helperName, builtinCollectionDispatchResolvers,
+              rewrittenOut);
+        };
+    collectionCountCapacityDispatchContext
+        .promoteCapacityToBuiltinValidation =
+        [&](const Expr &targetExpr, std::string &resolvedOut,
+            bool &isBuiltinMethodOut, bool requireKnownCollection) {
+          promoteCapacityToBuiltinValidation(targetExpr, resolvedOut,
+                                             isBuiltinMethodOut,
+                                             requireKnownCollection);
+        };
+    collectionCountCapacityDispatchContext
+        .isNonCollectionStructCapacityTarget =
+        [&](const std::string &resolvedPath) {
+          return isNonCollectionStructCapacityTarget(resolvedPath);
+        };
+    bool handledCollectionCountCapacityTarget = false;
+    std::optional<Expr> rewrittenCollectionCountCapacityCall;
+    if (!resolveExprCollectionCountCapacityTarget(
+            params, locals, expr, collectionCountCapacityDispatchContext,
+            handledCollectionCountCapacityTarget,
+            rewrittenCollectionCountCapacityCall, resolved, resolvedMethod,
+            usedMethodTarget, hasMethodReceiverIndex, methodReceiverIndex)) {
       return false;
-    } else if (!expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
-               !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-               !hasImportedDefinitionPath("/std/collections/vector/count")) {
+    }
+    if (handledCollectionCountCapacityTarget &&
+        rewrittenCollectionCountCapacityCall.has_value()) {
+      return validateExpr(params, locals,
+                          *rewrittenCollectionCountCapacityCall);
+    }
+    if (!expr.isMethodCall && isStdNamespacedVectorCountCall &&
+        expr.args.size() == 1 &&
+        !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
+        !hasImportedDefinitionPath("/std/collections/vector/count")) {
       std::string elemType;
       if (resolveStringTarget(expr.args.front()) || resolveArrayTarget(expr.args.front(), elemType) ||
           builtinCollectionDispatchResolvers.resolveExperimentalVectorTarget(
@@ -1179,178 +1242,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     }
     Expr rewrittenVectorHelperCall;
-    if (this->tryRewriteBareVectorHelperCall(
-            expr, "count", builtinCollectionDispatchResolvers, rewrittenVectorHelperCall) ||
-        this->tryRewriteBareVectorHelperCall(
-            expr, "capacity", builtinCollectionDispatchResolvers, rewrittenVectorHelperCall)) {
-      return validateExpr(params, locals, rewrittenVectorHelperCall);
-    }
-    if ((isStdNamespacedVectorCountCall && expr.args.size() == 1 && resolveMapTarget(expr.args.front())) &&
-               (defMap_.find("/std/collections/vector/count") == defMap_.end() ||
-                hasImportedDefinitionPath("/std/collections/vector/count")) &&
-               hasStdNamespacedVectorCountAliasDefinition) {
-      error_ = "count requires vector target";
-      return false;
-    } else if (!hasNamedArguments(expr.argNames) &&
-               (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-               (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
-                isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
-               expr.args.size() == 1 &&
-               !this->isArrayNamespacedVectorCountCompatibilityCall(expr, builtinCollectionDispatchResolvers) &&
-               !prefersCanonicalVectorCountAliasDefinition &&
-               ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
-                (isNamespacedVectorCountCall && !isStdNamespacedVectorCountCall) ||
-                isStdNamespacedMapCountCall || isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall ||
-                isResolvedMapCountCall)) {
-      usedMethodTarget = true;
-      hasMethodReceiverIndex = true;
-      methodReceiverIndex = 0;
-      bool isBuiltinMethod = false;
-      std::string methodResolved;
-      if (resolveMapTarget(expr.args.front()) &&
-          (hasDeclaredDefinitionPath("/std/collections/map/count") ||
-           hasImportedDefinitionPath("/std/collections/map/count") ||
-           hasDeclaredDefinitionPath("/map/count") ||
-           hasImportedDefinitionPath("/map/count"))) {
-        methodResolved = preferredBareMapHelperTarget("count");
-        isBuiltinMethod =
-            defMap_.find(methodResolved) == defMap_.end() &&
-            hasImportedDefinitionPath(methodResolved);
-      } else if (isUnnamespacedMapCountFallbackCall &&
-          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-          !hasDeclaredDefinitionPath("/map/count") &&
-          !hasImportedDefinitionPath("/std/collections/map/count") &&
-          resolveMapTarget(expr.args.front())) {
-        methodResolved = "/std/collections/map/count";
-        isBuiltinMethod = true;
-      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "count",
-                                      methodResolved, isBuiltinMethod)) {
-        // Preserve receiver diagnostics (for example unknown call target)
-        // when collection-target resolution fails.
-        (void)validateExpr(params, locals, expr.args.front());
-        return false;
-      }
-      if (isBuiltinMethod && methodResolved == "/std/collections/map/count" &&
-          !hasDeclaredDefinitionPath("/map/count") &&
-          !hasImportedDefinitionPath("/std/collections/map/count") &&
-          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-          !shouldBuiltinValidateBareMapCountCall &&
-          !resolveMapTarget(expr.args.front())) {
-        error_ = "unknown call target: /std/collections/map/count";
-        return false;
-      }
-      if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
-        error_ = "unknown method: " + methodResolved;
-        return false;
-      }
-      resolved = methodResolved;
-      resolvedMethod = isBuiltinMethod;
-    } else if (!hasNamedArguments(expr.argNames) &&
-               (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-               ((isVectorBuiltinName(expr, "count") && isNamespacedVectorHelperCall &&
-                 (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall)) ||
-                isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
-                isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
-               !expr.args.empty() && expr.args.size() != 1 &&
-               !prefersCanonicalVectorCountAliasDefinition &&
-               (defMap_.find(resolved) != defMap_.end() || isStdNamespacedMapCountCall ||
-                isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall)) {
-      usedMethodTarget = true;
-      hasMethodReceiverIndex = true;
-      methodReceiverIndex = 0;
-      bool isBuiltinMethod = false;
-      std::string methodResolved;
-      if (resolveMapTarget(expr.args.front()) &&
-          (hasDeclaredDefinitionPath("/std/collections/map/count") ||
-           hasImportedDefinitionPath("/std/collections/map/count") ||
-           hasDeclaredDefinitionPath("/map/count") ||
-           hasImportedDefinitionPath("/map/count"))) {
-        methodResolved = preferredBareMapHelperTarget("count");
-        isBuiltinMethod =
-            defMap_.find(methodResolved) == defMap_.end() &&
-            hasImportedDefinitionPath(methodResolved);
-      } else if (isUnnamespacedMapCountFallbackCall &&
-          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-          !hasDeclaredDefinitionPath("/map/count") &&
-          !hasImportedDefinitionPath("/std/collections/map/count") &&
-          resolveMapTarget(expr.args.front())) {
-        methodResolved = "/std/collections/map/count";
-        isBuiltinMethod = true;
-      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "count",
-                                      methodResolved, isBuiltinMethod)) {
-        (void)validateExpr(params, locals, expr.args.front());
-        return false;
-      }
-      if (isBuiltinMethod && methodResolved == "/std/collections/map/count" &&
-          !hasDeclaredDefinitionPath("/map/count") &&
-          !hasImportedDefinitionPath("/std/collections/map/count") &&
-          !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-          !shouldBuiltinValidateBareMapCountCall &&
-          !resolveMapTarget(expr.args.front())) {
-        error_ = "unknown call target: /std/collections/map/count";
-        return false;
-      }
-      if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
-        error_ = "unknown method: " + methodResolved;
-        return false;
-      }
-      resolved = methodResolved;
-      resolvedMethod = isBuiltinMethod;
-    } else if (!hasNamedArguments(expr.argNames) &&
-               !shouldSkipStdCapacityMethodFallback &&
-               (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall) &&
-               isVectorBuiltinName(expr, "capacity") && isNamespacedVectorHelperCall && !expr.args.empty() &&
-               expr.args.size() != 1 && defMap_.find(resolved) != defMap_.end()) {
-      usedMethodTarget = true;
-      hasMethodReceiverIndex = true;
-      methodReceiverIndex = 0;
-      bool isBuiltinMethod = false;
-      std::string methodResolved;
-      if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "capacity",
-                               methodResolved, isBuiltinMethod)) {
-        (void)validateExpr(params, locals, expr.args.front());
-        return false;
-      }
-      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-        error_ = "unknown method: " + methodResolved;
-        return false;
-      }
-      resolved = methodResolved;
-      resolvedMethod = isBuiltinMethod;
-    } else if (!hasNamedArguments(expr.argNames) &&
-               !shouldSkipStdCapacityMethodFallback &&
-               (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall) &&
-               isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
-               (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall)) {
-      usedMethodTarget = true;
-      hasMethodReceiverIndex = true;
-      methodReceiverIndex = 0;
-      bool isBuiltinMethod = false;
-      std::string methodResolved;
-      if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "capacity",
-                               methodResolved, isBuiltinMethod)) {
-        // Preserve receiver diagnostics (for example unknown call target)
-        // when collection-target resolution fails.
-        (void)validateExpr(params, locals, expr.args.front());
-        return false;
-      }
-      if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
-        if (!isNonCollectionStructCapacityTarget(methodResolved)) {
-          promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved, isBuiltinMethod, false);
-        }
-      }
-      if (!isBuiltinMethod && !hasResolvableDefinitionTarget(methodResolved)) {
-        error_ = "unknown method: " + methodResolved;
-        return false;
-      }
-      resolved = methodResolved;
-      resolvedMethod = isBuiltinMethod;
-    } else if (!expr.isMethodCall &&
-               !hasNamedArguments(expr.argNames) &&
-               expr.args.size() >= 1 &&
-               ((expr.namespacePrefix.empty() && (expr.name == "at" || expr.name == "at_unsafe")) ||
-                resolved == "/std/collections/vectorAt" ||
-                resolved == "/std/collections/vectorAtUnsafe")) {
+    if (!expr.isMethodCall &&
+        !hasNamedArguments(expr.argNames) &&
+        expr.args.size() >= 1 &&
+        ((expr.namespacePrefix.empty() &&
+          (expr.name == "at" || expr.name == "at_unsafe")) ||
+         resolved == "/std/collections/vectorAt" ||
+         resolved == "/std/collections/vectorAtUnsafe")) {
       const bool isUnsafeHelper =
           expr.name == "at_unsafe" ||
           resolved == "/std/collections/vector/at_unsafe" ||

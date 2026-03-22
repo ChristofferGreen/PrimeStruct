@@ -443,6 +443,7 @@ private:
                                                 const Expr &expr,
                                                 const ExprCollectionCountCapacityDispatchContext &context,
                                                 bool &handledOut,
+                                                std::optional<Expr> &rewrittenExprOut,
                                                 std::string &resolved,
                                                 bool &resolvedMethod,
                                                 bool &usedMethodTarget,
