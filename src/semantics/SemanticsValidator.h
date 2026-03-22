@@ -410,6 +410,16 @@ private:
       const std::unordered_map<std::string, BindingInfo> &locals,
       const Expr &expr,
       bool &handledOut);
+  struct ExprLateCallCompatibilityContext {
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+  };
+  bool validateExprLateCallCompatibility(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      const ExprLateCallCompatibilityContext &context,
+      bool &handledOut);
   struct ExprCollectionAccessValidationContext {
     bool isStdNamespacedVectorAccessCall = false;
     bool shouldAllowStdAccessCompatibilityFallback = false;

@@ -9254,6 +9254,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionLiterals.cpp";
   const std::filesystem::path semanticsExprLateFallbackBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateFallbackBuiltins.cpp";
+  const std::filesystem::path semanticsExprLateCallCompatibilityPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateCallCompatibility.cpp";
   const std::filesystem::path semanticsExprMutationBorrowsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMutationBorrows.cpp";
   const std::filesystem::path semanticsExprNamedArgumentBuiltinsPath =
@@ -9289,6 +9291,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateFallbackBuiltinsPath));
+  REQUIRE(std::filesystem::exists(semanticsExprLateCallCompatibilityPath));
   REQUIRE(std::filesystem::exists(semanticsExprMutationBorrowsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
@@ -9314,6 +9317,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprCollectionLiteralsSource = readText(semanticsExprCollectionLiteralsPath);
   const std::string semanticsExprLateFallbackBuiltinsSource =
       readText(semanticsExprLateFallbackBuiltinsPath);
+  const std::string semanticsExprLateCallCompatibilitySource =
+      readText(semanticsExprLateCallCompatibilityPath);
   const std::string semanticsExprMutationBorrowsSource =
       readText(semanticsExprMutationBorrowsPath);
   const std::string semanticsExprNamedArgumentBuiltinsSource = readText(semanticsExprNamedArgumentBuiltinsPath);
@@ -9338,6 +9343,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find(
             "validateExprMutationBorrowBuiltins(\n"
             "              params, locals, expr, handledMutationBorrowBuiltin)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprLateCallCompatibility(\n"
+            "              params, locals, expr, resolved,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") !=
         std::string::npos);
@@ -9485,6 +9494,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("if (isAssignCall(expr)) {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (getBuiltinMutationName(expr, mutateName)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "const BindingInfo *callableBinding = findParamBinding(params, expr.name);") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "if (callableBinding != nullptr && callableBinding->typeName == \"lambda\") {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "lateMapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
@@ -9783,6 +9798,21 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprLateFallbackBuiltinsSource.find(
             "const size_t receiverIndex =\n"
             "        this->mapHelperReceiverIndex(expr, *context.dispatchResolvers);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "bool SemanticsValidator::validateExprLateCallCompatibility") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "math builtin requires import /std/math/* or /std/math/<name>: ") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "named arguments not supported for lambda calls") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "unknown call target: /std/collections/vector/count") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "unknown call target: /std/collections/vector/capacity") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
             "bool SemanticsValidator::validateExprMutationBorrowBuiltins") !=

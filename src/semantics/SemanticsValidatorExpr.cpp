@@ -1546,116 +1546,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (handledMutationBorrowBuiltin) {
         return true;
       }
-      if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos) {
-        std::string builtinName;
-        if (getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
-            getBuiltinAbsSignName(expr, builtinName, true) || getBuiltinSaturateName(expr, builtinName, true) ||
-            getBuiltinMathName(expr, builtinName, true)) {
-          error_ = "math builtin requires import /std/math/* or /std/math/<name>: " + expr.name;
-          return false;
-        }
+      ExprLateCallCompatibilityContext lateCallCompatibilityContext;
+      lateCallCompatibilityContext.dispatchResolvers =
+          &builtinCollectionDispatchResolvers;
+      bool handledLateCallCompatibility = false;
+      if (!validateExprLateCallCompatibility(
+              params, locals, expr, resolved,
+              lateCallCompatibilityContext, handledLateCallCompatibility)) {
+        return false;
       }
-      if (!expr.isMethodCall && expr.name.find('/') == std::string::npos) {
-        const BindingInfo *callableBinding = findParamBinding(params, expr.name);
-        if (callableBinding == nullptr) {
-          auto localIt = locals.find(expr.name);
-          if (localIt != locals.end()) {
-            callableBinding = &localIt->second;
-          }
-        }
-        if (callableBinding != nullptr && callableBinding->typeName == "lambda") {
-          if (hasNamedArguments(expr.argNames)) {
-            error_ = "named arguments not supported for lambda calls";
-            return false;
-          }
-          if (!expr.templateArgs.empty()) {
-            error_ = "lambda calls do not accept template arguments";
-            return false;
-          }
-          if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-            error_ = "lambda calls do not accept block arguments";
-            return false;
-          }
-          for (const auto &arg : expr.args) {
-            if (!validateExpr(params, locals, arg)) {
-              return false;
-            }
-          }
-          return true;
-        }
-      }
-      if (!expr.isMethodCall &&
-          (resolved == "/std/collections/vector/count" || resolved == "/vector/count") &&
-          expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
-        std::string elemType;
-        std::string arrayElemType;
-        const bool resolvesVector = resolveVectorTarget(expr.args.front(), elemType);
-        std::string experimentalElemType;
-        const bool resolvesExperimentalVector =
-            builtinCollectionDispatchResolvers.resolveExperimentalVectorTarget(
-                expr.args.front(), experimentalElemType);
-        const bool resolvesArray = resolveArrayTarget(expr.args.front(), arrayElemType);
-        const bool resolvesString = resolveStringTarget(expr.args.front());
-        const bool resolvesMap = resolveMapTarget(expr.args.front());
-        if (!resolvesVector && !resolvesExperimentalVector && !resolvesArray && !resolvesString) {
-          if (!validateExpr(params, locals, expr.args.front())) {
-            return false;
-          }
-          if (resolvesMap || resolveMapTarget(expr.args.front())) {
-            error_ = "unknown call target: /std/collections/vector/count";
-            return false;
-          }
-          error_ = "count requires vector target";
-          return false;
-        }
-        if (!hasDeclaredDefinitionPath("/vector/count") &&
-            !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-            !hasImportedDefinitionPath("/std/collections/vector/count") &&
-            (resolvesVector || resolvesExperimentalVector)) {
-          error_ = "unknown call target: /std/collections/vector/count";
-          return false;
-        }
-        if (resolved == "/std/collections/vector/count" &&
-            hasImportedDefinitionPath("/std/collections/vector/count") &&
-            (resolvesVector || resolvesExperimentalVector)) {
-          return validateExpr(params, locals, expr.args.front());
-        }
-      }
-      if (!expr.isMethodCall &&
-          (resolved == "/std/collections/vector/capacity" || resolved == "/vector/capacity") &&
-          expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
-        std::string elemType;
-        const bool resolvesVector = resolveVectorTarget(expr.args.front(), elemType);
-        std::string experimentalElemType;
-        const bool resolvesExperimentalVector =
-            builtinCollectionDispatchResolvers.resolveExperimentalVectorTarget(
-                expr.args.front(), experimentalElemType);
-        if (!resolvesVector && !resolvesExperimentalVector) {
-          if (!validateExpr(params, locals, expr.args.front())) {
-            return false;
-          }
-          if (resolveArrayTarget(expr.args.front(), elemType)) {
-            error_ = "unknown call target: /std/collections/vector/capacity";
-            return false;
-          }
-          if (resolveMapTarget(expr.args.front())) {
-            error_ = "unknown call target: /std/collections/vector/capacity";
-            return false;
-          }
-          error_ = "capacity requires vector target";
-          return false;
-        }
-        if (!hasDeclaredDefinitionPath("/vector/capacity") &&
-            !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
-            !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
-            (resolvesVector || resolvesExperimentalVector)) {
-          error_ = "unknown call target: /std/collections/vector/capacity";
-          return false;
-        }
-        if (resolved == "/std/collections/vector/capacity" &&
-            hasImportedDefinitionPath("/std/collections/vector/capacity")) {
-          return validateExpr(params, locals, expr.args.front());
-        }
+      if (handledLateCallCompatibility) {
+        return true;
       }
       if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) && expr.args.size() == 2 &&
           !hasNamedArguments(expr.argNames)) {
