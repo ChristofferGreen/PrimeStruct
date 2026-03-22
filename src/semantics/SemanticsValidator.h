@@ -24,6 +24,14 @@ public:
     BindingInfo binding;
   };
 
+  struct LocalAutoBindingSnapshotEntry {
+    std::string scopePath;
+    std::string bindingName;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+    BindingInfo binding;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
@@ -34,6 +42,7 @@ public:
 
   bool run();
   std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;
+  std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;
 
 private:
   bool buildDefinitionMaps();

@@ -88,6 +88,83 @@ SemanticsValidator::returnResolutionSnapshotForTesting() const {
   return entries;
 }
 
+std::vector<SemanticsValidator::LocalAutoBindingSnapshotEntry>
+SemanticsValidator::localAutoBindingSnapshotForTesting() const {
+  auto explicitBindingTypeName = [](const Expr &expr) -> std::optional<std::string> {
+    for (const auto &transform : expr.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities") {
+        continue;
+      }
+      if (isBindingAuxTransformName(transform.name) || !transform.arguments.empty()) {
+        continue;
+      }
+      return transform.name;
+    }
+    return std::nullopt;
+  };
+
+  auto isLocalAutoCandidate = [&](const Expr &expr) {
+    const std::optional<std::string> typeName = explicitBindingTypeName(expr);
+    return !typeName.has_value() || normalizeBindingTypeName(*typeName) == "auto";
+  };
+
+  std::vector<LocalAutoBindingSnapshotEntry> entries;
+  std::function<void(const std::string &, const Expr &)> visitExpr;
+  visitExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.isBinding && isLocalAutoCandidate(expr)) {
+      const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(expr);
+      const auto bindingIt = graphLocalAutoBindings_.find(
+          graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+      if (bindingIt != graphLocalAutoBindings_.end()) {
+        entries.push_back(LocalAutoBindingSnapshotEntry{
+            scopePath,
+            expr.name,
+            sourceLine,
+            sourceColumn,
+            bindingIt->second,
+        });
+      }
+    }
+    for (const auto &arg : expr.args) {
+      visitExpr(scopePath, arg);
+    }
+    for (const auto &bodyExpr : expr.bodyArguments) {
+      visitExpr(scopePath, bodyExpr);
+    }
+  };
+
+  for (const auto &definition : program_.definitions) {
+    for (const auto &parameter : definition.parameters) {
+      for (const auto &arg : parameter.args) {
+        visitExpr(definition.fullPath, arg);
+      }
+      for (const auto &bodyExpr : parameter.bodyArguments) {
+        visitExpr(definition.fullPath, bodyExpr);
+      }
+    }
+    for (const auto &statement : definition.statements) {
+      visitExpr(definition.fullPath, statement);
+    }
+    if (definition.returnExpr.has_value()) {
+      visitExpr(definition.fullPath, *definition.returnExpr);
+    }
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    return left.bindingName < right.bindingName;
+  });
+  return entries;
+}
+
 std::string SemanticsValidator::graphLocalAutoBindingKey(const std::string &scopePath,
                                                          int sourceLine,
                                                          int sourceColumn) {

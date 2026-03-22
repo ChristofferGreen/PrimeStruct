@@ -36,6 +36,17 @@ const primec::semantics::TypeResolutionReturnSnapshotEntry &requireReturnSnapsho
   return *it;
 }
 
+const primec::semantics::TypeResolutionLocalBindingSnapshotEntry &requireLocalBindingSnapshotEntry(
+    const primec::semantics::TypeResolutionLocalBindingSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &bindingName) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.bindingName == bindingName;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 size_t requireTopologicalComponentIndex(const primec::semantics::CondensationDagSnapshot &dag, uint32_t componentId) {
   const auto it = std::find(dag.topologicalComponentIds.begin(), dag.topologicalComponentIds.end(), componentId);
   REQUIRE(it != dag.topologicalComponentIds.end());
@@ -264,6 +275,38 @@ main() {
   CHECK(entry.returnKind == "array");
   CHECK(entry.structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0);
   CHECK(entry.bindingTypeText == "Map<string, i32>");
+}
+
+TEST_CASE("type resolution local binding snapshot keeps control-flow collection binding metadata") {
+  const std::string source = R"(
+[return<array<i32>>]
+valuesA() {
+  return(array<i32>(1i32, 2i32))
+}
+
+[return<array<i32>>]
+valuesB() {
+  return(array<i32>(3i32, 4i32, 5i32))
+}
+
+[return<i32>]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(count(values))
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &entry = requireLocalBindingSnapshotEntry(snapshot, "/main", "values");
+  CHECK(entry.bindingTypeText == "array<i32>");
 }
 
 TEST_CASE("type resolution graph dump stays stable for a simple call chain") {
