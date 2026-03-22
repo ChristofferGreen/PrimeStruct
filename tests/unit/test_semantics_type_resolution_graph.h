@@ -58,6 +58,17 @@ const primec::semantics::TypeResolutionQueryCallSnapshotEntry &requireQueryCallS
   return *it;
 }
 
+const primec::semantics::TypeResolutionCallBindingSnapshotEntry &requireCallBindingSnapshotEntry(
+    const primec::semantics::TypeResolutionCallBindingSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &resolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.resolvedPath == resolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 size_t requireTopologicalComponentIndex(const primec::semantics::CondensationDagSnapshot &dag, uint32_t componentId) {
   const auto it = std::find(dag.topologicalComponentIds.begin(), dag.topologicalComponentIds.end(), componentId);
   REQUIRE(it != dag.topologicalComponentIds.end());
@@ -347,6 +358,40 @@ main() {
 
   const auto &tryAtEntry = requireQueryCallSnapshotEntry(snapshot, "/main", "/std/collections/map/tryAt");
   CHECK(tryAtEntry.typeText == "Result<i32, ContainerError>");
+}
+
+TEST_CASE("type resolution call binding snapshot keeps helper-returned map bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<auto> effects(heap_alloc)]
+buildValues() {
+  return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+}
+
+[return<auto> effects(heap_alloc)]
+wrapValues([Map<string, i32>] values) {
+  return(values)
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc)]
+main() {
+  [Map<string, i32>] values{wrapValues(buildValues())}
+  return(Result.ok(0i32))
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionCallBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionCallBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &buildEntry = requireCallBindingSnapshotEntry(snapshot, "/main", "/buildValues");
+  CHECK(buildEntry.bindingTypeText == "Map<string, i32>");
+
+  const auto &wrapEntry = requireCallBindingSnapshotEntry(snapshot, "/main", "/wrapValues");
+  CHECK(wrapEntry.bindingTypeText == "Map<string, i32>");
 }
 
 TEST_CASE("type resolution graph dump stays stable for a simple call chain") {

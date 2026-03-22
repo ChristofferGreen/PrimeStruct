@@ -100,6 +100,19 @@ struct TypeResolutionQueryCallSnapshot {
   std::vector<TypeResolutionQueryCallSnapshotEntry> entries;
 };
 
+struct TypeResolutionCallBindingSnapshotEntry {
+  std::string scopePath;
+  std::string callName;
+  std::string resolvedPath;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  std::string bindingTypeText;
+};
+
+struct TypeResolutionCallBindingSnapshot {
+  std::vector<TypeResolutionCallBindingSnapshotEntry> entries;
+};
+
 std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep(const std::string &text);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(const Expr &countExpr,
@@ -143,6 +156,12 @@ bool computeTypeResolutionQueryCallSnapshotForTesting(
     const std::string &entryPath,
     std::string &error,
     TypeResolutionQueryCallSnapshot &out,
+    const std::vector<std::string> &semanticTransforms = {});
+bool computeTypeResolutionCallBindingSnapshotForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    TypeResolutionCallBindingSnapshot &out,
     const std::vector<std::string> &semanticTransforms = {});
 
 } // namespace primec::semantics
