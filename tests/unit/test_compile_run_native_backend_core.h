@@ -3140,9 +3140,16 @@ import /std/image/*
 [return<int> effects(io_out)]
 main() {
   [ImageError] err{imageReadUnsupported()}
+  [Result<ImageError>] methodStatus{err.status()}
+  [Result<i32, ImageError>] methodValueStatus{err.result<i32>()}
   print_line(/ImageError/why(err))
   print_line(ImageError.why(err))
+  print_line(err.why())
   print_line(Result.why(imageErrorStatus(err)))
+  print_line(Result.why(methodStatus))
+  print_line(Result.why(methodValueStatus))
+  print_line(Result.why(err.status()))
+  print_line(Result.why(err.result<i32>()))
   return(0i32)
 }
 )";
@@ -3156,6 +3163,11 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath + " > " + outPath) == 0);
   CHECK(readFile(outPath) ==
+        "image_read_unsupported\n"
+        "image_read_unsupported\n"
+        "image_read_unsupported\n"
+        "image_read_unsupported\n"
+        "image_read_unsupported\n"
         "image_read_unsupported\n"
         "image_read_unsupported\n"
         "image_read_unsupported\n");

@@ -520,26 +520,36 @@ import /std/image/*
 
 [return<void>]
 main() {
+  [ImageError] err{imageReadUnsupported()}
   [Result<ImageError>] status{imageErrorStatus(imageReadUnsupported())}
   [Result<ImageError>] typeStatus{ImageError.status(imageReadUnsupported())}
   [Result<ImageError>] directStatus{/ImageError/status(imageReadUnsupported())}
+  [Result<ImageError>] methodStatus{err.status()}
   [Result<i32, ImageError>] valueStatus{imageErrorResult<i32>(imageInvalidOperation())}
   [Result<i32, ImageError>] typeValueStatus{ImageError.result<i32>(imageInvalidOperation())}
   [Result<i32, ImageError>] directValueStatus{/ImageError/result<i32>(imageInvalidOperation())}
+  [Result<i32, ImageError>] methodValueStatus{err.result<i32>()}
   [bool] statusError{Result.error(status)}
   [bool] typeStatusError{Result.error(typeStatus)}
   [bool] directStatusError{Result.error(directStatus)}
+  [bool] methodStatusDirectError{Result.error(err.status())}
   [bool] valueError{Result.error(valueStatus)}
   [bool] typeValueError{Result.error(typeValueStatus)}
   [bool] directValueError{Result.error(directValueStatus)}
+  [bool] methodValueError{Result.error(methodValueStatus)}
+  [string] methodWhy{err.why()}
   [string] statusWhy{Result.why(status)}
   [string] typeStatusWhy{Result.why(typeStatus)}
   [string] directStatusWhy{Result.why(directStatus)}
+  [string] methodStatusWhy{Result.why(methodStatus)}
   [string] valueWhy{Result.why(valueStatus)}
   [string] typeValueWhy{Result.why(typeValueStatus)}
   [string] directValueWhy{Result.why(directValueStatus)}
-  if(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
-         and(directStatusError, directValueError)),
+  [string] methodValueWhy{Result.why(methodValueStatus)}
+  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
+  if(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+                and(directStatusError, directValueError)),
+         and(methodStatusDirectError, methodValueError)),
      then(){ return() },
      else(){ return() })
 }
@@ -633,6 +643,22 @@ main() {
   CHECK(error.find("parameter err") != std::string::npos);
 }
 
+TEST_CASE("stdlib ImageError receiver methods reject unexpected arguments") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<void>]
+main() {
+  [ImageError] err{imageReadUnsupported()}
+  [Result<ImageError>] status{err.status(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/image/ImageError/status") != std::string::npos);
+}
+
 TEST_CASE("stdlib container error result helpers construct status and value results") {
   const std::string source = R"(
 import /std/collections/*
@@ -643,25 +669,33 @@ main() {
   [Result<ContainerError>] status{containerErrorStatus(containerMissingKey())}
   [Result<ContainerError>] typeStatus{ContainerError.status(containerMissingKey())}
   [Result<ContainerError>] directStatus{/ContainerError/status(containerMissingKey())}
+  [Result<ContainerError>] methodStatus{err.status()}
   [Result<i32, ContainerError>] valueStatus{containerErrorResult<i32>(containerCapacityExceeded())}
   [Result<i32, ContainerError>] typeValueStatus{ContainerError.result<i32>(containerCapacityExceeded())}
   [Result<i32, ContainerError>] directValueStatus{/ContainerError/result<i32>(containerCapacityExceeded())}
+  [Result<i32, ContainerError>] methodValueStatus{err.result<i32>()}
   [bool] statusError{Result.error(status)}
   [bool] typeStatusError{Result.error(typeStatus)}
   [bool] directStatusError{Result.error(directStatus)}
+  [bool] methodStatusDirectError{Result.error(err.status())}
   [bool] valueError{Result.error(valueStatus)}
   [bool] typeValueError{Result.error(typeValueStatus)}
   [bool] directValueError{Result.error(directValueStatus)}
   [string] direct{/ContainerError/why(err)}
   [string] viaType{ContainerError.why(err)}
+  [string] methodWhy{err.why()}
   [string] statusWhy{Result.why(status)}
   [string] typeStatusWhy{Result.why(typeStatus)}
   [string] directStatusWhy{Result.why(directStatus)}
+  [string] methodStatusWhy{Result.why(methodStatus)}
   [string] valueWhy{Result.why(valueStatus)}
   [string] typeValueWhy{Result.why(typeValueStatus)}
   [string] directValueWhy{Result.why(directValueStatus)}
-  if(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
-         and(directStatusError, directValueError)),
+  [string] methodValueWhy{Result.why(methodValueStatus)}
+  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
+  if(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+                and(directStatusError, directValueError)),
+         and(methodStatusDirectError, Result.error(methodValueStatus))),
      then(){ return() },
      else(){ return() })
 }
@@ -721,6 +755,23 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /std/collections/ContainerError/status parameter err") !=
+        std::string::npos);
+}
+
+TEST_CASE("stdlib ContainerError receiver methods reject unexpected arguments") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<void>]
+main() {
+  [ContainerError] err{containerMissingKey()}
+  [Result<ContainerError>] status{err.status(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/collections/ContainerError/status") !=
         std::string::npos);
 }
 

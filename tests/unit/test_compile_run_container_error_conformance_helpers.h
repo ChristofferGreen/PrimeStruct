@@ -16,11 +16,19 @@ makeUnknown() {
 
 [return<int> effects(io_out)]
 main() {
+  [ContainerError] err{/ContainerError/missing_key()}
+  [Result<ContainerError>] methodStatus{err.status()}
+  [Result<i32, ContainerError>] methodValueStatus{err.result<i32>()}
   [i32] total{plus(plus(/ContainerError/missing_key().code, /ContainerError/index_out_of_bounds().code),
                   plus(/ContainerError/empty().code, /ContainerError/capacity_exceeded().code))}
   print_line(/ContainerError/why(/ContainerError/missing_key()))
   print_line(ContainerError.why(/ContainerError/missing_key()))
+  print_line(err.why())
   print_line(Result.why(makeMissing()))
+  print_line(Result.why(methodStatus))
+  print_line(Result.why(methodValueStatus))
+  print_line(Result.why(err.status()))
+  print_line(Result.why(err.result<i32>()))
   print_line(Result.why(makeUnknown()))
   return(total)
 }
@@ -39,6 +47,11 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
           "container missing key\n"
           "container missing key\n"
           "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
+          "container missing key\n"
           "container error\n");
     return;
   }
@@ -51,6 +64,11 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == 10);
   CHECK(readFile(outPath) ==
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
+        "container missing key\n"
         "container missing key\n"
         "container missing key\n"
         "container missing key\n"

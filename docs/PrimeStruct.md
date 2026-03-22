@@ -755,15 +755,17 @@ sum_two_files([string] a, [string] b) {
     `ContainerError.result<T>(err)` namespace surface, or the public `/ContainerError/status(err)` /
     `/ContainerError/result<T>(err)` wrappers plus `/ContainerError/why([ContainerError] err)`,
     `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and
-    `/ContainerError/capacity_exceeded()` wrappers instead of hand-packing container error codes or reaching
-    through namespace-private helper paths.
+    `/ContainerError/capacity_exceeded()` wrappers, plus receiver-style `err.why()` / `err.status()` /
+    `err.result<T>()`, instead of hand-packing container error codes or reaching through namespace-private helper
+    paths.
     Import `/std/image/*` to use `.prime`-authored `imageReadUnsupported()`, `imageWriteUnsupported()`,
     `imageInvalidOperation()`, `imageErrorStatus(err)`, and `imageErrorResult<T>(err)` compatibility helpers, the
     type-owned `ImageError.status(err)` / `ImageError.result<T>(err)` namespace surface, or the public
     `/ImageError/status(err)` / `/ImageError/result<T>(err)` wrappers instead of hand-packing `ImageError` result
     codes, and load the public `/ImageError/why([ImageError] err)`, `/ImageError/read_unsupported()`,
-    `/ImageError/write_unsupported()`, and `/ImageError/invalid_operation()` wrappers for explicit type-owned
-    access to the current stdlib error strings and constructors. Import `/std/gfx/*` to use
+    `/ImageError/write_unsupported()`, and `/ImageError/invalid_operation()` wrappers plus receiver-style
+    `err.why()` / `err.status()` / `err.result<T>()` for explicit type-owned access to the current stdlib error
+    strings and constructors. Import `/std/gfx/*` to use
     `.prime`-authored `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` compatibility helpers, the type-owned
     `GfxError.status(err)` / `GfxError.result<T>(err)` namespace surface, or the public
     `/GfxError/status(err)` / `/GfxError/result<T>(err)` wrappers plus `/GfxError/why([GfxError] err)`,

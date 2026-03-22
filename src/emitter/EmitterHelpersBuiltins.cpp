@@ -1792,6 +1792,78 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return "";
   };
+  auto preferredImageErrorHelperTarget = [&](std::string_view helperName) -> std::string {
+    if (helperName == "why") {
+      if (defMap.find("/std/image/ImageError/why") != defMap.end()) {
+        return "/std/image/ImageError/why";
+      }
+      if (defMap.find("/ImageError/why") != defMap.end()) {
+        return "/ImageError/why";
+      }
+      return "";
+    }
+    if (helperName == "status") {
+      if (defMap.find("/std/image/ImageError/status") != defMap.end()) {
+        return "/std/image/ImageError/status";
+      }
+      if (defMap.find("/ImageError/status") != defMap.end()) {
+        return "/ImageError/status";
+      }
+      if (defMap.find("/std/image/imageErrorStatus") != defMap.end()) {
+        return "/std/image/imageErrorStatus";
+      }
+      return "";
+    }
+    if (helperName == "result") {
+      if (defMap.find("/std/image/ImageError/result") != defMap.end()) {
+        return "/std/image/ImageError/result";
+      }
+      if (defMap.find("/ImageError/result") != defMap.end()) {
+        return "/ImageError/result";
+      }
+      if (defMap.find("/std/image/imageErrorResult") != defMap.end()) {
+        return "/std/image/imageErrorResult";
+      }
+      return "";
+    }
+    return "";
+  };
+  auto preferredContainerErrorHelperTarget = [&](std::string_view helperName) -> std::string {
+    if (helperName == "why") {
+      if (defMap.find("/std/collections/ContainerError/why") != defMap.end()) {
+        return "/std/collections/ContainerError/why";
+      }
+      if (defMap.find("/ContainerError/why") != defMap.end()) {
+        return "/ContainerError/why";
+      }
+      return "";
+    }
+    if (helperName == "status") {
+      if (defMap.find("/std/collections/ContainerError/status") != defMap.end()) {
+        return "/std/collections/ContainerError/status";
+      }
+      if (defMap.find("/ContainerError/status") != defMap.end()) {
+        return "/ContainerError/status";
+      }
+      if (defMap.find("/std/collections/containerErrorStatus") != defMap.end()) {
+        return "/std/collections/containerErrorStatus";
+      }
+      return "";
+    }
+    if (helperName == "result") {
+      if (defMap.find("/std/collections/ContainerError/result") != defMap.end()) {
+        return "/std/collections/ContainerError/result";
+      }
+      if (defMap.find("/ContainerError/result") != defMap.end()) {
+        return "/ContainerError/result";
+      }
+      if (defMap.find("/std/collections/containerErrorResult") != defMap.end()) {
+        return "/std/collections/containerErrorResult";
+      }
+      return "";
+    }
+    return "";
+  };
   std::string typeName;
   if (receiver.kind == Expr::Kind::Name) {
     auto it = localTypes.find(receiver.name);
@@ -1803,6 +1875,18 @@ bool resolveMethodCallPath(const Expr &call,
            normalizedMethodName == "eof" || normalizedMethodName == "status" ||
            normalizedMethodName == "result")) {
         resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+        return !resolvedOut.empty();
+      }
+      if (receiver.name == "ImageError" &&
+          (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+           normalizedMethodName == "result")) {
+        resolvedOut = preferredImageErrorHelperTarget(normalizedMethodName);
+        return !resolvedOut.empty();
+      }
+      if (receiver.name == "ContainerError" &&
+          (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+           normalizedMethodName == "result")) {
+        resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
         return !resolvedOut.empty();
       }
       std::string resolvedReceiverPath = resolveExprPath(receiver);
@@ -1859,6 +1943,18 @@ bool resolveMethodCallPath(const Expr &call,
       (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
        normalizedMethodName == "status" || normalizedMethodName == "result")) {
     resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+    return !resolvedOut.empty();
+  }
+  if (typeName == "ImageError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut = preferredImageErrorHelperTarget(normalizedMethodName);
+    return !resolvedOut.empty();
+  }
+  if (typeName == "ContainerError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
     return !resolvedOut.empty();
   }
   if (typeName == "Pointer" || typeName == "Reference") {
