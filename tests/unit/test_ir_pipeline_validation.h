@@ -9391,6 +9391,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("std::function<bool(const Expr &)> isUnsafeReferenceExpr;") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateNamedArguments(expr.args, expr.argNames, resolved, error_)") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "resolveEscapingReferenceRoot = [&](const Expr &argExpr, std::string &rootOut) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
@@ -9417,6 +9423,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprBodyArguments(params, locals, expr, resolved, resolvedMethod,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprNamedArguments(params, locals, expr, resolved,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("isUnsafeReferenceExpr(params, locals, expr.args[1])") !=
         std::string::npos);

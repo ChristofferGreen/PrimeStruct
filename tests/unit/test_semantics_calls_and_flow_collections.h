@@ -15031,6 +15031,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector helper call-form expression user shadow keeps duplicate named diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/push([vector<i32> mut] values, [i32] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(push([values] values, [values] values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate named argument: values") != std::string::npos);
+}
+
 TEST_CASE("vector helper call-form expression prefers labeled named receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

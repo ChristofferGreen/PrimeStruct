@@ -286,10 +286,18 @@ private:
                               const ExprTryBuiltinContext &context,
                               bool &handledOut);
   struct ExprNamedArgumentBuiltinContext {
+    bool hasVectorHelperCallResolution = false;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
     std::function<bool(const Expr &)> isArrayNamespacedVectorCountCompatibilityCall;
   };
+  bool validateExprNamedArguments(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      bool resolvedMethod,
+      const ExprNamedArgumentBuiltinContext &context);
   bool validateExprNamedArgumentBuiltins(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,

@@ -1385,41 +1385,27 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
 
-    if (hasNamedArguments(expr.argNames)) {
-      auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {
-        std::string normalized = name;
-        if (!normalized.empty() && normalized.front() == '/') {
-          normalized.erase(normalized.begin());
-        }
-        if (normalized.rfind("vector/", 0) == 0) {
-          normalized = normalized.substr(std::string("vector/").size());
-        } else if (normalized.rfind("array/", 0) == 0) {
-          const std::string helperName = normalized.substr(std::string("array/").size());
-          const std::string canonicalPath = "/std/collections/vector/" + helperName;
-          if (hasDefinitionPath(canonicalPath) || hasImportedDefinitionPath(canonicalPath)) {
-            return false;
-          }
-          normalized = helperName;
-        } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
-          normalized = normalized.substr(std::string("std/collections/vector/").size());
-        }
-        if (normalized == "push" || normalized == "pop" || normalized == "reserve" || normalized == "clear" ||
-            normalized == "remove_at" || normalized == "remove_swap") {
-          helperOut = normalized;
-          return true;
-        }
-        return false;
-      };
-      std::string vectorHelperName;
-      if (resolveVectorMutatorName(expr.name, vectorHelperName) &&
-          (resolvedMethod || !hasVectorHelperCallResolution) &&
-          !hasResolvableDefinitionTarget(resolved)) {
-        error_ = vectorHelperName + " is only supported as a statement";
-        return false;
-      }
-    }
-
-    if (!validateNamedArguments(expr.args, expr.argNames, resolved, error_)) {
+    ExprNamedArgumentBuiltinContext namedArgumentBuiltinContext;
+    namedArgumentBuiltinContext.hasVectorHelperCallResolution =
+        hasVectorHelperCallResolution;
+    namedArgumentBuiltinContext.isNamedArgsPackMethodAccessCall =
+        [&](const Expr &target) {
+          return this->isNamedArgsPackMethodAccessCall(
+              target, builtinCollectionDispatchResolvers);
+        };
+    namedArgumentBuiltinContext.isNamedArgsPackWrappedFileBuiltinAccessCall =
+        [&](const Expr &target) {
+          return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
+              target, builtinCollectionDispatchResolvers);
+        };
+    namedArgumentBuiltinContext.isArrayNamespacedVectorCountCompatibilityCall =
+        [&](const Expr &target) {
+          return this->isArrayNamespacedVectorCountCompatibilityCall(
+              target, builtinCollectionDispatchResolvers);
+        };
+    if (!validateExprNamedArguments(params, locals, expr, resolved,
+                                    resolvedMethod,
+                                    namedArgumentBuiltinContext)) {
       return false;
     }
     auto it = defMap_.find(resolved);
@@ -1462,27 +1448,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (handledResultFileBuiltin) {
         return true;
-      }
-      ExprNamedArgumentBuiltinContext namedArgumentBuiltinContext;
-      namedArgumentBuiltinContext.isNamedArgsPackMethodAccessCall =
-          [&](const Expr &target) {
-            return this->isNamedArgsPackMethodAccessCall(
-                target, builtinCollectionDispatchResolvers);
-          };
-      namedArgumentBuiltinContext.isNamedArgsPackWrappedFileBuiltinAccessCall =
-          [&](const Expr &target) {
-            return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
-                target, builtinCollectionDispatchResolvers);
-          };
-      namedArgumentBuiltinContext.isArrayNamespacedVectorCountCompatibilityCall =
-          [&](const Expr &target) {
-            return this->isArrayNamespacedVectorCountCompatibilityCall(
-                target, builtinCollectionDispatchResolvers);
-          };
-      if (!validateExprNamedArgumentBuiltins(
-              params, locals, expr, resolved, resolvedMethod,
-              namedArgumentBuiltinContext)) {
-        return false;
       }
       bool handledGpuBufferBuiltin = false;
       if (!validateExprGpuBufferBuiltins(params, locals, expr,
