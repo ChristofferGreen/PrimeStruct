@@ -13,6 +13,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("direct Result.ok expressions participate in Result helpers") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [bool] is_error{ Result.error(Result.ok(1i32)) }
+  [string] why{ Result.why(Result.ok(1i32)) }
+  [i32] value{ try(Result.ok(7i32)) }
+  if(or(is_error, not(equal(value, 7i32))), then(){ return() }, else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("Result.error rejects non-result argument") {
   const std::string source = R"(
 [return<void>]
@@ -1132,6 +1147,23 @@ main() {
   [bool] failed{ Result.error(chained) }
   [string] why{ Result.why(chained) }
   if(failed, then(){ return() }, else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("Result.and_then infers direct Result.ok lambda return") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [Result<i32, FileError>] status{ Result.ok(4i32) }
+  [auto] chained{ Result.and_then(status, []([i32] value) { return(Result.ok(plus(value, 3i32))) }) }
+  [bool] failed{ Result.error(chained) }
+  [string] why{ Result.why(chained) }
+  [i32] value{ try(chained) }
+  if(or(failed, not(equal(value, 7i32))), then(){ return() }, else(){ return() })
 }
 )";
   std::string error;

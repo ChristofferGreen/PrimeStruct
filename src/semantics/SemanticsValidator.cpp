@@ -1192,6 +1192,51 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     return binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
+  auto resolveDirectResultOkType = [&](const Expr &candidate,
+                                       const std::vector<ParameterInfo> &currentParams,
+                                       const std::unordered_map<std::string, BindingInfo> &currentLocals,
+                                       const std::string &preferredErrorType,
+                                       ResultTypeInfo &resultOut) -> bool {
+    resultOut = ResultTypeInfo{};
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name != "ok" ||
+        !candidate.templateArgs.empty() || candidate.hasBodyArguments || !candidate.bodyArguments.empty() ||
+        candidate.args.empty()) {
+      return false;
+    }
+    const Expr &receiver = candidate.args.front();
+    if (receiver.kind != Expr::Kind::Name || normalizeBindingTypeName(receiver.name) != "Result") {
+      return false;
+    }
+    std::string errorType = preferredErrorType;
+    if (errorType.empty() && currentValidationContext_.resultType.has_value() &&
+        currentValidationContext_.resultType->isResult &&
+        !currentValidationContext_.resultType->errorType.empty()) {
+      errorType = currentValidationContext_.resultType->errorType;
+    }
+    if (errorType.empty() && currentValidationContext_.onError.has_value() &&
+        !currentValidationContext_.onError->errorType.empty()) {
+      errorType = currentValidationContext_.onError->errorType;
+    }
+    if (errorType.empty()) {
+      errorType = "_";
+    }
+    resultOut.isResult = true;
+    resultOut.errorType = std::move(errorType);
+    if (candidate.args.size() == 1) {
+      resultOut.hasValue = false;
+      return true;
+    }
+    if (candidate.args.size() != 2) {
+      return false;
+    }
+    BindingInfo payloadBinding;
+    if (!inferBindingTypeFromInitializer(candidate.args.back(), currentParams, currentLocals, payloadBinding)) {
+      return false;
+    }
+    resultOut.hasValue = true;
+    resultOut.valueType = bindingTypeText(payloadBinding);
+    return !resultOut.valueType.empty();
+  };
   auto resolveBindingTypeText = [&](const std::string &name, std::string &typeTextOut) -> bool {
     typeTextOut.clear();
     auto describeBindingType = [](const BindingInfo &binding) {
@@ -1415,7 +1460,9 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     return inferQueryExprTypeText(*valueExpr, {}, lambdaLocals, typeTextOut) && !typeTextOut.empty();
   };
-  auto inferLambdaBodyResultType = [&](const Expr &lambdaExpr, ResultTypeInfo &resultOut) -> bool {
+  auto inferLambdaBodyResultType = [&](const Expr &lambdaExpr,
+                                       const std::string &preferredErrorType,
+                                       ResultTypeInfo &resultOut) -> bool {
     resultOut = ResultTypeInfo{};
     if (!lambdaExpr.isLambda || (!lambdaExpr.hasBodyArguments && lambdaExpr.bodyArguments.empty())) {
       return false;
@@ -1458,7 +1505,16 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     if (valueExpr == nullptr) {
       return false;
     }
-    return resolveResultTypeForExpr(*valueExpr, {}, lambdaLocals, resultOut) && resultOut.isResult;
+    if (resolveDirectResultOkType(*valueExpr, {}, lambdaLocals, preferredErrorType, resultOut)) {
+      return true;
+    }
+    if (!resolveResultTypeForExpr(*valueExpr, {}, lambdaLocals, resultOut) || !resultOut.isResult) {
+      return false;
+    }
+    if (!preferredErrorType.empty() && resultOut.errorType == "_") {
+      resultOut.errorType = preferredErrorType;
+    }
+    return true;
   };
   auto resolveMethodResultPath = [&]() -> std::string {
     if (!expr.isMethodCall || expr.args.empty()) {
@@ -1547,6 +1603,9 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
   if (expr.kind != Expr::Kind::Call) {
     return false;
   }
+  if (resolveDirectResultOkType(expr, params, locals, "", out)) {
+    return true;
+  }
   if (!expr.isMethodCall && isSimpleCallName(expr, "File") && expr.templateArgs.size() == 1) {
     out.isResult = true;
     out.hasValue = true;
@@ -1621,7 +1680,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
           return true;
         }
         ResultTypeInfo chainedResult;
-        if (!inferLambdaBodyResultType(expr.args[2], chainedResult) || !chainedResult.isResult) {
+        if (!inferLambdaBodyResultType(expr.args[2], argResult.errorType, chainedResult) || !chainedResult.isResult) {
           return false;
         }
         if (!chainedResult.errorType.empty() && !argResult.errorType.empty() &&

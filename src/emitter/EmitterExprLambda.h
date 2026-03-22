@@ -33,6 +33,43 @@ std::string Emitter::emitExpr(const Expr &expr,
     }
     return binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
+  auto resolveDirectResultOkInfo = [&](const Expr &candidate,
+                                       const std::unordered_map<std::string, BindingInfo> &currentTypes,
+                                       const std::string &preferredErrorType,
+                                       ResultInfo &out) -> bool {
+    out = ResultInfo{};
+    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name != "ok" ||
+        !candidate.templateArgs.empty() || candidate.hasBodyArguments || !candidate.bodyArguments.empty() ||
+        candidate.args.empty()) {
+      return false;
+    }
+    const Expr &receiver = candidate.args.front();
+    if (receiver.kind != Expr::Kind::Name || normalizeBindingTypeName(receiver.name) != "Result") {
+      return false;
+    }
+    out.isResult = true;
+    out.errorType = preferredErrorType.empty() ? "_" : preferredErrorType;
+    if (candidate.args.size() == 1) {
+      out.hasValue = false;
+      return true;
+    }
+    if (candidate.args.size() != 2) {
+      return false;
+    }
+    const Expr &valueExpr = candidate.args.back();
+    if (valueExpr.kind == Expr::Kind::Name) {
+      auto it = currentTypes.find(valueExpr.name);
+      if (it != currentTypes.end()) {
+        out.hasValue = true;
+        out.valueType = bindingTypeText(it->second);
+        return !out.valueType.empty();
+      }
+    }
+    ReturnKind valueKind = inferPrimitiveReturnKind(valueExpr, currentTypes, returnKinds, allowMathBare);
+    out.valueType = typeNameForReturnKind(valueKind);
+    out.hasValue = !out.valueType.empty();
+    return out.hasValue;
+  };
   auto splitCaptureTokens = [](const std::string &capture) {
     std::vector<std::string> tokens;
     std::istringstream stream(capture);
@@ -139,6 +176,7 @@ std::string Emitter::emitExpr(const Expr &expr,
       resolveResultExprInfoWithTypes;
   auto inferLambdaResultInfo = [&](const Expr &lambdaExpr,
                                    const std::unordered_map<std::string, BindingInfo> &outerTypes,
+                                   const std::string &preferredErrorType,
                                    ResultInfo &resultOut) -> bool {
     resultOut = ResultInfo{};
     if (!lambdaExpr.isLambda || (!lambdaExpr.hasBodyArguments && lambdaExpr.bodyArguments.empty())) {
@@ -172,7 +210,16 @@ std::string Emitter::emitExpr(const Expr &expr,
     if (valueExpr == nullptr) {
       return false;
     }
-    return resolveResultExprInfoWithTypes(*valueExpr, activeTypes, resultOut) && resultOut.isResult;
+    if (resolveDirectResultOkInfo(*valueExpr, activeTypes, preferredErrorType, resultOut)) {
+      return true;
+    }
+    if (!resolveResultExprInfoWithTypes(*valueExpr, activeTypes, resultOut) || !resultOut.isResult) {
+      return false;
+    }
+    if (!preferredErrorType.empty() && resultOut.errorType == "_") {
+      resultOut.errorType = preferredErrorType;
+    }
+    return true;
   };
   resolveResultExprInfoWithTypes =
       [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &currentTypes, ResultInfo &out) -> bool {
@@ -197,6 +244,9 @@ std::string Emitter::emitExpr(const Expr &expr,
         }
         if (candidate.kind != Expr::Kind::Call) {
           return false;
+        }
+        if (resolveDirectResultOkInfo(candidate, currentTypes, "", out)) {
+          return true;
         }
         if (!candidate.isMethodCall && isSimpleCallName(candidate, "File")) {
           out.isResult = true;
@@ -241,7 +291,8 @@ std::string Emitter::emitExpr(const Expr &expr,
               ResultInfo argInfo;
               ResultInfo nextInfo;
               if (!resolveResultExprInfoWithTypes(candidate.args[1], currentTypes, argInfo) || !argInfo.isResult ||
-                  !argInfo.hasValue || !inferLambdaResultInfo(candidate.args[2], currentTypes, nextInfo) ||
+                  !argInfo.hasValue ||
+                  !inferLambdaResultInfo(candidate.args[2], currentTypes, argInfo.errorType, nextInfo) ||
                   !nextInfo.isResult) {
                 return false;
               }
