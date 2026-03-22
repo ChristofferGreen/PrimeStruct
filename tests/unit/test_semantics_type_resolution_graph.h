@@ -112,6 +112,16 @@ const primec::semantics::TypeResolutionOnErrorSnapshotEntry &requireOnErrorSnaps
   return *it;
 }
 
+const primec::semantics::TypeResolutionValidationContextSnapshotEntry &requireValidationContextSnapshotEntry(
+    const primec::semantics::TypeResolutionValidationContextSnapshot &snapshot,
+    const std::string &definitionPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.definitionPath == definitionPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 size_t requireTopologicalComponentIndex(const primec::semantics::CondensationDagSnapshot &dag, uint32_t componentId) {
   const auto it = std::find(dag.topologicalComponentIds.begin(), dag.topologicalComponentIds.end(), componentId);
   REQUIRE(it != dag.topologicalComponentIds.end());
@@ -638,6 +648,70 @@ main() {
   CHECK(mainEntry.returnResultHasValue);
   CHECK(mainEntry.returnResultValueTypeText == "int");
   CHECK(mainEntry.returnResultErrorTypeText == "ContainerError");
+}
+
+TEST_CASE("type resolution validation context snapshot keeps shared cached effects and safety metadata") {
+  const std::string source = R"(
+[return<void> effects(io_err)]
+unexpectedError([ContainerError] err) {
+}
+
+[return<void>]
+defaults() {
+}
+
+[compute return<void> effects(io_err)]
+kernel() {
+}
+
+[unsafe effects(heap_alloc)]
+scratch() {
+}
+
+[return<Result<int, ContainerError>> effects(io_out, io_err) on_error<ContainerError, /unexpectedError>]
+main() {
+  return(Result.ok(1i32))
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionValidationContextSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionValidationContextSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &defaultsEntry = requireValidationContextSnapshotEntry(snapshot, "/defaults");
+  CHECK(!defaultsEntry.definitionIsCompute);
+  CHECK(!defaultsEntry.definitionIsUnsafe);
+  CHECK(defaultsEntry.activeEffects == std::vector<std::string>({"io_err", "io_out"}));
+  CHECK(!defaultsEntry.hasResultType);
+  CHECK(!defaultsEntry.hasOnError);
+
+  const auto &kernelEntry = requireValidationContextSnapshotEntry(snapshot, "/kernel");
+  CHECK(kernelEntry.definitionIsCompute);
+  CHECK(!kernelEntry.definitionIsUnsafe);
+  CHECK(kernelEntry.activeEffects == std::vector<std::string>({"io_err"}));
+  CHECK(!kernelEntry.hasResultType);
+  CHECK(!kernelEntry.hasOnError);
+
+  const auto &scratchEntry = requireValidationContextSnapshotEntry(snapshot, "/scratch");
+  CHECK(!scratchEntry.definitionIsCompute);
+  CHECK(scratchEntry.definitionIsUnsafe);
+  CHECK(scratchEntry.activeEffects == std::vector<std::string>({"heap_alloc"}));
+  CHECK(!scratchEntry.hasResultType);
+  CHECK(!scratchEntry.hasOnError);
+
+  const auto &mainEntry = requireValidationContextSnapshotEntry(snapshot, "/main");
+  CHECK(!mainEntry.definitionIsCompute);
+  CHECK(!mainEntry.definitionIsUnsafe);
+  CHECK(mainEntry.activeEffects == std::vector<std::string>({"io_err", "io_out"}));
+  CHECK(mainEntry.hasResultType);
+  CHECK(mainEntry.resultTypeHasValue);
+  CHECK(mainEntry.resultValueTypeText == "int");
+  CHECK(mainEntry.resultErrorTypeText == "ContainerError");
+  CHECK(mainEntry.hasOnError);
+  CHECK(mainEntry.onErrorHandlerPath == "/unexpectedError");
+  CHECK(mainEntry.onErrorErrorTypeText == "ContainerError");
+  CHECK(mainEntry.onErrorBoundArgCount == 0);
 }
 
 TEST_CASE("type resolution graph dump stays stable for a simple call chain") {

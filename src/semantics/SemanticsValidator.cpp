@@ -446,48 +446,54 @@ SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
 
 std::vector<SemanticsValidator::OnErrorSnapshotEntry>
 SemanticsValidator::onErrorSnapshotForTesting() {
-  auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
-  };
-
   std::vector<OnErrorSnapshotEntry> entries;
   entries.reserve(program_.definitions.size());
   for (const auto &def : program_.definitions) {
-    std::optional<OnErrorHandler> onErrorHandler;
-    if (!withPreservedError([&]() {
-          return parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, onErrorHandler);
-        }) ||
-        !onErrorHandler.has_value()) {
+    const auto &context = buildDefinitionValidationContext(def);
+    if (!context.onError.has_value()) {
       continue;
-    }
-
-    ResultTypeInfo resultInfo;
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      if (withPreservedError([&]() {
-            return resolveResultTypeFromTypeName(transform.templateArgs.front(), resultInfo);
-          }) &&
-          resultInfo.isResult) {
-        break;
-      }
-      resultInfo = {};
     }
 
     entries.push_back(OnErrorSnapshotEntry{
         def.fullPath,
-        onErrorHandler->handlerPath,
-        onErrorHandler->errorType,
-        onErrorHandler->boundArgs.size(),
-        resultInfo.hasValue,
-        resultInfo.valueType,
-        resultInfo.errorType,
+        context.onError->handlerPath,
+        context.onError->errorType,
+        context.onError->boundArgs.size(),
+        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
+    });
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    return left.definitionPath < right.definitionPath;
+  });
+  return entries;
+}
+
+std::vector<SemanticsValidator::ValidationContextSnapshotEntry>
+SemanticsValidator::validationContextSnapshotForTesting() const {
+  std::vector<ValidationContextSnapshotEntry> entries;
+  entries.reserve(program_.definitions.size());
+  for (const auto &def : program_.definitions) {
+    const auto &context = buildDefinitionValidationContext(def);
+    std::vector<std::string> activeEffects(context.activeEffects.begin(), context.activeEffects.end());
+    std::sort(activeEffects.begin(), activeEffects.end());
+    activeEffects.erase(std::unique(activeEffects.begin(), activeEffects.end()), activeEffects.end());
+
+    entries.push_back(ValidationContextSnapshotEntry{
+        def.fullPath,
+        context.definitionIsCompute,
+        context.definitionIsUnsafe,
+        std::move(activeEffects),
+        context.resultType.has_value() && context.resultType->isResult,
+        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
+        context.onError.has_value(),
+        context.onError.has_value() ? context.onError->handlerPath : std::string{},
+        context.onError.has_value() ? context.onError->errorType : std::string{},
+        context.onError.has_value() ? context.onError->boundArgs.size() : 0,
     });
   }
 

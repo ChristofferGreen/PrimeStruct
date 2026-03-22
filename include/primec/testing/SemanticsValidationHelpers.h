@@ -173,6 +173,25 @@ struct TypeResolutionOnErrorSnapshot {
   std::vector<TypeResolutionOnErrorSnapshotEntry> entries;
 };
 
+struct TypeResolutionValidationContextSnapshotEntry {
+  std::string definitionPath;
+  bool definitionIsCompute = false;
+  bool definitionIsUnsafe = false;
+  std::vector<std::string> activeEffects;
+  bool hasResultType = false;
+  bool resultTypeHasValue = false;
+  std::string resultValueTypeText;
+  std::string resultErrorTypeText;
+  bool hasOnError = false;
+  std::string onErrorHandlerPath;
+  std::string onErrorErrorTypeText;
+  size_t onErrorBoundArgCount = 0;
+};
+
+struct TypeResolutionValidationContextSnapshot {
+  std::vector<TypeResolutionValidationContextSnapshotEntry> entries;
+};
+
 std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep(const std::string &text);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(const Expr &countExpr,
@@ -246,6 +265,12 @@ bool computeTypeResolutionOnErrorSnapshotForTesting(
     const std::string &entryPath,
     std::string &error,
     TypeResolutionOnErrorSnapshot &out,
+    const std::vector<std::string> &semanticTransforms = {});
+bool computeTypeResolutionValidationContextSnapshotForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    TypeResolutionValidationContextSnapshot &out,
     const std::vector<std::string> &semanticTransforms = {});
 
 } // namespace primec::semantics

@@ -95,6 +95,21 @@ public:
     std::string returnResultErrorType;
   };
 
+  struct ValidationContextSnapshotEntry {
+    std::string definitionPath;
+    bool definitionIsCompute = false;
+    bool definitionIsUnsafe = false;
+    std::vector<std::string> activeEffects;
+    bool hasResultType = false;
+    bool resultTypeHasValue = false;
+    std::string resultValueType;
+    std::string resultErrorType;
+    bool hasOnError = false;
+    std::string onErrorHandlerPath;
+    std::string onErrorErrorType;
+    size_t onErrorBoundArgCount = 0;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
@@ -112,6 +127,7 @@ public:
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
   std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
+  std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;
 
 private:
   void forEachLocalAwareSnapshotCall(

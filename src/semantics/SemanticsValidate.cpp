@@ -520,4 +520,33 @@ bool semantics::computeTypeResolutionOnErrorSnapshotForTesting(
   });
 }
 
+bool semantics::computeTypeResolutionValidationContextSnapshotForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    TypeResolutionValidationContextSnapshot &out,
+    const std::vector<std::string> &semanticTransforms) {
+  out.entries.clear();
+  return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
+    const auto entries = validator.validationContextSnapshotForTesting();
+    out.entries.reserve(entries.size());
+    for (const auto &entry : entries) {
+      out.entries.push_back(TypeResolutionValidationContextSnapshotEntry{
+          entry.definitionPath,
+          entry.definitionIsCompute,
+          entry.definitionIsUnsafe,
+          entry.activeEffects,
+          entry.hasResultType,
+          entry.resultTypeHasValue,
+          entry.resultValueType,
+          entry.resultErrorType,
+          entry.hasOnError,
+          entry.onErrorHandlerPath,
+          entry.onErrorErrorType,
+          entry.onErrorBoundArgCount,
+      });
+    }
+  });
+}
+
 } // namespace primec
