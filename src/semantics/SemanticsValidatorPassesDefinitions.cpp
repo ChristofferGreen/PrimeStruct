@@ -60,20 +60,7 @@ bool SemanticsValidator::validateDefinitions() {
       error_ = "lifecycle helpers must return void: " + def.fullPath;
       return false;
     }
-    currentValidationContext_.resultType.reset();
-    for (const auto &transform : def.transforms) {
-      if (transform.name == "return" && transform.templateArgs.size() == 1) {
-        ResultTypeInfo resultInfo;
-        if (resolveResultTypeFromTypeName(transform.templateArgs.front(), resultInfo)) {
-          currentValidationContext_.resultType = resultInfo;
-          break;
-        }
-      }
-    }
-    std::optional<OnErrorHandler> onErrorHandler;
-    if (!parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, onErrorHandler)) {
-      return false;
-    }
+    const std::optional<OnErrorHandler> &onErrorHandler = currentValidationContext_.onError;
     if (onErrorHandler.has_value() &&
         (!currentValidationContext_.resultType.has_value() ||
          !currentValidationContext_.resultType->isResult) &&
@@ -92,7 +79,7 @@ bool SemanticsValidator::validateDefinitions() {
     }
     if (onErrorHandler.has_value()) {
       OnErrorScope onErrorScope(*this, std::nullopt);
-      for (const auto &arg : onErrorHandler->boundArgs) {
+      for (const auto &arg : currentValidationContext_.onError->boundArgs) {
         if (!validateExpr(defParams, locals, arg)) {
           return false;
         }

@@ -411,6 +411,45 @@ main() {
   CHECK(entry.initializerResultErrorTypeText == "ContainerError");
 }
 
+TEST_CASE("type resolution local binding snapshot keeps shared Result ok error context") {
+  const std::string source = R"(
+[return<void>]
+unexpectedError([ContainerError] err) {
+}
+
+[return<auto> on_error<ContainerError, /unexpectedError>]
+counted() {
+  [auto] status{Result.ok()}
+  return(plus(1i32, 2i32))
+}
+
+[return<Result<int, ContainerError>> on_error<ContainerError, /unexpectedError>]
+main() {
+  [auto] ok{Result.ok(1i32)}
+  return(ok)
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &countedEntry = requireLocalBindingSnapshotEntry(snapshot, "/counted", "status");
+  CHECK(countedEntry.bindingTypeText == "Result<ContainerError>");
+  CHECK(countedEntry.initializerQueryTypeText == "Result<ContainerError>");
+  CHECK(!countedEntry.initializerResultHasValue);
+  CHECK(countedEntry.initializerResultValueTypeText.empty());
+  CHECK(countedEntry.initializerResultErrorTypeText == "ContainerError");
+
+  const auto &mainEntry = requireLocalBindingSnapshotEntry(snapshot, "/main", "ok");
+  CHECK(mainEntry.bindingTypeText == "Result<i32, ContainerError>");
+  CHECK(mainEntry.initializerQueryTypeText == "Result<i32, ContainerError>");
+  CHECK(mainEntry.initializerResultHasValue);
+  CHECK(mainEntry.initializerResultValueTypeText == "i32");
+  CHECK(mainEntry.initializerResultErrorTypeText == "ContainerError");
+}
+
 TEST_CASE("type resolution query call snapshot keeps map receiver query metadata") {
   const std::string source = R"(
 [return<auto> effects(heap_alloc)]

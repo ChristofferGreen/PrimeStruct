@@ -670,19 +670,28 @@ std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path
   return basePath;
 }
 
-SemanticsValidator::ValidationContext
-SemanticsValidator::makeDefinitionValidationContext(const Definition &def) const {
-  ValidationContext context;
-  context.definitionPath = def.fullPath;
+bool SemanticsValidator::makeDefinitionValidationContext(const Definition &def, ValidationContext &out) {
+  out = {};
+  out.definitionPath = def.fullPath;
   for (const auto &transform : def.transforms) {
     if (transform.name == "compute") {
-      context.definitionIsCompute = true;
+      out.definitionIsCompute = true;
     } else if (transform.name == "unsafe") {
-      context.definitionIsUnsafe = true;
+      out.definitionIsUnsafe = true;
+    } else if (transform.name == "return" && transform.templateArgs.size() == 1) {
+      ResultTypeInfo resultInfo;
+      if (resolveResultTypeFromTypeName(transform.templateArgs.front(), resultInfo)) {
+        out.resultType = std::move(resultInfo);
+      }
     }
   }
-  context.activeEffects = resolveEffects(def.transforms, def.fullPath == entryPath_);
-  return context;
+  out.activeEffects = resolveEffects(def.transforms, def.fullPath == entryPath_);
+  std::optional<OnErrorHandler> onErrorHandler;
+  if (!parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, onErrorHandler)) {
+    return false;
+  }
+  out.onError = std::move(onErrorHandler);
+  return true;
 }
 
 SemanticsValidator::ValidationContext

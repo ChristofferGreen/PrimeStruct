@@ -38,15 +38,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     entryDefaultEffectSet_.insert(effect);
   }
-  definitionValidationContexts_.reserve(program_.definitions.size());
-  for (const auto &def : program_.definitions) {
-    definitionValidationContexts_.try_emplace(def.fullPath, makeDefinitionValidationContext(def));
-  }
-  executionValidationContexts_.reserve(program_.executions.size());
-  for (const auto &exec : program_.executions) {
-    executionValidationContexts_.try_emplace(exec.fullPath, makeExecutionValidationContext(exec));
-  }
-
   std::unordered_set<std::string> explicitStructs;
   struct HelperSuffixInfo {
     std::string_view suffix;
@@ -181,7 +172,26 @@ bool SemanticsValidator::buildDefinitionMaps() {
     return false;
   }
 
-  return buildParameters();
+  if (!buildParameters()) {
+    return false;
+  }
+
+  definitionValidationContexts_.clear();
+  definitionValidationContexts_.reserve(program_.definitions.size());
+  for (const auto &def : program_.definitions) {
+    ValidationContext context;
+    if (!makeDefinitionValidationContext(def, context)) {
+      return false;
+    }
+    definitionValidationContexts_.try_emplace(def.fullPath, std::move(context));
+  }
+  executionValidationContexts_.clear();
+  executionValidationContexts_.reserve(program_.executions.size());
+  for (const auto &exec : program_.executions) {
+    executionValidationContexts_.try_emplace(exec.fullPath, makeExecutionValidationContext(exec));
+  }
+
+  return true;
 }
 
 }  // namespace primec::semantics

@@ -653,6 +653,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> returnBindings_;") !=
         std::string::npos);
+  CHECK(validatorCore.find("if (resolveResultTypeFromTypeName(transform.templateArgs.front(), resultInfo)) {") !=
+        std::string::npos);
+  CHECK(validatorCore.find("out.onError = std::move(onErrorHandler);") !=
+        std::string::npos);
   CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnKindGraphStep") != std::string::npos);
   CHECK(validatorHeader.find("graphTypeResolverEnabled_") == std::string::npos);
@@ -1201,6 +1205,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("inferQueryExprTypeText(") != std::string::npos);
   CHECK(validatorInfer.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
+  CHECK(validatorBuild.find("if (!makeDefinitionValidationContext(def, context)) {") !=
+        std::string::npos);
+  CHECK(validatorBuild.find("definitionValidationContexts_.try_emplace(def.fullPath, std::move(context));") !=
+        std::string::npos);
   CHECK(lowerInferenceSetup.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
         std::string::npos);

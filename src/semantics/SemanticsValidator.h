@@ -258,7 +258,7 @@ private:
   bool isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr) const;
   bool isBuiltinBlockCall(const Expr &expr) const;
   struct ValidationContext;
-  ValidationContext makeDefinitionValidationContext(const Definition &def) const;
+  bool makeDefinitionValidationContext(const Definition &def, ValidationContext &out);
   ValidationContext makeExecutionValidationContext(const Execution &exec) const;
   const ValidationContext &buildDefinitionValidationContext(const Definition &def) const;
   const ValidationContext &buildExecutionValidationContext(const Execution &exec) const;
