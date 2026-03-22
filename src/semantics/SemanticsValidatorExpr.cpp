@@ -1332,38 +1332,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
     }
-    if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
-      std::string remappedRemovedMapBodyArgumentTarget;
-      const bool remappedRemovedMapTarget =
-          this->resolveRemovedMapBodyArgumentTarget(
-              expr, resolved, params, locals, builtinCollectionDispatchResolverAdapters, remappedRemovedMapBodyArgumentTarget);
-      if (remappedRemovedMapTarget) {
-        resolved = remappedRemovedMapBodyArgumentTarget;
-        resolvedMethod = false;
-      } else if (!resolvedMethod && !this->shouldPreserveRemovedCollectionHelperPath(resolved)) {
-        resolved = preferVectorStdlibHelperPath(resolved);
-      }
-      if (resolvedMethod || !hasResolvableDefinitionTarget(resolved)) {
-        error_ = "block arguments require a definition target: " + resolved;
-        return false;
-      }
-      std::unordered_map<std::string, BindingInfo> blockLocals = locals;
-      std::vector<Expr> livenessStatements = expr.bodyArguments;
-      if (enclosingStatements != nullptr && statementIndex < enclosingStatements->size()) {
-        for (size_t idx = statementIndex + 1; idx < enclosingStatements->size(); ++idx) {
-          livenessStatements.push_back((*enclosingStatements)[idx]);
-        }
-      }
-      OnErrorScope onErrorScope(*this, std::nullopt);
-      BorrowEndScope borrowScope(*this, currentValidationContext_.endedReferenceBorrows);
-      for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size(); ++bodyIndex) {
-        const Expr &bodyExpr = expr.bodyArguments[bodyIndex];
-        if (!validateStatement(params, blockLocals, bodyExpr, ReturnKind::Unknown, false, true, nullptr,
-                               expr.namespacePrefix, &expr.bodyArguments, bodyIndex)) {
-          return false;
-        }
-        expireReferenceBorrowsForRemainder(params, blockLocals, livenessStatements, bodyIndex + 1);
-      }
+    if (!validateExprBodyArguments(params, locals, expr, resolved, resolvedMethod,
+                                   builtinCollectionDispatchResolverAdapters,
+                                   enclosingStatements, statementIndex)) {
+      return false;
     }
     std::string gpuBuiltin;
     if (getBuiltinGpuName(expr, gpuBuiltin)) {

@@ -202,6 +202,7 @@ private:
                                        const Expr &stmt,
                                        std::unordered_map<std::string, BindingInfo> &activeLocals,
                                        DefinitionReturnInferenceState &state);
+  struct BuiltinCollectionDispatchResolverAdapters;
 
   bool validateExpr(const std::vector<ParameterInfo> &params,
                     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -250,6 +251,7 @@ private:
                                  const Expr &expr,
                                  std::string &resolved,
                                  bool &resolvedMethod,
+                                 const BuiltinCollectionDispatchResolverAdapters &builtinCollectionDispatchResolverAdapters,
                                  const std::vector<Expr> *enclosingStatements,
                                  size_t statementIndex);
   struct ExprResultFileBuiltinContext {
@@ -463,7 +465,6 @@ private:
                                          const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          std::vector<std::string> &argsOut);
-  struct BuiltinCollectionDispatchResolverAdapters;
   std::string preferredExperimentalMapHelperTarget(std::string_view helperName) const;
   std::string preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const;
   bool canonicalExperimentalMapHelperPath(const std::string &resolvedPath,

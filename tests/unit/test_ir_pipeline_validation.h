@@ -9399,7 +9399,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find(
             "this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("this->resolveRemovedMapBodyArgumentTarget(") !=
+  CHECK(semanticsExprSource.find("this->resolveRemovedMapBodyArgumentTarget(") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprBodyArguments(params, locals, expr, resolved, resolvedMethod,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprCollectionLiteralBuiltins(params, locals, expr,") !=
         std::string::npos);
