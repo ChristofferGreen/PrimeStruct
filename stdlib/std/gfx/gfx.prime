@@ -357,12 +357,12 @@ namespace std {
 
   [public return<Result<GfxError>>]
   gfxErrorStatus([GfxError] err) {
-    return(err.code)
+    return(/std/gfx/GfxError/status(err))
   }
 
   [public return<Result<T, GfxError>>]
   gfxErrorResult<T>([GfxError] err) {
-    return(multiply(convert<i64>(err.code), 4294967296i64))
+    return(/std/gfx/GfxError/result<T>(err))
   }
 
   [return<void>]
@@ -421,6 +421,11 @@ namespace std {
       return("gfx_error"utf8)
     }
 
+    [public return<Result<GfxError>>]
+    status([GfxError] err) {
+      return(err.code)
+    }
+
     [public return<GfxError>]
     window_create_failed() {
       return(gfxError(1i32))
@@ -464,6 +469,11 @@ namespace std {
     [public return<GfxError>]
     frame_present_failed() {
       return(gfxError(9i32))
+    }
+
+    [public return<Result<T, GfxError>>]
+    result<T>([GfxError] err) {
+      return(multiply(convert<i64>(err.code), 4294967296i64))
     }
   }
 

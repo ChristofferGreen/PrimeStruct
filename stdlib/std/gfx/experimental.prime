@@ -422,12 +422,12 @@ namespace std {
 
   [public return<Result<GfxError>>]
   gfxErrorStatus([GfxError] err) {
-    return(err.code)
+    return(/std/gfx/experimental/GfxError/status(err))
   }
 
   [public return<Result<T, GfxError>>]
   gfxErrorResult<T>([GfxError] err) {
-    return(multiply(convert<i64>(err.code), 4294967296i64))
+    return(/std/gfx/experimental/GfxError/result<T>(err))
   }
 
   [return<void>]
@@ -600,6 +600,16 @@ namespace std {
         return("frame_present_failed"utf8)
       }
       return("gfx_error"utf8)
+    }
+
+    [public return<Result<GfxError>>]
+    status([GfxError] err) {
+      return(err.code)
+    }
+
+    [public return<Result<T, GfxError>>]
+    result<T>([GfxError] err) {
+      return(multiply(convert<i64>(err.code), 4294967296i64))
     }
   }
 

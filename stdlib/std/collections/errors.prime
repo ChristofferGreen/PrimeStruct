@@ -48,6 +48,11 @@ namespace std {
       return("container error"utf8)
     }
 
+    [public return<Result<ContainerError>>]
+    status([ContainerError] err) {
+      return(err.code)
+    }
+
     [public return<ContainerError>]
     missing_key() {
       return(ContainerError(1i32))
@@ -66,6 +71,11 @@ namespace std {
     [public return<ContainerError>]
     capacity_exceeded() {
       return(ContainerError(4i32))
+    }
+
+    [public return<Result<T, ContainerError>>]
+    result<T>([ContainerError] err) {
+      return(multiply(convert<i64>(err.code), 4294967296i64))
     }
   }
 
@@ -91,12 +101,12 @@ namespace std {
 
   [public return<Result<ContainerError>>]
   containerErrorStatus([ContainerError] err) {
-    return(err.code)
+    return(/std/collections/ContainerError/status(err))
   }
 
   [public return<Result<T, ContainerError>>]
   containerErrorResult<T>([ContainerError] err) {
-    return(multiply(convert<i64>(err.code), 4294967296i64))
+    return(/std/collections/ContainerError/result<T>(err))
   }
   }
 }

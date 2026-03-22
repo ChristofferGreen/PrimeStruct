@@ -42,6 +42,11 @@ namespace std {
           }))
     }
 
+    [public return<Result<ImageError>>]
+    status([ImageError] err) {
+      return(err.code)
+    }
+
     [public return<ImageError>]
     read_unsupported() {
       return(ImageError(1i32))
@@ -55,6 +60,11 @@ namespace std {
     [public return<ImageError>]
     invalid_operation() {
       return(ImageError(3i32))
+    }
+
+    [public return<Result<T, ImageError>>]
+    result<T>([ImageError] err) {
+      return(multiply(convert<i64>(err.code), 4294967296i64))
     }
   }
 
@@ -75,12 +85,12 @@ namespace std {
 
   [public return<Result<ImageError>>]
   imageErrorStatus([ImageError] err) {
-    return(err.code)
+    return(/std/image/ImageError/status(err))
   }
 
   [public return<Result<T, ImageError>>]
   imageErrorResult<T>([ImageError] err) {
-    return(multiply(convert<i64>(err.code), 4294967296i64))
+    return(/std/image/ImageError/result<T>(err))
   }
 
   [return<Result<ImageError>>]

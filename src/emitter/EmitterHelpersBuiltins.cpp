@@ -1772,6 +1772,24 @@ bool resolveMethodCallPath(const Expr &call,
       }
       return "";
     }
+    if (helperName == "status") {
+      if (defMap.find("/std/file/FileError/status") != defMap.end()) {
+        return "/std/file/FileError/status";
+      }
+      if (defMap.find("/std/file/fileErrorStatus") != defMap.end()) {
+        return "/std/file/fileErrorStatus";
+      }
+      return "";
+    }
+    if (helperName == "result") {
+      if (defMap.find("/std/file/FileError/result") != defMap.end()) {
+        return "/std/file/FileError/result";
+      }
+      if (defMap.find("/std/file/fileErrorResult") != defMap.end()) {
+        return "/std/file/fileErrorResult";
+      }
+      return "";
+    }
     return "";
   };
   std::string typeName;
@@ -1781,7 +1799,9 @@ bool resolveMethodCallPath(const Expr &call,
       typeName = it->second.typeName;
     } else {
       if (receiver.name == "FileError" &&
-          (normalizedMethodName == "why" || normalizedMethodName == "is_eof" || normalizedMethodName == "eof")) {
+          (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+           normalizedMethodName == "eof" || normalizedMethodName == "status" ||
+           normalizedMethodName == "result")) {
         resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
         return !resolvedOut.empty();
       }

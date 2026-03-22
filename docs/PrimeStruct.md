@@ -678,10 +678,29 @@ for(
     lambdas that return `Result.ok(...)` and need to inherit the input `Result` error domain instead of depending on
     an unrelated outer context.
   - `/std/file/*` now also exposes a stdlib-owned `FileError` namespace surface: `FileError.why(err)`,
-    `FileError.eof()`, and `FileError.is_eof(err)` resolve through `/std/file/FileError/*`, while the public
-    root-level `/FileError/*` wrappers remain as compatibility aliases over that same type-owned implementation.
-  - Stdlib containers use `Result<ContainerError>` / `Result<T, ContainerError>` as the shared error contract; `containerErrorStatus(err)` and `containerErrorResult<T>(err)` expose the current stdlib packing helpers, `/ContainerError/why([ContainerError] err)` is the explicit public wrapper for container error strings, `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and `/ContainerError/capacity_exceeded()` expose the current constructor values on the same public type-owned surface, and unknown codes fall back to `"container error"`. On current IR-backed backends, `Result.ok(value)` supports `i32`, `bool`, and `string` payloads, so value-carrying container helpers such as `mapTryAt` can now return string values when the underlying container path supports them.
-  - Canonical and experimental stdlib gfx use `Result<GfxError>` / `Result<T, GfxError>` as their shared error contract; `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` expose the current `.prime` packing helpers for `/std/gfx/*` and `/std/gfx/experimental/*`, and the canonical gfx package now also exposes `/GfxError/why([GfxError] err)` plus `/GfxError/window_create_failed()`, `/GfxError/device_create_failed()`, `/GfxError/swapchain_create_failed()`, `/GfxError/mesh_create_failed()`, `/GfxError/pipeline_create_failed()`, `/GfxError/material_create_failed()`, `/GfxError/frame_acquire_failed()`, `/GfxError/queue_submit_failed()`, and `/GfxError/frame_present_failed()` as the public root-level wrappers over the current stdlib-owned error strings and constructor values. Experimental gfx intentionally stays wrapper-free at those root paths so mixed canonical+experimental imports do not collide.
+    `FileError.status(err)`, `FileError.result<T>(err)`, `FileError.eof()`, and `FileError.is_eof(err)` resolve
+    through `/std/file/FileError/*`, while the public root-level `/FileError/*` wrappers remain as compatibility
+    aliases over that same type-owned implementation.
+  - Stdlib containers use `Result<ContainerError>` / `Result<T, ContainerError>` as the shared error contract;
+    `ContainerError.status(err)` / `ContainerError.result<T>(err)` now own the type-level packing surface while
+    `containerErrorStatus(err)` / `containerErrorResult<T>(err)` remain compatibility helpers,
+    `/ContainerError/why([ContainerError] err)` is the explicit public wrapper for container error strings,
+    `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and
+    `/ContainerError/capacity_exceeded()` expose the current constructor values on the same public type-owned
+    surface, and unknown codes fall back to `"container error"`. On current IR-backed backends, `Result.ok(value)`
+    supports `i32`, `bool`, and `string` payloads, so value-carrying container helpers such as `mapTryAt` can now
+    return string values when the underlying container path supports them.
+  - Canonical and experimental stdlib gfx use `Result<GfxError>` / `Result<T, GfxError>` as their shared error
+    contract; `GfxError.status(err)` / `GfxError.result<T>(err)` now own the type-level packing surface for
+    `/std/gfx/*` and `/std/gfx/experimental/*` while `gfxErrorStatus(err)` / `gfxErrorResult<T>(err)` remain
+    compatibility helpers, and the canonical gfx package now also exposes `/GfxError/why([GfxError] err)` plus
+    `/GfxError/window_create_failed()`, `/GfxError/device_create_failed()`,
+    `/GfxError/swapchain_create_failed()`, `/GfxError/mesh_create_failed()`,
+    `/GfxError/pipeline_create_failed()`, `/GfxError/material_create_failed()`,
+    `/GfxError/frame_acquire_failed()`, `/GfxError/queue_submit_failed()`, and
+    `/GfxError/frame_present_failed()` as the public root-level wrappers over the current stdlib-owned error
+    strings and constructor values. Experimental gfx intentionally stays wrapper-free at those root paths so mixed
+    canonical+experimental imports do not collide.
   - The postfix `?` operator unwraps a `Result` or propagates the error (see Error Handling).
     - `Result.map(result, fn)` applies `fn` to the success value (if any) and returns a new `Result`.
     - `Result.and_then(result, fn)` (a.k.a. bind) applies `fn` to the success value and flattens the result.
@@ -717,23 +736,27 @@ sum_two_files([string] a, [string] b) {
   - **Graphics entry flow:** `?` is also valid inside `return<int>` definitions with a matching
     `on_error<ErrorType, Handler>(...)`; on error, the handler runs and the definition returns the raw error code.
   - **Current stdlib progress:** import `/std/file/*` to use `.prime`-authored `fileReadEof()`,
-    `fileErrorStatus(err)`, `fileErrorIsEof(err)`, and `fileErrorResult<T>(err)` helpers instead of hand-packing
-    `FileError` results or hard-coding the EOF status code, and load the public `/FileError/why([FileError] err)`,
-    `/FileError/eof()`, and `/FileError/is_eof([FileError] err)` wrappers for explicit type-owned access to the current stdlib
-    FileError helper surface.
-    Import `/std/collections/*` to use `.prime`-authored `containerErrorStatus(err)` and
-    `containerErrorResult<T>(err)` helpers plus the public `/ContainerError/why([ContainerError] err)`,
+    `fileErrorStatus(err)` / `fileErrorResult<T>(err)` compatibility helpers or the type-owned
+    `FileError.status(err)` / `FileError.result<T>(err)` namespace surface instead of hand-packing `FileError`
+    results or hard-coding the EOF status code, plus `fileErrorIsEof(err)`, `/FileError/why([FileError] err)`,
+    `/FileError/eof()`, and `/FileError/is_eof([FileError] err)` for explicit type-owned access to the current
+    stdlib FileError helper surface.
+    Import `/std/collections/*` to use `.prime`-authored `containerErrorStatus(err)` /
+    `containerErrorResult<T>(err)` compatibility helpers or the type-owned `ContainerError.status(err)` /
+    `ContainerError.result<T>(err)` namespace surface plus the public `/ContainerError/why([ContainerError] err)`,
     `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and
     `/ContainerError/capacity_exceeded()` wrappers instead of hand-packing container error codes or reaching
     through namespace-private helper paths.
     Import `/std/image/*` to use `.prime`-authored `imageReadUnsupported()`, `imageWriteUnsupported()`,
-    `imageInvalidOperation()`, `imageErrorStatus(err)`, and `imageErrorResult<T>(err)` helpers instead of
+    `imageInvalidOperation()`, `imageErrorStatus(err)`, and `imageErrorResult<T>(err)` compatibility helpers or
+    the type-owned `ImageError.status(err)` / `ImageError.result<T>(err)` namespace surface instead of
     hand-packing `ImageError` result codes, and load the public `/ImageError/why([ImageError] err)`,
     `/ImageError/read_unsupported()`, `/ImageError/write_unsupported()`, and
-    `/ImageError/invalid_operation()` wrappers for explicit type-owned access to the current stdlib error
-    strings and constructors. Import `/std/gfx/*` to use
-    `.prime`-authored `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` helpers plus the public
-    `/GfxError/why([GfxError] err)`, `/GfxError/window_create_failed()`, `/GfxError/device_create_failed()`,
+    `/ImageError/invalid_operation()` wrappers for explicit type-owned access to the current stdlib error strings
+    and constructors. Import `/std/gfx/*` to use `.prime`-authored `gfxErrorStatus(err)` and
+    `gfxErrorResult<T>(err)` compatibility helpers or the type-owned `GfxError.status(err)` /
+    `GfxError.result<T>(err)` namespace surface plus the public `/GfxError/why([GfxError] err)`,
+    `/GfxError/window_create_failed()`, `/GfxError/device_create_failed()`,
     `/GfxError/swapchain_create_failed()`, `/GfxError/mesh_create_failed()`,
     `/GfxError/pipeline_create_failed()`, `/GfxError/material_create_failed()`,
     `/GfxError/frame_acquire_failed()`, `/GfxError/queue_submit_failed()`, and

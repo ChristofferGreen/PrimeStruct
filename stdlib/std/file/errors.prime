@@ -21,6 +21,11 @@ namespace std {
       return(/file_error/why(err))
     }
 
+    [public return<Result<FileError>>]
+    status([FileError] err) {
+      return(err)
+    }
+
     [public return<FileError>]
     eof() {
       return(65536i32)
@@ -29,6 +34,11 @@ namespace std {
     [public return<bool>]
     is_eof([FileError] err) {
       return(equal(err, eof()))
+    }
+
+    [public return<Result<T, FileError>>]
+    result<T>([FileError] err) {
+      return(multiply(convert<i64>(err), 4294967296i64))
     }
   }
 
@@ -39,7 +49,7 @@ namespace std {
 
   [public return<Result<FileError>>]
   fileErrorStatus([FileError] err) {
-    return(err)
+    return(/std/file/FileError/status(err))
   }
 
   [public return<bool>]
@@ -49,7 +59,7 @@ namespace std {
 
   [public return<Result<T, FileError>>]
   fileErrorResult<T>([FileError] err) {
-    return(multiply(convert<i64>(err), 4294967296i64))
+    return(/std/file/FileError/result<T>(err))
   }
   }
 }

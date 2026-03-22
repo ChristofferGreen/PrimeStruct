@@ -108,14 +108,23 @@ import /std/file/*
 [return<void>]
 main() {
   [Result<FileError>] status{fileErrorStatus(fileReadEof())}
+  [Result<FileError>] typeStatus{FileError.status(fileReadEof())}
   [Result<i32, FileError>] valueStatus{fileErrorResult<i32>(fileReadEof())}
+  [Result<i32, FileError>] typeValueStatus{FileError.result<i32>(fileReadEof())}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
   [bool] statusError{Result.error(status)}
+  [bool] typeStatusError{Result.error(typeStatus)}
   [bool] valueError{Result.error(valueStatus)}
+  [bool] typeValueError{Result.error(typeValueStatus)}
   [string] statusWhy{Result.why(status)}
+  [string] typeStatusWhy{Result.why(typeStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  if(and(and(statusError, valueError), and(eof, not(otherEof))), then(){ return() }, else(){ return() })
+  [string] typeValueWhy{Result.why(typeValueStatus)}
+  if(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+         and(eof, not(otherEof))),
+     then(){ return() },
+     else(){ return() })
 }
 )";
   std::string error;
@@ -272,6 +281,21 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch for /std/file/FileError/eof") != std::string::npos);
+}
+
+TEST_CASE("stdlib FileError status helper rejects non file errors") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [Result<FileError>] status{FileError.status(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/file/FileError/status parameter err") != std::string::npos);
 }
 
 TEST_CASE("stdlib File helpers cover imported method and slash-call wrappers") {
@@ -444,12 +468,20 @@ import /std/image/*
 [return<void>]
 main() {
   [Result<ImageError>] status{imageErrorStatus(imageReadUnsupported())}
+  [Result<ImageError>] typeStatus{ImageError.status(imageReadUnsupported())}
   [Result<i32, ImageError>] valueStatus{imageErrorResult<i32>(imageInvalidOperation())}
+  [Result<i32, ImageError>] typeValueStatus{ImageError.result<i32>(imageInvalidOperation())}
   [bool] statusError{Result.error(status)}
+  [bool] typeStatusError{Result.error(typeStatus)}
   [bool] valueError{Result.error(valueStatus)}
+  [bool] typeValueError{Result.error(typeValueStatus)}
   [string] statusWhy{Result.why(status)}
+  [string] typeStatusWhy{Result.why(typeStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  if(and(statusError, valueError), then(){ return() }, else(){ return() })
+  [string] typeValueWhy{Result.why(typeValueStatus)}
+  if(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+     then(){ return() },
+     else(){ return() })
 }
 )";
   std::string error;
@@ -531,13 +563,13 @@ import /std/image/*
 
 [return<void>]
 main() {
-  [Result<i32, ImageError>] status{imageErrorResult<i32>(true)}
+  [Result<i32, ImageError>] status{ImageError.result<i32>(true)}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/image/imageErrorResult") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/image/ImageError/result") != std::string::npos);
   CHECK(error.find("parameter err") != std::string::npos);
 }
 
@@ -549,14 +581,22 @@ import /std/collections/*
 main() {
   [ContainerError] err{containerMissingKey()}
   [Result<ContainerError>] status{containerErrorStatus(containerMissingKey())}
+  [Result<ContainerError>] typeStatus{ContainerError.status(containerMissingKey())}
   [Result<i32, ContainerError>] valueStatus{containerErrorResult<i32>(containerCapacityExceeded())}
+  [Result<i32, ContainerError>] typeValueStatus{ContainerError.result<i32>(containerCapacityExceeded())}
   [bool] statusError{Result.error(status)}
+  [bool] typeStatusError{Result.error(typeStatus)}
   [bool] valueError{Result.error(valueStatus)}
+  [bool] typeValueError{Result.error(typeValueStatus)}
   [string] direct{/ContainerError/why(err)}
   [string] viaType{ContainerError.why(err)}
   [string] statusWhy{Result.why(status)}
+  [string] typeStatusWhy{Result.why(typeStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  if(and(statusError, valueError), then(){ return() }, else(){ return() })
+  [string] typeValueWhy{Result.why(typeValueStatus)}
+  if(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+     then(){ return() },
+     else(){ return() })
 }
 )";
   std::string error;
@@ -601,6 +641,22 @@ main() {
   CHECK(error.find("argument type mismatch for /std/collections/containerErrorStatus parameter err") != std::string::npos);
 }
 
+TEST_CASE("stdlib ContainerError status helper rejects non container errors") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<void>]
+main() {
+  [Result<ContainerError>] status{ContainerError.status(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/ContainerError/status parameter err") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib ContainerError constructor wrappers reject unexpected arguments") {
   const std::string source = R"(
 import /std/collections/*
@@ -638,12 +694,20 @@ import /std/gfx/experimental/*
 [return<void>]
 main() {
   [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
+  [Result<GfxError>] typeStatus{GfxError.status(queueSubmitFailed())}
   [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
+  [Result<i32, GfxError>] typeValueStatus{GfxError.result<i32>(framePresentFailed())}
   [bool] statusError{Result.error(status)}
+  [bool] typeStatusError{Result.error(typeStatus)}
   [bool] valueError{Result.error(valueStatus)}
+  [bool] typeValueError{Result.error(typeValueStatus)}
   [string] statusWhy{Result.why(status)}
+  [string] typeStatusWhy{Result.why(typeStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  if(and(statusError, valueError), then(){ return() }, else(){ return() })
+  [string] typeValueWhy{Result.why(typeValueStatus)}
+  if(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+     then(){ return() },
+     else(){ return() })
 }
 )";
   std::string error;
@@ -667,6 +731,22 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("stdlib GfxError status helper rejects non gfx errors") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<void>]
+main() {
+  [Result<GfxError>] status{GfxError.status(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/gfx/experimental/GfxError/status parameter err") !=
+        std::string::npos);
+}
+
 TEST_CASE("canonical stdlib gfx error result helpers construct status and value results") {
   const std::string source = R"(
 import /std/gfx/*
@@ -674,12 +754,20 @@ import /std/gfx/*
 [return<void>]
 main() {
   [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
+  [Result<GfxError>] typeStatus{GfxError.status(queueSubmitFailed())}
   [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
+  [Result<i32, GfxError>] typeValueStatus{GfxError.result<i32>(framePresentFailed())}
   [bool] statusError{Result.error(status)}
+  [bool] typeStatusError{Result.error(typeStatus)}
   [bool] valueError{Result.error(valueStatus)}
+  [bool] typeValueError{Result.error(typeValueStatus)}
   [string] statusWhy{Result.why(status)}
+  [string] typeStatusWhy{Result.why(typeStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  if(and(statusError, valueError), then(){ return() }, else(){ return() })
+  [string] typeValueWhy{Result.why(typeValueStatus)}
+  if(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+     then(){ return() },
+     else(){ return() })
 }
 )";
   std::string error;
