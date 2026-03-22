@@ -679,8 +679,9 @@ for(
     an unrelated outer context.
   - `/std/file/*` now also exposes a stdlib-owned `FileError` namespace surface: `FileError.why(err)`,
     `FileError.status(err)`, `FileError.result<T>(err)`, `FileError.eof()`, and `FileError.is_eof(err)` resolve
-    through `/std/file/FileError/*`, while the public root-level `/FileError/*` wrappers remain as compatibility
-    aliases over that same type-owned implementation.
+    through `/std/file/FileError/*` even in direct nested `Result.error(...)` / `Result.why(...)` expressions,
+    while the public root-level `/FileError/*` wrappers remain as compatibility aliases over that same type-owned
+    implementation.
   - Stdlib containers use `Result<ContainerError>` / `Result<T, ContainerError>` as the shared error contract;
     `ContainerError.status(err)` / `ContainerError.result<T>(err)` now own the type-level packing surface while
     `containerErrorStatus(err)` / `containerErrorResult<T>(err)` remain compatibility helpers,

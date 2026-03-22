@@ -1239,6 +1239,7 @@ main() {
   [Result<i32, FileError>] valueStatus{make_value()}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
+  [bool] directStatusError{Result.error(FileError.status(fileReadEof()))}
   if(not(Result.error(status))) {
     return(1i32)
   }
@@ -1251,8 +1252,13 @@ main() {
   if(otherEof) {
     return(4i32)
   }
+  if(not(directStatusError)) {
+    return(5i32)
+  }
   print_line(Result.why(status))
   print_line(Result.why(valueStatus))
+  print_line(Result.why(FileError.status(fileReadEof())))
+  print_line(Result.why(FileError.result<i32>(fileReadEof())))
   return(0i32)
 }
 )";
@@ -1261,7 +1267,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_error_result_helpers_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "EOF\nEOF\n");
+  CHECK(readFile(outPath) == "EOF\nEOF\nEOF\nEOF\n");
 }
 
 TEST_CASE("vm uses stdlib File helper wrappers") {

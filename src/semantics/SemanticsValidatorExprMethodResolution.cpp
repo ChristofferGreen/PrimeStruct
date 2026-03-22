@@ -337,7 +337,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   }
   if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
-      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" || normalizedMethodName == "eof")) {
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "eof" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
     resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName, isBuiltinOut);
     return !resolvedOut.empty();
   }

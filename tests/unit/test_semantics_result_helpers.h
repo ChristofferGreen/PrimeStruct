@@ -111,6 +111,8 @@ main() {
   [Result<FileError>] typeStatus{FileError.status(fileReadEof())}
   [Result<i32, FileError>] valueStatus{fileErrorResult<i32>(fileReadEof())}
   [Result<i32, FileError>] typeValueStatus{FileError.result<i32>(fileReadEof())}
+  [bool] directStatusError{Result.error(FileError.status(fileReadEof()))}
+  [string] directValueWhy{Result.why(FileError.result<i32>(fileReadEof()))}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
   [bool] statusError{Result.error(status)}
@@ -121,7 +123,8 @@ main() {
   [string] typeStatusWhy{Result.why(typeStatus)}
   [string] valueWhy{Result.why(valueStatus)}
   [string] typeValueWhy{Result.why(typeValueStatus)}
-  if(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+  if(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+             directStatusError),
          and(eof, not(otherEof))),
      then(){ return() },
      else(){ return() })
