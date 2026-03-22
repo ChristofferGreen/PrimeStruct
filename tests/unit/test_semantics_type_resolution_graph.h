@@ -417,9 +417,8 @@ wrapValues([Map<string, i32>] values) {
 
 [return<Result<int, ContainerError>> effects(heap_alloc)]
 main() {
-  [i32] total{plus(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)).count(),
-                   try(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
-                           .tryAt("left"raw_utf8)))}
+  [auto] values{wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))}
+  [i32] total{plus(values.count(), try(values.tryAt("left"raw_utf8)))}
   return(Result.ok(total))
 }
 )";

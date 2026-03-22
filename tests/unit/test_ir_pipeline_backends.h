@@ -616,6 +616,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();") !=
         std::string::npos);
+  CHECK(validatorHeader.find("void forEachLocalAwareSnapshotCall(") != std::string::npos);
   CHECK(validatorHeader.find("void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool lookupGraphLocalAutoBinding(const std::string &scopePath,") !=
@@ -765,6 +766,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorCore.find("SemanticsValidator::callBindingSnapshotForTesting()") !=
         std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::queryReceiverBindingSnapshotForTesting()") !=
+        std::string::npos);
+  CHECK(validatorCore.find("SemanticsValidator::forEachLocalAwareSnapshotCall(") !=
+        std::string::npos);
+  CHECK(validatorCore.find("forEachLocalAwareSnapshotCall([&](const Definition &def,") !=
         std::string::npos);
   CHECK(validatorCore.find("auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {") ==
         std::string::npos);

@@ -76,6 +76,11 @@ public:
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
 
 private:
+  void forEachLocalAwareSnapshotCall(
+      const std::function<void(const Definition &,
+                               const std::vector<ParameterInfo> &,
+                               const Expr &,
+                               const std::unordered_map<std::string, BindingInfo> &)> &visitor);
   bool buildDefinitionMaps();
   bool validateDefinitionBuildTransforms(const Definition &def,
                                          bool isStructHelper,
