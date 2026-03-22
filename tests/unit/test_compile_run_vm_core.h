@@ -1957,6 +1957,28 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
+TEST_CASE("vm uses stdlib FileError eof constructor wrapper") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<int> effects(io_out)]
+main() {
+  [FileError] err{/FileError/eof()}
+  print_line(/FileError/why(err))
+  if(not(err.is_eof())) {
+    return(1i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_file_error_eof_wrapper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_error_eof_wrapper_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "EOF\n");
+}
+
 TEST_CASE("vm rejects recursive calls") {
   const std::string source = R"(
 [return<int>]

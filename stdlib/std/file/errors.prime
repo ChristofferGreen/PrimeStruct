@@ -3,6 +3,11 @@
   return(/file_error/why(err))
 }
 
+[public return<FileError>]
+/FileError/eof() {
+  return(/std/file/fileReadEof())
+}
+
 [public return<bool>]
 /FileError/is_eof([FileError] err) {
   return(/std/file/fileErrorIsEof(err))
@@ -22,7 +27,7 @@ namespace std {
 
   [public return<bool>]
   fileErrorIsEof([FileError] err) {
-    return(equal(err, fileReadEof()))
+    return(equal(err, /FileError/eof()))
   }
 
   [public return<Result<T, FileError>>]

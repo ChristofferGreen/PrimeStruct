@@ -6449,6 +6449,33 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("native uses stdlib FileError eof constructor wrapper") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<int> effects(io_out)]
+main() {
+  [FileError] err{/FileError/eof()}
+  print_line(/FileError/why(err))
+  if(not(err.is_eof())) {
+    return(1i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_file_error_eof_wrapper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_error_eof_wrapper_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_error_eof_wrapper_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "EOF\n");
+}
+
 #if defined(EACCES) && defined(ENOENT) && defined(EEXIST)
 TEST_CASE("native materializes variadic FileError packs with indexed why methods") {
   const std::string source =

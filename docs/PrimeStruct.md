@@ -709,8 +709,8 @@ sum_two_files([string] a, [string] b) {
     `on_error<ErrorType, Handler>(...)`; on error, the handler runs and the definition returns the raw error code.
   - **Current stdlib progress:** import `/std/file/*` to use `.prime`-authored `fileReadEof()`,
     `fileErrorStatus(err)`, `fileErrorIsEof(err)`, and `fileErrorResult<T>(err)` helpers instead of hand-packing
-    `FileError` results or hard-coding the EOF status code, and load the public `/FileError/why([FileError] err)`
-    plus `/FileError/is_eof([FileError] err)` wrappers for explicit type-owned access to the current stdlib
+    `FileError` results or hard-coding the EOF status code, and load the public `/FileError/why([FileError] err)`,
+    `/FileError/eof()`, and `/FileError/is_eof([FileError] err)` wrappers for explicit type-owned access to the current stdlib
     FileError helper surface.
     Import `/std/collections/*` to use `.prime`-authored `containerErrorStatus(err)` and
     `containerErrorResult<T>(err)` helpers plus the public `/ContainerError/why([ContainerError] err)` wrapper
@@ -751,7 +751,7 @@ sum_two_files([string] a, [string] b) {
   - `read_byte(...)` reports deterministic end-of-file as `EOF`.
   - Import `/std/file/*` for the current stdlib-authored file helper layer:
     `fileReadEof()`, `fileErrorStatus(err)`, `fileErrorIsEof(err)`, `fileErrorResult<T>(err)`,
-    `/FileError/why([FileError] err)`, `/FileError/is_eof([FileError] err)`,
+    `/FileError/why([FileError] err)`, `/FileError/eof()`, `/FileError/is_eof([FileError] err)`,
     `/File/read_byte(...)`, zero-to-five-value heterogenous `/File/write(...)` and
     `/File/write_line(...)` overload families,
     `/File/write_byte(...)`, `/File/write_bytes(...)`, `/File/flush(...)`, and
@@ -763,8 +763,9 @@ sum_two_files([string] a, [string] b) {
   - The stdlib file layer also defines `/FileError/why([FileError] err)` as the public wrapper over the
     intrinsic file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned
     helper surface while platform-specific code-to-string translation stays builtin substrate. It also defines
-    `/FileError/is_eof([FileError] err)` so EOF classification can use the same type-owned stdlib surface via either
-    direct calls or `err.is_eof()`.
+    `/FileError/eof()` so EOF values can be constructed from the same type-owned stdlib surface, plus
+    `/FileError/is_eof([FileError] err)` so EOF classification can use that same surface via either direct calls or
+    `err.is_eof()`.
 - **Effect requirement:** read-only file operations require `effects(file_read)` and write/append operations require `effects(file_write)`. `file_write` also implies `file_read` for compatibility.
 - **Example:**
   ```
