@@ -672,7 +672,7 @@ for(
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
   - Stdlib containers use `Result<ContainerError>` / `Result<T, ContainerError>` as the shared error contract; `containerErrorStatus(err)` and `containerErrorResult<T>(err)` expose the current stdlib packing helpers, `/ContainerError/why([ContainerError] err)` is the explicit public wrapper for container error strings, `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and `/ContainerError/capacity_exceeded()` expose the current constructor values on the same public type-owned surface, and unknown codes fall back to `"container error"`. On current IR-backed backends, `Result.ok(value)` supports `i32`, `bool`, and `string` payloads, so value-carrying container helpers such as `mapTryAt` can now return string values when the underlying container path supports them.
-  - Canonical and experimental stdlib gfx use `Result<GfxError>` / `Result<T, GfxError>` as their shared error contract; `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` expose the current `.prime` packing helpers for `/std/gfx/*` and `/std/gfx/experimental/*`, and the canonical gfx package now also exposes `/GfxError/why([GfxError] err)` as the public root-level wrapper over the stdlib-owned error strings.
+  - Canonical and experimental stdlib gfx use `Result<GfxError>` / `Result<T, GfxError>` as their shared error contract; `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` expose the current `.prime` packing helpers for `/std/gfx/*` and `/std/gfx/experimental/*`, and the canonical gfx package now also exposes `/GfxError/why([GfxError] err)` plus `/GfxError/window_create_failed()`, `/GfxError/device_create_failed()`, `/GfxError/swapchain_create_failed()`, `/GfxError/mesh_create_failed()`, `/GfxError/pipeline_create_failed()`, `/GfxError/material_create_failed()`, `/GfxError/frame_acquire_failed()`, `/GfxError/queue_submit_failed()`, and `/GfxError/frame_present_failed()` as the public root-level wrappers over the current stdlib-owned error strings and constructor values. Experimental gfx intentionally stays wrapper-free at those root paths so mixed canonical+experimental imports do not collide.
   - The postfix `?` operator unwraps a `Result` or propagates the error (see Error Handling).
     - `Result.map(result, fn)` applies `fn` to the success value (if any) and returns a new `Result`.
     - `Result.and_then(result, fn)` (a.k.a. bind) applies `fn` to the success value and flattens the result.
@@ -724,8 +724,12 @@ sum_two_files([string] a, [string] b) {
     `/ImageError/invalid_operation()` wrappers for explicit type-owned access to the current stdlib error
     strings and constructors. Import `/std/gfx/*` to use
     `.prime`-authored `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` helpers plus the public
-    `/GfxError/why([GfxError] err)` wrapper, or import `/std/gfx/experimental/*` to use the same
-    result helpers without adding a duplicate root-level gfx wrapper in mixed canonical+experimental
+    `/GfxError/why([GfxError] err)`, `/GfxError/window_create_failed()`, `/GfxError/device_create_failed()`,
+    `/GfxError/swapchain_create_failed()`, `/GfxError/mesh_create_failed()`,
+    `/GfxError/pipeline_create_failed()`, `/GfxError/material_create_failed()`,
+    `/GfxError/frame_acquire_failed()`, `/GfxError/queue_submit_failed()`, and
+    `/GfxError/frame_present_failed()` wrappers, or import `/std/gfx/experimental/*` to use the same
+    result helpers without adding duplicate root-level gfx wrapper paths in mixed canonical+experimental
     import graphs.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or

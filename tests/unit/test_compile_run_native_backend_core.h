@@ -3266,6 +3266,34 @@ main() {
         "queue_submit_failed\n");
 }
 
+TEST_CASE("native uses canonical stdlib GfxError constructor wrappers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(gfxErrorStatus(/GfxError/window_create_failed())))
+  print_line(Result.why(gfxErrorStatus(/GfxError/device_create_failed())))
+  print_line(Result.why(gfxErrorStatus(/GfxError/frame_present_failed())))
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_gfx_error_constructor_wrappers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_gfx_error_constructor_wrappers").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_canonical_gfx_error_constructor_wrappers.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) ==
+        "window_create_failed\n"
+        "device_create_failed\n"
+        "frame_present_failed\n");
+}
+
 TEST_CASE("native uses stdlib experimental Buffer helper methods") {
   const std::string source = R"(
 import /std/gfx/experimental/*

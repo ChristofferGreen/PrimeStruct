@@ -1740,6 +1740,29 @@ main() {
         "queue_submit_failed\n");
 }
 
+TEST_CASE("vm uses canonical stdlib GfxError constructor wrappers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(gfxErrorStatus(/GfxError/window_create_failed())))
+  print_line(Result.why(gfxErrorStatus(/GfxError/device_create_failed())))
+  print_line(Result.why(gfxErrorStatus(/GfxError/frame_present_failed())))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_canonical_gfx_error_constructor_wrappers.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_canonical_gfx_error_constructor_wrappers.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) ==
+        "window_create_failed\n"
+        "device_create_failed\n"
+        "frame_present_failed\n");
+}
+
 TEST_CASE("vm uses stdlib experimental Buffer helper methods") {
   const std::string source = R"(
 import /std/gfx/experimental/*

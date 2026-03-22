@@ -5,6 +5,51 @@ import /std/math/*
   return(/std/gfx/GfxError/why(err))
 }
 
+[public return</std/gfx/GfxError>]
+/GfxError/window_create_failed() {
+  return(/std/gfx/GfxError/window_create_failed())
+}
+
+[public return</std/gfx/GfxError>]
+/GfxError/device_create_failed() {
+  return(/std/gfx/GfxError/device_create_failed())
+}
+
+[public return</std/gfx/GfxError>]
+/GfxError/swapchain_create_failed() {
+  return(/std/gfx/GfxError/swapchain_create_failed())
+}
+
+[public return</std/gfx/GfxError>]
+/GfxError/mesh_create_failed() {
+  return(/std/gfx/GfxError/mesh_create_failed())
+}
+
+[public return</std/gfx/GfxError>]
+/GfxError/pipeline_create_failed() {
+  return(/std/gfx/GfxError/pipeline_create_failed())
+}
+
+[public return</std/gfx/GfxError>]
+/GfxError/material_create_failed() {
+  return(/std/gfx/GfxError/material_create_failed())
+}
+
+[public return</std/gfx/GfxError>]
+/GfxError/frame_acquire_failed() {
+  return(/std/gfx/GfxError/frame_acquire_failed())
+}
+
+[public return</std/gfx/GfxError>]
+/GfxError/queue_submit_failed() {
+  return(/std/gfx/GfxError/queue_submit_failed())
+}
+
+[public return</std/gfx/GfxError>]
+/GfxError/frame_present_failed() {
+  return(/std/gfx/GfxError/frame_present_failed())
+}
+
 namespace std {
   namespace gfx {
   [public struct]
@@ -375,51 +420,96 @@ namespace std {
       }
       return("gfx_error"utf8)
     }
+
+    [public return<GfxError>]
+    window_create_failed() {
+      return(gfxError(1i32))
+    }
+
+    [public return<GfxError>]
+    device_create_failed() {
+      return(gfxError(2i32))
+    }
+
+    [public return<GfxError>]
+    swapchain_create_failed() {
+      return(gfxError(3i32))
+    }
+
+    [public return<GfxError>]
+    mesh_create_failed() {
+      return(gfxError(4i32))
+    }
+
+    [public return<GfxError>]
+    pipeline_create_failed() {
+      return(gfxError(5i32))
+    }
+
+    [public return<GfxError>]
+    material_create_failed() {
+      return(gfxError(6i32))
+    }
+
+    [public return<GfxError>]
+    frame_acquire_failed() {
+      return(gfxError(7i32))
+    }
+
+    [public return<GfxError>]
+    queue_submit_failed() {
+      return(gfxError(8i32))
+    }
+
+    [public return<GfxError>]
+    frame_present_failed() {
+      return(gfxError(9i32))
+    }
   }
 
   [public return<GfxError>]
   windowCreateFailed() {
-    return(gfxError(1i32))
+    return(/std/gfx/GfxError/window_create_failed())
   }
 
   [public return<GfxError>]
   deviceCreateFailed() {
-    return(gfxError(2i32))
+    return(/std/gfx/GfxError/device_create_failed())
   }
 
   [public return<GfxError>]
   swapchainCreateFailed() {
-    return(gfxError(3i32))
+    return(/std/gfx/GfxError/swapchain_create_failed())
   }
 
   [public return<GfxError>]
   meshCreateFailed() {
-    return(gfxError(4i32))
+    return(/std/gfx/GfxError/mesh_create_failed())
   }
 
   [public return<GfxError>]
   pipelineCreateFailed() {
-    return(gfxError(5i32))
+    return(/std/gfx/GfxError/pipeline_create_failed())
   }
 
   [public return<GfxError>]
   materialCreateFailed() {
-    return(gfxError(6i32))
+    return(/std/gfx/GfxError/material_create_failed())
   }
 
   [public return<GfxError>]
   frameAcquireFailed() {
-    return(gfxError(7i32))
+    return(/std/gfx/GfxError/frame_acquire_failed())
   }
 
   [public return<GfxError>]
   queueSubmitFailed() {
-    return(gfxError(8i32))
+    return(/std/gfx/GfxError/queue_submit_failed())
   }
 
   [public return<GfxError>]
   framePresentFailed() {
-    return(gfxError(9i32))
+    return(/std/gfx/GfxError/frame_present_failed())
   }
   }
 }
