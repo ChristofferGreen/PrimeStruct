@@ -476,7 +476,18 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
   allowRecursiveReturnInference_ = previousAllowRecursive;
   deferUnknownReturnInferenceErrors_ = previousDeferUnknown;
 
-  const auto applyKnownReturn = [&](ReturnKind kind, const std::string &structPath) {
+  const auto applyKnownReturn = [&](ReturnKind kind,
+                                    const std::string &structPath,
+                                    const BindingInfo *binding) {
+    auto normalizedBindingTypeText = [&](const BindingInfo &candidate) {
+      const std::string normalizedCollectionType = normalizeCollectionTypePath(candidate.typeName);
+      const std::string normalizedBase =
+          normalizedCollectionType.empty() ? normalizeBindingTypeName(candidate.typeName) : normalizedCollectionType;
+      if (candidate.typeTemplateArg.empty()) {
+        return normalizedBase;
+      }
+      return normalizedBase + "<" + normalizeBindingTypeName(candidate.typeTemplateArg) + ">";
+    };
     if (kindIt->second != kind) {
       kindIt->second = kind;
       changed = true;
@@ -495,6 +506,22 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
       returnStructs_.erase(structIt);
       changed = true;
     }
+
+    auto bindingIt = returnBindings_.find(def.fullPath);
+    if (binding != nullptr && !binding->typeName.empty()) {
+      const bool bindingChanged =
+          bindingIt == returnBindings_.end() ||
+          normalizedBindingTypeText(bindingIt->second) != normalizedBindingTypeText(*binding);
+      if (bindingChanged) {
+        returnBindings_[def.fullPath] = *binding;
+        changed = true;
+      }
+      return;
+    }
+    if (bindingIt != returnBindings_.end()) {
+      returnBindings_.erase(bindingIt);
+      changed = true;
+    }
   };
 
   if (!inferenceState.sawReturn) {
@@ -505,14 +532,16 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
       error_ = "unable to infer return type on " + def.fullPath;
       return false;
     }
-    applyKnownReturn(ReturnKind::Void, {});
+    applyKnownReturn(ReturnKind::Void, {}, nullptr);
     return true;
   }
 
   if (inferenceState.inferred == ReturnKind::Unknown || inferenceState.sawUnresolvedReturnDependency) {
     if (!finalize) {
       if (inferenceState.inferred != ReturnKind::Unknown) {
-        applyKnownReturn(inferenceState.inferred, inferenceState.inferredStructPath);
+        applyKnownReturn(inferenceState.inferred,
+                         inferenceState.inferredStructPath,
+                         inferenceState.hasInferredBinding ? &inferenceState.inferredBinding : nullptr);
       }
       return true;
     }
@@ -521,7 +550,9 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
     return false;
   }
 
-  applyKnownReturn(inferenceState.inferred, inferenceState.inferredStructPath);
+  applyKnownReturn(inferenceState.inferred,
+                   inferenceState.inferredStructPath,
+                   inferenceState.hasInferredBinding ? &inferenceState.inferredBinding : nullptr);
   return true;
 }
 

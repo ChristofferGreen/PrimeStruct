@@ -944,6 +944,12 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
 }
 
 bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut) {
+  auto cachedBindingIt = returnBindings_.find(def.fullPath);
+  if (cachedBindingIt != returnBindings_.end() && !cachedBindingIt->second.typeName.empty()) {
+    bindingOut = cachedBindingIt->second;
+    return true;
+  }
+
   auto findDefParamBinding = [&](const std::vector<ParameterInfo> &defParams,
                                  const std::string &name) -> const BindingInfo * {
     for (const auto &param : defParams) {

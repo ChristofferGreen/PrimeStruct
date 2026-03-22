@@ -8,6 +8,15 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     const std::vector<ParameterInfo> &defParams,
     const std::unordered_map<std::string, BindingInfo> &activeLocals,
     DefinitionReturnInferenceState &state) {
+  auto normalizedBindingTypeText = [&](const BindingInfo &binding) {
+    const std::string normalizedCollectionType = normalizeCollectionTypePath(binding.typeName);
+    const std::string normalizedBase =
+        normalizedCollectionType.empty() ? normalizeBindingTypeName(binding.typeName) : normalizedCollectionType;
+    if (binding.typeTemplateArg.empty()) {
+      return normalizedBase;
+    }
+    return normalizedBase + "<" + normalizeBindingTypeName(binding.typeTemplateArg) + ">";
+  };
   auto containsDeferredMapAliasInference = [&](const Expr &candidate, auto &&containsDeferredMapAliasInferenceRef)
       -> bool {
     std::string builtinAccessName;
@@ -34,6 +43,8 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
   state.sawReturn = true;
   ReturnKind exprKind = ReturnKind::Void;
   std::string exprStructPath;
+  BindingInfo exprBinding;
+  bool hasExprBinding = false;
   if (valueExpr != nullptr) {
     exprKind = inferExprReturnKind(*valueExpr, defParams, activeLocals);
     if (exprKind == ReturnKind::Array || exprKind == ReturnKind::Unknown) {
@@ -42,6 +53,11 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
         exprKind = ReturnKind::Array;
       }
     }
+    const std::string previousError = error_;
+    error_.clear();
+    hasExprBinding = inferBindingTypeFromInitializer(*valueExpr, defParams, activeLocals, exprBinding);
+    error_.clear();
+    error_ = previousError;
   }
   if (exprKind == ReturnKind::Unknown) {
     if (deferUnknownReturnInferenceErrors_) {
@@ -64,6 +80,10 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     if (!exprStructPath.empty()) {
       state.inferredStructPath = exprStructPath;
     }
+    if (hasExprBinding) {
+      state.inferredBinding = exprBinding;
+      state.hasInferredBinding = true;
+    }
     return true;
   }
   if (state.inferred != exprKind) {
@@ -83,6 +103,18 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
         return false;
       }
     } else if (!state.inferredStructPath.empty()) {
+      if (error_.empty()) {
+        error_ = "conflicting return types on " + def.fullPath;
+      }
+      return false;
+    }
+  }
+  if (hasExprBinding) {
+    if (!state.hasInferredBinding) {
+      state.inferredBinding = exprBinding;
+      state.hasInferredBinding = true;
+    } else if (normalizedBindingTypeText(state.inferredBinding) !=
+               normalizedBindingTypeText(exprBinding)) {
       if (error_.empty()) {
         error_ = "conflicting return types on " + def.fullPath;
       }
@@ -232,6 +264,7 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
       return false;
     }
     kindIt->second = ReturnKind::Void;
+    returnBindings_.erase(def.fullPath);
   } else if (inferenceState.inferred == ReturnKind::Unknown) {
     if (error_.empty()) {
       error_ = "unable to infer return type on " + def.fullPath;
@@ -239,6 +272,11 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
     return false;
   } else {
     kindIt->second = inferenceState.inferred;
+    if (inferenceState.hasInferredBinding) {
+      returnBindings_[def.fullPath] = inferenceState.inferredBinding;
+    } else {
+      returnBindings_.erase(def.fullPath);
+    }
   }
   if (!inferenceState.inferredStructPath.empty()) {
     returnStructs_[def.fullPath] = inferenceState.inferredStructPath;

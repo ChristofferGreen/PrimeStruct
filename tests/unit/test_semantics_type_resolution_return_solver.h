@@ -82,6 +82,25 @@ main() {
   CHECK(error.find("conflicting return types on /main") != std::string::npos);
 }
 
+TEST_CASE("graph type resolver preserves conflicting collection template return diagnostic") {
+  const std::string source = R"(
+[return<auto>]
+pick([bool] cond) {
+  if(cond,
+    then(){ return(map<i32, i32>(1i32, 2i32)) },
+    else(){ return(map<i32, bool>(1i32, true)) })
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("conflicting return types on /pick") != std::string::npos);
+}
+
 TEST_CASE("graph type resolver infers direct-call auto binding from struct-return helper") {
   const std::string source = R"(
 [struct]
@@ -98,6 +117,24 @@ makePair() {
 main() {
   [auto] pair{makePair()}
   return(pair.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("graph type resolver infers direct-call auto binding from auto map-return helper") {
+  const std::string source = R"(
+[return<auto>]
+makeValues() {
+  return(map<i32, i32>(1i32, 7i32, 2i32, 11i32))
+}
+
+[return<i32>]
+main() {
+  [auto] values{makeValues()}
+  return(at_unsafe(values, 2i32))
 }
 )";
   std::string error;

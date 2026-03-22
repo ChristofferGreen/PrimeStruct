@@ -186,6 +186,8 @@ private:
   struct DefinitionReturnInferenceState {
     ReturnKind inferred = ReturnKind::Unknown;
     std::string inferredStructPath;
+    BindingInfo inferredBinding;
+    bool hasInferredBinding = false;
     bool sawReturn = false;
     bool sawUnresolvedReturnDependency = false;
   };
@@ -1358,6 +1360,7 @@ private:
   std::unordered_map<std::string, const Definition *> defMap_;
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_map<std::string, std::string> returnStructs_;
+  std::unordered_map<std::string, BindingInfo> returnBindings_;
   std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;

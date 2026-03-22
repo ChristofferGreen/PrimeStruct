@@ -47,6 +47,12 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
     return false;
   }
 
+  const auto directBindingIt = returnBindings_.find(resolvedPath);
+  if (directBindingIt != returnBindings_.end() && !directBindingIt->second.typeName.empty()) {
+    bindingOut = directBindingIt->second;
+    return true;
+  }
+
   const auto defIt = defMap_.find(resolvedPath);
   const auto directStructIt = returnStructs_.find(resolvedPath);
   if (directStructIt != returnStructs_.end() && !directStructIt->second.empty()) {

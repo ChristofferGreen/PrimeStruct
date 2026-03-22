@@ -583,6 +583,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;") !=
         std::string::npos);
+  CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> returnBindings_;") !=
+        std::string::npos);
   CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnKindGraphStep") != std::string::npos);
   CHECK(validatorHeader.find("graphTypeResolverEnabled_") == std::string::npos);
@@ -650,7 +652,12 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)") !=
         std::string::npos);
+  CHECK(validatorBuild.find("returnBindings_.clear();") != std::string::npos);
+  CHECK(validatorBuild.find("const auto directBindingIt = returnBindings_.find(resolvedPath);") !=
+        std::string::npos);
   CHECK(validatorCollections.find("ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("auto cachedBindingIt = returnBindings_.find(def.fullPath);") !=
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,") !=
         std::string::npos);
@@ -710,6 +717,11 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("inferExprTypeText(stmt.args.front(), defParams, defLocals, inferredLocalType)") ==
         std::string::npos);
+  CHECK(validatorInfer.find("bool hasInferredBinding = false;") != std::string::npos);
+  CHECK(validatorInfer.find("state.hasInferredBinding = true;") != std::string::npos);
+  CHECK(validatorInfer.find("returnBindings_[def.fullPath] = inferenceState.inferredBinding;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("auto bindingIt = returnBindings_.find(def.fullPath);") != std::string::npos);
   CHECK(validatorExprMain.find("auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {") ==
         std::string::npos);
   CHECK(validatorExprMain.find("auto resolveCallCollectionTemplateArgs =") == std::string::npos);
