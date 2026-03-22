@@ -480,6 +480,47 @@
           function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
           return true;
         }
+        auto resolveResultLambdaValueExpr =
+            [&](const Expr &lambdaExpr,
+                LocalMap &lambdaLocals,
+                const std::string &builtinName,
+                const Expr *&mappedValueExprOut) -> bool {
+          mappedValueExprOut = nullptr;
+          for (size_t i = 0; i < lambdaExpr.bodyArguments.size(); ++i) {
+            const Expr &bodyExpr = lambdaExpr.bodyArguments[i];
+            const bool isLast = (i + 1 == lambdaExpr.bodyArguments.size());
+            if (bodyExpr.isBinding) {
+              if (!emitStatement(bodyExpr, lambdaLocals)) {
+                return false;
+              }
+              continue;
+            }
+            if (isSimpleCallName(bodyExpr, "return")) {
+              if (bodyExpr.args.size() != 1) {
+                error = "IR backends require " + builtinName + " lambda returns with a value";
+                return false;
+              }
+              if (!isLast) {
+                error = "IR backends require " + builtinName + " lambda returns to be final";
+                return false;
+              }
+              mappedValueExprOut = &bodyExpr.args.front();
+              break;
+            }
+            if (!isLast) {
+              if (!emitStatement(bodyExpr, lambdaLocals)) {
+                return false;
+              }
+              continue;
+            }
+            mappedValueExprOut = &bodyExpr;
+          }
+          if (mappedValueExprOut == nullptr) {
+            error = "IR backends require " + builtinName + " lambdas to produce a value";
+            return false;
+          }
+          return true;
+        };
         auto tryEmitResultMapCall = [&](const Expr &callExpr, const LocalMap &callLocals) -> std::optional<bool> {
           if (!(callExpr.isMethodCall && callExpr.name == "map" && callExpr.args.size() == 3 &&
                 callExpr.args.front().kind == Expr::Kind::Name && callExpr.args.front().name == "Result")) {
@@ -554,37 +595,7 @@
           lambdaLocals[lambdaExpr.args.front().name] = paramInfo;
 
           const Expr *mappedValueExpr = nullptr;
-          for (size_t i = 0; i < lambdaExpr.bodyArguments.size(); ++i) {
-            const Expr &bodyExpr = lambdaExpr.bodyArguments[i];
-            const bool isLast = (i + 1 == lambdaExpr.bodyArguments.size());
-            if (bodyExpr.isBinding) {
-              if (!emitStatement(bodyExpr, lambdaLocals)) {
-                return false;
-              }
-              continue;
-            }
-            if (isSimpleCallName(bodyExpr, "return")) {
-              if (bodyExpr.args.size() != 1) {
-                error = "IR backends require Result.map lambda returns with a value";
-                return false;
-              }
-              if (!isLast) {
-                error = "IR backends require Result.map lambda returns to be final";
-                return false;
-              }
-              mappedValueExpr = &bodyExpr.args.front();
-              break;
-            }
-            if (!isLast) {
-              if (!emitStatement(bodyExpr, lambdaLocals)) {
-                return false;
-              }
-              continue;
-            }
-            mappedValueExpr = &bodyExpr;
-          }
-          if (mappedValueExpr == nullptr) {
-            error = "IR backends require Result.map lambdas to produce a value";
+          if (!resolveResultLambdaValueExpr(lambdaExpr, lambdaLocals, "Result.map", mappedValueExpr)) {
             return false;
           }
 
@@ -609,9 +620,106 @@
           function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
           return true;
         };
+        auto tryEmitResultAndThenCall = [&](const Expr &callExpr, const LocalMap &callLocals) -> std::optional<bool> {
+          if (!(callExpr.isMethodCall && callExpr.name == "and_then" && callExpr.args.size() == 3 &&
+                callExpr.args.front().kind == Expr::Kind::Name && callExpr.args.front().name == "Result")) {
+            return std::nullopt;
+          }
+
+          ir_lowerer::ResultExprInfo sourceResultInfo;
+          if (!resolveResultExprInfo ||
+              !resolveResultExprInfo(callExpr.args[1], callLocals, sourceResultInfo) ||
+              !sourceResultInfo.isResult) {
+            error = "Result.and_then requires Result argument";
+            return false;
+          }
+          if (!sourceResultInfo.hasValue) {
+            error = "Result.and_then requires value Result";
+            return false;
+          }
+
+          const Expr &lambdaExpr = callExpr.args[2];
+          if (!lambdaExpr.isLambda) {
+            error = "Result.and_then requires a lambda argument";
+            return false;
+          }
+          if (lambdaExpr.args.size() != 1) {
+            error = "Result.and_then requires a single-parameter lambda";
+            return false;
+          }
+          if (lambdaExpr.bodyArguments.empty()) {
+            error = "IR backends require Result.and_then lambda bodies";
+            return false;
+          }
+
+          if (!emitExpr(callExpr.args[1], callLocals)) {
+            return false;
+          }
+          const int32_t resultLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+
+          const int32_t errorLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+          function.instructions.push_back({IrOpcode::DivI64, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, 0});
+          function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+          const size_t jumpError = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+          const int32_t payloadLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+          function.instructions.push_back({IrOpcode::MulI64, 0});
+          function.instructions.push_back({IrOpcode::SubI64, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadLocal)});
+
+          LocalMap lambdaLocals = callLocals;
+          LocalInfo paramInfo;
+          paramInfo.index = payloadLocal;
+          paramInfo.kind = LocalInfo::Kind::Value;
+          paramInfo.valueKind = sourceResultInfo.valueKind;
+          if (sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
+            paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
+          }
+          lambdaLocals[lambdaExpr.args.front().name] = paramInfo;
+
+          const Expr *chainedResultExpr = nullptr;
+          if (!resolveResultLambdaValueExpr(lambdaExpr, lambdaLocals, "Result.and_then", chainedResultExpr)) {
+            return false;
+          }
+
+          ir_lowerer::ResultExprInfo chainedResultInfo;
+          if (!resolveResultExprInfo ||
+              !resolveResultExprInfo(*chainedResultExpr, lambdaLocals, chainedResultInfo) ||
+              !chainedResultInfo.isResult) {
+            error = "IR backends require Result.and_then lambdas to produce Result values";
+            return false;
+          }
+          if (!emitExpr(*chainedResultExpr, lambdaLocals)) {
+            return false;
+          }
+          const size_t jumpEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+
+          const size_t errorIndex = function.instructions.size();
+          function.instructions[jumpError].imm = static_cast<int32_t>(errorIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+
+          const size_t endIndex = function.instructions.size();
+          function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+          return true;
+        };
         if (const auto resultMapCallResult = tryEmitResultMapCall(expr, localsIn);
             resultMapCallResult.has_value()) {
           return *resultMapCallResult;
+        }
+        if (const auto resultAndThenCallResult = tryEmitResultAndThenCall(expr, localsIn);
+            resultAndThenCallResult.has_value()) {
+          return *resultAndThenCallResult;
         }
         const auto resultOkCallResult = ir_lowerer::tryEmitResultOkCall(
             expr,
