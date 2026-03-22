@@ -9276,6 +9276,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprGpuBuffer.cpp";
   const std::filesystem::path semanticsExprScalarPointerMemoryPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprScalarPointerMemory.cpp";
+  const std::filesystem::path semanticsExprResolvedCallArgumentsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprResolvedCallArguments.cpp";
   const std::filesystem::path semanticsExprStructConstructorsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprStructConstructors.cpp";
   const std::filesystem::path semanticsExprMapSoaBuiltinsPath =
@@ -9306,6 +9308,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(semanticsExprGpuBufferPath));
   REQUIRE(std::filesystem::exists(semanticsExprScalarPointerMemoryPath));
+  REQUIRE(std::filesystem::exists(semanticsExprResolvedCallArgumentsPath));
   REQUIRE(std::filesystem::exists(semanticsExprStructConstructorsPath));
   REQUIRE(std::filesystem::exists(semanticsExprMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
@@ -9336,6 +9339,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
   const std::string semanticsExprGpuBufferSource = readText(semanticsExprGpuBufferPath);
   const std::string semanticsExprScalarPointerMemorySource = readText(semanticsExprScalarPointerMemoryPath);
+  const std::string semanticsExprResolvedCallArgumentsSource =
+      readText(semanticsExprResolvedCallArgumentsPath);
   const std::string semanticsExprStructConstructorsSource = readText(semanticsExprStructConstructorsPath);
   const std::string semanticsExprMapSoaBuiltinsSource = readText(semanticsExprMapSoaBuiltinsPath);
   const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
@@ -9364,6 +9369,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find(
             "validateExprResolvedStructConstructorCall(\n"
             "            params, locals, expr, resolved, resolvedStructConstructorContext,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprResolvedCallArguments(\n"
+            "            params, locals, expr, resolved, resolvedCallArgumentContext,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") !=
         std::string::npos);
@@ -9535,6 +9544,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "struct definitions may only contain field bindings: \" + resolved") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (hasStructZeroArgConstructor(resolved)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const std::vector<Expr> *orderedCallArgs = &expr.args;") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("std::vector<const Expr *> packedArgs;") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("unsafe reference escapes across safe boundary to ") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "lateMapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
@@ -9872,6 +9887,21 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(
             "if (hasStructZeroArgConstructor(resolved)) {") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "bool SemanticsValidator::validateExprResolvedCallArguments") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "const std::vector<Expr> *orderedCallArgs = &expr.args;") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "std::vector<const Expr *> packedArgs;") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "validateArgumentsForParameter(") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "unsafe reference escapes across safe boundary to ") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
             "bool SemanticsValidator::validateExprMutationBorrowBuiltins") !=

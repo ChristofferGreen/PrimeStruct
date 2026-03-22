@@ -102,6 +102,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp
   src/semantics/SemanticsValidatorExprResultFile.cpp
   src/semantics/SemanticsValidatorExprScalarPointerMemory.cpp
+  src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp
   src/semantics/SemanticsValidatorExprStructConstructors.cpp
   src/semantics/SemanticsValidatorExprTry.cpp
   src/semantics/SemanticsValidatorExprVectorHelpers.cpp

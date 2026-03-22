@@ -448,6 +448,21 @@ private:
       const std::string &resolved,
       const ExprResolvedStructConstructorContext &context,
       bool &handledOut);
+  struct ExprResolvedCallArgumentContext {
+    const Definition *resolvedDefinition = nullptr;
+    const std::vector<ParameterInfo> *calleeParams = nullptr;
+    const ExprArgumentValidationContext *argumentValidationContext = nullptr;
+    const std::string *diagnosticResolved = nullptr;
+    bool hasMethodReceiverIndex = false;
+    size_t methodReceiverIndex = 0;
+  };
+  bool validateExprResolvedCallArguments(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      const ExprResolvedCallArgumentContext &context,
+      bool &handledOut);
   struct ExprCollectionAccessValidationContext {
     bool isStdNamespacedVectorAccessCall = false;
     bool shouldAllowStdAccessCompatibilityFallback = false;

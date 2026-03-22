@@ -194,6 +194,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("method call fixed argument still allows trailing variadic positionals") {
+  const std::string source = R"(
+[struct]
+Collector() {
+  [i32] seed{0i32}
+}
+
+[return<i32>]
+/Collector/collect([Collector] self, [i32] head, [i32] values...) {
+  return(head)
+}
+
+[return<i32>]
+main() {
+  [Collector] collector{Collector(7i32)}
+  return(collector.collect(1i32, 2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("execution named argument cannot bind variadic parameter") {
   const std::string source = R"(
 [return<int>]
@@ -211,6 +234,30 @@ job([head] 1i32, [values] 2i32)
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments cannot bind variadic parameter: values") != std::string::npos);
+}
+
+TEST_CASE("method call variadic parameter rejects mismatched trailing argument") {
+  const std::string source = R"(
+[struct]
+Collector() {
+  [i32] seed{0i32}
+}
+
+[return<i32>]
+/Collector/collect([Collector] self, [i32] head, [i32] values...) {
+  return(head)
+}
+
+[return<i32>]
+main() {
+  [Collector] collector{Collector(7i32)}
+  return(collector.collect(1i32, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /Collector/collect parameter values: expected i32 got bool") !=
+        std::string::npos);
 }
 
 TEST_CASE("execution variadic parameter rejects mismatched trailing argument") {
