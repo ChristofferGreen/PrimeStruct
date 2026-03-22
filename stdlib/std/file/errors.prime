@@ -3,6 +3,11 @@
   return(/std/file/FileError/why(err))
 }
 
+[public return<Result<FileError>>]
+/FileError/status([FileError] err) {
+  return(/std/file/FileError/status(err))
+}
+
 [public return<FileError>]
 /FileError/eof() {
   return(/std/file/FileError/eof())
@@ -11,6 +16,11 @@
 [public return<bool>]
 /FileError/is_eof([FileError] err) {
   return(/std/file/FileError/is_eof(err))
+}
+
+[public return<Result<T, FileError>>]
+/FileError/result<T>([FileError] err) {
+  return(/std/file/FileError/result<T>(err))
 }
 
 namespace std {

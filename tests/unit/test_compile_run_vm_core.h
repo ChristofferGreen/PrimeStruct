@@ -1225,12 +1225,12 @@ import /std/file/*
 
 [return<Result<FileError>>]
 make_status() {
-  return(FileError.status(fileReadEof()))
+  return(/FileError/status(fileReadEof()))
 }
 
 [return<Result<i32, FileError>>]
 make_value() {
-  return(FileError.result<i32>(fileReadEof()))
+  return(/FileError/result<i32>(fileReadEof()))
 }
 
 [return<int> effects(io_out)]
@@ -1616,9 +1616,9 @@ import /std/image/*
 
 [return<int> effects(io_out)]
 main() {
-  print_line(Result.why(ImageError.status(imageReadUnsupported())))
-  print_line(Result.why(ImageError.result<i32>(imageWriteUnsupported())))
-  print_line(Result.why(ImageError.result<i32>(imageInvalidOperation())))
+  print_line(Result.why(/ImageError/status(imageReadUnsupported())))
+  print_line(Result.why(/ImageError/result<i32>(imageWriteUnsupported())))
+  print_line(Result.why(/ImageError/result<i32>(imageInvalidOperation())))
   return(0i32)
 }
 )";
@@ -1707,8 +1707,8 @@ import /std/gfx/*
 
 [return<int> effects(io_out)]
 main() {
-  print_line(Result.why(GfxError.status(queueSubmitFailed())))
-  print_line(Result.why(GfxError.result<i32>(framePresentFailed())))
+  print_line(Result.why(/GfxError/status(queueSubmitFailed())))
+  print_line(Result.why(/GfxError/result<i32>(framePresentFailed())))
   return(0i32)
 }
 )";

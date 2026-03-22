@@ -3,6 +3,11 @@
   return(/std/collections/ContainerError/why(err))
 }
 
+[public return<Result</std/collections/ContainerError>>]
+/ContainerError/status([/std/collections/ContainerError] err) {
+  return(/std/collections/ContainerError/status(err))
+}
+
 [public return</std/collections/ContainerError>]
 /ContainerError/missing_key() {
   return(/std/collections/ContainerError/missing_key())
@@ -21,6 +26,11 @@
 [public return</std/collections/ContainerError>]
 /ContainerError/capacity_exceeded() {
   return(/std/collections/ContainerError/capacity_exceeded())
+}
+
+[public return<Result<T, /std/collections/ContainerError>>]
+/ContainerError/result<T>([/std/collections/ContainerError] err) {
+  return(/std/collections/ContainerError/result<T>(err))
 }
 
 namespace std {

@@ -7,6 +7,11 @@ import /std/collections/*
   return(/std/image/ImageError/why(err))
 }
 
+[public return<Result</std/image/ImageError>>]
+/ImageError/status([/std/image/ImageError] err) {
+  return(/std/image/ImageError/status(err))
+}
+
 [public return</std/image/ImageError>]
 /ImageError/read_unsupported() {
   return(/std/image/ImageError/read_unsupported())
@@ -20,6 +25,11 @@ import /std/collections/*
 [public return</std/image/ImageError>]
 /ImageError/invalid_operation() {
   return(/std/image/ImageError/invalid_operation())
+}
+
+[public return<Result<T, /std/image/ImageError>>]
+/ImageError/result<T>([/std/image/ImageError] err) {
+  return(/std/image/ImageError/result<T>(err))
 }
 
 namespace std {

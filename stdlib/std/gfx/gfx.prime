@@ -5,6 +5,11 @@ import /std/math/*
   return(/std/gfx/GfxError/why(err))
 }
 
+[public return<Result</std/gfx/GfxError>>]
+/GfxError/status([/std/gfx/GfxError] err) {
+  return(/std/gfx/GfxError/status(err))
+}
+
 [public return</std/gfx/GfxError>]
 /GfxError/window_create_failed() {
   return(/std/gfx/GfxError/window_create_failed())
@@ -48,6 +53,11 @@ import /std/math/*
 [public return</std/gfx/GfxError>]
 /GfxError/frame_present_failed() {
   return(/std/gfx/GfxError/frame_present_failed())
+}
+
+[public return<Result<T, /std/gfx/GfxError>>]
+/GfxError/result<T>([/std/gfx/GfxError] err) {
+  return(/std/gfx/GfxError/result<T>(err))
 }
 
 namespace std {
