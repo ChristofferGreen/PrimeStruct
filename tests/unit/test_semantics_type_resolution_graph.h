@@ -69,6 +69,17 @@ const primec::semantics::TypeResolutionCallBindingSnapshotEntry &requireCallBind
   return *it;
 }
 
+const primec::semantics::TypeResolutionQueryReceiverBindingSnapshotEntry &requireQueryReceiverBindingSnapshotEntry(
+    const primec::semantics::TypeResolutionQueryReceiverBindingSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &resolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.resolvedPath == resolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 size_t requireTopologicalComponentIndex(const primec::semantics::CondensationDagSnapshot &dag, uint32_t componentId) {
   const auto it = std::find(dag.topologicalComponentIds.begin(), dag.topologicalComponentIds.end(), componentId);
   REQUIRE(it != dag.topologicalComponentIds.end());
@@ -392,6 +403,39 @@ main() {
 
   const auto &wrapEntry = requireCallBindingSnapshotEntry(snapshot, "/main", "/wrapValues");
   CHECK(wrapEntry.bindingTypeText == "Map<string, i32>");
+}
+
+TEST_CASE("type resolution query receiver binding snapshot keeps wrapped map receiver bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<auto> effects(heap_alloc)]
+wrapValues([Map<string, i32>] values) {
+  return(values)
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc)]
+main() {
+  [i32] total{plus(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)).count(),
+                   try(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+                           .tryAt("left"raw_utf8)))}
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionQueryReceiverBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryReceiverBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &countEntry =
+      requireQueryReceiverBindingSnapshotEntry(snapshot, "/main", "/std/collections/map/count");
+  CHECK(countEntry.receiverBindingTypeText == "Map<string, i32>");
+
+  const auto &tryAtEntry =
+      requireQueryReceiverBindingSnapshotEntry(snapshot, "/main", "/std/collections/map/tryAt");
+  CHECK(tryAtEntry.receiverBindingTypeText == "Map<string, i32>");
 }
 
 TEST_CASE("type resolution graph dump stays stable for a simple call chain") {

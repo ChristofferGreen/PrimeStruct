@@ -442,4 +442,38 @@ bool semantics::computeTypeResolutionCallBindingSnapshotForTesting(
   return true;
 }
 
+bool semantics::computeTypeResolutionQueryReceiverBindingSnapshotForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    TypeResolutionQueryReceiverBindingSnapshot &out,
+    const std::vector<std::string> &semanticTransforms) {
+  out = {};
+  error.clear();
+  if (!semantics::prepareProgramForTypeResolutionAnalysis(
+          program, entryPath, semanticTransforms, error)) {
+    return false;
+  }
+
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  semantics::SemanticsValidator validator(program, entryPath, error, defaults, defaults, nullptr, false);
+  if (!validator.run()) {
+    return false;
+  }
+
+  const auto entries = validator.queryReceiverBindingSnapshotForTesting();
+  out.entries.reserve(entries.size());
+  for (const auto &entry : entries) {
+    out.entries.push_back(TypeResolutionQueryReceiverBindingSnapshotEntry{
+        entry.scopePath,
+        entry.callName,
+        entry.resolvedPath,
+        entry.sourceLine,
+        entry.sourceColumn,
+        bindingTypeTextForSnapshot(entry.receiverBinding),
+    });
+  }
+  return true;
+}
+
 } // namespace primec

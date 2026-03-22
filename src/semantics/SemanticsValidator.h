@@ -51,6 +51,15 @@ public:
     BindingInfo binding;
   };
 
+  struct QueryReceiverBindingSnapshotEntry {
+    std::string scopePath;
+    std::string callName;
+    std::string resolvedPath;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+    BindingInfo receiverBinding;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
@@ -64,6 +73,7 @@ public:
   std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;
   std::vector<QueryCallTypeSnapshotEntry> queryCallTypeSnapshotForTesting();
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
+  std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
 
 private:
   bool buildDefinitionMaps();
