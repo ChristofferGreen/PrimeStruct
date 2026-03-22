@@ -93,6 +93,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprLateBuiltins.cpp
   src/semantics/SemanticsValidatorExprLateMapSoaBuiltins.cpp
   src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp
+  src/semantics/SemanticsValidatorExprMutationBorrows.cpp
   src/semantics/SemanticsValidatorExprPointerLike.cpp
   src/semantics/SemanticsValidatorExprReferenceEscapes.cpp
   src/semantics/SemanticsValidatorExprReceiverPaths.cpp

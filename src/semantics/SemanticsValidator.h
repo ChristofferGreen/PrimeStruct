@@ -405,6 +405,11 @@ private:
       bool resolvedMethod,
       const ExprLateFallbackBuiltinContext &context,
       bool &handledOut);
+  bool validateExprMutationBorrowBuiltins(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      bool &handledOut);
   struct ExprCollectionAccessValidationContext {
     bool isStdNamespacedVectorAccessCall = false;
     bool shouldAllowStdAccessCompatibilityFallback = false;

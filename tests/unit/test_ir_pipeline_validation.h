@@ -9254,6 +9254,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionLiterals.cpp";
   const std::filesystem::path semanticsExprLateFallbackBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateFallbackBuiltins.cpp";
+  const std::filesystem::path semanticsExprMutationBorrowsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMutationBorrows.cpp";
   const std::filesystem::path semanticsExprNamedArgumentBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNamedArgumentBuiltins.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
@@ -9287,6 +9289,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateFallbackBuiltinsPath));
+  REQUIRE(std::filesystem::exists(semanticsExprMutationBorrowsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
   REQUIRE(std::filesystem::exists(semanticsExprReferenceEscapesPath));
@@ -9311,6 +9314,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprCollectionLiteralsSource = readText(semanticsExprCollectionLiteralsPath);
   const std::string semanticsExprLateFallbackBuiltinsSource =
       readText(semanticsExprLateFallbackBuiltinsPath);
+  const std::string semanticsExprMutationBorrowsSource =
+      readText(semanticsExprMutationBorrowsPath);
   const std::string semanticsExprNamedArgumentBuiltinsSource = readText(semanticsExprNamedArgumentBuiltinsPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
   const std::string semanticsExprReceiverPathsSource = readText(semanticsExprReceiverPathsPath);
@@ -9329,6 +9334,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find(
             "validateExprLateFallbackBuiltins(\n"
             "              params, locals, expr, resolved, resolvedMethod,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprMutationBorrowBuiltins(\n"
+            "              params, locals, expr, handledMutationBorrowBuiltin)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") !=
         std::string::npos);
@@ -9468,6 +9477,14 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("validateExprLateCollectionAccessFallbacks(") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprCollectionAccessFallbacks(") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto hasActiveBorrowForBinding = [&](const std::string &name,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (isSimpleCallName(expr, \"move\")) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (isAssignCall(expr)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("if (getBuiltinMutationName(expr, mutateName)) {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "lateMapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
@@ -9766,6 +9783,20 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprLateFallbackBuiltinsSource.find(
             "const size_t receiverIndex =\n"
             "        this->mapHelperReceiverIndex(expr, *context.dispatchResolvers);") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "bool SemanticsValidator::validateExprMutationBorrowBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "auto hasActiveBorrowForBinding =\n"
+            "      [&](const std::string &name,") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find("if (isSimpleCallName(expr, \"move\")) {") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find("if (isAssignCall(expr)) {") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "if (getBuiltinMutationName(expr, mutateName)) {") !=
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "bool SemanticsValidator::validateExprNamedArgumentBuiltins") !=

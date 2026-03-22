@@ -852,6 +852,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("borrow checker rejects increment before pointer-alias last use") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  increment(dereference(ptr))
+  [i32] observed{dereference(ptr)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows increment after pointer-alias last use") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  [i32] observed{dereference(ptr)}
+  increment(dereference(ptr))
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("software numeric return type is rejected") {
   const std::string source = R"(
 [return<complex>]
