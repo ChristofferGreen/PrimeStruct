@@ -30,6 +30,7 @@ public:
     int sourceLine = 0;
     int sourceColumn = 0;
     BindingInfo binding;
+    std::string initializerResolvedPath;
     std::string initializerQueryTypeText;
     bool initializerResultHasValue = false;
     std::string initializerResultValueType;
@@ -1440,6 +1441,7 @@ private:
   std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_map<std::string, BindingInfo> returnBindings_;
   std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;
+  std::unordered_map<std::string, std::string> graphLocalAutoResolvedPaths_;
   std::unordered_map<std::string, std::string> graphLocalAutoQueryTypeTexts_;
   std::unordered_map<std::string, ResultTypeInfo> graphLocalAutoResultTypes_;
   std::unordered_set<std::string> structNames_;

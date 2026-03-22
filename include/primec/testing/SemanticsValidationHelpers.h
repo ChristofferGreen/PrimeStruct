@@ -80,6 +80,7 @@ struct TypeResolutionLocalBindingSnapshotEntry {
   int sourceLine = 0;
   int sourceColumn = 0;
   std::string bindingTypeText;
+  std::string initializerResolvedPath;
   std::string initializerQueryTypeText;
   bool initializerResultHasValue = false;
   std::string initializerResultValueTypeText;
