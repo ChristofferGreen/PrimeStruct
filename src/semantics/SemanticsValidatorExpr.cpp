@@ -1478,48 +1478,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     if (it == defMap_.end() || resolvedMethod) {
-      ExprMapSoaBuiltinContext mapSoaBuiltinContext;
-      mapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =
+      ExprLateMapSoaBuiltinContext lateMapSoaBuiltinContext;
+      lateMapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =
           shouldBuiltinValidateBareMapContainsCall;
-      mapSoaBuiltinContext.resolveMapKeyType =
-          [&](const Expr &target, std::string &mapKeyTypeOut) {
-            return this->resolveMapKeyType(
-                target, builtinCollectionDispatchResolvers, mapKeyTypeOut);
-          };
-      mapSoaBuiltinContext.resolveVectorTarget =
+      lateMapSoaBuiltinContext.resolveVectorTarget =
           [&](const Expr &target, std::string &elemTypeOut) {
             return resolveVectorTarget(target, elemTypeOut);
           };
-      mapSoaBuiltinContext.resolveSoaVectorTarget =
+      lateMapSoaBuiltinContext.resolveSoaVectorTarget =
           [&](const Expr &target, std::string &elemTypeOut) {
             return resolveSoaVectorTarget(target, elemTypeOut);
           };
-      mapSoaBuiltinContext.resolveStringTarget =
-          [&](const Expr &target) {
-            return this->isStringExprForArgumentValidation(
-                target, builtinCollectionDispatchResolvers);
-          };
-      mapSoaBuiltinContext.bareMapHelperOperandIndices =
-          [&](const Expr &target, size_t &receiverIndexOut,
-              size_t &keyIndexOut) {
-            return this->bareMapHelperOperandIndices(
-                target, builtinCollectionDispatchResolvers,
-                receiverIndexOut, keyIndexOut);
-          };
-      mapSoaBuiltinContext.isNamedArgsPackMethodAccessCall =
-          [&](const Expr &target) {
-            return this->isNamedArgsPackMethodAccessCall(
-                target, builtinCollectionDispatchResolvers);
-          };
-      mapSoaBuiltinContext.isNamedArgsPackWrappedFileBuiltinAccessCall =
-          [&](const Expr &target) {
-            return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
-                target, builtinCollectionDispatchResolvers);
-          };
+      lateMapSoaBuiltinContext.dispatchResolvers =
+          &builtinCollectionDispatchResolvers;
       bool handledMapSoaBuiltin = false;
-      if (!validateExprMapSoaBuiltins(
+      if (!validateExprLateMapSoaBuiltins(
               params, locals, expr, resolved, resolvedMethod,
-              mapSoaBuiltinContext, handledMapSoaBuiltin)) {
+              lateMapSoaBuiltinContext, handledMapSoaBuiltin)) {
         return false;
       }
       if (handledMapSoaBuiltin) {

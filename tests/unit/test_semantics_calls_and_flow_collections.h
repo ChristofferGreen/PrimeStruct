@@ -16122,6 +16122,50 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("canonical map borrowed receiver validates direct stdlib contains") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<Reference</std/collections/map<i32, i32>>>]
+borrowValues([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  if(/std/collections/map/contains(borrowValues(location(source)), 1i32),
+     then(){ return(1i32) },
+     else(){ return(0i32) })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical map borrowed receiver keeps contains key diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<Reference</std/collections/map<i32, i32>>>]
+borrowValues([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32)}
+  if(/std/collections/map/contains(borrowValues(location(source)), true),
+     then(){ return(1i32) },
+     else(){ return(0i32) })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("contains requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("explicit canonical map binding keeps builtin helper validation") {
   const std::string source = R"(
 import /std/collections/*

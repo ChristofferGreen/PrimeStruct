@@ -9454,13 +9454,16 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprScalarPointerMemoryBuiltins(") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprMapSoaBuiltins(") !=
+  CHECK(semanticsExprSource.find("validateExprLateMapSoaBuiltins(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("validateExprMapSoaBuiltins(") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprCollectionAccessFallbacks(") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("mapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
+  CHECK(semanticsExprSource.find(
+            "lateMapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("mapSoaBuiltinContext.bareMapHelperOperandIndices =") !=
+  CHECK(semanticsExprSource.find("mapSoaBuiltinContext.bareMapHelperOperandIndices =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (getBuiltinCollectionName(expr, builtinName)) {") ==
         std::string::npos);

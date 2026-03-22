@@ -89,6 +89,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprNumeric.cpp
   src/semantics/SemanticsValidatorExprArgumentValidation.cpp
   src/semantics/SemanticsValidatorExprLateBuiltins.cpp
+  src/semantics/SemanticsValidatorExprLateMapSoaBuiltins.cpp
   src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp
   src/semantics/SemanticsValidatorExprPointerLike.cpp
   src/semantics/SemanticsValidatorExprReferenceEscapes.cpp

@@ -361,6 +361,20 @@ private:
                                   bool resolvedMethod,
                                   const ExprMapSoaBuiltinContext &context,
                                   bool &handledOut);
+  struct ExprLateMapSoaBuiltinContext {
+    bool shouldBuiltinValidateBareMapContainsCall = false;
+    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+  };
+  bool validateExprLateMapSoaBuiltins(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      bool resolvedMethod,
+      const ExprLateMapSoaBuiltinContext &context,
+      bool &handledOut);
   struct ExprCollectionAccessValidationContext {
     bool isStdNamespacedVectorAccessCall = false;
     bool shouldAllowStdAccessCompatibilityFallback = false;
