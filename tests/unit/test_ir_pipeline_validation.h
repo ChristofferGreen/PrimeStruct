@@ -3117,15 +3117,18 @@ TEST_CASE("ir lowerer inference get-return-info callback setup validates depende
 }
 
 TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
+  primec::Program program;
   primec::Definition definition;
   definition.fullPath = "/callee";
   primec::Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs = {"i64"};
   definition.transforms.push_back(returnTransform);
+  program.definitions.push_back(definition);
+  const primec::Definition &programDefinition = program.definitions.front();
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/callee", &definition},
+      {"/callee", &programDefinition},
   };
   std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> returnInfoCache;
   std::unordered_set<std::string> returnInferenceStack;
@@ -3135,6 +3138,7 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceGetReturnInfoSetup(
       {
+          .program = &program,
           .defMap = &defMap,
           .returnInfoCache = &returnInfoCache,
           .returnInferenceStack = &returnInferenceStack,
@@ -3182,7 +3186,7 @@ TEST_CASE("ir lowerer inference get-return-info setup validates dependencies") {
       {},
       getReturnInfo,
       error));
-  CHECK(error == "native backend missing inference get-return-info setup dependency: defMap");
+  CHECK(error == "native backend missing inference get-return-info setup dependency: program");
   CHECK_FALSE(static_cast<bool>(getReturnInfo));
 }
 
@@ -47438,6 +47442,90 @@ TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
       out,
       error));
   CHECK(error.empty());
+  CHECK_FALSE(out.returnsVoid);
+  CHECK_FALSE(out.returnsArray);
+  CHECK(out.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
+TEST_CASE("ir lowerer return inference helpers defer grounded recursive dependencies") {
+  primec::Definition def;
+  def.fullPath = "/alpha";
+
+  primec::Expr condExpr;
+  condExpr.kind = primec::Expr::Kind::BoolLiteral;
+  condExpr.boolValue = true;
+
+  primec::Expr literalOne;
+  literalOne.kind = primec::Expr::Kind::Literal;
+  literalOne.literalValue = 1;
+
+  primec::Expr thenReturn;
+  thenReturn.kind = primec::Expr::Kind::Call;
+  thenReturn.name = "return";
+  thenReturn.args = {literalOne};
+
+  primec::Expr thenBlock;
+  thenBlock.kind = primec::Expr::Kind::Call;
+  thenBlock.name = "then";
+  thenBlock.hasBodyArguments = true;
+  thenBlock.bodyArguments = {thenReturn};
+
+  primec::Expr betaCall;
+  betaCall.kind = primec::Expr::Kind::Call;
+  betaCall.name = "beta";
+
+  primec::Expr elseReturn;
+  elseReturn.kind = primec::Expr::Kind::Call;
+  elseReturn.name = "return";
+  elseReturn.args = {betaCall};
+
+  primec::Expr elseBlock;
+  elseBlock.kind = primec::Expr::Kind::Call;
+  elseBlock.name = "else";
+  elseBlock.hasBodyArguments = true;
+  elseBlock.bodyArguments = {elseReturn};
+
+  primec::Expr ifExpr;
+  ifExpr.kind = primec::Expr::Kind::Call;
+  ifExpr.name = "if";
+  ifExpr.args = {condExpr, thenBlock, elseBlock};
+
+  primec::Expr returnStmt;
+  returnStmt.kind = primec::Expr::Kind::Call;
+  returnStmt.name = "return";
+  returnStmt.args = {ifExpr};
+
+  def.statements = {returnStmt};
+  def.hasReturnStatement = true;
+
+  primec::ir_lowerer::ReturnInferenceOptions options;
+  options.missingReturnBehavior = primec::ir_lowerer::MissingReturnBehavior::Error;
+  options.includeDefinitionReturnExpr = false;
+  options.deferUnknownReturnDependencyErrors = true;
+
+  primec::ir_lowerer::ReturnInfo out;
+  std::string error;
+  bool sawUnresolvedDependency = false;
+  REQUIRE(primec::ir_lowerer::inferDefinitionReturnType(
+      def,
+      {},
+      [](const primec::Expr &, bool, primec::ir_lowerer::LocalMap &, std::string &) { return true; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Literal) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+      options,
+      out,
+      error,
+      &sawUnresolvedDependency));
+  CHECK(error.empty());
+  CHECK(sawUnresolvedDependency);
   CHECK_FALSE(out.returnsVoid);
   CHECK_FALSE(out.returnsArray);
   CHECK(out.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);

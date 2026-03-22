@@ -291,12 +291,17 @@ bool inferDefinitionReturnType(const Definition &def,
                                const ExpandMatchToIfFn &expandMatchToIf,
                                const ReturnInferenceOptions &options,
                                ReturnInfo &outInfo,
-                               std::string &error) {
+                               std::string &error,
+                               bool *sawUnresolvedDependencyOut) {
+  if (sawUnresolvedDependencyOut != nullptr) {
+    *sawUnresolvedDependencyOut = false;
+  }
   LocalInfo::ValueKind inferred = LocalInfo::ValueKind::Unknown;
   bool inferredArray = false;
   LocalInfo::ValueKind inferredArrayKind = LocalInfo::ValueKind::Unknown;
   bool sawReturn = false;
   bool inferredVoid = false;
+  bool sawUnresolvedDependency = false;
 
   std::function<bool(const Expr &, const LocalMap &)> recordInferredReturn;
   recordInferredReturn = [&](const Expr &valueExpr, const LocalMap &activeLocals) -> bool {
@@ -363,6 +368,10 @@ bool inferDefinitionReturnType(const Definition &def,
       }
     }
     if (kind == LocalInfo::ValueKind::Unknown) {
+      if (options.deferUnknownReturnDependencyErrors) {
+        sawUnresolvedDependency = true;
+        return true;
+      }
       error = "unable to infer return type on " + def.fullPath;
       return false;
     }
@@ -498,8 +507,17 @@ bool inferDefinitionReturnType(const Definition &def,
     outInfo.kind = inferred;
   }
   if (outInfo.kind == LocalInfo::ValueKind::Unknown) {
+    if (options.deferUnknownReturnDependencyErrors && sawUnresolvedDependency) {
+      if (sawUnresolvedDependencyOut != nullptr) {
+        *sawUnresolvedDependencyOut = true;
+      }
+      return true;
+    }
     error = "unable to infer return type on " + def.fullPath;
     return false;
+  }
+  if (sawUnresolvedDependencyOut != nullptr) {
+    *sawUnresolvedDependencyOut = sawUnresolvedDependency;
   }
   return true;
 }
@@ -512,7 +530,8 @@ bool inferDefinitionReturnType(const Definition &def,
                                const ExpandMatchToIfFn &expandMatchToIf,
                                const ReturnInferenceOptions &options,
                                ReturnInfo &outInfo,
-                               std::string &error) {
+                               std::string &error,
+                               bool *sawUnresolvedDependencyOut) {
   return inferDefinitionReturnType(
       def,
       std::move(localsForInference),
@@ -523,7 +542,8 @@ bool inferDefinitionReturnType(const Definition &def,
       expandMatchToIf,
       options,
       outInfo,
-      error);
+      error,
+      sawUnresolvedDependencyOut);
 }
 
 } // namespace primec::ir_lowerer

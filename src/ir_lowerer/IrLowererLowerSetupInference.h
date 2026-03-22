@@ -2,6 +2,7 @@
   ir_lowerer::LowerInferenceSetupBootstrapState inferenceSetupBootstrap;
   if (!ir_lowerer::runLowerInferenceSetup(
           {
+              .program = &program,
               .defMap = &defMap,
               .importAliases = &importAliases,
               .structNames = &structNames,

@@ -1,8 +1,15 @@
 #include "IrLowererLowerInferenceSetup.h"
 
+#include "../semantics/CondensationDag.h"
+#include "../semantics/TypeResolutionGraph.h"
+
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererUninitializedTypeHelpers.h"
+
+#include <algorithm>
+#include <limits>
+#include <vector>
 
 namespace primec::ir_lowerer {
 
@@ -107,6 +114,58 @@ bool inferMapContainsResultKind(const Expr &expr,
   }
   kindOut = LocalInfo::ValueKind::Bool;
   return true;
+}
+
+bool returnInfoEquals(const ReturnInfo &left, const ReturnInfo &right) {
+  return left.returnsVoid == right.returnsVoid && left.returnsArray == right.returnsArray &&
+         left.kind == right.kind && left.isResult == right.isResult &&
+         left.resultHasValue == right.resultHasValue &&
+         left.resultValueKind == right.resultValueKind &&
+         left.resultErrorType == right.resultErrorType;
+}
+
+void sortDefinitionsForDeterministicReturnSolve(std::vector<const Definition *> &definitions) {
+  std::stable_sort(definitions.begin(), definitions.end(), [](const Definition *left, const Definition *right) {
+    const int leftLine = left->sourceLine > 0 ? left->sourceLine : std::numeric_limits<int>::max();
+    const int rightLine = right->sourceLine > 0 ? right->sourceLine : std::numeric_limits<int>::max();
+    if (leftLine != rightLine) {
+      return leftLine < rightLine;
+    }
+    const int leftColumn = left->sourceColumn > 0 ? left->sourceColumn : std::numeric_limits<int>::max();
+    const int rightColumn = right->sourceColumn > 0 ? right->sourceColumn : std::numeric_limits<int>::max();
+    if (leftColumn != rightColumn) {
+      return leftColumn < rightColumn;
+    }
+    return left->fullPath < right->fullPath;
+  });
+}
+
+bool componentHasReturnInferenceCycle(const semantics::CondensationDagNode &componentNode) {
+  return componentNode.memberNodeIds.size() > 1;
+}
+
+std::vector<const Definition *> collectReturnInfoComponentDefinitions(
+    const semantics::TypeResolutionGraph &graph,
+    const semantics::CondensationDagNode &componentNode,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  std::vector<const Definition *> definitions;
+  definitions.reserve(componentNode.memberNodeIds.size());
+  for (uint32_t nodeId : componentNode.memberNodeIds) {
+    if (nodeId >= graph.nodes.size()) {
+      continue;
+    }
+    const semantics::TypeResolutionGraphNode &node = graph.nodes[nodeId];
+    if (node.kind != semantics::TypeResolutionNodeKind::DefinitionReturn) {
+      continue;
+    }
+    const auto defIt = defMap.find(node.resolvedPath);
+    if (defIt == defMap.end() || defIt->second == nullptr) {
+      continue;
+    }
+    definitions.push_back(defIt->second);
+  }
+  sortDefinitionsForDeterministicReturnSolve(definitions);
+  return definitions;
 }
 
 bool inferLiteralOrNameExprKindImpl(const Expr &expr,
@@ -575,6 +634,7 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
   auto &inferArrayElementKind = stateOut.inferArrayElementKind;
   return runLowerInferenceGetReturnInfoSetup(
       {
+          .program = input.program,
           .defMap = input.defMap,
           .returnInfoCache = &returnInfoCache,
           .returnInferenceStack = &returnInferenceStack,
@@ -940,10 +1000,12 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
   return true;
 }
 
-bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &input,
-                                      const Definition &definition,
-                                      ReturnInfo &infoInOut,
-                                      std::string &errorOut) {
+bool runLowerInferenceReturnInfoSetupImpl(const LowerInferenceReturnInfoSetupInput &input,
+                                          const Definition &definition,
+                                          ReturnInfo &infoInOut,
+                                          bool deferUnknownReturnDependencyErrors,
+                                          bool *sawUnresolvedDependencyOut,
+                                          std::string &errorOut) {
   if (!input.resolveStructTypeName) {
     errorOut = "native backend missing inference return-info setup dependency: resolveStructTypeName";
     return false;
@@ -1103,6 +1165,7 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
       ReturnInferenceOptions options;
       options.missingReturnBehavior = MissingReturnBehavior::Error;
       options.includeDefinitionReturnExpr = true;
+      options.deferUnknownReturnDependencyErrors = deferUnknownReturnDependencyErrors;
       if (!ir_lowerer::inferDefinitionReturnType(
               definition,
               LocalMap{},
@@ -1115,7 +1178,8 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
               },
               options,
               infoInOut,
-              errorOut)) {
+              errorOut,
+              sawUnresolvedDependencyOut)) {
         return false;
       }
     } else if (!infoInOut.returnsVoid) {
@@ -1140,6 +1204,7 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
     ReturnInferenceOptions options;
     options.missingReturnBehavior = MissingReturnBehavior::Void;
     options.includeDefinitionReturnExpr = false;
+    options.deferUnknownReturnDependencyErrors = deferUnknownReturnDependencyErrors;
     if (!ir_lowerer::inferDefinitionReturnType(
             definition,
             LocalMap{},
@@ -1152,8 +1217,116 @@ bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &
             },
             options,
             infoInOut,
-            errorOut)) {
+            errorOut,
+            sawUnresolvedDependencyOut)) {
       return false;
+    }
+  }
+
+  return true;
+}
+
+bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &input,
+                                      const Definition &definition,
+                                      ReturnInfo &infoInOut,
+                                      std::string &errorOut) {
+  return runLowerInferenceReturnInfoSetupImpl(
+      input, definition, infoInOut, false, nullptr, errorOut);
+}
+
+bool precomputeGraphReturnInfoCache(const LowerInferenceGetReturnInfoSetupInput &input,
+                                    const LowerInferenceReturnInfoSetupInput &returnInfoSetupInput,
+                                    std::string &errorOut) {
+  if (input.program == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: program";
+    return false;
+  }
+  if (input.defMap == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: defMap";
+    return false;
+  }
+  if (input.returnInfoCache == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: returnInfoCache";
+    return false;
+  }
+
+  auto &returnInfoCache = *input.returnInfoCache;
+  returnInfoCache.clear();
+
+  const semantics::TypeResolutionGraph graph =
+      semantics::buildTypeResolutionGraph(*input.program);
+  std::vector<semantics::DirectedGraphEdge> dependencyEdges;
+  dependencyEdges.reserve(graph.edges.size());
+  for (const semantics::TypeResolutionGraphEdge &edge : graph.edges) {
+    if (edge.kind != semantics::TypeResolutionEdgeKind::Dependency) {
+      continue;
+    }
+    dependencyEdges.push_back(semantics::DirectedGraphEdge{edge.sourceId, edge.targetId});
+  }
+  const semantics::CondensationDag dag =
+      semantics::computeCondensationDag(static_cast<uint32_t>(graph.nodes.size()), dependencyEdges);
+
+  for (auto componentIt = dag.topologicalComponentIds.rbegin();
+       componentIt != dag.topologicalComponentIds.rend();
+       ++componentIt) {
+    const semantics::CondensationDagNode &componentNode = dag.nodes[*componentIt];
+    std::vector<const Definition *> definitions =
+        collectReturnInfoComponentDefinitions(graph, componentNode, *input.defMap);
+    if (definitions.empty()) {
+      continue;
+    }
+
+    for (const Definition *definition : definitions) {
+      returnInfoCache.try_emplace(definition->fullPath, ReturnInfo{});
+    }
+
+    bool changed = false;
+    do {
+      changed = false;
+      for (const Definition *definition : definitions) {
+        ReturnInfo nextInfo;
+        bool sawUnresolvedDependency = false;
+        std::string localError;
+        if (!runLowerInferenceReturnInfoSetupImpl(returnInfoSetupInput,
+                                                  *definition,
+                                                  nextInfo,
+                                                  true,
+                                                  &sawUnresolvedDependency,
+                                                  localError)) {
+          errorOut = std::move(localError);
+          return false;
+        }
+        (void)sawUnresolvedDependency;
+
+        auto cacheIt = returnInfoCache.find(definition->fullPath);
+        if (cacheIt == returnInfoCache.end() || !returnInfoEquals(cacheIt->second, nextInfo)) {
+          returnInfoCache[definition->fullPath] = nextInfo;
+          changed = true;
+        }
+      }
+    } while (changed);
+
+    const bool componentHasCycle = componentHasReturnInferenceCycle(componentNode);
+    for (const Definition *definition : definitions) {
+      ReturnInfo finalInfo;
+      bool sawUnresolvedDependency = false;
+      std::string localError;
+      if (!runLowerInferenceReturnInfoSetupImpl(returnInfoSetupInput,
+                                                *definition,
+                                                finalInfo,
+                                                true,
+                                                &sawUnresolvedDependency,
+                                                localError)) {
+        errorOut = std::move(localError);
+        return false;
+      }
+      if (sawUnresolvedDependency) {
+        errorOut = componentHasCycle
+                       ? "native backend return type inference requires explicit annotation on " + definition->fullPath
+                       : "unable to infer return type on " + definition->fullPath;
+        return false;
+      }
+      returnInfoCache[definition->fullPath] = finalInfo;
     }
   }
 
@@ -1254,6 +1427,10 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
                                          std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfoOut,
                                          std::string &errorOut) {
   getReturnInfoOut = {};
+  if (input.program == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: program";
+    return false;
+  }
   if (input.defMap == nullptr) {
     errorOut = "native backend missing inference get-return-info setup dependency: defMap";
     return false;
@@ -1271,10 +1448,12 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
     return false;
   }
 
+  const Program *const program = input.program;
   const auto *defMap = input.defMap;
   auto *returnInfoCache = input.returnInfoCache;
   auto *returnInferenceStack = input.returnInferenceStack;
   std::string *const inferenceError = input.error;
+  returnInferenceStack->clear();
 
   const LowerInferenceReturnInfoSetupInput returnInfoSetupInput = {
       .resolveStructTypeName = input.resolveStructTypeName,
@@ -1295,6 +1474,11 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
   };
   getReturnInfoOut = [defMap, returnInfoCache, returnInferenceStack, returnInfoSetupInput, inferenceError](
                          const std::string &path, ReturnInfo &outInfo) -> bool {
+    auto cached = returnInfoCache->find(path);
+    if (cached != returnInfoCache->end()) {
+      outInfo = cached->second;
+      return true;
+    }
     return runLowerInferenceGetReturnInfoStep(
         {
             .defMap = defMap,
@@ -1306,6 +1490,33 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
         outInfo,
         *inferenceError);
   };
+  if (!precomputeGraphReturnInfoCache(
+          {
+              .program = program,
+              .defMap = defMap,
+              .returnInfoCache = returnInfoCache,
+              .returnInferenceStack = returnInferenceStack,
+              .resolveStructTypeName = input.resolveStructTypeName,
+              .resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath,
+              .isBindingMutable = input.isBindingMutable,
+              .bindingKind = input.bindingKind,
+              .hasExplicitBindingTypeTransform = input.hasExplicitBindingTypeTransform,
+              .bindingValueKind = input.bindingValueKind,
+              .inferExprKind = input.inferExprKind,
+              .isFileErrorBinding = input.isFileErrorBinding,
+              .setReferenceArrayInfo = input.setReferenceArrayInfo,
+              .applyStructArrayInfo = input.applyStructArrayInfo,
+              .applyStructValueInfo = input.applyStructValueInfo,
+              .inferStructExprPath = input.inferStructExprPath,
+              .isStringBinding = input.isStringBinding,
+              .inferArrayElementKind = input.inferArrayElementKind,
+              .lowerMatchToIf = input.lowerMatchToIf,
+              .error = inferenceError,
+          },
+          returnInfoSetupInput,
+          errorOut)) {
+    return false;
+  }
   errorOut.clear();
   return true;
 }

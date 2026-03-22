@@ -1248,7 +1248,7 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("shared_collection_receiver_classifiers") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
-  CHECK(parityHeader.find("grounded mutual recursion currently diverges between legacy and graph vm pipelines") !=
+  CHECK(parityHeader.find("graph type resolver carries grounded mutual recursion through vm pipeline lowering") !=
         std::string::npos);
 }
 

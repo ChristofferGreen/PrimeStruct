@@ -376,7 +376,7 @@ main() {
   CHECK(graph.diagnosticSnapshot.find("cycle member: /beta") != std::string::npos);
 }
 
-TEST_CASE("grounded mutual recursion currently diverges between legacy and graph vm pipelines") {
+TEST_CASE("graph type resolver carries grounded mutual recursion through vm pipeline lowering") {
   const std::string source = R"(
 [return<auto>]
 alpha([bool] done{false}) {
@@ -405,9 +405,10 @@ main() {
   CHECK(legacy.error.find("return type inference requires explicit annotation on /beta") != std::string::npos);
   CHECK(legacy.serializedIr.empty());
 
-  CHECK_FALSE(graph.ok);
-  CHECK(graph.error.find("unable to infer return type on /alpha") != std::string::npos);
-  CHECK(graph.serializedIr.empty());
+  CHECK(graph.ok);
+  CHECK(graph.errorStage == primec::CompilePipelineErrorStage::None);
+  CHECK(graph.error.empty());
+  CHECK_FALSE(graph.serializedIr.empty());
 }
 
 TEST_SUITE_END();

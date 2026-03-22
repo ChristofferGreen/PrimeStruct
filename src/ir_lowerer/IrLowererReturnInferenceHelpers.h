@@ -15,6 +15,7 @@ enum class MissingReturnBehavior { Error, Void };
 struct ReturnInferenceOptions {
   MissingReturnBehavior missingReturnBehavior = MissingReturnBehavior::Error;
   bool includeDefinitionReturnExpr = false;
+  bool deferUnknownReturnDependencyErrors = false;
 };
 
 struct EntryReturnConfig {
@@ -59,7 +60,8 @@ bool inferDefinitionReturnType(const Definition &def,
                                const ExpandMatchToIfFn &expandMatchToIf,
                                const ReturnInferenceOptions &options,
                                ReturnInfo &outInfo,
-                               std::string &error);
+                               std::string &error,
+                               bool *sawUnresolvedDependencyOut = nullptr);
 bool inferDefinitionReturnType(const Definition &def,
                                LocalMap localsForInference,
                                const InferBindingIntoLocalsFn &inferBindingIntoLocals,
@@ -68,7 +70,8 @@ bool inferDefinitionReturnType(const Definition &def,
                                const ExpandMatchToIfFn &expandMatchToIf,
                                const ReturnInferenceOptions &options,
                                ReturnInfo &outInfo,
-                               std::string &error);
+                               std::string &error,
+                               bool *sawUnresolvedDependencyOut = nullptr);
 bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
                                            bool isParameter,
                                            const std::string &definitionPath,
