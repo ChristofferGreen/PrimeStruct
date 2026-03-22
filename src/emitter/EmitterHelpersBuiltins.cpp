@@ -2,6 +2,7 @@
 #include "primec/StringLiteral.h"
 
 #include <functional>
+#include <string_view>
 
 namespace primec::emitter {
 
@@ -1737,12 +1738,53 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return "";
   };
+  auto preferredFileErrorHelperTarget = [&](std::string_view helperName) -> std::string {
+    if (helperName == "why") {
+      if (defMap.find("/std/file/FileError/why") != defMap.end()) {
+        return "/std/file/FileError/why";
+      }
+      if (defMap.find("/FileError/why") != defMap.end()) {
+        return "/FileError/why";
+      }
+      return "/file_error/why";
+    }
+    if (helperName == "is_eof") {
+      if (defMap.find("/std/file/FileError/is_eof") != defMap.end()) {
+        return "/std/file/FileError/is_eof";
+      }
+      if (defMap.find("/FileError/is_eof") != defMap.end()) {
+        return "/FileError/is_eof";
+      }
+      if (defMap.find("/std/file/fileErrorIsEof") != defMap.end()) {
+        return "/std/file/fileErrorIsEof";
+      }
+      return "";
+    }
+    if (helperName == "eof") {
+      if (defMap.find("/std/file/FileError/eof") != defMap.end()) {
+        return "/std/file/FileError/eof";
+      }
+      if (defMap.find("/FileError/eof") != defMap.end()) {
+        return "/FileError/eof";
+      }
+      if (defMap.find("/std/file/fileReadEof") != defMap.end()) {
+        return "/std/file/fileReadEof";
+      }
+      return "";
+    }
+    return "";
+  };
   std::string typeName;
   if (receiver.kind == Expr::Kind::Name) {
     auto it = localTypes.find(receiver.name);
     if (it != localTypes.end()) {
       typeName = it->second.typeName;
     } else {
+      if (receiver.name == "FileError" &&
+          (normalizedMethodName == "why" || normalizedMethodName == "is_eof" || normalizedMethodName == "eof")) {
+        resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+        return !resolvedOut.empty();
+      }
       std::string resolvedReceiverPath = resolveExprPath(receiver);
       if (findStructTypeMetadata(resolvedReceiverPath) != nullptr ||
           defMap.find(resolvedReceiverPath + "/" + normalizedMethodName) != defMap.end()) {
@@ -1794,16 +1836,8 @@ bool resolveMethodCallPath(const Expr &call,
     return true;
   }
   if (typeName == "FileError" && (normalizedMethodName == "why" || normalizedMethodName == "is_eof")) {
-    if (normalizedMethodName == "why") {
-      resolvedOut = defMap.find("/FileError/why") != defMap.end() ? "/FileError/why" : "/file_error/why";
-    } else if (defMap.find("/FileError/is_eof") != defMap.end()) {
-      resolvedOut = "/FileError/is_eof";
-    } else if (defMap.find("/std/file/fileErrorIsEof") != defMap.end()) {
-      resolvedOut = "/std/file/fileErrorIsEof";
-    } else {
-      return false;
-    }
-    return true;
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+    return !resolvedOut.empty();
   }
   if (typeName == "Pointer" || typeName == "Reference") {
     return false;

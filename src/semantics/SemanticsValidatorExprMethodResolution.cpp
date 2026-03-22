@@ -117,6 +117,45 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return "/" + candidate;
   };
+  auto preferredFileErrorHelperTarget = [&](std::string_view helperName,
+                                            bool &builtinOut) -> std::string {
+    builtinOut = false;
+    if (helperName == "why") {
+      if (defMap_.count("/std/file/FileError/why") > 0) {
+        return "/std/file/FileError/why";
+      }
+      if (defMap_.count("/FileError/why") > 0) {
+        return "/FileError/why";
+      }
+      builtinOut = true;
+      return "/file_error/why";
+    }
+    if (helperName == "is_eof") {
+      if (defMap_.count("/std/file/FileError/is_eof") > 0) {
+        return "/std/file/FileError/is_eof";
+      }
+      if (defMap_.count("/FileError/is_eof") > 0) {
+        return "/FileError/is_eof";
+      }
+      if (defMap_.count("/std/file/fileErrorIsEof") > 0) {
+        return "/std/file/fileErrorIsEof";
+      }
+      return "";
+    }
+    if (helperName == "eof") {
+      if (defMap_.count("/std/file/FileError/eof") > 0) {
+        return "/std/file/FileError/eof";
+      }
+      if (defMap_.count("/FileError/eof") > 0) {
+        return "/FileError/eof";
+      }
+      if (defMap_.count("/std/file/fileReadEof") > 0) {
+        return "/std/file/fileReadEof";
+      }
+      return "";
+    }
+    return "";
+  };
 
   const std::string explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName);
   auto explicitVectorMethodPath = [&](const std::string &rawMethodName) -> std::string {
@@ -278,6 +317,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     resolvedOut = "/result/" + normalizedMethodName;
     isBuiltinOut = true;
     return true;
+  }
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" || normalizedMethodName == "eof")) {
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName, isBuiltinOut);
+    return !resolvedOut.empty();
   }
   if (receiver.kind == Expr::Kind::Name &&
       findParamBinding(params, receiver.name) == nullptr &&
@@ -1324,20 +1368,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (collectionElemType == "FileError" &&
         (normalizedMethodName == "why" || normalizedMethodName == "is_eof")) {
-      if (normalizedMethodName == "why") {
-        resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
-        isBuiltinOut = resolvedOut == "/file_error/why";
-      } else {
-        if (defMap_.count("/FileError/is_eof") > 0) {
-          resolvedOut = "/FileError/is_eof";
-        } else if (defMap_.count("/std/file/fileErrorIsEof") > 0) {
-          resolvedOut = "/std/file/fileErrorIsEof";
-        } else {
-          return false;
-        }
-        isBuiltinOut = false;
-      }
-      return true;
+      resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName, isBuiltinOut);
+      return !resolvedOut.empty();
     }
     std::string elemBase;
     std::string elemArgText;
@@ -1633,20 +1665,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           }
           if (normalizedElemType == "FileError" &&
               (normalizedMethodName == "why" || normalizedMethodName == "is_eof")) {
-            if (normalizedMethodName == "why") {
-              resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
-              isBuiltinOut = resolvedOut == "/file_error/why";
-            } else {
-              if (defMap_.count("/FileError/is_eof") > 0) {
-                resolvedOut = "/FileError/is_eof";
-              } else if (defMap_.count("/std/file/fileErrorIsEof") > 0) {
-                resolvedOut = "/std/file/fileErrorIsEof";
-              } else {
-                return false;
-              }
-              isBuiltinOut = false;
-            }
-            return true;
+            resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName, isBuiltinOut);
+            return !resolvedOut.empty();
           }
           if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
             resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
@@ -1916,20 +1936,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return setPreferredMapMethodTarget(receiver, normalizedMethodName);
   }
   if (typeName == "FileError" && (normalizedMethodName == "why" || normalizedMethodName == "is_eof")) {
-    if (normalizedMethodName == "why") {
-      resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
-      isBuiltinOut = resolvedOut == "/file_error/why";
-    } else {
-      if (defMap_.count("/FileError/is_eof") > 0) {
-        resolvedOut = "/FileError/is_eof";
-      } else if (defMap_.count("/std/file/fileErrorIsEof") > 0) {
-        resolvedOut = "/std/file/fileErrorIsEof";
-      } else {
-        return false;
-      }
-      isBuiltinOut = false;
-    }
-    return true;
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName, isBuiltinOut);
+    return !resolvedOut.empty();
   }
   if (typeName == "string" &&
       (normalizedMethodName == "count" || normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {

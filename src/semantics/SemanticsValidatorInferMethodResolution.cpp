@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <functional>
+#include <string_view>
 
 namespace primec::semantics {
 
@@ -128,6 +129,42 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
+  auto preferredFileErrorHelperTarget = [&](std::string_view helperName) -> std::string {
+    if (helperName == "why") {
+      if (defMap_.count("/std/file/FileError/why") > 0) {
+        return "/std/file/FileError/why";
+      }
+      if (defMap_.count("/FileError/why") > 0) {
+        return "/FileError/why";
+      }
+      return "/file_error/why";
+    }
+    if (helperName == "is_eof") {
+      if (defMap_.count("/std/file/FileError/is_eof") > 0) {
+        return "/std/file/FileError/is_eof";
+      }
+      if (defMap_.count("/FileError/is_eof") > 0) {
+        return "/FileError/is_eof";
+      }
+      if (defMap_.count("/std/file/fileErrorIsEof") > 0) {
+        return "/std/file/fileErrorIsEof";
+      }
+      return "";
+    }
+    if (helperName == "eof") {
+      if (defMap_.count("/std/file/FileError/eof") > 0) {
+        return "/std/file/FileError/eof";
+      }
+      if (defMap_.count("/FileError/eof") > 0) {
+        return "/FileError/eof";
+      }
+      if (defMap_.count("/std/file/fileReadEof") > 0) {
+        return "/std/file/fileReadEof";
+      }
+      return "";
+    }
+    return "";
+  };
   auto inferPointerLikeCallReturnType = [&](const Expr &receiverExpr) -> std::string {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
       return "";
@@ -526,20 +563,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       break;
     }
   }
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" || normalizedMethodName == "eof")) {
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+    return !resolvedOut.empty();
+  }
   if (typeName.empty()) {
     return false;
   }
   if (typeName == "FileError" && (normalizedMethodName == "why" || normalizedMethodName == "is_eof")) {
-    if (normalizedMethodName == "why") {
-      resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
-    } else if (defMap_.count("/FileError/is_eof") > 0) {
-      resolvedOut = "/FileError/is_eof";
-    } else if (defMap_.count("/std/file/fileErrorIsEof") > 0) {
-      resolvedOut = "/std/file/fileErrorIsEof";
-    } else {
-      return false;
-    }
-    return true;
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+    return !resolvedOut.empty();
   }
   if (typeName == "Pointer" || typeName == "Reference") {
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {

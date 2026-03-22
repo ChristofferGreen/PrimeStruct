@@ -6454,6 +6454,7 @@ main() {
     return(1i32)
   }
   print_line(/FileError/why(err))
+  print_line(FileError.why(err))
   print_line(err.why())
   print_line(Result.why(fileErrorStatus(err)))
   return(0i32)
@@ -6469,7 +6470,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "EOF\nEOF\nEOF\n");
+  CHECK(readFile(outPath) == "EOF\nEOF\nEOF\nEOF\n");
 }
 
 TEST_CASE("native uses stdlib FileError eof wrapper") {
@@ -6483,14 +6484,20 @@ main() {
   if(not(/FileError/is_eof(eofErr))) {
     return(1i32)
   }
-  if(not(eofErr.is_eof())) {
+  if(not(FileError.is_eof(eofErr))) {
     return(2i32)
   }
-  if(/FileError/is_eof(otherErr)) {
+  if(not(eofErr.is_eof())) {
     return(3i32)
   }
-  if(otherErr.is_eof()) {
+  if(/FileError/is_eof(otherErr)) {
     return(4i32)
+  }
+  if(FileError.is_eof(otherErr)) {
+    return(5i32)
+  }
+  if(otherErr.is_eof()) {
+    return(6i32)
   }
   return(0i32)
 }
@@ -6510,10 +6517,14 @@ import /std/file/*
 
 [return<int> effects(io_out)]
 main() {
-  [FileError] err{/FileError/eof()}
+  [FileError] err{FileError.eof()}
   print_line(/FileError/why(err))
-  if(not(err.is_eof())) {
+  print_line(FileError.why(err))
+  if(not(FileError.is_eof(err))) {
     return(1i32)
+  }
+  if(not(err.is_eof())) {
+    return(2i32)
   }
   return(0i32)
 }
@@ -6528,7 +6539,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "EOF\n");
+  CHECK(readFile(outPath) == "EOF\nEOF\n");
 }
 
 #if defined(EACCES) && defined(ENOENT) && defined(EEXIST)

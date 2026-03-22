@@ -1,23 +1,40 @@
 [public return<string>]
 /FileError/why([FileError] err) {
-  return(/file_error/why(err))
+  return(/std/file/FileError/why(err))
 }
 
 [public return<FileError>]
 /FileError/eof() {
-  return(/std/file/fileReadEof())
+  return(/std/file/FileError/eof())
 }
 
 [public return<bool>]
 /FileError/is_eof([FileError] err) {
-  return(/std/file/fileErrorIsEof(err))
+  return(/std/file/FileError/is_eof(err))
 }
 
 namespace std {
   namespace file {
+  namespace FileError {
+    [public return<string>]
+    why([FileError] err) {
+      return(/file_error/why(err))
+    }
+
+    [public return<FileError>]
+    eof() {
+      return(65536i32)
+    }
+
+    [public return<bool>]
+    is_eof([FileError] err) {
+      return(equal(err, eof()))
+    }
+  }
+
   [public return<FileError>]
   fileReadEof() {
-    return(65536i32)
+    return(/std/file/FileError/eof())
   }
 
   [public return<Result<FileError>>]
@@ -27,7 +44,7 @@ namespace std {
 
   [public return<bool>]
   fileErrorIsEof([FileError] err) {
-    return(equal(err, /FileError/eof()))
+    return(/std/file/FileError/is_eof(err))
   }
 
   [public return<Result<T, FileError>>]

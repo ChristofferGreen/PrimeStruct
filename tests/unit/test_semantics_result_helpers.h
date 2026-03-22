@@ -146,6 +146,7 @@ import /std/file/*
 main() {
   [FileError] err{fileReadEof()}
   [string] direct{/FileError/why(err)}
+  [string] viaType{FileError.why(err)}
   [string] method{err.why()}
   [string] viaResult{Result.why(fileErrorStatus(err))}
   return()
@@ -179,10 +180,13 @@ main() {
   [FileError] eofErr{fileReadEof()}
   [FileError] otherErr{1i32}
   [bool] directEof{/FileError/is_eof(eofErr)}
+  [bool] viaTypeEof{FileError.is_eof(eofErr)}
   [bool] methodEof{eofErr.is_eof()}
   [bool] helperOther{fileErrorIsEof(otherErr)}
+  [bool] viaTypeOther{FileError.is_eof(otherErr)}
   [bool] methodOther{otherErr.is_eof()}
-  if(and(and(directEof, methodEof), and(not(helperOther), not(methodOther))),
+  if(and(and(and(directEof, viaTypeEof), methodEof),
+         and(not(helperOther), and(not(viaTypeOther), not(methodOther)))),
      then(){ return() },
      else(){ return() })
 }
@@ -213,10 +217,12 @@ import /std/file/*
 [return<void>]
 main() {
   [FileError] direct{/FileError/eof()}
+  [FileError] viaType{FileError.eof()}
   [Result<FileError>] status{fileErrorStatus(/FileError/eof())}
   [bool] eof{direct.is_eof()}
+  [bool] typeEof{FileError.is_eof(viaType)}
   [bool] statusError{Result.error(status)}
-  if(and(eof, statusError), then(){ return() }, else(){ return() })
+  if(and(and(eof, typeEof), statusError), then(){ return() }, else(){ return() })
 }
 )";
   std::string error;
@@ -259,13 +265,13 @@ import /std/file/*
 
 [return<void>]
 main() {
-  [FileError] err{/FileError/eof(true)}
+  [FileError] err{FileError.eof(true)}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /FileError/eof") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/file/FileError/eof") != std::string::npos);
 }
 
 TEST_CASE("stdlib File helpers cover imported method and slash-call wrappers") {
