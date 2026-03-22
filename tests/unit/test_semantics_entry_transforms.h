@@ -316,6 +316,57 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("unsafe parameter reference allows named safe-call boundary") {
+  const std::string source = R"(
+[return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+forward([Reference<i32>] input) {
+  consume([input] input)
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  forward(ref)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unsafe reference rejects named safe-call boundary escape through call result") {
+  const std::string source = R"(
+[unsafe, return<Reference<i32>>]
+forward([Reference<i32>] input) {
+  return(input)
+}
+
+[return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  consume([input] forward([input] ref))
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
+}
+
 TEST_CASE("unsafe transform rejects duplicate markers") {
   const std::string source = R"(
 [unsafe, unsafe, return<void>]

@@ -9256,6 +9256,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNamedArgumentBuiltins.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPointerLike.cpp";
+  const std::filesystem::path semanticsExprReferenceEscapesPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprReferenceEscapes.cpp";
   const std::filesystem::path semanticsExprReceiverPathsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprReceiverPaths.cpp";
   const std::filesystem::path semanticsExprTryPath =
@@ -9284,6 +9286,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
+  REQUIRE(std::filesystem::exists(semanticsExprReferenceEscapesPath));
   REQUIRE(std::filesystem::exists(semanticsExprReceiverPathsPath));
   REQUIRE(std::filesystem::exists(semanticsExprTryPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
@@ -9385,6 +9388,17 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("std::function<bool(const Expr &)> isUnsafeReferenceExpr;") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "resolveEscapingReferenceRoot = [&](const Expr &argExpr, std::string &rootOut) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "auto reportReferenceAssignmentEscape = [&](const std::string &sinkName, const Expr &rhsExpr) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "auto resolveReferenceEscapeSink = [&](const std::string &targetName, std::string &sinkOut) -> bool {") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("this->canonicalExperimentalMapHelperPath(") == std::string::npos);
@@ -9403,6 +9417,11 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprBodyArguments(params, locals, expr, resolved, resolvedMethod,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("isUnsafeReferenceExpr(params, locals, expr.args[1])") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "reportReferenceAssignmentEscape(params, locals, escapeSink,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprCollectionLiteralBuiltins(params, locals, expr,") !=
         std::string::npos);

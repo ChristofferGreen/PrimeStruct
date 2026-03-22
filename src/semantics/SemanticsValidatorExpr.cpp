@@ -1422,189 +1422,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (!validateNamedArguments(expr.args, expr.argNames, resolved, error_)) {
       return false;
     }
-    std::function<bool(const Expr &)> isUnsafeReferenceExpr;
-    isUnsafeReferenceExpr = [&](const Expr &argExpr) -> bool {
-        if (argExpr.kind == Expr::Kind::Name) {
-          if (const BindingInfo *paramBinding = findParamBinding(params, argExpr.name)) {
-            return paramBinding->typeName == "Reference" && paramBinding->isUnsafeReference;
-        }
-        auto itLocal = locals.find(argExpr.name);
-        return itLocal != locals.end() && itLocal->second.typeName == "Reference" && itLocal->second.isUnsafeReference;
-        }
-        if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding) {
-          return false;
-        }
-        auto hasUnsafeChildExpr = [&](const Expr &callExpr) -> bool {
-          for (const auto &nestedArg : callExpr.args) {
-            if (isUnsafeReferenceExpr(nestedArg)) {
-              return true;
-            }
-          }
-          for (const auto &bodyExpr : callExpr.bodyArguments) {
-            if (isUnsafeReferenceExpr(bodyExpr)) {
-              return true;
-            }
-          }
-          return false;
-        };
-        if (isIfCall(argExpr) || isMatchCall(argExpr) || isBlockCall(argExpr) || isReturnCall(argExpr) ||
-            isSimpleCallName(argExpr, "then") || isSimpleCallName(argExpr, "else") ||
-            isSimpleCallName(argExpr, "case")) {
-          return hasUnsafeChildExpr(argExpr);
-        }
-        const std::string nestedResolved = resolveCalleePath(argExpr);
-        if (nestedResolved.empty()) {
-          return false;
-        }
-      auto nestedIt = defMap_.find(nestedResolved);
-      if (nestedIt == defMap_.end() || nestedIt->second == nullptr) {
-        return false;
-      }
-      bool returnsReference = false;
-      for (const auto &transform : nestedIt->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        std::string base;
-        std::string arg;
-        if (splitTemplateTypeName(transform.templateArgs.front(), base, arg) && base == "Reference") {
-          returnsReference = true;
-          break;
-        }
-      }
-      if (!returnsReference) {
-        return false;
-      }
-      const auto &nestedParams = paramsByDef_[nestedResolved];
-      if (nestedParams.empty()) {
-        return false;
-      }
-      std::string nestedArgError;
-      if (!validateNamedArgumentsAgainstParams(nestedParams, argExpr.argNames, nestedArgError)) {
-        return false;
-      }
-      std::vector<const Expr *> nestedOrderedArgs;
-      if (!buildOrderedArguments(nestedParams, argExpr.args, argExpr.argNames, nestedOrderedArgs, nestedArgError)) {
-        return false;
-      }
-      for (size_t nestedIndex = 0; nestedIndex < nestedOrderedArgs.size() && nestedIndex < nestedParams.size();
-           ++nestedIndex) {
-        const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
-        if (nestedArg == nullptr || nestedParams[nestedIndex].binding.typeName != "Reference") {
-          continue;
-        }
-        if (isUnsafeReferenceExpr(*nestedArg)) {
-          return true;
-        }
-      }
-      return false;
-    };
-    std::function<bool(const Expr &, std::string &)> resolveEscapingReferenceRoot;
-    resolveEscapingReferenceRoot = [&](const Expr &argExpr, std::string &rootOut) -> bool {
-      rootOut.clear();
-      if (argExpr.kind == Expr::Kind::Name) {
-        if (findParamBinding(params, argExpr.name) != nullptr) {
-          return false;
-        }
-        auto itLocal = locals.find(argExpr.name);
-        if (itLocal == locals.end() || itLocal->second.typeName != "Reference") {
-          return false;
-        }
-        std::string sourceRoot = itLocal->second.referenceRoot.empty() ? argExpr.name : itLocal->second.referenceRoot;
-        if (const BindingInfo *rootParam = findParamBinding(params, sourceRoot)) {
-          if (rootParam->typeName == "Reference") {
-            return false;
-          }
-        }
-        rootOut = sourceRoot;
-        return true;
-      }
-      if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding) {
-        return false;
-      }
-      auto resolveChildRoot = [&](const Expr &callExpr) -> bool {
-        for (const auto &nestedArg : callExpr.args) {
-          if (resolveEscapingReferenceRoot(nestedArg, rootOut)) {
-            return true;
-          }
-        }
-        for (const auto &bodyExpr : callExpr.bodyArguments) {
-          if (resolveEscapingReferenceRoot(bodyExpr, rootOut)) {
-            return true;
-          }
-        }
-        return false;
-      };
-      if (isIfCall(argExpr) || isMatchCall(argExpr) || isBlockCall(argExpr) || isReturnCall(argExpr) ||
-          isSimpleCallName(argExpr, "then") || isSimpleCallName(argExpr, "else") ||
-          isSimpleCallName(argExpr, "case")) {
-        return resolveChildRoot(argExpr);
-      }
-      const std::string nestedResolved = resolveCalleePath(argExpr);
-      if (nestedResolved.empty()) {
-        return false;
-      }
-      auto nestedIt = defMap_.find(nestedResolved);
-      if (nestedIt == defMap_.end() || nestedIt->second == nullptr) {
-        return false;
-      }
-      bool returnsReference = false;
-      for (const auto &transform : nestedIt->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        std::string base;
-        std::string arg;
-        if (splitTemplateTypeName(transform.templateArgs.front(), base, arg) && base == "Reference") {
-          returnsReference = true;
-          break;
-        }
-      }
-      if (!returnsReference) {
-        return false;
-      }
-      const auto &nestedParams = paramsByDef_[nestedResolved];
-      if (nestedParams.empty()) {
-        return false;
-      }
-      std::string nestedArgError;
-      if (!validateNamedArgumentsAgainstParams(nestedParams, argExpr.argNames, nestedArgError)) {
-        return false;
-      }
-      std::vector<const Expr *> nestedOrderedArgs;
-      if (!buildOrderedArguments(nestedParams, argExpr.args, argExpr.argNames, nestedOrderedArgs, nestedArgError)) {
-        return false;
-      }
-      for (size_t nestedIndex = 0; nestedIndex < nestedOrderedArgs.size() && nestedIndex < nestedParams.size();
-           ++nestedIndex) {
-        const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
-        if (nestedArg == nullptr || nestedParams[nestedIndex].binding.typeName != "Reference") {
-          continue;
-        }
-        if (resolveEscapingReferenceRoot(*nestedArg, rootOut)) {
-          return true;
-        }
-      }
-      return false;
-    };
-    auto reportReferenceAssignmentEscape = [&](const std::string &sinkName, const Expr &rhsExpr) -> bool {
-      std::string sourceRoot;
-      if (!resolveEscapingReferenceRoot(rhsExpr, sourceRoot)) {
-        return false;
-      }
-      if (sourceRoot.empty()) {
-        sourceRoot = "<unknown>";
-      }
-      const std::string sink = sinkName.empty() ? "<unknown>" : sinkName;
-      if (currentValidationContext_.definitionIsUnsafe && isUnsafeReferenceExpr(rhsExpr)) {
-        error_ = "unsafe reference escapes via assignment to " + sink +
-                 " (root: " + sourceRoot + ", sink: " + sink + ")";
-      } else {
-        error_ = "reference escapes via assignment to " + sink +
-                 " (root: " + sourceRoot + ", sink: " + sink + ")";
-      }
-      return true;
-    };
     auto it = defMap_.find(resolved);
     if (it == defMap_.end() || resolvedMethod) {
       ExprTryBuiltinContext tryBuiltinContext;
@@ -2169,28 +1986,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         return nullptr;
       };
-      auto resolveReferenceEscapeSink = [&](const std::string &targetName, std::string &sinkOut) -> bool {
-        sinkOut.clear();
-        if (const BindingInfo *targetParam = findParamBinding(params, targetName)) {
-          if (targetParam->typeName == "Reference") {
-            sinkOut = targetName;
-            return true;
-          }
-          return false;
-        }
-        auto targetIt = locals.find(targetName);
-        if (targetIt == locals.end() || targetIt->second.typeName != "Reference" ||
-            targetIt->second.referenceRoot.empty()) {
-          return false;
-        }
-        if (const BindingInfo *rootParam = findParamBinding(params, targetIt->second.referenceRoot)) {
-          if (rootParam->typeName == "Reference") {
-            sinkOut = targetIt->second.referenceRoot;
-            return true;
-          }
-        }
-        return false;
-      };
       std::function<bool(const Expr &, std::string &)> resolveLocationRootBindingName;
       resolveLocationRootBindingName = [&](const Expr &pointerExpr, std::string &rootNameOut) -> bool {
         if (pointerExpr.kind != Expr::Kind::Call) {
@@ -2469,16 +2264,19 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             formatBorrowedBindingError(pointerBorrowRoot, borrowSink);
             return false;
           }
-          if (currentValidationContext_.definitionIsUnsafe && isUnsafeReferenceExpr(expr.args[1])) {
+          if (currentValidationContext_.definitionIsUnsafe &&
+              isUnsafeReferenceExpr(params, locals, expr.args[1])) {
             std::string escapeSink;
             bool hasEscapeSink = false;
             if (pointerExpr.kind == Expr::Kind::Name) {
-              hasEscapeSink = resolveReferenceEscapeSink(pointerExpr.name, escapeSink);
+              hasEscapeSink = resolveReferenceEscapeSink(
+                  params, locals, pointerExpr.name, escapeSink);
             }
             if (!hasEscapeSink) {
               std::string locationRootName;
               if (resolveLocationRootBindingName(pointerExpr, locationRootName)) {
-                hasEscapeSink = resolveReferenceEscapeSink(locationRootName, escapeSink);
+                hasEscapeSink = resolveReferenceEscapeSink(
+                    params, locals, locationRootName, escapeSink);
               }
             }
             if (!hasEscapeSink && !pointerBorrowRoot.empty()) {
@@ -2489,7 +2287,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               }
             }
             if (hasEscapeSink) {
-              if (reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
+              if (reportReferenceAssignmentEscape(
+                      params, locals, escapeSink, expr.args[1])) {
                 return false;
               }
             }
@@ -2498,12 +2297,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             std::string escapeSink;
             bool hasEscapeSink = false;
             if (pointerExpr.kind == Expr::Kind::Name) {
-              hasEscapeSink = resolveReferenceEscapeSink(pointerExpr.name, escapeSink);
+              hasEscapeSink = resolveReferenceEscapeSink(
+                  params, locals, pointerExpr.name, escapeSink);
             }
             if (!hasEscapeSink) {
               std::string locationRootName;
               if (resolveLocationRootBindingName(pointerExpr, locationRootName)) {
-                hasEscapeSink = resolveReferenceEscapeSink(locationRootName, escapeSink);
+                hasEscapeSink = resolveReferenceEscapeSink(
+                    params, locals, locationRootName, escapeSink);
               }
             }
             if (!hasEscapeSink && !pointerBorrowRoot.empty()) {
@@ -2513,7 +2314,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 escapeSink = pointerBorrowRoot;
               }
             }
-            if (hasEscapeSink && reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
+            if (hasEscapeSink &&
+                reportReferenceAssignmentEscape(params, locals, escapeSink,
+                                               expr.args[1])) {
               return false;
             }
           }
@@ -2525,18 +2328,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           error_ = "assign target must be a mutable binding";
           return false;
         }
-        if (currentValidationContext_.definitionIsUnsafe && targetIsName && isUnsafeReferenceExpr(expr.args[1])) {
+        if (currentValidationContext_.definitionIsUnsafe && targetIsName &&
+            isUnsafeReferenceExpr(params, locals, expr.args[1])) {
           std::string escapeSink;
-          if (resolveReferenceEscapeSink(target.name, escapeSink)) {
-            if (reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
+          if (resolveReferenceEscapeSink(params, locals, target.name,
+                                         escapeSink)) {
+            if (reportReferenceAssignmentEscape(params, locals, escapeSink,
+                                                expr.args[1])) {
               return false;
             }
           }
         }
         if (!currentValidationContext_.definitionIsUnsafe && targetIsName) {
           std::string escapeSink;
-          if (resolveReferenceEscapeSink(target.name, escapeSink) &&
-              reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
+          if (resolveReferenceEscapeSink(params, locals, target.name,
+                                         escapeSink) &&
+              reportReferenceAssignmentEscape(params, locals, escapeSink,
+                                              expr.args[1])) {
             return false;
           }
         }
@@ -3206,7 +3014,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             continue;
           }
           for (const Expr *arg : packedArgs) {
-            if (!arg || !isUnsafeReferenceExpr(*arg)) {
+            if (!arg || !isUnsafeReferenceExpr(params, locals, *arg)) {
               continue;
             }
             error_ = "unsafe reference escapes across safe boundary to " + resolved;
@@ -3224,7 +3032,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (!isReferenceTypeText(param.binding.typeName, expectedTypeText)) {
           continue;
         }
-        if (!isUnsafeReferenceExpr(*arg)) {
+        if (!isUnsafeReferenceExpr(params, locals, *arg)) {
           continue;
         }
         error_ = "unsafe reference escapes across safe boundary to " + resolved;

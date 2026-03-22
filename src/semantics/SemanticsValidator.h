@@ -254,6 +254,17 @@ private:
                                  const BuiltinCollectionDispatchResolverAdapters &builtinCollectionDispatchResolverAdapters,
                                  const std::vector<Expr> *enclosingStatements,
                                  size_t statementIndex);
+  bool isUnsafeReferenceExpr(const std::vector<ParameterInfo> &params,
+                             const std::unordered_map<std::string, BindingInfo> &locals,
+                             const Expr &expr);
+  bool resolveEscapingReferenceRoot(const std::vector<ParameterInfo> &params,
+                                    const std::unordered_map<std::string, BindingInfo> &locals,
+                                    const Expr &expr,
+                                    std::string &rootOut);
+  bool reportReferenceAssignmentEscape(const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       const std::string &sinkName,
+                                       const Expr &rhsExpr);
   struct ExprResultFileBuiltinContext {
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
     std::function<bool(const Expr &)> isStringExpr;
@@ -372,6 +383,10 @@ private:
   bool hasImportedDefinitionPath(const std::string &path) const;
   bool isStaticHelperDefinition(const Definition &def) const;
   bool hasDeclaredDefinitionPath(const std::string &path) const;
+  bool resolveReferenceEscapeSink(const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals,
+                                  const std::string &targetName,
+                                  std::string &sinkOut);
   bool resolveMethodTarget(const std::vector<ParameterInfo> &params,
                            const std::unordered_map<std::string, BindingInfo> &locals,
                            const std::string &callNamespacePrefix,
