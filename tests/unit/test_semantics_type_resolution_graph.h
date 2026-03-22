@@ -47,6 +47,17 @@ const primec::semantics::TypeResolutionLocalBindingSnapshotEntry &requireLocalBi
   return *it;
 }
 
+const primec::semantics::TypeResolutionQueryCallSnapshotEntry &requireQueryCallSnapshotEntry(
+    const primec::semantics::TypeResolutionQueryCallSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &resolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.resolvedPath == resolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 size_t requireTopologicalComponentIndex(const primec::semantics::CondensationDagSnapshot &dag, uint32_t componentId) {
   const auto it = std::find(dag.topologicalComponentIds.begin(), dag.topologicalComponentIds.end(), componentId);
   REQUIRE(it != dag.topologicalComponentIds.end());
@@ -308,6 +319,34 @@ main() {
   const auto &entry = requireLocalBindingSnapshotEntry(snapshot, "/main", "values");
   CHECK(entry.bindingTypeText == "array<i32>");
   CHECK(entry.initializerQueryTypeText == "array<i32>");
+}
+
+TEST_CASE("type resolution query call snapshot keeps map receiver query metadata") {
+  const std::string source = R"(
+[return<auto> effects(heap_alloc)]
+selectValues() {
+  if(true,
+    then(){ return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) },
+    else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc)]
+main() {
+  [i32] total{plus(selectValues().count(), try(selectValues().tryAt("left"raw_utf8)))}
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionQueryCallSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryCallSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &countEntry = requireQueryCallSnapshotEntry(snapshot, "/main", "/std/collections/map/count");
+  CHECK(countEntry.typeText == "i32");
+
+  const auto &tryAtEntry = requireQueryCallSnapshotEntry(snapshot, "/main", "/std/collections/map/tryAt");
+  CHECK(tryAtEntry.typeText == "Result<i32, ContainerError>");
 }
 
 TEST_CASE("type resolution graph dump stays stable for a simple call chain") {

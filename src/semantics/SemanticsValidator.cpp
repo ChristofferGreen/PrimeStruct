@@ -172,6 +172,156 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
   return entries;
 }
 
+std::vector<SemanticsValidator::QueryCallTypeSnapshotEntry>
+SemanticsValidator::queryCallTypeSnapshotForTesting() {
+  using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
+
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  auto inferBindingForLocals = [&](const Definition &def,
+                                   const std::vector<ParameterInfo> &defParams,
+                                   const ActiveLocalBindings &activeLocals,
+                                   const Expr &bindingExpr,
+                                   BindingInfo &bindingOut) {
+    const std::string namespacePrefix =
+        bindingExpr.namespacePrefix.empty() ? def.namespacePrefix : bindingExpr.namespacePrefix;
+    std::optional<std::string> restrictType;
+    if (!withPreservedError([&]() {
+          return parseBindingInfo(
+              bindingExpr, namespacePrefix, structNames_, importAliases_, bindingOut, restrictType, error_);
+        })) {
+      return false;
+    }
+    if (!hasExplicitBindingTypeTransform(bindingExpr) && bindingExpr.args.size() == 1) {
+      BindingInfo inferred = bindingOut;
+      if (withPreservedError([&]() {
+            return inferBindingTypeFromInitializer(
+                bindingExpr.args.front(), defParams, activeLocals, inferred, &bindingExpr);
+          })) {
+        bindingOut = std::move(inferred);
+      }
+    }
+    if (!restrictType.has_value()) {
+      return true;
+    }
+    const bool hasTemplate = !bindingOut.typeTemplateArg.empty();
+    return restrictMatchesBinding(
+        *restrictType, bindingOut.typeName, bindingOut.typeTemplateArg, hasTemplate, namespacePrefix);
+  };
+
+  std::vector<QueryCallTypeSnapshotEntry> entries;
+  std::function<void(const Definition &, const std::vector<ParameterInfo> &, const Expr &, ActiveLocalBindings &)>
+      visitExpr;
+  std::function<void(const Definition &, const std::vector<ParameterInfo> &, const std::vector<Expr> &, ActiveLocalBindings &)>
+      visitExprSequence;
+
+  visitExprSequence = [&](const Definition &def,
+                          const std::vector<ParameterInfo> &defParams,
+                          const std::vector<Expr> &exprs,
+                          ActiveLocalBindings &activeLocals) {
+    for (const auto &expr : exprs) {
+      visitExpr(def, defParams, expr, activeLocals);
+    }
+  };
+
+  visitExpr = [&](const Definition &def,
+                  const std::vector<ParameterInfo> &defParams,
+                  const Expr &expr,
+                  ActiveLocalBindings &activeLocals) {
+    if (expr.isBinding) {
+      for (const auto &arg : expr.args) {
+        ActiveLocalBindings argLocals = activeLocals;
+        visitExpr(def, defParams, arg, argLocals);
+      }
+      if (!expr.bodyArguments.empty()) {
+        ActiveLocalBindings bodyLocals = activeLocals;
+        visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+      }
+
+      BindingInfo binding;
+      if (inferBindingForLocals(def, defParams, activeLocals, expr, binding)) {
+        activeLocals.emplace(expr.name, std::move(binding));
+      }
+      return;
+    }
+
+    if (expr.kind == Expr::Kind::Call) {
+      std::string typeText;
+      if (withPreservedError([&]() {
+            return inferQueryExprTypeText(expr, defParams, activeLocals, typeText);
+          }) &&
+          !typeText.empty()) {
+        entries.push_back(QueryCallTypeSnapshotEntry{
+            def.fullPath,
+            expr.name,
+            resolveCalleePath(expr),
+            expr.sourceLine,
+            expr.sourceColumn,
+            std::move(typeText),
+        });
+      }
+    }
+
+    for (const auto &arg : expr.args) {
+      ActiveLocalBindings argLocals = activeLocals;
+      visitExpr(def, defParams, arg, argLocals);
+    }
+    if (!expr.bodyArguments.empty()) {
+      ActiveLocalBindings bodyLocals = activeLocals;
+      visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+    }
+  };
+
+  for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
+    ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
+    const auto paramsIt = paramsByDef_.find(def.fullPath);
+    if (paramsIt == paramsByDef_.end()) {
+      continue;
+    }
+    const auto &defParams = paramsIt->second;
+
+    for (const auto &param : def.parameters) {
+      for (const auto &arg : param.args) {
+        ActiveLocalBindings paramLocals;
+        visitExpr(def, defParams, arg, paramLocals);
+      }
+      if (!param.bodyArguments.empty()) {
+        ActiveLocalBindings paramLocals;
+        visitExprSequence(def, defParams, param.bodyArguments, paramLocals);
+      }
+    }
+
+    ActiveLocalBindings definitionLocals;
+    visitExprSequence(def, defParams, def.statements, definitionLocals);
+    if (def.returnExpr.has_value()) {
+      ActiveLocalBindings returnLocals = definitionLocals;
+      visitExpr(def, defParams, *def.returnExpr, returnLocals);
+    }
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    return left.callName < right.callName;
+  });
+  return entries;
+}
+
 std::string SemanticsValidator::graphLocalAutoBindingKey(const std::string &scopePath,
                                                          int sourceLine,
                                                          int sourceColumn) {
