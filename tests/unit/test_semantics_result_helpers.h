@@ -1100,18 +1100,43 @@ main() {
   CHECK(error.find("upload requires numeric/bool element type") != std::string::npos);
 }
 
-TEST_CASE("Result.map inline lambda syntax parses with explicit diagnostics") {
+TEST_CASE("Result.map infers auto Result binding from lambda body") {
   const std::string source = R"(
 [return<void>]
 main() {
   [Result<i32, FileError>] status{ Result.ok(1i32) }
-  [Result<i32, FileError>] mapped{ Result.map(status, []([i32] v) { return(plus(v, 1i32)) }) }
-  if(Result.error(mapped), then(){ return() }, else(){ return() })
+  [auto] mapped{ Result.map(status, []([i32] v) { return(plus(v, 1i32)) }) }
+  [bool] failed{ Result.error(mapped) }
+  [string] why{ Result.why(mapped) }
+  if(failed, then(){ return() }, else(){ return() })
 }
 )";
   std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("unexpected token in expression") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("Result.and_then and Result.map2 infer nested auto Result bindings") {
+  const std::string source = R"(
+[return<Result<i32, FileError>>]
+lift([i32] value) {
+  return(Result.ok(value))
+}
+
+[return<void>]
+main() {
+  [Result<i32, FileError>] first{ Result.ok(1i32) }
+  [Result<i32, FileError>] second{ Result.ok(2i32) }
+  [auto] summed{ Result.map2(first, second, []([i32] x, [i32] y) { return(plus(x, y)) }) }
+  [auto] chained{ Result.and_then(summed, []([i32] total) { return(lift(plus(total, 1i32))) }) }
+  [bool] failed{ Result.error(chained) }
+  [string] why{ Result.why(chained) }
+  if(failed, then(){ return() }, else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("Result.map requires lambda argument") {

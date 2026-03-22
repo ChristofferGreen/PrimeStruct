@@ -27,82 +27,280 @@ std::string Emitter::emitExpr(const Expr &expr,
     }
     return false;
   };
-  auto resolveResultExprInfo = [&](const Expr &candidate, ResultInfo &out) -> bool {
-    out = ResultInfo{};
-    if (candidate.kind == Expr::Kind::Name) {
-      auto it = localTypes.find(candidate.name);
-      if (it != localTypes.end() && it->second.typeName == "Result") {
-        std::vector<std::string> args;
-        if (splitTopLevelTemplateArgs(it->second.typeTemplateArg, args)) {
-          out.isResult = true;
-          out.hasValue = (args.size() == 2);
-          if (out.hasValue) {
-            out.valueType = args.front();
-            out.errorType = args.back();
-          } else if (!args.empty()) {
-            out.errorType = args.front();
-          }
-          return true;
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto splitCaptureTokens = [](const std::string &capture) {
+    std::vector<std::string> tokens;
+    std::istringstream stream(capture);
+    std::string token;
+    while (stream >> token) {
+      tokens.push_back(token);
+    }
+    return tokens;
+  };
+  auto seedLambdaTypes = [&](const Expr &lambdaExpr,
+                             const std::unordered_map<std::string, BindingInfo> &outerTypes,
+                             std::unordered_map<std::string, BindingInfo> &lambdaTypesOut) -> bool {
+    lambdaTypesOut.clear();
+    bool captureAll = false;
+    std::vector<std::string> explicitCaptureNames;
+    explicitCaptureNames.reserve(lambdaExpr.lambdaCaptures.size());
+    for (const auto &capture : lambdaExpr.lambdaCaptures) {
+      std::vector<std::string> tokens = splitCaptureTokens(capture);
+      if (tokens.empty()) {
+        return false;
+      }
+      if (tokens.size() == 1 && (tokens[0] == "=" || tokens[0] == "&")) {
+        captureAll = true;
+        continue;
+      }
+      explicitCaptureNames.push_back(tokens.back());
+    }
+    if (captureAll) {
+      for (const auto &entry : outerTypes) {
+        lambdaTypesOut.emplace(entry.first, entry.second);
+      }
+    } else {
+      for (const auto &captureName : explicitCaptureNames) {
+        auto it = outerTypes.find(captureName);
+        if (it != outerTypes.end()) {
+          lambdaTypesOut.emplace(captureName, it->second);
         }
       }
+    }
+    for (const auto &param : lambdaExpr.args) {
+      if (!param.isBinding) {
+        return false;
+      }
+      BindingInfo binding = getBindingInfo(param);
+      if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
+        ReturnKind initKind = inferPrimitiveReturnKind(param.args.front(), lambdaTypesOut, returnKinds, allowMathBare);
+        std::string inferred = typeNameForReturnKind(initKind);
+        if (!inferred.empty()) {
+          binding.typeName = inferred;
+          binding.typeTemplateArg.clear();
+        }
+      }
+      lambdaTypesOut[param.name] = std::move(binding);
+    }
+    return true;
+  };
+  auto inferLambdaValueTypeText = [&](const Expr &lambdaExpr,
+                                      const std::unordered_map<std::string, BindingInfo> &outerTypes,
+                                      std::string &typeTextOut) -> bool {
+    typeTextOut.clear();
+    if (!lambdaExpr.isLambda || (!lambdaExpr.hasBodyArguments && lambdaExpr.bodyArguments.empty())) {
       return false;
     }
-    if (candidate.kind == Expr::Kind::Call) {
-      if (!candidate.isMethodCall && isSimpleCallName(candidate, "File")) {
-        out.isResult = true;
-        out.hasValue = true;
-        out.valueType = "File";
-        out.errorType = "FileError";
-        return true;
-      }
-      std::string resolved = resolveExprPath(candidate);
-      if (candidate.isMethodCall) {
-        std::string methodPath;
-        if (resolveMethodCallPath(
-                candidate, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
-          resolved = methodPath;
+    std::unordered_map<std::string, BindingInfo> activeTypes;
+    if (!seedLambdaTypes(lambdaExpr, outerTypes, activeTypes)) {
+      return false;
+    }
+    const Expr *valueExpr = nullptr;
+    for (const auto &stmt : lambdaExpr.bodyArguments) {
+      if (stmt.isBinding) {
+        BindingInfo binding = getBindingInfo(stmt);
+        if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+          ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), activeTypes, returnKinds, allowMathBare);
+          std::string inferred = typeNameForReturnKind(initKind);
+          if (!inferred.empty()) {
+            binding.typeName = inferred;
+            binding.typeTemplateArg.clear();
+          }
         }
-        if (resolved.rfind("/file/", 0) == 0) {
+        activeTypes[stmt.name] = std::move(binding);
+        continue;
+      }
+      if (isSimpleCallName(stmt, "return") && stmt.args.size() == 1) {
+        valueExpr = &stmt.args.front();
+        break;
+      }
+      valueExpr = &stmt;
+    }
+    if (valueExpr == nullptr) {
+      return false;
+    }
+    if (valueExpr->kind == Expr::Kind::Name) {
+      auto it = activeTypes.find(valueExpr->name);
+      if (it != activeTypes.end()) {
+        typeTextOut = bindingTypeText(it->second);
+        return !typeTextOut.empty();
+      }
+    }
+    ReturnKind kind = inferPrimitiveReturnKind(*valueExpr, activeTypes, returnKinds, allowMathBare);
+    typeTextOut = typeNameForReturnKind(kind);
+    return !typeTextOut.empty();
+  };
+  std::function<bool(const Expr &, const std::unordered_map<std::string, BindingInfo> &, ResultInfo &)>
+      resolveResultExprInfoWithTypes;
+  auto inferLambdaResultInfo = [&](const Expr &lambdaExpr,
+                                   const std::unordered_map<std::string, BindingInfo> &outerTypes,
+                                   ResultInfo &resultOut) -> bool {
+    resultOut = ResultInfo{};
+    if (!lambdaExpr.isLambda || (!lambdaExpr.hasBodyArguments && lambdaExpr.bodyArguments.empty())) {
+      return false;
+    }
+    std::unordered_map<std::string, BindingInfo> activeTypes;
+    if (!seedLambdaTypes(lambdaExpr, outerTypes, activeTypes)) {
+      return false;
+    }
+    const Expr *valueExpr = nullptr;
+    for (const auto &stmt : lambdaExpr.bodyArguments) {
+      if (stmt.isBinding) {
+        BindingInfo binding = getBindingInfo(stmt);
+        if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+          ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), activeTypes, returnKinds, allowMathBare);
+          std::string inferred = typeNameForReturnKind(initKind);
+          if (!inferred.empty()) {
+            binding.typeName = inferred;
+            binding.typeTemplateArg.clear();
+          }
+        }
+        activeTypes[stmt.name] = std::move(binding);
+        continue;
+      }
+      if (isSimpleCallName(stmt, "return") && stmt.args.size() == 1) {
+        valueExpr = &stmt.args.front();
+        break;
+      }
+      valueExpr = &stmt;
+    }
+    if (valueExpr == nullptr) {
+      return false;
+    }
+    return resolveResultExprInfoWithTypes(*valueExpr, activeTypes, resultOut) && resultOut.isResult;
+  };
+  resolveResultExprInfoWithTypes =
+      [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &currentTypes, ResultInfo &out) -> bool {
+        out = ResultInfo{};
+        if (candidate.kind == Expr::Kind::Name) {
+          auto it = currentTypes.find(candidate.name);
+          if (it != currentTypes.end() && it->second.typeName == "Result") {
+            std::vector<std::string> args;
+            if (splitTopLevelTemplateArgs(it->second.typeTemplateArg, args)) {
+              out.isResult = true;
+              out.hasValue = (args.size() == 2);
+              if (out.hasValue) {
+                out.valueType = args.front();
+                out.errorType = args.back();
+              } else if (!args.empty()) {
+                out.errorType = args.front();
+              }
+              return true;
+            }
+          }
+          return false;
+        }
+        if (candidate.kind != Expr::Kind::Call) {
+          return false;
+        }
+        if (!candidate.isMethodCall && isSimpleCallName(candidate, "File")) {
           out.isResult = true;
-          out.hasValue = false;
+          out.hasValue = true;
+          out.valueType = "File";
           out.errorType = "FileError";
           return true;
         }
-      }
-      auto it = resultInfos.find(resolved);
-      if (it != resultInfos.end() && it->second.isResult) {
-        out = it->second;
-        return true;
-      }
-      if (!candidate.isMethodCall && !candidate.name.empty() && candidate.name[0] != '/' &&
-          candidate.name.find('/') == std::string::npos) {
-        auto importIt = importAliases.find(candidate.name);
-        if (importIt != importAliases.end()) {
-          auto aliasIt = resultInfos.find(importIt->second);
-          if (aliasIt != resultInfos.end() && aliasIt->second.isResult) {
-            out = aliasIt->second;
+        std::string resolved = resolveExprPath(candidate);
+        if (candidate.isMethodCall) {
+          std::string methodPath;
+          if (resolveMethodCallPath(
+                  candidate, defMap, currentTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
+            resolved = methodPath;
+          }
+          if (resolved.rfind("/file/", 0) == 0) {
+            out.isResult = true;
+            out.hasValue = false;
+            out.errorType = "FileError";
             return true;
           }
+          if (!candidate.args.empty() &&
+              candidate.args.front().kind == Expr::Kind::Name &&
+              normalizeBindingTypeName(candidate.args.front().name) == "Result") {
+            if (candidate.name == "map" && candidate.args.size() == 3) {
+              ResultInfo argInfo;
+              if (!resolveResultExprInfoWithTypes(candidate.args[1], currentTypes, argInfo) || !argInfo.isResult ||
+                  !argInfo.hasValue) {
+                return false;
+              }
+              std::string mappedType;
+              if (!inferLambdaValueTypeText(candidate.args[2], currentTypes, mappedType) || mappedType.empty()) {
+                return false;
+              }
+              out.isResult = true;
+              out.hasValue = true;
+              out.valueType = std::move(mappedType);
+              out.errorType = argInfo.errorType;
+              return true;
+            }
+            if (candidate.name == "and_then" && candidate.args.size() == 3) {
+              ResultInfo argInfo;
+              ResultInfo nextInfo;
+              if (!resolveResultExprInfoWithTypes(candidate.args[1], currentTypes, argInfo) || !argInfo.isResult ||
+                  !argInfo.hasValue || !inferLambdaResultInfo(candidate.args[2], currentTypes, nextInfo) ||
+                  !nextInfo.isResult) {
+                return false;
+              }
+              if (!nextInfo.errorType.empty() &&
+                  !argInfo.errorType.empty() &&
+                  normalizeBindingTypeName(nextInfo.errorType) != normalizeBindingTypeName(argInfo.errorType)) {
+                return false;
+              }
+              out = std::move(nextInfo);
+              return true;
+            }
+            if (candidate.name == "map2" && candidate.args.size() == 4) {
+              ResultInfo leftInfo;
+              ResultInfo rightInfo;
+              if (!resolveResultExprInfoWithTypes(candidate.args[1], currentTypes, leftInfo) || !leftInfo.isResult ||
+                  !leftInfo.hasValue ||
+                  !resolveResultExprInfoWithTypes(candidate.args[2], currentTypes, rightInfo) || !rightInfo.isResult ||
+                  !rightInfo.hasValue ||
+                  normalizeBindingTypeName(leftInfo.errorType) != normalizeBindingTypeName(rightInfo.errorType)) {
+                return false;
+              }
+              std::string mappedType;
+              if (!inferLambdaValueTypeText(candidate.args[3], currentTypes, mappedType) || mappedType.empty()) {
+                return false;
+              }
+              out.isResult = true;
+              out.hasValue = true;
+              out.valueType = std::move(mappedType);
+              out.errorType = leftInfo.errorType;
+              return true;
+            }
+          }
         }
-      }
-    }
-    return false;
+        auto it = resultInfos.find(resolved);
+        if (it != resultInfos.end() && it->second.isResult) {
+          out = it->second;
+          return true;
+        }
+        if (!candidate.isMethodCall && !candidate.name.empty() && candidate.name[0] != '/' &&
+            candidate.name.find('/') == std::string::npos) {
+          auto importIt = importAliases.find(candidate.name);
+          if (importIt != importAliases.end()) {
+            auto aliasIt = resultInfos.find(importIt->second);
+            if (aliasIt != resultInfos.end() && aliasIt->second.isResult) {
+              out = aliasIt->second;
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+  auto resolveResultExprInfo = [&](const Expr &candidate, ResultInfo &out) -> bool {
+    return resolveResultExprInfoWithTypes(candidate, localTypes, out);
   };
   if (expr.isLambda) {
     struct LambdaCapture {
       std::string name;
       bool byRef = false;
     };
-    auto splitCaptureTokens = [](const std::string &capture) {
-      std::vector<std::string> tokens;
-      std::istringstream stream(capture);
-      std::string token;
-      while (stream >> token) {
-        tokens.push_back(token);
-      }
-      return tokens;
-    };
-
     std::string captureAllToken;
     std::vector<LambdaCapture> explicitCaptures;
     explicitCaptures.reserve(expr.lambdaCaptures.size());

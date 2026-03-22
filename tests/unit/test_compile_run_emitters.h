@@ -347,6 +347,38 @@ main() {
   CHECK(readFile(outPath) == "custom error\n");
 }
 
+TEST_CASE("C++ emitter compiles nested Result combinators") {
+  const std::string source = R"(
+[return<Result<i32, FileError>>]
+lift([i32] value) {
+  return(Result.ok(value))
+}
+
+[return<Result<i32, FileError>>]
+main() {
+  [Result<i32, FileError>] first{ Result.ok(2i32) }
+  [Result<i32, FileError>] second{ Result.ok(3i32) }
+  return(
+    Result.and_then(
+      Result.map2(
+        Result.map(first, []([i32] value) { return(multiply(value, 4i32)) }),
+        second,
+        []([i32] left, [i32] right) { return(plus(left, right)) }
+      ),
+      []([i32] total) { return(lift(plus(total, 5i32))) }
+    )
+  )
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_result_combinators.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_result_combinators_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 16);
+}
+
 TEST_CASE("C++ emitter supports image api contract deterministically") {
   const std::string source = R"(
 import /std/image/*

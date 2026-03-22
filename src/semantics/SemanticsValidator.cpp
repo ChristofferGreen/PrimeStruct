@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorExprCaptureSplitStep.h"
 
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
@@ -1185,6 +1186,12 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
                                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                                   ResultTypeInfo &out) {
   out = ResultTypeInfo{};
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
   auto resolveBindingTypeText = [&](const std::string &name, std::string &typeTextOut) -> bool {
     typeTextOut.clear();
     auto describeBindingType = [](const BindingInfo &binding) {
@@ -1293,6 +1300,165 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       }
     }
     return inferQueryExprTypeText(receiverExpr, params, locals, typeTextOut);
+  };
+  auto seedLambdaLocals = [&](const Expr &lambdaExpr,
+                              std::unordered_map<std::string, BindingInfo> &lambdaLocals) -> bool {
+    lambdaLocals.clear();
+    bool captureAll = false;
+    std::vector<std::string> captureNames;
+    captureNames.reserve(lambdaExpr.lambdaCaptures.size());
+    for (const auto &capture : lambdaExpr.lambdaCaptures) {
+      const std::vector<std::string> tokens = runSemanticsValidatorExprCaptureSplitStep(capture);
+      if (tokens.empty()) {
+        return false;
+      }
+      if (tokens.size() == 1) {
+        if (tokens[0] == "=" || tokens[0] == "&") {
+          captureAll = true;
+          continue;
+        }
+        captureNames.push_back(tokens[0]);
+        continue;
+      }
+      captureNames.push_back(tokens.back());
+    }
+    auto addCapturedBinding = [&](const std::string &name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+        lambdaLocals.emplace(name, *paramBinding);
+        return true;
+      }
+      auto localIt = locals.find(name);
+      if (localIt != locals.end()) {
+        lambdaLocals.emplace(name, localIt->second);
+        return true;
+      }
+      return false;
+    };
+    if (captureAll) {
+      for (const auto &param : params) {
+        lambdaLocals.emplace(param.name, param.binding);
+      }
+      for (const auto &entry : locals) {
+        lambdaLocals.emplace(entry.first, entry.second);
+      }
+    } else {
+      for (const auto &name : captureNames) {
+        (void)addCapturedBinding(name);
+      }
+    }
+    for (const auto &param : lambdaExpr.args) {
+      if (!param.isBinding) {
+        return false;
+      }
+      BindingInfo binding;
+      std::optional<std::string> restrictType;
+      if (!parseBindingInfo(
+              param, lambdaExpr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+        return false;
+      }
+      if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
+        (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasAnyMathImport());
+      }
+      lambdaLocals[param.name] = std::move(binding);
+    }
+    return true;
+  };
+  auto inferLambdaBodyTypeText = [&](const Expr &lambdaExpr, std::string &typeTextOut) -> bool {
+    typeTextOut.clear();
+    if (!lambdaExpr.isLambda || (!lambdaExpr.hasBodyArguments && lambdaExpr.bodyArguments.empty())) {
+      return false;
+    }
+    std::unordered_map<std::string, BindingInfo> lambdaLocals;
+    if (!seedLambdaLocals(lambdaExpr, lambdaLocals)) {
+      return false;
+    }
+    const Expr *valueExpr = nullptr;
+    for (const auto &bodyExpr : lambdaExpr.bodyArguments) {
+      if (bodyExpr.isBinding) {
+        BindingInfo binding;
+        std::optional<std::string> restrictType;
+        if (!parseBindingInfo(
+                bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+          return false;
+        }
+        if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+          (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), {}, lambdaLocals, binding, &bodyExpr);
+        }
+        if (restrictType.has_value()) {
+          const bool hasTemplate = !binding.typeTemplateArg.empty();
+          if (!restrictMatchesBinding(
+                  *restrictType, binding.typeName, binding.typeTemplateArg, hasTemplate, bodyExpr.namespacePrefix)) {
+            return false;
+          }
+        }
+        lambdaLocals[bodyExpr.name] = std::move(binding);
+        continue;
+      }
+      if (isReturnCall(bodyExpr)) {
+        if (bodyExpr.args.size() != 1) {
+          return false;
+        }
+        valueExpr = &bodyExpr.args.front();
+        break;
+      }
+      valueExpr = &bodyExpr;
+    }
+    if (valueExpr == nullptr) {
+      return false;
+    }
+    BindingInfo inferredBinding;
+    if (inferBindingTypeFromInitializer(*valueExpr, {}, lambdaLocals, inferredBinding)) {
+      typeTextOut = bindingTypeText(inferredBinding);
+      if (!typeTextOut.empty()) {
+        return true;
+      }
+    }
+    return inferQueryExprTypeText(*valueExpr, {}, lambdaLocals, typeTextOut) && !typeTextOut.empty();
+  };
+  auto inferLambdaBodyResultType = [&](const Expr &lambdaExpr, ResultTypeInfo &resultOut) -> bool {
+    resultOut = ResultTypeInfo{};
+    if (!lambdaExpr.isLambda || (!lambdaExpr.hasBodyArguments && lambdaExpr.bodyArguments.empty())) {
+      return false;
+    }
+    std::unordered_map<std::string, BindingInfo> lambdaLocals;
+    if (!seedLambdaLocals(lambdaExpr, lambdaLocals)) {
+      return false;
+    }
+    const Expr *valueExpr = nullptr;
+    for (const auto &bodyExpr : lambdaExpr.bodyArguments) {
+      if (bodyExpr.isBinding) {
+        BindingInfo binding;
+        std::optional<std::string> restrictType;
+        if (!parseBindingInfo(
+                bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+          return false;
+        }
+        if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+          (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), {}, lambdaLocals, binding, &bodyExpr);
+        }
+        if (restrictType.has_value()) {
+          const bool hasTemplate = !binding.typeTemplateArg.empty();
+          if (!restrictMatchesBinding(
+                  *restrictType, binding.typeName, binding.typeTemplateArg, hasTemplate, bodyExpr.namespacePrefix)) {
+            return false;
+          }
+        }
+        lambdaLocals[bodyExpr.name] = std::move(binding);
+        continue;
+      }
+      if (isReturnCall(bodyExpr)) {
+        if (bodyExpr.args.size() != 1) {
+          return false;
+        }
+        valueExpr = &bodyExpr.args.front();
+        break;
+      }
+      valueExpr = &bodyExpr;
+    }
+    if (valueExpr == nullptr) {
+      return false;
+    }
+    return resolveResultTypeForExpr(*valueExpr, {}, lambdaLocals, resultOut) && resultOut.isResult;
   };
   auto resolveMethodResultPath = [&]() -> std::string {
     if (!expr.isMethodCall || expr.args.empty()) {
@@ -1434,6 +1600,60 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
   }
   if (expr.isMethodCall) {
+    if (!expr.args.empty() &&
+        expr.args.front().kind == Expr::Kind::Name &&
+        normalizeBindingTypeName(expr.args.front().name) == "Result") {
+      if ((expr.name == "map" || expr.name == "and_then") && expr.args.size() == 3) {
+        ResultTypeInfo argResult;
+        if (!resolveResultTypeForExpr(expr.args[1], params, locals, argResult) || !argResult.isResult ||
+            !argResult.hasValue) {
+          return false;
+        }
+        if (expr.name == "map") {
+          std::string mappedType;
+          if (!inferLambdaBodyTypeText(expr.args[2], mappedType) || mappedType.empty()) {
+            return false;
+          }
+          out.isResult = true;
+          out.hasValue = true;
+          out.valueType = std::move(mappedType);
+          out.errorType = argResult.errorType;
+          return true;
+        }
+        ResultTypeInfo chainedResult;
+        if (!inferLambdaBodyResultType(expr.args[2], chainedResult) || !chainedResult.isResult) {
+          return false;
+        }
+        if (!chainedResult.errorType.empty() && !argResult.errorType.empty() &&
+            !errorTypesMatch(chainedResult.errorType, argResult.errorType, expr.namespacePrefix)) {
+          return false;
+        }
+        out = std::move(chainedResult);
+        return true;
+      }
+      if (expr.name == "map2" && expr.args.size() == 4) {
+        ResultTypeInfo leftResult;
+        ResultTypeInfo rightResult;
+        if (!resolveResultTypeForExpr(expr.args[1], params, locals, leftResult) || !leftResult.isResult ||
+            !leftResult.hasValue ||
+            !resolveResultTypeForExpr(expr.args[2], params, locals, rightResult) || !rightResult.isResult ||
+            !rightResult.hasValue) {
+          return false;
+        }
+        if (!errorTypesMatch(leftResult.errorType, rightResult.errorType, expr.namespacePrefix)) {
+          return false;
+        }
+        std::string mappedType;
+        if (!inferLambdaBodyTypeText(expr.args[3], mappedType) || mappedType.empty()) {
+          return false;
+        }
+        out.isResult = true;
+        out.hasValue = true;
+        out.valueType = std::move(mappedType);
+        out.errorType = leftResult.errorType;
+        return true;
+      }
+    }
     if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
         expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
       out.isResult = true;
