@@ -454,6 +454,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib ImageError constructor wrappers expose type-owned error values") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<void>]
+main() {
+  [ImageError] readErr{/ImageError/read_unsupported()}
+  [ImageError] writeErr{/ImageError/write_unsupported()}
+  [ImageError] invalidErr{/ImageError/invalid_operation()}
+  [string] readWhy{Result.why(imageErrorStatus(readErr))}
+  [string] writeWhy{Result.why(imageErrorStatus(writeErr))}
+  [string] invalidWhy{Result.why(imageErrorStatus(invalidErr))}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib ImageError why wrapper rejects non image errors") {
   const std::string source = R"(
 import /std/image/*
@@ -467,6 +487,21 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /ImageError/why parameter err") != std::string::npos);
+}
+
+TEST_CASE("stdlib ImageError constructor wrappers reject unexpected arguments") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<void>]
+main() {
+  [ImageError] err{/ImageError/read_unsupported(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /ImageError/read_unsupported") != std::string::npos);
 }
 
 TEST_CASE("stdlib image error result helpers reject non image errors") {

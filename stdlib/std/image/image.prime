@@ -7,6 +7,21 @@ import /std/collections/*
   return(/std/image/ImageError/why(err))
 }
 
+[public return</std/image/ImageError>]
+/ImageError/read_unsupported() {
+  return(/std/image/ImageError/read_unsupported())
+}
+
+[public return</std/image/ImageError>]
+/ImageError/write_unsupported() {
+  return(/std/image/ImageError/write_unsupported())
+}
+
+[public return</std/image/ImageError>]
+/ImageError/invalid_operation() {
+  return(/std/image/ImageError/invalid_operation())
+}
+
 namespace std {
   namespace image {
   [public struct]
@@ -26,21 +41,36 @@ namespace std {
               else() { "image_invalid_operation"utf8 })
           }))
     }
+
+    [public return<ImageError>]
+    read_unsupported() {
+      return(ImageError(1i32))
+    }
+
+    [public return<ImageError>]
+    write_unsupported() {
+      return(ImageError(2i32))
+    }
+
+    [public return<ImageError>]
+    invalid_operation() {
+      return(ImageError(3i32))
+    }
   }
 
   [public return<ImageError>]
   imageReadUnsupported() {
-    return(ImageError(1i32))
+    return(/std/image/ImageError/read_unsupported())
   }
 
   [public return<ImageError>]
   imageWriteUnsupported() {
-    return(ImageError(2i32))
+    return(/std/image/ImageError/write_unsupported())
   }
 
   [public return<ImageError>]
   imageInvalidOperation() {
-    return(ImageError(3i32))
+    return(/std/image/ImageError/invalid_operation())
   }
 
   [public return<Result<ImageError>>]
@@ -55,17 +85,17 @@ namespace std {
 
   [return<Result<ImageError>>]
   unsupported_read() {
-    return(imageErrorStatus(imageReadUnsupported()))
+    return(imageErrorStatus(/ImageError/read_unsupported()))
   }
 
   [return<Result<ImageError>>]
   unsupported_write() {
-    return(imageErrorStatus(imageWriteUnsupported()))
+    return(imageErrorStatus(/ImageError/write_unsupported()))
   }
 
   [return<Result<ImageError>>]
   invalidOperation() {
-    return(imageErrorStatus(imageInvalidOperation()))
+    return(imageErrorStatus(/ImageError/invalid_operation()))
   }
 
   [return<void>]

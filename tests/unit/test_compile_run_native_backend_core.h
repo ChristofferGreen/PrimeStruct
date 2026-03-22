@@ -3161,6 +3161,33 @@ main() {
         "image_read_unsupported\n");
 }
 
+TEST_CASE("native uses stdlib ImageError constructor wrappers") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(imageErrorStatus(/ImageError/read_unsupported())))
+  print_line(Result.why(imageErrorStatus(/ImageError/write_unsupported())))
+  print_line(Result.why(imageErrorStatus(/ImageError/invalid_operation())))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_image_error_constructor_wrappers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_error_constructor_wrappers").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_image_error_constructor_wrappers.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) ==
+        "image_read_unsupported\n"
+        "image_write_unsupported\n"
+        "image_invalid_operation\n");
+}
+
 TEST_CASE("native uses stdlib GfxError result helpers") {
   const std::string source = R"(
 import /std/gfx/experimental/*

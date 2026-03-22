@@ -717,8 +717,10 @@ sum_two_files([string] a, [string] b) {
     instead of hand-packing container error codes or reaching through namespace-private helper paths.
     Import `/std/image/*` to use `.prime`-authored `imageReadUnsupported()`, `imageWriteUnsupported()`,
     `imageInvalidOperation()`, `imageErrorStatus(err)`, and `imageErrorResult<T>(err)` helpers instead of
-    hand-packing `ImageError` result codes, and load the public `/ImageError/why([ImageError] err)` wrapper for
-    explicit type-owned access to the current stdlib error strings. Import `/std/gfx/*` to use
+    hand-packing `ImageError` result codes, and load the public `/ImageError/why([ImageError] err)`,
+    `/ImageError/read_unsupported()`, `/ImageError/write_unsupported()`, and
+    `/ImageError/invalid_operation()` wrappers for explicit type-owned access to the current stdlib error
+    strings and constructors. Import `/std/gfx/*` to use
     `.prime`-authored `gfxErrorStatus(err)` and `gfxErrorResult<T>(err)` helpers plus the public
     `/GfxError/why([GfxError] err)` wrapper, or import `/std/gfx/experimental/*` to use the same
     result helpers without adding a duplicate root-level gfx wrapper in mixed canonical+experimental
@@ -804,7 +806,10 @@ sum_two_files([string] a, [string] b) {
     `imageReadUnsupported()`, `imageWriteUnsupported()`, `imageInvalidOperation()`,
     `imageErrorStatus(err)`, and `imageErrorResult<T>(err)`.
   - The image stdlib layer also defines `/ImageError/why([ImageError] err)` as the public wrapper over the
-    current `ImageError.why(err)` mapping so explicit type-owned calls stay on the stdlib surface.
+    current `ImageError.why(err)` mapping so explicit type-owned calls stay on the stdlib surface. It also
+    defines `/ImageError/read_unsupported()`, `/ImageError/write_unsupported()`, and
+    `/ImageError/invalid_operation()` so ImageError constructor values can come from that same public
+    type-owned stdlib surface instead of only from package-level image helpers.
 - **Example:**
   ```
   import /std/image/*
