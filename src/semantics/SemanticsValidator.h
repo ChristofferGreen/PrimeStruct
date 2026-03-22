@@ -51,6 +51,17 @@ public:
     BindingInfo binding;
   };
 
+  struct QueryResultTypeSnapshotEntry {
+    std::string scopePath;
+    std::string callName;
+    std::string resolvedPath;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+    bool hasValue = false;
+    std::string valueType;
+    std::string errorType;
+  };
+
   struct CallBindingSnapshotEntry {
     std::string scopePath;
     std::string callName;
@@ -82,6 +93,7 @@ public:
   std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;
   std::vector<QueryCallTypeSnapshotEntry> queryCallTypeSnapshotForTesting();
   std::vector<QueryBindingSnapshotEntry> queryBindingSnapshotForTesting();
+  std::vector<QueryResultTypeSnapshotEntry> queryResultTypeSnapshotForTesting();
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
 

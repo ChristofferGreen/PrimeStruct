@@ -266,6 +266,55 @@ SemanticsValidator::queryBindingSnapshotForTesting() {
   return entries;
 }
 
+std::vector<SemanticsValidator::QueryResultTypeSnapshotEntry>
+SemanticsValidator::queryResultTypeSnapshotForTesting() {
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  std::vector<QueryResultTypeSnapshotEntry> entries;
+  forEachLocalAwareSnapshotCall([&](const Definition &def,
+                                    const std::vector<ParameterInfo> &defParams,
+                                    const Expr &expr,
+                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+    ResultTypeInfo resultInfo;
+    if (withPreservedError([&]() {
+          return resolveResultTypeForExpr(expr, defParams, activeLocals, resultInfo);
+        }) &&
+        resultInfo.isResult) {
+      entries.push_back(QueryResultTypeSnapshotEntry{
+          def.fullPath,
+          expr.name,
+          resolveCalleePath(expr),
+          expr.sourceLine,
+          expr.sourceColumn,
+          resultInfo.hasValue,
+          resultInfo.valueType,
+          resultInfo.errorType,
+      });
+    }
+  });
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    return left.callName < right.callName;
+  });
+  return entries;
+}
+
 std::vector<SemanticsValidator::CallBindingSnapshotEntry>
 SemanticsValidator::callBindingSnapshotForTesting() {
   std::vector<CallBindingSnapshotEntry> entries;

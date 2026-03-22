@@ -69,6 +69,17 @@ const primec::semantics::TypeResolutionQueryBindingSnapshotEntry &requireQueryBi
   return *it;
 }
 
+const primec::semantics::TypeResolutionQueryResultTypeSnapshotEntry &requireQueryResultTypeSnapshotEntry(
+    const primec::semantics::TypeResolutionQueryResultTypeSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &resolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.resolvedPath == resolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 const primec::semantics::TypeResolutionCallBindingSnapshotEntry &requireCallBindingSnapshotEntry(
     const primec::semantics::TypeResolutionCallBindingSnapshot &snapshot,
     const std::string &scopePath,
@@ -408,6 +419,34 @@ main() {
 
   const auto &tryAtEntry = requireQueryBindingSnapshotEntry(snapshot, "/main", "/std/collections/map/tryAt");
   CHECK(tryAtEntry.bindingTypeText == "Result<i32, ContainerError>");
+}
+
+TEST_CASE("type resolution query result snapshot keeps map try result metadata") {
+  const std::string source = R"(
+[return<auto> effects(heap_alloc)]
+selectValues() {
+  if(true,
+    then(){ return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) },
+    else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc)]
+main() {
+  [i32] total{plus(selectValues().count(), try(selectValues().tryAt("left"raw_utf8)))}
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionQueryResultTypeSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryResultTypeSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &tryAtEntry =
+      requireQueryResultTypeSnapshotEntry(snapshot, "/main", "/std/collections/map/tryAt");
+  CHECK(tryAtEntry.hasValue);
+  CHECK(tryAtEntry.valueTypeText == "i32");
+  CHECK(tryAtEntry.errorTypeText == "ContainerError");
 }
 
 TEST_CASE("type resolution call binding snapshot keeps helper-returned map bindings") {
