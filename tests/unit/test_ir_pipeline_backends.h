@@ -310,9 +310,12 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(testApi.find("struct TypeResolutionGraphSnapshotNode") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshotEdge") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshot") != std::string::npos);
+  CHECK(testApi.find("struct TypeResolutionReturnSnapshotEntry") != std::string::npos);
+  CHECK(testApi.find("struct TypeResolutionReturnSnapshot") != std::string::npos);
   CHECK(testApi.find("buildTypeResolutionGraphForTesting") != std::string::npos);
   CHECK(testApi.find("computeTypeResolutionDependencyDagForTesting") != std::string::npos);
   CHECK(testApi.find("dumpTypeResolutionGraphForTesting") != std::string::npos);
+  CHECK(testApi.find("computeTypeResolutionReturnSnapshotForTesting") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionNodeKind") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionEdgeKind") != std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraphNode") != std::string::npos);
@@ -575,6 +578,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(semanticsHeader.find("typeResolver") == std::string::npos);
   CHECK(semanticsValidate.find("typeResolver") == std::string::npos);
   CHECK(validatorHeader.find("bool inferUnknownReturnKindsGraph();") != std::string::npos);
+  CHECK(validatorHeader.find("struct ReturnResolutionSnapshotEntry {") != std::string::npos);
+  CHECK(validatorHeader.find("std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;") !=
+        std::string::npos);
   CHECK(validatorHeader.find("void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool lookupGraphLocalAutoBinding(const std::string &scopePath,") !=
@@ -713,6 +719,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("return inferQueryExprTypeText(receiverExpr, params, locals, typeTextOut);") !=
         std::string::npos);
+  CHECK(validatorCore.find("SemanticsValidator::returnResolutionSnapshotForTesting() const") !=
+        std::string::npos);
   CHECK(validatorCore.find("auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {") ==
         std::string::npos);
   CHECK(validatorCore.find("inferExprTypeText(stmt.args.front(), defParams, defLocals, inferredLocalType)") ==
@@ -722,6 +730,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("returnBindings_[def.fullPath] = inferenceState.inferredBinding;") !=
         std::string::npos);
   CHECK(validatorInfer.find("auto bindingIt = returnBindings_.find(def.fullPath);") != std::string::npos);
+  CHECK(semanticsValidate.find("computeTypeResolutionReturnSnapshotForTesting(") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.returnResolutionSnapshotForTesting()") != std::string::npos);
   CHECK(validatorExprMain.find("auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {") ==
         std::string::npos);
   CHECK(validatorExprMain.find("auto resolveCallCollectionTemplateArgs =") == std::string::npos);
@@ -1678,6 +1688,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   CHECK(semanticsTestApi.find("runSemanticsValidatorStatementKnownIterationCountStep") != std::string::npos);
   CHECK(semanticsTestApi.find("runSemanticsValidatorStatementCanIterateMoreThanOnceStep") != std::string::npos);
   CHECK(semanticsTestApi.find("runSemanticsValidatorStatementIsNegativeIntegerLiteralStep") != std::string::npos);
+  CHECK(semanticsTestApi.find("computeTypeResolutionReturnSnapshotForTesting") != std::string::npos);
 
   const std::string parserHelperTest = readTextFile(parserHelperTestPath);
   CHECK(parserHelperTest.find("#include \"primec/testing/ParserHelpers.h\"") != std::string::npos);

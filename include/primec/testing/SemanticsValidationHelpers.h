@@ -63,6 +63,17 @@ struct TypeResolutionGraphSnapshot {
   std::vector<TypeResolutionGraphSnapshotEdge> edges;
 };
 
+struct TypeResolutionReturnSnapshotEntry {
+  std::string definitionPath;
+  std::string returnKind;
+  std::string structPath;
+  std::string bindingTypeText;
+};
+
+struct TypeResolutionReturnSnapshot {
+  std::vector<TypeResolutionReturnSnapshotEntry> entries;
+};
+
 std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep(const std::string &text);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(const Expr &countExpr,
@@ -90,5 +101,10 @@ bool dumpTypeResolutionGraphForTesting(Program program,
                                        std::string &error,
                                        std::string &out,
                                        const std::vector<std::string> &semanticTransforms = {});
+bool computeTypeResolutionReturnSnapshotForTesting(Program program,
+                                                   const std::string &entryPath,
+                                                   std::string &error,
+                                                   TypeResolutionReturnSnapshot &out,
+                                                   const std::vector<std::string> &semanticTransforms = {});
 
 } // namespace primec::semantics

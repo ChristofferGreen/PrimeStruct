@@ -60,6 +60,34 @@ SemanticsValidator::SemanticsValidator(const Program &program,
   }
 }
 
+std::vector<SemanticsValidator::ReturnResolutionSnapshotEntry>
+SemanticsValidator::returnResolutionSnapshotForTesting() const {
+  std::vector<ReturnResolutionSnapshotEntry> entries;
+  entries.reserve(program_.definitions.size());
+  for (const auto &definition : program_.definitions) {
+    const auto kindIt = returnKinds_.find(definition.fullPath);
+    if (kindIt == returnKinds_.end()) {
+      continue;
+    }
+    ReturnResolutionSnapshotEntry entry;
+    entry.definitionPath = definition.fullPath;
+    entry.kind = kindIt->second;
+    if (const auto structIt = returnStructs_.find(definition.fullPath);
+        structIt != returnStructs_.end()) {
+      entry.structPath = structIt->second;
+    }
+    if (const auto bindingIt = returnBindings_.find(definition.fullPath);
+        bindingIt != returnBindings_.end()) {
+      entry.binding = bindingIt->second;
+    }
+    entries.push_back(std::move(entry));
+  }
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    return left.definitionPath < right.definitionPath;
+  });
+  return entries;
+}
+
 std::string SemanticsValidator::graphLocalAutoBindingKey(const std::string &scopePath,
                                                          int sourceLine,
                                                          int sourceColumn) {

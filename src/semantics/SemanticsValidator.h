@@ -17,6 +17,13 @@ struct TypeResolutionGraph;
 
 class SemanticsValidator {
 public:
+  struct ReturnResolutionSnapshotEntry {
+    std::string definitionPath;
+    ReturnKind kind = ReturnKind::Unknown;
+    std::string structPath;
+    BindingInfo binding;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
@@ -26,6 +33,7 @@ public:
                      bool collectDiagnostics);
 
   bool run();
+  std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;
 
 private:
   bool buildDefinitionMaps();

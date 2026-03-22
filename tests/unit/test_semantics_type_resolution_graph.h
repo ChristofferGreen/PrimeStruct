@@ -26,6 +26,16 @@ std::string requireTypeResolutionGraphDump(const std::string &source, const std:
   return dump;
 }
 
+const primec::semantics::TypeResolutionReturnSnapshotEntry &requireReturnSnapshotEntry(
+    const primec::semantics::TypeResolutionReturnSnapshot &snapshot,
+    const std::string &definitionPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.definitionPath == definitionPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 size_t requireTopologicalComponentIndex(const primec::semantics::CondensationDagSnapshot &dag, uint32_t componentId) {
   const auto it = std::find(dag.topologicalComponentIds.begin(), dag.topologicalComponentIds.end(), componentId);
   REQUIRE(it != dag.topologicalComponentIds.end());
@@ -226,6 +236,34 @@ main() {
   CHECK(requireGraphEdge(graph, 1).kind == "dependency");
   CHECK(requireGraphEdge(graph, 1).sourceId == 1);
   CHECK(requireGraphEdge(graph, 1).targetId == 2);
+}
+
+TEST_CASE("type resolution return snapshot keeps inferred experimental map binding metadata") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<auto> effects(heap_alloc)]
+buildValues() {
+  return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [auto] values{buildValues()}
+  return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionReturnSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionReturnSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &entry = requireReturnSnapshotEntry(snapshot, "/buildValues");
+  CHECK(entry.returnKind == "array");
+  CHECK(entry.structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+  CHECK(entry.bindingTypeText == "Map<string, i32>");
 }
 
 TEST_CASE("type resolution graph dump stays stable for a simple call chain") {

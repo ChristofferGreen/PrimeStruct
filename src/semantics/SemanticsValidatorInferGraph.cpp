@@ -500,9 +500,7 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
         returnStructs_[def.fullPath] = structPath;
         changed = true;
       }
-      return;
-    }
-    if (structIt != returnStructs_.end() && !previousStructPath.empty()) {
+    } else if (structIt != returnStructs_.end() && !previousStructPath.empty()) {
       returnStructs_.erase(structIt);
       changed = true;
     }
