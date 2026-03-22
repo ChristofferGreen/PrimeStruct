@@ -9436,9 +9436,17 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprLateBuiltins(params, locals, expr, resolved,") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprCountCapacityMapBuiltins(params, locals, expr, resolved,") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("validateExprTryBuiltin(params, locals, expr,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprResultFileBuiltins(params, locals, expr, resolved,") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("std::string logicalResolvedMethod = resolved;") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "auto usesCanonicalMapReceiver = [&](const Expr &receiverExpr)") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprNamedArgumentBuiltins(") ==
         std::string::npos);

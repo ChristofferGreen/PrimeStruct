@@ -1441,247 +1441,43 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (handledLateBuiltin) {
       return true;
     }
+    ExprCountCapacityMapBuiltinContext countCapacityMapBuiltinContext;
+    countCapacityMapBuiltinContext
+        .shouldBuiltinValidateStdNamespacedVectorCountCall =
+        shouldBuiltinValidateStdNamespacedVectorCountCall;
+    countCapacityMapBuiltinContext.isStdNamespacedVectorCountCall =
+        isStdNamespacedVectorCountCall;
+    countCapacityMapBuiltinContext.shouldBuiltinValidateBareMapCountCall =
+        shouldBuiltinValidateBareMapCountCall;
+    countCapacityMapBuiltinContext.isNamespacedMapCountCall =
+        isNamespacedMapCountCall;
+    countCapacityMapBuiltinContext.isResolvedMapCountCall =
+        isResolvedMapCountCall;
+    countCapacityMapBuiltinContext
+        .shouldBuiltinValidateStdNamespacedVectorCapacityCall =
+        shouldBuiltinValidateStdNamespacedVectorCapacityCall;
+    countCapacityMapBuiltinContext.isStdNamespacedVectorCapacityCall =
+        isStdNamespacedVectorCapacityCall;
+    countCapacityMapBuiltinContext.resolveVectorTarget =
+        [&](const Expr &target, std::string &elemTypeOut) {
+          return resolveVectorTarget(target, elemTypeOut);
+        };
+    countCapacityMapBuiltinContext.resolveMapTarget =
+        [&](const Expr &target) { return resolveMapTarget(target); };
+    countCapacityMapBuiltinContext.dispatchResolverAdapters =
+        &builtinCollectionDispatchResolverAdapters;
+    countCapacityMapBuiltinContext.dispatchResolvers =
+        &builtinCollectionDispatchResolvers;
+    bool handledCountCapacityMapBuiltin = false;
+    if (!validateExprCountCapacityMapBuiltins(
+            params, locals, expr, resolved, resolvedMethod,
+            countCapacityMapBuiltinContext, handledCountCapacityMapBuiltin)) {
+      return false;
+    }
+    if (handledCountCapacityMapBuiltin) {
+      return true;
+    }
     if (it == defMap_.end() || resolvedMethod) {
-      std::string logicalResolvedMethod = resolved;
-      if (resolvedMethod) {
-        std::string canonicalExperimentalMapHelperResolved;
-        if (this->canonicalizeExperimentalMapHelperResolvedPath(
-                resolved, canonicalExperimentalMapHelperResolved)) {
-          logicalResolvedMethod = canonicalExperimentalMapHelperResolved;
-        }
-      }
-      if (resolvedMethod && (logicalResolvedMethod == "/array/count" ||
-                             logicalResolvedMethod == "/vector/count" ||
-                             logicalResolvedMethod == "/std/collections/vector/count" ||
-                             logicalResolvedMethod == "/soa_vector/count" || logicalResolvedMethod == "/string/count" ||
-                             logicalResolvedMethod == "/map/count" ||
-                             logicalResolvedMethod == "/std/collections/map/count")) {
-        if (!expr.templateArgs.empty()) {
-          error_ = "count does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = "count does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 1) {
-          error_ = "argument count mismatch for builtin count";
-          return false;
-        }
-        if (logicalResolvedMethod == "/map/count" ||
-            logicalResolvedMethod == "/std/collections/map/count") {
-          if (!resolveMapTarget(expr.args.front())) {
-            if (!validateExpr(params, locals, expr.args.front())) {
-              return false;
-            }
-            error_ = "count requires map target";
-            return false;
-          }
-        }
-        if (!validateExpr(params, locals, expr.args.front())) {
-          return false;
-        }
-        return true;
-      }
-      if (expr.isMethodCall && resolvedMethod &&
-          (logicalResolvedMethod == "/std/collections/map/contains" ||
-           logicalResolvedMethod == "/std/collections/map/tryAt" ||
-           logicalResolvedMethod == "/std/collections/map/at" ||
-           logicalResolvedMethod == "/std/collections/map/at_unsafe")) {
-        auto isCanonicalMapTypeText = [&](const std::string &typeText) {
-          std::string normalizedType = normalizeBindingTypeName(typeText);
-          while (true) {
-            std::string base;
-            std::string argText;
-            if (!splitTemplateTypeName(normalizedType, base, argText)) {
-              return false;
-            }
-            base = normalizeBindingTypeName(base);
-            if (base == "Reference" || base == "Pointer") {
-              std::vector<std::string> args;
-              if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
-                return false;
-              }
-              normalizedType = normalizeBindingTypeName(args.front());
-              continue;
-            }
-            return base == "std/collections/map" || base == "/std/collections/map";
-          }
-        };
-        auto usesCanonicalMapReceiver = [&](const Expr &receiverExpr) {
-          auto bindingTypeText = [](const BindingInfo &binding) {
-            if (binding.typeName == "Reference" || binding.typeName == "Pointer") {
-              return binding.typeName + "<" + binding.typeTemplateArg + ">";
-            }
-            if (binding.typeTemplateArg.empty()) {
-              return binding.typeName;
-            }
-            return binding.typeName + "<" + binding.typeTemplateArg + ">";
-          };
-          if (receiverExpr.kind == Expr::Kind::Name) {
-            if (const BindingInfo *paramBinding = findParamBinding(params, receiverExpr.name)) {
-              return isCanonicalMapTypeText(bindingTypeText(*paramBinding));
-            }
-            if (auto it = locals.find(receiverExpr.name); it != locals.end()) {
-              return isCanonicalMapTypeText(bindingTypeText(it->second));
-            }
-          }
-          BindingInfo inferredBinding;
-          if (inferBindingTypeFromInitializer(receiverExpr, params, locals, inferredBinding)) {
-            return isCanonicalMapTypeText(bindingTypeText(inferredBinding));
-          }
-          std::string typeText;
-          return inferQueryExprTypeText(receiverExpr, params, locals, typeText) &&
-                 isCanonicalMapTypeText(typeText);
-        };
-        auto setCanonicalMapKeyMismatch = [&](const Expr &receiverExpr,
-                                              const std::string &helperName,
-                                              const std::string &mapKeyType) {
-          if ((logicalResolvedMethod == "/std/collections/map/at" ||
-               logicalResolvedMethod == "/std/collections/map/at_unsafe") &&
-              usesCanonicalMapReceiver(receiverExpr)) {
-            error_ = "argument type mismatch for " + logicalResolvedMethod + " parameter key";
-            return;
-          }
-          if (normalizeBindingTypeName(mapKeyType) == "string") {
-            error_ = helperName + " requires string map key";
-          } else {
-            error_ = helperName + " requires map key type " + mapKeyType;
-          }
-        };
-        const std::string helperName =
-            logicalResolvedMethod.substr(logicalResolvedMethod.find_last_of('/') + 1);
-        if (!expr.templateArgs.empty()) {
-          error_ = helperName + " does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = helperName + " does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 2) {
-          error_ = "argument count mismatch for builtin " + helperName;
-          return false;
-        }
-        const Expr &receiverExpr = expr.args.front();
-        const Expr &keyExpr = expr.args[1];
-        std::string mapKeyType;
-        if (!this->resolveMapKeyType(receiverExpr, builtinCollectionDispatchResolvers, mapKeyType)) {
-          if (!validateExpr(params, locals, receiverExpr)) {
-            return false;
-          }
-          error_ = helperName + " requires map target";
-          return false;
-        }
-        if (!mapKeyType.empty()) {
-          if (normalizeBindingTypeName(mapKeyType) == "string") {
-            if (!this->isStringExprForArgumentValidation(
-                    keyExpr, builtinCollectionDispatchResolvers)) {
-              setCanonicalMapKeyMismatch(receiverExpr, helperName, mapKeyType);
-              return false;
-            }
-          } else {
-            ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
-            if (keyKind != ReturnKind::Unknown) {
-              if (resolveStringTarget(keyExpr)) {
-                setCanonicalMapKeyMismatch(receiverExpr, helperName, mapKeyType);
-                return false;
-              }
-              ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
-              if (candidateKind != ReturnKind::Unknown && candidateKind != keyKind) {
-                setCanonicalMapKeyMismatch(receiverExpr, helperName, mapKeyType);
-                return false;
-              }
-            }
-          }
-        }
-        if (!validateExpr(params, locals, receiverExpr) ||
-            !validateExpr(params, locals, keyExpr)) {
-          return false;
-        }
-        return true;
-      }
-      if (!resolvedMethod && isVectorBuiltinName(expr, "count") &&
-          !this->isArrayNamespacedVectorCountCompatibilityCall(expr, builtinCollectionDispatchResolvers) &&
-          (!shouldBuiltinValidateStdNamespacedVectorCountCall && !isStdNamespacedVectorCountCall) &&
-          !isNamespacedMapCountCall && !isResolvedMapCountCall &&
-          !this->isUnnamespacedMapCountBuiltinFallbackCall(
-              expr, params, locals, builtinCollectionDispatchResolverAdapters) &&
-          it == defMap_.end()) {
-        if (!shouldBuiltinValidateBareMapCountCall) {
-          Expr rewrittenMapHelperCall;
-          if (this->tryRewriteBareMapHelperCall(
-                  expr, "count", builtinCollectionDispatchResolvers, rewrittenMapHelperCall)) {
-            return validateExpr(params, locals, rewrittenMapHelperCall);
-          }
-        }
-        if (!expr.templateArgs.empty()) {
-          error_ = "count does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = "count does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 1) {
-          error_ = "argument count mismatch for builtin count";
-          return false;
-        }
-        if (!validateExpr(params, locals, expr.args.front())) {
-          return false;
-        }
-        return true;
-      }
-      if (resolvedMethod &&
-          (resolved == "/vector/capacity" ||
-           resolved == "/std/collections/vector/capacity")) {
-        if (!expr.templateArgs.empty()) {
-          error_ = "capacity does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = "capacity does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 1) {
-          error_ = "argument count mismatch for builtin capacity";
-          return false;
-        }
-        std::string elemType;
-        if (!resolveVectorTarget(expr.args.front(), elemType)) {
-          error_ = "capacity requires vector target";
-          return false;
-        }
-        if (!validateExpr(params, locals, expr.args.front())) {
-          return false;
-        }
-        return true;
-      }
-      if (!resolvedMethod && isVectorBuiltinName(expr, "capacity") &&
-          (!shouldBuiltinValidateStdNamespacedVectorCapacityCall && !isStdNamespacedVectorCapacityCall) &&
-          it == defMap_.end()) {
-        if (!expr.templateArgs.empty()) {
-          error_ = "capacity does not accept template arguments";
-          return false;
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = "capacity does not accept block arguments";
-          return false;
-        }
-        if (expr.args.size() != 1) {
-          error_ = "argument count mismatch for builtin capacity";
-          return false;
-        }
-        std::string elemType;
-        if (!resolveVectorTarget(expr.args.front(), elemType)) {
-          error_ = "capacity requires vector target";
-          return false;
-        }
-        if (!validateExpr(params, locals, expr.args.front())) {
-          return false;
-        }
-        return true;
-      }
       ExprMapSoaBuiltinContext mapSoaBuiltinContext;
       mapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =
           shouldBuiltinValidateBareMapContainsCall;

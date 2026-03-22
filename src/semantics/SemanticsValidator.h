@@ -203,6 +203,7 @@ private:
                                        std::unordered_map<std::string, BindingInfo> &activeLocals,
                                        DefinitionReturnInferenceState &state);
   struct BuiltinCollectionDispatchResolverAdapters;
+  struct BuiltinCollectionDispatchResolvers;
 
   bool validateExpr(const std::vector<ParameterInfo> &params,
                     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -296,6 +297,27 @@ private:
                                 bool resolvedMethod,
                                 const ExprLateBuiltinContext &context,
                                 bool &handledOut);
+  struct ExprCountCapacityMapBuiltinContext {
+    bool shouldBuiltinValidateStdNamespacedVectorCountCall = false;
+    bool isStdNamespacedVectorCountCall = false;
+    bool shouldBuiltinValidateBareMapCountCall = false;
+    bool isNamespacedMapCountCall = false;
+    bool isResolvedMapCountCall = false;
+    bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;
+    bool isStdNamespacedVectorCapacityCall = false;
+    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &)> resolveMapTarget;
+    const BuiltinCollectionDispatchResolverAdapters *dispatchResolverAdapters = nullptr;
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+  };
+  bool validateExprCountCapacityMapBuiltins(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      bool resolvedMethod,
+      const ExprCountCapacityMapBuiltinContext &context,
+      bool &handledOut);
   struct ExprNamedArgumentBuiltinContext {
     bool hasVectorHelperCallResolution = false;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;

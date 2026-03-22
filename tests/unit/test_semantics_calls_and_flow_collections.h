@@ -16081,6 +16081,47 @@ main() {
   CHECK(error.find("argument type mismatch for /std/collections/map/at") != std::string::npos);
 }
 
+TEST_CASE("canonical map borrowed receiver validates direct stdlib access") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<Reference</std/collections/map<i32, i32>>>]
+borrowValues([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(/std/collections/map/at(borrowValues(location(source)), 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical map borrowed receiver keeps parameter key diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<Reference</std/collections/map<i32, i32>>>]
+borrowValues([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/at(borrowValues(location(source)), true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
+}
+
 TEST_CASE("explicit canonical map binding keeps builtin helper validation") {
   const std::string source = R"(
 import /std/collections/*
