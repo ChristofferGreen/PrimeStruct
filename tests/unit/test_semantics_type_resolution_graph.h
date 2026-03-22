@@ -388,7 +388,8 @@ wrapValues([Map<string, i32>] values) {
 
 [return<Result<int, ContainerError>> effects(heap_alloc)]
 main() {
-  [Map<string, i32>] values{wrapValues(buildValues())}
+  [auto] built{buildValues()}
+  [Map<string, i32>] values{wrapValues(built)}
   return(Result.ok(0i32))
 }
 )";

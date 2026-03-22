@@ -222,50 +222,27 @@ SemanticsValidator::queryCallTypeSnapshotForTesting() {
 std::vector<SemanticsValidator::CallBindingSnapshotEntry>
 SemanticsValidator::callBindingSnapshotForTesting() {
   std::vector<CallBindingSnapshotEntry> entries;
-  std::function<void(const std::string &, const Expr &)> visitExpr;
-  visitExpr = [&](const std::string &scopePath, const Expr &expr) {
-    if (expr.kind == Expr::Kind::Call) {
-      const std::string resolvedPath = resolveCalleePath(expr);
-      BindingInfo binding;
-      if (!resolvedPath.empty() &&
-          inferResolvedDirectCallBindingType(resolvedPath, binding) &&
-          !binding.typeName.empty()) {
-        entries.push_back(CallBindingSnapshotEntry{
-            scopePath,
-            expr.name,
-            resolvedPath,
-            expr.sourceLine,
-            expr.sourceColumn,
-            std::move(binding),
-        });
-      }
+  forEachLocalAwareSnapshotCall([&](const Definition &def,
+                                    const std::vector<ParameterInfo> &defParams,
+                                    const Expr &expr,
+                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+    (void)defParams;
+    (void)activeLocals;
+    const std::string resolvedPath = resolveCalleePath(expr);
+    BindingInfo binding;
+    if (!resolvedPath.empty() &&
+        inferResolvedDirectCallBindingType(resolvedPath, binding) &&
+        !binding.typeName.empty()) {
+      entries.push_back(CallBindingSnapshotEntry{
+          def.fullPath,
+          expr.name,
+          resolvedPath,
+          expr.sourceLine,
+          expr.sourceColumn,
+          std::move(binding),
+      });
     }
-    for (const auto &arg : expr.args) {
-      visitExpr(scopePath, arg);
-    }
-    for (const auto &bodyExpr : expr.bodyArguments) {
-      visitExpr(scopePath, bodyExpr);
-    }
-  };
-
-  for (const auto &definition : program_.definitions) {
-    DefinitionContextScope definitionScope(*this, definition);
-    ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(definition));
-    for (const auto &parameter : definition.parameters) {
-      for (const auto &arg : parameter.args) {
-        visitExpr(definition.fullPath, arg);
-      }
-      for (const auto &bodyExpr : parameter.bodyArguments) {
-        visitExpr(definition.fullPath, bodyExpr);
-      }
-    }
-    for (const auto &statement : definition.statements) {
-      visitExpr(definition.fullPath, statement);
-    }
-    if (definition.returnExpr.has_value()) {
-      visitExpr(definition.fullPath, *definition.returnExpr);
-    }
-  }
+  });
 
   std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
     if (left.scopePath != right.scopePath) {

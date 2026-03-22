@@ -771,6 +771,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("forEachLocalAwareSnapshotCall([&](const Definition &def,") !=
         std::string::npos);
+  CHECK(validatorCore.find("std::vector<CallBindingSnapshotEntry> entries;\n  forEachLocalAwareSnapshotCall(") !=
+        std::string::npos);
   CHECK(validatorCore.find("auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {") ==
         std::string::npos);
   CHECK(validatorCore.find("inferExprTypeText(stmt.args.front(), defParams, defLocals, inferredLocalType)") ==
