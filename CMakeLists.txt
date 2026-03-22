@@ -80,6 +80,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp
   src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp
   src/semantics/SemanticsValidatorExprLateCollectionAccessFallbacks.cpp
+  src/semantics/SemanticsValidatorExprLateFallbackBuiltins.cpp
   src/semantics/SemanticsValidatorExprCollectionPredicates.cpp
   src/semantics/SemanticsValidatorExprCollectionLiterals.cpp
   src/semantics/SemanticsValidatorExprFieldResolution.cpp

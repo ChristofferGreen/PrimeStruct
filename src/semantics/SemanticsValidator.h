@@ -393,6 +393,18 @@ private:
       bool resolvedMethod,
       const ExprLateCollectionAccessFallbackContext &context,
       bool &handledOut);
+  struct ExprLateFallbackBuiltinContext {
+    ExprLateCollectionAccessFallbackContext collectionAccessFallbackContext;
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+  };
+  bool validateExprLateFallbackBuiltins(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      bool resolvedMethod,
+      const ExprLateFallbackBuiltinContext &context,
+      bool &handledOut);
   struct ExprCollectionAccessValidationContext {
     bool isStdNamespacedVectorAccessCall = false;
     bool shouldAllowStdAccessCompatibilityFallback = false;

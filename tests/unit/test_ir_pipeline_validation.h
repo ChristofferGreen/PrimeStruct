@@ -9252,6 +9252,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccessValidation.cpp";
   const std::filesystem::path semanticsExprCollectionLiteralsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionLiterals.cpp";
+  const std::filesystem::path semanticsExprLateFallbackBuiltinsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateFallbackBuiltins.cpp";
   const std::filesystem::path semanticsExprNamedArgumentBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNamedArgumentBuiltins.cpp";
   const std::filesystem::path semanticsExprPointerLikePath =
@@ -9284,6 +9286,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprCollectionPredicatesPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
+  REQUIRE(std::filesystem::exists(semanticsExprLateFallbackBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
   REQUIRE(std::filesystem::exists(semanticsExprReferenceEscapesPath));
@@ -9306,6 +9309,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprCollectionAccessValidationSource =
       readText(semanticsExprCollectionAccessValidationPath);
   const std::string semanticsExprCollectionLiteralsSource = readText(semanticsExprCollectionLiteralsPath);
+  const std::string semanticsExprLateFallbackBuiltinsSource =
+      readText(semanticsExprLateFallbackBuiltinsPath);
   const std::string semanticsExprNamedArgumentBuiltinsSource = readText(semanticsExprNamedArgumentBuiltinsPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
   const std::string semanticsExprReceiverPathsSource = readText(semanticsExprReceiverPathsPath);
@@ -9321,7 +9326,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("return validateBlockExpr(params, locals, expr);") != std::string::npos);
   CHECK(semanticsExprSource.find("return validateIfExpr(params, locals, expr);") != std::string::npos);
-  CHECK(semanticsExprSource.find("if (!validateNumericBuiltinExpr(params, locals, expr, handledNumericBuiltin)) {") !=
+  CHECK(semanticsExprSource.find(
+            "validateExprLateFallbackBuiltins(\n"
+            "              params, locals, expr, resolved, resolvedMethod,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") !=
         std::string::npos);
@@ -9432,7 +9439,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find(
             "reportReferenceAssignmentEscape(params, locals, escapeSink,") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprCollectionLiteralBuiltins(params, locals, expr,") !=
+  CHECK(semanticsExprSource.find("validateExprCollectionLiteralBuiltins(params, locals, expr,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprLateBuiltins(params, locals, expr, resolved,") !=
         std::string::npos);
@@ -9452,13 +9459,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprGpuBufferBuiltins(params, locals, expr,") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprScalarPointerMemoryBuiltins(") !=
+  CHECK(semanticsExprSource.find("validateExprScalarPointerMemoryBuiltins(") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprLateMapSoaBuiltins(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprMapSoaBuiltins(") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprLateCollectionAccessFallbacks(") !=
+  CHECK(semanticsExprSource.find("validateExprLateCollectionAccessFallbacks(") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprCollectionAccessFallbacks(") ==
         std::string::npos);
@@ -9567,7 +9574,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "lateCollectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") !=
+            "lateFallbackBuiltinContext.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("collectionAccessValidationContext.resolveExperimentalMapTarget =") ==
         std::string::npos);
@@ -9740,6 +9747,25 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprCollectionLiteralsSource.find("validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionLiteralsSource.find("this->validateCollectionElementType(") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "bool SemanticsValidator::validateExprLateFallbackBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "validateExprLateCollectionAccessFallbacks(") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "validateExprScalarPointerMemoryBuiltins(") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "validateExprCollectionLiteralBuiltins(") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "Expr rewrittenMapAccessCall = expr;") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "const size_t receiverIndex =\n"
+            "        this->mapHelperReceiverIndex(expr, *context.dispatchResolvers);") !=
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "bool SemanticsValidator::validateExprNamedArgumentBuiltins") !=

@@ -1500,104 +1500,43 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (handledMapSoaBuiltin) {
         return true;
       }
-      std::string builtinName;
-      bool handledNumericBuiltin = false;
-      if (!validateNumericBuiltinExpr(params, locals, expr, handledNumericBuiltin)) {
-        return false;
-      }
-      if (handledNumericBuiltin) {
-        return true;
-      }
-      ExprLateCollectionAccessFallbackContext
-          lateCollectionAccessFallbackContext;
-      lateCollectionAccessFallbackContext.isStdNamespacedVectorAccessCall =
+      ExprLateFallbackBuiltinContext lateFallbackBuiltinContext;
+      lateFallbackBuiltinContext
+          .collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =
           isStdNamespacedVectorAccessCall;
-      lateCollectionAccessFallbackContext
+      lateFallbackBuiltinContext.collectionAccessFallbackContext
           .shouldAllowStdAccessCompatibilityFallback =
           shouldAllowStdAccessCompatibilityFallback;
-      lateCollectionAccessFallbackContext
+      lateFallbackBuiltinContext.collectionAccessFallbackContext
           .hasStdNamespacedVectorAccessDefinition =
           hasStdNamespacedVectorAccessDefinition;
-      lateCollectionAccessFallbackContext.isStdNamespacedMapAccessCall =
+      lateFallbackBuiltinContext
+          .collectionAccessFallbackContext.isStdNamespacedMapAccessCall =
           isStdNamespacedMapAccessCall;
-      lateCollectionAccessFallbackContext.hasStdNamespacedMapAccessDefinition =
+      lateFallbackBuiltinContext
+          .collectionAccessFallbackContext.hasStdNamespacedMapAccessDefinition =
           hasStdNamespacedMapAccessDefinition;
-      lateCollectionAccessFallbackContext
+      lateFallbackBuiltinContext.collectionAccessFallbackContext
           .shouldBuiltinValidateBareMapAccessCall =
           shouldBuiltinValidateBareMapAccessCall;
-      lateCollectionAccessFallbackContext.isNonCollectionStructAccessTarget =
+      lateFallbackBuiltinContext
+          .collectionAccessFallbackContext.isNonCollectionStructAccessTarget =
           [&](const std::string &targetPath) {
             return isNonCollectionStructAccessTarget(targetPath);
           };
-      lateCollectionAccessFallbackContext.dispatchResolvers =
+      lateFallbackBuiltinContext
+          .collectionAccessFallbackContext.dispatchResolvers =
           &builtinCollectionDispatchResolvers;
-      bool handledCollectionAccessFallback = false;
-      if (!validateExprLateCollectionAccessFallbacks(
+      lateFallbackBuiltinContext.dispatchResolvers =
+          &builtinCollectionDispatchResolvers;
+      bool handledLateFallbackBuiltin = false;
+      if (!validateExprLateFallbackBuiltins(
               params, locals, expr, resolved, resolvedMethod,
-              lateCollectionAccessFallbackContext,
-              handledCollectionAccessFallback)) {
+              lateFallbackBuiltinContext, handledLateFallbackBuiltin)) {
         return false;
       }
-      if (handledCollectionAccessFallback) {
+      if (handledLateFallbackBuiltin) {
         return true;
-      }
-      if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) && expr.args.size() == 2 &&
-          !hasNamedArguments(expr.argNames)) {
-        if (!this->isMapLikeBareAccessReceiver(
-                expr.args.front(), params, locals,
-                builtinCollectionDispatchResolvers) &&
-            this->isMapLikeBareAccessReceiver(
-                expr.args[1], params, locals,
-                builtinCollectionDispatchResolvers)) {
-          Expr rewrittenMapAccessCall = expr;
-          std::swap(rewrittenMapAccessCall.args[0], rewrittenMapAccessCall.args[1]);
-          return validateExpr(params, locals, rewrittenMapAccessCall);
-        }
-      }
-      bool handledScalarPointerMemoryBuiltin = false;
-      if (!validateExprScalarPointerMemoryBuiltins(
-              params, locals, expr, handledScalarPointerMemoryBuiltin)) {
-        return false;
-      }
-      if (handledScalarPointerMemoryBuiltin) {
-        return true;
-      }
-      bool handledCollectionLiteralBuiltin = false;
-      if (!validateExprCollectionLiteralBuiltins(params, locals, expr,
-                                                handledCollectionLiteralBuiltin)) {
-        return false;
-      }
-      if (handledCollectionLiteralBuiltin) {
-        return true;
-      }
-      if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
-          expr.args.size() == 2) {
-        const size_t receiverIndex = this->mapHelperReceiverIndex(expr, builtinCollectionDispatchResolvers);
-        if (receiverIndex < expr.args.size()) {
-          const Expr &receiverExpr = expr.args[receiverIndex];
-          std::string elemType;
-          std::string keyType;
-          std::string valueType;
-          const bool hasCollectionReceiver =
-              resolveArgsPackAccessTarget(receiverExpr, elemType) ||
-              resolveVectorTarget(receiverExpr, elemType) ||
-              resolveArrayTarget(receiverExpr, elemType) ||
-              resolveStringTarget(receiverExpr) ||
-              resolveMapTarget(receiverExpr) ||
-              resolveExperimentalMapTarget(receiverExpr, keyType, valueType);
-          if (!hasCollectionReceiver) {
-            bool isBuiltinMethod = false;
-            std::string methodResolved;
-            if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiverExpr, builtinName, methodResolved,
-                                    isBuiltinMethod) &&
-                !methodResolved.empty()) {
-              error_ = "unknown method: " + methodResolved;
-            } else {
-              error_ = builtinName + " requires array, vector, map, or string target";
-            }
-            return false;
-          }
-        }
       }
       auto hasActiveBorrowForBinding = [&](const std::string &name,
                                            const std::string &ignoreBorrowName = std::string()) -> bool {

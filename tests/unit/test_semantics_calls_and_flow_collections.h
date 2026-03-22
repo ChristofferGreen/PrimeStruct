@@ -18346,6 +18346,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin at rewrites positional reordered canonical map receiver") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at(7i32, map<i32, i32>(7i32, 8i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("user definition named vector call is not treated as builtin collection target") {
   const std::string source = R"(
 [return<int>]
@@ -18373,6 +18385,23 @@ map<K, V>([K] key, [V] value) {
 [return<int>]
 main() {
   return(at(map<i32, i32>(7i32, 8i32), 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires array, vector, map, or string target") != std::string::npos);
+}
+
+TEST_CASE("user definition named Map reordered receiver is not treated as builtin experimental map target") {
+  const std::string source = R"(
+[return<int>]
+Map<K, V>([K] key, [V] value) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(at(0i32, Map<i32, i32>(7i32, 8i32)))
 }
 )";
   std::string error;
