@@ -6,7 +6,7 @@ import /std/collections/*
 
 [return<Result<ContainerError>>]
 makeMissing() {
-  return(containerErrorStatus(containerMissingKey()))
+  return(containerErrorStatus(/ContainerError/missing_key()))
 }
 
 [return<Result<ContainerError>>]
@@ -16,10 +16,10 @@ makeUnknown() {
 
 [return<int> effects(io_out)]
 main() {
-  [i32] total{plus(plus(containerMissingKey().code, containerIndexOutOfBounds().code),
-                  plus(containerEmpty().code, containerCapacityExceeded().code))}
-  print_line(/ContainerError/why(containerMissingKey()))
-  print_line(ContainerError.why(containerMissingKey()))
+  [i32] total{plus(plus(/ContainerError/missing_key().code, /ContainerError/index_out_of_bounds().code),
+                  plus(/ContainerError/empty().code, /ContainerError/capacity_exceeded().code))}
+  print_line(/ContainerError/why(/ContainerError/missing_key()))
+  print_line(ContainerError.why(/ContainerError/missing_key()))
   print_line(Result.why(makeMissing()))
   print_line(Result.why(makeUnknown()))
   return(total)

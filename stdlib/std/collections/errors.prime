@@ -3,6 +3,26 @@
   return(/std/collections/ContainerError/why(err))
 }
 
+[public return</std/collections/ContainerError>]
+/ContainerError/missing_key() {
+  return(/std/collections/ContainerError/missing_key())
+}
+
+[public return</std/collections/ContainerError>]
+/ContainerError/index_out_of_bounds() {
+  return(/std/collections/ContainerError/index_out_of_bounds())
+}
+
+[public return</std/collections/ContainerError>]
+/ContainerError/empty() {
+  return(/std/collections/ContainerError/empty())
+}
+
+[public return</std/collections/ContainerError>]
+/ContainerError/capacity_exceeded() {
+  return(/std/collections/ContainerError/capacity_exceeded())
+}
+
 namespace std {
   namespace collections {
   [public struct]
@@ -27,26 +47,46 @@ namespace std {
       }
       return("container error"utf8)
     }
+
+    [public return<ContainerError>]
+    missing_key() {
+      return(ContainerError(1i32))
+    }
+
+    [public return<ContainerError>]
+    index_out_of_bounds() {
+      return(ContainerError(2i32))
+    }
+
+    [public return<ContainerError>]
+    empty() {
+      return(ContainerError(3i32))
+    }
+
+    [public return<ContainerError>]
+    capacity_exceeded() {
+      return(ContainerError(4i32))
+    }
   }
 
   [public return<ContainerError>]
   containerMissingKey() {
-    return(ContainerError(1i32))
+    return(/std/collections/ContainerError/missing_key())
   }
 
   [public return<ContainerError>]
   containerIndexOutOfBounds() {
-    return(ContainerError(2i32))
+    return(/std/collections/ContainerError/index_out_of_bounds())
   }
 
   [public return<ContainerError>]
   containerEmpty() {
-    return(ContainerError(3i32))
+    return(/std/collections/ContainerError/empty())
   }
 
   [public return<ContainerError>]
   containerCapacityExceeded() {
-    return(ContainerError(4i32))
+    return(/std/collections/ContainerError/capacity_exceeded())
   }
 
   [public return<Result<ContainerError>>]

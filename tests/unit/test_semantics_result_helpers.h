@@ -543,6 +543,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib ContainerError constructor wrappers expose type-owned error values") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<void>]
+main() {
+  [ContainerError] missing{/ContainerError/missing_key()}
+  [ContainerError] oob{/ContainerError/index_out_of_bounds()}
+  [ContainerError] emptyErr{/ContainerError/empty()}
+  [ContainerError] capacity{/ContainerError/capacity_exceeded()}
+  [string] missingWhy{Result.why(containerErrorStatus(missing))}
+  [string] oobWhy{Result.why(containerErrorStatus(oob))}
+  [string] emptyWhy{Result.why(containerErrorStatus(emptyErr))}
+  [string] capacityWhy{Result.why(containerErrorStatus(capacity))}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib container error status helper rejects non container errors") {
   const std::string source = R"(
 import /std/collections/*
@@ -556,6 +578,21 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /std/collections/containerErrorStatus parameter err") != std::string::npos);
+}
+
+TEST_CASE("stdlib ContainerError constructor wrappers reject unexpected arguments") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<void>]
+main() {
+  [ContainerError] err{/ContainerError/missing_key(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /ContainerError/missing_key") != std::string::npos);
 }
 
 TEST_CASE("stdlib ContainerError why wrapper rejects non container errors") {
