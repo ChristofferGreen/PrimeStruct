@@ -2338,6 +2338,61 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs wrapper std namespaced access helper named receiver in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(plus(index, 30i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/at([index] 2i32, [values] wrapVector()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_std_namespaced_vector_access_named_receiver.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_std_namespaced_vector_access_named_receiver_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 32);
+}
+
+TEST_CASE("rejects wrapper std namespaced access helper named receiver without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/at([index] 1i32, [values] wrapVector()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_std_namespaced_vector_access_named_receiver_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_cpp_wrapper_std_namespaced_vector_access_named_receiver_reject_err.txt")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
+}
+
 TEST_CASE("rejects removed vector access alias named arguments in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
