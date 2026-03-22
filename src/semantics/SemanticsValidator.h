@@ -285,6 +285,17 @@ private:
                               const Expr &expr,
                               const ExprTryBuiltinContext &context,
                               bool &handledOut);
+  struct ExprLateBuiltinContext {
+    ExprTryBuiltinContext tryBuiltinContext;
+    ExprResultFileBuiltinContext resultFileBuiltinContext;
+  };
+  bool validateExprLateBuiltins(const std::vector<ParameterInfo> &params,
+                                const std::unordered_map<std::string, BindingInfo> &locals,
+                                const Expr &expr,
+                                const std::string &resolved,
+                                bool resolvedMethod,
+                                const ExprLateBuiltinContext &context,
+                                bool &handledOut);
   struct ExprNamedArgumentBuiltinContext {
     bool hasVectorHelperCallResolution = false;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;

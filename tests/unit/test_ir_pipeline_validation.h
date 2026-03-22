@@ -9434,13 +9434,15 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprCollectionLiteralBuiltins(params, locals, expr,") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprTryBuiltin(params, locals, expr, tryBuiltinContext,") !=
+  CHECK(semanticsExprSource.find("validateExprLateBuiltins(params, locals, expr, resolved,") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprResultFileBuiltins(params, locals, expr, resolved,") !=
+  CHECK(semanticsExprSource.find("validateExprTryBuiltin(params, locals, expr,") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprNamedArgumentBuiltins(") !=
+  CHECK(semanticsExprSource.find("validateExprResultFileBuiltins(params, locals, expr, resolved,") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprGpuBufferBuiltins(params, locals, expr,") !=
+  CHECK(semanticsExprSource.find("validateExprNamedArgumentBuiltins(") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("validateExprGpuBufferBuiltins(params, locals, expr,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprScalarPointerMemoryBuiltins(") !=
         std::string::npos);

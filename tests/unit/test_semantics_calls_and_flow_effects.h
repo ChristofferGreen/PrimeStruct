@@ -1604,6 +1604,42 @@ main() {
   CHECK(error.find("missing on_error for ? usage") != std::string::npos);
 }
 
+TEST_CASE("user-defined try helper keeps named arguments") {
+  const std::string source = R"(
+[return<int>]
+try([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(try([value] 7i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("builtin try rejects named arguments") {
+  const std::string source = R"(
+[return<Result<FileError>> on_error<FileError, /log_file_error>]
+main() {
+  [Result<FileError>] status{Result.ok()}
+  try([value] status)
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("on_error allows int return type for graphics-style flow") {
   const std::string source = R"(
 [struct]

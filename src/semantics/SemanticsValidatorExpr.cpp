@@ -1409,54 +1409,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     auto it = defMap_.find(resolved);
+    ExprLateBuiltinContext lateBuiltinContext;
+    lateBuiltinContext.tryBuiltinContext.getDirectMapHelperCompatibilityPath =
+        [&](const Expr &target) {
+          return this->directMapHelperCompatibilityPath(
+              target, params, locals,
+              builtinCollectionDispatchResolverAdapters);
+        };
+    lateBuiltinContext.tryBuiltinContext.isIndexedArgsPackMapReceiverTarget =
+        [&](const Expr &target) {
+          return this->isIndexedArgsPackMapReceiverTarget(
+              target, builtinCollectionDispatchResolvers);
+        };
+    lateBuiltinContext.resultFileBuiltinContext
+        .isNamedArgsPackWrappedFileBuiltinAccessCall =
+        [&](const Expr &target) {
+          return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
+              target, builtinCollectionDispatchResolvers);
+        };
+    lateBuiltinContext.resultFileBuiltinContext.isStringExpr =
+        [&](const Expr &target) {
+          return this->isStringExprForArgumentValidation(
+              target, builtinCollectionDispatchResolvers);
+        };
+    bool handledLateBuiltin = false;
+    if (!validateExprLateBuiltins(params, locals, expr, resolved,
+                                  resolvedMethod, lateBuiltinContext,
+                                  handledLateBuiltin)) {
+      return false;
+    }
+    if (handledLateBuiltin) {
+      return true;
+    }
     if (it == defMap_.end() || resolvedMethod) {
-      ExprTryBuiltinContext tryBuiltinContext;
-      tryBuiltinContext.getDirectMapHelperCompatibilityPath =
-          [&](const Expr &target) {
-            return this->directMapHelperCompatibilityPath(
-                target, params, locals,
-                builtinCollectionDispatchResolverAdapters);
-          };
-      tryBuiltinContext.isIndexedArgsPackMapReceiverTarget =
-          [&](const Expr &target) {
-            return this->isIndexedArgsPackMapReceiverTarget(
-                target, builtinCollectionDispatchResolvers);
-          };
-      bool handledTryBuiltin = false;
-      if (!validateExprTryBuiltin(params, locals, expr, tryBuiltinContext,
-                                  handledTryBuiltin)) {
-        return false;
-      }
-      if (handledTryBuiltin) {
-        return true;
-      }
-      ExprResultFileBuiltinContext resultFileBuiltinContext;
-      resultFileBuiltinContext.isNamedArgsPackWrappedFileBuiltinAccessCall =
-          [&](const Expr &target) {
-            return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
-                target, builtinCollectionDispatchResolvers);
-          };
-      resultFileBuiltinContext.isStringExpr = [&](const Expr &target) {
-        return this->isStringExprForArgumentValidation(
-            target, builtinCollectionDispatchResolvers);
-      };
-      bool handledResultFileBuiltin = false;
-      if (!validateExprResultFileBuiltins(params, locals, expr, resolved,
-                                          resolvedMethod, resultFileBuiltinContext,
-                                          handledResultFileBuiltin)) {
-        return false;
-      }
-      if (handledResultFileBuiltin) {
-        return true;
-      }
-      bool handledGpuBufferBuiltin = false;
-      if (!validateExprGpuBufferBuiltins(params, locals, expr,
-                                         handledGpuBufferBuiltin)) {
-        return false;
-      }
-      if (handledGpuBufferBuiltin) {
-        return true;
-      }
       std::string logicalResolvedMethod = resolved;
       if (resolvedMethod) {
         std::string canonicalExperimentalMapHelperResolved;
