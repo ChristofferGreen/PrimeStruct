@@ -5,6 +5,7 @@
 #include <string_view>
 #include <vector>
 
+#include "CondensationDag.h"
 #include "primec/Ast.h"
 
 namespace primec::semantics {
@@ -49,6 +50,7 @@ bool buildTypeResolutionGraphForProgram(Program program,
                                         const std::vector<std::string> &semanticTransforms,
                                         std::string &error,
                                         TypeResolutionGraph &out);
+CondensationDag computeTypeResolutionDependencyDag(const TypeResolutionGraph &graph);
 std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph);
 
 } // namespace primec::semantics

@@ -311,6 +311,7 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(testApi.find("struct TypeResolutionGraphSnapshotEdge") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshot") != std::string::npos);
   CHECK(testApi.find("buildTypeResolutionGraphForTesting") != std::string::npos);
+  CHECK(testApi.find("computeTypeResolutionDependencyDagForTesting") != std::string::npos);
   CHECK(testApi.find("dumpTypeResolutionGraphForTesting") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionNodeKind") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionEdgeKind") != std::string::npos);
@@ -318,12 +319,15 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(graphHeader.find("struct TypeResolutionGraphEdge") != std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraph") != std::string::npos);
   CHECK(graphHeader.find("buildTypeResolutionGraphForProgram") != std::string::npos);
+  CHECK(graphHeader.find("computeTypeResolutionDependencyDag") != std::string::npos);
   CHECK(graphHeader.find("formatTypeResolutionGraph") != std::string::npos);
   CHECK(graphSource.find("TypeResolutionGraphBuilder") != std::string::npos);
   CHECK(graphSource.find("monomorphizeTemplates(program, entryPath, error)") != std::string::npos);
   CHECK(graphSource.find("rewriteConvertConstructors(program, error)") != std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraph(program)") != std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraphForProgram(std::move(program), entryPath") != std::string::npos);
+  CHECK(graphSource.find("computeTypeResolutionDependencyDag(const TypeResolutionGraph &graph)") !=
+        std::string::npos);
   CHECK(graphSource.find("out = formatTypeResolutionGraph(graph);") != std::string::npos);
   CHECK(pipeline.find("DumpStage::TypeGraph") != std::string::npos);
   CHECK(pipeline.find("dumpStage == \"type_graph\" || dumpStage == \"type-graph\"") != std::string::npos);
@@ -399,6 +403,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       cwd / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
   std::filesystem::path validatorInferUtilityPath =
       cwd / "src" / "semantics" / "SemanticsValidatorInferUtility.cpp";
+  std::filesystem::path lowerInferenceSetupPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerInferenceSetup.cpp";
   std::filesystem::path pipelinePath = cwd / "src" / "CompilePipeline.cpp";
   std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
   std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
@@ -465,6 +471,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
     validatorInferUtilityPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferUtility.cpp";
+    lowerInferenceSetupPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerInferenceSetup.cpp";
     pipelinePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
     primecMainPath = cwd.parent_path() / "src" / "main.cpp";
     primevmMainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
@@ -506,6 +513,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorInferStructReturnPath));
   REQUIRE(std::filesystem::exists(validatorInferTargetResolutionPath));
   REQUIRE(std::filesystem::exists(validatorInferUtilityPath));
+  REQUIRE(std::filesystem::exists(lowerInferenceSetupPath));
   REQUIRE(std::filesystem::exists(pipelinePath));
   REQUIRE(std::filesystem::exists(primecMainPath));
   REQUIRE(std::filesystem::exists(primevmMainPath));
@@ -557,6 +565,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       validatorInferTargetResolutionPath,
       validatorInferUtilityPath,
   });
+  const std::string lowerInferenceSetup = readTextFile(lowerInferenceSetupPath);
   const std::string pipeline = readTextFile(pipelinePath);
   const std::string primecMain = readTextFile(primecMainPath);
   const std::string primevmMain = readTextFile(primevmMainPath);
@@ -1062,7 +1071,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, binding);") !=
         std::string::npos);
-  CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
+  CHECK(validatorInfer.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
+  CHECK(lowerInferenceSetup.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
         std::string::npos);
   CHECK(validatorInfer.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);

@@ -26,6 +26,21 @@ std::string requireTypeResolutionGraphDump(const std::string &source, const std:
   return dump;
 }
 
+size_t requireTopologicalComponentIndex(const primec::semantics::CondensationDagSnapshot &dag, uint32_t componentId) {
+  const auto it = std::find(dag.topologicalComponentIds.begin(), dag.topologicalComponentIds.end(), componentId);
+  REQUIRE(it != dag.topologicalComponentIds.end());
+  return static_cast<size_t>(std::distance(dag.topologicalComponentIds.begin(), it));
+}
+
+bool hasCondensationEdge(const primec::semantics::CondensationDagSnapshot &dag,
+                         uint32_t sourceComponentId,
+                         uint32_t targetComponentId) {
+  return std::find_if(dag.edges.begin(), dag.edges.end(), [&](const auto &edge) {
+           return edge.sourceComponentId == sourceComponentId &&
+                  edge.targetComponentId == targetComponentId;
+         }) != dag.edges.end();
+}
+
 } // namespace
 
 TEST_CASE("type resolution graph builder keeps stable node and edge order for return and local auto dependencies") {
@@ -112,6 +127,71 @@ main() {
   CHECK(requireGraphEdge(graph, 1).kind == "requirement");
   CHECK(requireGraphEdge(graph, 1).sourceId == 1);
   CHECK(requireGraphEdge(graph, 1).targetId == 2);
+}
+
+TEST_CASE("type resolution dependency dag helper groups mutual-recursion graph components") {
+  const std::string source = R"(
+[return<auto>]
+alpha() {
+  return(beta())
+}
+
+[return<auto>]
+beta() {
+  return(alpha())
+}
+)";
+  std::string error;
+  primec::semantics::CondensationDagSnapshot dag;
+  REQUIRE(primec::semantics::computeTypeResolutionDependencyDagForTesting(
+      parseProgram(source), "/alpha", error, dag));
+  CHECK(error.empty());
+
+  REQUIRE(dag.nodes.size() == 1);
+  CHECK(dag.nodes[0].memberNodeIds == std::vector<uint32_t>({0, 1, 2, 3}));
+  CHECK(dag.topologicalComponentIds == std::vector<uint32_t>({0}));
+  CHECK(dag.componentIdByNodeId == std::vector<uint32_t>({0, 0, 0, 0}));
+}
+
+TEST_CASE("type resolution dependency dag helper preserves acyclic graph dependency order") {
+  const std::string source = R"(
+[return<auto>]
+leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+mid() {
+  return(leaf())
+}
+
+[return<auto>]
+main() {
+  [auto] value{mid()}
+  return(value)
+}
+)";
+  std::string error;
+  primec::semantics::CondensationDagSnapshot dag;
+  REQUIRE(primec::semantics::computeTypeResolutionDependencyDagForTesting(
+      parseProgram(source), "/main", error, dag));
+  CHECK(error.empty());
+
+  REQUIRE(dag.nodes.size() == 6);
+  REQUIRE(dag.edges.size() == 4);
+  CHECK(hasCondensationEdge(dag, dag.componentIdByNodeId[1], dag.componentIdByNodeId[3]));
+  CHECK(hasCondensationEdge(dag, dag.componentIdByNodeId[3], dag.componentIdByNodeId[0]));
+  CHECK(hasCondensationEdge(dag, dag.componentIdByNodeId[4], dag.componentIdByNodeId[1]));
+  CHECK(hasCondensationEdge(dag, dag.componentIdByNodeId[5], dag.componentIdByNodeId[4]));
+
+  CHECK(requireTopologicalComponentIndex(dag, dag.componentIdByNodeId[5]) <
+        requireTopologicalComponentIndex(dag, dag.componentIdByNodeId[4]));
+  CHECK(requireTopologicalComponentIndex(dag, dag.componentIdByNodeId[4]) <
+        requireTopologicalComponentIndex(dag, dag.componentIdByNodeId[1]));
+  CHECK(requireTopologicalComponentIndex(dag, dag.componentIdByNodeId[1]) <
+        requireTopologicalComponentIndex(dag, dag.componentIdByNodeId[3]));
+  CHECK(requireTopologicalComponentIndex(dag, dag.componentIdByNodeId[3]) <
+        requireTopologicalComponentIndex(dag, dag.componentIdByNodeId[0]));
 }
 
 TEST_CASE("type resolution graph builder resolves imported public call targets") {

@@ -80,6 +80,11 @@ bool buildTypeResolutionGraphForTesting(Program program,
                                         std::string &error,
                                         TypeResolutionGraphSnapshot &out,
                                         const std::vector<std::string> &semanticTransforms = {});
+bool computeTypeResolutionDependencyDagForTesting(Program program,
+                                                  const std::string &entryPath,
+                                                  std::string &error,
+                                                  CondensationDagSnapshot &out,
+                                                  const std::vector<std::string> &semanticTransforms = {});
 bool dumpTypeResolutionGraphForTesting(Program program,
                                        const std::string &entryPath,
                                        std::string &error,

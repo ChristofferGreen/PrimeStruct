@@ -1,5 +1,6 @@
 #include "TypeResolutionGraph.h"
 
+#include "CondensationDag.h"
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateConvertConstructors.h"
 #include "SemanticsValidateExperimentalGfxConstructors.h"
@@ -487,6 +488,18 @@ bool buildTypeResolutionGraphForProgram(Program program,
   return true;
 }
 
+CondensationDag computeTypeResolutionDependencyDag(const TypeResolutionGraph &graph) {
+  std::vector<DirectedGraphEdge> dependencyEdges;
+  dependencyEdges.reserve(graph.edges.size());
+  for (const TypeResolutionGraphEdge &edge : graph.edges) {
+    if (edge.kind != TypeResolutionEdgeKind::Dependency) {
+      continue;
+    }
+    dependencyEdges.push_back(DirectedGraphEdge{edge.sourceId, edge.targetId});
+  }
+  return computeCondensationDag(static_cast<uint32_t>(graph.nodes.size()), dependencyEdges);
+}
+
 std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
   std::ostringstream out;
   out << "type_graph {\n";
@@ -537,6 +550,40 @@ bool buildTypeResolutionGraphForTesting(Program program,
         edge.sourceId,
         edge.targetId,
         std::string(typeResolutionEdgeKindName(edge.kind)),
+    });
+  }
+  return true;
+}
+
+bool computeTypeResolutionDependencyDagForTesting(Program program,
+                                                  const std::string &entryPath,
+                                                  std::string &error,
+                                                  CondensationDagSnapshot &out,
+                                                  const std::vector<std::string> &semanticTransforms) {
+  TypeResolutionGraph graph;
+  if (!buildTypeResolutionGraphForProgram(std::move(program), entryPath, semanticTransforms, error, graph)) {
+    out = {};
+    return false;
+  }
+
+  const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
+  out = {};
+  out.componentIdByNodeId = dag.componentIdByNodeId;
+  out.topologicalComponentIds = dag.topologicalComponentIds;
+  out.nodes.reserve(dag.nodes.size());
+  for (const CondensationDagNode &node : dag.nodes) {
+    out.nodes.push_back(CondensationDagNodeSnapshot{
+        node.componentId,
+        node.memberNodeIds,
+        node.incomingComponentIds,
+        node.outgoingComponentIds,
+    });
+  }
+  out.edges.reserve(dag.edges.size());
+  for (const CondensationDagEdge &edge : dag.edges) {
+    out.edges.push_back(CondensationDagEdgeSnapshot{
+        edge.sourceComponentId,
+        edge.targetComponentId,
     });
   }
   return true;

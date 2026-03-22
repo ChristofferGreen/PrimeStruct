@@ -1255,16 +1255,7 @@ bool precomputeGraphReturnInfoCache(const LowerInferenceGetReturnInfoSetupInput 
 
   const semantics::TypeResolutionGraph graph =
       semantics::buildTypeResolutionGraph(*input.program);
-  std::vector<semantics::DirectedGraphEdge> dependencyEdges;
-  dependencyEdges.reserve(graph.edges.size());
-  for (const semantics::TypeResolutionGraphEdge &edge : graph.edges) {
-    if (edge.kind != semantics::TypeResolutionEdgeKind::Dependency) {
-      continue;
-    }
-    dependencyEdges.push_back(semantics::DirectedGraphEdge{edge.sourceId, edge.targetId});
-  }
-  const semantics::CondensationDag dag =
-      semantics::computeCondensationDag(static_cast<uint32_t>(graph.nodes.size()), dependencyEdges);
+  const semantics::CondensationDag dag = semantics::computeTypeResolutionDependencyDag(graph);
 
   for (auto componentIt = dag.topologicalComponentIds.rbegin();
        componentIt != dag.topologicalComponentIds.rend();

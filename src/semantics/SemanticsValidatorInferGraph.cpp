@@ -55,18 +55,7 @@ bool SemanticsValidator::inferUnknownReturnKinds() {
 bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   graphLocalAutoBindings_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
-
-  std::vector<DirectedGraphEdge> dependencyEdges;
-  dependencyEdges.reserve(graph.edges.size());
-  for (const TypeResolutionGraphEdge &edge : graph.edges) {
-    if (edge.kind != TypeResolutionEdgeKind::Dependency) {
-      continue;
-    }
-    dependencyEdges.push_back(DirectedGraphEdge{edge.sourceId, edge.targetId});
-  }
-
-  const CondensationDag dag =
-      computeCondensationDag(static_cast<uint32_t>(graph.nodes.size()), dependencyEdges);
+  const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
 
   auto collectUnknownDefinitions = [&](const CondensationDagNode &componentNode) {
     std::vector<const Definition *> definitions;
