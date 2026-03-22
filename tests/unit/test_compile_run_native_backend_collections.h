@@ -739,7 +739,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
-TEST_CASE("rejects native stdlib map at alias fallback without import") {
+TEST_CASE("compiles and runs native stdlib map at alias fallback without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -758,17 +758,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_namespaced_map_at_alias_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_native_stdlib_namespaced_map_at_alias_fallback_out.txt")
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_namespaced_map_at_alias_fallback_exe")
                                   .string();
 
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("native backend only supports arithmetic/comparison") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("rejects native stdlib map at unsafe alias fallback without import") {
+TEST_CASE("compiles and runs native stdlib map at unsafe alias fallback without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -787,14 +786,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_namespaced_map_at_unsafe_alias_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
-                               "primec_native_stdlib_namespaced_map_at_unsafe_alias_fallback_out.txt")
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_namespaced_map_at_unsafe_alias_fallback_exe")
                                   .string();
 
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("native backend only supports arithmetic/comparison") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("compiles native bare map count through canonical helper") {
@@ -1191,7 +1189,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("push is only supported as a statement") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /array/push") != std::string::npos);
 }
 
 TEST_CASE("rejects native stdlib canonical vector helper method-precedence forwarding") {
@@ -2051,7 +2049,7 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("rejects native vector literal count method without imported helper") {
+TEST_CASE("runs native vector literal count method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2059,12 +2057,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_literal_count.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_literal_count_err.txt").string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_literal_count_exe").string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("compiles and runs native vector method call") {
@@ -2091,7 +2089,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native bare vector literal unsafe access through imported stdlib helper") {
+TEST_CASE("rejects native bare vector literal unsafe access through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2101,12 +2099,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_literal_unsafe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_literal_unsafe_err.txt").string();
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_vector_literal_unsafe_exe").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native bare vector at through imported stdlib helper") {
@@ -2317,10 +2319,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects native wrapper temporary vector count method without helper") {
+TEST_CASE("compiles and runs native wrapper temporary vector count method without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -2334,16 +2336,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_vector_count_method_import_requirement.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_wrapper_vector_count_method_import_requirement_err.txt")
+       "primec_native_wrapper_vector_count_method_import_requirement_exe")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("compiles and runs native stdlib collection shim helpers") {
@@ -2423,7 +2422,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("rejects native templated stdlib return wrapper temporaries in expressions") {
+TEST_CASE("compiles and runs native templated stdlib return wrapper temporaries in expressions") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2448,17 +2447,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temporaries.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_native_stdlib_collection_shim_templated_return_temporaries.err")
-          .string();
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_collection_shim_templated_return_temporaries_exe")
+                                  .string();
 
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/"
-                               "sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
 }
 
 TEST_CASE("compiles and runs native templated stdlib wrapper temporary call forms") {
@@ -2701,7 +2696,7 @@ TEST_CASE("rejects native stdlib wrapper vector constructor auto inference misma
   expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("native");
 }
 
-TEST_CASE("compiles and runs native stdlib wrapper vector constructor receivers") {
+TEST_CASE("rejects native stdlib wrapper vector constructor receivers") {
   expectStdlibWrapperVectorConstructorReceiverConformance("native");
 }
 
@@ -2713,7 +2708,7 @@ TEST_CASE("rejects native stdlib wrapper vector method receiver mismatch") {
   expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced vector constructor temporaries") {
+TEST_CASE("rejects native canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("native");
 }
 
@@ -2721,7 +2716,7 @@ TEST_CASE("rejects native canonical namespaced vector explicit builtin bindings"
   expectCanonicalVectorNamespaceExplicitBindingReject("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced vector named-argument temporaries") {
+TEST_CASE("rejects native canonical namespaced vector named-argument temporaries") {
   expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance("native");
 }
 
@@ -2805,7 +2800,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("rejects native templated stdlib vector wrapper temporary methods in expressions") {
+TEST_CASE("compiles and runs native templated stdlib vector wrapper temporary methods in expressions") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2825,17 +2820,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_vector_temp_methods.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_native_stdlib_collection_shim_templated_return_vector_temp_methods.err")
-          .string();
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_collection_shim_templated_return_vector_temp_methods_exe")
+                                  .string();
 
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/"
-                               "sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
 }
 
 TEST_CASE("compiles and runs native templated stdlib wrapper temporary index forms") {
@@ -2940,7 +2931,7 @@ main() {
   CHECK(runCommand(exePath) == 18);
 }
 
-TEST_CASE("rejects native templated stdlib wrapper temporary count capacity parity in expressions") {
+TEST_CASE("compiles and runs native templated stdlib wrapper temporary count capacity parity in expressions") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2968,17 +2959,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_count_capacity_parity.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_native_stdlib_collection_shim_templated_return_temp_count_capacity_parity.err")
-          .string();
+  const std::string exePath = (std::filesystem::temp_directory_path() /
+                               "primec_native_stdlib_collection_shim_templated_return_temp_count_capacity_parity_exe")
+                                  .string();
 
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/"
-                               "sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
 }
 
 TEST_CASE("compiles and runs native user wrapper temporary at_unsafe shadow precedence") {
@@ -3197,7 +3184,7 @@ main() {
   CHECK(runCommand(exePath) == 83);
 }
 
-TEST_CASE("native user wrapper temporary count capacity shadow precedence currently fails during lowering") {
+TEST_CASE("compiles and runs native user wrapper temporary count capacity shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -3236,14 +3223,9 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() /
                                "primec_native_user_wrapper_temp_count_capacity_shadow_precedence_exe")
                                   .string();
-  const std::string errPath = (std::filesystem::temp_directory_path() /
-                               "primec_native_user_wrapper_temp_count_capacity_shadow_precedence.err")
-                                  .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 163);
 }
 
 TEST_CASE("rejects native user wrapper temporary count capacity shadow value mismatch") {
@@ -3324,7 +3306,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  CHECK(runCommand(exePath) == 84);
 }
 
 TEST_CASE("compiles and runs native user wrapper temporary syntax parity shadow precedence") {
@@ -3368,7 +3350,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 96);
+  CHECK(runCommand(exePath) == 177);
 }
 
 TEST_CASE("rejects native user wrapper temporary syntax parity shadow mismatch") {
@@ -3466,7 +3448,8 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unsupported return type on /wrapUnknown") != std::string::npos);
+  CHECK(readFile(errPath).find("native backend does not support return type on /wrapUnknown") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib map wrapper temporary key mismatch") {
@@ -5464,9 +5447,7 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Unknown") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("native backend only supports numeric/bool map values") != std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib map return envelope unsupported value arg") {
@@ -5491,7 +5472,8 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unsupported return type on /wrapMapUnknownValue") != std::string::npos);
+  CHECK(readFile(errPath).find("native backend does not support return type on /wrapMapUnknownValue") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib vector return envelope nested arg") {
@@ -5516,7 +5498,8 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unsupported return type on /wrapVectorArray") != std::string::npos);
+  CHECK(readFile(errPath).find("native backend does not support return type on /wrapVectorArray") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib map return envelope nested arg") {
@@ -5541,7 +5524,8 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unsupported return type on /wrapMapNestedValue") != std::string::npos);
+  CHECK(readFile(errPath).find("native backend does not support return type on /wrapMapNestedValue") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib vector return envelope wrong arity") {
@@ -7748,7 +7732,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects native bare vector capacity method without imported helper") {
+TEST_CASE("compiles and runs native bare vector capacity method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -7757,17 +7741,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_capacity_method_import_requirement.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_native_vector_capacity_method_import_requirement_err.txt")
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_capacity_method_import_requirement_exe")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("rejects native wrapper temporary vector capacity method without helper") {
+TEST_CASE("compiles and runs native wrapper temporary vector capacity method without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -7781,16 +7763,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_vector_capacity_method_import_requirement.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (std::filesystem::temp_directory_path() /
-       "primec_native_wrapper_vector_capacity_method_import_requirement_err.txt")
+       "primec_native_wrapper_vector_capacity_method_import_requirement_exe")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("compiles and runs native bare vector capacity after pop through imported stdlib helper") {

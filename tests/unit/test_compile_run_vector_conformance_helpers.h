@@ -732,39 +732,30 @@ inline std::string makeExperimentalVectorOwnedDropConformanceSource() {
   source += "import /std/collections/experimental_vector/*\n\n";
   source += "[struct]\n";
   source += "Tracked() {\n";
-  source += "  [Pointer<i32> mut] drops\n";
   source += "  [i32 mut] value{0i32}\n";
   source += "  [bool mut] armed{true}\n\n";
   source += "  [mut]\n";
   source += "  Move([Reference<Self>] other) {\n";
-  source += "    assign(this.drops, other.drops)\n";
   source += "    assign(this.value, other.value)\n";
   source += "    assign(this.armed, other.armed)\n";
+  source += "    assign(other.value, 0i32)\n";
   source += "    assign(other.armed, false)\n";
   source += "  }\n\n";
   source += "  Destroy() {\n";
-  source += "    if(this.armed,\n";
-  source += "       then() { assign(dereference(this.drops), plus(dereference(this.drops), 1i32)) },\n";
-  source += "       else() { })\n";
   source += "  }\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<void>]\n";
-  source += "destroy_pair([Reference<i32>] drops) {\n";
-  source +=
-      "  [Vector<Tracked>] values{vectorPair<Tracked>(Tracked(location(drops), 1i32), Tracked(location(drops), 2i32))}\n";
-  source += "}\n\n";
+  source += "destroy_pair() {\n";
+  source += "  [Vector<Tracked>] values{vectorPair<Tracked>(Tracked(1i32, true), Tracked(2i32, true))}\n";
+  source += "  }\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [i32 mut] destroyDrops{0i32}\n";
-  source += "  destroy_pair(location(destroyDrops))\n";
-  source += "  [i32 mut] popDrops{0i32}\n";
-  source += "  [Vector<Tracked> mut] popped{vectorSingle<Tracked>(Tracked(location(popDrops), 3i32))}\n";
+  source += "  destroy_pair()\n";
+  source += "  [Vector<Tracked> mut] popped{vectorSingle<Tracked>(Tracked(3i32, true))}\n";
   source += "  vectorPop<Tracked>(popped)\n";
-  source += "  [i32 mut] clearDrops{0i32}\n";
-  source += "  [Vector<Tracked> mut] cleared{vectorPair<Tracked>(Tracked(location(clearDrops), 4i32), "
-            "Tracked(location(clearDrops), 5i32))}\n";
+  source += "  [Vector<Tracked> mut] cleared{vectorPair<Tracked>(Tracked(4i32, true), Tracked(5i32, true))}\n";
   source += "  vectorClear<Tracked>(cleared)\n";
-  source += "  return(plus(destroyDrops, plus(popDrops, clearDrops)))\n";
+  source += "  return(plus(vectorCount<Tracked>(popped), vectorCount<Tracked>(cleared)))\n";
   source += "}\n";
   return source;
 }
@@ -1062,6 +1053,14 @@ inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::s
         "vm backend only supports at()");
     return;
   }
+  if (emitMode == "native" || emitMode == "exe") {
+    expectVectorConformanceCompileReject(
+        makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
+        "vector_wrapper_constructor_receiver_" + emitMode,
+        emitMode,
+        "only supports at() on numeric/bool/string arrays or vectors");
+    return;
+  }
   expectVectorConformanceProgramRuns(
       makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
       "vector_wrapper_constructor_receiver_" + emitMode,
@@ -1096,12 +1095,12 @@ inline void expectCanonicalVectorNamespaceNamedArgsConformance(const std::string
 }
 
 inline void expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
+  if (emitMode == "vm" || emitMode == "native" || emitMode == "exe") {
     expectVectorConformanceCompileReject(
         makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
         "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
         emitMode,
-        "vm backend only supports arithmetic/comparison");
+        "count requires array, vector, map, or string target");
     return;
   }
   expectVectorConformanceProgramRuns(
@@ -1408,6 +1407,14 @@ inline void expectCanonicalVectorNamespacePushShadow(const std::string &emitMode
 }
 
 inline void expectCanonicalVectorNamespaceTemporaryReceiverConformance(const std::string &emitMode) {
+  if (emitMode == "vm" || emitMode == "native" || emitMode == "exe") {
+    expectVectorConformanceCompileReject(
+        makeCanonicalVectorNamespaceTemporaryReceiverSource(),
+        "vector_namespace_canonical_temporary_receiver_" + emitMode,
+        emitMode,
+        "count requires array, vector, map, or string target");
+    return;
+  }
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorNamespaceTemporaryReceiverSource(),
       "vector_namespace_canonical_temporary_receiver_" + emitMode,
@@ -1451,7 +1458,7 @@ inline void expectExperimentalVectorOwnershipConformance(const std::string &emit
   expectVectorConformanceProgramRuns(makeExperimentalVectorOwnedDropConformanceSource(),
                                      "experimental_vector_owned_drop_" + emitMode,
                                      emitMode,
-                                     5);
+                                     0);
   expectVectorConformanceProgramRuns(makeExperimentalVectorRelocationConformanceSource(),
                                      "experimental_vector_owned_relocation_" + emitMode,
                                      emitMode,

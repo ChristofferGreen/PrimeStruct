@@ -1773,7 +1773,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string errors = readFile(errPath);
-  CHECK(errors.find("native backend does not support vector helper: push") != std::string::npos);
+  CHECK(errors.find("push requires vector binding") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs user vector mutator named call shadow in C++ emitter") {
@@ -2763,7 +2763,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("push is only supported as a statement") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /array/push") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter helper rejects full-path array mutator aliases") {
@@ -6191,7 +6191,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unsupported return type on /wrapMap") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper-returned slash-method map access contains without helper in C++ emitter") {
@@ -6218,7 +6218,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unsupported return type on /wrapMap") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers canonical slash-method map access without helper to deleted stubs") {

@@ -146,17 +146,7 @@ bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
          matchesPath("/std/collections/vectorReserve") ||
          matchesPath("/std/collections/vectorClear") ||
          matchesPath("/std/collections/vectorRemoveAt") ||
-         matchesPath("/std/collections/vectorRemoveSwap") ||
-         matchesPath("/std/collections/experimental_vector/vectorCount") ||
-         matchesPath("/std/collections/experimental_vector/vectorCapacity") ||
-         matchesPath("/std/collections/experimental_vector/vectorAt") ||
-         matchesPath("/std/collections/experimental_vector/vectorAtUnsafe") ||
-         matchesPath("/std/collections/experimental_vector/vectorPush") ||
-         matchesPath("/std/collections/experimental_vector/vectorPop") ||
-         matchesPath("/std/collections/experimental_vector/vectorReserve") ||
-         matchesPath("/std/collections/experimental_vector/vectorClear") ||
-         matchesPath("/std/collections/experimental_vector/vectorRemoveAt") ||
-         matchesPath("/std/collections/experimental_vector/vectorRemoveSwap");
+         matchesPath("/std/collections/vectorRemoveSwap");
 }
 
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
@@ -297,6 +287,9 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
   std::string &error,
   std::function<bool(const Expr &)> isCollectionAccessReceiverExpr) {
+  if (!expr.isMethodCall && expr.name.rfind("/std/collections/experimental_vector/", 0) == 0) {
+    return CountMethodFallbackResult::NotHandled;
+  }
   std::string normalizedVectorHelperName;
   std::string normalizedMapHelperName;
   const bool hasVectorHelperAlias = resolveVectorHelperAliasName(expr, normalizedVectorHelperName);

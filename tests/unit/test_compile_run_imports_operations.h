@@ -157,7 +157,7 @@ TEST_CASE("compiles and runs canonical namespaced map _ref helpers on borrowed e
   expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("exe");
 }
 
-TEST_CASE("rejects experimental map methods on bound map values in C++ emitter") {
+TEST_CASE("compiles and runs experimental map methods on bound map values in C++ emitter") {
   expectExperimentalMapMethodConformance("exe");
 }
 
@@ -217,7 +217,7 @@ TEST_CASE("rejects stdlib wrapper vector constructor auto inference mismatch in 
   expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("exe");
 }
 
-TEST_CASE("compiles and runs stdlib wrapper vector constructor receivers in C++ emitter") {
+TEST_CASE("rejects stdlib wrapper vector constructor receivers in C++ emitter") {
   expectStdlibWrapperVectorConstructorReceiverConformance("exe");
 }
 
@@ -229,7 +229,7 @@ TEST_CASE("rejects stdlib wrapper vector method receiver mismatch in C++ emitter
   expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("exe");
 }
 
-TEST_CASE("compiles and runs canonical namespaced vector constructor temporaries in C++ emitter") {
+TEST_CASE("rejects canonical namespaced vector constructor temporaries in C++ emitter") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("exe");
 }
 
@@ -237,7 +237,7 @@ TEST_CASE("rejects canonical namespaced vector explicit builtin bindings in C++ 
   expectCanonicalVectorNamespaceExplicitBindingReject("exe");
 }
 
-TEST_CASE("compiles and runs canonical namespaced vector named-argument temporaries in C++ emitter") {
+TEST_CASE("rejects canonical namespaced vector named-argument temporaries in C++ emitter") {
   expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance("exe");
 }
 

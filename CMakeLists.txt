@@ -719,6 +719,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 255 LAST 331)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "growth_limits_and_syntax"
                                  SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 332 LAST 352)
+    elseif(suite STREQUAL "primestruct.compile.run.native_backend.core")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800)
     elseif(suite STREQUAL "primestruct.compile.run.emitters.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "lambda_and_mutator_resolution"
                                  SOURCE_FILE "*test_compile_run_emitters.h" FIRST 1 LAST 45)

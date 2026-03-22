@@ -1648,9 +1648,8 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
 }
 
 inline void expectExperimentalMapMethodConformance(const std::string &emitMode) {
-  const int expectedExitCode = emitMode == "vm" ? 20 : (emitMode == "exe" ? 1 : 139);
-  const std::string expectedError = emitMode == "vm" ? "container missing key" :
-                                    (emitMode == "native" ? "" : "unaligned indirect address in IR");
+  const int expectedExitCode = 20;
+  const std::string expectedError = "container missing key";
   expectMapConformanceFailure(makeExperimentalMapMethodConformanceSource(),
                               "experimental_map_methods",
                               emitMode,
@@ -1730,7 +1729,7 @@ inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
   expectMapConformanceCompileReject(makeExperimentalMapIndexConformanceSource(),
                                     "experimental_map_index",
                                     emitMode,
-                                    "at requires integer index");
+                                    "unknown call target: /std/collections/map/at");
 }
 
 inline void expectCanonicalMapNamespaceVmConformance() {

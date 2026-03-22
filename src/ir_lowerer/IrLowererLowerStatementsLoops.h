@@ -310,6 +310,21 @@
         popFileScope();
         return true;
       }
+      if (!stmt.isMethodCall && stmt.name.rfind("/std/collections/experimental_vector/", 0) == 0) {
+        if (const Definition *callee = resolveDefinitionCall(stmt)) {
+          ReturnInfo info;
+          if (!getReturnInfo(callee->fullPath, info)) {
+            return false;
+          }
+          if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
+            return false;
+          }
+          if (!info.returnsVoid) {
+            function.instructions.push_back({IrOpcode::Pop, 0});
+          }
+          return true;
+        }
+      }
       const auto vectorHelperResult = ir_lowerer::tryEmitVectorStatementHelper(
           stmt,
           localsIn,
