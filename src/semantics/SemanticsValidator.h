@@ -375,6 +375,24 @@ private:
       bool resolvedMethod,
       const ExprLateMapSoaBuiltinContext &context,
       bool &handledOut);
+  struct ExprLateCollectionAccessFallbackContext {
+    bool isStdNamespacedVectorAccessCall = false;
+    bool shouldAllowStdAccessCompatibilityFallback = false;
+    bool hasStdNamespacedVectorAccessDefinition = false;
+    bool isStdNamespacedMapAccessCall = false;
+    bool hasStdNamespacedMapAccessDefinition = false;
+    bool shouldBuiltinValidateBareMapAccessCall = false;
+    std::function<bool(const std::string &)> isNonCollectionStructAccessTarget;
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+  };
+  bool validateExprLateCollectionAccessFallbacks(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      bool resolvedMethod,
+      const ExprLateCollectionAccessFallbackContext &context,
+      bool &handledOut);
   struct ExprCollectionAccessValidationContext {
     bool isStdNamespacedVectorAccessCall = false;
     bool shouldAllowStdAccessCompatibilityFallback = false;

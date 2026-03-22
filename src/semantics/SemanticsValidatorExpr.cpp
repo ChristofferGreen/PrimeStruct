@@ -1508,88 +1508,33 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (handledNumericBuiltin) {
         return true;
       }
-      ExprCollectionAccessValidationContext collectionAccessValidationContext;
-      collectionAccessValidationContext.isStdNamespacedVectorAccessCall =
+      ExprLateCollectionAccessFallbackContext
+          lateCollectionAccessFallbackContext;
+      lateCollectionAccessFallbackContext.isStdNamespacedVectorAccessCall =
           isStdNamespacedVectorAccessCall;
-      collectionAccessValidationContext
+      lateCollectionAccessFallbackContext
           .shouldAllowStdAccessCompatibilityFallback =
           shouldAllowStdAccessCompatibilityFallback;
-      collectionAccessValidationContext.hasStdNamespacedVectorAccessDefinition =
+      lateCollectionAccessFallbackContext
+          .hasStdNamespacedVectorAccessDefinition =
           hasStdNamespacedVectorAccessDefinition;
-      collectionAccessValidationContext.isStdNamespacedMapAccessCall =
+      lateCollectionAccessFallbackContext.isStdNamespacedMapAccessCall =
           isStdNamespacedMapAccessCall;
-      collectionAccessValidationContext.hasStdNamespacedMapAccessDefinition =
+      lateCollectionAccessFallbackContext.hasStdNamespacedMapAccessDefinition =
           hasStdNamespacedMapAccessDefinition;
-      collectionAccessValidationContext.shouldBuiltinValidateBareMapAccessCall =
+      lateCollectionAccessFallbackContext
+          .shouldBuiltinValidateBareMapAccessCall =
           shouldBuiltinValidateBareMapAccessCall;
-      collectionAccessValidationContext.resolveArgsPackAccessTarget =
-          [&](const Expr &target, std::string &elemTypeOut) {
-            return resolveArgsPackAccessTarget(target, elemTypeOut);
-          };
-      collectionAccessValidationContext.resolveVectorTarget =
-          [&](const Expr &target, std::string &elemTypeOut) {
-            return resolveVectorTarget(target, elemTypeOut);
-          };
-      collectionAccessValidationContext.resolveExperimentalVectorValueTarget =
-          [&](const Expr &target, std::string &elemTypeOut) {
-            return builtinCollectionDispatchResolvers
-                .resolveExperimentalVectorValueTarget != nullptr &&
-                   builtinCollectionDispatchResolvers
-                       .resolveExperimentalVectorValueTarget(target, elemTypeOut);
-          };
-      collectionAccessValidationContext.resolveArrayTarget =
-          [&](const Expr &target, std::string &elemTypeOut) {
-            return resolveArrayTarget(target, elemTypeOut);
-          };
-      collectionAccessValidationContext.resolveStringTarget =
-          [&](const Expr &target) { return resolveStringTarget(target); };
-      collectionAccessValidationContext.resolveMapKeyType =
-          [&](const Expr &target, std::string &mapKeyTypeOut) {
-            return this->resolveMapKeyType(
-                target, builtinCollectionDispatchResolvers, mapKeyTypeOut);
-          };
-      collectionAccessValidationContext.resolveExperimentalMapTarget =
-          [&](const Expr &target, std::string &keyTypeOut,
-              std::string &valueTypeOut) {
-            return resolveExperimentalMapTarget(target, keyTypeOut,
-                                                valueTypeOut);
-          };
-      collectionAccessValidationContext.isIndexedArgsPackMapReceiverTarget =
-          [&](const Expr &target) {
-            return this->isIndexedArgsPackMapReceiverTarget(
-                target, builtinCollectionDispatchResolvers);
-          };
-      collectionAccessValidationContext.isNamedArgsPackMethodAccessCall =
-          [&](const Expr &target) {
-            return this->isNamedArgsPackMethodAccessCall(
-                target, builtinCollectionDispatchResolvers);
-          };
-      collectionAccessValidationContext
-          .isNamedArgsPackWrappedFileBuiltinAccessCall =
-          [&](const Expr &target) {
-            return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
-                target, builtinCollectionDispatchResolvers);
-          };
-      collectionAccessValidationContext.isMapLikeBareAccessReceiverTarget =
-          [&](const Expr &target) {
-            return this->isMapLikeBareAccessReceiver(
-                target, params, locals, builtinCollectionDispatchResolvers);
-          };
-      collectionAccessValidationContext.isNonCollectionStructAccessTarget =
+      lateCollectionAccessFallbackContext.isNonCollectionStructAccessTarget =
           [&](const std::string &targetPath) {
             return isNonCollectionStructAccessTarget(targetPath);
           };
-      collectionAccessValidationContext.tryRewriteBareMapHelperCall =
-          [&](const Expr &target, const std::string &helperName,
-              Expr &rewrittenOut) {
-            return this->tryRewriteBareMapHelperCall(
-                target, helperName, builtinCollectionDispatchResolvers,
-                rewrittenOut);
-          };
+      lateCollectionAccessFallbackContext.dispatchResolvers =
+          &builtinCollectionDispatchResolvers;
       bool handledCollectionAccessFallback = false;
-      if (!validateExprCollectionAccessFallbacks(
+      if (!validateExprLateCollectionAccessFallbacks(
               params, locals, expr, resolved, resolvedMethod,
-              collectionAccessValidationContext,
+              lateCollectionAccessFallbackContext,
               handledCollectionAccessFallback)) {
         return false;
       }

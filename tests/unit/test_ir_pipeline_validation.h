@@ -9458,7 +9458,9 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprMapSoaBuiltins(") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprCollectionAccessFallbacks(") !=
+  CHECK(semanticsExprSource.find("validateExprLateCollectionAccessFallbacks(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("validateExprCollectionAccessFallbacks(") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "lateMapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
@@ -9564,9 +9566,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("collectionAccessValidationContext.resolveExperimentalMapTarget =") !=
+  CHECK(semanticsExprSource.find(
+            "lateCollectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("collectionAccessValidationContext.isMapLikeBareAccessReceiverTarget =") !=
+  CHECK(semanticsExprSource.find("collectionAccessValidationContext.resolveExperimentalMapTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("collectionAccessValidationContext.isMapLikeBareAccessReceiverTarget =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto getRemovedVectorAccessBuiltinName = [&](const Expr &candidate, std::string &helperOut) -> bool {") ==
         std::string::npos);
