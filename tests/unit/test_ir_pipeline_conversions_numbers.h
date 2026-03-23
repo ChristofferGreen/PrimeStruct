@@ -288,7 +288,43 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("native backend only supports Result.ok with 32-bit or string values") != std::string::npos);
+  CHECK(error.find("IR backends only support Result.and_then with 32-bit or string values") != std::string::npos);
+}
+
+TEST_CASE("ir lowerer supports Result.and_then status-only returns") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<int>]
+main() {
+  [Result<i32, FileError>] ok{Result.ok(2i32)}
+  [Result<FileError>] chained{
+    Result.and_then(ok, []([i32] value) { return(FileError.status(FileError.eof())) })
+  }
+  if(not(Result.error(chained))) {
+    return(1i32)
+  }
+  if(not(equal(Result.why(chained), "EOF"utf8))) {
+    return(2i32)
+  }
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 0);
 }
 
 TEST_CASE("ir lowerer supports Result.and_then f32 payloads") {

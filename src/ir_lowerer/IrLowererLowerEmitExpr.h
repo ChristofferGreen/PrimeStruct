@@ -699,6 +699,11 @@
             error = "IR backends require Result.and_then lambdas to produce Result values";
             return false;
           }
+          if (chainedResultInfo.hasValue &&
+              !ir_lowerer::isSupportedPackedResultValueKind(chainedResultInfo.valueKind)) {
+            error = ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then");
+            return false;
+          }
           if (!emitExpr(*chainedResultExpr, lambdaLocals)) {
             return false;
           }
