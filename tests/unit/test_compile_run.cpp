@@ -22,7 +22,7 @@
 
 namespace {
 std::string writeTemp(const std::string &name, const std::string &contents) {
-  auto dir = std::filesystem::current_path() / "primec_tests";
+  auto dir = std::filesystem::temp_directory_path() / "primec_tests";
   std::filesystem::create_directories(dir);
   auto path = dir / name;
   std::ofstream file(path);

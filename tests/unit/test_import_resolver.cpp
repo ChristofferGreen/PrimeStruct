@@ -190,7 +190,7 @@ TEST_CASE("expands bare slash imports with whitespace separators") {
 }
 
 TEST_CASE("bare slash import does not use absolute filesystem path") {
-  auto absRoot = std::filesystem::path("/tmp") / "primec_tests" / "include_bare_absolute";
+  auto absRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_absolute";
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_absolute_base";
   std::filesystem::remove_all(absRoot);
   std::filesystem::remove_all(baseDir);
@@ -198,8 +198,7 @@ TEST_CASE("bare slash import does not use absolute filesystem path") {
   std::filesystem::create_directories(baseDir);
 
   writeFile(absRoot / "lib.prime", "// INCLUDE_BARE_ABS\n");
-  const std::string srcPath =
-      writeFile(baseDir / "main.prime", "import</tmp/primec_tests/include_bare_absolute>\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "import<" + absRoot.string() + ">\n");
 
   std::string source;
   std::string error;
