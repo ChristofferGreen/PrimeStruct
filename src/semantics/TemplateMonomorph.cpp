@@ -1062,6 +1062,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphExperimentalCollectionValueRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionReceiverResolution.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
+#include "TemplateMonomorphExperimentalCollectionReturnRewrites.h"
 
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
@@ -2162,55 +2163,11 @@ bool rewriteDefinition(Definition &def,
           resolvesExperimentalMapValueTypeText(inferredReturnType, mapping, allowedParams, def.namespacePrefix, ctx);
     }
   }
-  auto rewriteCanonicalExperimentalVectorReturnConstructors = [&](auto &self, Expr &candidate) -> void {
-    rewriteCanonicalExperimentalVectorConstructorValue(candidate);
-    for (auto &arg : candidate.args) {
-      if (arg.kind == Expr::Kind::Call) {
-        self(self, arg);
-      }
-    }
-    bool sawExplicitReturn = false;
-    size_t implicitReturnIndex = candidate.bodyArguments.size();
-    for (size_t argIndex = 0; argIndex < candidate.bodyArguments.size(); ++argIndex) {
-      if (isReturnCall(candidate.bodyArguments[argIndex])) {
-        sawExplicitReturn = true;
-        break;
-      }
-      if (!candidate.bodyArguments[argIndex].isBinding) {
-        implicitReturnIndex = argIndex;
-      }
-    }
-    for (size_t argIndex = 0; argIndex < candidate.bodyArguments.size(); ++argIndex) {
-      Expr &arg = candidate.bodyArguments[argIndex];
-      if (isReturnCall(arg) || (!sawExplicitReturn && argIndex == implicitReturnIndex)) {
-        self(self, arg);
-      }
-    }
+  auto rewriteCanonicalExperimentalVectorReturnConstructors = [&](Expr &candidate) {
+    rewriteExperimentalConstructorReturnTree(candidate, rewriteCanonicalExperimentalVectorConstructorValue);
   };
-  auto rewriteCanonicalExperimentalMapReturnConstructors = [&](auto &self, Expr &candidate) -> void {
-    rewriteCanonicalExperimentalMapConstructorValue(candidate);
-    for (auto &arg : candidate.args) {
-      if (arg.kind == Expr::Kind::Call) {
-        self(self, arg);
-      }
-    }
-    bool sawExplicitReturn = false;
-    size_t implicitReturnIndex = candidate.bodyArguments.size();
-    for (size_t argIndex = 0; argIndex < candidate.bodyArguments.size(); ++argIndex) {
-      if (isReturnCall(candidate.bodyArguments[argIndex])) {
-        sawExplicitReturn = true;
-        break;
-      }
-      if (!candidate.bodyArguments[argIndex].isBinding) {
-        implicitReturnIndex = argIndex;
-      }
-    }
-    for (size_t argIndex = 0; argIndex < candidate.bodyArguments.size(); ++argIndex) {
-      Expr &arg = candidate.bodyArguments[argIndex];
-      if (isReturnCall(arg) || (!sawExplicitReturn && argIndex == implicitReturnIndex)) {
-        self(self, arg);
-      }
-    }
+  auto rewriteCanonicalExperimentalMapReturnConstructors = [&](Expr &candidate) {
+    rewriteExperimentalConstructorReturnTree(candidate, rewriteCanonicalExperimentalMapConstructorValue);
   };
   params.reserve(def.parameters.size());
   locals.reserve(def.parameters.size() + def.statements.size());
@@ -2260,13 +2217,13 @@ bool rewriteDefinition(Definition &def,
     const bool isReturnPathStmt =
         isReturnCall(stmt) || (!sawExplicitReturnStmt && stmtIndex == implicitReturnStmtIndex);
     if (expectedExperimentalVectorReturn && isReturnPathStmt) {
-      rewriteCanonicalExperimentalVectorReturnConstructors(rewriteCanonicalExperimentalVectorReturnConstructors, stmt);
+      rewriteCanonicalExperimentalVectorReturnConstructors(stmt);
       if (!error.empty()) {
         return false;
       }
     }
     if (expectedExperimentalMapReturn && isReturnPathStmt) {
-      rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors, stmt);
+      rewriteCanonicalExperimentalMapReturnConstructors(stmt);
       if (!error.empty()) {
         return false;
       }
@@ -2275,13 +2232,13 @@ bool rewriteDefinition(Definition &def,
       return false;
     }
     if (expectedExperimentalVectorReturn && isReturnPathStmt) {
-      rewriteCanonicalExperimentalVectorReturnConstructors(rewriteCanonicalExperimentalVectorReturnConstructors, stmt);
+      rewriteCanonicalExperimentalVectorReturnConstructors(stmt);
       if (!error.empty()) {
         return false;
       }
     }
     if (expectedExperimentalMapReturn && isReturnPathStmt) {
-      rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors, stmt);
+      rewriteCanonicalExperimentalMapReturnConstructors(stmt);
       if (!error.empty()) {
         return false;
       }
@@ -2302,15 +2259,13 @@ bool rewriteDefinition(Definition &def,
   }
   if (def.returnExpr.has_value()) {
     if (expectedExperimentalVectorReturn) {
-      rewriteCanonicalExperimentalVectorReturnConstructors(rewriteCanonicalExperimentalVectorReturnConstructors,
-                                                          *def.returnExpr);
+      rewriteCanonicalExperimentalVectorReturnConstructors(*def.returnExpr);
       if (!error.empty()) {
         return false;
       }
     }
     if (expectedExperimentalMapReturn) {
-      rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors,
-                                                       *def.returnExpr);
+      rewriteCanonicalExperimentalMapReturnConstructors(*def.returnExpr);
       if (!error.empty()) {
         return false;
       }
@@ -2320,15 +2275,13 @@ bool rewriteDefinition(Definition &def,
       return false;
     }
     if (expectedExperimentalVectorReturn) {
-      rewriteCanonicalExperimentalVectorReturnConstructors(rewriteCanonicalExperimentalVectorReturnConstructors,
-                                                          *def.returnExpr);
+      rewriteCanonicalExperimentalVectorReturnConstructors(*def.returnExpr);
       if (!error.empty()) {
         return false;
       }
     }
     if (expectedExperimentalMapReturn) {
-      rewriteCanonicalExperimentalMapReturnConstructors(rewriteCanonicalExperimentalMapReturnConstructors,
-                                                       *def.returnExpr);
+      rewriteCanonicalExperimentalMapReturnConstructors(*def.returnExpr);
       if (!error.empty()) {
         return false;
       }
