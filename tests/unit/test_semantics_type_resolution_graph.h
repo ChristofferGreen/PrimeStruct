@@ -59,6 +59,17 @@ const primec::semantics::TypeResolutionQueryCallSnapshotEntry &requireQueryCallS
   return *it;
 }
 
+const primec::semantics::TypeResolutionQueryBindingSnapshotEntry &requireQueryBindingSnapshotEntry(
+    const primec::semantics::TypeResolutionQueryBindingSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &resolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.resolvedPath == resolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 const primec::semantics::TypeResolutionQueryResultTypeSnapshotEntry &requireQueryResultTypeSnapshotEntry(
     const primec::semantics::TypeResolutionQueryResultTypeSnapshot &snapshot,
     const std::string &scopePath,
@@ -462,6 +473,7 @@ main() {
   const auto &selectedEntry = requireLocalBindingSnapshotEntry(snapshot, "/main", "selected");
   CHECK(selectedEntry.bindingTypeText == "i32");
   CHECK(selectedEntry.initializerResolvedPath == "/std/collections/map/tryAt");
+  CHECK(selectedEntry.initializerBindingTypeText == "Result<i32, ContainerError>");
   CHECK(selectedEntry.initializerReceiverBindingTypeText == "Map<string, i32>");
   CHECK(selectedEntry.initializerQueryTypeText == "Result<i32, ContainerError>");
   CHECK(selectedEntry.initializerResultHasValue);
@@ -537,6 +549,11 @@ main() {
       parseProgram(source), "/main", error, queryCallSnapshot));
   CHECK(error.empty());
 
+  primec::semantics::TypeResolutionQueryBindingSnapshot queryBindingSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, queryBindingSnapshot));
+  CHECK(error.empty());
+
   primec::semantics::TypeResolutionQueryResultTypeSnapshot queryResultSnapshot;
   REQUIRE(primec::semantics::computeTypeResolutionQueryResultTypeSnapshotForTesting(
       parseProgram(source), "/main", error, queryResultSnapshot));
@@ -549,12 +566,15 @@ main() {
 
   const auto &localEntry = requireLocalBindingSnapshotEntry(localSnapshot, "/main", "selected");
   const auto &callEntry = requireQueryCallSnapshotEntry(queryCallSnapshot, "/main", "/std/collections/map/tryAt");
+  const auto &bindingEntry =
+      requireQueryBindingSnapshotEntry(queryBindingSnapshot, "/main", "/std/collections/map/tryAt");
   const auto &resultEntry =
       requireQueryResultTypeSnapshotEntry(queryResultSnapshot, "/main", "/std/collections/map/tryAt");
   const auto &receiverEntry =
       requireQueryReceiverBindingSnapshotEntry(queryReceiverSnapshot, "/main", "/std/collections/map/tryAt");
 
   CHECK(localEntry.initializerResolvedPath == callEntry.resolvedPath);
+  CHECK(localEntry.initializerBindingTypeText == bindingEntry.bindingTypeText);
   CHECK(localEntry.initializerQueryTypeText == callEntry.typeText);
   CHECK(localEntry.initializerReceiverBindingTypeText == receiverEntry.receiverBindingTypeText);
   CHECK(localEntry.initializerResultHasValue == resultEntry.hasValue);
