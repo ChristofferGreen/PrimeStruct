@@ -1310,6 +1310,42 @@
           error = priorError;
           return true;
         }
+        auto rewriteBareMapAccessMethodExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.size() != 2) {
+            return false;
+          }
+          std::string accessName;
+          if (!getBuiltinArrayAccessName(callExpr, accessName) ||
+              (accessName != "at" && accessName != "at_unsafe")) {
+            return false;
+          }
+          if (callExpr.args.front().kind != Expr::Kind::Call) {
+            return false;
+          }
+          ir_lowerer::MapAccessTargetInfo targetInfoOut;
+          const Definition *callee = resolveDefinitionCall(callExpr.args.front());
+          if (callee == nullptr) {
+            return false;
+          }
+          std::string collectionName;
+          std::vector<std::string> collectionArgs;
+          if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
+              collectionName != "map" || collectionArgs.size() != 2) {
+            return false;
+          }
+          rewrittenExpr = callExpr;
+          rewrittenExpr.isMethodCall = true;
+          return true;
+        };
+        Expr rewrittenBareMapAccessMethodExpr;
+        if (rewriteBareMapAccessMethodExpr(expr, rewrittenBareMapAccessMethodExpr)) {
+          const std::string priorError = error;
+          if (!emitExpr(rewrittenBareMapAccessMethodExpr, localsIn)) {
+            return false;
+          }
+          error = priorError;
+          return true;
+        }
         Expr inlineDispatchExpr = expr;
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             inlineDispatchExpr,

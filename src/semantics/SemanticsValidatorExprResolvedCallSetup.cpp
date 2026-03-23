@@ -25,6 +25,11 @@ void SemanticsValidator::prepareExprResolvedCallSetup(
 
   const bool isResolvedStructConstructorCall =
       calleeParams.empty() && structNames_.count(resolved) > 0;
+  if (isResolvedStructConstructorCall && expr.args.empty() &&
+      !hasNamedArguments(expr.argNames) && !expr.hasBodyArguments &&
+      expr.bodyArguments.empty()) {
+    contextOut.resolvedStructConstructorZeroArgDiagnostic.clear();
+  }
 
   contextOut.resolvedStructConstructorContext = {
       .isResolvedStructConstructorCall = isResolvedStructConstructorCall,

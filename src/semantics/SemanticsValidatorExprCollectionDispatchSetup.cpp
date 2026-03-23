@@ -48,9 +48,34 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
         dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType)) {
       return true;
     }
-    std::string inferredTypeText;
-    return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
-           returnsMapCollectionType(inferredTypeText);
+    if (target.kind != Expr::Kind::Call) {
+      return false;
+    }
+    auto defIt = defMap_.find(resolveCalleePath(target));
+    if ((defIt == defMap_.end() || defIt->second == nullptr) &&
+        !target.name.empty() && target.name.find('/') == std::string::npos) {
+      defIt = defMap_.find("/" + target.name);
+    }
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    BindingInfo inferredReturn;
+    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+      const std::string inferredTypeText =
+          inferredReturn.typeTemplateArg.empty()
+              ? inferredReturn.typeName
+              : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
+      if (returnsMapCollectionType(inferredTypeText)) {
+        return true;
+      }
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+          returnsMapCollectionType(transform.templateArgs.front())) {
+        return true;
+      }
+    }
+    return false;
   };
   auto hasVisibleCanonicalVectorHelperPath = [&](const std::string &path) {
     const bool isStdlibVectorWrapperDefinition =

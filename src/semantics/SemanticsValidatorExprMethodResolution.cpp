@@ -2220,6 +2220,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   }
 
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
+  const auto &resolveArgsPackAccessTarget =
+      dispatchResolvers.resolveArgsPackAccessTarget;
   const auto &resolveMapTargetWithTypes = dispatchResolvers.resolveMapTarget;
   const auto &resolveExperimentalMapTarget = dispatchResolvers.resolveExperimentalMapTarget;
   auto resolveMapTarget = [&](const Expr &target) -> bool {

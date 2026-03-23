@@ -3460,12 +3460,12 @@ import /std/collections/*
   return(77i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
   return(vector<i32>(1i32, 2i32, 3i32))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(wrapVector().capacity())
 }
@@ -9178,6 +9178,18 @@ main() {
 
 TEST_CASE("map wrapper temporary tryAt call validates canonical target classification") {
   const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+namespace ContainerError {
+  [return<string>]
+  why([ContainerError] err) {
+    return("container error"utf8)
+  }
+}
+
 [effects(io_err)]
 unexpectedMapWrapperTryAtError([ContainerError] err) {}
 
@@ -9201,8 +9213,20 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map wrapper temporary tryAt auto inference uses canonical helper return") {
+TEST_CASE("map wrapper temporary tryAt explicit result binding uses canonical helper return") {
   const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+namespace ContainerError {
+  [return<string>]
+  why([ContainerError] err) {
+    return("container error"utf8)
+  }
+}
+
 [effects(io_err)]
 unexpectedMapWrapperTryAtError([ContainerError] err) {}
 
@@ -9218,7 +9242,7 @@ wrapMap() {
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedMapWrapperTryAtError>]
 main() {
-  [auto] inferred{/std/collections/map/tryAt(wrapMap(), 1i32)}
+  [Result<i32, ContainerError>] inferred{/std/collections/map/tryAt(wrapMap(), 1i32)}
   return(Result.ok(try(inferred)))
 }
 )";
@@ -9229,6 +9253,18 @@ main() {
 
 TEST_CASE("map wrapper temporary tryAt call requires canonical helper definition") {
   const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+namespace ContainerError {
+  [return<string>]
+  why([ContainerError] err) {
+    return("container error"utf8)
+  }
+}
+
 [effects(io_err)]
 unexpectedMapWrapperTryAtError([ContainerError] err) {}
 
@@ -9247,8 +9283,20 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("map wrapper temporary tryAt auto inference requires canonical helper definition") {
+TEST_CASE("map wrapper temporary tryAt auto inference keeps builtin result without canonical helper") {
   const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+namespace ContainerError {
+  [return<string>]
+  why([ContainerError] err) {
+    return("container error"utf8)
+  }
+}
+
 [effects(io_err)]
 unexpectedMapWrapperTryAtError([ContainerError] err) {}
 
@@ -9264,8 +9312,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map wrapper temporary contains call validates canonical target classification") {
@@ -9571,7 +9619,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map at wrapper call requires canonical or compatibility helper") {
+TEST_CASE("bare map at wrapper call keeps builtin validation without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -9584,8 +9632,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare map at call resolves through compatibility helper when canonical helper is absent") {
@@ -10419,7 +10467,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("wrapper-returned canonical map method keeps unknown call target when helpers are absent") {
+TEST_CASE("wrapper-returned canonical map method keeps builtin validation when helpers are absent") {
   const std::string source = R"(
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 makeValues() {
@@ -10432,8 +10480,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib canonical map slash return type keeps canonical method diagnostics") {

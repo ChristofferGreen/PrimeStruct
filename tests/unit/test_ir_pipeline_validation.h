@@ -10087,9 +10087,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("this->preferredCanonicalExperimentalMapHelperTarget(helperName)") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("this->canonicalExperimentalMapHelperPath(") == std::string::npos);
-  CHECK(semanticsExprSource.find("this->canonicalizeExperimentalMapHelperResolvedPath(") !=
+  CHECK(semanticsExprPreDispatchDirectCallsSource.find("this->canonicalizeExperimentalMapHelperResolvedPath(") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("this->directMapHelperCompatibilityPath(") != std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find("this->directMapHelperCompatibilityPath(") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("this->shouldPreserveRemovedCollectionHelperPath(resolved)") ==
         std::string::npos);
   CHECK(semanticsExprBodyArgumentsSource.find(
@@ -10260,8 +10261,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("unsafe reference escapes across safe boundary to ") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "lateMapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.shouldBuiltinValidateBareMapContainsCall =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("mapSoaBuiltinContext.bareMapHelperOperandIndices =") ==
         std::string::npos);
@@ -10383,8 +10384,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            ".collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") !=
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("collectionAccessValidationContext.resolveExperimentalMapTarget =") ==
         std::string::npos);
@@ -11362,7 +11363,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
         std::string::npos);
-  CHECK(semanticsInferCombinedSource.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
+  CHECK(semanticsInferCombinedSource.find("resolveDereferencedIndexedArgsPackElementType;") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveWrappedIndexedArgsPackElementType =") !=
         std::string::npos);
@@ -11418,9 +11419,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferSource.find("auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,") ==
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("resolveBuiltinCollectionMethodReturnKind(") != std::string::npos);
-  CHECK(semanticsInferCombinedSource.find("resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)") !=
+  CHECK(semanticsInferCombinedSource.find("resolveBuiltinCollectionAccessCallReturnKind(\n          expr, builtinCollectionDispatchResolvers,") !=
         std::string::npos);
-  CHECK(semanticsInferCombinedSource.find("builtinCollectionCountCapacityDispatchContext, builtinCollectionKind))") !=
+  CHECK(semanticsInferCombinedSource.find(".builtinCollectionDirectCountCapacityContext,") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("inferBuiltinCollectionDirectCountCapacityReturnKind(") != std::string::npos);
   CHECK(semanticsInferCombinedSource.find("handledDirectBuiltinCountCapacity") != std::string::npos);
@@ -11523,11 +11524,11 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
         std::string::npos);
-  CHECK(semanticsInferLateFallbackBuiltinsSource.find("if (!expr.isMethodCall && (isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")) &&") !=
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find("isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("if (getBuiltinGpuName(expr, builtinName)) {") !=
         std::string::npos);
-  CHECK(semanticsInferLateFallbackBuiltinsSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"buffer_load\") && expr.args.size() == 2) {") !=
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"buffer_load\") &&\n      expr.args.size() == 2) {") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(") !=
         std::string::npos);
@@ -11551,9 +11552,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferResolvedCallsSource.find("ReturnKind SemanticsValidator::inferResolvedCallReturnKind(") !=
         std::string::npos);
-  CHECK(semanticsInferResolvedCallsSource.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {") !=
+  CHECK(semanticsInferResolvedCallsSource.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr,") !=
         std::string::npos);
-  CHECK(semanticsInferResolvedCallsSource.find("if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, orderedArgError)) {") !=
+  CHECK(semanticsInferResolvedCallsSource.find("validateNamedArgumentsAgainstParams(\n            calleeParams, *orderedCallArgNames, orderedArgError)") !=
         std::string::npos);
   CHECK(semanticsInferResolvedCallsSource.find("if (!ensureDefinitionReturnKindReady(*defIt->second)) {") !=
         std::string::npos);

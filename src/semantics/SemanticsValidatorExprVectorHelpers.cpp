@@ -416,6 +416,9 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
        resolved == "/std/collections/vector/at_unsafe");
   const bool hasVisibleStdNamespacedVectorCanonicalHelper =
       isStdNamespacedVectorCanonicalHelperCall && hasVisibleDefinitionPath(resolved);
+  const bool hasVisibleStdNamespacedVectorCompatibilityHelper =
+      isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
+      hasVisibleDefinitionPath("/vector/" + namespacedHelper);
   const bool allowStdNamespacedUserReceiverProbe =
       isStdNamespacedVectorCanonicalHelperCall &&
       (namespacedHelper == "count" || namespacedHelper == "capacity") &&
@@ -427,6 +430,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }
   if (isStdNamespacedVectorCanonicalHelperCall && !hasVisibleStdNamespacedVectorCanonicalHelper &&
       !hasVisibleDefinitionPath(resolved) &&
+      !hasVisibleStdNamespacedVectorCompatibilityHelper &&
       !allowStdNamespacedUserReceiverProbe) {
     error_ = "unknown call target: " + resolved;
     return false;
@@ -455,8 +459,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
 
   size_t resolvedReceiverIndex = 0;
   const bool shouldProbeVectorHelperReceiver =
-      (!isStdNamespacedVectorCanonicalHelperCall || allowStdNamespacedUserReceiverProbe) &&
-      defMap_.find(resolved) == defMap_.end();
+      (!isStdNamespacedVectorCanonicalHelperCall ||
+       allowStdNamespacedUserReceiverProbe ||
+       hasVisibleStdNamespacedVectorCompatibilityHelper) &&
+      (defMap_.find(resolved) == defMap_.end() ||
+       hasVisibleStdNamespacedVectorCompatibilityHelper);
   if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
     std::vector<size_t> receiverIndices;
     const bool hasNamedArgs = hasNamedArguments(expr.argNames);
@@ -479,7 +486,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     }
 
     const bool probePositionalReorderedReceiver =
-        !isStdNamespacedVectorCanonicalHelperCall &&
+        (!isStdNamespacedVectorCanonicalHelperCall ||
+         hasVisibleStdNamespacedVectorCompatibilityHelper) &&
         !hasNamedArgs && expr.args.size() > 1 &&
         (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
          expr.args.front().kind == Expr::Kind::FloatLiteral ||

@@ -665,7 +665,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(readFile(outPath).find(
+            "Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native explicit canonical map typed bindings with builtin helpers") {
@@ -8618,7 +8620,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(readFile(errPath).find(
+            "Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("native keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {

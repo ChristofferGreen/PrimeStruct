@@ -458,7 +458,9 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(readFile(outPath).find(
+            "Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm explicit canonical map typed bindings with builtin helpers") {
@@ -7653,7 +7655,9 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(readFile(errPath).find(
+            "Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("vm keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {

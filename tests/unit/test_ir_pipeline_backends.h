@@ -1379,7 +1379,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
         std::string::npos);
-  CHECK(validatorInfer.find("builtinCollectionDispatchResolvers.resolveDereferencedIndexedArgsPackElementType;") !=
+  CHECK(validatorInfer.find("resolveDereferencedIndexedArgsPackElementType;") !=
         std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveWrappedIndexedArgsPackElementType =") != std::string::npos);
   CHECK(validatorInfer.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
@@ -1476,7 +1476,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
         std::string::npos);
-  CHECK(validatorInfer.find("if (!expr.isMethodCall && (isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")) &&") !=
+  CHECK(validatorInfer.find("isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")") !=
         std::string::npos);
   CHECK(validatorInfer.find("if (getBuiltinGpuName(expr, builtinName)) {") !=
         std::string::npos);
@@ -1502,9 +1502,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("ReturnKind SemanticsValidator::inferResolvedCallReturnKind(") !=
         std::string::npos);
-  CHECK(validatorInfer.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {") !=
+  CHECK(validatorInfer.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr,") !=
         std::string::npos);
-  CHECK(validatorInfer.find("if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, orderedArgError)) {") !=
+  CHECK(validatorInfer.find("validateNamedArgumentsAgainstParams(\n            calleeParams, *orderedCallArgNames, orderedArgError)") !=
         std::string::npos);
   CHECK(validatorInfer.find("if (!ensureDefinitionReturnKindReady(*defIt->second)) {") !=
         std::string::npos);
