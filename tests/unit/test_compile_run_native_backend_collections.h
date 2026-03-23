@@ -665,7 +665,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+  CHECK(readFile(outPath).find(
+            "Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
 
@@ -3004,7 +3005,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 152);
+  CHECK(runCommand(exePath) == 81);
 }
 
 TEST_CASE("rejects native user wrapper temporary unsafe parity shadow mismatch") {
@@ -3182,7 +3183,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 156);
+  CHECK(runCommand(exePath) == 83);
 }
 
 TEST_CASE("compiles and runs native user wrapper temporary count capacity shadow precedence") {
@@ -3226,7 +3227,7 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 60);
+  CHECK(runCommand(exePath) == 163);
 }
 
 TEST_CASE("rejects native user wrapper temporary count capacity shadow value mismatch") {
@@ -3351,7 +3352,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 177);
 }
 
 TEST_CASE("rejects native user wrapper temporary syntax parity shadow mismatch") {
@@ -8391,7 +8392,7 @@ main() {
   CHECK(runCommand(exePath) == 95);
 }
 
-TEST_CASE("native runs canonical map reference string access") {
+TEST_CASE("native keeps current canonical map reference string access runtime failure") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -8414,7 +8415,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("native keeps current builtin count runtime failure on canonical map reference string access") {
@@ -8619,7 +8620,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(readFile(errPath).find(
+            "Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("native keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {

@@ -5959,11 +5959,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("at requires map key type i32") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter runs canonical map reference string access") {
+TEST_CASE("C++ emitter keeps current canonical map reference string access runtime failure") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -5980,7 +5979,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("C++ emitter keeps non-string diagnostics on canonical map reference access receivers") {

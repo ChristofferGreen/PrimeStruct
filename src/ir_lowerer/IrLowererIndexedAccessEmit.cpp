@@ -438,28 +438,6 @@ bool emitBuiltinArrayAccess(
     return true;
   }
 
-  const auto mapLookupResult = tryEmitMapAccessLookup(
-      accessName,
-      targetExpr,
-      indexExpr,
-      localsIn,
-      allocTempLocal,
-      emitExpr,
-      resolveStringTableTarget,
-      resolveCallMapAccessTargetInfo,
-      inferExprKind,
-      emitMapKeyNotFound,
-      instructionCount,
-      emitInstruction,
-      patchInstructionImm,
-      error);
-  if (mapLookupResult == MapAccessLookupEmitResult::Error) {
-    return false;
-  }
-  if (mapLookupResult == MapAccessLookupEmitResult::Emitted) {
-    return true;
-  }
-
   const auto dynamicStringAccessResult = tryEmitDynamicStringAccessLoad(
       accessName,
       targetExpr,
@@ -489,6 +467,28 @@ bool emitBuiltinArrayAccess(
   }
   if (nonLiteralStringTargetResult == NonLiteralStringAccessTargetResult::Error) {
     return false;
+  }
+
+  const auto mapLookupResult = tryEmitMapAccessLookup(
+      accessName,
+      targetExpr,
+      indexExpr,
+      localsIn,
+      allocTempLocal,
+      emitExpr,
+      resolveStringTableTarget,
+      resolveCallMapAccessTargetInfo,
+      inferExprKind,
+      emitMapKeyNotFound,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+  if (mapLookupResult == MapAccessLookupEmitResult::Error) {
+    return false;
+  }
+  if (mapLookupResult == MapAccessLookupEmitResult::Emitted) {
+    return true;
   }
 
   return emitArrayVectorIndexedAccess(

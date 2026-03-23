@@ -458,7 +458,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+  CHECK(readFile(outPath).find(
+            "Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
 
@@ -497,8 +498,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") !=
-        std::string::npos);
+  CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib namespaced map constructor alias fallback without import") {
@@ -2265,7 +2265,7 @@ TEST_CASE("rejects vm stdlib wrapper vector constructor explicit Vector mismatch
   expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject("vm");
 }
 
-TEST_CASE("runs vm stdlib wrapper vector constructors on inferred auto bindings") {
+TEST_CASE("runs vm stdlib vector constructors on inferred auto bindings") {
   expectStdlibWrapperVectorConstructorAutoInferenceConformance("vm");
 }
 
@@ -7655,7 +7655,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+  CHECK(readFile(errPath).find(
+            "Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
 

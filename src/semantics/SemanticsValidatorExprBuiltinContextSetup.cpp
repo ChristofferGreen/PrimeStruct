@@ -55,16 +55,46 @@ void SemanticsValidator::prepareExprCountCapacityMapBuiltinContext(
       shouldBuiltinValidateStdNamespacedVectorCapacityCall;
   contextOut.isStdNamespacedVectorCapacityCall =
       isStdNamespacedVectorCapacityCall;
-  contextOut.resolveVectorTarget =
-      [&](const Expr &target, std::string &elemTypeOut) {
-        return dispatchResolvers.resolveVectorTarget(target, elemTypeOut);
-      };
-  contextOut.resolveMapTarget =
-      [&](const Expr &target) {
-        std::string keyType;
-        std::string valueType;
-        return dispatchResolvers.resolveMapTarget(target, keyType, valueType);
-      };
+  contextOut.resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
+  contextOut.resolveMapTarget = [&](const Expr &target) {
+    std::string keyType;
+    std::string valueType;
+    if ((dispatchResolvers.resolveMapTarget != nullptr &&
+         dispatchResolvers.resolveMapTarget(target, keyType, valueType)) ||
+        (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
+         dispatchResolvers.resolveExperimentalMapTarget(target, keyType,
+                                                       valueType))) {
+      return true;
+    }
+    if (target.kind != Expr::Kind::Call) {
+      return false;
+    }
+    auto defIt = defMap_.find(resolveCalleePath(target));
+    if ((defIt == defMap_.end() || defIt->second == nullptr) &&
+        !target.name.empty() && target.name.find('/') == std::string::npos) {
+      defIt = defMap_.find("/" + target.name);
+    }
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    BindingInfo inferredReturn;
+    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+      const std::string inferredTypeText =
+          inferredReturn.typeTemplateArg.empty()
+              ? inferredReturn.typeName
+              : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
+      if (returnsMapCollectionType(inferredTypeText)) {
+        return true;
+      }
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+          returnsMapCollectionType(transform.templateArgs.front())) {
+        return true;
+      }
+    }
+    return false;
+  };
   contextOut.dispatchResolverAdapters = &dispatchResolverAdapters;
   contextOut.dispatchResolvers = &dispatchResolvers;
 }
@@ -97,14 +127,8 @@ void SemanticsValidator::prepareExprLateMapSoaBuiltinContext(
   contextOut = {};
   contextOut.shouldBuiltinValidateBareMapContainsCall =
       shouldBuiltinValidateBareMapContainsCall;
-  contextOut.resolveVectorTarget =
-      [&](const Expr &target, std::string &elemTypeOut) {
-        return dispatchResolvers.resolveVectorTarget(target, elemTypeOut);
-      };
-  contextOut.resolveSoaVectorTarget =
-      [&](const Expr &target, std::string &elemTypeOut) {
-        return dispatchResolvers.resolveSoaVectorTarget(target, elemTypeOut);
-      };
+  contextOut.resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
+  contextOut.resolveSoaVectorTarget = dispatchResolvers.resolveSoaVectorTarget;
   contextOut.dispatchResolvers = &dispatchResolvers;
 }
 
@@ -132,20 +156,10 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
   contextOut.collectionAccessFallbackContext.shouldBuiltinValidateBareMapAccessCall =
       shouldBuiltinValidateBareMapAccessCall;
   contextOut.collectionAccessFallbackContext.isNonCollectionStructAccessTarget =
-      [this](const std::string &targetPath) {
-        const size_t slash = targetPath.find_last_of('/');
-        if (slash == std::string::npos || slash == 0) {
-          return false;
-        }
-        const std::string receiverPath = targetPath.substr(0, slash);
-        if (receiverPath == "/array" || receiverPath == "/vector" ||
-            receiverPath == "/std/collections/vector" ||
-            receiverPath == "/soa_vector" || receiverPath == "/map" ||
-            receiverPath == "/std/collections/map" ||
-            receiverPath == "/string") {
-          return false;
-        }
-        return structNames_.count(receiverPath) > 0;
+      [&](const std::string &targetPath) {
+        const size_t methodSlash = targetPath.find_last_of('/');
+        return methodSlash != std::string::npos && methodSlash > 0 &&
+               structNames_.count(targetPath.substr(0, methodSlash)) > 0;
       };
   contextOut.collectionAccessFallbackContext.dispatchResolvers =
       &dispatchResolvers;

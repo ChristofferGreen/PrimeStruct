@@ -117,6 +117,163 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return "/" + candidate;
   };
+  auto preferredFileErrorHelperTarget = [&](std::string_view helperName,
+                                            bool &builtinOut) -> std::string {
+    builtinOut = false;
+    if (helperName == "why") {
+      if (defMap_.count("/std/file/FileError/why") > 0) {
+        return "/std/file/FileError/why";
+      }
+      if (defMap_.count("/FileError/why") > 0) {
+        return "/FileError/why";
+      }
+      builtinOut = true;
+      return "/file_error/why";
+    }
+    if (helperName == "is_eof") {
+      if (defMap_.count("/std/file/FileError/is_eof") > 0) {
+        return "/std/file/FileError/is_eof";
+      }
+      if (defMap_.count("/FileError/is_eof") > 0) {
+        return "/FileError/is_eof";
+      }
+      if (defMap_.count("/std/file/fileErrorIsEof") > 0) {
+        return "/std/file/fileErrorIsEof";
+      }
+      return "";
+    }
+    if (helperName == "eof") {
+      if (defMap_.count("/std/file/FileError/eof") > 0) {
+        return "/std/file/FileError/eof";
+      }
+      if (defMap_.count("/FileError/eof") > 0) {
+        return "/FileError/eof";
+      }
+      if (defMap_.count("/std/file/fileReadEof") > 0) {
+        return "/std/file/fileReadEof";
+      }
+      return "";
+    }
+    if (helperName == "status") {
+      if (defMap_.count("/std/file/FileError/status") > 0) {
+        return "/std/file/FileError/status";
+      }
+      if (defMap_.count("/std/file/fileErrorStatus") > 0) {
+        return "/std/file/fileErrorStatus";
+      }
+      return "";
+    }
+    if (helperName == "result") {
+      if (defMap_.count("/std/file/FileError/result") > 0) {
+        return "/std/file/FileError/result";
+      }
+      if (defMap_.count("/std/file/fileErrorResult") > 0) {
+        return "/std/file/fileErrorResult";
+      }
+      return "";
+    }
+    return "";
+  };
+  auto preferredImageErrorHelperTarget = [&](std::string_view helperName) -> std::string {
+    if (helperName == "why") {
+      if (defMap_.count("/std/image/ImageError/why") > 0) {
+        return "/std/image/ImageError/why";
+      }
+      if (defMap_.count("/ImageError/why") > 0) {
+        return "/ImageError/why";
+      }
+      return "";
+    }
+    if (helperName == "status") {
+      if (defMap_.count("/std/image/ImageError/status") > 0) {
+        return "/std/image/ImageError/status";
+      }
+      if (defMap_.count("/ImageError/status") > 0) {
+        return "/ImageError/status";
+      }
+      if (defMap_.count("/std/image/imageErrorStatus") > 0) {
+        return "/std/image/imageErrorStatus";
+      }
+      return "";
+    }
+    if (helperName == "result") {
+      if (defMap_.count("/std/image/ImageError/result") > 0) {
+        return "/std/image/ImageError/result";
+      }
+      if (defMap_.count("/ImageError/result") > 0) {
+        return "/ImageError/result";
+      }
+      if (defMap_.count("/std/image/imageErrorResult") > 0) {
+        return "/std/image/imageErrorResult";
+      }
+      return "";
+    }
+    return "";
+  };
+  auto preferredContainerErrorHelperTarget = [&](std::string_view helperName) -> std::string {
+    if (helperName == "why") {
+      if (defMap_.count("/std/collections/ContainerError/why") > 0) {
+        return "/std/collections/ContainerError/why";
+      }
+      if (defMap_.count("/ContainerError/why") > 0) {
+        return "/ContainerError/why";
+      }
+      return "";
+    }
+    if (helperName == "status") {
+      if (defMap_.count("/std/collections/ContainerError/status") > 0) {
+        return "/std/collections/ContainerError/status";
+      }
+      if (defMap_.count("/ContainerError/status") > 0) {
+        return "/ContainerError/status";
+      }
+      if (defMap_.count("/std/collections/containerErrorStatus") > 0) {
+        return "/std/collections/containerErrorStatus";
+      }
+      return "";
+    }
+    if (helperName == "result") {
+      if (defMap_.count("/std/collections/ContainerError/result") > 0) {
+        return "/std/collections/ContainerError/result";
+      }
+      if (defMap_.count("/ContainerError/result") > 0) {
+        return "/ContainerError/result";
+      }
+      if (defMap_.count("/std/collections/containerErrorResult") > 0) {
+        return "/std/collections/containerErrorResult";
+      }
+      return "";
+    }
+    return "";
+  };
+  auto preferredGfxErrorHelperTarget = [&](std::string_view helperName,
+                                           const std::string &resolvedStructPath) -> std::string {
+    auto helperForBasePath = [&](std::string_view basePath) -> std::string {
+      const std::string helperPath = std::string(basePath) + "/" + std::string(helperName);
+      if (defMap_.count(helperPath) > 0) {
+        return helperPath;
+      }
+      return "";
+    };
+    const std::string canonicalBase = "/std/gfx/GfxError";
+    const std::string experimentalBase = "/std/gfx/experimental/GfxError";
+    if (resolvedStructPath == canonicalBase) {
+      return helperForBasePath(canonicalBase);
+    }
+    if (resolvedStructPath == experimentalBase) {
+      return helperForBasePath(experimentalBase);
+    }
+    const bool hasCanonical = defMap_.count(canonicalBase + "/" + std::string(helperName)) > 0;
+    const bool hasExperimental =
+        defMap_.count(experimentalBase + "/" + std::string(helperName)) > 0;
+    if (hasCanonical && !hasExperimental) {
+      return helperForBasePath(canonicalBase);
+    }
+    if (!hasCanonical && hasExperimental) {
+      return helperForBasePath(experimentalBase);
+    }
+    return "";
+  };
 
   const std::string explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName);
   auto explicitVectorMethodPath = [&](const std::string &rawMethodName) -> std::string {
@@ -278,6 +435,38 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     resolvedOut = "/result/" + normalizedMethodName;
     isBuiltinOut = true;
     return true;
+  }
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "eof" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName, isBuiltinOut);
+    return !resolvedOut.empty();
+  }
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "ImageError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut = preferredImageErrorHelperTarget(normalizedMethodName);
+    isBuiltinOut = false;
+    return !resolvedOut.empty();
+  }
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "ContainerError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
+    isBuiltinOut = false;
+    return !resolvedOut.empty();
+  }
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "GfxError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut =
+        preferredGfxErrorHelperTarget(normalizedMethodName,
+                                      resolveStructTypePath(receiver.name, receiver.namespacePrefix));
+    isBuiltinOut = false;
+    if (!resolvedOut.empty()) {
+      return true;
+    }
   }
   if (receiver.kind == Expr::Kind::Name &&
       findParamBinding(params, receiver.name) == nullptr &&
@@ -1322,10 +1511,37 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (collectionElemType == "string" || normalizedElemBaseType == "string") {
       return setCollectionMethodTarget("/string/" + normalizedMethodName);
     }
-    if (collectionElemType == "FileError" && normalizedMethodName == "why") {
-      resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
-      isBuiltinOut = resolvedOut == "/file_error/why";
-      return true;
+    if (collectionElemType == "FileError" &&
+        (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+         normalizedMethodName == "status" || normalizedMethodName == "result")) {
+      resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName, isBuiltinOut);
+      return !resolvedOut.empty();
+    }
+    if (collectionElemType == "ImageError" &&
+        (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+         normalizedMethodName == "result")) {
+      resolvedOut = preferredImageErrorHelperTarget(normalizedMethodName);
+      isBuiltinOut = false;
+      return !resolvedOut.empty();
+    }
+    if (collectionElemType == "ContainerError" &&
+        (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+         normalizedMethodName == "result")) {
+      resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
+      isBuiltinOut = false;
+      return !resolvedOut.empty();
+    }
+    if (collectionElemType == "GfxError" &&
+        (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+         normalizedMethodName == "result")) {
+      resolvedOut =
+          preferredGfxErrorHelperTarget(normalizedMethodName,
+                                        resolveStructTypePath(collectionElemType,
+                                                              receiverExpr.namespacePrefix));
+      isBuiltinOut = false;
+      if (!resolvedOut.empty()) {
+        return true;
+      }
     }
     std::string elemBase;
     std::string elemArgText;
@@ -1619,10 +1835,37 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               return true;
             }
           }
-          if (normalizedElemType == "FileError" && normalizedMethodName == "why") {
-            resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
-            isBuiltinOut = resolvedOut == "/file_error/why";
-            return true;
+          if (normalizedElemType == "FileError" &&
+              (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+               normalizedMethodName == "status" || normalizedMethodName == "result")) {
+            resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName, isBuiltinOut);
+            return !resolvedOut.empty();
+          }
+          if (normalizedElemType == "ImageError" &&
+              (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+               normalizedMethodName == "result")) {
+            resolvedOut = preferredImageErrorHelperTarget(normalizedMethodName);
+            isBuiltinOut = false;
+            return !resolvedOut.empty();
+          }
+          if (normalizedElemType == "ContainerError" &&
+              (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+               normalizedMethodName == "result")) {
+            resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
+            isBuiltinOut = false;
+            return !resolvedOut.empty();
+          }
+          if (normalizedElemType == "GfxError" &&
+              (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+               normalizedMethodName == "result")) {
+            resolvedOut =
+                preferredGfxErrorHelperTarget(normalizedMethodName,
+                                              resolveStructTypePath(normalizedElemType,
+                                                                    receiver.namespacePrefix));
+            isBuiltinOut = false;
+            if (!resolvedOut.empty()) {
+              return true;
+            }
           }
           if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
             resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
@@ -1891,10 +2134,36 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return setPreferredMapMethodTarget(receiver, normalizedMethodName);
   }
-  if (typeName == "FileError" && normalizedMethodName == "why") {
-    resolvedOut = defMap_.count("/FileError/why") > 0 ? "/FileError/why" : "/file_error/why";
-    isBuiltinOut = resolvedOut == "/file_error/why";
-    return true;
+  if (typeName == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "status" || normalizedMethodName == "result")) {
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName, isBuiltinOut);
+    return !resolvedOut.empty();
+  }
+  if (typeName == "ImageError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut = preferredImageErrorHelperTarget(normalizedMethodName);
+    isBuiltinOut = false;
+    return !resolvedOut.empty();
+  }
+  if (typeName == "ContainerError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
+    isBuiltinOut = false;
+    return !resolvedOut.empty();
+  }
+  if (typeName == "GfxError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut =
+        preferredGfxErrorHelperTarget(normalizedMethodName,
+                                      resolveStructTypePath(typeName, receiver.namespacePrefix));
+    isBuiltinOut = false;
+    if (!resolvedOut.empty()) {
+      return true;
+    }
   }
   if (typeName == "string" &&
       (normalizedMethodName == "count" || normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
@@ -1951,6 +2220,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   }
 
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
+  const auto &resolveArgsPackAccessTarget =
+      dispatchResolvers.resolveArgsPackAccessTarget;
   const auto &resolveMapTargetWithTypes = dispatchResolvers.resolveMapTarget;
   const auto &resolveExperimentalMapTarget = dispatchResolvers.resolveExperimentalMapTarget;
   auto resolveMapTarget = [&](const Expr &target) -> bool {
@@ -2225,7 +2496,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         std::string valueType;
         keepBuiltinIndexedArgsPackMapMethod =
             keepBuiltinIndexedArgsPackMapMethod ||
-            (resolveArgsPackElementTypeForExpr(*accessReceiver, params, locals, elemType) &&
+            (dispatchResolvers.resolveArgsPackAccessTarget(*accessReceiver, elemType) &&
              extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
       }
     }

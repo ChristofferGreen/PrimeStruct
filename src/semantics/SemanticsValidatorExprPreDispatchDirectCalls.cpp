@@ -9,23 +9,23 @@ bool isExperimentalMapTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {
     std::string base;
-    std::string arg;
-    if (!splitTemplateTypeName(normalizedType, base, arg)) {
+    std::string argText;
+    if (!splitTemplateTypeName(normalizedType, base, argText)) {
       return false;
     }
     base = normalizeBindingTypeName(base);
     if (base == "Map" || base == "/Map" ||
         base == "std/collections/experimental_map/Map" ||
         base == "/std/collections/experimental_map/Map") {
-      std::vector<std::string> args;
-      return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
+      std::vector<std::string> parts;
+      return splitTopLevelTemplateArgs(argText, parts) && parts.size() == 2;
     }
     if (base == "Reference" || base == "Pointer") {
-      std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+      std::vector<std::string> parts;
+      if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 1) {
         return false;
       }
-      normalizedType = normalizeBindingTypeName(args.front());
+      normalizedType = normalizeBindingTypeName(parts.front());
       continue;
     }
     return false;
@@ -50,6 +50,32 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   }
 
   const auto &dispatchBootstrap = *context.dispatchBootstrap;
+  auto isExperimentalMapTypeText = [&](const std::string &typeText) {
+    std::string normalizedType = normalizeBindingTypeName(typeText);
+    while (true) {
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(normalizedType, base, arg)) {
+        return false;
+      }
+      base = normalizeBindingTypeName(base);
+      if (base == "Map" || base == "/Map" ||
+          base == "std/collections/experimental_map/Map" ||
+          base == "/std/collections/experimental_map/Map") {
+        std::vector<std::string> args;
+        return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
+      }
+      if (base == "Reference" || base == "Pointer") {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          return false;
+        }
+        normalizedType = normalizeBindingTypeName(args.front());
+        continue;
+      }
+      return false;
+    }
+  };
   auto isExperimentalMapReceiverExpr = [&](const Expr &candidate) {
     std::string receiverTypeText;
     if (inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&

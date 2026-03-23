@@ -9213,7 +9213,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map wrapper temporary tryAt auto inference rejects explicit helper binding as try input") {
+TEST_CASE("map wrapper temporary tryAt explicit result binding uses canonical helper return") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -9242,13 +9242,13 @@ wrapMap() {
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedMapWrapperTryAtError>]
 main() {
-  [auto] inferred{/std/collections/map/tryAt(wrapMap(), 1i32)}
+  [Result<i32, ContainerError>] inferred{/std/collections/map/tryAt(wrapMap(), 1i32)}
   return(Result.ok(try(inferred)))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("try requires Result argument") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map wrapper temporary tryAt call requires canonical helper definition") {
@@ -9283,7 +9283,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("map wrapper temporary tryAt auto inference keeps builtin map result fallback without helper") {
+TEST_CASE("map wrapper temporary tryAt auto inference keeps builtin result without canonical helper") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -9619,7 +9619,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map at wrapper call validates builtin wrapper receiver without helpers") {
+TEST_CASE("bare map at wrapper call keeps builtin validation without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -9951,7 +9951,7 @@ forward_ptrs([args<Pointer<File<Write>>>] values) {
 forward_ptrs_mixed([args<Pointer<File<Write>>>] values) {
   [File<Write>] extra{File<Write>("extra_named_ptr.txt"utf8)?}
   [Pointer<File<Write>>] extra_ptr{location(extra)}
-  return(score_ptrs([spread] values, extra_ptr))
+  return(score_ptrs(extra_ptr, [spread] values))
 }
 
 [return<int> effects(file_write) on_error<FileError, /swallow_file_error>]
@@ -10019,7 +10019,7 @@ forward_refs([args<Reference<File<Read>>>] values) {
 forward_refs_mixed([args<Reference<File<Read>>>] values) {
   [File<Read>] extra{File<Read>("extra_named_ref.txt"utf8)?}
   [Reference<File<Read>>] extra_ref{location(extra)}
-  return(score_refs([spread] values, extra_ref))
+  return(score_refs(extra_ref, [spread] values))
 }
 
 [return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
@@ -10040,7 +10040,7 @@ forward_ptrs([args<Pointer<File<Read>>>] values) {
 forward_ptrs_mixed([args<Pointer<File<Read>>>] values) {
   [File<Read>] extra{File<Read>("extra_named_ptr.txt"utf8)?}
   [Pointer<File<Read>>] extra_ptr{location(extra)}
-  return(score_ptrs([spread] values, extra_ptr))
+  return(score_ptrs(extra_ptr, [spread] values))
 }
 
 [return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
@@ -10467,7 +10467,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("wrapper-returned canonical map method validates builtin wrapper receiver without helpers") {
+TEST_CASE("wrapper-returned canonical map method keeps builtin validation when helpers are absent") {
   const std::string source = R"(
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 makeValues() {
@@ -15528,7 +15528,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced helper auto inference keeps explicit parameter order") {
+TEST_CASE("vector stdlib namespaced helper auto inference probes reordered receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -15549,12 +15549,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/vector/push parameter values") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced helper keeps explicit parameter diagnostics over return mismatch") {
+TEST_CASE("vector stdlib namespaced helper auto inference keeps reordered receiver alias precedence diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -15576,8 +15575,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/vector/push parameter values") !=
-        std::string::npos);
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced push auto inference uses canonical helper definition") {
