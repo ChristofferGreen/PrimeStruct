@@ -1057,6 +1057,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphCollectionHelperInference.h"
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphExperimentalCollectionArgumentRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionTargetValueRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionReceiverResolution.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 
@@ -2101,78 +2102,46 @@ bool rewriteExpr(Expr &expr,
         return false;
       }
     }
-    auto rewriteCanonicalExperimentalVectorConstructorAssign = [&]() {
-      if (!isAssignCall(expr) || expr.args.size() != 2) {
-        return;
-      }
-      BindingInfo targetInfo;
-      if (!resolveAssignmentTargetBinding(
-              expr.args.front(), params, locals, allowMathBare, namespacePrefix, ctx, targetInfo)) {
-        return;
-      }
-      std::string targetTypeText = targetInfo.typeName;
-      if (!targetInfo.typeTemplateArg.empty()) {
-        targetTypeText += "<" + targetInfo.typeTemplateArg + ">";
-      }
-      Expr &valueExpr = expr.args[1];
-      (void)rewriteExperimentalVectorTargetValueForType(targetTypeText, valueExpr);
-    };
-    auto rewriteCanonicalExperimentalVectorConstructorInit = [&]() {
-      if (!isSimpleCallName(expr, "init") || expr.args.size() != 2) {
-        return;
-      }
-      BindingInfo targetInfo;
-      if (!resolveAssignmentTargetBinding(
-              expr.args.front(), params, locals, allowMathBare, namespacePrefix, ctx, targetInfo)) {
-        return;
-      }
-      std::string targetTypeText = targetInfo.typeName;
-      if (!targetInfo.typeTemplateArg.empty()) {
-        targetTypeText += "<" + targetInfo.typeTemplateArg + ">";
-      }
-      Expr &valueExpr = expr.args[1];
-      (void)rewriteExperimentalVectorTargetValueForType(targetTypeText, valueExpr);
-    };
-    auto rewriteCanonicalExperimentalMapConstructorAssign = [&]() {
-      if (!isAssignCall(expr) || expr.args.size() != 2) {
-        return;
-      }
-      BindingInfo targetInfo;
-      if (!resolveAssignmentTargetBinding(
-              expr.args.front(), params, locals, allowMathBare, namespacePrefix, ctx, targetInfo)) {
-        return;
-      }
-      std::string targetTypeText = targetInfo.typeName;
-      if (!targetInfo.typeTemplateArg.empty()) {
-        targetTypeText += "<" + targetInfo.typeTemplateArg + ">";
-      }
-      Expr &valueExpr = expr.args[1];
-      if (!rewriteExperimentalMapTargetValueForType(targetTypeText, valueExpr)) {
-        return;
-      }
-    };
-    auto rewriteCanonicalExperimentalMapConstructorInit = [&]() {
-      if (!isSimpleCallName(expr, "init") || expr.args.size() != 2) {
-        return;
-      }
-      BindingInfo targetInfo;
-      if (!resolveAssignmentTargetBinding(
-              expr.args.front(), params, locals, allowMathBare, namespacePrefix, ctx, targetInfo)) {
-        return;
-      }
-      std::string targetTypeText = targetInfo.typeName;
-      if (!targetInfo.typeTemplateArg.empty()) {
-        targetTypeText += "<" + targetInfo.typeTemplateArg + ">";
-      }
-      Expr &valueExpr = expr.args[1];
-      if (!rewriteExperimentalMapTargetValueForType(targetTypeText, valueExpr)) {
-        return;
-      }
-    };
-    rewriteCanonicalExperimentalVectorConstructorAssign();
-    rewriteCanonicalExperimentalVectorConstructorInit();
-    rewriteCanonicalExperimentalMapConstructorAssign();
-    rewriteCanonicalExperimentalMapConstructorInit();
+    rewriteExperimentalAssignTargetValue(
+        expr,
+        params,
+        locals,
+        allowMathBare,
+        namespacePrefix,
+        ctx,
+        [&](const std::string &targetTypeText, Expr &valueExpr) {
+          return rewriteExperimentalVectorTargetValueForType(targetTypeText, valueExpr);
+        });
+    rewriteExperimentalInitTargetValue(
+        expr,
+        params,
+        locals,
+        allowMathBare,
+        namespacePrefix,
+        ctx,
+        [&](const std::string &targetTypeText, Expr &valueExpr) {
+          return rewriteExperimentalVectorTargetValueForType(targetTypeText, valueExpr);
+        });
+    rewriteExperimentalAssignTargetValue(
+        expr,
+        params,
+        locals,
+        allowMathBare,
+        namespacePrefix,
+        ctx,
+        [&](const std::string &targetTypeText, Expr &valueExpr) {
+          return rewriteExperimentalMapTargetValueForType(targetTypeText, valueExpr);
+        });
+    rewriteExperimentalInitTargetValue(
+        expr,
+        params,
+        locals,
+        allowMathBare,
+        namespacePrefix,
+        ctx,
+        [&](const std::string &targetTypeText, Expr &valueExpr) {
+          return rewriteExperimentalMapTargetValueForType(targetTypeText, valueExpr);
+        });
   }
   if (expr.isMethodCall) {
     if (!expr.args.empty()) {
