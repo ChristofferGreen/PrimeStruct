@@ -858,6 +858,13 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("bool SemanticsValidator::inferQuerySnapshotData(") != std::string::npos);
   CHECK(validatorCore.find("bool SemanticsValidator::inferCallSnapshotData(") != std::string::npos);
+  CHECK(validatorCore.find("CallSnapshotData callData;") != std::string::npos);
+  CHECK(validatorCore.find("inferCallSnapshotData(defParams, activeLocals, expr, callData)") !=
+        std::string::npos);
+  CHECK(validatorCore.find("out.resolvedPath = std::move(callData.resolvedPath);") !=
+        std::string::npos);
+  CHECK(validatorCore.find("out.binding = std::move(callData.binding);") !=
+        std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::tryValueSnapshotForTesting()") !=
         std::string::npos);
   CHECK(validatorCore.find("if (expr.isMethodCall || !isSimpleCallName(expr, \"try\") || expr.args.size() != 1 ||") !=

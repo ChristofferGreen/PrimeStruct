@@ -362,12 +362,13 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
     return ok;
   };
 
-  out.resolvedPath = resolveCalleePath(expr);
+  CallSnapshotData callData;
+  if (inferCallSnapshotData(defParams, activeLocals, expr, callData)) {
+    out.resolvedPath = std::move(callData.resolvedPath);
+    out.binding = std::move(callData.binding);
+  }
   withPreservedError([&]() {
     return inferQueryExprTypeText(expr, defParams, activeLocals, out.typeText);
-  });
-  withPreservedError([&]() {
-    return inferBindingTypeFromInitializer(expr, defParams, activeLocals, out.binding);
   });
   if (!(withPreservedError([&]() {
           return resolveResultTypeForExpr(expr, defParams, activeLocals, out.resultInfo);
