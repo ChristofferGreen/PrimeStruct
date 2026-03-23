@@ -117,9 +117,25 @@ bool inferMapContainsResultKind(const Expr &expr,
   return true;
 }
 
-LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr, const LocalMap &localsIn);
+bool isBaseSetupResultOrTryCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  if (isSimpleCallName(expr, "try")) {
+    return true;
+  }
+  return expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+         expr.args.front().name == "Result";
+}
 
-bool resolveBaseSetupResultExprInfo(const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) {
+LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
+                                                  const LocalMap &localsIn,
+                                                  const InferExprKindWithLocalsFn *fallbackInferExprKind);
+
+bool resolveBaseSetupResultExprInfo(const Expr &expr,
+                                    const LocalMap &localsIn,
+                                    const InferExprKindWithLocalsFn *fallbackInferExprKind,
+                                    ResultExprInfo &out) {
   auto resolveMethodCall = [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
   auto resolveDefinitionCall = [](const Expr &) -> const Definition * { return nullptr; };
   auto lookupReturnInfo = [](const std::string &, ReturnInfo &) { return false; };
@@ -129,13 +145,15 @@ bool resolveBaseSetupResultExprInfo(const Expr &expr, const LocalMap &localsIn, 
       resolveMethodCall,
       resolveDefinitionCall,
       lookupReturnInfo,
-      [](const Expr &candidate, const LocalMap &candidateLocals) {
-        return inferBaseSetupSimpleExprKind(candidate, candidateLocals);
+      [fallbackInferExprKind](const Expr &candidate, const LocalMap &candidateLocals) {
+        return inferBaseSetupSimpleExprKind(candidate, candidateLocals, fallbackInferExprKind);
       },
       out);
 }
 
-LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr, const LocalMap &localsIn) {
+LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
+                                                  const LocalMap &localsIn,
+                                                  const InferExprKindWithLocalsFn *fallbackInferExprKind) {
   switch (expr.kind) {
     case Expr::Kind::Literal:
       if (expr.isUnsigned) {
@@ -164,8 +182,12 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr, const LocalM
     }
     case Expr::Kind::Call: {
       ResultExprInfo resultInfo;
-      if (resolveBaseSetupResultExprInfo(expr, localsIn, resultInfo) && resultInfo.isResult && resultInfo.hasValue) {
+      if (resolveBaseSetupResultExprInfo(expr, localsIn, fallbackInferExprKind, resultInfo) && resultInfo.isResult &&
+          resultInfo.hasValue) {
         return resultInfo.valueKind;
+      }
+      if (fallbackInferExprKind != nullptr && *fallbackInferExprKind && !isBaseSetupResultOrTryCall(expr)) {
+        return (*fallbackInferExprKind)(expr, localsIn);
       }
       return LocalInfo::ValueKind::Unknown;
     }
@@ -285,6 +307,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
                                                         const LocalMap &,
                                                         UninitializedStorageAccessInfo &,
                                                         bool &)> &resolveUninitializedStorage,
+                               const InferExprKindWithLocalsFn *fallbackInferExprKind,
                                LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if (expr.kind != Expr::Kind::Call) {
@@ -447,7 +470,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
         }
       }
       ResultExprInfo resultInfo;
-      if (resolveBaseSetupResultExprInfo(arg, localsIn, resultInfo) && resultInfo.isResult) {
+      if (resolveBaseSetupResultExprInfo(arg, localsIn, fallbackInferExprKind, resultInfo) && resultInfo.isResult) {
         kindOut = resultInfo.hasValue ? resultInfo.valueKind : LocalInfo::ValueKind::Int32;
         return true;
       }
@@ -891,10 +914,16 @@ bool runLowerInferenceExprKindCallBaseSetup(const LowerInferenceExprKindCallBase
   const auto resolveStructFieldSlot = input.resolveStructFieldSlot;
   const auto resolveUninitializedStorage = input.resolveUninitializedStorage;
   stateInOut.inferCallExprBaseKind =
-      [inferStructExprPath, resolveStructFieldSlot, resolveUninitializedStorage](
+      [inferStructExprPath, resolveStructFieldSlot, resolveUninitializedStorage, &stateInOut](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         return inferCallExprBaseKindImpl(
-            expr, localsIn, inferStructExprPath, resolveStructFieldSlot, resolveUninitializedStorage, kindOut);
+            expr,
+            localsIn,
+            inferStructExprPath,
+            resolveStructFieldSlot,
+            resolveUninitializedStorage,
+            &stateInOut.inferExprKind,
+            kindOut);
       };
   return true;
 }

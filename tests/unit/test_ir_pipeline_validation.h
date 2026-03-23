@@ -1140,8 +1140,31 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup validates dependencies
   CHECK(error == "native backend missing inference expr-kind call-base setup dependency: inferStructExprPath");
 }
 
-TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from direct Result combinators") {
+TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from direct Result combinators with arithmetic bodies") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &locals) {
+    using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+    switch (expr.kind) {
+      case primec::Expr::Kind::Literal:
+        return ValueKind::Int32;
+      case primec::Expr::Kind::StringLiteral:
+        return ValueKind::String;
+      case primec::Expr::Kind::Name: {
+        auto it = locals.find(expr.name);
+        if (it != locals.end()) {
+          return it->second.valueKind;
+        }
+        return ValueKind::Unknown;
+      }
+      case primec::Expr::Kind::Call:
+        if (expr.name == "plus" || expr.name == "multiply") {
+          return ValueKind::Int32;
+        }
+        return ValueKind::Unknown;
+      default:
+        return ValueKind::Unknown;
+    }
+  };
   std::string error;
   REQUIRE(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
       {
@@ -1217,17 +1240,26 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from direct
   valueName.kind = primec::Expr::Kind::Name;
   valueName.name = "value";
 
-  primec::Expr returnValue;
-  returnValue.kind = primec::Expr::Kind::Call;
-  returnValue.name = "return";
-  returnValue.args = {valueName};
+  primec::Expr mappedAmount;
+  mappedAmount.kind = primec::Expr::Kind::Literal;
+  mappedAmount.literalValue = 4;
+
+  primec::Expr mappedValueExpr;
+  mappedValueExpr.kind = primec::Expr::Kind::Call;
+  mappedValueExpr.name = "multiply";
+  mappedValueExpr.args = {valueName, mappedAmount};
+
+  primec::Expr returnMapped;
+  returnMapped.kind = primec::Expr::Kind::Call;
+  returnMapped.name = "return";
+  returnMapped.args = {mappedValueExpr};
 
   primec::Expr mapLambda;
   mapLambda.kind = primec::Expr::Kind::Call;
   mapLambda.isLambda = true;
   mapLambda.hasBodyArguments = true;
   mapLambda.args = {valueParam};
-  mapLambda.bodyArguments = {returnValue};
+  mapLambda.bodyArguments = {returnMapped};
 
   primec::Expr mapExpr;
   mapExpr.kind = primec::Expr::Kind::Call;
@@ -1239,7 +1271,16 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from direct
   chainedValueExpr.kind = primec::Expr::Kind::Call;
   chainedValueExpr.isMethodCall = true;
   chainedValueExpr.name = "ok";
-  chainedValueExpr.args = {resultName, valueName};
+  primec::Expr chainedAmount;
+  chainedAmount.kind = primec::Expr::Kind::Literal;
+  chainedAmount.literalValue = 3;
+
+  primec::Expr chainedPayloadExpr;
+  chainedPayloadExpr.kind = primec::Expr::Kind::Call;
+  chainedPayloadExpr.name = "plus";
+  chainedPayloadExpr.args = {valueName, chainedAmount};
+
+  chainedValueExpr.args = {resultName, chainedPayloadExpr};
 
   primec::Expr returnChained;
   returnChained.kind = primec::Expr::Kind::Call;
@@ -1271,17 +1312,26 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from direct
   leftName.kind = primec::Expr::Kind::Name;
   leftName.name = "left";
 
-  primec::Expr returnLeft;
-  returnLeft.kind = primec::Expr::Kind::Call;
-  returnLeft.name = "return";
-  returnLeft.args = {leftName};
+  primec::Expr rightName;
+  rightName.kind = primec::Expr::Kind::Name;
+  rightName.name = "right";
+
+  primec::Expr summedValueExpr;
+  summedValueExpr.kind = primec::Expr::Kind::Call;
+  summedValueExpr.name = "plus";
+  summedValueExpr.args = {leftName, rightName};
+
+  primec::Expr returnSummed;
+  returnSummed.kind = primec::Expr::Kind::Call;
+  returnSummed.name = "return";
+  returnSummed.args = {summedValueExpr};
 
   primec::Expr map2Lambda;
   map2Lambda.kind = primec::Expr::Kind::Call;
   map2Lambda.isLambda = true;
   map2Lambda.hasBodyArguments = true;
   map2Lambda.args = {leftParam, rightParam};
-  map2Lambda.bodyArguments = {returnLeft};
+  map2Lambda.bodyArguments = {returnSummed};
 
   primec::Expr map2Expr;
   map2Expr.kind = primec::Expr::Kind::Call;

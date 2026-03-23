@@ -687,8 +687,9 @@ for(
     status-only `Result<Error>` returns continue to lower on the same IR-backed path. The same IR inference now
     recognizes direct string `try(Result.map(...))`, `try(Result.and_then(...))`, and `try(Result.map2(...))`
     expressions for downstream string consumers such as `count(...)` and `print_line(...)` without an intermediate
-    binding, and the lowerer’s standalone call-base inference helper now resolves those same direct combinators for
-    `try(...)` instead of depending on the later dispatch-only path.
+    binding, and the lowerer’s call-base inference helper now resolves those same direct combinators for `try(...)`
+    while reusing the configured inference state for ordinary mapped/chained arithmetic bodies instead of depending on
+    the later dispatch-only path.
   - `/std/file/*` now also exposes a stdlib-owned `FileError` namespace surface: `FileError.why(err)`,
     `FileError.status(err)`, `FileError.result<T>(err)`, `FileError.eof()`, and `FileError.is_eof(err)` resolve
     through `/std/file/FileError/*` even in direct nested `Result.error(...)` / `Result.why(...)` expressions, and
