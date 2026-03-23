@@ -10824,18 +10824,23 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphMethodTargets.h";
   const std::filesystem::path templateMonomorphTypeResolutionPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphTypeResolution.h";
+  const std::filesystem::path templateMonomorphCollectionHelperInferencePath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphCollectionHelperInference.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
   REQUIRE(std::filesystem::exists(templateMonomorphFallbackPath));
   REQUIRE(std::filesystem::exists(templateMonomorphBindingCallPath));
   REQUIRE(std::filesystem::exists(templateMonomorphBindingBlockPath));
   REQUIRE(std::filesystem::exists(templateMonomorphMethodTargetsPath));
   REQUIRE(std::filesystem::exists(templateMonomorphTypeResolutionPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphCollectionHelperInferencePath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
   const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath);
   const std::string templateMonomorphBindingBlockSource = readText(templateMonomorphBindingBlockPath);
   const std::string templateMonomorphMethodTargetsSource = readText(templateMonomorphMethodTargetsPath);
   const std::string templateMonomorphTypeResolutionSource = readText(templateMonomorphTypeResolutionPath);
+  const std::string templateMonomorphCollectionHelperInferenceSource =
+      readText(templateMonomorphCollectionHelperInferencePath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingCallInference.h\"") !=
@@ -10845,6 +10850,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphMethodTargets.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphTypeResolution.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphCollectionHelperInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind)") ==
         std::string::npos);
@@ -10866,6 +10873,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphSource.find(
             "std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx)") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find(
             "if (inferCallBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut,") !=
@@ -10909,6 +10918,11 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
             "std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx)") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionHelperInferenceSource.find(
+            "bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionHelperInferenceSource.find("enum class HelperFamily { None, Vector, Map };") !=
         std::string::npos);
 }
 
