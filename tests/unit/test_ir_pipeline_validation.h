@@ -10858,6 +10858,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionDispatch.cpp";
   const std::filesystem::path semanticsInferCollectionDispatchSetupPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionDispatchSetup.cpp";
+  const std::filesystem::path semanticsInferLateFallbackBuiltinsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferLateFallbackBuiltins.cpp";
   const std::filesystem::path semanticsInferCollectionsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
   const std::filesystem::path semanticsInferControlFlowPath =
@@ -10881,6 +10883,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDirectCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDispatchPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDispatchSetupPath));
+  REQUIRE(std::filesystem::exists(semanticsInferLateFallbackBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsInferDefinitionPath));
@@ -10897,6 +10900,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       semanticsInferCollectionDirectCountCapacityPath,
       semanticsInferCollectionDispatchPath,
       semanticsInferCollectionDispatchSetupPath,
+      semanticsInferLateFallbackBuiltinsPath,
       semanticsInferCollectionsPath,
       semanticsInferControlFlowPath,
       semanticsInferDefinitionPath,
@@ -10914,6 +10918,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   const std::string semanticsInferCollectionDispatchSource = readText(semanticsInferCollectionDispatchPath);
   const std::string semanticsInferCollectionDispatchSetupSource =
       readText(semanticsInferCollectionDispatchSetupPath);
+  const std::string semanticsInferLateFallbackBuiltinsSource =
+      readText(semanticsInferLateFallbackBuiltinsPath);
   const std::string semanticsInferCollectionsSource = readText(semanticsInferCollectionsPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
@@ -10926,6 +10932,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCombinedSource.find("InferCollectionDispatchSetup inferCollectionDispatchSetup;") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("prepareInferCollectionDispatchSetup(") !=
+        std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("inferLateFallbackReturnKind(") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
         std::string::npos);
@@ -11037,6 +11045,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") ==
         std::string::npos);
+  CHECK(semanticsInferSource.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("if (!expr.isMethodCall && (isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")) &&") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("if (getBuiltinGpuName(expr, builtinName)) {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"buffer_load\") && expr.args.size() == 2) {") ==
+        std::string::npos);
   CHECK(semanticsInferCollectionCountCapacitySource.find("bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKind") !=
@@ -11063,6 +11079,16 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find("ReturnKind SemanticsValidator::inferLateFallbackReturnKind(") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find("if (!expr.isMethodCall && (isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")) &&") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find("if (getBuiltinGpuName(expr, builtinName)) {") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"buffer_load\") && expr.args.size() == 2) {") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::normalizeCollectionTypePath") !=
         std::string::npos);

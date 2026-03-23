@@ -1044,6 +1044,12 @@ private:
     BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;
     BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;
   };
+  struct InferLateFallbackBuiltinContext {
+    std::string resolved;
+    const InferCollectionDispatchSetup *collectionDispatchSetup = nullptr;
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+    std::function<bool(const std::string &, std::string &)> resolveMethodCallPath;
+  };
   void prepareInferCollectionDispatchSetup(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
@@ -1054,6 +1060,12 @@ private:
       const std::function<bool(const std::string &, ReturnKind &)> &inferResolvedPathReturnKind,
       const BuiltinCollectionDispatchResolvers &builtinCollectionDispatchResolvers,
       InferCollectionDispatchSetup &setupOut);
+  ReturnKind inferLateFallbackReturnKind(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const InferLateFallbackBuiltinContext &context,
+      bool &handled);
   bool resolveBuiltinCollectionMethodReturnKind(const std::string &resolvedPath,
                                                 const Expr &receiverExpr,
                                                 const BuiltinCollectionDispatchResolvers &resolvers,

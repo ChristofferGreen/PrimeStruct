@@ -121,6 +121,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorInferCollectionDirectCountCapacity.cpp
   src/semantics/SemanticsValidatorInferCollectionDispatch.cpp
   src/semantics/SemanticsValidatorInferCollectionDispatchSetup.cpp
+  src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp
   src/semantics/SemanticsValidatorInferCollections.cpp
   src/semantics/SemanticsValidatorInferControlFlow.cpp
   src/semantics/SemanticsValidatorInferDefinition.cpp

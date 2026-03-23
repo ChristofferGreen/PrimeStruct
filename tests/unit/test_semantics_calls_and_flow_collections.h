@@ -9201,6 +9201,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map wrapper temporary tryAt auto inference uses canonical helper return") {
+  const std::string source = R"(
+[effects(io_err)]
+unexpectedMapWrapperTryAtError([ContainerError] err) {}
+
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<Result<i32, ContainerError>>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(17i32))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedMapWrapperTryAtError>]
+main() {
+  [auto] inferred{/std/collections/map/tryAt(wrapMap(), 1i32)}
+  return(Result.ok(try(inferred)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("map wrapper temporary tryAt call requires canonical helper definition") {
   const std::string source = R"(
 [effects(io_err)]
@@ -9214,6 +9240,27 @@ wrapMap() {
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedMapWrapperTryAtError>]
 main() {
   return(Result.ok(try(/std/collections/map/tryAt(wrapMap(), 1i32))))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
+}
+
+TEST_CASE("map wrapper temporary tryAt auto inference requires canonical helper definition") {
+  const std::string source = R"(
+[effects(io_err)]
+unexpectedMapWrapperTryAtError([ContainerError] err) {}
+
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedMapWrapperTryAtError>]
+main() {
+  [auto] inferred{/std/collections/map/tryAt(wrapMap(), 1i32)}
+  return(Result.ok(try(inferred)))
 }
 )";
   std::string error;
