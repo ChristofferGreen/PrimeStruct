@@ -1050,6 +1050,11 @@ private:
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
     std::function<bool(const std::string &, std::string &)> resolveMethodCallPath;
   };
+  struct InferResolvedCallContext {
+    std::string resolved;
+    const InferCollectionDispatchSetup *collectionDispatchSetup = nullptr;
+    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
+  };
   void prepareInferCollectionDispatchSetup(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
@@ -1065,6 +1070,12 @@ private:
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const InferLateFallbackBuiltinContext &context,
+      bool &handled);
+  ReturnKind inferResolvedCallReturnKind(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const InferResolvedCallContext &context,
       bool &handled);
   ReturnKind inferScalarBuiltinReturnKind(
       const Expr &expr,

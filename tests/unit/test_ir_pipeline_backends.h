@@ -385,6 +385,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       cwd / "src" / "semantics" / "SemanticsValidatorInferLateFallbackBuiltins.cpp";
   std::filesystem::path validatorInferScalarBuiltinsPath =
       cwd / "src" / "semantics" / "SemanticsValidatorInferScalarBuiltins.cpp";
+  std::filesystem::path validatorInferResolvedCallsPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorInferResolvedCalls.cpp";
   std::filesystem::path validatorInferGraphPath =
       cwd / "src" / "semantics" / "SemanticsValidatorInferGraph.cpp";
   std::filesystem::path validatorInferMethodResolutionPath =
@@ -448,6 +450,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferLateFallbackBuiltins.cpp";
     validatorInferScalarBuiltinsPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferScalarBuiltins.cpp";
+    validatorInferResolvedCallsPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferResolvedCalls.cpp";
     validatorInferGraphPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferGraph.cpp";
     validatorInferMethodResolutionPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferMethodResolution.cpp";
@@ -491,6 +495,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorInferCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(validatorInferLateFallbackBuiltinsPath));
   REQUIRE(std::filesystem::exists(validatorInferScalarBuiltinsPath));
+  REQUIRE(std::filesystem::exists(validatorInferResolvedCallsPath));
   REQUIRE(std::filesystem::exists(validatorInferGraphPath));
   REQUIRE(std::filesystem::exists(validatorInferMethodResolutionPath));
   REQUIRE(std::filesystem::exists(validatorInferStructReturnPath));
@@ -538,6 +543,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       validatorInferCollectionDispatchSetupPath,
       validatorInferLateFallbackBuiltinsPath,
       validatorInferScalarBuiltinsPath,
+      validatorInferResolvedCallsPath,
       validatorInferDefinitionPath,
       validatorInferGraphPath,
       validatorInferMethodResolutionPath,
@@ -619,6 +625,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("ReturnKind inferLateFallbackReturnKind(") !=
         std::string::npos);
   CHECK(validatorHeader.find("ReturnKind inferScalarBuiltinReturnKind(") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("struct InferResolvedCallContext") != std::string::npos);
+  CHECK(validatorHeader.find("ReturnKind inferResolvedCallReturnKind(") !=
         std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut)") !=
         std::string::npos);
@@ -1078,6 +1087,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("inferLateFallbackReturnKind(") != std::string::npos);
   CHECK(validatorInfer.find("inferScalarBuiltinReturnKind(") != std::string::npos);
+  CHECK(validatorInfer.find("inferResolvedCallReturnKind(") != std::string::npos);
   CHECK(validatorInferMain.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
   CHECK(validatorInferMain.find("auto resolveDereferencedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
@@ -1127,6 +1137,12 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInferMain.find("if (isAssignCall(expr)) {") ==
         std::string::npos);
+  CHECK(validatorInferMain.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorInferMain.find("if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, orderedArgError)) {") ==
+        std::string::npos);
+  CHECK(validatorInferMain.find("if (!ensureDefinitionReturnKindReady(*defIt->second)) {") ==
+        std::string::npos);
   CHECK(validatorInfer.find("void SemanticsValidator::prepareInferCollectionDispatchSetup(") !=
         std::string::npos);
   CHECK(validatorInfer.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
@@ -1152,6 +1168,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("if (getBuiltinMutationName(expr, builtinName)) {") !=
         std::string::npos);
   CHECK(validatorInfer.find("if (isAssignCall(expr)) {") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("ReturnKind SemanticsValidator::inferResolvedCallReturnKind(") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, orderedArgError)) {") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("if (!ensureDefinitionReturnKindReady(*defIt->second)) {") !=
         std::string::npos);
   CHECK(validatorInfer.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
         std::string::npos);
@@ -1426,6 +1450,7 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("src/semantics/SemanticsValidatorInferCollections.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorInferControlFlow.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorInferDefinition.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferResolvedCalls.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorInferScalarBuiltins.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorPassesEffects.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorPassesDiagnostics.cpp") != std::string::npos);

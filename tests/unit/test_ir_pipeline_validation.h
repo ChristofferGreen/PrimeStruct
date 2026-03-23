@@ -10862,6 +10862,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferLateFallbackBuiltins.cpp";
   const std::filesystem::path semanticsInferScalarBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferScalarBuiltins.cpp";
+  const std::filesystem::path semanticsInferResolvedCallsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferResolvedCalls.cpp";
   const std::filesystem::path semanticsInferCollectionsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
   const std::filesystem::path semanticsInferControlFlowPath =
@@ -10887,6 +10889,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(semanticsInferLateFallbackBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsInferScalarBuiltinsPath));
+  REQUIRE(std::filesystem::exists(semanticsInferResolvedCallsPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsInferDefinitionPath));
@@ -10905,6 +10908,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       semanticsInferCollectionDispatchSetupPath,
       semanticsInferLateFallbackBuiltinsPath,
       semanticsInferScalarBuiltinsPath,
+      semanticsInferResolvedCallsPath,
       semanticsInferCollectionsPath,
       semanticsInferControlFlowPath,
       semanticsInferDefinitionPath,
@@ -10926,6 +10930,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       readText(semanticsInferLateFallbackBuiltinsPath);
   const std::string semanticsInferScalarBuiltinsSource =
       readText(semanticsInferScalarBuiltinsPath);
+  const std::string semanticsInferResolvedCallsSource =
+      readText(semanticsInferResolvedCallsPath);
   const std::string semanticsInferCollectionsSource = readText(semanticsInferCollectionsPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
@@ -10942,6 +10948,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCombinedSource.find("inferLateFallbackReturnKind(") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("inferScalarBuiltinReturnKind(") !=
+        std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("inferResolvedCallReturnKind(") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
         std::string::npos);
@@ -11071,6 +11079,12 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("if (isAssignCall(expr)) {") ==
         std::string::npos);
+  CHECK(semanticsInferSource.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, orderedArgError)) {") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("if (!ensureDefinitionReturnKindReady(*defIt->second)) {") ==
+        std::string::npos);
   CHECK(semanticsInferCollectionCountCapacitySource.find("bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKind") !=
@@ -11119,6 +11133,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferScalarBuiltinsSource.find("if (getBuiltinMutationName(expr, builtinName)) {") !=
         std::string::npos);
   CHECK(semanticsInferScalarBuiltinsSource.find("if (isAssignCall(expr)) {") !=
+        std::string::npos);
+  CHECK(semanticsInferResolvedCallsSource.find("ReturnKind SemanticsValidator::inferResolvedCallReturnKind(") !=
+        std::string::npos);
+  CHECK(semanticsInferResolvedCallsSource.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsInferResolvedCallsSource.find("if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames, orderedArgError)) {") !=
+        std::string::npos);
+  CHECK(semanticsInferResolvedCallsSource.find("if (!ensureDefinitionReturnKindReady(*defIt->second)) {") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::normalizeCollectionTypePath") !=
         std::string::npos);
