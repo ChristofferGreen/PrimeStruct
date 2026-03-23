@@ -534,6 +534,46 @@ main() {
   CHECK(localEntry.initializerTryOnErrorBoundArgCount == tryEntry.onErrorBoundArgCount);
 }
 
+TEST_CASE("type resolution try operand call metadata stays aligned with call snapshot") {
+  const std::string source = R"(
+[return<void>]
+unexpectedError([MyError] err) {
+}
+
+MyError() {
+}
+
+[return<Result<int, MyError>>]
+makeValue() {
+  return(Result.ok(4i32))
+}
+
+[return<Result<int, MyError>> on_error<MyError, /unexpectedError>]
+main() {
+  [auto] selected{try(makeValue())}
+  return(Result.ok(selected))
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionTryValueSnapshot trySnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionTryValueSnapshotForTesting(
+      parseProgram(source), "/main", error, trySnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionCallBindingSnapshot callSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionCallBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, callSnapshot));
+  CHECK(error.empty());
+
+  const auto &tryEntry = requireTryValueSnapshotEntry(trySnapshot, "/main", "/makeValue");
+  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/makeValue");
+  CHECK(tryEntry.operandResolvedPath == callEntry.resolvedPath);
+  CHECK(tryEntry.operandBindingTypeText == callEntry.bindingTypeText);
+  CHECK(tryEntry.valueTypeText == "i32");
+  CHECK(tryEntry.errorTypeText == "MyError");
+}
+
 TEST_CASE("type resolution local query metadata stays aligned with query snapshots") {
   const std::string source = R"(
 import /std/collections/*

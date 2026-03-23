@@ -503,11 +503,11 @@ bool SemanticsValidator::inferTrySnapshotData(const Definition &def,
     return false;
   }
 
-  out.operandResolvedPath =
-      expr.args.front().kind == Expr::Kind::Call ? resolveCalleePath(expr.args.front()) : std::string{};
-  withPreservedError([&]() {
-    return inferBindingTypeFromInitializer(expr.args.front(), defParams, activeLocals, out.operandBinding);
-  });
+  CallSnapshotData operandCallData;
+  if (inferCallSnapshotData(defParams, activeLocals, expr.args.front(), operandCallData)) {
+    out.operandResolvedPath = std::move(operandCallData.resolvedPath);
+    out.operandBinding = std::move(operandCallData.binding);
+  }
   out.valueType = resultInfo.valueType;
   out.errorType = resultInfo.errorType;
   if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
