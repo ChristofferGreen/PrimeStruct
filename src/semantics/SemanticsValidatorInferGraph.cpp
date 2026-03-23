@@ -307,19 +307,29 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         const std::string bindingKey =
             graphLocalAutoBindingKey(def.fullPath, sourceLine, sourceColumn);
         graphLocalAutoBindings_.try_emplace(bindingKey, binding);
+        const Expr *initializerAnalysisExpr = expr.args.size() == 1 ? &expr.args.front() : nullptr;
+        if (initializerAnalysisExpr != nullptr &&
+            !initializerAnalysisExpr->isMethodCall &&
+            isSimpleCallName(*initializerAnalysisExpr, "try") &&
+            initializerAnalysisExpr->args.size() == 1 &&
+            initializerAnalysisExpr->templateArgs.empty() &&
+            !initializerAnalysisExpr->hasBodyArguments &&
+            initializerAnalysisExpr->bodyArguments.empty()) {
+          initializerAnalysisExpr = &initializerAnalysisExpr->args.front();
+        }
         const std::string initializerResolvedPath =
-            expr.args.size() == 1 ? resolveCalleePath(expr.args.front()) : std::string{};
+            initializerAnalysisExpr != nullptr ? resolveCalleePath(*initializerAnalysisExpr) : std::string{};
         if (!initializerResolvedPath.empty()) {
           graphLocalAutoResolvedPaths_[bindingKey] = initializerResolvedPath;
         } else {
           graphLocalAutoResolvedPaths_.erase(bindingKey);
         }
         const bool receiverQueryCandidate =
-            expr.args.size() == 1 &&
-            expr.args.front().kind == Expr::Kind::Call &&
-            !expr.args.front().args.empty() &&
+            initializerAnalysisExpr != nullptr &&
+            initializerAnalysisExpr->kind == Expr::Kind::Call &&
+            !initializerAnalysisExpr->args.empty() &&
             (!initializerResolvedPath.empty() &&
-             (expr.args.front().isMethodCall ||
+             (initializerAnalysisExpr->isMethodCall ||
               initializerResolvedPath.rfind("/std/collections/", 0) == 0 ||
               initializerResolvedPath.rfind("/array/", 0) == 0 ||
               initializerResolvedPath.rfind("/vector/", 0) == 0 ||
@@ -328,7 +338,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         if (receiverQueryCandidate &&
             withPreservedError([&]() {
               return inferBindingTypeFromInitializer(
-                  expr.args.front().args.front(), defParams, activeLocals, initializerReceiverBinding);
+                  initializerAnalysisExpr->args.front(), defParams, activeLocals, initializerReceiverBinding);
             }) &&
             !initializerReceiverBinding.typeName.empty()) {
           graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerReceiverBinding);
@@ -336,10 +346,10 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
           graphLocalAutoReceiverBindings_.erase(bindingKey);
         }
         std::string initializerQueryTypeText;
-        if (expr.args.size() == 1 &&
+        if (initializerAnalysisExpr != nullptr &&
             withPreservedError([&]() {
               return inferQueryExprTypeText(
-                  expr.args.front(), defParams, activeLocals, initializerQueryTypeText);
+                  *initializerAnalysisExpr, defParams, activeLocals, initializerQueryTypeText);
             }) &&
             !initializerQueryTypeText.empty()) {
           graphLocalAutoQueryTypeTexts_[bindingKey] = initializerQueryTypeText;
@@ -347,10 +357,10 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
           graphLocalAutoQueryTypeTexts_.erase(bindingKey);
         }
         ResultTypeInfo initializerResultType;
-        if (expr.args.size() == 1 &&
+        if (initializerAnalysisExpr != nullptr &&
             withPreservedError([&]() {
               return resolveResultTypeForExpr(
-                  expr.args.front(), defParams, activeLocals, initializerResultType);
+                  *initializerAnalysisExpr, defParams, activeLocals, initializerResultType);
             }) &&
             initializerResultType.isResult) {
           graphLocalAutoResultTypes_[bindingKey] = std::move(initializerResultType);

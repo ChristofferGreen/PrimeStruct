@@ -1243,6 +1243,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, binding);") !=
         std::string::npos);
+  CHECK(validatorInfer.find("const Expr *initializerAnalysisExpr = expr.args.size() == 1 ? &expr.args.front() : nullptr;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("initializerAnalysisExpr = &initializerAnalysisExpr->args.front();") !=
+        std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoResolvedPaths_[bindingKey] = initializerResolvedPath;") !=
         std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerReceiverBinding);") !=

@@ -417,6 +417,12 @@ main() {
 
   const auto &selectedEntry = requireLocalBindingSnapshotEntry(snapshot, "/main", "selected");
   CHECK(selectedEntry.bindingTypeText == "i32");
+  CHECK(selectedEntry.initializerResolvedPath == "/std/collections/map/tryAt");
+  CHECK(selectedEntry.initializerReceiverBindingTypeText == "Map<string, i32>");
+  CHECK(selectedEntry.initializerQueryTypeText == "Result<i32, ContainerError>");
+  CHECK(selectedEntry.initializerResultHasValue);
+  CHECK(selectedEntry.initializerResultValueTypeText == "i32");
+  CHECK(selectedEntry.initializerResultErrorTypeText == "ContainerError");
   CHECK(selectedEntry.initializerHasTry);
   CHECK(selectedEntry.initializerTryOperandResolvedPath == "/std/collections/map/tryAt");
   CHECK(selectedEntry.initializerTryValueTypeText == "i32");
