@@ -67,6 +67,17 @@ public:
     std::string errorType;
   };
 
+  struct TryValueSnapshotEntry {
+    std::string scopePath;
+    std::string operandResolvedPath;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+    std::string valueType;
+    std::string errorType;
+    ReturnKind contextReturnKind = ReturnKind::Unknown;
+    std::string onErrorHandlerPath;
+  };
+
   struct CallBindingSnapshotEntry {
     std::string scopePath;
     std::string callName;
@@ -126,6 +137,7 @@ public:
   std::vector<QueryCallTypeSnapshotEntry> queryCallTypeSnapshotForTesting();
   std::vector<QueryBindingSnapshotEntry> queryBindingSnapshotForTesting();
   std::vector<QueryResultTypeSnapshotEntry> queryResultTypeSnapshotForTesting();
+  std::vector<TryValueSnapshotEntry> tryValueSnapshotForTesting();
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
   std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();

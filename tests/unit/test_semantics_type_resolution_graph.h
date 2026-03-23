@@ -80,6 +80,17 @@ const primec::semantics::TypeResolutionQueryResultTypeSnapshotEntry &requireQuer
   return *it;
 }
 
+const primec::semantics::TypeResolutionTryValueSnapshotEntry &requireTryValueSnapshotEntry(
+    const primec::semantics::TypeResolutionTryValueSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &operandResolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.operandResolvedPath == operandResolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 const primec::semantics::TypeResolutionCallBindingSnapshotEntry &requireCallBindingSnapshotEntry(
     const primec::semantics::TypeResolutionCallBindingSnapshot &snapshot,
     const std::string &scopePath,
@@ -542,6 +553,47 @@ main() {
   CHECK(tryAtEntry.hasValue);
   CHECK(tryAtEntry.valueTypeText == "i32");
   CHECK(tryAtEntry.errorTypeText == "ContainerError");
+}
+
+TEST_CASE("type resolution try snapshot keeps shared try consumer context") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<void>]
+unexpectedError([ContainerError] err) {
+}
+
+[return<auto> effects(heap_alloc) on_error<ContainerError, /unexpectedError>]
+counted() {
+  [Map<string, i32>] values{/std/collections/mapPair("left"raw_utf8, 4i32)}
+  return(plus(1i32, try(values.tryAt("left"raw_utf8))))
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc) on_error<ContainerError, /unexpectedError>]
+main() {
+  [Map<string, i32>] values{/std/collections/mapPair("left"raw_utf8, 4i32)}
+  [i32] total{plus(1i32, try(values.tryAt("left"raw_utf8)))}
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionTryValueSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionTryValueSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &countedEntry = requireTryValueSnapshotEntry(snapshot, "/counted", "/std/collections/map/tryAt");
+  CHECK(countedEntry.valueTypeText == "i32");
+  CHECK(countedEntry.errorTypeText == "ContainerError");
+  CHECK(countedEntry.contextReturnKindText == "i32");
+  CHECK(countedEntry.onErrorHandlerPath == "/unexpectedError");
+
+  const auto &mainEntry = requireTryValueSnapshotEntry(snapshot, "/main", "/std/collections/map/tryAt");
+  CHECK(mainEntry.valueTypeText == "i32");
+  CHECK(mainEntry.errorTypeText == "ContainerError");
+  CHECK(mainEntry.contextReturnKindText == "array");
+  CHECK(mainEntry.onErrorHandlerPath == "/unexpectedError");
 }
 
 TEST_CASE("type resolution call binding snapshot keeps helper-returned map bindings") {

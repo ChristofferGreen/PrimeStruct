@@ -342,6 +342,70 @@ SemanticsValidator::queryResultTypeSnapshotForTesting() {
   return entries;
 }
 
+std::vector<SemanticsValidator::TryValueSnapshotEntry>
+SemanticsValidator::tryValueSnapshotForTesting() {
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  std::vector<TryValueSnapshotEntry> entries;
+  forEachLocalAwareSnapshotCall([&](const Definition &def,
+                                    const std::vector<ParameterInfo> &defParams,
+                                    const Expr &expr,
+                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+    if (expr.isMethodCall || !isSimpleCallName(expr, "try") || expr.args.size() != 1 ||
+        !expr.templateArgs.empty() || expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return;
+    }
+
+    ResultTypeInfo resultInfo;
+    if (!withPreservedError([&]() {
+          return resolveResultTypeForExpr(expr.args.front(), defParams, activeLocals, resultInfo);
+        }) ||
+        !resultInfo.isResult || !resultInfo.hasValue || resultInfo.valueType.empty()) {
+      return;
+    }
+
+    ReturnKind contextReturnKind = ReturnKind::Unknown;
+    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
+      contextReturnKind = returnKindIt->second;
+    }
+    const auto &context = buildDefinitionValidationContext(def);
+    const std::string operandResolvedPath =
+        expr.args.front().kind == Expr::Kind::Call ? resolveCalleePath(expr.args.front()) : std::string{};
+
+    entries.push_back(TryValueSnapshotEntry{
+        def.fullPath,
+        operandResolvedPath,
+        expr.sourceLine,
+        expr.sourceColumn,
+        resultInfo.valueType,
+        resultInfo.errorType,
+        contextReturnKind,
+        context.onError.has_value() ? context.onError->handlerPath : std::string{},
+    });
+  });
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    return left.operandResolvedPath < right.operandResolvedPath;
+  });
+  return entries;
+}
+
 std::vector<SemanticsValidator::CallBindingSnapshotEntry>
 SemanticsValidator::callBindingSnapshotForTesting() {
   std::vector<CallBindingSnapshotEntry> entries;
