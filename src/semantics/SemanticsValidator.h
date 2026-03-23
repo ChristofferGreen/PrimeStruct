@@ -620,6 +620,16 @@ private:
                                    bool &hasResolutionOut,
                                    std::string &resolvedPathOut,
                                    size_t &receiverIndexOut);
+  struct ExprDispatchBootstrap {
+    BuiltinCollectionDispatchResolverAdapters dispatchResolverAdapters;
+    BuiltinCollectionDispatchResolvers dispatchResolvers;
+    std::function<bool(const Expr &)> isDeclaredPointerLikeCall;
+    std::function<bool(const Expr &)> resolveMapTarget;
+  };
+  void prepareExprDispatchBootstrap(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      ExprDispatchBootstrap &bootstrapOut);
   struct ExprCollectionDispatchSetup {
     bool isNamespacedVectorHelperCall = false;
     bool isStdNamespacedVectorCountCall = false;

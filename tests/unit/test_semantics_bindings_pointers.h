@@ -13,6 +13,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("dereference accepts helper-returned pointer calls") {
+  const std::string source = R"(
+[return<Pointer<i32>>]
+forward([Pointer<i32>] ptr) {
+  return(ptr)
+}
+
+[return<int>]
+main() {
+  [i32] value{7i32}
+  return(dereference(forward(location(value))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("dereference rejects helper-returned non-pointer calls") {
+  const std::string source = R"(
+[return<int>]
+value() {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  return(dereference(value()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("dereference requires a pointer or reference") !=
+        std::string::npos);
+}
+
 TEST_CASE("pointer helpers reject template arguments") {
   const std::string source = R"(
 [return<int>]

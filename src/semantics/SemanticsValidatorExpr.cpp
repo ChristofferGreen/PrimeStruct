@@ -286,116 +286,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "return not allowed in expression context";
       return false;
     }
-    auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
-      if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
-        return false;
-      }
-      std::string structPath;
-      const Expr &receiver = target.args.front();
-      if (receiver.kind == Expr::Kind::Name) {
-        const BindingInfo *receiverBinding = findParamBinding(params, receiver.name);
-        if (!receiverBinding) {
-          auto it = locals.find(receiver.name);
-          if (it != locals.end()) {
-            receiverBinding = &it->second;
-          }
-        }
-        if (receiverBinding != nullptr) {
-          std::string receiverType = receiverBinding->typeName;
-          if ((receiverType == "Reference" || receiverType == "Pointer") && !receiverBinding->typeTemplateArg.empty()) {
-            receiverType = receiverBinding->typeTemplateArg;
-          }
-          structPath = resolveStructTypePath(receiverType, receiver.namespacePrefix, structNames_);
-          if (structPath.empty()) {
-            auto importIt = importAliases_.find(receiverType);
-            if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
-              structPath = importIt->second;
-            }
-          }
-        }
-      } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
-        std::string inferredStruct = inferStructReturnPath(receiver, params, locals);
-        if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
-          structPath = inferredStruct;
-        } else {
-          const std::string resolvedType = resolveCalleePath(receiver);
-          if (structNames_.count(resolvedType) > 0) {
-            structPath = resolvedType;
-          }
-        }
-      }
-      if (structPath.empty()) {
-        return false;
-      }
-      auto defIt = defMap_.find(structPath);
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
-        return false;
-      }
-      for (const auto &fieldStmt : defIt->second->statements) {
-        bool isStaticField = false;
-        for (const auto &transform : fieldStmt.transforms) {
-          if (transform.name == "static") {
-            isStaticField = true;
-            break;
-          }
-        }
-        if (!fieldStmt.isBinding || isStaticField || fieldStmt.name != target.name) {
-          continue;
-        }
-        return resolveStructFieldBinding(*defIt->second, fieldStmt, bindingOut);
-      }
-      return false;
-    };
-    const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{
-        .resolveBindingTarget =
-            [&](const Expr &target, BindingInfo &bindingOut) -> bool {
-              return resolveFieldBindingTarget(target, bindingOut);
-            },
-        .inferCallBinding =
-            [&](const Expr &target, BindingInfo &bindingOut) -> bool {
-              if (target.kind != Expr::Kind::Call) {
-                return false;
-              }
-              auto defIt = defMap_.find(resolveCalleePath(target));
-              return defIt != defMap_.end() && defIt->second != nullptr &&
-                     inferDefinitionReturnBinding(*defIt->second, bindingOut);
-            }};
-    const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
-        makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters);
-    const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;
-    const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;
-    const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;
-    const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;
-    const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;
-    const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;
-    const auto &resolveExperimentalMapTarget =
-        builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;
-    auto isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call) {
-        return false;
-      }
-      auto defIt = defMap_.find(resolveCalleePath(candidate));
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
-        return false;
-      }
-      BindingInfo inferredReturn;
-      if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-        return false;
-      }
-      return inferredReturn.typeName == "Pointer" || inferredReturn.typeName == "Reference";
-    };
-    std::function<bool(const Expr &)> resolveMapTarget;
-    resolveMapTarget = [&](const Expr &target) -> bool {
-      std::string keyType;
-      std::string valueType;
-      if (resolveMapTargetWithTypes(target, keyType, valueType) ||
-          resolveExperimentalMapTarget(target, keyType, valueType)) {
-        return true;
-      }
-      std::string inferredTypeText;
-      return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
-             returnsMapCollectionType(inferredTypeText);
-    };
+    ExprDispatchBootstrap dispatchBootstrap;
+    prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
     const bool shouldBuiltinValidateBareMapCountCall = true;
     const bool shouldBuiltinValidateBareMapContainsCall = true;
     const bool shouldBuiltinValidateBareMapTryAtCall = true;
@@ -428,7 +320,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (earlyPointerBuiltin == "dereference" &&
           !isPointerLikeExpr(expr.args.front(), params, locals) &&
-          !isDeclaredPointerLikeCall(expr.args.front())) {
+          !dispatchBootstrap.isDeclaredPointerLikeCall(expr.args.front())) {
         error_ = "dereference requires a pointer or reference";
         return false;
       }
@@ -443,18 +335,24 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     Expr rewrittenCanonicalExperimentalVectorHelperCall;
     if (this->tryRewriteCanonicalExperimentalVectorHelperCall(
-            expr, builtinCollectionDispatchResolvers, rewrittenCanonicalExperimentalVectorHelperCall)) {
+            expr,
+            dispatchBootstrap.dispatchResolvers,
+            rewrittenCanonicalExperimentalVectorHelperCall)) {
       return validateExpr(params, locals, rewrittenCanonicalExperimentalVectorHelperCall);
     }
     Expr rewrittenCanonicalExperimentalMapHelperCall;
     if (this->tryRewriteCanonicalExperimentalMapHelperCall(
-            expr, builtinCollectionDispatchResolvers, rewrittenCanonicalExperimentalMapHelperCall)) {
+            expr,
+            dispatchBootstrap.dispatchResolvers,
+            rewrittenCanonicalExperimentalMapHelperCall)) {
       return validateExpr(params, locals, rewrittenCanonicalExperimentalMapHelperCall);
     }
     std::string borrowedCanonicalExperimentalMapHelperPath;
     if (!expr.isMethodCall &&
         this->explicitCanonicalExperimentalMapBorrowedHelperPath(
-            expr, builtinCollectionDispatchResolvers, borrowedCanonicalExperimentalMapHelperPath)) {
+            expr,
+            dispatchBootstrap.dispatchResolvers,
+            borrowedCanonicalExperimentalMapHelperPath)) {
       error_ = "unknown call target: " + borrowedCanonicalExperimentalMapHelperPath;
       return false;
     }
@@ -503,7 +401,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         size_t receiverIndex = 0;
         size_t keyIndex = 1;
         const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
-            expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
+            expr, dispatchBootstrap.dispatchResolvers, receiverIndex, keyIndex);
         const Expr &receiverExpr = hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
         const Expr &keyExpr = hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
         std::string receiverTypeText;
@@ -513,14 +411,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType, mapValueType)) {
           if (!mapKeyType.empty()) {
             if (normalizeBindingTypeName(mapKeyType) == "string") {
-              if (!this->isStringExprForArgumentValidation(keyExpr, builtinCollectionDispatchResolvers)) {
+              if (!this->isStringExprForArgumentValidation(
+                      keyExpr, dispatchBootstrap.dispatchResolvers)) {
                 setCanonicalMapKeyMismatch(receiverExpr, mapKeyType);
                 return false;
               }
             } else {
               ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
               if (keyKind != ReturnKind::Unknown) {
-                if (resolveStringTarget(keyExpr)) {
+                if (dispatchBootstrap.dispatchResolvers.resolveStringTarget(keyExpr)) {
                   setCanonicalMapKeyMismatch(receiverExpr, mapKeyType);
                   return false;
                 }
@@ -545,10 +444,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       std::string receiverTypeText;
       if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
           expr.args.size() == 2 &&
-          ((builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget != nullptr &&
-            (builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget(
+          ((dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget != nullptr &&
+            (dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget(
                  expr.args.front(), receiverTypeText, borrowedCanonicalExperimentalMapHelperPath) ||
-             builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget(
+             dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget(
                  expr.args[1], receiverTypeText, borrowedCanonicalExperimentalMapHelperPath))) ||
            isExperimentalMapReceiverExpr(expr.args.front()) ||
            isExperimentalMapReceiverExpr(expr.args[1]))) {
@@ -599,7 +498,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     }
     if (!expr.isMethodCall &&
-        this->isArrayNamespacedVectorCountCompatibilityCall(expr, builtinCollectionDispatchResolvers)) {
+        this->isArrayNamespacedVectorCountCompatibilityCall(expr, dispatchBootstrap.dispatchResolvers)) {
       error_ = "unknown call target: /array/count";
       return false;
     }
@@ -613,7 +512,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     if (!expr.isMethodCall) {
       const std::string removedMapCompatibilityPath =
-          this->directMapHelperCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters);
+          this->directMapHelperCompatibilityPath(
+              expr, params, locals, dispatchBootstrap.dispatchResolverAdapters);
       if (!removedMapCompatibilityPath.empty()) {
         error_ = "unknown call target: " + removedMapCompatibilityPath;
         return false;
@@ -621,8 +521,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {
       std::string elemType;
-      return resolveVectorTarget(targetExpr, elemType) || resolveArrayTarget(targetExpr, elemType) ||
-             resolveStringTarget(targetExpr) || resolveMapTarget(targetExpr);
+      return dispatchBootstrap.dispatchResolvers.resolveVectorTarget(targetExpr, elemType) ||
+             dispatchBootstrap.dispatchResolvers.resolveArrayTarget(targetExpr, elemType) ||
+             dispatchBootstrap.dispatchResolvers.resolveStringTarget(targetExpr) ||
+             dispatchBootstrap.resolveMapTarget(targetExpr);
     };
     auto promoteCapacityToBuiltinValidation = [&](const Expr &targetExpr,
                                                   std::string &resolvedOut,
@@ -695,8 +597,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             params,
             locals,
             expr,
-            builtinCollectionDispatchResolvers,
-            builtinCollectionDispatchResolverAdapters,
+            dispatchBootstrap.dispatchResolvers,
+            dispatchBootstrap.dispatchResolverAdapters,
             resolved,
             collectionDispatchSetup)) {
       return false;
@@ -721,8 +623,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             locals,
             expr,
             methodResolutionContext,
-            builtinCollectionDispatchResolvers,
-            builtinCollectionDispatchResolverAdapters,
+            dispatchBootstrap.dispatchResolvers,
+            dispatchBootstrap.dispatchResolverAdapters,
             resolved,
             resolvedMethod,
             usedMethodTarget,
@@ -772,17 +674,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     collectionCountCapacityDispatchContext.shouldBuiltinValidateBareMapCountCall =
         shouldBuiltinValidateBareMapCountCall;
     collectionCountCapacityDispatchContext.resolveMapTarget =
-        [&](const Expr &target) { return resolveMapTarget(target); };
+        dispatchBootstrap.resolveMapTarget;
     collectionCountCapacityDispatchContext
         .isArrayNamespacedVectorCountCompatibilityCall =
         [&](const Expr &target) {
           return this->isArrayNamespacedVectorCountCompatibilityCall(
-              target, builtinCollectionDispatchResolvers);
+              target, dispatchBootstrap.dispatchResolvers);
         };
     collectionCountCapacityDispatchContext.tryRewriteBareVectorHelperCall =
         [&](const std::string &helperName, Expr &rewrittenOut) {
           return this->tryRewriteBareVectorHelperCall(
-              expr, helperName, builtinCollectionDispatchResolvers,
+              expr, helperName, dispatchBootstrap.dispatchResolvers,
               rewrittenOut);
         };
     collectionCountCapacityDispatchContext
@@ -816,7 +718,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     directCollectionFallbackContext.isStdNamespacedVectorCountCall =
         collectionDispatchSetup.isStdNamespacedVectorCountCall;
     directCollectionFallbackContext.dispatchResolvers =
-        &builtinCollectionDispatchResolvers;
+        &dispatchBootstrap.dispatchResolvers;
     std::optional<Expr> rewrittenDirectCollectionFallbackCall;
     if (!validateExprDirectCollectionFallbacks(
             params,
@@ -836,8 +738,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         collectionDispatchSetup,
         shouldBuiltinValidateBareMapContainsCall,
         shouldBuiltinValidateBareMapAccessCall,
-        builtinCollectionDispatchResolvers,
-        [&](const Expr &target) { return resolveMapTarget(target); },
+        dispatchBootstrap.dispatchResolvers,
+        dispatchBootstrap.resolveMapTarget,
         collectionAccessDispatchContext);
     bool handledCollectionAccessTarget = false;
     if (!resolveExprCollectionAccessTarget(
@@ -855,7 +757,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             resolved,
             resolvedMethod,
             usedMethodTarget,
-            builtinCollectionDispatchResolverAdapters,
+            dispatchBootstrap.dispatchResolverAdapters,
             enclosingStatements,
             statementIndex,
             handledPostAccessPrecheck)) {
@@ -868,7 +770,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     ExprNamedArgumentBuiltinContext namedArgumentBuiltinContext;
     prepareExprNamedArgumentBuiltinContext(
         hasVectorHelperCallResolution,
-        builtinCollectionDispatchResolvers,
+        dispatchBootstrap.dispatchResolvers,
         namedArgumentBuiltinContext);
     if (!validateExprNamedArguments(params, locals, expr, resolved,
                                     resolvedMethod,
@@ -880,8 +782,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     prepareExprLateBuiltinContext(
         params,
         locals,
-        builtinCollectionDispatchResolverAdapters,
-        builtinCollectionDispatchResolvers,
+        dispatchBootstrap.dispatchResolverAdapters,
+        dispatchBootstrap.dispatchResolvers,
         lateBuiltinContext);
     bool handledLateBuiltin = false;
     if (!validateExprLateBuiltins(params, locals, expr, resolved,
@@ -902,8 +804,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         collectionDispatchSetup
             .shouldBuiltinValidateStdNamespacedVectorCapacityCall,
         collectionDispatchSetup.isStdNamespacedVectorCapacityCall,
-        builtinCollectionDispatchResolverAdapters,
-        builtinCollectionDispatchResolvers,
+        dispatchBootstrap.dispatchResolverAdapters,
+        dispatchBootstrap.dispatchResolvers,
         countCapacityMapBuiltinContext);
     bool handledCountCapacityMapBuiltin = false;
     if (!validateExprCountCapacityMapBuiltins(
@@ -918,7 +820,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       ExprLateMapSoaBuiltinContext lateMapSoaBuiltinContext;
       prepareExprLateMapSoaBuiltinContext(
           shouldBuiltinValidateBareMapContainsCall,
-          builtinCollectionDispatchResolvers,
+          dispatchBootstrap.dispatchResolvers,
           lateMapSoaBuiltinContext);
       bool handledMapSoaBuiltin = false;
       if (!validateExprLateMapSoaBuiltins(
@@ -937,7 +839,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           collectionDispatchSetup.isStdNamespacedMapAccessCall,
           collectionDispatchSetup.hasStdNamespacedMapAccessDefinition,
           shouldBuiltinValidateBareMapAccessCall,
-          builtinCollectionDispatchResolvers,
+          dispatchBootstrap.dispatchResolvers,
           lateFallbackBuiltinContext);
       bool handledLateFallbackBuiltin = false;
       if (!validateExprLateFallbackBuiltins(
@@ -958,7 +860,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       ExprLateCallCompatibilityContext lateCallCompatibilityContext;
       prepareExprLateCallCompatibilityContext(
-          builtinCollectionDispatchResolvers,
+          dispatchBootstrap.dispatchResolvers,
           lateCallCompatibilityContext);
       bool handledLateCallCompatibility = false;
       if (!validateExprLateCallCompatibility(
@@ -971,7 +873,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       ExprLateMapAccessBuiltinContext lateMapAccessBuiltinContext;
       prepareExprLateMapAccessBuiltinContext(
-          builtinCollectionDispatchResolvers,
+          dispatchBootstrap.dispatchResolvers,
           shouldBuiltinValidateBareMapContainsCall,
           shouldBuiltinValidateBareMapTryAtCall,
           shouldBuiltinValidateBareMapAccessCall,
@@ -987,7 +889,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       ExprLateUnknownTargetFallbackContext lateUnknownTargetFallbackContext;
       lateUnknownTargetFallbackContext.resolveMapTarget =
-          [&](const Expr &target) { return resolveMapTarget(target); };
+          dispatchBootstrap.resolveMapTarget;
       bool handledLateUnknownTargetFallback = false;
       if (!validateExprLateUnknownTargetFallbacks(
               params, locals, expr, lateUnknownTargetFallbackContext,
@@ -1005,7 +907,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         locals,
         expr,
         resolved,
-        builtinCollectionDispatchResolvers,
+        dispatchBootstrap.dispatchResolvers,
         *it->second,
         calleeParams,
         hasMethodReceiverIndex,

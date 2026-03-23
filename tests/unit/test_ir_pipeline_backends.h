@@ -350,6 +350,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       cwd / "src" / "semantics" / "SemanticsValidatorBuildDirectCallBinding.cpp";
   std::filesystem::path validatorCollectionsPath = cwd / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
   std::filesystem::path validatorExprPath = cwd / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
+  std::filesystem::path validatorExprDispatchBootstrapPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorExprDispatchBootstrap.cpp";
   std::filesystem::path validatorExprCollectionDispatchSetupPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprCollectionDispatchSetup.cpp";
   std::filesystem::path validatorExprCollectionAccessSetupPath =
@@ -401,6 +403,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuildDirectCallBinding.cpp";
     validatorCollectionsPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
     validatorExprPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
+    validatorExprDispatchBootstrapPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprDispatchBootstrap.cpp";
     validatorExprCollectionDispatchSetupPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprCollectionDispatchSetup.cpp";
     validatorExprCollectionAccessSetupPath =
@@ -449,6 +453,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorBuildDirectCallBindingPath));
   REQUIRE(std::filesystem::exists(validatorCollectionsPath));
   REQUIRE(std::filesystem::exists(validatorExprPath));
+  REQUIRE(std::filesystem::exists(validatorExprDispatchBootstrapPath));
   REQUIRE(std::filesystem::exists(validatorExprCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprCollectionAccessSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprDirectCollectionFallbacksPath));
@@ -488,6 +493,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       readTextFile(validatorExprBodyArgumentsPath);
   const std::string validatorExpr = readTextFiles({
       validatorExprPath,
+      validatorExprDispatchBootstrapPath,
       validatorExprCollectionDispatchSetupPath,
       validatorExprCollectionAccessSetupPath,
       validatorExprDirectCollectionFallbacksPath,
@@ -644,11 +650,23 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {") ==
         std::string::npos);
   CHECK(validatorExprMain.find("auto resolveCallCollectionTemplateArgs =") == std::string::npos);
-  CHECK(validatorExpr.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") !=
+  CHECK(validatorExprMain.find("prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);") !=
         std::string::npos);
-  CHECK(validatorExpr.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =") !=
+  CHECK(validatorExprMain.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") ==
         std::string::npos);
-  CHECK(validatorExpr.find("makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters)") !=
+  CHECK(validatorExprMain.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =") ==
+        std::string::npos);
+  CHECK(validatorExprMain.find("makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters)") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprDispatchBootstrap(") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("bootstrapOut.dispatchResolverAdapters = {") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("bootstrapOut.dispatchResolvers = makeBuiltinCollectionDispatchResolvers(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("auto isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("bootstrapOut.isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {") !=
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") !=
         std::string::npos);
@@ -656,20 +674,24 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveWrappedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") !=
         std::string::npos);
-  CHECK(validatorExpr.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") !=
+  CHECK(validatorExprMain.find("const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
+  CHECK(validatorExprMain.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
+  CHECK(validatorExprMain.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
+  CHECK(validatorExprMain.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
+  CHECK(validatorExprMain.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
+  CHECK(validatorExprMain.find("const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const auto &resolveExperimentalMapTarget =") != std::string::npos);
-  CHECK(validatorExpr.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") !=
+  CHECK(validatorExprMain.find("const auto &resolveExperimentalMapTarget =") == std::string::npos);
+  CHECK(validatorExprMain.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("bootstrapOut.resolveMapTarget = [&](const Expr &target) -> bool {") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("bootstrapOut.dispatchResolvers.resolveExperimentalMapTarget(target, keyType,") !=
         std::string::npos);
   CHECK(validatorExpr.find("dispatchResolvers.resolveExperimentalMapValueTarget == nullptr") != std::string::npos);
   CHECK(validatorExpr.find("dispatchResolvers.resolveExperimentalMapValueTarget(receiverExpr, keyType, valueType)") !=
@@ -727,7 +749,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExprBodyArguments.find("shouldPreserveRemovedCollectionHelperPath(resolved)") !=
         std::string::npos);
-  CHECK(validatorExpr.find("isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
+  CHECK(validatorExprMain.find("isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, dispatchBootstrap.dispatchResolverAdapters)") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, dispatchResolverAdapters)") !=
         std::string::npos);
   CHECK(validatorExpr.find("resolveRemovedMapBodyArgumentTarget(") ==
         std::string::npos);
@@ -737,6 +761,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExprMain.find("auto remapWrappedMapMethodBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
+  CHECK(validatorHeader.find("struct ExprDispatchBootstrap") != std::string::npos);
+  CHECK(validatorHeader.find("void prepareExprDispatchBootstrap(") != std::string::npos);
   CHECK(validatorHeader.find("struct ExprCollectionDispatchSetup") != std::string::npos);
   CHECK(validatorHeader.find("bool prepareExprCollectionDispatchSetup(") != std::string::npos);
   CHECK(validatorHeader.find("void prepareExprCollectionAccessDispatchContext(") !=
@@ -768,6 +794,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("const std::string directRemovedMapCompatibilityPath =") ==
         std::string::npos);
   CHECK(validatorExpr.find("const std::string directRemovedMapCompatibilityPath =") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("prepareExprDispatchBootstrap(") != std::string::npos);
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprDispatchBootstrap(") !=
         std::string::npos);
   CHECK(validatorExprMain.find("prepareExprCollectionDispatchSetup(") != std::string::npos);
   CHECK(validatorExpr.find("bool SemanticsValidator::prepareExprCollectionDispatchSetup(") !=
@@ -1181,6 +1210,8 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("src/semantics/SemanticsValidateTransforms.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprBodyArguments.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprBlock.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprDispatchBootstrap.cpp") !=
+        std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionAccess.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp") !=
         std::string::npos);
