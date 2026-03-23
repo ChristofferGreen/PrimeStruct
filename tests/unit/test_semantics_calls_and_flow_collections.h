@@ -1798,6 +1798,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map wrapper temporary unsafe access validates direct stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/map/at_unsafe(wrapMapAuto(), 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map wrapper temporary access keeps canonical key diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/map/at(wrapMapAuto(), true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
+}
+
 TEST_CASE("map wrapper temporary capacity reports vector target diagnostic") {
   const std::string source = R"(
 wrapMapAuto() {

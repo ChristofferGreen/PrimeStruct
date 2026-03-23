@@ -352,6 +352,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   std::filesystem::path validatorExprPath = cwd / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
   std::filesystem::path validatorExprDispatchBootstrapPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprDispatchBootstrap.cpp";
+  std::filesystem::path validatorExprPreDispatchDirectCallsPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorExprPreDispatchDirectCalls.cpp";
   std::filesystem::path validatorExprCollectionDispatchSetupPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprCollectionDispatchSetup.cpp";
   std::filesystem::path validatorExprCollectionAccessSetupPath =
@@ -405,6 +407,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
     validatorExprPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
     validatorExprDispatchBootstrapPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprDispatchBootstrap.cpp";
+    validatorExprPreDispatchDirectCallsPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprPreDispatchDirectCalls.cpp";
     validatorExprCollectionDispatchSetupPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprCollectionDispatchSetup.cpp";
     validatorExprCollectionAccessSetupPath =
@@ -454,6 +458,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorCollectionsPath));
   REQUIRE(std::filesystem::exists(validatorExprPath));
   REQUIRE(std::filesystem::exists(validatorExprDispatchBootstrapPath));
+  REQUIRE(std::filesystem::exists(validatorExprPreDispatchDirectCallsPath));
   REQUIRE(std::filesystem::exists(validatorExprCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprCollectionAccessSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprDirectCollectionFallbacksPath));
@@ -494,6 +499,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   const std::string validatorExpr = readTextFiles({
       validatorExprPath,
       validatorExprDispatchBootstrapPath,
+      validatorExprPreDispatchDirectCallsPath,
       validatorExprCollectionDispatchSetupPath,
       validatorExprCollectionAccessSetupPath,
       validatorExprDirectCollectionFallbacksPath,
@@ -652,6 +658,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("auto resolveCallCollectionTemplateArgs =") == std::string::npos);
   CHECK(validatorExprMain.find("prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);") !=
         std::string::npos);
+  CHECK(validatorExprMain.find("validateExprPreDispatchDirectCalls(") !=
+        std::string::npos);
   CHECK(validatorExprMain.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") ==
         std::string::npos);
   CHECK(validatorExprMain.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =") ==
@@ -667,6 +675,28 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("auto isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {") ==
         std::string::npos);
   CHECK(validatorExpr.find("bootstrapOut.isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("bool SemanticsValidator::validateExprPreDispatchDirectCalls(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("std::string canonicalExperimentalMapHelperResolved;") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("std::string canonicalExperimentalMapHelperResolved;") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("tryRewriteCanonicalExperimentalVectorHelperCall(") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("tryRewriteCanonicalExperimentalVectorHelperCall(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("explicitCanonicalExperimentalMapBorrowedHelperPath(") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("explicitCanonicalExperimentalMapBorrowedHelperPath(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("auto setCanonicalMapKeyMismatch =") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto setCanonicalMapKeyMismatch =") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("auto isExperimentalMapReceiverExpr = [&](const Expr &candidate)") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto isExperimentalMapReceiverExpr = [&](const Expr &candidate)") !=
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") !=
         std::string::npos);
@@ -763,6 +793,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("struct ExprDispatchBootstrap") != std::string::npos);
   CHECK(validatorHeader.find("void prepareExprDispatchBootstrap(") != std::string::npos);
+  CHECK(validatorHeader.find("struct ExprPreDispatchDirectCallContext") != std::string::npos);
+  CHECK(validatorHeader.find("bool validateExprPreDispatchDirectCalls(") !=
+        std::string::npos);
   CHECK(validatorHeader.find("struct ExprCollectionDispatchSetup") != std::string::npos);
   CHECK(validatorHeader.find("bool prepareExprCollectionDispatchSetup(") != std::string::npos);
   CHECK(validatorHeader.find("void prepareExprCollectionAccessDispatchContext(") !=
@@ -1211,6 +1244,8 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprBodyArguments.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprBlock.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprDispatchBootstrap.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprPreDispatchDirectCalls.cpp") !=
         std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionAccess.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp") !=

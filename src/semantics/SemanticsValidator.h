@@ -630,6 +630,17 @@ private:
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       ExprDispatchBootstrap &bootstrapOut);
+  struct ExprPreDispatchDirectCallContext {
+    const ExprDispatchBootstrap *dispatchBootstrap = nullptr;
+  };
+  bool validateExprPreDispatchDirectCalls(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const ExprPreDispatchDirectCallContext &context,
+      std::string &resolvedOut,
+      std::optional<Expr> &rewrittenExprOut,
+      bool &handledOut);
   struct ExprCollectionDispatchSetup {
     bool isNamespacedVectorHelperCall = false;
     bool isStdNamespacedVectorCountCall = false;

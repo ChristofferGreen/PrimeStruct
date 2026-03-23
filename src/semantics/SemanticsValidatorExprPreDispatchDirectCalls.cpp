@@ -1,0 +1,194 @@
+#include "SemanticsValidator.h"
+
+#include <optional>
+
+namespace primec::semantics {
+
+bool SemanticsValidator::validateExprPreDispatchDirectCalls(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr,
+    const ExprPreDispatchDirectCallContext &context,
+    std::string &resolvedOut,
+    std::optional<Expr> &rewrittenExprOut,
+    bool &handledOut) {
+  rewrittenExprOut.reset();
+  handledOut = false;
+  resolvedOut = resolveCalleePath(expr);
+  if (context.dispatchBootstrap == nullptr) {
+    return true;
+  }
+
+  const auto &dispatchBootstrap = *context.dispatchBootstrap;
+  auto isExperimentalMapReceiverExpr = [&](const Expr &candidate) {
+    std::string receiverTypeText;
+    if (inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
+        isExperimentalMapTypeText(receiverTypeText)) {
+      return true;
+    }
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    auto defIt = defMap_.find(resolveCalleePath(candidate));
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    BindingInfo inferredReturn;
+    if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+      return false;
+    }
+    const std::string inferredTypeText =
+        inferredReturn.typeTemplateArg.empty()
+            ? inferredReturn.typeName
+            : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
+    return isExperimentalMapTypeText(inferredTypeText);
+  };
+
+  std::string canonicalExperimentalMapHelperResolved;
+  if (!expr.isMethodCall && defMap_.count(resolvedOut) == 0 &&
+      this->canonicalizeExperimentalMapHelperResolvedPath(
+          resolvedOut, canonicalExperimentalMapHelperResolved)) {
+    resolvedOut = canonicalExperimentalMapHelperResolved;
+  }
+
+  Expr rewrittenCanonicalExperimentalVectorHelperCall;
+  if (this->tryRewriteCanonicalExperimentalVectorHelperCall(
+          expr, dispatchBootstrap.dispatchResolvers,
+          rewrittenCanonicalExperimentalVectorHelperCall)) {
+    rewrittenExprOut = rewrittenCanonicalExperimentalVectorHelperCall;
+    return true;
+  }
+
+  Expr rewrittenCanonicalExperimentalMapHelperCall;
+  if (this->tryRewriteCanonicalExperimentalMapHelperCall(
+          expr, dispatchBootstrap.dispatchResolvers,
+          rewrittenCanonicalExperimentalMapHelperCall)) {
+    rewrittenExprOut = rewrittenCanonicalExperimentalMapHelperCall;
+    return true;
+  }
+
+  std::string borrowedCanonicalExperimentalMapHelperPath;
+  if (!expr.isMethodCall &&
+      this->explicitCanonicalExperimentalMapBorrowedHelperPath(
+          expr, dispatchBootstrap.dispatchResolvers,
+          borrowedCanonicalExperimentalMapHelperPath)) {
+    error_ = "unknown call target: " + borrowedCanonicalExperimentalMapHelperPath;
+    return false;
+  }
+
+  if (expr.isMethodCall && expr.args.size() == 1 &&
+      (expr.name == "count" || expr.name == "capacity")) {
+    std::string receiverCollectionTypePath;
+    if (expr.args.front().kind == Expr::Kind::Call &&
+        resolveCallCollectionTypePath(expr.args.front(), params, locals,
+                                      receiverCollectionTypePath) &&
+        receiverCollectionTypePath == "/vector") {
+      if ((expr.name == "count" || expr.name == "capacity") &&
+          expr.templateArgs.empty() && !expr.hasBodyArguments &&
+          expr.bodyArguments.empty()) {
+        rewrittenExprOut = expr.args.front();
+        return true;
+      }
+      rewrittenExprOut = expr;
+      rewrittenExprOut->isMethodCall = false;
+      rewrittenExprOut->namespacePrefix.clear();
+      rewrittenExprOut->name = expr.name;
+      return true;
+    }
+  }
+
+  if (!expr.isMethodCall && expr.args.size() == 2) {
+    std::string builtinAccessName;
+    if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
+        hasImportedDefinitionPath("/std/collections/map/" + builtinAccessName) &&
+        defMap_.find("/std/collections/map/" + builtinAccessName) == defMap_.end() &&
+        !hasDeclaredDefinitionPath("/map/" + builtinAccessName)) {
+      auto setCanonicalMapKeyMismatch = [&](const std::string &mapKeyType) {
+        const std::string canonicalPath =
+            "/std/collections/map/" + builtinAccessName;
+        if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
+            expr.namespacePrefix == "/std/collections/map" ||
+            expr.namespacePrefix == "std/collections/map") {
+          error_ = "argument type mismatch for " + canonicalPath +
+                   " parameter key";
+          return;
+        }
+        if (normalizeBindingTypeName(mapKeyType) == "string") {
+          error_ = builtinAccessName + " requires string map key";
+        } else {
+          error_ = builtinAccessName + " requires map key type " + mapKeyType;
+        }
+      };
+      size_t receiverIndex = 0;
+      size_t keyIndex = 1;
+      const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
+          expr, dispatchBootstrap.dispatchResolvers, receiverIndex, keyIndex);
+      const Expr &receiverExpr =
+          hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+      const Expr &keyExpr =
+          hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+      std::string receiverTypeText;
+      std::string mapKeyType;
+      std::string mapValueType;
+      if (inferQueryExprTypeText(receiverExpr, params, locals,
+                                 receiverTypeText) &&
+          extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType,
+                                             mapValueType)) {
+        if (!mapKeyType.empty()) {
+          if (normalizeBindingTypeName(mapKeyType) == "string") {
+            if (!this->isStringExprForArgumentValidation(
+                    keyExpr, dispatchBootstrap.dispatchResolvers)) {
+              setCanonicalMapKeyMismatch(mapKeyType);
+              return false;
+            }
+          } else {
+            ReturnKind keyKind =
+                returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+            if (keyKind != ReturnKind::Unknown) {
+              if (dispatchBootstrap.dispatchResolvers.resolveStringTarget(
+                      keyExpr)) {
+                setCanonicalMapKeyMismatch(mapKeyType);
+                return false;
+              }
+              ReturnKind indexKind =
+                  inferExprReturnKind(keyExpr, params, locals);
+              if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
+                setCanonicalMapKeyMismatch(mapKeyType);
+                return false;
+              }
+            }
+          }
+        }
+        if (!validateExpr(params, locals, expr.args.front()) ||
+            !validateExpr(params, locals, expr.args[1])) {
+          return false;
+        }
+        handledOut = true;
+        return true;
+      }
+    }
+  }
+
+  if (!expr.isMethodCall) {
+    std::string builtinAccessName;
+    std::string receiverTypeText;
+    std::string borrowedHelperProbe;
+    if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
+        expr.args.size() == 2 &&
+        ((dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget !=
+          nullptr &&
+          (dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget(
+               expr.args.front(), receiverTypeText, borrowedHelperProbe) ||
+           dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget(
+               expr.args[1], receiverTypeText, borrowedHelperProbe))) ||
+         isExperimentalMapReceiverExpr(expr.args.front()) ||
+         isExperimentalMapReceiverExpr(expr.args[1]))) {
+      error_ = "unknown call target: /std/collections/map/" + builtinAccessName;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+} // namespace primec::semantics
