@@ -1066,6 +1066,11 @@ private:
       const std::unordered_map<std::string, BindingInfo> &locals,
       const InferLateFallbackBuiltinContext &context,
       bool &handled);
+  ReturnKind inferScalarBuiltinReturnKind(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      bool &handled);
   bool resolveBuiltinCollectionMethodReturnKind(const std::string &resolvedPath,
                                                 const Expr &receiverExpr,
                                                 const BuiltinCollectionDispatchResolvers &resolvers,
