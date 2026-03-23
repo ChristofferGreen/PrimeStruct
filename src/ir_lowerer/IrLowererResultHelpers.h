@@ -195,6 +195,7 @@ void emitResultWhyErrorLocalFromResult(
 bool emitResultWhyEmptyString(
     const std::function<int32_t(const std::string &)> &internString,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+std::string unsupportedPackedResultValueKindError(const std::string &builtinName);
 Expr makeResultWhyErrorValueExpr(int32_t errorLocal,
                                  LocalInfo::ValueKind valueKind,
                                  const std::string &namespacePrefix,

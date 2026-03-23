@@ -528,6 +528,26 @@ main() {
   CHECK(result == 18);
 }
 
+TEST_CASE("ir lowerer rejects wide Result.ok payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<Result<i64, FileError>>]
+main() {
+  return(Result.ok(3i64))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("IR backends only support Result.ok with 32-bit or string values") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer accepts move builtin") {
   const std::string source = R"(
 [return<int>]

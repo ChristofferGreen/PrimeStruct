@@ -47804,7 +47804,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [&](primec::IrOpcode, uint64_t) {},
             error) ==
         EmitResult::Error);
-  CHECK(error == "native backend only supports Result.ok with 32-bit or string values");
+  CHECK(error == "IR backends only support Result.ok with 32-bit or string values");
   CHECK_FALSE(emitCalled);
 
   error.clear();
@@ -47819,6 +47819,17 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             error) ==
         EmitResult::Error);
   CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer result helpers format unsupported packed Result diagnostics") {
+  CHECK(primec::ir_lowerer::unsupportedPackedResultValueKindError("Result.ok") ==
+        "IR backends only support Result.ok with 32-bit or string values");
+  CHECK(primec::ir_lowerer::unsupportedPackedResultValueKindError("Result.map") ==
+        "IR backends only support Result.map with 32-bit or string values");
+  CHECK(primec::ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then") ==
+        "IR backends only support Result.and_then with 32-bit or string values");
+  CHECK(primec::ir_lowerer::unsupportedPackedResultValueKindError("Result.map2") ==
+        "IR backends only support Result.map2 with 32-bit or string values");
 }
 
 TEST_CASE("ir lowerer result helpers resolve definition result metadata") {

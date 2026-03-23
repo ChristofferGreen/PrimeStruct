@@ -534,6 +534,10 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
          kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::String;
 }
 
+std::string unsupportedPackedResultValueKindError(const std::string &builtinName) {
+  return "IR backends only support " + builtinName + " with 32-bit or string values";
+}
+
 ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -555,7 +559,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
   }
   const LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
   if (!isSupportedPackedResultValueKind(argKind)) {
-    error = "native backend only supports Result.ok with 32-bit or string values";
+    error = unsupportedPackedResultValueKindError("Result.ok");
     return ResultOkMethodCallEmitResult::Error;
   }
   if (!emitExpr(expr.args[1], localsIn)) {

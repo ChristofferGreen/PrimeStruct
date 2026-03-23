@@ -539,7 +539,7 @@
             return false;
           }
           if (!ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind)) {
-            error = "IR backends only support Result.map with 32-bit or string values";
+            error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map");
             return false;
           }
 
@@ -599,7 +599,7 @@
 
           const LocalInfo::ValueKind mappedValueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
           if (!ir_lowerer::isSupportedPackedResultValueKind(mappedValueKind)) {
-            error = "IR backends only support Result.map with 32-bit or string values";
+            error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map");
             return false;
           }
           if (!emitExpr(*mappedValueExpr, lambdaLocals)) {
@@ -634,7 +634,7 @@
             return false;
           }
           if (!ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind)) {
-            error = "IR backends only support Result.and_then with 32-bit or string values";
+            error = ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then");
             return false;
           }
 
@@ -740,7 +740,7 @@
           }
           if (!ir_lowerer::isSupportedPackedResultValueKind(leftResultInfo.valueKind) ||
               !ir_lowerer::isSupportedPackedResultValueKind(rightResultInfo.valueKind)) {
-            error = "IR backends only support Result.map2 with 32-bit or string values";
+            error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
             return false;
           }
 
@@ -834,7 +834,7 @@
 
           const LocalInfo::ValueKind mappedValueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
           if (!ir_lowerer::isSupportedPackedResultValueKind(mappedValueKind)) {
-            error = "IR backends only support Result.map2 with 32-bit or string values";
+            error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
             return false;
           }
           if (!emitExpr(*mappedValueExpr, lambdaLocals)) {
