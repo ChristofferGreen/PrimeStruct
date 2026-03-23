@@ -52,6 +52,14 @@ public:
     std::string onErrorHandlerPath;
   };
 
+  struct QuerySnapshotData {
+    std::string resolvedPath;
+    std::string typeText;
+    BindingInfo binding;
+    ResultTypeInfo resultInfo;
+    BindingInfo receiverBinding;
+  };
+
   struct QueryCallTypeSnapshotEntry {
     std::string scopePath;
     std::string callName;
@@ -233,6 +241,10 @@ private:
                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                   const std::string &methodName,
                                   std::string &resolvedOut);
+  bool inferQuerySnapshotData(const std::vector<ParameterInfo> &defParams,
+                              const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                              const Expr &expr,
+                              QuerySnapshotData &out);
   bool inferTrySnapshotData(const Definition &def,
                             const std::vector<ParameterInfo> &defParams,
                             const std::unordered_map<std::string, BindingInfo> &activeLocals,

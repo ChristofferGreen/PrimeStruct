@@ -317,54 +317,33 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
             initializerAnalysisExpr->bodyArguments.empty()) {
           initializerAnalysisExpr = &initializerAnalysisExpr->args.front();
         }
-        const std::string initializerResolvedPath =
-            initializerAnalysisExpr != nullptr ? resolveCalleePath(*initializerAnalysisExpr) : std::string{};
-        if (!initializerResolvedPath.empty()) {
-          graphLocalAutoResolvedPaths_[bindingKey] = initializerResolvedPath;
+        QuerySnapshotData initializerQueryData;
+        if (initializerAnalysisExpr != nullptr &&
+            inferQuerySnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerQueryData)) {
+          if (!initializerQueryData.resolvedPath.empty()) {
+            graphLocalAutoResolvedPaths_[bindingKey] = initializerQueryData.resolvedPath;
+          } else {
+            graphLocalAutoResolvedPaths_.erase(bindingKey);
+          }
+          if (!initializerQueryData.receiverBinding.typeName.empty()) {
+            graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerQueryData.receiverBinding);
+          } else {
+            graphLocalAutoReceiverBindings_.erase(bindingKey);
+          }
+          if (!initializerQueryData.typeText.empty()) {
+            graphLocalAutoQueryTypeTexts_[bindingKey] = std::move(initializerQueryData.typeText);
+          } else {
+            graphLocalAutoQueryTypeTexts_.erase(bindingKey);
+          }
+          if (initializerQueryData.resultInfo.isResult) {
+            graphLocalAutoResultTypes_[bindingKey] = std::move(initializerQueryData.resultInfo);
+          } else {
+            graphLocalAutoResultTypes_.erase(bindingKey);
+          }
         } else {
           graphLocalAutoResolvedPaths_.erase(bindingKey);
-        }
-        const bool receiverQueryCandidate =
-            initializerAnalysisExpr != nullptr &&
-            initializerAnalysisExpr->kind == Expr::Kind::Call &&
-            !initializerAnalysisExpr->args.empty() &&
-            (!initializerResolvedPath.empty() &&
-             (initializerAnalysisExpr->isMethodCall ||
-              initializerResolvedPath.rfind("/std/collections/", 0) == 0 ||
-              initializerResolvedPath.rfind("/array/", 0) == 0 ||
-              initializerResolvedPath.rfind("/vector/", 0) == 0 ||
-              initializerResolvedPath.rfind("/map/", 0) == 0));
-        BindingInfo initializerReceiverBinding;
-        if (receiverQueryCandidate &&
-            withPreservedError([&]() {
-              return inferBindingTypeFromInitializer(
-                  initializerAnalysisExpr->args.front(), defParams, activeLocals, initializerReceiverBinding);
-            }) &&
-            !initializerReceiverBinding.typeName.empty()) {
-          graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerReceiverBinding);
-        } else {
           graphLocalAutoReceiverBindings_.erase(bindingKey);
-        }
-        std::string initializerQueryTypeText;
-        if (initializerAnalysisExpr != nullptr &&
-            withPreservedError([&]() {
-              return inferQueryExprTypeText(
-                  *initializerAnalysisExpr, defParams, activeLocals, initializerQueryTypeText);
-            }) &&
-            !initializerQueryTypeText.empty()) {
-          graphLocalAutoQueryTypeTexts_[bindingKey] = initializerQueryTypeText;
-        } else {
           graphLocalAutoQueryTypeTexts_.erase(bindingKey);
-        }
-        ResultTypeInfo initializerResultType;
-        if (initializerAnalysisExpr != nullptr &&
-            withPreservedError([&]() {
-              return resolveResultTypeForExpr(
-                  *initializerAnalysisExpr, defParams, activeLocals, initializerResultType);
-            }) &&
-            initializerResultType.isResult) {
-          graphLocalAutoResultTypes_[bindingKey] = std::move(initializerResultType);
-        } else {
           graphLocalAutoResultTypes_.erase(bindingKey);
         }
         LocalAutoTrySnapshotData initializerTryValue;

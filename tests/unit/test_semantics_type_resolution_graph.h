@@ -48,6 +48,39 @@ const primec::semantics::TypeResolutionTryValueSnapshotEntry &requireTryValueSna
   return *it;
 }
 
+const primec::semantics::TypeResolutionQueryCallSnapshotEntry &requireQueryCallSnapshotEntry(
+    const primec::semantics::TypeResolutionQueryCallSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &resolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.resolvedPath == resolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
+const primec::semantics::TypeResolutionQueryResultTypeSnapshotEntry &requireQueryResultTypeSnapshotEntry(
+    const primec::semantics::TypeResolutionQueryResultTypeSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &resolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.resolvedPath == resolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
+const primec::semantics::TypeResolutionQueryReceiverBindingSnapshotEntry &requireQueryReceiverBindingSnapshotEntry(
+    const primec::semantics::TypeResolutionQueryReceiverBindingSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &resolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.resolvedPath == resolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 primec::semantics::TypeResolutionCallBindingSnapshotEntry requireCallBindingSnapshotEntry(
     const primec::semantics::TypeResolutionCallBindingSnapshot &snapshot,
     const std::string &scopePath,
@@ -478,6 +511,55 @@ main() {
   CHECK(localEntry.initializerTryErrorTypeText == tryEntry.errorTypeText);
   CHECK(localEntry.initializerTryContextReturnKindText == tryEntry.contextReturnKindText);
   CHECK(localEntry.initializerTryOnErrorHandlerPath == tryEntry.onErrorHandlerPath);
+}
+
+TEST_CASE("type resolution local query metadata stays aligned with query snapshots") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<Result<int, ContainerError>> effects(heap_alloc)]
+main() {
+  [Map<string, i32>] values{/std/collections/mapPair("left"raw_utf8, 4i32)}
+  [auto] selected{try(values.tryAt("left"raw_utf8))}
+  return(Result.ok(selected))
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot localSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, localSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryCallSnapshot queryCallSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryCallSnapshotForTesting(
+      parseProgram(source), "/main", error, queryCallSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryResultTypeSnapshot queryResultSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryResultTypeSnapshotForTesting(
+      parseProgram(source), "/main", error, queryResultSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryReceiverBindingSnapshot queryReceiverSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryReceiverBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, queryReceiverSnapshot));
+  CHECK(error.empty());
+
+  const auto &localEntry = requireLocalBindingSnapshotEntry(localSnapshot, "/main", "selected");
+  const auto &callEntry = requireQueryCallSnapshotEntry(queryCallSnapshot, "/main", "/std/collections/map/tryAt");
+  const auto &resultEntry =
+      requireQueryResultTypeSnapshotEntry(queryResultSnapshot, "/main", "/std/collections/map/tryAt");
+  const auto &receiverEntry =
+      requireQueryReceiverBindingSnapshotEntry(queryReceiverSnapshot, "/main", "/std/collections/map/tryAt");
+
+  CHECK(localEntry.initializerResolvedPath == callEntry.resolvedPath);
+  CHECK(localEntry.initializerQueryTypeText == callEntry.typeText);
+  CHECK(localEntry.initializerReceiverBindingTypeText == receiverEntry.receiverBindingTypeText);
+  CHECK(localEntry.initializerResultHasValue == resultEntry.hasValue);
+  CHECK(localEntry.initializerResultValueTypeText == resultEntry.valueTypeText);
+  CHECK(localEntry.initializerResultErrorTypeText == resultEntry.errorTypeText);
 }
 
 TEST_SUITE_END();

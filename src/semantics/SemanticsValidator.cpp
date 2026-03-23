@@ -223,32 +223,21 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
 
 std::vector<SemanticsValidator::QueryCallTypeSnapshotEntry>
 SemanticsValidator::queryCallTypeSnapshotForTesting() {
-  auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
-  };
-
   std::vector<QueryCallTypeSnapshotEntry> entries;
   forEachLocalAwareSnapshotCall([&](const Definition &def,
                                     const std::vector<ParameterInfo> &defParams,
                                     const Expr &expr,
                                     const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    std::string typeText;
-    if (withPreservedError([&]() {
-          return inferQueryExprTypeText(expr, defParams, activeLocals, typeText);
-        }) &&
-        !typeText.empty()) {
+    QuerySnapshotData queryData;
+    if (inferQuerySnapshotData(defParams, activeLocals, expr, queryData) &&
+        !queryData.typeText.empty()) {
       entries.push_back(QueryCallTypeSnapshotEntry{
           def.fullPath,
           expr.name,
-          resolveCalleePath(expr),
+          std::move(queryData.resolvedPath),
           expr.sourceLine,
           expr.sourceColumn,
-          std::move(typeText),
+          std::move(queryData.typeText),
       });
     }
   });
@@ -270,32 +259,21 @@ SemanticsValidator::queryCallTypeSnapshotForTesting() {
 
 std::vector<SemanticsValidator::QueryBindingSnapshotEntry>
 SemanticsValidator::queryBindingSnapshotForTesting() {
-  auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
-  };
-
   std::vector<QueryBindingSnapshotEntry> entries;
   forEachLocalAwareSnapshotCall([&](const Definition &def,
                                     const std::vector<ParameterInfo> &defParams,
                                     const Expr &expr,
                                     const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    BindingInfo binding;
-    if (withPreservedError([&]() {
-          return inferBindingTypeFromInitializer(expr, defParams, activeLocals, binding);
-        }) &&
-        !binding.typeName.empty()) {
+    QuerySnapshotData queryData;
+    if (inferQuerySnapshotData(defParams, activeLocals, expr, queryData) &&
+        !queryData.binding.typeName.empty()) {
       entries.push_back(QueryBindingSnapshotEntry{
           def.fullPath,
           expr.name,
-          resolveCalleePath(expr),
+          std::move(queryData.resolvedPath),
           expr.sourceLine,
           expr.sourceColumn,
-          std::move(binding),
+          std::move(queryData.binding),
       });
     }
   });
@@ -317,34 +295,23 @@ SemanticsValidator::queryBindingSnapshotForTesting() {
 
 std::vector<SemanticsValidator::QueryResultTypeSnapshotEntry>
 SemanticsValidator::queryResultTypeSnapshotForTesting() {
-  auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
-  };
-
   std::vector<QueryResultTypeSnapshotEntry> entries;
   forEachLocalAwareSnapshotCall([&](const Definition &def,
                                     const std::vector<ParameterInfo> &defParams,
                                     const Expr &expr,
                                     const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    ResultTypeInfo resultInfo;
-    if (withPreservedError([&]() {
-          return resolveResultTypeForExpr(expr, defParams, activeLocals, resultInfo);
-        }) &&
-        resultInfo.isResult) {
+    QuerySnapshotData queryData;
+    if (inferQuerySnapshotData(defParams, activeLocals, expr, queryData) &&
+        queryData.resultInfo.isResult) {
       entries.push_back(QueryResultTypeSnapshotEntry{
           def.fullPath,
           expr.name,
-          resolveCalleePath(expr),
+          std::move(queryData.resolvedPath),
           expr.sourceLine,
           expr.sourceColumn,
-          resultInfo.hasValue,
-          resultInfo.valueType,
-          resultInfo.errorType,
+          queryData.resultInfo.hasValue,
+          std::move(queryData.resultInfo.valueType),
+          std::move(queryData.resultInfo.errorType),
       });
     }
   });
@@ -362,6 +329,59 @@ SemanticsValidator::queryResultTypeSnapshotForTesting() {
     return left.callName < right.callName;
   });
   return entries;
+}
+
+bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo> &defParams,
+                                                const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                                                const Expr &expr,
+                                                QuerySnapshotData &out) {
+  out = {};
+
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  out.resolvedPath = resolveCalleePath(expr);
+  withPreservedError([&]() {
+    return inferQueryExprTypeText(expr, defParams, activeLocals, out.typeText);
+  });
+  withPreservedError([&]() {
+    return inferBindingTypeFromInitializer(expr, defParams, activeLocals, out.binding);
+  });
+  if (!(withPreservedError([&]() {
+          return resolveResultTypeForExpr(expr, defParams, activeLocals, out.resultInfo);
+        }) &&
+        out.resultInfo.isResult)) {
+    out.resultInfo = {};
+  }
+
+  const bool receiverQueryCandidate =
+      expr.kind == Expr::Kind::Call &&
+      !expr.args.empty() &&
+      !out.resolvedPath.empty() &&
+      (expr.isMethodCall ||
+       out.resolvedPath.rfind("/std/collections/", 0) == 0 ||
+       out.resolvedPath.rfind("/array/", 0) == 0 ||
+       out.resolvedPath.rfind("/vector/", 0) == 0 ||
+       out.resolvedPath.rfind("/map/", 0) == 0);
+  if (receiverQueryCandidate &&
+      !(withPreservedError([&]() {
+          return inferBindingTypeFromInitializer(expr.args.front(), defParams, activeLocals, out.receiverBinding);
+        }) &&
+        !out.receiverBinding.typeName.empty())) {
+    out.receiverBinding = {};
+  }
+
+  return !out.resolvedPath.empty() ||
+         !out.typeText.empty() ||
+         !out.binding.typeName.empty() ||
+         out.resultInfo.isResult ||
+         !out.receiverBinding.typeName.empty();
 }
 
 std::vector<SemanticsValidator::TryValueSnapshotEntry>
@@ -485,47 +505,21 @@ SemanticsValidator::callBindingSnapshotForTesting() {
 
 std::vector<SemanticsValidator::QueryReceiverBindingSnapshotEntry>
 SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
-  auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
-  };
-
-  auto isReceiverQueryCandidate = [&](const Expr &expr, const std::string &resolvedPath) {
-    if (expr.kind != Expr::Kind::Call || expr.args.empty() || resolvedPath.empty()) {
-      return false;
-    }
-    return expr.isMethodCall ||
-           resolvedPath.rfind("/std/collections/", 0) == 0 ||
-           resolvedPath.rfind("/array/", 0) == 0 ||
-           resolvedPath.rfind("/vector/", 0) == 0 ||
-           resolvedPath.rfind("/map/", 0) == 0;
-  };
-
   std::vector<QueryReceiverBindingSnapshotEntry> entries;
   forEachLocalAwareSnapshotCall([&](const Definition &def,
                                     const std::vector<ParameterInfo> &defParams,
                                     const Expr &expr,
                                     const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    const std::string resolvedPath = resolveCalleePath(expr);
-    if (!isReceiverQueryCandidate(expr, resolvedPath)) {
-      return;
-    }
-    BindingInfo receiverBinding;
-    if (withPreservedError([&]() {
-          return inferBindingTypeFromInitializer(expr.args.front(), defParams, activeLocals, receiverBinding);
-        }) &&
-        !receiverBinding.typeName.empty()) {
+    QuerySnapshotData queryData;
+    if (inferQuerySnapshotData(defParams, activeLocals, expr, queryData) &&
+        !queryData.receiverBinding.typeName.empty()) {
       entries.push_back(QueryReceiverBindingSnapshotEntry{
           def.fullPath,
           expr.name,
-          resolvedPath,
+          std::move(queryData.resolvedPath),
           expr.sourceLine,
           expr.sourceColumn,
-          std::move(receiverBinding),
+          std::move(queryData.receiverBinding),
       });
     }
   });
