@@ -1057,6 +1057,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphCollectionHelperInference.h"
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphExperimentalCollectionArgumentRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionConstructorRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionTargetValueRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionValueRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionReceiverResolution.h"
@@ -1487,161 +1488,6 @@ bool rewriteExpr(Expr &expr,
     }
     return true;
   };
-  auto rewriteCanonicalExperimentalMapConstructorExpr = [&](Expr &valueExpr) -> bool {
-    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
-      return true;
-    }
-    const std::string originalPath = resolveCalleePath(valueExpr, namespacePrefix, ctx);
-    auto canonicalizeResolvedPath = [](std::string path) {
-      const size_t specializationSuffix = path.find("__t");
-      if (specializationSuffix != std::string::npos) {
-        path.erase(specializationSuffix);
-      }
-      return path;
-    };
-    auto isExperimentalMapEntryArgument = [&](const Expr &argExpr) {
-      if (argExpr.isSpread) {
-        return true;
-      }
-      const std::string resolvedArgPath = canonicalizeResolvedPath(resolveCalleePath(argExpr, namespacePrefix, ctx));
-      if (resolvedArgPath == "/std/collections/experimental_map/entry") {
-        return true;
-      }
-      BindingInfo argInfo;
-      if (!inferBindingTypeForMonomorph(argExpr, params, locals, allowMathBare, ctx, argInfo)) {
-        return false;
-      }
-      std::string argTypeText = argInfo.typeName;
-      if (!argInfo.typeTemplateArg.empty()) {
-        argTypeText += "<" + argInfo.typeTemplateArg + ">";
-      }
-      std::string normalizedArgType = normalizeBindingTypeName(argTypeText);
-      if (!normalizedArgType.empty() && normalizedArgType.front() == '/') {
-        normalizedArgType.erase(normalizedArgType.begin());
-      }
-      return normalizedArgType == "std/collections/experimental_map/Entry" ||
-             normalizedArgType.rfind("std/collections/experimental_map/Entry__", 0) == 0;
-    };
-    std::string helperPath = experimentalMapConstructorRewritePath(originalPath, valueExpr.args.size());
-    if ((originalPath == "/map" || originalPath == "/std/collections/map/map") &&
-        !valueExpr.args.empty()) {
-      const bool usesEntryArgs =
-          std::all_of(valueExpr.args.begin(), valueExpr.args.end(), isExperimentalMapEntryArgument);
-      if (usesEntryArgs) {
-        helperPath = "/std/collections/experimental_map/map";
-      }
-    }
-    if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
-      return true;
-    }
-    valueExpr.name = helperPath;
-    valueExpr.namespacePrefix.clear();
-    if (valueExpr.templateArgs.empty()) {
-      auto defIt = ctx.sourceDefs.find(helperPath);
-      if (defIt != ctx.sourceDefs.end()) {
-        std::vector<std::string> inferredArgs;
-        std::string inferError;
-        if (inferImplicitTemplateArgs(defIt->second,
-                                      valueExpr,
-                                      locals,
-                                      params,
-                                      mapping,
-                                      allowedParams,
-                                      namespacePrefix,
-                                      ctx,
-                                      allowMathBare,
-                                      inferredArgs,
-                                      inferError)) {
-          valueExpr.templateArgs = std::move(inferredArgs);
-        } else {
-          defIt = ctx.sourceDefs.find(helperPath);
-          if (defIt == ctx.sourceDefs.end()) {
-            return false;
-          }
-          if (inferError.empty() &&
-              inferStdlibCollectionHelperTemplateArgs(defIt->second,
-                                                      valueExpr,
-                                                      locals,
-                                                      params,
-                                                      mapping,
-                                                      allowedParams,
-                                                      namespacePrefix,
-                                                      ctx,
-                                                      allowMathBare,
-                                                      inferredArgs)) {
-            valueExpr.templateArgs = std::move(inferredArgs);
-          } else if (!inferError.empty()) {
-            error = inferError;
-            const size_t helperPos = error.find(helperPath);
-            if (helperPos != std::string::npos) {
-              error.replace(helperPos, helperPath.size(), originalPath);
-            }
-            return false;
-          }
-        }
-      }
-    }
-    return true;
-  };
-  auto rewriteCanonicalExperimentalVectorConstructorExpr = [&](Expr &valueExpr) -> bool {
-    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
-      return true;
-    }
-    const std::string originalPath = resolveCalleePath(valueExpr, namespacePrefix, ctx);
-    const std::string helperPath =
-        experimentalVectorConstructorRewritePath(originalPath, valueExpr.args.size());
-    if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
-      return true;
-    }
-    valueExpr.name = helperPath;
-    valueExpr.namespacePrefix.clear();
-    if (valueExpr.templateArgs.empty()) {
-      auto defIt = ctx.sourceDefs.find(helperPath);
-      if (defIt != ctx.sourceDefs.end()) {
-        std::vector<std::string> inferredArgs;
-        std::string inferError;
-        if (inferImplicitTemplateArgs(defIt->second,
-                                      valueExpr,
-                                      locals,
-                                      params,
-                                      mapping,
-                                      allowedParams,
-                                      namespacePrefix,
-                                      ctx,
-                                      allowMathBare,
-                                      inferredArgs,
-                                      inferError)) {
-          valueExpr.templateArgs = std::move(inferredArgs);
-        } else {
-          defIt = ctx.sourceDefs.find(helperPath);
-          if (defIt == ctx.sourceDefs.end()) {
-            return false;
-          }
-          if (inferError.empty() &&
-              inferStdlibCollectionHelperTemplateArgs(defIt->second,
-                                                      valueExpr,
-                                                      locals,
-                                                      params,
-                                                      mapping,
-                                                      allowedParams,
-                                                      namespacePrefix,
-                                                      ctx,
-                                                      allowMathBare,
-                                                      inferredArgs)) {
-            valueExpr.templateArgs = std::move(inferredArgs);
-          } else if (!inferError.empty()) {
-            error = inferError;
-            const size_t helperPos = error.find(helperPath);
-            if (helperPos != std::string::npos) {
-              error.replace(helperPos, helperPath.size(), originalPath);
-            }
-            return false;
-          }
-        }
-      }
-    }
-    return true;
-  };
   std::function<bool(Expr &)> rewriteNestedExperimentalMapConstructorValue;
   std::function<bool(Expr &)> rewriteNestedExperimentalMapResultOkPayloadValue;
   std::function<bool(Expr &)> rewriteNestedExperimentalVectorConstructorValue;
@@ -1696,7 +1542,15 @@ bool rewriteExpr(Expr &expr,
   };
   rewriteNestedExperimentalMapConstructorValue = [&](Expr &candidate) -> bool {
     return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {
-      return rewriteCanonicalExperimentalMapConstructorExpr(current);
+      return ::rewriteCanonicalExperimentalMapConstructorExpr(current,
+                                                             locals,
+                                                             params,
+                                                             mapping,
+                                                             allowedParams,
+                                                             namespacePrefix,
+                                                             ctx,
+                                                             allowMathBare,
+                                                             error);
     });
   };
 
@@ -1705,7 +1559,15 @@ bool rewriteExpr(Expr &expr,
   };
   rewriteNestedExperimentalVectorConstructorValue = [&](Expr &candidate) -> bool {
     return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {
-      return rewriteCanonicalExperimentalVectorConstructorExpr(current);
+      return ::rewriteCanonicalExperimentalVectorConstructorExpr(current,
+                                                                locals,
+                                                                params,
+                                                                mapping,
+                                                                allowedParams,
+                                                                namespacePrefix,
+                                                                ctx,
+                                                                allowMathBare,
+                                                                error);
     });
   };
 
@@ -2233,156 +2095,26 @@ bool rewriteDefinition(Definition &def,
   std::vector<ParameterInfo> params;
   LocalTypeMap locals;
   auto rewriteCanonicalExperimentalMapConstructorValue = [&](Expr &valueExpr) {
-    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
-      return;
-    }
-    const std::string originalPath = resolveCalleePath(valueExpr, def.namespacePrefix, ctx);
-    auto canonicalizeResolvedPath = [](std::string path) {
-      const size_t specializationSuffix = path.find("__t");
-      if (specializationSuffix != std::string::npos) {
-        path.erase(specializationSuffix);
-      }
-      return path;
-    };
-    auto isExperimentalMapEntryArgument = [&](const Expr &argExpr) {
-      if (argExpr.isSpread) {
-        return true;
-      }
-      const std::string resolvedArgPath = canonicalizeResolvedPath(resolveCalleePath(argExpr, def.namespacePrefix, ctx));
-      if (resolvedArgPath == "/std/collections/experimental_map/entry") {
-        return true;
-      }
-      BindingInfo argInfo;
-      if (!inferBindingTypeForMonomorph(argExpr, params, locals, allowMathBare, ctx, argInfo)) {
-        return false;
-      }
-      std::string argTypeText = argInfo.typeName;
-      if (!argInfo.typeTemplateArg.empty()) {
-        argTypeText += "<" + argInfo.typeTemplateArg + ">";
-      }
-      std::string normalizedArgType = normalizeBindingTypeName(argTypeText);
-      if (!normalizedArgType.empty() && normalizedArgType.front() == '/') {
-        normalizedArgType.erase(normalizedArgType.begin());
-      }
-      return normalizedArgType == "std/collections/experimental_map/Entry" ||
-             normalizedArgType.rfind("std/collections/experimental_map/Entry__", 0) == 0;
-    };
-    std::string helperPath =
-        experimentalMapConstructorRewritePath(originalPath, valueExpr.args.size());
-    if ((originalPath == "/map" || originalPath == "/std/collections/map/map") &&
-        !valueExpr.args.empty()) {
-      const bool usesEntryArgs =
-          std::all_of(valueExpr.args.begin(), valueExpr.args.end(), isExperimentalMapEntryArgument);
-      if (usesEntryArgs) {
-        helperPath = "/std/collections/experimental_map/map";
-      }
-    }
-    if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
-      return;
-    }
-    valueExpr.name = helperPath;
-    valueExpr.namespacePrefix.clear();
-    if (valueExpr.templateArgs.empty()) {
-      auto defIt = ctx.sourceDefs.find(helperPath);
-      if (defIt != ctx.sourceDefs.end()) {
-        std::vector<std::string> inferredArgs;
-        std::string inferError;
-        if (inferImplicitTemplateArgs(defIt->second,
-                                      valueExpr,
-                                      locals,
-                                      params,
-                                      mapping,
-                                      allowedParams,
-                                      def.namespacePrefix,
-                                      ctx,
-                                      allowMathBare,
-                                      inferredArgs,
-                                      inferError)) {
-          valueExpr.templateArgs = std::move(inferredArgs);
-        } else {
-          defIt = ctx.sourceDefs.find(helperPath);
-          if (defIt == ctx.sourceDefs.end()) {
-            return;
-          }
-          if (inferError.empty() &&
-              inferStdlibCollectionHelperTemplateArgs(defIt->second,
-                                                      valueExpr,
-                                                      locals,
-                                                      params,
-                                                      mapping,
-                                                      allowedParams,
-                                                      def.namespacePrefix,
-                                                      ctx,
-                                                      allowMathBare,
-                                                      inferredArgs)) {
-            valueExpr.templateArgs = std::move(inferredArgs);
-          } else if (!inferError.empty()) {
-            error = inferError;
-            const size_t helperPos = error.find(helperPath);
-            if (helperPos != std::string::npos) {
-              error.replace(helperPos, helperPath.size(), originalPath);
-            }
-          }
-        }
-      }
-    }
+    (void)::rewriteCanonicalExperimentalMapConstructorExpr(valueExpr,
+                                                           locals,
+                                                           params,
+                                                           mapping,
+                                                           allowedParams,
+                                                           def.namespacePrefix,
+                                                           ctx,
+                                                           allowMathBare,
+                                                           error);
   };
   auto rewriteCanonicalExperimentalVectorConstructorValue = [&](Expr &valueExpr) {
-    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
-      return;
-    }
-    const std::string originalPath = resolveCalleePath(valueExpr, def.namespacePrefix, ctx);
-    const std::string helperPath =
-        experimentalVectorConstructorRewritePath(originalPath, valueExpr.args.size());
-    if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {
-      return;
-    }
-    valueExpr.name = helperPath;
-    valueExpr.namespacePrefix.clear();
-    if (valueExpr.templateArgs.empty()) {
-      auto defIt = ctx.sourceDefs.find(helperPath);
-      if (defIt != ctx.sourceDefs.end()) {
-        std::vector<std::string> inferredArgs;
-        std::string inferError;
-        if (inferImplicitTemplateArgs(defIt->second,
-                                      valueExpr,
-                                      locals,
-                                      params,
-                                      mapping,
-                                      allowedParams,
-                                      def.namespacePrefix,
-                                      ctx,
-                                      allowMathBare,
-                                      inferredArgs,
-                                      inferError)) {
-          valueExpr.templateArgs = std::move(inferredArgs);
-        } else {
-          defIt = ctx.sourceDefs.find(helperPath);
-          if (defIt == ctx.sourceDefs.end()) {
-            return;
-          }
-          if (inferError.empty() &&
-              inferStdlibCollectionHelperTemplateArgs(defIt->second,
-                                                      valueExpr,
-                                                      locals,
-                                                      params,
-                                                      mapping,
-                                                      allowedParams,
-                                                      def.namespacePrefix,
-                                                      ctx,
-                                                      allowMathBare,
-                                                      inferredArgs)) {
-            valueExpr.templateArgs = std::move(inferredArgs);
-          } else if (!inferError.empty()) {
-            error = inferError;
-            const size_t helperPos = error.find(helperPath);
-            if (helperPos != std::string::npos) {
-              error.replace(helperPos, helperPath.size(), originalPath);
-            }
-          }
-        }
-      }
-    }
+    (void)::rewriteCanonicalExperimentalVectorConstructorExpr(valueExpr,
+                                                              locals,
+                                                              params,
+                                                              mapping,
+                                                              allowedParams,
+                                                              def.namespacePrefix,
+                                                              ctx,
+                                                              allowMathBare,
+                                                              error);
   };
   bool hasExplicitNonAutoReturn = false;
   bool expectedExperimentalVectorReturn = [&]() {

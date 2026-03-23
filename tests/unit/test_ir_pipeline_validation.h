@@ -10830,6 +10830,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphAssignmentTargetResolution.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionArgumentRewritesPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionArgumentRewrites.h";
+  const std::filesystem::path templateMonomorphExperimentalCollectionConstructorRewritesPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionConstructorRewrites.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionTargetValueRewritesPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionTargetValueRewrites.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionValueRewritesPath =
@@ -10847,6 +10849,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphCollectionHelperInferencePath));
   REQUIRE(std::filesystem::exists(templateMonomorphAssignmentTargetResolutionPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionArgumentRewritesPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionConstructorRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionTargetValueRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionValueRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReceiverResolutionPath));
@@ -10863,6 +10866,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphAssignmentTargetResolutionPath);
   const std::string templateMonomorphExperimentalCollectionArgumentRewritesSource =
       readText(templateMonomorphExperimentalCollectionArgumentRewritesPath);
+  const std::string templateMonomorphExperimentalCollectionConstructorRewritesSource =
+      readText(templateMonomorphExperimentalCollectionConstructorRewritesPath);
   const std::string templateMonomorphExperimentalCollectionTargetValueRewritesSource =
       readText(templateMonomorphExperimentalCollectionTargetValueRewritesPath);
   const std::string templateMonomorphExperimentalCollectionValueRewritesSource =
@@ -10886,6 +10891,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphAssignmentTargetResolution.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionArgumentRewrites.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionConstructorRewrites.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionTargetValueRewrites.h\"") !=
         std::string::npos);
@@ -10929,6 +10936,14 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("std::vector<ParameterInfo> buildExperimentalConstructorRewriteParams(") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool rewriteExperimentalConstructorArgsForTarget(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool isExperimentalMapEntryArgument(const Expr &argExpr,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool inferExperimentalCollectionConstructorTemplateArgs(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool rewriteCanonicalExperimentalMapConstructorExpr(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool rewriteCanonicalExperimentalVectorConstructorExpr(") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolveExperimentalConstructorTargetTypeText(") ==
         std::string::npos);
@@ -11030,6 +11045,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionArgumentRewritesSource.find(
             "bool rewriteExperimentalConstructorArgsForTarget(Expr &callExpr,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionConstructorRewritesSource.find(
+            "bool isExperimentalMapEntryArgument(const Expr &argExpr,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionConstructorRewritesSource.find(
+            "bool inferExperimentalCollectionConstructorTemplateArgs(const std::string &originalPath,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionConstructorRewritesSource.find(
+            "bool rewriteCanonicalExperimentalMapConstructorExpr(Expr &valueExpr,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionConstructorRewritesSource.find(
+            "bool rewriteCanonicalExperimentalVectorConstructorExpr(Expr &valueExpr,") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionTargetValueRewritesSource.find(
             "bool resolveExperimentalConstructorTargetTypeText(const Expr &targetExpr,") !=
