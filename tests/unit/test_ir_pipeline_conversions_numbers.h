@@ -670,6 +670,107 @@ main() {
   CHECK(result == 14);
 }
 
+TEST_CASE("ir lowerer preserves inline-call Result metadata from caller-scoped parameter defaults") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return("parse failed"utf8)
+  }
+}
+
+[struct]
+Reader() {
+  [i32] marker{0i32}
+}
+
+[return<Result<string, ParseError>>]
+greeting() {
+  return(Result.ok("alpha"utf8))
+}
+
+[return<Result<string, ParseError>>]
+/Reader/read([Reader] self) {
+  return(Result.ok("beta"utf8))
+}
+
+[return<int>]
+consume(status) {
+  return(count(try(status)))
+}
+
+[return<int>]
+main() {
+  [Reader] reader{Reader()}
+  return(consume(greeting()))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  auto makeName = [](const std::string &name) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    return expr;
+  };
+  auto makeCall = [](const std::string &name, std::vector<primec::Expr> args, bool isMethodCall = false) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = name;
+    expr.args = std::move(args);
+    expr.isMethodCall = isMethodCall;
+    return expr;
+  };
+
+  auto consumeIt =
+      std::find_if(program.definitions.begin(), program.definitions.end(), [](const primec::Definition &def) {
+        return def.fullPath == "/consume";
+      });
+  REQUIRE(consumeIt != program.definitions.end());
+  REQUIRE(consumeIt->parameters.size() == 1);
+
+  primec::Expr leftParam = makeName("left");
+  primec::Expr rightParam = makeName("right");
+  primec::Expr returnLeft = makeCall("return", {makeName("left")});
+
+  primec::Expr map2Lambda;
+  map2Lambda.kind = primec::Expr::Kind::Call;
+  map2Lambda.isLambda = true;
+  map2Lambda.hasBodyArguments = true;
+  map2Lambda.args = {leftParam, rightParam};
+  map2Lambda.bodyArguments = {returnLeft};
+
+  consumeIt->parameters.front().args = {
+      makeCall("map2",
+               {
+                   makeName("Result"),
+                   makeCall("greeting", {}),
+                   makeCall("read", {makeName("reader")}, true),
+                   map2Lambda,
+               },
+               true),
+  };
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
+}
+
 TEST_CASE("ir lowerer rejects wide Result.ok payloads") {
   const std::string source = R"(
 import /std/file/*
