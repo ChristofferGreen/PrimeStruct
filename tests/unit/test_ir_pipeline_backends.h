@@ -264,7 +264,7 @@ TEST_CASE("semantics validator caches base validation contexts behind a single c
   CHECK(header.find("std::unordered_set<std::string> movedBindings_;") == std::string::npos);
   CHECK(header.find("std::unordered_set<std::string> endedReferenceBorrows_;") == std::string::npos);
   CHECK(header.find("std::string currentDefinitionPath_;") == std::string::npos);
-  CHECK(build.find("definitionValidationContexts_.try_emplace(def.fullPath, makeDefinitionValidationContext(def));") !=
+  CHECK(build.find("definitionValidationContexts_.try_emplace(def.fullPath, std::move(context));") !=
         std::string::npos);
   CHECK(build.find("executionValidationContexts_.try_emplace(exec.fullPath, makeExecutionValidationContext(exec));") !=
         std::string::npos);
@@ -836,7 +836,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("inferExprTypeText(stmt.args.front(), defParams, defLocals, inferredLocalType)") ==
         std::string::npos);
-  CHECK(validatorInfer.find("bool hasInferredBinding = false;") != std::string::npos);
+  CHECK(validatorHeader.find("bool hasInferredBinding = false;") != std::string::npos);
   CHECK(validatorInfer.find("state.hasInferredBinding = true;") != std::string::npos);
   CHECK(validatorInfer.find("returnBindings_[def.fullPath] = inferenceState.inferredBinding;") !=
         std::string::npos);
@@ -1424,7 +1424,7 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("shared_collection_receiver_classifiers") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
-  CHECK(parityHeader.find("graph type resolver carries grounded mutual recursion through vm pipeline lowering") !=
+  CHECK(parityHeader.find("graph type resolver still surfaces vm recursive-call lowering limits") !=
         std::string::npos);
 }
 

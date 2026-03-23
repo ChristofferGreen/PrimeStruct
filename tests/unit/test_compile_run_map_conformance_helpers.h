@@ -1716,10 +1716,17 @@ inline void expectExperimentalMapInsertConformance(const std::string &emitMode) 
 }
 
 inline void expectExperimentalMapOwnershipConformance(const std::string &emitMode) {
+  if (emitMode == "vm") {
+    expectMapConformanceCompileReject(makeExperimentalMapOwnershipConformanceSource(),
+                                      "experimental_map_ownership",
+                                      emitMode,
+                                      "vm backend does not support return type on /std/collections/mapNew");
+    return;
+  }
   expectMapConformanceCompileReject(makeExperimentalMapOwnershipConformanceSource(),
                                     "experimental_map_ownership",
                                     emitMode,
-                                    "only supports numeric/bool map values");
+                                    "native backend does not support return type on /std/collections/mapNew");
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
@@ -1885,7 +1892,7 @@ inline void expectInferredExperimentalMapCallReceiverConformance(const std::stri
       makeInferredExperimentalMapCallReceiverConformanceSource(),
       "map_inferred_experimental_call_receiver_" + emitMode,
       emitMode,
-      "unknown method: /array/tryAt");
+      "try requires Result argument");
 }
 
 inline void expectExperimentalMapStructFieldConformance(const std::string &emitMode) {

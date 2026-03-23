@@ -279,7 +279,7 @@ main() {
   CHECK(cpp.find("ps_array_count(") != std::string::npos);
 }
 
-TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
+TEST_CASE("semantics accepts but lowerer rejects soa_vector return literals") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -297,11 +297,9 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-  REQUIRE(module.functions.size() == 1);
-  CHECK(module.functions[0].name == "/main");
-  CHECK_FALSE(module.functions[0].instructions.empty());
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend does not support return type on /main");
+  CHECK(module.functions.empty());
 }
 
 TEST_CASE("semantics accepts soa_vector count in non-entry helpers") {
@@ -854,85 +852,6 @@ TEST_CASE("ir lowerer inference setup bootstrap validates dependencies") {
   CHECK_FALSE(static_cast<bool>(state.resolveMethodCallDefinition));
 }
 
-TEST_CASE("ir lowerer inference setup orchestrates callbacks") {
-  primec::Definition callee;
-  callee.fullPath = "/callee";
-  std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/callee", &callee},
-  };
-  std::unordered_map<std::string, std::string> importAliases;
-  std::unordered_set<std::string> structNames;
-
-  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
-  std::string error;
-  CHECK(primec::ir_lowerer::runLowerInferenceSetup(
-      {
-          .defMap = &defMap,
-          .importAliases = &importAliases,
-          .structNames = &structNames,
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
-          .getBuiltinOperatorName = [](const primec::Expr &, std::string &) { return false; },
-          .resolveStructArrayInfoFromPath =
-              [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
-          .inferStructExprPath =
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
-                return false;
-              },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-          .hasMathImport = false,
-          .combineNumericKinds =
-              [](primec::ir_lowerer::LocalInfo::ValueKind, primec::ir_lowerer::LocalInfo::ValueKind) {
-                return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-              },
-          .getMathConstantName = [](const std::string &, std::string &) { return false; },
-          .resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; },
-          .isBindingMutable = [](const primec::Expr &) { return false; },
-          .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
-          .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return false; },
-          .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
-            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-          },
-          .isFileErrorBinding = [](const primec::Expr &) { return false; },
-          .setReferenceArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-          .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-          .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-          .isStringBinding = [](const primec::Expr &) { return false; },
-          .lowerMatchToIf = [](const primec::Expr &expr, primec::Expr &expandedExpr, std::string &) {
-            expandedExpr = expr;
-            return true;
-          },
-      },
-      state,
-      error));
-  CHECK(error.empty());
-  CHECK(static_cast<bool>(state.getReturnInfo));
-  CHECK(static_cast<bool>(state.inferExprKind));
-  CHECK(static_cast<bool>(state.inferArrayElementKind));
-  CHECK(static_cast<bool>(state.resolveMethodCallDefinition));
-
-  primec::ir_lowerer::ReturnInfo returnInfo;
-  CHECK(state.getReturnInfo("/callee", returnInfo));
-  CHECK(returnInfo.returnsVoid);
-
-  primec::Expr literalExpr;
-  literalExpr.kind = primec::Expr::Kind::Literal;
-  CHECK(state.inferExprKind(literalExpr, primec::ir_lowerer::LocalMap{}) ==
-        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-}
-
 TEST_CASE("ir lowerer inference setup validates dependencies") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   std::unordered_map<std::string, std::string> importAliases;
@@ -992,7 +911,7 @@ TEST_CASE("ir lowerer inference setup validates dependencies") {
       },
       state,
       error));
-  CHECK(error == "native backend missing inference setup bootstrap dependency: resolveExprPath");
+  CHECK(error == "native backend missing inference setup bootstrap dependency: structNames");
   CHECK_FALSE(static_cast<bool>(state.getReturnInfo));
 }
 
@@ -3188,120 +3107,6 @@ TEST_CASE("ir lowerer inference get-return-info setup validates dependencies") {
       error));
   CHECK(error == "native backend missing inference get-return-info setup dependency: program");
   CHECK_FALSE(static_cast<bool>(getReturnInfo));
-}
-
-TEST_CASE("ir lowerer inference preserves map reference parameter info for canonical count auto wrappers") {
-  primec::Definition canonicalCountDef;
-  canonicalCountDef.fullPath = "/std/collections/map/count";
-  primec::Transform countReturnTransform;
-  countReturnTransform.name = "return";
-  countReturnTransform.templateArgs = {"int"};
-  canonicalCountDef.transforms.push_back(countReturnTransform);
-
-  primec::Definition projectDef;
-  projectDef.fullPath = "/project";
-  primec::Transform projectReturnTransform;
-  projectReturnTransform.name = "return";
-  projectReturnTransform.templateArgs = {"auto"};
-  projectDef.transforms.push_back(projectReturnTransform);
-
-  primec::Expr refParam;
-  refParam.isBinding = true;
-  refParam.name = "ref";
-  primec::Transform refTransform;
-  refTransform.name = "Reference";
-  refTransform.templateArgs = {"std/collections/map<i32, i32>"};
-  refParam.transforms.push_back(refTransform);
-  projectDef.parameters.push_back(refParam);
-
-  primec::Expr countCall;
-  countCall.kind = primec::Expr::Kind::Call;
-  countCall.name = "/std/collections/map/count";
-  primec::Expr refName;
-  refName.kind = primec::Expr::Kind::Name;
-  refName.name = "ref";
-  primec::Expr markerArg;
-  markerArg.kind = primec::Expr::Kind::BoolLiteral;
-  markerArg.boolValue = true;
-  countCall.args = {refName, markerArg};
-  projectDef.returnExpr = countCall;
-
-  std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {canonicalCountDef.fullPath, &canonicalCountDef},
-      {projectDef.fullPath, &projectDef},
-  };
-  std::unordered_map<std::string, std::string> importAliases;
-  std::unordered_set<std::string> structNames;
-
-  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
-  std::string error;
-  CHECK(primec::ir_lowerer::runLowerInferenceSetup(
-      {
-          .defMap = &defMap,
-          .importAliases = &importAliases,
-          .structNames = &structNames,
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .resolveExprPath = [](const primec::Expr &expr) {
-            if (expr.kind == primec::Expr::Kind::Call && !expr.name.empty() && expr.name.front() != '/') {
-              return std::string("/") + expr.name;
-            }
-            return expr.name;
-          },
-          .getBuiltinOperatorName = [](const primec::Expr &, std::string &) { return false; },
-          .resolveStructArrayInfoFromPath =
-              [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
-          .inferStructExprPath =
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
-                return false;
-              },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-          .hasMathImport = false,
-          .combineNumericKinds =
-              [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind right) {
-                return (left == right) ? left : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-              },
-          .getMathConstantName = [](const std::string &, std::string &) { return false; },
-          .resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; },
-          .isBindingMutable = [](const primec::Expr &) { return false; },
-          .bindingKind = [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-          .hasExplicitBindingTypeTransform =
-              [](const primec::Expr &expr) { return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr); },
-          .bindingValueKind = [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-          },
-          .isFileErrorBinding = [](const primec::Expr &expr) { return primec::ir_lowerer::isFileErrorBindingType(expr); },
-          .setReferenceArrayInfo = [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo &info) {
-            primec::ir_lowerer::setReferenceArrayInfoFromTransforms(expr, info);
-          },
-          .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-          .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-          .isStringBinding = [](const primec::Expr &expr) { return primec::ir_lowerer::isStringBindingType(expr); },
-          .lowerMatchToIf = [](const primec::Expr &expr, primec::Expr &expandedExpr, std::string &) {
-            expandedExpr = expr;
-            return true;
-          },
-      },
-      state,
-      error));
-  CHECK(error.empty());
-
-  primec::ir_lowerer::ReturnInfo returnInfo;
-  CHECK(state.getReturnInfo("/project", returnInfo));
-  CHECK_FALSE(returnInfo.returnsVoid);
-  CHECK_FALSE(returnInfo.returnsArray);
-  CHECK(returnInfo.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
 TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {

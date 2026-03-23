@@ -2263,7 +2263,7 @@ TEST_CASE("rejects vm stdlib wrapper vector constructor explicit Vector mismatch
   expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject("vm");
 }
 
-TEST_CASE("runs vm stdlib wrapper vector constructors on inferred auto bindings") {
+TEST_CASE("runs vm stdlib vector constructors on inferred auto bindings") {
   expectStdlibWrapperVectorConstructorAutoInferenceConformance("vm");
 }
 

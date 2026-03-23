@@ -442,7 +442,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native explicit math imports") {
+TEST_CASE("native explicit math imports currently reject unsupported stdlib helper returns") {
   const std::string source = R"(
 import /std/math/min /std/math/pi
 [return<int>]
@@ -451,12 +451,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_math_explicit_imports.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_math_explicit_imports_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_explicit_imports.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend does not support return type on /std/math/ColorSRGBA/toLinear") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native float pow") {

@@ -41,6 +41,12 @@ std::string returnKindSnapshotName(ReturnKind kind) {
       return "f32";
     case ReturnKind::Float64:
       return "f64";
+    case ReturnKind::Integer:
+      return "integer";
+    case ReturnKind::Decimal:
+      return "decimal";
+    case ReturnKind::Complex:
+      return "complex";
     case ReturnKind::Bool:
       return "bool";
     case ReturnKind::String:

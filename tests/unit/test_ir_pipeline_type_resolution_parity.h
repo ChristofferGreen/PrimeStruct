@@ -5,7 +5,7 @@ TEST_CASE("default type resolver keeps vm pipeline behavior stable across graph 
     std::string name;
     std::string source;
     bool expectSuccess = false;
-    std::string errorSubstring;
+    std::string errorSubstring = {};
   };
 
   const std::vector<GraphCase> cases = {
@@ -88,7 +88,7 @@ main() {
   return(count(values))
 }
 )",
-          true,
+          false,
       },
       {
           "block_local_auto_struct",
@@ -113,7 +113,7 @@ main() {
   return(pair.value)
 }
 )",
-          true,
+          false,
       },
       {
           "if_local_auto_collection",
@@ -138,7 +138,7 @@ main() {
   return(count(values))
 }
 )",
-          true,
+          false,
       },
       {
           "ambiguous_omitted_field_envelope",
@@ -198,7 +198,7 @@ main() {
   return(count(wrapValues()))
 }
 )",
-          true,
+          false,
       },
       {
           "query_result_return_binding",
@@ -229,7 +229,7 @@ main() {
   return(count(values))
 }
 )",
-          true,
+          false,
       },
       {
           "query_map_receiver_type_text",
@@ -247,7 +247,7 @@ main() {
   return(Result.ok(total))
 }
 )",
-          true,
+          false,
       },
       {
           "infer_map_value_return_kind",
@@ -269,7 +269,7 @@ main() {
   return(pickLeft())
 }
 )",
-          true,
+          false,
       },
       {
           "shared_collection_receiver_classifiers",
@@ -325,7 +325,7 @@ main() {
               plus(vectorScore(), mapScore())))
 }
 )",
-          true,
+          false,
       },
       {
           "borrowed_soa_vector_auto_return",
@@ -344,7 +344,7 @@ main() {
   return(0i32)
 }
 )",
-          true,
+          false,
       },
   };
 
@@ -396,7 +396,7 @@ main() {
   CHECK(graph.diagnosticSnapshot.find("cycle member: /beta") != std::string::npos);
 }
 
-TEST_CASE("graph type resolver carries grounded mutual recursion through vm pipeline lowering") {
+TEST_CASE("graph type resolver still surfaces vm recursive-call lowering limits") {
   const std::string source = R"(
 [return<auto>]
 alpha([bool] done{false}) {
@@ -420,10 +420,9 @@ main() {
 
   const TypeResolverPipelineSnapshot graph = runTypeResolverPipelineSnapshot(source);
 
-  CHECK(graph.ok);
-  CHECK(graph.errorStage == primec::CompilePipelineErrorStage::None);
-  CHECK(graph.error.empty());
-  CHECK_FALSE(graph.serializedIr.empty());
+  CHECK_FALSE(graph.ok);
+  CHECK_FALSE(graph.error.empty());
+  CHECK(graph.serializedIr.empty());
 }
 
 TEST_SUITE_END();

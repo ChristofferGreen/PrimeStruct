@@ -2144,6 +2144,7 @@ enum class MissingReturnBehavior { Error, Void };
 struct ReturnInferenceOptions {
   MissingReturnBehavior missingReturnBehavior = MissingReturnBehavior::Error;
   bool includeDefinitionReturnExpr = false;
+  bool deferUnknownReturnDependencyErrors = false;
 };
 
 struct EntryReturnConfig {
@@ -2188,7 +2189,8 @@ bool inferDefinitionReturnType(const Definition &def,
                                const ExpandMatchToIfFn &expandMatchToIf,
                                const ReturnInferenceOptions &options,
                                ReturnInfo &outInfo,
-                               std::string &error);
+                               std::string &error,
+                               bool *sawUnresolvedDependencyOut = nullptr);
 bool inferDefinitionReturnType(const Definition &def,
                                LocalMap localsForInference,
                                const InferBindingIntoLocalsFn &inferBindingIntoLocals,
@@ -2197,7 +2199,8 @@ bool inferDefinitionReturnType(const Definition &def,
                                const ExpandMatchToIfFn &expandMatchToIf,
                                const ReturnInferenceOptions &options,
                                ReturnInfo &outInfo,
-                               std::string &error);
+                               std::string &error,
+                               bool *sawUnresolvedDependencyOut = nullptr);
 bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
                                            bool isParameter,
                                            const std::string &definitionPath,
@@ -2544,6 +2547,7 @@ struct LowerInferenceGetReturnInfoCallbackSetupInput {
   std::string *error = nullptr;
 };
 struct LowerInferenceGetReturnInfoSetupInput {
+  const Program *program = nullptr;
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
