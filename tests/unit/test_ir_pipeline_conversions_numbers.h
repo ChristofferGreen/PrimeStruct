@@ -482,6 +482,52 @@ main() {
   CHECK(result == 5);
 }
 
+TEST_CASE("ir lowerer supports direct Result combinator consumers") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
+  [i32] mapped{try(Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }))}
+  [i32] chained{try(Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) }))}
+  [i32] summed{
+    try(Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) }))
+  }
+  if(not(Result.error(Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) })))) {
+    return(1i32)
+  }
+  if(not(equal(Result.why(Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) })), "EOF"utf8))) {
+    return(2i32)
+  }
+  if(not(equal(Result.why(Result.map2(Result.ok(2i32), failed, []([i32] left, [i32] right) { return(plus(left, right)) })), "EOF"utf8))) {
+    return(3i32)
+  }
+  return(plus(plus(mapped, chained), summed))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 18);
+}
+
 TEST_CASE("ir lowerer accepts move builtin") {
   const std::string source = R"(
 [return<int>]

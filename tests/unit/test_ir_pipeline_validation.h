@@ -47471,6 +47471,202 @@ TEST_CASE("ir lowerer result helpers resolve direct Result.ok payload metadata f
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
 }
 
+TEST_CASE("ir lowerer result helpers resolve direct Result combinator metadata from locals") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo failedResult;
+  failedResult.isResult = true;
+  failedResult.resultHasValue = true;
+  failedResult.resultValueKind = ValueKind::Int32;
+  failedResult.resultErrorType = "FileError";
+  locals.emplace("failed", failedResult);
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr okValue;
+  okValue.kind = primec::Expr::Kind::Literal;
+  okValue.literalValue = 2;
+
+  primec::Expr directOk;
+  directOk.kind = primec::Expr::Kind::Call;
+  directOk.isMethodCall = true;
+  directOk.name = "ok";
+  directOk.args = {resultName, okValue};
+
+  primec::Expr valueParam;
+  valueParam.kind = primec::Expr::Kind::Name;
+  valueParam.name = "value";
+
+  primec::Expr valueName;
+  valueName.kind = primec::Expr::Kind::Name;
+  valueName.name = "value";
+
+  primec::Expr plusValue;
+  plusValue.kind = primec::Expr::Kind::Literal;
+  plusValue.literalValue = 3;
+
+  primec::Expr plusCall;
+  plusCall.kind = primec::Expr::Kind::Call;
+  plusCall.name = "plus";
+  plusCall.args = {valueName, plusValue};
+
+  primec::Expr multiplyValue;
+  multiplyValue.kind = primec::Expr::Kind::Literal;
+  multiplyValue.literalValue = 4;
+
+  primec::Expr multiplyCall;
+  multiplyCall.kind = primec::Expr::Kind::Call;
+  multiplyCall.name = "multiply";
+  multiplyCall.args = {valueName, multiplyValue};
+
+  primec::Expr returnMapped;
+  returnMapped.kind = primec::Expr::Kind::Call;
+  returnMapped.name = "return";
+  returnMapped.args = {multiplyCall};
+
+  primec::Expr mapLambda;
+  mapLambda.kind = primec::Expr::Kind::Call;
+  mapLambda.isLambda = true;
+  mapLambda.hasBodyArguments = true;
+  mapLambda.args = {valueParam};
+  mapLambda.bodyArguments = {returnMapped};
+
+  primec::Expr mapExpr;
+  mapExpr.kind = primec::Expr::Kind::Call;
+  mapExpr.isMethodCall = true;
+  mapExpr.name = "map";
+  mapExpr.args = {resultName, directOk, mapLambda};
+
+  primec::Expr failedName;
+  failedName.kind = primec::Expr::Kind::Name;
+  failedName.name = "failed";
+
+  primec::Expr chainedValueExpr;
+  chainedValueExpr.kind = primec::Expr::Kind::Call;
+  chainedValueExpr.isMethodCall = true;
+  chainedValueExpr.name = "ok";
+  chainedValueExpr.args = {resultName, plusCall};
+
+  primec::Expr chainedBinding;
+  chainedBinding.kind = primec::Expr::Kind::Call;
+  chainedBinding.isBinding = true;
+  chainedBinding.name = "next";
+  chainedBinding.args = {chainedValueExpr};
+
+  primec::Expr nextName;
+  nextName.kind = primec::Expr::Kind::Name;
+  nextName.name = "next";
+
+  primec::Expr returnChained;
+  returnChained.kind = primec::Expr::Kind::Call;
+  returnChained.name = "return";
+  returnChained.args = {nextName};
+
+  primec::Expr andThenLambda;
+  andThenLambda.kind = primec::Expr::Kind::Call;
+  andThenLambda.isLambda = true;
+  andThenLambda.hasBodyArguments = true;
+  andThenLambda.args = {valueParam};
+  andThenLambda.bodyArguments = {chainedBinding, returnChained};
+
+  primec::Expr andThenExpr;
+  andThenExpr.kind = primec::Expr::Kind::Call;
+  andThenExpr.isMethodCall = true;
+  andThenExpr.name = "and_then";
+  andThenExpr.args = {resultName, failedName, andThenLambda};
+
+  primec::Expr leftParam;
+  leftParam.kind = primec::Expr::Kind::Name;
+  leftParam.name = "left";
+  primec::Expr rightParam;
+  rightParam.kind = primec::Expr::Kind::Name;
+  rightParam.name = "right";
+  primec::Expr leftName;
+  leftName.kind = primec::Expr::Kind::Name;
+  leftName.name = "left";
+  primec::Expr rightName;
+  rightName.kind = primec::Expr::Kind::Name;
+  rightName.name = "right";
+
+  primec::Expr map2ReturnExpr;
+  map2ReturnExpr.kind = primec::Expr::Kind::Call;
+  map2ReturnExpr.name = "plus";
+  map2ReturnExpr.args = {leftName, rightName};
+
+  primec::Expr returnMap2;
+  returnMap2.kind = primec::Expr::Kind::Call;
+  returnMap2.name = "return";
+  returnMap2.args = {map2ReturnExpr};
+
+  primec::Expr map2Lambda;
+  map2Lambda.kind = primec::Expr::Kind::Call;
+  map2Lambda.isLambda = true;
+  map2Lambda.hasBodyArguments = true;
+  map2Lambda.args = {leftParam, rightParam};
+  map2Lambda.bodyArguments = {returnMap2};
+
+  primec::Expr map2Expr;
+  map2Expr.kind = primec::Expr::Kind::Call;
+  map2Expr.isMethodCall = true;
+  map2Expr.name = "map2";
+  map2Expr.args = {resultName, directOk, failedName, map2Lambda};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+
+  std::function<ValueKind(const primec::Expr &, const primec::ir_lowerer::LocalMap &)> inferExprKind;
+  inferExprKind = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &scopeLocals) -> ValueKind {
+    if (expr.kind == primec::Expr::Kind::Literal) {
+      return ValueKind::Int32;
+    }
+    if (expr.kind == primec::Expr::Kind::Name) {
+      auto it = scopeLocals.find(expr.name);
+      return it != scopeLocals.end() ? it->second.valueKind : ValueKind::Unknown;
+    }
+    if (expr.kind == primec::Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
+        expr.args.front().kind == primec::Expr::Kind::Name && expr.args.front().name == "Result" && expr.name == "ok" &&
+        expr.args.size() == 2) {
+      return inferExprKind(expr.args[1], scopeLocals);
+    }
+    if (expr.kind == primec::Expr::Kind::Call && (expr.name == "plus" || expr.name == "multiply")) {
+      return ValueKind::Int32;
+    }
+    return ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      mapExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int32);
+  CHECK(out.errorType.empty());
+
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      andThenExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int32);
+  CHECK(out.errorType == "FileError");
+
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      map2Expr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int32);
+  CHECK(out.errorType == "FileError");
+}
+
 TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
   using EmitResult = primec::ir_lowerer::ResultOkMethodCallEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;

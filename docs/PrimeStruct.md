@@ -676,7 +676,9 @@ for(
     semantics side. Lambda-backed execution now covers `Result.map(...)`, `Result.and_then(...)`, and
     `Result.map2(...)` on IR-backed native/VM paths for the current `i32`/`bool`/`f32`/`string` payload subset as
     well as the C++ emitter path, including direct `Result.ok(...)` source expressions instead of only local- or
-    definition-backed `Result` inputs.
+    definition-backed `Result` inputs, and the IR-side result resolver now recognizes those direct combinator
+    expressions themselves so VM/native `try(...)`, `Result.error(...)`, and `Result.why(...)` can consume them
+    without an intermediate binding.
   - Direct `Result.ok(...)` expressions now participate in that same metadata flow, including `Result.and_then(...)`
     lambdas that return `Result.ok(...)` and need to inherit the input `Result` error domain instead of depending on
     an unrelated outer context.

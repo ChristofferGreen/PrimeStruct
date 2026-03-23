@@ -33,6 +33,77 @@ bool isMapTryAtCallName(const Expr &expr) {
          normalized.rfind("std/collections/experimental_map/mapTryAt__", 0) == 0;
 }
 
+bool isResultBuiltinCall(const Expr &expr, const std::string &name, size_t argCount) {
+  return expr.kind == Expr::Kind::Call && expr.isMethodCall && expr.name == name && expr.args.size() == argCount &&
+         !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result";
+}
+
+bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
+                                             LocalMap &lambdaLocals,
+                                             const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+                                             const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                             const LookupReturnInfoFn &lookupReturnInfo,
+                                             const InferExprKindWithLocalsFn &inferExprKind,
+                                             const Expr *&valueExprOut) {
+  valueExprOut = nullptr;
+  if (!lambdaExpr.isLambda || (!lambdaExpr.hasBodyArguments && lambdaExpr.bodyArguments.empty())) {
+    return false;
+  }
+
+  for (size_t i = 0; i < lambdaExpr.bodyArguments.size(); ++i) {
+    const Expr &bodyExpr = lambdaExpr.bodyArguments[i];
+    const bool isLast = (i + 1 == lambdaExpr.bodyArguments.size());
+    if (bodyExpr.isBinding) {
+      if (bodyExpr.name.empty() || bodyExpr.args.empty()) {
+        return false;
+      }
+
+      LocalInfo bindingInfo;
+      bindingInfo.kind = LocalInfo::Kind::Value;
+      if (inferExprKind) {
+        bindingInfo.valueKind = inferExprKind(bodyExpr.args.front(), lambdaLocals);
+        if (bindingInfo.valueKind == LocalInfo::ValueKind::String) {
+          bindingInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
+        }
+      }
+
+      ResultExprInfo bindingResultInfo;
+      if (resolveResultExprInfoFromLocals(bodyExpr.args.front(),
+                                          lambdaLocals,
+                                          resolveMethodCall,
+                                          resolveDefinitionCall,
+                                          lookupReturnInfo,
+                                          inferExprKind,
+                                          bindingResultInfo) &&
+          bindingResultInfo.isResult) {
+        bindingInfo.isResult = true;
+        bindingInfo.resultHasValue = bindingResultInfo.hasValue;
+        bindingInfo.resultValueKind = bindingResultInfo.valueKind;
+        bindingInfo.resultErrorType = bindingResultInfo.errorType;
+      }
+
+      lambdaLocals[bodyExpr.name] = bindingInfo;
+      continue;
+    }
+
+    if (isSimpleCallName(bodyExpr, "return")) {
+      if (bodyExpr.args.size() != 1 || !isLast) {
+        return false;
+      }
+      valueExprOut = &bodyExpr.args.front();
+      break;
+    }
+
+    if (!isLast) {
+      continue;
+    }
+
+    valueExprOut = &bodyExpr;
+  }
+
+  return valueExprOut != nullptr;
+}
+
 } // namespace
 
 bool resolveResultExprInfo(const Expr &expr,
@@ -269,6 +340,145 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     if (out.hasValue && expr.args.size() == 2 && inferExprKind) {
       out.valueKind = inferExprKind(expr.args[1], localsIn);
     }
+    return true;
+  }
+  if (isResultBuiltinCall(expr, "map", 3)) {
+    ResultExprInfo sourceResultInfo;
+    if (!resolveResultExprInfoFromLocals(expr.args[1],
+                                         localsIn,
+                                         resolveMethodCall,
+                                         resolveDefinitionCall,
+                                         lookupReturnInfo,
+                                         inferExprKind,
+                                         sourceResultInfo) ||
+        !sourceResultInfo.isResult || !sourceResultInfo.hasValue || !expr.args[2].isLambda || expr.args[2].args.size() != 1) {
+      return false;
+    }
+
+    LocalMap lambdaLocals = localsIn;
+    LocalInfo paramInfo;
+    paramInfo.kind = LocalInfo::Kind::Value;
+    paramInfo.valueKind = sourceResultInfo.valueKind;
+    if (sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
+      paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
+    }
+    lambdaLocals[expr.args[2].args.front().name] = paramInfo;
+
+    const Expr *mappedValueExpr = nullptr;
+    if (!resolveResultLambdaValueExprForMetadata(
+            expr.args[2], lambdaLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, mappedValueExpr)) {
+      return false;
+    }
+
+    out.isResult = true;
+    out.hasValue = true;
+    if (inferExprKind) {
+      out.valueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
+    }
+    out.errorType = sourceResultInfo.errorType;
+    return true;
+  }
+  if (isResultBuiltinCall(expr, "and_then", 3)) {
+    ResultExprInfo sourceResultInfo;
+    if (!resolveResultExprInfoFromLocals(expr.args[1],
+                                         localsIn,
+                                         resolveMethodCall,
+                                         resolveDefinitionCall,
+                                         lookupReturnInfo,
+                                         inferExprKind,
+                                         sourceResultInfo) ||
+        !sourceResultInfo.isResult || !sourceResultInfo.hasValue || !expr.args[2].isLambda || expr.args[2].args.size() != 1) {
+      return false;
+    }
+
+    LocalMap lambdaLocals = localsIn;
+    LocalInfo paramInfo;
+    paramInfo.kind = LocalInfo::Kind::Value;
+    paramInfo.valueKind = sourceResultInfo.valueKind;
+    if (sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
+      paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
+    }
+    lambdaLocals[expr.args[2].args.front().name] = paramInfo;
+
+    const Expr *chainedResultExpr = nullptr;
+    if (!resolveResultLambdaValueExprForMetadata(
+            expr.args[2], lambdaLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, chainedResultExpr)) {
+      return false;
+    }
+
+    ResultExprInfo chainedResultInfo;
+    if (!resolveResultExprInfoFromLocals(*chainedResultExpr,
+                                         lambdaLocals,
+                                         resolveMethodCall,
+                                         resolveDefinitionCall,
+                                         lookupReturnInfo,
+                                         inferExprKind,
+                                         chainedResultInfo) ||
+        !chainedResultInfo.isResult) {
+      return false;
+    }
+    if (chainedResultInfo.errorType.empty()) {
+      chainedResultInfo.errorType = sourceResultInfo.errorType;
+    }
+    out = std::move(chainedResultInfo);
+    return true;
+  }
+  if (isResultBuiltinCall(expr, "map2", 4)) {
+    ResultExprInfo leftResultInfo;
+    ResultExprInfo rightResultInfo;
+    if (!resolveResultExprInfoFromLocals(expr.args[1],
+                                         localsIn,
+                                         resolveMethodCall,
+                                         resolveDefinitionCall,
+                                         lookupReturnInfo,
+                                         inferExprKind,
+                                         leftResultInfo) ||
+        !resolveResultExprInfoFromLocals(expr.args[2],
+                                         localsIn,
+                                         resolveMethodCall,
+                                         resolveDefinitionCall,
+                                         lookupReturnInfo,
+                                         inferExprKind,
+                                         rightResultInfo) ||
+        !leftResultInfo.isResult || !leftResultInfo.hasValue || !rightResultInfo.isResult || !rightResultInfo.hasValue ||
+        !expr.args[3].isLambda || expr.args[3].args.size() != 2) {
+      return false;
+    }
+
+    if (!leftResultInfo.errorType.empty() && !rightResultInfo.errorType.empty() &&
+        leftResultInfo.errorType != rightResultInfo.errorType) {
+      return false;
+    }
+
+    LocalMap lambdaLocals = localsIn;
+    LocalInfo leftParamInfo;
+    leftParamInfo.kind = LocalInfo::Kind::Value;
+    leftParamInfo.valueKind = leftResultInfo.valueKind;
+    if (leftResultInfo.valueKind == LocalInfo::ValueKind::String) {
+      leftParamInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
+    }
+    lambdaLocals[expr.args[3].args.front().name] = leftParamInfo;
+
+    LocalInfo rightParamInfo;
+    rightParamInfo.kind = LocalInfo::Kind::Value;
+    rightParamInfo.valueKind = rightResultInfo.valueKind;
+    if (rightResultInfo.valueKind == LocalInfo::ValueKind::String) {
+      rightParamInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
+    }
+    lambdaLocals[expr.args[3].args[1].name] = rightParamInfo;
+
+    const Expr *mappedValueExpr = nullptr;
+    if (!resolveResultLambdaValueExprForMetadata(
+            expr.args[3], lambdaLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, mappedValueExpr)) {
+      return false;
+    }
+
+    out.isResult = true;
+    out.hasValue = true;
+    if (inferExprKind) {
+      out.valueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
+    }
+    out.errorType = !leftResultInfo.errorType.empty() ? leftResultInfo.errorType : rightResultInfo.errorType;
     return true;
   }
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && expr.name == "tryAt") {

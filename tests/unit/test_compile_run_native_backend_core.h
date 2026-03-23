@@ -6533,6 +6533,50 @@ main() {
   CHECK(readFile(outPath) == "8\n5\n");
 }
 
+TEST_CASE("native backend supports direct Result combinator consumers on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
+  [i32] mapped{try(Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }))}
+  [i32] chained{try(Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) }))}
+  [i32] summed{
+    try(Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) }))
+  }
+  if(not(Result.error(Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) })))) {
+    return(1i32)
+  }
+  if(not(equal(Result.why(Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) })), "EOF"utf8))) {
+    return(2i32)
+  }
+  if(not(equal(Result.why(Result.map2(Result.ok(2i32), failed, []([i32] left, [i32] right) { return(plus(left, right)) })), "EOF"utf8))) {
+    return(3i32)
+  }
+  print_line(mapped)
+  print_line(chained)
+  return(summed)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_result_direct_combinator_consumers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_direct_combinator_consumers").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_direct_combinator_consumers_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 5);
+  CHECK(readFile(outPath) == "8\n5\n");
+}
+
 TEST_CASE("compiles and runs native direct type namespace string helpers") {
   const std::string source = R"(
 [struct]
