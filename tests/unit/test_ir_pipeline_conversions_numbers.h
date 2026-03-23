@@ -564,6 +564,52 @@ main() {
   CHECK(result == 18);
 }
 
+TEST_CASE("ir lowerer supports direct string Result combinator consumers") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return("parse failed"utf8)
+  }
+}
+
+[return<int>]
+main() {
+  return(
+    plus(
+      plus(
+        count(try(Result.map(Result.ok("alpha"utf8), []([string] value) { return(value) }))),
+        count(try(Result.and_then(Result.ok("beta"utf8), []([string] value) { return(Result.ok(value)) })))
+      ),
+      count(try(Result.map2(Result.ok("gamma"utf8), Result.ok("delta"utf8), []([string] left, [string] right) {
+        return(left)
+      })))
+    )
+  )
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 14);
+}
+
 TEST_CASE("ir lowerer rejects wide Result.ok payloads") {
   const std::string source = R"(
 import /std/file/*

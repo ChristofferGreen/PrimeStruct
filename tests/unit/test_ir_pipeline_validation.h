@@ -3275,6 +3275,148 @@ TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
   tryCallExpr.name = "try";
   tryCallExpr.args.push_back(resultCallExpr);
   CHECK(state.inferExprKind(tryCallExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
+
+  primec::Expr resultTypeExpr;
+  resultTypeExpr.kind = primec::Expr::Kind::Name;
+  resultTypeExpr.name = "Result";
+
+  primec::Expr alphaExpr;
+  alphaExpr.kind = primec::Expr::Kind::StringLiteral;
+  alphaExpr.stringValue = "\"alpha\"utf8";
+
+  primec::Expr betaExpr;
+  betaExpr.kind = primec::Expr::Kind::StringLiteral;
+  betaExpr.stringValue = "\"beta\"utf8";
+
+  primec::Expr gammaExpr;
+  gammaExpr.kind = primec::Expr::Kind::StringLiteral;
+  gammaExpr.stringValue = "\"gamma\"utf8";
+
+  primec::Expr deltaExpr;
+  deltaExpr.kind = primec::Expr::Kind::StringLiteral;
+  deltaExpr.stringValue = "\"delta\"utf8";
+
+  primec::Expr directOkAlpha;
+  directOkAlpha.kind = primec::Expr::Kind::Call;
+  directOkAlpha.isMethodCall = true;
+  directOkAlpha.name = "ok";
+  directOkAlpha.args = {resultTypeExpr, alphaExpr};
+
+  primec::Expr directOkBeta;
+  directOkBeta.kind = primec::Expr::Kind::Call;
+  directOkBeta.isMethodCall = true;
+  directOkBeta.name = "ok";
+  directOkBeta.args = {resultTypeExpr, betaExpr};
+
+  primec::Expr directOkGamma;
+  directOkGamma.kind = primec::Expr::Kind::Call;
+  directOkGamma.isMethodCall = true;
+  directOkGamma.name = "ok";
+  directOkGamma.args = {resultTypeExpr, gammaExpr};
+
+  primec::Expr directOkDelta;
+  directOkDelta.kind = primec::Expr::Kind::Call;
+  directOkDelta.isMethodCall = true;
+  directOkDelta.name = "ok";
+  directOkDelta.args = {resultTypeExpr, deltaExpr};
+
+  primec::Expr valueParam;
+  valueParam.kind = primec::Expr::Kind::Name;
+  valueParam.name = "value";
+
+  primec::Expr valueName;
+  valueName.kind = primec::Expr::Kind::Name;
+  valueName.name = "value";
+
+  primec::Expr returnMapped;
+  returnMapped.kind = primec::Expr::Kind::Call;
+  returnMapped.name = "return";
+  returnMapped.args = {valueName};
+
+  primec::Expr mapLambda;
+  mapLambda.kind = primec::Expr::Kind::Call;
+  mapLambda.isLambda = true;
+  mapLambda.hasBodyArguments = true;
+  mapLambda.args = {valueParam};
+  mapLambda.bodyArguments = {returnMapped};
+
+  primec::Expr mapExpr;
+  mapExpr.kind = primec::Expr::Kind::Call;
+  mapExpr.isMethodCall = true;
+  mapExpr.name = "map";
+  mapExpr.args = {resultTypeExpr, directOkAlpha, mapLambda};
+
+  primec::Expr chainedValueExpr;
+  chainedValueExpr.kind = primec::Expr::Kind::Call;
+  chainedValueExpr.isMethodCall = true;
+  chainedValueExpr.name = "ok";
+  chainedValueExpr.args = {resultTypeExpr, valueName};
+
+  primec::Expr returnChained;
+  returnChained.kind = primec::Expr::Kind::Call;
+  returnChained.name = "return";
+  returnChained.args = {chainedValueExpr};
+
+  primec::Expr andThenLambda;
+  andThenLambda.kind = primec::Expr::Kind::Call;
+  andThenLambda.isLambda = true;
+  andThenLambda.hasBodyArguments = true;
+  andThenLambda.args = {valueParam};
+  andThenLambda.bodyArguments = {returnChained};
+
+  primec::Expr andThenExpr;
+  andThenExpr.kind = primec::Expr::Kind::Call;
+  andThenExpr.isMethodCall = true;
+  andThenExpr.name = "and_then";
+  andThenExpr.args = {resultTypeExpr, directOkBeta, andThenLambda};
+
+  primec::Expr leftParam;
+  leftParam.kind = primec::Expr::Kind::Name;
+  leftParam.name = "left";
+
+  primec::Expr rightParam;
+  rightParam.kind = primec::Expr::Kind::Name;
+  rightParam.name = "right";
+
+  primec::Expr leftName;
+  leftName.kind = primec::Expr::Kind::Name;
+  leftName.name = "left";
+
+  primec::Expr returnMap2;
+  returnMap2.kind = primec::Expr::Kind::Call;
+  returnMap2.name = "return";
+  returnMap2.args = {leftName};
+
+  primec::Expr map2Lambda;
+  map2Lambda.kind = primec::Expr::Kind::Call;
+  map2Lambda.isLambda = true;
+  map2Lambda.hasBodyArguments = true;
+  map2Lambda.args = {leftParam, rightParam};
+  map2Lambda.bodyArguments = {returnMap2};
+
+  primec::Expr map2Expr;
+  map2Expr.kind = primec::Expr::Kind::Call;
+  map2Expr.isMethodCall = true;
+  map2Expr.name = "map2";
+  map2Expr.args = {resultTypeExpr, directOkGamma, directOkDelta, map2Lambda};
+
+  primec::Expr tryMapExpr;
+  tryMapExpr.kind = primec::Expr::Kind::Call;
+  tryMapExpr.name = "try";
+  tryMapExpr.args = {mapExpr};
+  CHECK(state.inferExprKind(tryMapExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
+
+  primec::Expr tryAndThenExpr;
+  tryAndThenExpr.kind = primec::Expr::Kind::Call;
+  tryAndThenExpr.name = "try";
+  tryAndThenExpr.args = {andThenExpr};
+  CHECK(state.inferExprKind(tryAndThenExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
+
+  primec::Expr tryMap2Expr;
+  tryMap2Expr.kind = primec::Expr::Kind::Call;
+  tryMap2Expr.name = "try";
+  tryMap2Expr.args = {map2Expr};
+  CHECK(state.inferExprKind(tryMap2Expr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
 TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed pointer Result args packs") {

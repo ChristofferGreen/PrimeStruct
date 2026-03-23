@@ -684,7 +684,10 @@ for(
     an unrelated outer context. Unsupported wider payload kinds now reject through the same explicit IR-backed
     contract across `Result.ok(...)`, `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)`, with
     unsupported value-carrying `Result.and_then(...)` lambda returns now rejecting at the combinator boundary while
-    status-only `Result<Error>` returns continue to lower on the same IR-backed path.
+    status-only `Result<Error>` returns continue to lower on the same IR-backed path. The same IR inference now
+    recognizes direct string `try(Result.map(...))`, `try(Result.and_then(...))`, and `try(Result.map2(...))`
+    expressions for downstream string consumers such as `count(...)` and `print_line(...)` without an intermediate
+    binding.
   - `/std/file/*` now also exposes a stdlib-owned `FileError` namespace surface: `FileError.why(err)`,
     `FileError.status(err)`, `FileError.result<T>(err)`, `FileError.eof()`, and `FileError.is_eof(err)` resolve
     through `/std/file/FileError/*` even in direct nested `Result.error(...)` / `Result.why(...)` expressions, and

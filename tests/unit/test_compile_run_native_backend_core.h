@@ -6728,6 +6728,43 @@ main() {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
+TEST_CASE("native backend supports direct string Result combinator consumers") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return("parse failed"utf8)
+  }
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(try(Result.map(Result.ok("alpha"utf8), []([string] value) { return(value) })))
+  print_line(try(Result.and_then(Result.ok("beta"utf8), []([string] value) { return(Result.ok(value)) })))
+  print_line(try(Result.map2(Result.ok("gamma"utf8), Result.ok("delta"utf8), []([string] left, [string] right) {
+    return(left)
+  })))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("native_result_combinators_string.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_combinators_string_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_combinators_string_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\nbeta\ngamma\n");
+}
+
 #if defined(EACCES)
 TEST_CASE("compiles and runs native FileError.why mapping") {
   const std::string source =

@@ -4,6 +4,7 @@
 #include "../semantics/TypeResolutionGraph.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererResultHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererUninitializedTypeHelpers.h"
 
@@ -2227,6 +2228,45 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
               kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
               return true;
             }
+          }
+        }
+        if (stateInOut.getReturnInfo && stateInOut.inferExprKind) {
+          auto resolveMethodCallDefinitionNoProbeError =
+              [&](const Expr &candidate, const LocalMap &candidateLocals) -> const Definition * {
+            if (!stateInOut.resolveMethodCallDefinition) {
+              return nullptr;
+            }
+            return stateInOut.resolveMethodCallDefinition(candidate, candidateLocals);
+          };
+          auto resolveDefinitionCall = [&](const Expr &candidate) -> const Definition * {
+            if (candidate.isMethodCall || defMap == nullptr || !resolveExprPath) {
+              return nullptr;
+            }
+            std::string path = resolveExprPath(candidate);
+            if (path.empty() && !candidate.name.empty()) {
+              path = candidate.name;
+              if (!path.empty() && path.front() != '/') {
+                path.insert(path.begin(), '/');
+              }
+            }
+            if (path.empty()) {
+              return nullptr;
+            }
+            auto defIt = defMap->find(path);
+            return defIt != defMap->end() ? defIt->second : nullptr;
+          };
+
+          ResultExprInfo resultInfo;
+          if (resolveResultExprInfoFromLocals(resultExpr,
+                                             localsIn,
+                                             resolveMethodCallDefinitionNoProbeError,
+                                             resolveDefinitionCall,
+                                             stateInOut.getReturnInfo,
+                                             stateInOut.inferExprKind,
+                                             resultInfo) &&
+              resultInfo.isResult) {
+            kindOut = resultInfo.hasValue ? resultInfo.valueKind : LocalInfo::ValueKind::Int32;
+            return true;
           }
         }
       }
