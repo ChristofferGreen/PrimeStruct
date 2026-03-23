@@ -631,6 +631,17 @@ private:
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       const std::function<bool(const Expr &)> &resolveMapTarget,
       ExprCollectionAccessDispatchContext &contextOut);
+  bool validateExprPostAccessPrechecks(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      std::string &resolved,
+      bool &resolvedMethod,
+      bool usedMethodTarget,
+      const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
+      const std::vector<Stmt> *enclosingStatements,
+      size_t statementIndex,
+      bool &handledOut);
   bool resolveExprCollectionAccessTarget(const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          const Expr &expr,

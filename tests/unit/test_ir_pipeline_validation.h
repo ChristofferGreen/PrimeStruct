@@ -9256,6 +9256,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccessSetup.cpp";
   const std::filesystem::path semanticsExprDirectCollectionFallbacksPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprDirectCollectionFallbacks.cpp";
+  const std::filesystem::path semanticsExprPostAccessPrechecksPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprPostAccessPrechecks.cpp";
   const std::filesystem::path semanticsExprCollectionLiteralsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionLiterals.cpp";
   const std::filesystem::path semanticsExprBodyArgumentsPath =
@@ -9308,6 +9310,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessSetupPath));
   REQUIRE(std::filesystem::exists(semanticsExprDirectCollectionFallbacksPath));
+  REQUIRE(std::filesystem::exists(semanticsExprPostAccessPrechecksPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
   REQUIRE(std::filesystem::exists(semanticsExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateFallbackBuiltinsPath));
@@ -9344,6 +9347,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprCollectionAccessSetupPath);
   const std::string semanticsExprDirectCollectionFallbacksSource =
       readText(semanticsExprDirectCollectionFallbacksPath);
+  const std::string semanticsExprPostAccessPrechecksSource =
+      readText(semanticsExprPostAccessPrechecksPath);
   const std::string semanticsExprCollectionLiteralsSource = readText(semanticsExprCollectionLiteralsPath);
   const std::string semanticsExprBodyArgumentsSource =
       readText(semanticsExprBodyArgumentsPath);
@@ -9412,6 +9417,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "prepareExprCollectionAccessDispatchContext(\n"
             "        collectionDispatchSetup,\n"
             "        shouldBuiltinValidateBareMapContainsCall,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprPostAccessPrechecks(\n"
+            "            params,\n"
+            "            locals,\n"
+            "            expr,\n"
+            "            resolved,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprLateMapAccessBuiltins(\n"
@@ -9564,10 +9576,26 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprBodyArgumentsSource.find("this->resolveRemovedMapBodyArgumentTarget(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "validateExprBodyArguments(params, locals, expr, resolved, resolvedMethod,") ==
+        std::string::npos);
+  CHECK(semanticsExprPostAccessPrechecksSource.find(
             "validateExprBodyArguments(params, locals, expr, resolved, resolvedMethod,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprNamedArguments(params, locals, expr, resolved,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("std::string gpuBuiltin;") == std::string::npos);
+  CHECK(semanticsExprPostAccessPrechecksSource.find("std::string gpuBuiltin;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("PathSpaceBuiltin pathSpaceBuiltin;") ==
+        std::string::npos);
+  CHECK(semanticsExprPostAccessPrechecksSource.find("PathSpaceBuiltin pathSpaceBuiltin;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "if (!resolvedMethod && resolved == \"/file_error/why\" &&") ==
+        std::string::npos);
+  CHECK(semanticsExprPostAccessPrechecksSource.find(
+            "if (!resolvedMethod && resolved == \"/file_error/why\" &&") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("isUnsafeReferenceExpr(params, locals, expr.args[1])") ==
         std::string::npos);

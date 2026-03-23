@@ -356,6 +356,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       cwd / "src" / "semantics" / "SemanticsValidatorExprCollectionAccessSetup.cpp";
   std::filesystem::path validatorExprDirectCollectionFallbacksPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprDirectCollectionFallbacks.cpp";
+  std::filesystem::path validatorExprPostAccessPrechecksPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorExprPostAccessPrechecks.cpp";
   std::filesystem::path validatorExprMethodResolutionPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
   std::filesystem::path validatorExprBodyArgumentsPath =
@@ -399,6 +401,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprCollectionAccessSetup.cpp";
     validatorExprDirectCollectionFallbacksPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprDirectCollectionFallbacks.cpp";
+    validatorExprPostAccessPrechecksPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprPostAccessPrechecks.cpp";
     validatorExprMethodResolutionPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
     validatorExprBodyArgumentsPath =
@@ -436,6 +440,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorExprCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprCollectionAccessSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprDirectCollectionFallbacksPath));
+  REQUIRE(std::filesystem::exists(validatorExprPostAccessPrechecksPath));
   REQUIRE(std::filesystem::exists(validatorExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(validatorExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(validatorCollectionHelperRewritesPath));
@@ -471,6 +476,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       validatorExprCollectionDispatchSetupPath,
       validatorExprCollectionAccessSetupPath,
       validatorExprDirectCollectionFallbacksPath,
+      validatorExprPostAccessPrechecksPath,
       validatorExprMethodResolutionPath,
       validatorCollectionHelperRewritesPath,
   });
@@ -719,6 +725,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("struct ExprDirectCollectionFallbackContext") != std::string::npos);
   CHECK(validatorHeader.find("bool validateExprDirectCollectionFallbacks(") != std::string::npos);
+  CHECK(validatorHeader.find("bool validateExprPostAccessPrechecks(") !=
+        std::string::npos);
   CHECK(validatorExprMain.find("const std::string directRemovedMapCompatibilityPath =") ==
         std::string::npos);
   CHECK(validatorExpr.find("const std::string directRemovedMapCompatibilityPath =") !=
@@ -733,6 +741,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("validateExprDirectCollectionFallbacks(") != std::string::npos);
   CHECK(validatorExpr.find("bool SemanticsValidator::validateExprDirectCollectionFallbacks(") !=
         std::string::npos);
+  CHECK(validatorExprMain.find("validateExprPostAccessPrechecks(") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("bool SemanticsValidator::validateExprPostAccessPrechecks(") !=
+        std::string::npos);
   CHECK(validatorExprMain.find("const bool allowStdNamespacedVectorUserReceiverProbe =") ==
         std::string::npos);
   CHECK(validatorExpr.find("const bool allowStdNamespacedVectorUserReceiverProbe =") !=
@@ -744,6 +756,12 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("collectionAccessDispatchContext.resolveArrayTarget =") ==
         std::string::npos);
   CHECK(validatorExpr.find("contextOut.resolveArrayTarget = dispatchResolvers.resolveArrayTarget;") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("std::string gpuBuiltin;") == std::string::npos);
+  CHECK(validatorExpr.find("std::string gpuBuiltin;") != std::string::npos);
+  CHECK(validatorExprMain.find("PathSpaceBuiltin pathSpaceBuiltin;") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("PathSpaceBuiltin pathSpaceBuiltin;") !=
         std::string::npos);
   CHECK(validatorExpr.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") !=
         std::string::npos);
@@ -1049,6 +1067,8 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionAccessSetup.cpp") !=
         std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprDirectCollectionFallbacks.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprPostAccessPrechecks.cpp") !=
         std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp") !=
         std::string::npos);

@@ -141,6 +141,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin FileError why method works without imported wrapper") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [FileError] err{13i32}
+  [string] why{err.why()}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("builtin FileError why method rejects explicit arguments without imported wrapper") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [FileError] err{13i32}
+  [string] why{err.why(1i32)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("why does not accept arguments") != std::string::npos);
+}
+
 TEST_CASE("stdlib FileError why wrapper rejects non file errors") {
   const std::string source = R"(
 import /std/file/*
