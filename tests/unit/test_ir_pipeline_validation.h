@@ -10856,6 +10856,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionDirectCountCapacity.cpp";
   const std::filesystem::path semanticsInferCollectionDispatchPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionDispatch.cpp";
+  const std::filesystem::path semanticsInferCollectionDispatchSetupPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionDispatchSetup.cpp";
   const std::filesystem::path semanticsInferCollectionsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
   const std::filesystem::path semanticsInferControlFlowPath =
@@ -10878,6 +10880,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferCollectionCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDirectCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDispatchPath));
+  REQUIRE(std::filesystem::exists(semanticsInferCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsInferDefinitionPath));
@@ -10893,6 +10896,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       semanticsInferCollectionCountCapacityPath,
       semanticsInferCollectionDirectCountCapacityPath,
       semanticsInferCollectionDispatchPath,
+      semanticsInferCollectionDispatchSetupPath,
       semanticsInferCollectionsPath,
       semanticsInferControlFlowPath,
       semanticsInferDefinitionPath,
@@ -10908,6 +10912,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   const std::string semanticsInferCollectionDirectCountCapacitySource =
       readText(semanticsInferCollectionDirectCountCapacityPath);
   const std::string semanticsInferCollectionDispatchSource = readText(semanticsInferCollectionDispatchPath);
+  const std::string semanticsInferCollectionDispatchSetupSource =
+      readText(semanticsInferCollectionDispatchSetupPath);
   const std::string semanticsInferCollectionsSource = readText(semanticsInferCollectionsPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
@@ -10917,9 +10923,13 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers") !=
         std::string::npos);
-  CHECK(semanticsInferCombinedSource.find("BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;") !=
+  CHECK(semanticsInferCombinedSource.find("InferCollectionDispatchSetup inferCollectionDispatchSetup;") !=
         std::string::npos);
-  CHECK(semanticsInferCombinedSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") !=
+  CHECK(semanticsInferCombinedSource.find("prepareInferCollectionDispatchSetup(") !=
+        std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
+        std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
@@ -11019,6 +11029,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionMethodReturnKind = [&]") == std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionAccessCallReturnKind = [&]") == std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinCollectionCountCapacityReturnKind = [&]") == std::string::npos);
+  CHECK(semanticsInferSource.find("std::string namespacedCollection;") == std::string::npos);
+  CHECK(semanticsInferSource.find("const bool isStdNamespacedVectorCountCall =") == std::string::npos);
+  CHECK(semanticsInferSource.find("const bool shouldDeferResolvedNamespacedCollectionHelperReturn =") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;") ==
+        std::string::npos);
+  CHECK(semanticsInferSource.find("BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;") ==
+        std::string::npos);
   CHECK(semanticsInferCollectionCountCapacitySource.find("bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKind") !=
@@ -11033,6 +11051,18 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDispatchSource.find("bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find("bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find("void SemanticsValidator::prepareInferCollectionDispatchSetup") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find("std::string namespacedCollection;") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find("const bool isStdNamespacedVectorCountCall =") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.shouldDeferResolvedNamespacedCollectionHelperReturn =") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::normalizeCollectionTypePath") !=
         std::string::npos);

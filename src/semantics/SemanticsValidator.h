@@ -1024,6 +1024,36 @@ private:
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
   };
+  struct InferCollectionDispatchSetup {
+    std::string builtinAccessName;
+    bool hasBuiltinAccessSpelling = false;
+    bool isBuiltinAccess = false;
+    bool shouldDeferNamespacedVectorAccessCall = false;
+    bool shouldDeferNamespacedMapAccessCall = false;
+    bool shouldDeferResolvedNamespacedCollectionHelperReturn = false;
+    bool hasPreferredBuiltinAccessKind = false;
+    ReturnKind preferredBuiltinAccessKind = ReturnKind::Unknown;
+    bool isStdNamespacedVectorAccessSpelling = false;
+    bool shouldAllowStdAccessCompatibilityFallback = false;
+    bool isStdNamespacedMapAccessSpelling = false;
+    bool hasStdNamespacedMapAccessDefinition = false;
+    bool shouldInferBuiltinBareMapContainsCall = true;
+    bool shouldInferBuiltinBareMapTryAtCall = true;
+    bool shouldInferBuiltinBareMapAccessCall = true;
+    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
+    BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;
+    BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;
+  };
+  void prepareInferCollectionDispatchSetup(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      const std::function<bool(const std::string &, std::string &)> &resolveMethodCallPath,
+      const std::function<bool(const Expr &, std::string &)> &resolveArgsPackCountTarget,
+      const std::function<bool(const std::string &, ReturnKind &)> &inferResolvedPathReturnKind,
+      const BuiltinCollectionDispatchResolvers &builtinCollectionDispatchResolvers,
+      InferCollectionDispatchSetup &setupOut);
   bool resolveBuiltinCollectionMethodReturnKind(const std::string &resolvedPath,
                                                 const Expr &receiverExpr,
                                                 const BuiltinCollectionDispatchResolvers &resolvers,

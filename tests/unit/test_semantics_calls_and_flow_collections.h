@@ -9243,6 +9243,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map wrapper temporary contains auto inference uses canonical helper return") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(true)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [auto] inferred{/std/collections/map/contains(wrapMap(), 1i32)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("map wrapper temporary contains call requires canonical helper definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
@@ -9253,6 +9276,24 @@ wrapMap() {
 [effects(heap_alloc), return<bool>]
 main() {
   return(/std/collections/map/contains(wrapMap(), 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/contains") != std::string::npos);
+}
+
+TEST_CASE("map wrapper temporary contains auto inference requires canonical helper definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [auto] inferred{/std/collections/map/contains(wrapMap(), 1i32)}
+  return(inferred)
 }
 )";
   std::string error;

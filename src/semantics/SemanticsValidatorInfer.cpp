@@ -870,199 +870,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
-    std::string namespacedCollection;
-    std::string namespacedHelper;
-    const bool isNamespacedCollectionHelperCall =
-        getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
-    const bool isNamespacedVectorHelperCall =
-        isNamespacedCollectionHelperCall && namespacedCollection == "vector";
-    const bool isNamespacedMapHelperCall =
-        isNamespacedCollectionHelperCall && namespacedCollection == "map";
-    const bool isStdNamespacedVectorCountCall =
-        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
-    const bool hasStdNamespacedVectorCountDefinition =
-        hasImportedDefinitionPath("/std/collections/vector/count");
-    const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
-        isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
-    const bool isStdNamespacedMapCountCall =
-        !expr.isMethodCall && resolveCalleePath(expr) == "/std/collections/map/count";
-    const bool isNamespacedVectorCountCall =
-        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
-        isVectorBuiltinName(expr, "count") && !isArrayNamespacedVectorCountCompatibilityCall(expr);
-    const bool isNamespacedMapCountCall =
-        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
-        !isMapNamespacedCountCompatibilityCall && !isStdNamespacedMapCountCall &&
-        !hasDefinitionPath(resolved);
-    const bool prefersExplicitDirectMapAccessAliasDefinition =
-        !expr.isMethodCall &&
-        (((isNamespacedMapHelperCall && (namespacedHelper == "at" || namespacedHelper == "at_unsafe")) ||
-          (((expr.namespacePrefix == "map") || (expr.namespacePrefix == "/map")) &&
-           (expr.name == "at" || expr.name == "at_unsafe")))) &&
-        hasDefinitionPath("/map/" +
-                          ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper));
-    if (prefersExplicitDirectMapAccessAliasDefinition) {
-      resolved = "/map/" + ((expr.name == "at" || expr.name == "at_unsafe") ? expr.name : namespacedHelper);
-      hasResolvedPath = true;
-    }
-    const BuiltinCollectionDispatchResolverAdapters mapCountDispatchResolverAdapters;
-    const bool isUnnamespacedMapCountFallbackCall =
-        !expr.isMethodCall &&
-        this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, mapCountDispatchResolverAdapters);
-    const bool isResolvedMapCountCall =
-        !expr.isMethodCall && resolved == "/map/count" &&
-        !isMapNamespacedCountCompatibilityCall &&
-        !isUnnamespacedMapCountFallbackCall;
-    const bool isNamespacedVectorCapacityCall =
-        !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
-        isVectorBuiltinName(expr, "capacity");
-    const bool isStdNamespacedVectorCapacityCall =
-        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
-    const bool hasStdNamespacedVectorCapacityDefinition =
-        hasImportedDefinitionPath("/std/collections/vector/capacity");
-    const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =
-        isStdNamespacedVectorCapacityCall && hasStdNamespacedVectorCapacityDefinition;
-    std::string builtinAccessName;
-    const bool hasBuiltinAccessSpelling = getBuiltinArrayAccessName(expr, builtinAccessName);
-    const bool isStdNamespacedVectorAccessSpelling =
-        hasBuiltinAccessSpelling && !expr.isMethodCall &&
-        resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
-    const bool hasStdNamespacedVectorAccessDefinition =
-        isStdNamespacedVectorAccessSpelling &&
-        hasImportedDefinitionPath(resolveCalleePath(expr));
-    const bool isStdNamespacedMapAccessSpelling =
-        hasBuiltinAccessSpelling && !expr.isMethodCall &&
-        (resolveCalleePath(expr) == "/std/collections/map/at" ||
-         resolveCalleePath(expr) == "/std/collections/map/at_unsafe");
-    const bool hasStdNamespacedMapAccessDefinition =
-        isStdNamespacedMapAccessSpelling &&
-        hasImportedDefinitionPath(resolveCalleePath(expr));
-    const bool isResolvedMapAccessCall =
-        !expr.isMethodCall && (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
-        !isMapNamespacedAccessCompatibilityCall;
-    const bool shouldAllowStdAccessCompatibilityFallback =
-        isStdNamespacedVectorAccessSpelling && !builtinAccessName.empty() &&
-        hasDefinitionPath("/vector/" + builtinAccessName);
-    const bool isBuiltinAccess =
-        hasBuiltinAccessSpelling &&
-        (!isStdNamespacedVectorAccessSpelling || shouldAllowStdAccessCompatibilityFallback ||
-         hasStdNamespacedVectorAccessDefinition) &&
-        !isStdNamespacedMapAccessSpelling && !isResolvedMapAccessCall;
-    const bool isNamespacedVectorAccessCall =
-        !expr.isMethodCall && isBuiltinAccess && isNamespacedVectorHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
-    const bool isNamespacedMapAccessCall =
-        !expr.isMethodCall && isBuiltinAccess && isNamespacedMapHelperCall &&
-        (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
-        !prefersExplicitDirectMapAccessAliasDefinition &&
-        !isMapNamespacedAccessCompatibilityCall &&
-        !hasDefinitionPath(resolved);
-    const bool shouldInferBuiltinBareMapContainsCall = true;
-    const bool shouldInferBuiltinBareMapTryAtCall = true;
-    const bool shouldInferBuiltinBareMapAccessCall = true;
-    auto isIndexedArgsPackMapReceiverTarget = [&](const Expr &receiverExpr) -> bool {
-      std::string elemType;
-      std::string keyType;
-      std::string valueType;
-      return ((resolveIndexedArgsPackElementType(receiverExpr, elemType) ||
-               resolveWrappedIndexedArgsPackElementType(receiverExpr, elemType) ||
-               resolveDereferencedIndexedArgsPackElementType(receiverExpr, elemType)) &&
-              extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
-    };
-    BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;
-    builtinCollectionCountCapacityDispatchContext.isCountLike =
-        (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
-         isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
-        expr.args.size() == 1 && !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
-        (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-        !prefersCanonicalVectorCountAliasDefinition;
-    builtinCollectionCountCapacityDispatchContext.isCapacityLike =
-        isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
-        (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall);
-    builtinCollectionCountCapacityDispatchContext.isUnnamespacedMapCountFallbackCall =
-        isUnnamespacedMapCountFallbackCall;
-    builtinCollectionCountCapacityDispatchContext.shouldInferBuiltinBareMapCountCall =
-        shouldInferBuiltinBareMapCountCall;
-    builtinCollectionCountCapacityDispatchContext.resolveMethodCallPath = resolveMethodCallPath;
-    builtinCollectionCountCapacityDispatchContext.preferVectorStdlibHelperPath =
-        preferVectorStdlibHelperPathForDispatch;
-    builtinCollectionCountCapacityDispatchContext.hasDeclaredDefinitionPath =
-        hasDeclaredDefinitionPathForDispatch;
-    builtinCollectionCountCapacityDispatchContext.resolveMapTarget = resolveMapTarget;
-    builtinCollectionCountCapacityDispatchContext.dispatchResolvers = &builtinCollectionDispatchResolvers;
+    InferCollectionDispatchSetup inferCollectionDispatchSetup;
+    prepareInferCollectionDispatchSetup(
+        params,
+        locals,
+        expr,
+        resolved,
+        resolveMethodCallPath,
+        resolveArgsPackCountTarget,
+        inferResolvedPathReturnKind,
+        builtinCollectionDispatchResolvers,
+        inferCollectionDispatchSetup);
     auto defIt = hasResolvedPath ? defMap_.find(resolved) : defMap_.end();
-    const bool hasResolvedDefinition = defIt != defMap_.end();
-    std::string normalizedCallName = expr.name;
-    if (!normalizedCallName.empty() && normalizedCallName.front() == '/') {
-      normalizedCallName.erase(normalizedCallName.begin());
-    }
-    const bool isStdNamespacedMapAccessPath = normalizedCallName.rfind("std/collections/map/", 0) == 0;
-    const bool shouldDeferNamespacedVectorAccessCall =
-        isNamespacedVectorAccessCall && (!hasResolvedDefinition || isStdNamespacedVectorAccessSpelling);
-    const bool shouldDeferNamespacedMapAccessCall =
-        isNamespacedMapAccessCall && (!hasResolvedDefinition || isStdNamespacedMapAccessPath);
-    const bool shouldUseResolvedStdNamespacedVectorCountDefinition =
-        isStdNamespacedVectorCountCall && !hasDefinitionPath("/vector/count") &&
-        hasDefinitionPath("/std/collections/vector/count");
-    ReturnKind preferredBuiltinAccessKind = ReturnKind::Unknown;
-    const bool hasPreferredBuiltinAccessKind =
-        hasBuiltinAccessSpelling &&
-        resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, preferredBuiltinAccessKind);
-    bool shouldDeferResolvedNamespacedCollectionHelperReturn =
-        isNamespacedVectorCountCall || isNamespacedMapCountCall || isResolvedMapCountCall ||
-        isNamespacedVectorCapacityCall || shouldDeferNamespacedVectorAccessCall ||
-        shouldDeferNamespacedMapAccessCall;
-    if (prefersCanonicalVectorCountAliasDefinition) {
-      shouldDeferResolvedNamespacedCollectionHelperReturn = false;
-    }
-    if (shouldUseResolvedStdNamespacedVectorCountDefinition) {
-      shouldDeferResolvedNamespacedCollectionHelperReturn = false;
-    }
-    const bool isDirectBuiltinCountCapacityCountCall =
-        !expr.isMethodCall &&
-        (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
-         isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall) &&
-        !expr.args.empty() &&
-        !isArrayNamespacedVectorCountCompatibilityCall(expr) &&
-        (!isStdNamespacedVectorCountCall || shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-        !prefersCanonicalVectorCountAliasDefinition &&
-        ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
-         isNamespacedVectorCountCall || isStdNamespacedMapCountCall || isNamespacedMapCountCall ||
-         isUnnamespacedMapCountFallbackCall || isResolvedMapCountCall);
-    const bool isDirectBuiltinCountCapacityCapacityCall =
-        !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
-        (!isStdNamespacedVectorCapacityCall || shouldBuiltinValidateStdNamespacedVectorCapacityCall) &&
-        !expr.args.empty() &&
-        (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall);
-    BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;
-    builtinCollectionDirectCountCapacityContext.isDirectCountCall = isDirectBuiltinCountCapacityCountCall;
-    builtinCollectionDirectCountCapacityContext.isDirectCountSingleArg =
-        isDirectBuiltinCountCapacityCountCall && expr.args.size() == 1;
-    builtinCollectionDirectCountCapacityContext.isDirectCapacityCall = isDirectBuiltinCountCapacityCapacityCall;
-    builtinCollectionDirectCountCapacityContext.isDirectCapacitySingleArg =
-        isDirectBuiltinCountCapacityCapacityCall && expr.args.size() == 1;
-    builtinCollectionDirectCountCapacityContext.shouldInferBuiltinBareMapCountCall =
-        shouldInferBuiltinBareMapCountCall;
-    builtinCollectionDirectCountCapacityContext.resolveMethodCallPath = resolveMethodCallPath;
-    builtinCollectionDirectCountCapacityContext.preferVectorStdlibHelperPath =
-        preferVectorStdlibHelperPathForDispatch;
-    builtinCollectionDirectCountCapacityContext.hasDeclaredDefinitionPath =
-        hasDeclaredDefinitionPathForDispatch;
-    builtinCollectionDirectCountCapacityContext.inferResolvedPathReturnKind =
-        inferResolvedPathReturnKind;
-    builtinCollectionDirectCountCapacityContext.tryRewriteBareMapHelperCall =
-        [&](const Expr &candidate, Expr &rewrittenOut) {
-          return this->tryRewriteBareMapHelperCall(
-              candidate, "count", builtinCollectionDispatchResolvers, rewrittenOut);
-        };
-    builtinCollectionDirectCountCapacityContext.inferRewrittenExprReturnKind =
-        [&](const Expr &rewrittenExpr) { return inferExprReturnKind(rewrittenExpr, params, locals); };
-    builtinCollectionDirectCountCapacityContext.resolveArgsPackCountTarget = resolveArgsPackCountTarget;
-    builtinCollectionDirectCountCapacityContext.resolveVectorTarget = resolveVectorTarget;
-    builtinCollectionDirectCountCapacityContext.resolveArrayTarget = resolveArrayTarget;
-    builtinCollectionDirectCountCapacityContext.resolveStringTarget = resolveStringTarget;
-    builtinCollectionDirectCountCapacityContext.resolveMapTarget = resolveMapTarget;
-    builtinCollectionDirectCountCapacityContext.dispatchResolvers =
-        &builtinCollectionDispatchResolvers;
     auto isTypeNamespaceMethodCall = [&](const Expr &callExpr, const std::string &resolvedPath) -> bool {
       if (!callExpr.isMethodCall || callExpr.args.empty() || resolvedPath.empty()) {
         return false;
@@ -1084,9 +903,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           receiverSlash == std::string::npos ? receiverPath : receiverPath.substr(receiverSlash + 1);
       return receiverTypeName == receiver.name;
     };
-    if (defIt != defMap_.end() && !shouldDeferResolvedNamespacedCollectionHelperReturn) {
-      if (hasPreferredBuiltinAccessKind && expr.isMethodCall) {
-        return preferredBuiltinAccessKind;
+    if (defIt != defMap_.end() &&
+        !inferCollectionDispatchSetup.shouldDeferResolvedNamespacedCollectionHelperReturn) {
+      if (inferCollectionDispatchSetup.hasPreferredBuiltinAccessKind &&
+          expr.isMethodCall) {
+        return inferCollectionDispatchSetup.preferredBuiltinAccessKind;
       }
       if (expr.isMethodCall) {
         const auto &calleeParams = paramsByDef_[resolved];
@@ -1151,12 +972,17 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (!ensureDefinitionReturnKindReady(*defIt->second)) {
         ReturnKind builtinAccessKind = ReturnKind::Unknown;
-        if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)) {
+        if (resolveBuiltinCollectionAccessCallReturnKind(
+                expr, builtinCollectionDispatchResolvers,
+                builtinAccessKind)) {
           return builtinAccessKind;
         }
         ReturnKind builtinCollectionKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionCountCapacityReturnKind(
-                expr, builtinCollectionCountCapacityDispatchContext, builtinCollectionKind)) {
+                expr,
+                inferCollectionDispatchSetup
+                    .builtinCollectionCountCapacityDispatchContext,
+                builtinCollectionKind)) {
           return builtinCollectionKind;
         }
         return ReturnKind::Unknown;
@@ -1171,7 +997,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       ReturnKind builtinCollectionKind = ReturnKind::Unknown;
       if (resolveBuiltinCollectionCountCapacityReturnKind(
-              expr, builtinCollectionCountCapacityDispatchContext, builtinCollectionKind)) {
+              expr,
+              inferCollectionDispatchSetup
+                  .builtinCollectionCountCapacityDispatchContext,
+              builtinCollectionKind)) {
         return builtinCollectionKind;
       }
       return ReturnKind::Unknown;
@@ -1179,7 +1008,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     bool handledDirectBuiltinCountCapacity = false;
     ReturnKind directBuiltinCountCapacityKind =
         inferBuiltinCollectionDirectCountCapacityReturnKind(
-            expr, resolved, builtinCollectionDirectCountCapacityContext, handledDirectBuiltinCountCapacity);
+            expr,
+            resolved,
+            inferCollectionDispatchSetup
+                .builtinCollectionDirectCountCapacityContext,
+            handledDirectBuiltinCountCapacity);
     if (handledDirectBuiltinCountCapacity) {
       return directBuiltinCountCapacityKind;
     }
@@ -1199,10 +1032,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     const bool isBuiltinGet = isSimpleCallName(expr, "get");
     const bool isBuiltinRef = isSimpleCallName(expr, "ref");
     if (!expr.isMethodCall &&
-        ((isBuiltinAccess && !expr.args.empty()) || ((isBuiltinGet || isBuiltinRef) && expr.args.size() == 2)) &&
-        (defMap_.find(resolved) == defMap_.end() || shouldDeferNamespacedVectorAccessCall ||
-         shouldDeferNamespacedMapAccessCall)) {
-      const std::string helperName = isBuiltinAccess ? builtinAccessName : (isBuiltinGet ? "get" : "ref");
+        ((inferCollectionDispatchSetup.isBuiltinAccess && !expr.args.empty()) ||
+         ((isBuiltinGet || isBuiltinRef) && expr.args.size() == 2)) &&
+        (defMap_.find(resolved) == defMap_.end() ||
+         inferCollectionDispatchSetup.shouldDeferNamespacedVectorAccessCall ||
+         inferCollectionDispatchSetup.shouldDeferNamespacedMapAccessCall)) {
+      const std::string helperName =
+          inferCollectionDispatchSetup.isBuiltinAccess
+              ? inferCollectionDispatchSetup.builtinAccessName
+              : (isBuiltinGet ? "get" : "ref");
       std::vector<size_t> receiverIndices;
       auto appendReceiverIndex = [&](size_t index) {
         if (index >= expr.args.size()) {
@@ -1316,7 +1154,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
     }
-    if (defIt != defMap_.end() && shouldDeferResolvedNamespacedCollectionHelperReturn) {
+    if (defIt != defMap_.end() &&
+        inferCollectionDispatchSetup
+            .shouldDeferResolvedNamespacedCollectionHelperReturn) {
       if (!ensureDefinitionReturnKindReady(*defIt->second)) {
         ReturnKind builtinAccessKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionAccessCallReturnKind(expr, builtinCollectionDispatchResolvers, builtinAccessKind)) {
@@ -1324,7 +1164,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         ReturnKind builtinCollectionKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionCountCapacityReturnKind(
-                expr, builtinCollectionCountCapacityDispatchContext, builtinCollectionKind)) {
+                expr,
+                inferCollectionDispatchSetup
+                    .builtinCollectionCountCapacityDispatchContext,
+                builtinCollectionKind)) {
           return builtinCollectionKind;
         }
         return ReturnKind::Unknown;
@@ -1335,7 +1178,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       ReturnKind builtinCollectionKind = ReturnKind::Unknown;
       if (resolveBuiltinCollectionCountCapacityReturnKind(
-              expr, builtinCollectionCountCapacityDispatchContext, builtinCollectionKind)) {
+              expr,
+              inferCollectionDispatchSetup
+                  .builtinCollectionCountCapacityDispatchContext,
+              builtinCollectionKind)) {
         return builtinCollectionKind;
       }
       auto kindIt = returnKinds_.find(resolved);
@@ -1344,14 +1190,19 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Unknown;
     }
-    if (hasPreferredBuiltinAccessKind) {
-      return preferredBuiltinAccessKind;
+    if (inferCollectionDispatchSetup.hasPreferredBuiltinAccessKind) {
+      return inferCollectionDispatchSetup.preferredBuiltinAccessKind;
     }
     std::string builtinName;
-    if (defMap_.find(resolved) == defMap_.end() && getBuiltinArrayAccessName(expr, builtinName) &&
-        (!isStdNamespacedVectorAccessSpelling || shouldAllowStdAccessCompatibilityFallback) &&
-        (!isStdNamespacedMapAccessSpelling || hasStdNamespacedMapAccessDefinition) &&
+    std::string builtinAccessName;
+    if (defMap_.find(resolved) == defMap_.end() &&
+        inferCollectionDispatchSetup.hasBuiltinAccessSpelling &&
+        (!inferCollectionDispatchSetup.isStdNamespacedVectorAccessSpelling ||
+         inferCollectionDispatchSetup.shouldAllowStdAccessCompatibilityFallback) &&
+        (!inferCollectionDispatchSetup.isStdNamespacedMapAccessSpelling ||
+         inferCollectionDispatchSetup.hasStdNamespacedMapAccessDefinition) &&
         expr.args.size() == 2) {
+      builtinName = inferCollectionDispatchSetup.builtinAccessName;
       size_t receiverIndex = 0;
       size_t keyIndex = 1;
       const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
@@ -1378,7 +1229,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (defMap_.find(resolved) == defMap_.end() && !expr.isMethodCall &&
         isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
-        shouldInferBuiltinBareMapContainsCall) {
+        inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall) {
       size_t receiverIndex = 0;
       size_t keyIndex = 1;
       const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
@@ -1393,10 +1244,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (!expr.isMethodCall && defMap_.find(resolved) == defMap_.end() && expr.args.size() == 2 &&
         (isSimpleCallName(expr, "contains") || isSimpleCallName(expr, "tryAt") ||
-         getBuiltinArrayAccessName(expr, builtinAccessName))) {
-      if ((isSimpleCallName(expr, "contains") && !shouldInferBuiltinBareMapContainsCall) ||
-          (isSimpleCallName(expr, "tryAt") && !shouldInferBuiltinBareMapTryAtCall) ||
-          ((expr.name == "at" || expr.name == "at_unsafe") && !shouldInferBuiltinBareMapAccessCall)) {
+         inferCollectionDispatchSetup.hasBuiltinAccessSpelling)) {
+      builtinAccessName = inferCollectionDispatchSetup.builtinAccessName;
+      if ((isSimpleCallName(expr, "contains") &&
+           !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall) ||
+          (isSimpleCallName(expr, "tryAt") &&
+           !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall) ||
+          ((expr.name == "at" || expr.name == "at_unsafe") &&
+           !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall)) {
         Expr rewrittenMapHelperCall;
         if (this->tryRewriteBareMapHelperCall(expr,
                                               isSimpleCallName(expr, "contains")
@@ -1415,16 +1270,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (resolveMapTarget(receiverExpr, keyType, valueType)) {
         std::string methodResolved;
         if (resolveMethodCallPath(expr.name, methodResolved)) {
-          if (methodResolved == "/std/collections/map/contains" && !shouldInferBuiltinBareMapContainsCall &&
-              !isIndexedArgsPackMapReceiverTarget(receiverExpr) &&
+          if (methodResolved == "/std/collections/map/contains" &&
+              !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall &&
+              !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(receiverExpr) &&
               !hasDeclaredDefinitionPath("/map/contains") &&
               !hasImportedDefinitionPath("/std/collections/map/contains") &&
               !hasDeclaredDefinitionPath("/std/collections/map/contains")) {
             error_ = "unknown call target: /std/collections/map/contains";
             return ReturnKind::Unknown;
           }
-          if (methodResolved == "/std/collections/map/tryAt" && !shouldInferBuiltinBareMapTryAtCall &&
-              !isIndexedArgsPackMapReceiverTarget(receiverExpr) &&
+          if (methodResolved == "/std/collections/map/tryAt" &&
+              !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall &&
+              !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(receiverExpr) &&
               !hasDeclaredDefinitionPath("/map/tryAt") &&
               !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
               !hasDeclaredDefinitionPath("/std/collections/map/tryAt")) {
@@ -1432,9 +1289,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             return ReturnKind::Unknown;
           }
           if ((methodResolved == "/map/at" || methodResolved == "/map/at_unsafe" ||
-               methodResolved == "/std/collections/map/at" || methodResolved == "/std/collections/map/at_unsafe") &&
-              !shouldInferBuiltinBareMapAccessCall &&
-              !isIndexedArgsPackMapReceiverTarget(receiverExpr) &&
+              methodResolved == "/std/collections/map/at" || methodResolved == "/std/collections/map/at_unsafe") &&
+              !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall &&
+              !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(receiverExpr) &&
               !hasDeclaredDefinitionPath("/map/" + builtinAccessName) &&
               !hasImportedDefinitionPath("/std/collections/map/" + builtinAccessName) &&
               !hasDeclaredDefinitionPath("/std/collections/map/" + builtinAccessName)) {
@@ -1482,7 +1339,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
                                isSimpleCallName(expr, "readback"))) {
       return ReturnKind::Array;
     }
-    if (!expr.isMethodCall && isSimpleCallName(expr, "contains") && shouldInferBuiltinBareMapContainsCall &&
+    if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
+        inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall &&
         expr.args.size() == 2) {
       size_t receiverIndex = 0;
       size_t keyIndex = 1;
@@ -1496,19 +1354,20 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
     }
     if (!expr.isMethodCall && isSimpleCallName(expr, "tryAt") && expr.args.size() == 2 &&
-        (shouldInferBuiltinBareMapTryAtCall ||
-         isIndexedArgsPackMapReceiverTarget(
+        (inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall ||
+         inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
              expr.args[this->mapHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)]))) {
       ResultTypeInfo argResult;
       if (resolveResultTypeForExpr(expr, params, locals, argResult) && argResult.isResult) {
         return ReturnKind::Array;
       }
     }
-    if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinAccessName) &&
+    if (!expr.isMethodCall && inferCollectionDispatchSetup.hasBuiltinAccessSpelling &&
         expr.args.size() == 2 &&
-        (shouldInferBuiltinBareMapAccessCall ||
-         isIndexedArgsPackMapReceiverTarget(
+        (inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall ||
+         inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
              expr.args[this->mapHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)]))) {
+      builtinAccessName = inferCollectionDispatchSetup.builtinAccessName;
       size_t receiverIndex = 0;
       size_t keyIndex = 1;
       const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
@@ -1521,8 +1380,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind;
       }
     }
-    if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinAccessName) &&
+    if (!expr.isMethodCall && inferCollectionDispatchSetup.hasBuiltinAccessSpelling &&
         expr.args.size() == 2) {
+      builtinAccessName = inferCollectionDispatchSetup.builtinAccessName;
       std::string elemType;
       std::string keyType;
       std::string valueType;
