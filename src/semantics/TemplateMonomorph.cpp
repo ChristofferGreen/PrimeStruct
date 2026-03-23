@@ -1064,6 +1064,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 #include "TemplateMonomorphExperimentalCollectionReturnRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
+#include "TemplateMonomorphDefinitionBindingSetup.h"
 
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
@@ -2130,35 +2131,9 @@ bool rewriteDefinition(Definition &def,
   locals.reserve(def.parameters.size() + def.statements.size());
   const DefinitionReturnStatementSelection returnStatementSelection =
       determineDefinitionReturnStatementSelection(def);
-  for (auto &param : def.parameters) {
-    if (!rewriteExpr(param, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
-      return false;
-    }
-    BindingInfo info;
-    if (extractExplicitBindingType(param, info)) {
-      if (info.typeName == "auto" && param.args.size() == 1 &&
-          inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, info)) {
-        locals[param.name] = info;
-      } else {
-        locals[param.name] = info;
-      }
-      ParameterInfo paramInfo;
-      paramInfo.name = param.name;
-      paramInfo.binding = info;
-      if (param.args.size() == 1) {
-        paramInfo.defaultExpr = &param.args.front();
-      }
-      params.push_back(std::move(paramInfo));
-    } else if (param.isBinding && param.args.size() == 1) {
-      if (inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, info)) {
-        locals[param.name] = info;
-        ParameterInfo paramInfo;
-        paramInfo.name = param.name;
-        paramInfo.binding = info;
-        paramInfo.defaultExpr = &param.args.front();
-        params.push_back(std::move(paramInfo));
-      }
-    }
+  if (!rewriteDefinitionParameters(
+          def.parameters, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
+    return false;
   }
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
     auto &stmt = def.statements[stmtIndex];
@@ -2193,19 +2168,7 @@ bool rewriteDefinition(Definition &def,
         return false;
       }
     }
-    BindingInfo info;
-    if (extractExplicitBindingType(stmt, info)) {
-      if (info.typeName == "auto" && stmt.args.size() == 1 &&
-          inferBindingTypeForMonomorph(stmt.args.front(), params, locals, allowMathBare, ctx, info)) {
-        locals[stmt.name] = info;
-      } else {
-        locals[stmt.name] = info;
-      }
-    } else if (stmt.isBinding && stmt.args.size() == 1) {
-      if (inferBindingTypeForMonomorph(stmt.args.front(), params, locals, allowMathBare, ctx, info)) {
-        locals[stmt.name] = info;
-      }
-    }
+    recordDefinitionStatementBindingLocal(stmt, params, locals, allowMathBare, ctx, locals);
   }
   if (def.returnExpr.has_value()) {
     if (returnRewritePlan.expectedExperimentalVectorReturn) {

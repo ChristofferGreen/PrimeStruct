@@ -10844,6 +10844,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReturnRewrites.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionReturnSetupPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReturnSetup.h";
+  const std::filesystem::path templateMonomorphDefinitionBindingSetupPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphDefinitionBindingSetup.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
   REQUIRE(std::filesystem::exists(templateMonomorphFallbackPath));
   REQUIRE(std::filesystem::exists(templateMonomorphBindingCallPath));
@@ -10860,6 +10862,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionConstructorPathsPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReturnRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReturnSetupPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphDefinitionBindingSetupPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
   const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath);
@@ -10886,6 +10889,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphExperimentalCollectionReturnRewritesPath);
   const std::string templateMonomorphExperimentalCollectionReturnSetupSource =
       readText(templateMonomorphExperimentalCollectionReturnSetupPath);
+  const std::string templateMonomorphDefinitionBindingSetupSource =
+      readText(templateMonomorphDefinitionBindingSetupPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingCallInference.h\"") !=
@@ -10915,6 +10920,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionReturnRewrites.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionReturnSetup.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphDefinitionBindingSetup.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind)") ==
         std::string::npos);
@@ -10968,6 +10975,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("ExperimentalCollectionReturnRewritePlan inferExperimentalCollectionReturnRewritePlan(") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("DefinitionReturnStatementSelection determineDefinitionReturnStatementSelection(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool tryAppendDefinitionParameterBinding(Expr &param,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool rewriteDefinitionParameters(std::vector<Expr> &parameters,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("void recordDefinitionStatementBindingLocal(Expr &stmt,") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolveExperimentalConstructorTargetTypeText(") ==
         std::string::npos);
@@ -11135,6 +11148,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReturnSetupSource.find(
             "DefinitionReturnStatementSelection determineDefinitionReturnStatementSelection(const Definition &def)") !=
+        std::string::npos);
+  CHECK(templateMonomorphDefinitionBindingSetupSource.find(
+            "bool tryAppendDefinitionParameterBinding(Expr &param,") !=
+        std::string::npos);
+  CHECK(templateMonomorphDefinitionBindingSetupSource.find(
+            "bool rewriteDefinitionParameters(std::vector<Expr> &parameters,") !=
+        std::string::npos);
+  CHECK(templateMonomorphDefinitionBindingSetupSource.find(
+            "void recordDefinitionStatementBindingLocal(Expr &stmt,") !=
         std::string::npos);
 }
 
