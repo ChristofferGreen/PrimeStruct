@@ -42232,6 +42232,109 @@ TEST_CASE("ir lowerer statement binding helper infers call parameter local info"
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer statement binding helper infers Result metadata for local-backed default parameters") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo sourceInfo;
+  sourceInfo.isResult = true;
+  sourceInfo.resultHasValue = true;
+  sourceInfo.resultValueKind = ValueKind::Int32;
+  sourceInfo.resultErrorType = "FileError";
+  sourceInfo.valueKind = ValueKind::Int64;
+  locals.emplace("source", sourceInfo);
+
+  primec::Expr sourceName;
+  sourceName.kind = primec::Expr::Kind::Name;
+  sourceName.name = "source";
+
+  primec::Expr valueParam;
+  valueParam.kind = primec::Expr::Kind::Name;
+  valueParam.name = "value";
+
+  primec::Expr valueName;
+  valueName.kind = primec::Expr::Kind::Name;
+  valueName.name = "value";
+
+  primec::Expr oneExpr;
+  oneExpr.kind = primec::Expr::Kind::Literal;
+  oneExpr.literalValue = 1;
+
+  primec::Expr plusExpr;
+  plusExpr.kind = primec::Expr::Kind::Call;
+  plusExpr.name = "plus";
+  plusExpr.args = {valueName, oneExpr};
+
+  primec::Expr returnExpr;
+  returnExpr.kind = primec::Expr::Kind::Call;
+  returnExpr.name = "return";
+  returnExpr.args = {plusExpr};
+
+  primec::Expr lambdaExpr;
+  lambdaExpr.kind = primec::Expr::Kind::Call;
+  lambdaExpr.isLambda = true;
+  lambdaExpr.hasBodyArguments = true;
+  lambdaExpr.args = {valueParam};
+  lambdaExpr.bodyArguments = {returnExpr};
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr defaultInit;
+  defaultInit.kind = primec::Expr::Kind::Call;
+  defaultInit.isMethodCall = true;
+  defaultInit.name = "map";
+  defaultInit.args = {resultName, sourceName, lambdaExpr};
+
+  primec::Expr param;
+  param.name = "status";
+  param.args = {defaultInit};
+
+  std::function<ValueKind(const primec::Expr &, const primec::ir_lowerer::LocalMap &)> inferExprKind;
+  inferExprKind = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &scopeLocals) -> ValueKind {
+    if (expr.kind == primec::Expr::Kind::Literal) {
+      return ValueKind::Int32;
+    }
+    if (expr.kind == primec::Expr::Kind::Name) {
+      auto it = scopeLocals.find(expr.name);
+      return it != scopeLocals.end() ? it->second.valueKind : ValueKind::Unknown;
+    }
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "plus") {
+      return ValueKind::Int32;
+    }
+    return ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 13;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      inferExprKind,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.isResult);
+  CHECK(info.resultHasValue);
+  CHECK(info.resultValueKind == ValueKind::Int32);
+  CHECK(info.resultErrorType == "FileError");
+  CHECK(info.valueKind == ValueKind::Int64);
+}
+
 TEST_CASE("ir lowerer statement binding helper sets string parameter defaults") {
   primec::Expr literalInit;
   literalInit.kind = primec::Expr::Kind::Literal;

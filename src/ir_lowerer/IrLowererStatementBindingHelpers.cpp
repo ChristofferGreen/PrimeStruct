@@ -4,6 +4,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererResultHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStringCallHelpers.h"
 #include "IrLowererStringLiteralHelpers.h"
@@ -42,6 +43,20 @@ bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut) 
     return !typeTextOut.empty();
   }
   return false;
+}
+
+bool inferCallParameterDefaultResultInfo(const Expr &expr,
+                                         const LocalMap &localsForKindInference,
+                                         const InferBindingExprKindFn &inferExprKind,
+                                         ResultExprInfo &infoOut) {
+  return resolveResultExprInfoFromLocals(
+      expr,
+      localsForKindInference,
+      [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; },
+      [](const Expr &) -> const Definition * { return nullptr; },
+      [](const std::string &, ReturnInfo &) { return false; },
+      [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+      infoOut);
 }
 
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut) {
@@ -560,6 +575,16 @@ bool inferCallParameterLocalInfo(const Expr &param,
     infoOut.valueKind = inferExprKind(param.args.front(), localsForKindInference);
     if (infoOut.valueKind == LocalInfo::ValueKind::Unknown) {
       infoOut.valueKind = LocalInfo::ValueKind::Int32;
+    }
+    ResultExprInfo inferredResultInfo;
+    if (inferCallParameterDefaultResultInfo(
+            param.args.front(), localsForKindInference, inferExprKind, inferredResultInfo) &&
+        inferredResultInfo.isResult) {
+      infoOut.isResult = true;
+      infoOut.resultHasValue = inferredResultInfo.hasValue;
+      infoOut.resultValueKind = inferredResultInfo.valueKind;
+      infoOut.resultErrorType = inferredResultInfo.errorType;
+      infoOut.valueKind = infoOut.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
     }
   } else {
     infoOut.valueKind = bindingValueKind(param, infoOut.kind);
