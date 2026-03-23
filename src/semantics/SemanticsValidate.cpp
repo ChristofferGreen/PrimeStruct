@@ -387,6 +387,8 @@ bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
           entry.initializerTryErrorType,
           entry.initializerHasTry ? returnKindSnapshotName(entry.initializerTryContextReturnKind) : std::string{},
           entry.initializerTryOnErrorHandlerPath,
+          entry.initializerTryOnErrorErrorType,
+          entry.initializerTryOnErrorBoundArgCount,
       });
     }
   });
@@ -483,6 +485,8 @@ bool semantics::computeTypeResolutionTryValueSnapshotForTesting(
           entry.errorType,
           returnKindSnapshotName(entry.contextReturnKind),
           entry.onErrorHandlerPath,
+          entry.onErrorErrorType,
+          entry.onErrorBoundArgCount,
       });
     }
   });

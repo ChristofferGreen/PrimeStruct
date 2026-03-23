@@ -43,6 +43,8 @@ public:
     std::string initializerTryErrorType;
     ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
     std::string initializerTryOnErrorHandlerPath;
+    std::string initializerTryOnErrorErrorType;
+    size_t initializerTryOnErrorBoundArgCount = 0;
   };
 
   struct LocalAutoTrySnapshotData {
@@ -51,6 +53,8 @@ public:
     std::string errorType;
     ReturnKind contextReturnKind = ReturnKind::Unknown;
     std::string onErrorHandlerPath;
+    std::string onErrorErrorType;
+    size_t onErrorBoundArgCount = 0;
   };
 
   struct QuerySnapshotData {
@@ -99,6 +103,8 @@ public:
     std::string errorType;
     ReturnKind contextReturnKind = ReturnKind::Unknown;
     std::string onErrorHandlerPath;
+    std::string onErrorErrorType;
+    size_t onErrorBoundArgCount = 0;
   };
 
   struct CallBindingSnapshotEntry {

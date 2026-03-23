@@ -469,6 +469,8 @@ main() {
   CHECK(branchEntry.initializerTryErrorTypeText.empty());
   CHECK(branchEntry.initializerTryContextReturnKindText.empty());
   CHECK(branchEntry.initializerTryOnErrorHandlerPath.empty());
+  CHECK(branchEntry.initializerTryOnErrorErrorTypeText.empty());
+  CHECK(branchEntry.initializerTryOnErrorBoundArgCount == 0);
 
   const auto &selectedEntry = requireLocalBindingSnapshotEntry(snapshot, "/main", "selected");
   CHECK(selectedEntry.bindingTypeText == "i32");
@@ -485,6 +487,8 @@ main() {
   CHECK(selectedEntry.initializerTryErrorTypeText == "ContainerError");
   CHECK(selectedEntry.initializerTryContextReturnKindText == "array");
   CHECK(selectedEntry.initializerTryOnErrorHandlerPath == "/unexpectedError");
+  CHECK(selectedEntry.initializerTryOnErrorErrorTypeText == "ContainerError");
+  CHECK(selectedEntry.initializerTryOnErrorBoundArgCount == 1);
 }
 
 TEST_CASE("type resolution local try metadata stays aligned with try snapshot metadata") {
@@ -523,6 +527,8 @@ main() {
   CHECK(localEntry.initializerTryErrorTypeText == tryEntry.errorTypeText);
   CHECK(localEntry.initializerTryContextReturnKindText == tryEntry.contextReturnKindText);
   CHECK(localEntry.initializerTryOnErrorHandlerPath == tryEntry.onErrorHandlerPath);
+  CHECK(localEntry.initializerTryOnErrorErrorTypeText == tryEntry.onErrorErrorTypeText);
+  CHECK(localEntry.initializerTryOnErrorBoundArgCount == tryEntry.onErrorBoundArgCount);
 }
 
 TEST_CASE("type resolution local query metadata stays aligned with query snapshots") {

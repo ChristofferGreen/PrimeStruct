@@ -93,6 +93,8 @@ struct TypeResolutionLocalBindingSnapshotEntry {
   std::string initializerTryErrorTypeText;
   std::string initializerTryContextReturnKindText;
   std::string initializerTryOnErrorHandlerPath;
+  std::string initializerTryOnErrorErrorTypeText;
+  size_t initializerTryOnErrorBoundArgCount = 0;
 };
 
 struct TypeResolutionLocalBindingSnapshot {
@@ -149,6 +151,8 @@ struct TypeResolutionTryValueSnapshotEntry {
   std::string errorTypeText;
   std::string contextReturnKindText;
   std::string onErrorHandlerPath;
+  std::string onErrorErrorTypeText;
+  size_t onErrorBoundArgCount = 0;
 };
 
 struct TypeResolutionTryValueSnapshot {

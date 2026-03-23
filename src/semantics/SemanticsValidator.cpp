@@ -156,6 +156,8 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
         std::string initializerTryErrorType;
         ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
         std::string initializerTryOnErrorHandlerPath;
+        std::string initializerTryOnErrorErrorType;
+        size_t initializerTryOnErrorBoundArgCount = 0;
         if (const auto tryIt = graphLocalAutoTryValues_.find(
                 graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
             tryIt != graphLocalAutoTryValues_.end()) {
@@ -165,6 +167,8 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
           initializerTryErrorType = tryIt->second.errorType;
           initializerTryContextReturnKind = tryIt->second.contextReturnKind;
           initializerTryOnErrorHandlerPath = tryIt->second.onErrorHandlerPath;
+          initializerTryOnErrorErrorType = tryIt->second.onErrorErrorType;
+          initializerTryOnErrorBoundArgCount = tryIt->second.onErrorBoundArgCount;
         }
         entries.push_back(LocalAutoBindingSnapshotEntry{
             scopePath,
@@ -185,6 +189,8 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             std::move(initializerTryErrorType),
             initializerTryContextReturnKind,
             std::move(initializerTryOnErrorHandlerPath),
+            std::move(initializerTryOnErrorErrorType),
+            initializerTryOnErrorBoundArgCount,
         });
       }
     }
@@ -412,6 +418,8 @@ SemanticsValidator::tryValueSnapshotForTesting() {
         std::move(tryData.errorType),
         tryData.contextReturnKind,
         std::move(tryData.onErrorHandlerPath),
+        std::move(tryData.onErrorErrorType),
+        tryData.onErrorBoundArgCount,
     });
   });
 
@@ -467,7 +475,11 @@ bool SemanticsValidator::inferTrySnapshotData(const Definition &def,
     out.contextReturnKind = returnKindIt->second;
   }
   const auto &context = buildDefinitionValidationContext(def);
-  out.onErrorHandlerPath = context.onError.has_value() ? context.onError->handlerPath : std::string{};
+  if (context.onError.has_value()) {
+    out.onErrorHandlerPath = context.onError->handlerPath;
+    out.onErrorErrorType = context.onError->errorType;
+    out.onErrorBoundArgCount = context.onError->boundArgCount;
+  }
   return true;
 }
 std::vector<SemanticsValidator::CallBindingSnapshotEntry>
