@@ -9258,6 +9258,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprDirectCollectionFallbacks.cpp";
   const std::filesystem::path semanticsExprPostAccessPrechecksPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPostAccessPrechecks.cpp";
+  const std::filesystem::path semanticsExprBuiltinContextSetupPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprBuiltinContextSetup.cpp";
   const std::filesystem::path semanticsExprCollectionLiteralsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionLiterals.cpp";
   const std::filesystem::path semanticsExprBodyArgumentsPath =
@@ -9311,6 +9313,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessSetupPath));
   REQUIRE(std::filesystem::exists(semanticsExprDirectCollectionFallbacksPath));
   REQUIRE(std::filesystem::exists(semanticsExprPostAccessPrechecksPath));
+  REQUIRE(std::filesystem::exists(semanticsExprBuiltinContextSetupPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionLiteralsPath));
   REQUIRE(std::filesystem::exists(semanticsExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateFallbackBuiltinsPath));
@@ -9349,6 +9352,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprDirectCollectionFallbacksPath);
   const std::string semanticsExprPostAccessPrechecksSource =
       readText(semanticsExprPostAccessPrechecksPath);
+  const std::string semanticsExprBuiltinContextSetupSource =
+      readText(semanticsExprBuiltinContextSetupPath);
   const std::string semanticsExprCollectionLiteralsSource = readText(semanticsExprCollectionLiteralsPath);
   const std::string semanticsExprBodyArgumentsSource =
       readText(semanticsExprBodyArgumentsPath);
@@ -9424,6 +9429,17 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "            locals,\n"
             "            expr,\n"
             "            resolved,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "prepareExprNamedArgumentBuiltinContext(\n"
+            "        hasVectorHelperCallResolution,\n"
+            "        builtinCollectionDispatchResolvers,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "prepareExprLateBuiltinContext(\n"
+            "        params,\n"
+            "        locals,\n"
+            "        builtinCollectionDispatchResolverAdapters,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprLateMapAccessBuiltins(\n"
@@ -9583,6 +9599,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprNamedArguments(params, locals, expr, resolved,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "namedArgumentBuiltinContext.hasVectorHelperCallResolution =") ==
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.hasVectorHelperCallResolution = hasVectorHelperCallResolution;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "lateBuiltinContext.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") ==
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("std::string gpuBuiltin;") == std::string::npos);
   CHECK(semanticsExprPostAccessPrechecksSource.find("std::string gpuBuiltin;") !=

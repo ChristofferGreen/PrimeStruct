@@ -290,6 +290,12 @@ private:
     ExprTryBuiltinContext tryBuiltinContext;
     ExprResultFileBuiltinContext resultFileBuiltinContext;
   };
+  void prepareExprLateBuiltinContext(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      ExprLateBuiltinContext &contextOut);
   bool validateExprLateBuiltins(const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals,
                                 const Expr &expr,
@@ -324,6 +330,10 @@ private:
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
     std::function<bool(const Expr &)> isArrayNamespacedVectorCountCompatibilityCall;
   };
+  void prepareExprNamedArgumentBuiltinContext(
+      bool hasVectorHelperCallResolution,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      ExprNamedArgumentBuiltinContext &contextOut);
   bool validateExprNamedArguments(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,

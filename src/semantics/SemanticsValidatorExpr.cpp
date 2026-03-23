@@ -866,23 +866,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
 
     ExprNamedArgumentBuiltinContext namedArgumentBuiltinContext;
-    namedArgumentBuiltinContext.hasVectorHelperCallResolution =
-        hasVectorHelperCallResolution;
-    namedArgumentBuiltinContext.isNamedArgsPackMethodAccessCall =
-        [&](const Expr &target) {
-          return this->isNamedArgsPackMethodAccessCall(
-              target, builtinCollectionDispatchResolvers);
-        };
-    namedArgumentBuiltinContext.isNamedArgsPackWrappedFileBuiltinAccessCall =
-        [&](const Expr &target) {
-          return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
-              target, builtinCollectionDispatchResolvers);
-        };
-    namedArgumentBuiltinContext.isArrayNamespacedVectorCountCompatibilityCall =
-        [&](const Expr &target) {
-          return this->isArrayNamespacedVectorCountCompatibilityCall(
-              target, builtinCollectionDispatchResolvers);
-        };
+    prepareExprNamedArgumentBuiltinContext(
+        hasVectorHelperCallResolution,
+        builtinCollectionDispatchResolvers,
+        namedArgumentBuiltinContext);
     if (!validateExprNamedArguments(params, locals, expr, resolved,
                                     resolvedMethod,
                                     namedArgumentBuiltinContext)) {
@@ -890,28 +877,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     auto it = defMap_.find(resolved);
     ExprLateBuiltinContext lateBuiltinContext;
-    lateBuiltinContext.tryBuiltinContext.getDirectMapHelperCompatibilityPath =
-        [&](const Expr &target) {
-          return this->directMapHelperCompatibilityPath(
-              target, params, locals,
-              builtinCollectionDispatchResolverAdapters);
-        };
-    lateBuiltinContext.tryBuiltinContext.isIndexedArgsPackMapReceiverTarget =
-        [&](const Expr &target) {
-          return this->isIndexedArgsPackMapReceiverTarget(
-              target, builtinCollectionDispatchResolvers);
-        };
-    lateBuiltinContext.resultFileBuiltinContext
-        .isNamedArgsPackWrappedFileBuiltinAccessCall =
-        [&](const Expr &target) {
-          return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
-              target, builtinCollectionDispatchResolvers);
-        };
-    lateBuiltinContext.resultFileBuiltinContext.isStringExpr =
-        [&](const Expr &target) {
-          return this->isStringExprForArgumentValidation(
-              target, builtinCollectionDispatchResolvers);
-        };
+    prepareExprLateBuiltinContext(
+        params,
+        locals,
+        builtinCollectionDispatchResolverAdapters,
+        builtinCollectionDispatchResolvers,
+        lateBuiltinContext);
     bool handledLateBuiltin = false;
     if (!validateExprLateBuiltins(params, locals, expr, resolved,
                                   resolvedMethod, lateBuiltinContext,
