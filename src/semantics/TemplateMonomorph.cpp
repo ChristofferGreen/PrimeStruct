@@ -1055,6 +1055,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphTypeResolution.h"
 #include "TemplateMonomorphCollectionHelperInference.h"
+#include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
@@ -1888,70 +1889,6 @@ bool rewriteExpr(Expr &expr,
     }
     return {};
   };
-  auto experimentalMapConstructorHelperPath = [&](size_t argumentCount) -> std::string {
-    switch (argumentCount) {
-    case 0:
-      return "/std/collections/experimental_map/mapNew";
-    case 2:
-      return "/std/collections/experimental_map/mapSingle";
-    case 4:
-      return "/std/collections/experimental_map/mapPair";
-    case 6:
-      return "/std/collections/experimental_map/mapTriple";
-    case 8:
-      return "/std/collections/experimental_map/mapQuad";
-    case 10:
-      return "/std/collections/experimental_map/mapQuint";
-    case 12:
-      return "/std/collections/experimental_map/mapSext";
-    case 14:
-      return "/std/collections/experimental_map/mapSept";
-    case 16:
-      return "/std/collections/experimental_map/mapOct";
-    default:
-      return {};
-    }
-  };
-  auto experimentalMapConstructorRewritePath =
-      [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
-    if (resolvedPath == "/map") {
-      return experimentalMapConstructorHelperPath(argumentCount);
-    }
-    if (resolvedPath == "/std/collections/map/map") {
-      return experimentalMapConstructorHelperPath(argumentCount);
-    }
-    if (resolvedPath == "/std/collections/mapNew") {
-      return "/std/collections/experimental_map/mapNew";
-    }
-    if (resolvedPath == "/std/collections/mapSingle") {
-      return "/std/collections/experimental_map/mapSingle";
-    }
-    if (resolvedPath == "/std/collections/mapDouble") {
-      return "/std/collections/experimental_map/mapDouble";
-    }
-    if (resolvedPath == "/std/collections/mapPair") {
-      return "/std/collections/experimental_map/mapPair";
-    }
-    if (resolvedPath == "/std/collections/mapTriple") {
-      return "/std/collections/experimental_map/mapTriple";
-    }
-    if (resolvedPath == "/std/collections/mapQuad") {
-      return "/std/collections/experimental_map/mapQuad";
-    }
-    if (resolvedPath == "/std/collections/mapQuint") {
-      return "/std/collections/experimental_map/mapQuint";
-    }
-    if (resolvedPath == "/std/collections/mapSext") {
-      return "/std/collections/experimental_map/mapSext";
-    }
-    if (resolvedPath == "/std/collections/mapSept") {
-      return "/std/collections/experimental_map/mapSept";
-    }
-    if (resolvedPath == "/std/collections/mapOct") {
-      return "/std/collections/experimental_map/mapOct";
-    }
-    return {};
-  };
   auto rewriteCanonicalExperimentalMapConstructorExpr = [&](Expr &valueExpr) -> bool {
     if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
       return true;
@@ -2047,41 +1984,6 @@ bool rewriteExpr(Expr &expr,
       }
     }
     return true;
-  };
-  auto experimentalVectorConstructorRewritePath =
-      [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
-    (void)argumentCount;
-    if (resolvedPath == "/vector" || resolvedPath == "/std/collections/vector/vector") {
-      return "/std/collections/experimental_vector/vector";
-    }
-    if (resolvedPath == "/std/collections/vectorNew") {
-      return "/std/collections/experimental_vector/vectorNew";
-    }
-    if (resolvedPath == "/std/collections/vectorSingle") {
-      return "/std/collections/experimental_vector/vectorSingle";
-    }
-    if (resolvedPath == "/std/collections/vectorPair") {
-      return "/std/collections/experimental_vector/vectorPair";
-    }
-    if (resolvedPath == "/std/collections/vectorTriple") {
-      return "/std/collections/experimental_vector/vectorTriple";
-    }
-    if (resolvedPath == "/std/collections/vectorQuad") {
-      return "/std/collections/experimental_vector/vectorQuad";
-    }
-    if (resolvedPath == "/std/collections/vectorQuint") {
-      return "/std/collections/experimental_vector/vectorQuint";
-    }
-    if (resolvedPath == "/std/collections/vectorSext") {
-      return "/std/collections/experimental_vector/vectorSext";
-    }
-    if (resolvedPath == "/std/collections/vectorSept") {
-      return "/std/collections/experimental_vector/vectorSept";
-    }
-    if (resolvedPath == "/std/collections/vectorOct") {
-      return "/std/collections/experimental_vector/vectorOct";
-    }
-    return {};
   };
   auto rewriteCanonicalExperimentalVectorConstructorExpr = [&](Expr &valueExpr) -> bool {
     if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
@@ -3214,70 +3116,6 @@ bool rewriteDefinition(Definition &def,
   const bool allowMathBare = hasMathImport(ctx);
   std::vector<ParameterInfo> params;
   LocalTypeMap locals;
-  auto experimentalMapConstructorHelperPath = [&](size_t argumentCount) -> std::string {
-    switch (argumentCount) {
-    case 0:
-      return "/std/collections/experimental_map/mapNew";
-    case 2:
-      return "/std/collections/experimental_map/mapSingle";
-    case 4:
-      return "/std/collections/experimental_map/mapPair";
-    case 6:
-      return "/std/collections/experimental_map/mapTriple";
-    case 8:
-      return "/std/collections/experimental_map/mapQuad";
-    case 10:
-      return "/std/collections/experimental_map/mapQuint";
-    case 12:
-      return "/std/collections/experimental_map/mapSext";
-    case 14:
-      return "/std/collections/experimental_map/mapSept";
-    case 16:
-      return "/std/collections/experimental_map/mapOct";
-    default:
-      return {};
-    }
-  };
-  auto experimentalMapConstructorRewritePath =
-      [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
-    if (resolvedPath == "/map") {
-      return experimentalMapConstructorHelperPath(argumentCount);
-    }
-    if (resolvedPath == "/std/collections/map/map") {
-      return experimentalMapConstructorHelperPath(argumentCount);
-    }
-    if (resolvedPath == "/std/collections/mapNew") {
-      return "/std/collections/experimental_map/mapNew";
-    }
-    if (resolvedPath == "/std/collections/mapSingle") {
-      return "/std/collections/experimental_map/mapSingle";
-    }
-    if (resolvedPath == "/std/collections/mapDouble") {
-      return "/std/collections/experimental_map/mapDouble";
-    }
-    if (resolvedPath == "/std/collections/mapPair") {
-      return "/std/collections/experimental_map/mapPair";
-    }
-    if (resolvedPath == "/std/collections/mapTriple") {
-      return "/std/collections/experimental_map/mapTriple";
-    }
-    if (resolvedPath == "/std/collections/mapQuad") {
-      return "/std/collections/experimental_map/mapQuad";
-    }
-    if (resolvedPath == "/std/collections/mapQuint") {
-      return "/std/collections/experimental_map/mapQuint";
-    }
-    if (resolvedPath == "/std/collections/mapSext") {
-      return "/std/collections/experimental_map/mapSext";
-    }
-    if (resolvedPath == "/std/collections/mapSept") {
-      return "/std/collections/experimental_map/mapSept";
-    }
-    if (resolvedPath == "/std/collections/mapOct") {
-      return "/std/collections/experimental_map/mapOct";
-    }
-    return {};
-  };
   auto rewriteCanonicalExperimentalMapConstructorValue = [&](Expr &valueExpr) {
     if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
       return;
@@ -3372,41 +3210,6 @@ bool rewriteDefinition(Definition &def,
         }
       }
     }
-  };
-  auto experimentalVectorConstructorRewritePath =
-      [&](const std::string &resolvedPath, size_t argumentCount) -> std::string {
-    (void)argumentCount;
-    if (resolvedPath == "/vector" || resolvedPath == "/std/collections/vector/vector") {
-      return "/std/collections/experimental_vector/vector";
-    }
-    if (resolvedPath == "/std/collections/vectorNew") {
-      return "/std/collections/experimental_vector/vectorNew";
-    }
-    if (resolvedPath == "/std/collections/vectorSingle") {
-      return "/std/collections/experimental_vector/vectorSingle";
-    }
-    if (resolvedPath == "/std/collections/vectorPair") {
-      return "/std/collections/experimental_vector/vectorPair";
-    }
-    if (resolvedPath == "/std/collections/vectorTriple") {
-      return "/std/collections/experimental_vector/vectorTriple";
-    }
-    if (resolvedPath == "/std/collections/vectorQuad") {
-      return "/std/collections/experimental_vector/vectorQuad";
-    }
-    if (resolvedPath == "/std/collections/vectorQuint") {
-      return "/std/collections/experimental_vector/vectorQuint";
-    }
-    if (resolvedPath == "/std/collections/vectorSext") {
-      return "/std/collections/experimental_vector/vectorSext";
-    }
-    if (resolvedPath == "/std/collections/vectorSept") {
-      return "/std/collections/experimental_vector/vectorSept";
-    }
-    if (resolvedPath == "/std/collections/vectorOct") {
-      return "/std/collections/experimental_vector/vectorOct";
-    }
-    return {};
   };
   auto rewriteCanonicalExperimentalVectorConstructorValue = [&](Expr &valueExpr) {
     if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
