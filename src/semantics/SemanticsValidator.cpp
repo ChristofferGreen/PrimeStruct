@@ -153,6 +153,8 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
         bool initializerHasTry = false;
         std::string initializerTryOperandResolvedPath;
         BindingInfo initializerTryOperandBinding;
+        BindingInfo initializerTryOperandReceiverBinding;
+        std::string initializerTryOperandQueryTypeText;
         std::string initializerTryValueType;
         std::string initializerTryErrorType;
         ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
@@ -165,6 +167,8 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
           initializerHasTry = true;
           initializerTryOperandResolvedPath = tryIt->second.operandResolvedPath;
           initializerTryOperandBinding = tryIt->second.operandBinding;
+          initializerTryOperandReceiverBinding = tryIt->second.operandReceiverBinding;
+          initializerTryOperandQueryTypeText = tryIt->second.operandQueryTypeText;
           initializerTryValueType = tryIt->second.valueType;
           initializerTryErrorType = tryIt->second.errorType;
           initializerTryContextReturnKind = tryIt->second.contextReturnKind;
@@ -188,6 +192,8 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             initializerHasTry,
             std::move(initializerTryOperandResolvedPath),
             std::move(initializerTryOperandBinding),
+            std::move(initializerTryOperandReceiverBinding),
+            std::move(initializerTryOperandQueryTypeText),
             std::move(initializerTryValueType),
             std::move(initializerTryErrorType),
             initializerTryContextReturnKind,
@@ -451,6 +457,8 @@ SemanticsValidator::tryValueSnapshotForTesting() {
         expr.sourceLine,
         expr.sourceColumn,
         std::move(tryData.operandBinding),
+        std::move(tryData.operandReceiverBinding),
+        std::move(tryData.operandQueryTypeText),
         std::move(tryData.valueType),
         std::move(tryData.errorType),
         tryData.contextReturnKind,
@@ -497,6 +505,8 @@ bool SemanticsValidator::inferTrySnapshotData(const Definition &def,
 
   out.operandResolvedPath = std::move(operandQueryData.resolvedPath);
   out.operandBinding = std::move(operandQueryData.binding);
+  out.operandReceiverBinding = std::move(operandQueryData.receiverBinding);
+  out.operandQueryTypeText = std::move(operandQueryData.typeText);
   out.valueType = std::move(operandQueryData.resultInfo.valueType);
   out.errorType = std::move(operandQueryData.resultInfo.errorType);
   if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {

@@ -40,6 +40,8 @@ public:
     bool initializerHasTry = false;
     std::string initializerTryOperandResolvedPath;
     BindingInfo initializerTryOperandBinding;
+    BindingInfo initializerTryOperandReceiverBinding;
+    std::string initializerTryOperandQueryTypeText;
     std::string initializerTryValueType;
     std::string initializerTryErrorType;
     ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
@@ -51,6 +53,8 @@ public:
   struct LocalAutoTrySnapshotData {
     std::string operandResolvedPath;
     BindingInfo operandBinding;
+    BindingInfo operandReceiverBinding;
+    std::string operandQueryTypeText;
     std::string valueType;
     std::string errorType;
     ReturnKind contextReturnKind = ReturnKind::Unknown;
@@ -107,6 +111,8 @@ public:
     int sourceLine = 0;
     int sourceColumn = 0;
     BindingInfo operandBinding;
+    BindingInfo operandReceiverBinding;
+    std::string operandQueryTypeText;
     std::string valueType;
     std::string errorType;
     ReturnKind contextReturnKind = ReturnKind::Unknown;

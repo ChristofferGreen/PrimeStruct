@@ -466,6 +466,8 @@ main() {
   CHECK(!branchEntry.initializerHasTry);
   CHECK(branchEntry.initializerTryOperandResolvedPath.empty());
   CHECK(branchEntry.initializerTryOperandBindingTypeText.empty());
+  CHECK(branchEntry.initializerTryOperandReceiverBindingTypeText.empty());
+  CHECK(branchEntry.initializerTryOperandQueryTypeText.empty());
   CHECK(branchEntry.initializerTryValueTypeText.empty());
   CHECK(branchEntry.initializerTryErrorTypeText.empty());
   CHECK(branchEntry.initializerTryContextReturnKindText.empty());
@@ -485,6 +487,8 @@ main() {
   CHECK(selectedEntry.initializerHasTry);
   CHECK(selectedEntry.initializerTryOperandResolvedPath == "/std/collections/map/tryAt");
   CHECK(selectedEntry.initializerTryOperandBindingTypeText == "Result<i32, ContainerError>");
+  CHECK(selectedEntry.initializerTryOperandReceiverBindingTypeText == "Map<string, i32>");
+  CHECK(selectedEntry.initializerTryOperandQueryTypeText == "Result<i32, ContainerError>");
   CHECK(selectedEntry.initializerTryValueTypeText == "i32");
   CHECK(selectedEntry.initializerTryErrorTypeText == "ContainerError");
   CHECK(selectedEntry.initializerTryContextReturnKindText == "array");
@@ -526,6 +530,8 @@ main() {
   CHECK(localEntry.initializerHasTry);
   CHECK(localEntry.initializerTryOperandResolvedPath == tryEntry.operandResolvedPath);
   CHECK(localEntry.initializerTryOperandBindingTypeText == tryEntry.operandBindingTypeText);
+  CHECK(localEntry.initializerTryOperandReceiverBindingTypeText == tryEntry.operandReceiverBindingTypeText);
+  CHECK(localEntry.initializerTryOperandQueryTypeText == tryEntry.operandQueryTypeText);
   CHECK(localEntry.initializerTryValueTypeText == tryEntry.valueTypeText);
   CHECK(localEntry.initializerTryErrorTypeText == tryEntry.errorTypeText);
   CHECK(localEntry.initializerTryContextReturnKindText == tryEntry.contextReturnKindText);
@@ -536,21 +542,17 @@ main() {
 
 TEST_CASE("type resolution try operand metadata stays aligned with query snapshots") {
   const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
 [return<void>]
-unexpectedError([MyError] err) {
+unexpectedError([ContainerError] err) {
 }
 
-MyError() {
-}
-
-[return<Result<int, MyError>>]
-makeValue() {
-  return(Result.ok(4i32))
-}
-
-[return<Result<int, MyError>> on_error<MyError, /unexpectedError>]
+[return<Result<int, ContainerError>> effects(heap_alloc) on_error<ContainerError, /unexpectedError>]
 main() {
-  [auto] selected{try(makeValue())}
+  [Map<string, i32>] values{/std/collections/mapPair("left"raw_utf8, 4i32)}
+  [auto] selected{try(values.tryAt("left"raw_utf8))}
   return(Result.ok(selected))
 }
 )";
@@ -566,16 +568,32 @@ main() {
       parseProgram(source), "/main", error, queryBindingSnapshot));
   CHECK(error.empty());
 
+  primec::semantics::TypeResolutionQueryCallSnapshot queryCallSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryCallSnapshotForTesting(
+      parseProgram(source), "/main", error, queryCallSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryReceiverBindingSnapshot queryReceiverSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryReceiverBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, queryReceiverSnapshot));
+  CHECK(error.empty());
+
   primec::semantics::TypeResolutionQueryResultTypeSnapshot queryResultSnapshot;
   REQUIRE(primec::semantics::computeTypeResolutionQueryResultTypeSnapshotForTesting(
       parseProgram(source), "/main", error, queryResultSnapshot));
   CHECK(error.empty());
 
-  const auto &tryEntry = requireTryValueSnapshotEntry(trySnapshot, "/main", "/makeValue");
-  const auto &bindingEntry = requireQueryBindingSnapshotEntry(queryBindingSnapshot, "/main", "/makeValue");
-  const auto &resultEntry = requireQueryResultTypeSnapshotEntry(queryResultSnapshot, "/main", "/makeValue");
+  const auto &tryEntry = requireTryValueSnapshotEntry(trySnapshot, "/main", "/std/collections/map/tryAt");
+  const auto &callEntry = requireQueryCallSnapshotEntry(queryCallSnapshot, "/main", "/std/collections/map/tryAt");
+  const auto &bindingEntry = requireQueryBindingSnapshotEntry(queryBindingSnapshot, "/main", "/std/collections/map/tryAt");
+  const auto &receiverEntry =
+      requireQueryReceiverBindingSnapshotEntry(queryReceiverSnapshot, "/main", "/std/collections/map/tryAt");
+  const auto &resultEntry = requireQueryResultTypeSnapshotEntry(queryResultSnapshot, "/main", "/std/collections/map/tryAt");
+  CHECK(tryEntry.operandResolvedPath == callEntry.resolvedPath);
   CHECK(tryEntry.operandResolvedPath == bindingEntry.resolvedPath);
   CHECK(tryEntry.operandBindingTypeText == bindingEntry.bindingTypeText);
+  CHECK(tryEntry.operandReceiverBindingTypeText == receiverEntry.receiverBindingTypeText);
+  CHECK(tryEntry.operandQueryTypeText == callEntry.typeText);
   CHECK(tryEntry.valueTypeText == resultEntry.valueTypeText);
   CHECK(tryEntry.errorTypeText == resultEntry.errorTypeText);
 }
