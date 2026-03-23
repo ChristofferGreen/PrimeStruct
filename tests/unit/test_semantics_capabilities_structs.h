@@ -3407,18 +3407,35 @@ TEST_CASE("unsupported reflection metadata queries are rejected") {
   }
 }
 
-TEST_CASE("runtime reflection object paths are rejected") {
-  const char *runtimeTargets[] = {"/meta/object", "/meta/table"};
-  for (const auto *runtimeTarget : runtimeTargets) {
-    CAPTURE(runtimeTarget);
+TEST_CASE("runtime reflection object queries are rejected") {
+  struct Scenario {
+    const char *label;
+    const char *query;
+    const char *expected;
+  };
+  const Scenario scenarios[] = {
+      {"method-object", "meta.object<Item>()",
+       "runtime reflection objects/tables are unsupported: meta.object"},
+      {"method-table", "meta.table<Item>()",
+       "runtime reflection objects/tables are unsupported: meta.table"},
+      {"path-object", "/meta/object()",
+       "runtime reflection objects/tables are unsupported: /meta/object"},
+      {"path-table", "/meta/table()",
+       "runtime reflection objects/tables are unsupported: /meta/table"},
+  };
+  for (const auto &scenario : scenarios) {
+    CAPTURE(scenario.label);
     const std::string source =
-        std::string("[return<int>]\n"
+        std::string("[struct reflect]\n"
+                    "Item() {\n"
+                    "  [i32] value{1i32}\n"
+                    "}\n\n"
+                    "[return<int>]\n"
                     "main() {\n  ") +
-        runtimeTarget + "()\n  return(0i32)\n}\n";
+        scenario.query + "\n  return(0i32)\n}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("runtime reflection objects/tables are unsupported: " + std::string(runtimeTarget)) !=
-          std::string::npos);
+    CHECK(error.find(scenario.expected) != std::string::npos);
   }
 }
 

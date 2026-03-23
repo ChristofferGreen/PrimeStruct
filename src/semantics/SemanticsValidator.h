@@ -641,6 +641,25 @@ private:
       std::string &resolvedOut,
       std::optional<Expr> &rewrittenExprOut,
       bool &handledOut);
+  struct ExprMethodCompatibilitySetup {
+    bool resolvedMethod = false;
+    bool usedMethodTarget = false;
+    bool hasMethodReceiverIndex = false;
+    size_t methodReceiverIndex = 0;
+    std::function<void(const Expr &, std::string &, bool &, bool)> promoteCapacityToBuiltinValidation;
+    std::function<bool(const std::string &)> isNonCollectionStructCapacityTarget;
+    std::function<std::string(const std::string &)> unavailableMethodDiagnostic;
+  };
+  bool prepareExprMethodCompatibilitySetup(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const ExprDispatchBootstrap &dispatchBootstrap,
+      bool hasVectorHelperCallResolution,
+      const std::string &vectorHelperCallResolvedPath,
+      size_t vectorHelperCallReceiverIndex,
+      std::string &resolved,
+      ExprMethodCompatibilitySetup &setupOut);
   struct ExprCollectionDispatchSetup {
     bool isNamespacedVectorHelperCall = false;
     bool isStdNamespacedVectorCountCall = false;

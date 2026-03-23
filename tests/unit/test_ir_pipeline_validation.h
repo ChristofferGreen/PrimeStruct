@@ -9238,6 +9238,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprDispatchBootstrap.cpp";
   const std::filesystem::path semanticsExprPreDispatchDirectCallsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprPreDispatchDirectCalls.cpp";
+  const std::filesystem::path semanticsExprMethodCompatibilitySetupPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodCompatibilitySetup.cpp";
   const std::filesystem::path semanticsExprBlockPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprBlock.cpp";
   const std::filesystem::path semanticsExprControlFlowPath =
@@ -9311,6 +9313,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprPath));
   REQUIRE(std::filesystem::exists(semanticsExprDispatchBootstrapPath));
   REQUIRE(std::filesystem::exists(semanticsExprPreDispatchDirectCallsPath));
+  REQUIRE(std::filesystem::exists(semanticsExprMethodCompatibilitySetupPath));
   REQUIRE(std::filesystem::exists(semanticsExprBlockPath));
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
@@ -9351,6 +9354,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprDispatchBootstrapPath);
   const std::string semanticsExprPreDispatchDirectCallsSource =
       readText(semanticsExprPreDispatchDirectCallsPath);
+  const std::string semanticsExprMethodCompatibilitySetupSource =
+      readText(semanticsExprMethodCompatibilitySetupPath);
   const std::string semanticsExprBlockSource = readText(semanticsExprBlockPath);
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
@@ -9432,6 +9437,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "            locals,\n"
             "            expr,\n"
             "            preDispatchDirectCallContext,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "prepareExprMethodCompatibilitySetup(\n"
+            "            params,\n"
+            "            locals,\n"
+            "            expr,\n"
+            "            dispatchBootstrap,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "prepareExprCollectionDispatchSetup(\n"
@@ -9562,6 +9574,29 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprPreDispatchDirectCallsSource.find(
             "auto isExperimentalMapReceiverExpr = [&](const Expr &candidate)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "bool SemanticsValidator::prepareExprMethodCompatibilitySetup(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const std::string methodReflectionTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "const std::string methodReflectionTarget =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const std::string removedVectorCompatibilityPath =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "const std::string removedVectorCompatibilityPath =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const std::string removedMapCompatibilityPath =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "const std::string removedMapCompatibilityPath =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "auto isKnownCollectionTarget = [this, &dispatchBootstrap](") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("const auto &resolveIndexedArgsPackElementType =") == std::string::npos);
   CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") ==
