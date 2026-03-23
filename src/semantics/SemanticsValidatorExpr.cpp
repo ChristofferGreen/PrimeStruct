@@ -222,25 +222,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto hasDefinitionPath = [&](const std::string &path) {
       return this->hasDefinitionPath(path);
     };
-    auto hasVisibleCanonicalVectorHelperPath = [&](const std::string &path) {
-      const bool isStdlibVectorWrapperDefinition =
-          currentValidationContext_.definitionPath.rfind("/std/collections/", 0) == 0 ||
-          currentValidationContext_.definitionPath.rfind("/std/image/", 0) == 0;
-      if (hasImportedDefinitionPath(path)) {
-        return true;
-      }
-      if (defMap_.count(path) == 0) {
-        return false;
-      }
-      auto paramsIt = paramsByDef_.find(path);
-      if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
-        std::string experimentalElemType;
-        if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
-          return isStdlibVectorWrapperDefinition;
-        }
-      }
-      return true;
-    };
     auto isExperimentalMapTypeText = [&](const std::string &typeText) {
       std::string normalizedType = normalizeBindingTypeName(typeText);
       while (true) {
@@ -709,116 +690,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isFieldAccess) {
       return validateExprFieldAccess(params, locals, expr);
     }
-    std::string accessHelperName;
-    std::string namespacedCollection;
-    std::string namespacedHelper;
-    const bool isNamespacedCollectionHelperCall =
-        getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
-    const bool isNamespacedVectorHelperCall =
-        isNamespacedCollectionHelperCall && namespacedCollection == "vector";
-    const bool isStdNamespacedVectorCountCall =
-        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
-    const bool hasStdNamespacedVectorCountDefinition =
-        hasImportedDefinitionPath("/std/collections/vector/count");
-    const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
-        isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
-    const bool isStdNamespacedMapCountCall =
-        !expr.isMethodCall && resolveCalleePath(expr) == "/std/collections/map/count";
-    const bool isNamespacedMapHelperCall =
-        isNamespacedCollectionHelperCall && namespacedCollection == "map";
-    const std::string directRemovedMapCompatibilityPath =
-        !expr.isMethodCall
-            ? this->directMapHelperCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)
-            : std::string();
-    const bool isMapNamespacedCountCompatibilityCall =
-        directRemovedMapCompatibilityPath == "/map/count";
-    const bool isNamespacedVectorCountCall =
-        !expr.isMethodCall && !isStdNamespacedVectorCountCall &&
-        isNamespacedVectorHelperCall && namespacedHelper == "count" &&
-        isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-        !hasDefinitionPath(resolved) &&
-        !this->isArrayNamespacedVectorCountCompatibilityCall(expr, builtinCollectionDispatchResolvers);
-    const bool isNamespacedMapCountCall =
-        !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
-        !isStdNamespacedMapCountCall && !isMapNamespacedCountCompatibilityCall &&
-        !hasDefinitionPath(resolved);
-    const bool isUnnamespacedMapCountFallbackCall =
-        !expr.isMethodCall &&
-        this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, builtinCollectionDispatchResolverAdapters);
-    const bool isResolvedMapCountCall =
-        !expr.isMethodCall && resolved == "/map/count" &&
-        !isMapNamespacedCountCompatibilityCall &&
-        !isUnnamespacedMapCountFallbackCall;
-    const bool isStdNamespacedVectorCapacityCall =
-        !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
-    const bool hasStdNamespacedVectorCapacityDefinition =
-        hasImportedDefinitionPath("/std/collections/vector/capacity");
-    const bool isNamespacedVectorCapacityCall =
-        !expr.isMethodCall && !isStdNamespacedVectorCapacityCall &&
-        isNamespacedVectorHelperCall && namespacedHelper == "capacity" &&
-        isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
-        !hasDefinitionPath(resolved);
-    const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =
-        isStdNamespacedVectorCapacityCall && hasStdNamespacedVectorCapacityDefinition;
-    const bool hasBuiltinAccessSpelling =
-        !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
-    const bool isStdNamespacedVectorAccessCall =
-        hasBuiltinAccessSpelling && !expr.isMethodCall &&
-        resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
-    const bool hasStdNamespacedVectorAccessDefinition =
-        isStdNamespacedVectorAccessCall &&
-        hasImportedDefinitionPath(resolveCalleePath(expr));
-    const bool isStdNamespacedMapAccessCall =
-        hasBuiltinAccessSpelling && !expr.isMethodCall &&
-        (resolveCalleePath(expr) == "/std/collections/map/at" ||
-         resolveCalleePath(expr) == "/std/collections/map/at_unsafe");
-    const bool hasStdNamespacedMapAccessDefinition =
-        isStdNamespacedMapAccessCall &&
-        hasImportedDefinitionPath(resolveCalleePath(expr));
-    const bool shouldAllowStdAccessCompatibilityFallback = false;
-    const bool isDirectStdNamespacedVectorCountWrapperMapTarget =
-        !expr.isMethodCall && isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
-        expr.args.front().kind == Expr::Kind::Call && resolveMapTarget(expr.args.front());
-    const bool hasStdNamespacedVectorCountAliasDefinition =
-        hasDefinitionPath("/std/collections/vector/count") ||
-        hasImportedDefinitionPath("/std/collections/vector/count");
-    const bool prefersCanonicalVectorCountAliasDefinition =
-        !expr.isMethodCall && resolved == "/vector/count" && !hasDefinitionPath(resolved) &&
-        hasDefinitionPath("/std/collections/vector/count");
-    const bool allowStdNamespacedVectorUserReceiverProbe =
-        !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
-        isNamespacedVectorHelperCall &&
-        (namespacedHelper == "count" || namespacedHelper == "capacity");
-    if (!expr.isMethodCall && isStdNamespacedVectorCountCall &&
-        !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count") &&
-        !allowStdNamespacedVectorUserReceiverProbe) {
-      error_ = "unknown call target: /std/collections/vector/count";
+    ExprCollectionDispatchSetup collectionDispatchSetup;
+    if (!prepareExprCollectionDispatchSetup(
+            params,
+            locals,
+            expr,
+            builtinCollectionDispatchResolvers,
+            builtinCollectionDispatchResolverAdapters,
+            resolved,
+            collectionDispatchSetup)) {
       return false;
-    }
-    if (!expr.isMethodCall && isStdNamespacedVectorCapacityCall &&
-        !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity") &&
-        !allowStdNamespacedVectorUserReceiverProbe) {
-      error_ = "unknown call target: /std/collections/vector/capacity";
-      return false;
-    }
-    if (prefersCanonicalVectorCountAliasDefinition) {
-      resolved = "/std/collections/vector/count";
-    }
-    if (!expr.isMethodCall && expr.args.size() > 1 && !hasNamedArguments(expr.argNames) &&
-        (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe")) &&
-        defMap_.find("/" + expr.name) == defMap_.end()) {
-      std::string shadowedReceiverPath;
-      if (this->resolveDirectCallTemporaryAccessReceiverPath(expr.args.front(), expr.name, shadowedReceiverPath) ||
-          this->resolveLeadingNonCollectionAccessReceiverPath(
-              params,
-              locals,
-              expr.args.front(),
-              expr.name,
-              builtinCollectionDispatchResolvers,
-              shadowedReceiverPath)) {
-        error_ = "unknown method: " + shadowedReceiverPath;
-        return false;
-      }
     }
     ExprMethodResolutionContext methodResolutionContext;
     methodResolutionContext.hasVectorHelperCallResolution =
@@ -851,42 +732,43 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     ExprCollectionCountCapacityDispatchContext collectionCountCapacityDispatchContext;
     collectionCountCapacityDispatchContext.isNamespacedVectorHelperCall =
-        isNamespacedVectorHelperCall;
+        collectionDispatchSetup.isNamespacedVectorHelperCall;
     collectionCountCapacityDispatchContext.namespacedHelper =
-        namespacedHelper;
+        collectionDispatchSetup.namespacedHelper;
     collectionCountCapacityDispatchContext.isStdNamespacedVectorCountCall =
-        isStdNamespacedVectorCountCall;
+        collectionDispatchSetup.isStdNamespacedVectorCountCall;
     collectionCountCapacityDispatchContext
         .shouldBuiltinValidateStdNamespacedVectorCountCall =
-        shouldBuiltinValidateStdNamespacedVectorCountCall;
+        collectionDispatchSetup.shouldBuiltinValidateStdNamespacedVectorCountCall;
     collectionCountCapacityDispatchContext.isStdNamespacedMapCountCall =
-        isStdNamespacedMapCountCall;
+        collectionDispatchSetup.isStdNamespacedMapCountCall;
     collectionCountCapacityDispatchContext.isNamespacedVectorCountCall =
-        isNamespacedVectorCountCall;
+        collectionDispatchSetup.isNamespacedVectorCountCall;
     collectionCountCapacityDispatchContext.isNamespacedMapCountCall =
-        isNamespacedMapCountCall;
+        collectionDispatchSetup.isNamespacedMapCountCall;
     collectionCountCapacityDispatchContext
         .isUnnamespacedMapCountFallbackCall =
-        isUnnamespacedMapCountFallbackCall;
+        collectionDispatchSetup.isUnnamespacedMapCountFallbackCall;
     collectionCountCapacityDispatchContext.isResolvedMapCountCall =
-        isResolvedMapCountCall;
+        collectionDispatchSetup.isResolvedMapCountCall;
     collectionCountCapacityDispatchContext
         .prefersCanonicalVectorCountAliasDefinition =
-        prefersCanonicalVectorCountAliasDefinition;
+        collectionDispatchSetup.prefersCanonicalVectorCountAliasDefinition;
     collectionCountCapacityDispatchContext
         .isStdNamespacedVectorCapacityCall =
-        isStdNamespacedVectorCapacityCall;
+        collectionDispatchSetup.isStdNamespacedVectorCapacityCall;
     collectionCountCapacityDispatchContext
         .shouldBuiltinValidateStdNamespacedVectorCapacityCall =
-        shouldBuiltinValidateStdNamespacedVectorCapacityCall;
+        collectionDispatchSetup
+            .shouldBuiltinValidateStdNamespacedVectorCapacityCall;
     collectionCountCapacityDispatchContext.isNamespacedVectorCapacityCall =
-        isNamespacedVectorCapacityCall;
+        collectionDispatchSetup.isNamespacedVectorCapacityCall;
     collectionCountCapacityDispatchContext
         .isDirectStdNamespacedVectorCountWrapperMapTarget =
-        isDirectStdNamespacedVectorCountWrapperMapTarget;
+        collectionDispatchSetup.isDirectStdNamespacedVectorCountWrapperMapTarget;
     collectionCountCapacityDispatchContext
         .hasStdNamespacedVectorCountAliasDefinition =
-        hasStdNamespacedVectorCountAliasDefinition;
+        collectionDispatchSetup.hasStdNamespacedVectorCountAliasDefinition;
     collectionCountCapacityDispatchContext.shouldBuiltinValidateBareMapCountCall =
         shouldBuiltinValidateBareMapCountCall;
     collectionCountCapacityDispatchContext.resolveMapTarget =
@@ -930,7 +812,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return validateExpr(params, locals,
                           *rewrittenCollectionCountCapacityCall);
     }
-    if (!expr.isMethodCall && isStdNamespacedVectorCountCall &&
+    if (!expr.isMethodCall && collectionDispatchSetup.isStdNamespacedVectorCountCall &&
         expr.args.size() == 1 &&
         !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
         !hasImportedDefinitionPath("/std/collections/vector/count")) {
@@ -1012,10 +894,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     ExprCollectionAccessDispatchContext collectionAccessDispatchContext;
     collectionAccessDispatchContext.isNamespacedVectorHelperCall =
-        isNamespacedVectorHelperCall;
+        collectionDispatchSetup.isNamespacedVectorHelperCall;
     collectionAccessDispatchContext.isNamespacedMapHelperCall =
-        isNamespacedMapHelperCall;
-    collectionAccessDispatchContext.namespacedHelper = namespacedHelper;
+        collectionDispatchSetup.isNamespacedMapHelperCall;
+    collectionAccessDispatchContext.namespacedHelper =
+        collectionDispatchSetup.namespacedHelper;
     collectionAccessDispatchContext.shouldBuiltinValidateBareMapContainsCall =
         shouldBuiltinValidateBareMapContainsCall;
     collectionAccessDispatchContext.shouldBuiltinValidateBareMapAccessCall =
@@ -1172,20 +1055,21 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     ExprCountCapacityMapBuiltinContext countCapacityMapBuiltinContext;
     countCapacityMapBuiltinContext
         .shouldBuiltinValidateStdNamespacedVectorCountCall =
-        shouldBuiltinValidateStdNamespacedVectorCountCall;
+        collectionDispatchSetup.shouldBuiltinValidateStdNamespacedVectorCountCall;
     countCapacityMapBuiltinContext.isStdNamespacedVectorCountCall =
-        isStdNamespacedVectorCountCall;
+        collectionDispatchSetup.isStdNamespacedVectorCountCall;
     countCapacityMapBuiltinContext.shouldBuiltinValidateBareMapCountCall =
         shouldBuiltinValidateBareMapCountCall;
     countCapacityMapBuiltinContext.isNamespacedMapCountCall =
-        isNamespacedMapCountCall;
+        collectionDispatchSetup.isNamespacedMapCountCall;
     countCapacityMapBuiltinContext.isResolvedMapCountCall =
-        isResolvedMapCountCall;
+        collectionDispatchSetup.isResolvedMapCountCall;
     countCapacityMapBuiltinContext
         .shouldBuiltinValidateStdNamespacedVectorCapacityCall =
-        shouldBuiltinValidateStdNamespacedVectorCapacityCall;
+        collectionDispatchSetup
+            .shouldBuiltinValidateStdNamespacedVectorCapacityCall;
     countCapacityMapBuiltinContext.isStdNamespacedVectorCapacityCall =
-        isStdNamespacedVectorCapacityCall;
+        collectionDispatchSetup.isStdNamespacedVectorCapacityCall;
     countCapacityMapBuiltinContext.resolveVectorTarget =
         [&](const Expr &target, std::string &elemTypeOut) {
           return resolveVectorTarget(target, elemTypeOut);
@@ -1231,19 +1115,19 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       ExprLateFallbackBuiltinContext lateFallbackBuiltinContext;
       lateFallbackBuiltinContext
           .collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =
-          isStdNamespacedVectorAccessCall;
+          collectionDispatchSetup.isStdNamespacedVectorAccessCall;
       lateFallbackBuiltinContext.collectionAccessFallbackContext
           .shouldAllowStdAccessCompatibilityFallback =
-          shouldAllowStdAccessCompatibilityFallback;
+          collectionDispatchSetup.shouldAllowStdAccessCompatibilityFallback;
       lateFallbackBuiltinContext.collectionAccessFallbackContext
           .hasStdNamespacedVectorAccessDefinition =
-          hasStdNamespacedVectorAccessDefinition;
+          collectionDispatchSetup.hasStdNamespacedVectorAccessDefinition;
       lateFallbackBuiltinContext
           .collectionAccessFallbackContext.isStdNamespacedMapAccessCall =
-          isStdNamespacedMapAccessCall;
+          collectionDispatchSetup.isStdNamespacedMapAccessCall;
       lateFallbackBuiltinContext
           .collectionAccessFallbackContext.hasStdNamespacedMapAccessDefinition =
-          hasStdNamespacedMapAccessDefinition;
+          collectionDispatchSetup.hasStdNamespacedMapAccessDefinition;
       lateFallbackBuiltinContext.collectionAccessFallbackContext
           .shouldBuiltinValidateBareMapAccessCall =
           shouldBuiltinValidateBareMapAccessCall;

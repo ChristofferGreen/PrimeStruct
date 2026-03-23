@@ -568,6 +568,37 @@ private:
                                    bool &hasResolutionOut,
                                    std::string &resolvedPathOut,
                                    size_t &receiverIndexOut);
+  struct ExprCollectionDispatchSetup {
+    bool isNamespacedVectorHelperCall = false;
+    bool isStdNamespacedVectorCountCall = false;
+    bool shouldBuiltinValidateStdNamespacedVectorCountCall = false;
+    bool isStdNamespacedMapCountCall = false;
+    bool isNamespacedMapHelperCall = false;
+    std::string namespacedHelper;
+    bool isNamespacedVectorCountCall = false;
+    bool isNamespacedMapCountCall = false;
+    bool isUnnamespacedMapCountFallbackCall = false;
+    bool isResolvedMapCountCall = false;
+    bool prefersCanonicalVectorCountAliasDefinition = false;
+    bool isStdNamespacedVectorCapacityCall = false;
+    bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;
+    bool isNamespacedVectorCapacityCall = false;
+    bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
+    bool hasStdNamespacedVectorCountAliasDefinition = false;
+    bool isStdNamespacedVectorAccessCall = false;
+    bool hasStdNamespacedVectorAccessDefinition = false;
+    bool isStdNamespacedMapAccessCall = false;
+    bool hasStdNamespacedMapAccessDefinition = false;
+    bool shouldAllowStdAccessCompatibilityFallback = false;
+  };
+  bool prepareExprCollectionDispatchSetup(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
+      std::string &resolved,
+      ExprCollectionDispatchSetup &setupOut);
   struct ExprCollectionAccessDispatchContext {
     bool isNamespacedVectorHelperCall = false;
     bool isNamespacedMapHelperCall = false;

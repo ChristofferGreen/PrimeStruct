@@ -2127,6 +2127,28 @@ main() {
   CHECK(error.find("unknown method: /Counter/at") != std::string::npos);
 }
 
+TEST_CASE("at call keeps unknown method on non-collection wrapper temporary") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+}
+
+makeCounter() {
+  [Counter] counter{Counter()}
+  return(counter)
+}
+
+[return<int>]
+main() {
+  at(makeCounter(), 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/at") != std::string::npos);
+}
+
 TEST_CASE("at_unsafe call keeps unknown method on non-collection wrapper temporary") {
   const std::string source = R"(
 Counter {

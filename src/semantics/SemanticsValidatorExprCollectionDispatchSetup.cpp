@@ -1,0 +1,166 @@
+#include "SemanticsValidator.h"
+
+namespace primec::semantics {
+
+bool SemanticsValidator::prepareExprCollectionDispatchSetup(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+    const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
+    std::string &resolved,
+    ExprCollectionDispatchSetup &setupOut) {
+  setupOut = {};
+
+  std::string accessHelperName;
+  std::string namespacedCollection;
+  const bool isNamespacedCollectionHelperCall =
+      getNamespacedCollectionHelperName(expr, namespacedCollection, setupOut.namespacedHelper);
+  setupOut.isNamespacedVectorHelperCall =
+      isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+  setupOut.isStdNamespacedVectorCountCall =
+      !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
+  const bool hasStdNamespacedVectorCountDefinition =
+      hasImportedDefinitionPath("/std/collections/vector/count");
+  setupOut.shouldBuiltinValidateStdNamespacedVectorCountCall =
+      setupOut.isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
+  setupOut.isStdNamespacedMapCountCall =
+      !expr.isMethodCall && resolveCalleePath(expr) == "/std/collections/map/count";
+  setupOut.isNamespacedMapHelperCall =
+      isNamespacedCollectionHelperCall && namespacedCollection == "map";
+  const std::string directRemovedMapCompatibilityPath =
+      !expr.isMethodCall
+          ? this->directMapHelperCompatibilityPath(expr, params, locals, dispatchResolverAdapters)
+          : std::string();
+  const bool isMapNamespacedCountCompatibilityCall =
+      directRemovedMapCompatibilityPath == "/map/count";
+  setupOut.isNamespacedMapCountCall =
+      !expr.isMethodCall && setupOut.isNamespacedMapHelperCall &&
+      setupOut.namespacedHelper == "count" &&
+      !setupOut.isStdNamespacedMapCountCall &&
+      !isMapNamespacedCountCompatibilityCall &&
+      !hasDefinitionPath(resolved);
+
+  auto resolveMapTarget = [&](const Expr &target) -> bool {
+    std::string keyType;
+    std::string valueType;
+    if (dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
+        dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType)) {
+      return true;
+    }
+    std::string inferredTypeText;
+    return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
+           returnsMapCollectionType(inferredTypeText);
+  };
+  auto hasVisibleCanonicalVectorHelperPath = [&](const std::string &path) {
+    const bool isStdlibVectorWrapperDefinition =
+        currentValidationContext_.definitionPath.rfind("/std/collections/", 0) == 0 ||
+        currentValidationContext_.definitionPath.rfind("/std/image/", 0) == 0;
+    if (hasImportedDefinitionPath(path)) {
+      return true;
+    }
+    if (defMap_.count(path) == 0) {
+      return false;
+    }
+    auto paramsIt = paramsByDef_.find(path);
+    if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
+      std::string experimentalElemType;
+      if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
+        return isStdlibVectorWrapperDefinition;
+      }
+    }
+    return true;
+  };
+
+  setupOut.isNamespacedVectorCountCall =
+      !expr.isMethodCall && !setupOut.isStdNamespacedVectorCountCall &&
+      setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "count" &&
+      isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+      !hasDefinitionPath(resolved) &&
+      !this->isArrayNamespacedVectorCountCompatibilityCall(expr, dispatchResolvers);
+  setupOut.isUnnamespacedMapCountFallbackCall =
+      !expr.isMethodCall &&
+      this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, dispatchResolverAdapters);
+  setupOut.isResolvedMapCountCall =
+      !expr.isMethodCall && resolved == "/map/count" &&
+      !isMapNamespacedCountCompatibilityCall &&
+      !setupOut.isUnnamespacedMapCountFallbackCall;
+  setupOut.isStdNamespacedVectorCapacityCall =
+      !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
+  const bool hasStdNamespacedVectorCapacityDefinition =
+      hasImportedDefinitionPath("/std/collections/vector/capacity");
+  setupOut.isNamespacedVectorCapacityCall =
+      !expr.isMethodCall && !setupOut.isStdNamespacedVectorCapacityCall &&
+      setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "capacity" &&
+      isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+      !hasDefinitionPath(resolved);
+  setupOut.shouldBuiltinValidateStdNamespacedVectorCapacityCall =
+      setupOut.isStdNamespacedVectorCapacityCall &&
+      hasStdNamespacedVectorCapacityDefinition;
+  const bool hasBuiltinAccessSpelling =
+      !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
+  setupOut.isStdNamespacedVectorAccessCall =
+      hasBuiltinAccessSpelling && !expr.isMethodCall &&
+      resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+  setupOut.hasStdNamespacedVectorAccessDefinition =
+      setupOut.isStdNamespacedVectorAccessCall &&
+      hasImportedDefinitionPath(resolveCalleePath(expr));
+  setupOut.isStdNamespacedMapAccessCall =
+      hasBuiltinAccessSpelling && !expr.isMethodCall &&
+      (resolveCalleePath(expr) == "/std/collections/map/at" ||
+       resolveCalleePath(expr) == "/std/collections/map/at_unsafe");
+  setupOut.hasStdNamespacedMapAccessDefinition =
+      setupOut.isStdNamespacedMapAccessCall &&
+      hasImportedDefinitionPath(resolveCalleePath(expr));
+  setupOut.shouldAllowStdAccessCompatibilityFallback = false;
+  setupOut.isDirectStdNamespacedVectorCountWrapperMapTarget =
+      !expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&
+      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&
+      resolveMapTarget(expr.args.front());
+  setupOut.hasStdNamespacedVectorCountAliasDefinition =
+      hasDefinitionPath("/std/collections/vector/count") ||
+      hasImportedDefinitionPath("/std/collections/vector/count");
+  setupOut.prefersCanonicalVectorCountAliasDefinition =
+      !expr.isMethodCall && resolved == "/vector/count" && !hasDefinitionPath(resolved) &&
+      hasDefinitionPath("/std/collections/vector/count");
+
+  const bool allowStdNamespacedVectorUserReceiverProbe =
+      !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
+      setupOut.isNamespacedVectorHelperCall &&
+      (setupOut.namespacedHelper == "count" || setupOut.namespacedHelper == "capacity");
+  if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&
+      !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count") &&
+      !allowStdNamespacedVectorUserReceiverProbe) {
+    error_ = "unknown call target: /std/collections/vector/count";
+    return false;
+  }
+  if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCapacityCall &&
+      !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity") &&
+      !allowStdNamespacedVectorUserReceiverProbe) {
+    error_ = "unknown call target: /std/collections/vector/capacity";
+    return false;
+  }
+  if (setupOut.prefersCanonicalVectorCountAliasDefinition) {
+    resolved = "/std/collections/vector/count";
+  }
+  if (!expr.isMethodCall && expr.args.size() > 1 && !hasNamedArguments(expr.argNames) &&
+      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe")) &&
+      defMap_.find("/" + expr.name) == defMap_.end()) {
+    std::string shadowedReceiverPath;
+    if (this->resolveDirectCallTemporaryAccessReceiverPath(expr.args.front(), expr.name, shadowedReceiverPath) ||
+        this->resolveLeadingNonCollectionAccessReceiverPath(
+            params,
+            locals,
+            expr.args.front(),
+            expr.name,
+            dispatchResolvers,
+            shadowedReceiverPath)) {
+      error_ = "unknown method: " + shadowedReceiverPath;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+} // namespace primec::semantics

@@ -75,6 +75,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprCaptureSplitStep.cpp
   src/semantics/SemanticsValidatorExprBodyArguments.cpp
   src/semantics/SemanticsValidatorExprControlFlow.cpp
+  src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp
   src/semantics/SemanticsValidatorExprCollectionAccess.cpp
   src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp
   src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp
