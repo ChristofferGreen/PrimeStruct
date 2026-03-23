@@ -9338,6 +9338,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("bare map at wrapper call resolves through canonical helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(at(wrapMap(), 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare map at wrapper call requires canonical or compatibility helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(at(wrapMap(), 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target") != std::string::npos);
+}
+
 TEST_CASE("bare map at call resolves through compatibility helper when canonical helper is absent") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

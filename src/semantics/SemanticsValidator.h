@@ -624,6 +624,13 @@ private:
     std::function<bool(const std::string &)> hasResolvableMapHelperPath;
     std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
   };
+  void prepareExprCollectionAccessDispatchContext(
+      const ExprCollectionDispatchSetup &dispatchSetup,
+      bool shouldBuiltinValidateBareMapContainsCall,
+      bool shouldBuiltinValidateBareMapAccessCall,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      const std::function<bool(const Expr &)> &resolveMapTarget,
+      ExprCollectionAccessDispatchContext &contextOut);
   bool resolveExprCollectionAccessTarget(const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          const Expr &expr,

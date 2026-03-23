@@ -832,41 +832,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                           *rewrittenDirectCollectionFallbackCall);
     }
     ExprCollectionAccessDispatchContext collectionAccessDispatchContext;
-    collectionAccessDispatchContext.isNamespacedVectorHelperCall =
-        collectionDispatchSetup.isNamespacedVectorHelperCall;
-    collectionAccessDispatchContext.isNamespacedMapHelperCall =
-        collectionDispatchSetup.isNamespacedMapHelperCall;
-    collectionAccessDispatchContext.namespacedHelper =
-        collectionDispatchSetup.namespacedHelper;
-    collectionAccessDispatchContext.shouldBuiltinValidateBareMapContainsCall =
-        shouldBuiltinValidateBareMapContainsCall;
-    collectionAccessDispatchContext.shouldBuiltinValidateBareMapAccessCall =
-        shouldBuiltinValidateBareMapAccessCall;
-    collectionAccessDispatchContext.resolveArrayTarget =
-        [&](const Expr &target, std::string &elemTypeOut) {
-          return resolveArrayTarget(target, elemTypeOut);
-        };
-    collectionAccessDispatchContext.resolveVectorTarget =
-        [&](const Expr &target, std::string &elemTypeOut) {
-          return resolveVectorTarget(target, elemTypeOut);
-        };
-    collectionAccessDispatchContext.resolveSoaVectorTarget =
-        [&](const Expr &target, std::string &elemTypeOut) {
-          return resolveSoaVectorTarget(target, elemTypeOut);
-        };
-    collectionAccessDispatchContext.resolveStringTarget =
-        [&](const Expr &target) { return resolveStringTarget(target); };
-    collectionAccessDispatchContext.resolveMapTarget =
-        [&](const Expr &target) { return resolveMapTarget(target); };
-    collectionAccessDispatchContext.hasResolvableMapHelperPath =
-        [&](const std::string &path) {
-          return this->hasResolvableMapHelperPath(path);
-        };
-    collectionAccessDispatchContext.isIndexedArgsPackMapReceiverTarget =
-        [&](const Expr &target) {
-          return this->isIndexedArgsPackMapReceiverTarget(
-              target, builtinCollectionDispatchResolvers);
-        };
+    prepareExprCollectionAccessDispatchContext(
+        collectionDispatchSetup,
+        shouldBuiltinValidateBareMapContainsCall,
+        shouldBuiltinValidateBareMapAccessCall,
+        builtinCollectionDispatchResolvers,
+        [&](const Expr &target) { return resolveMapTarget(target); },
+        collectionAccessDispatchContext);
     bool handledCollectionAccessTarget = false;
     if (!resolveExprCollectionAccessTarget(
             params, locals, expr, collectionAccessDispatchContext,
