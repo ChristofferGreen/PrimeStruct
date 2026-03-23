@@ -826,4 +826,56 @@ TEST_CASE("type resolution temporary receiver result metadata stays aligned") {
   CHECK(resultEntry.errorTypeText == "MyError");
 }
 
+TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {
+  const std::string source =
+      "MyError {\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "makeValue() {\n"
+      "  return(4i32)\n"
+      "}\n"
+      "\n"
+      "[return<Result<int, MyError>>]\n"
+      "main() {\n"
+      "  [auto] status{Result.ok(makeValue())}\n"
+      "  return(status)\n"
+      "}\n";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot localSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, localSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryCallSnapshot queryCallSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryCallSnapshotForTesting(
+      parseProgram(source), "/main", error, queryCallSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryBindingSnapshot queryBindingSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, queryBindingSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionCallBindingSnapshot callSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionCallBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, callSnapshot));
+  CHECK(error.empty());
+
+  const auto &localEntry = requireLocalBindingSnapshotEntry(localSnapshot, "/main", "status");
+  const auto &queryCallEntry = requireQueryCallSnapshotEntry(queryCallSnapshot, "/main", "/makeValue");
+  const auto &queryBindingEntry = requireQueryBindingSnapshotEntry(queryBindingSnapshot, "/main", "/makeValue");
+  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/makeValue");
+
+  CHECK(localEntry.bindingTypeText == "Result<i32, MyError>");
+  CHECK(localEntry.initializerResolvedPath == queryCallEntry.resolvedPath);
+  CHECK(localEntry.initializerBindingTypeText == queryBindingEntry.bindingTypeText);
+  CHECK(localEntry.initializerQueryTypeText == queryCallEntry.typeText);
+  CHECK(localEntry.initializerReceiverBindingTypeText.empty());
+  CHECK(!localEntry.initializerResultHasValue);
+  CHECK(queryCallEntry.typeText == callEntry.bindingTypeText);
+  CHECK(queryBindingEntry.bindingTypeText == callEntry.bindingTypeText);
+}
+
 TEST_SUITE_END();

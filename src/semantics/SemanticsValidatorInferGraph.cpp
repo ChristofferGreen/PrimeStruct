@@ -311,12 +311,15 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         const Expr *initializerAnalysisExpr = expr.args.size() == 1 ? &expr.args.front() : nullptr;
         if (initializerAnalysisExpr != nullptr &&
             !initializerAnalysisExpr->isMethodCall &&
-            isSimpleCallName(*initializerAnalysisExpr, "try") &&
             initializerAnalysisExpr->args.size() == 1 &&
             initializerAnalysisExpr->templateArgs.empty() &&
             !initializerAnalysisExpr->hasBodyArguments &&
             initializerAnalysisExpr->bodyArguments.empty()) {
-          initializerAnalysisExpr = &initializerAnalysisExpr->args.front();
+          const std::string initializerWrapperPath = resolveCalleePath(*initializerAnalysisExpr);
+          if (isSimpleCallName(*initializerAnalysisExpr, "try") ||
+              initializerWrapperPath == "/Result/ok") {
+            initializerAnalysisExpr = &initializerAnalysisExpr->args.front();
+          }
         }
         CallSnapshotData initializerCallData;
         if (initializerAnalysisExpr != nullptr &&

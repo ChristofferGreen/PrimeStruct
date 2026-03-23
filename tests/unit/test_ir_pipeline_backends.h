@@ -1338,6 +1338,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("const Expr *initializerAnalysisExpr = expr.args.size() == 1 ? &expr.args.front() : nullptr;") !=
         std::string::npos);
+  CHECK(validatorInfer.find("const std::string initializerWrapperPath = resolveCalleePath(*initializerAnalysisExpr);") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("initializerWrapperPath == \"/Result/ok\"") !=
+        std::string::npos);
   CHECK(validatorInfer.find("initializerAnalysisExpr = &initializerAnalysisExpr->args.front();") !=
         std::string::npos);
   CHECK(validatorInfer.find("CallSnapshotData initializerCallData;") !=
