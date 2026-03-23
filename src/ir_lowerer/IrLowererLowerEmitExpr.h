@@ -538,9 +538,7 @@
             error = "Result.map requires value Result";
             return false;
           }
-          if (sourceResultInfo.valueKind != LocalInfo::ValueKind::Int32 &&
-              sourceResultInfo.valueKind != LocalInfo::ValueKind::Bool &&
-              sourceResultInfo.valueKind != LocalInfo::ValueKind::String) {
+          if (!ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind)) {
             error = "IR backends only support Result.map with 32-bit or string values";
             return false;
           }
@@ -600,9 +598,7 @@
           }
 
           const LocalInfo::ValueKind mappedValueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
-          if (mappedValueKind != LocalInfo::ValueKind::Int32 &&
-              mappedValueKind != LocalInfo::ValueKind::Bool &&
-              mappedValueKind != LocalInfo::ValueKind::String) {
+          if (!ir_lowerer::isSupportedPackedResultValueKind(mappedValueKind)) {
             error = "IR backends only support Result.map with 32-bit or string values";
             return false;
           }
@@ -635,6 +631,10 @@
           }
           if (!sourceResultInfo.hasValue) {
             error = "Result.and_then requires value Result";
+            return false;
+          }
+          if (!ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind)) {
+            error = "IR backends only support Result.and_then with 32-bit or string values";
             return false;
           }
 
@@ -738,12 +738,8 @@
             error = "Result.map2 requires matching error types";
             return false;
           }
-          if ((leftResultInfo.valueKind != LocalInfo::ValueKind::Int32 &&
-               leftResultInfo.valueKind != LocalInfo::ValueKind::Bool &&
-               leftResultInfo.valueKind != LocalInfo::ValueKind::String) ||
-              (rightResultInfo.valueKind != LocalInfo::ValueKind::Int32 &&
-               rightResultInfo.valueKind != LocalInfo::ValueKind::Bool &&
-               rightResultInfo.valueKind != LocalInfo::ValueKind::String)) {
+          if (!ir_lowerer::isSupportedPackedResultValueKind(leftResultInfo.valueKind) ||
+              !ir_lowerer::isSupportedPackedResultValueKind(rightResultInfo.valueKind)) {
             error = "IR backends only support Result.map2 with 32-bit or string values";
             return false;
           }
@@ -837,9 +833,7 @@
           }
 
           const LocalInfo::ValueKind mappedValueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
-          if (mappedValueKind != LocalInfo::ValueKind::Int32 &&
-              mappedValueKind != LocalInfo::ValueKind::Bool &&
-              mappedValueKind != LocalInfo::ValueKind::String) {
+          if (!ir_lowerer::isSupportedPackedResultValueKind(mappedValueKind)) {
             error = "IR backends only support Result.map2 with 32-bit or string values";
             return false;
           }

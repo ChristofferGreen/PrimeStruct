@@ -870,7 +870,7 @@ Draft constraints:
   - Block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected.
   - `print*` and vector helper calls are statement-only; expression usage is rejected.
   - `File<Mode>(path)` requires a string literal or literal-backed binding.
-  - `Result.ok(value)` currently accepts `i32`, `bool`, and literal-backed `string` payloads only.
+  - `Result.ok(value)` currently accepts `i32`, `bool`, `f32`, and literal-backed `string` payloads only.
   - Unsupported math or GPU builtins fail during lowering.
 - Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
 - VM/native consume the PSIR v16 opcode set (see design doc) and deserialization rejects unknown opcodes.

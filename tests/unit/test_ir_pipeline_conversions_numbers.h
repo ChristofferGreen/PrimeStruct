@@ -165,6 +165,41 @@ main() {
   CHECK(error.find("IR backends only support Result.map with 32-bit or string values") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer supports Result.map f32 payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<f32, FileError>] ok{Result.ok(1.5f32)}
+  [Result<f32, FileError>] mapped{
+    Result.map(ok, []([f32] value) { return(plus(value, 0.5f32)) })
+  }
+  return(convert<int>(multiply(try(mapped), 10.0f32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 20);
+}
+
 TEST_CASE("ir lowerer supports Result.and_then builtin lambdas") {
   const std::string source = R"(
 import /std/file/*
@@ -222,6 +257,41 @@ main() {
   CHECK(error.find("native backend only supports Result.ok with 32-bit or string values") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer supports Result.and_then f32 payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<f32, FileError>] ok{Result.ok(1.5f32)}
+  [Result<f32, FileError>] chained{
+    Result.and_then(ok, []([f32] value) { return(Result.ok(multiply(value, 2.0f32))) })
+  }
+  return(convert<int>(multiply(try(chained), 10.0f32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 30);
+}
+
 TEST_CASE("ir lowerer supports Result.map2 builtin lambdas") {
   const std::string source = R"(
 [return<int>]
@@ -272,6 +342,42 @@ main() {
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.find("IR backends only support Result.map2 with 32-bit or string values") != std::string::npos);
+}
+
+TEST_CASE("ir lowerer supports Result.map2 f32 payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<f32, FileError>] first{Result.ok(1.25f32)}
+  [Result<f32, FileError>] second{Result.ok(0.75f32)}
+  [Result<f32, FileError>] summed{
+    Result.map2(first, second, []([f32] left, [f32] right) { return(plus(left, right)) })
+  }
+  return(convert<int>(multiply(try(summed), 10.0f32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 20);
 }
 
 TEST_CASE("ir lowerer accepts move builtin") {

@@ -181,6 +181,7 @@ bool emitResultWhyCallWithComposedOps(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
     std::string &error);
+bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind);
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
 void emitResultWhyErrorLocalFromResult(

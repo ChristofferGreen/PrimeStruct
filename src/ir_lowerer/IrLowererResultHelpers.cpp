@@ -308,6 +308,11 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
   };
 }
 
+bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
+  return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool ||
+         kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::String;
+}
+
 ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -328,8 +333,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     return ResultOkMethodCallEmitResult::Error;
   }
   const LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
-  if (argKind != LocalInfo::ValueKind::Int32 && argKind != LocalInfo::ValueKind::Bool &&
-      argKind != LocalInfo::ValueKind::String) {
+  if (!isSupportedPackedResultValueKind(argKind)) {
     error = "native backend only supports Result.ok with 32-bit or string values";
     return ResultOkMethodCallEmitResult::Error;
   }

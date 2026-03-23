@@ -6456,6 +6456,45 @@ main() {
   CHECK(readFile(outPath) == "container missing key\ncontainer empty\n");
 }
 
+TEST_CASE("native backend supports f32 Result payloads on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<f32, FileError>] ok{Result.ok(1.5f32)}
+  [Result<f32, FileError>] mapped{
+    Result.map(ok, []([f32] value) { return(plus(value, 1.0f32)) })
+  }
+  [Result<f32, FileError>] chained{
+    Result.and_then(mapped, []([f32] value) { return(Result.ok(multiply(value, 2.0f32))) })
+  }
+  [Result<f32, FileError>] summed{
+    Result.map2(chained, Result.ok(0.5f32), []([f32] left, [f32] right) { return(plus(left, right)) })
+  }
+  [f32] value{summed?}
+  print_line(convert<int>(multiply(value, 10.0f32)))
+  return(convert<int>(multiply(value, 10.0f32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_result_f32_ir_backed.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_f32_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_f32_ir_backed_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 55);
+  CHECK(readFile(outPath) == "55\n");
+}
+
 TEST_CASE("compiles and runs native direct type namespace string helpers") {
   const std::string source = R"(
 [struct]
