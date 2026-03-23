@@ -318,19 +318,26 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
             initializerAnalysisExpr->bodyArguments.empty()) {
           initializerAnalysisExpr = &initializerAnalysisExpr->args.front();
         }
-        QuerySnapshotData initializerQueryData;
+        CallSnapshotData initializerCallData;
         if (initializerAnalysisExpr != nullptr &&
-            inferQuerySnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerQueryData)) {
-          if (!initializerQueryData.resolvedPath.empty()) {
-            graphLocalAutoResolvedPaths_[bindingKey] = initializerQueryData.resolvedPath;
+            inferCallSnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerCallData)) {
+          if (!initializerCallData.resolvedPath.empty()) {
+            graphLocalAutoResolvedPaths_[bindingKey] = std::move(initializerCallData.resolvedPath);
           } else {
             graphLocalAutoResolvedPaths_.erase(bindingKey);
           }
-          if (!initializerQueryData.binding.typeName.empty()) {
-            graphLocalAutoInitializerBindings_[bindingKey] = initializerQueryData.binding;
+          if (!initializerCallData.binding.typeName.empty()) {
+            graphLocalAutoInitializerBindings_[bindingKey] = std::move(initializerCallData.binding);
           } else {
             graphLocalAutoInitializerBindings_.erase(bindingKey);
           }
+        } else {
+          graphLocalAutoResolvedPaths_.erase(bindingKey);
+          graphLocalAutoInitializerBindings_.erase(bindingKey);
+        }
+        QuerySnapshotData initializerQueryData;
+        if (initializerAnalysisExpr != nullptr &&
+            inferQuerySnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerQueryData)) {
           if (!initializerQueryData.receiverBinding.typeName.empty()) {
             graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerQueryData.receiverBinding);
           } else {
@@ -347,8 +354,6 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
             graphLocalAutoResultTypes_.erase(bindingKey);
           }
         } else {
-          graphLocalAutoResolvedPaths_.erase(bindingKey);
-          graphLocalAutoInitializerBindings_.erase(bindingKey);
           graphLocalAutoReceiverBindings_.erase(bindingKey);
           graphLocalAutoQueryTypeTexts_.erase(bindingKey);
           graphLocalAutoResultTypes_.erase(bindingKey);

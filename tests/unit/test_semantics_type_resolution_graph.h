@@ -591,4 +591,37 @@ main() {
   CHECK(localEntry.initializerResultErrorTypeText == resultEntry.errorTypeText);
 }
 
+TEST_CASE("type resolution local call metadata stays aligned with call snapshot") {
+  const std::string source =
+      "[return<auto>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<auto>]\n"
+      "main() {\n"
+      "  [auto] selected{id(1i32)}\n"
+      "  return(selected)\n"
+      "}\n";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot localSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, localSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionCallBindingSnapshot callSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionCallBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, callSnapshot));
+  CHECK(error.empty());
+
+  const auto &localEntry = requireLocalBindingSnapshotEntry(localSnapshot, "/main", "selected");
+  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/id__t25a78a513414c3bf");
+  CHECK(localEntry.initializerResolvedPath == callEntry.resolvedPath);
+  CHECK(localEntry.initializerBindingTypeText == callEntry.bindingTypeText);
+  CHECK(localEntry.initializerReceiverBindingTypeText.empty());
+  CHECK(localEntry.initializerQueryTypeText.empty());
+  CHECK(!localEntry.initializerResultHasValue);
+}
+
 TEST_SUITE_END();

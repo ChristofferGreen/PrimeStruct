@@ -400,6 +400,38 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
          !out.receiverBinding.typeName.empty();
 }
 
+bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> &defParams,
+                                               const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                                               const Expr &expr,
+                                               CallSnapshotData &out) {
+  out = {};
+
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  out.resolvedPath = resolveCalleePath(expr);
+  if (!out.resolvedPath.empty()) {
+    BindingInfo resolvedBinding;
+    if (inferResolvedDirectCallBindingType(out.resolvedPath, resolvedBinding) &&
+        !resolvedBinding.typeName.empty()) {
+      out.binding = std::move(resolvedBinding);
+    }
+  }
+  if (out.binding.typeName.empty()) {
+    withPreservedError([&]() {
+      return inferBindingTypeFromInitializer(expr, defParams, activeLocals, out.binding);
+    });
+  }
+
+  return !out.resolvedPath.empty() || !out.binding.typeName.empty();
+}
+
 std::vector<SemanticsValidator::TryValueSnapshotEntry>
 SemanticsValidator::tryValueSnapshotForTesting() {
   std::vector<TryValueSnapshotEntry> entries;
@@ -496,20 +528,17 @@ SemanticsValidator::callBindingSnapshotForTesting() {
                                     const std::vector<ParameterInfo> &defParams,
                                     const Expr &expr,
                                     const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    (void)defParams;
-    (void)activeLocals;
-    const std::string resolvedPath = resolveCalleePath(expr);
-    BindingInfo binding;
-    if (!resolvedPath.empty() &&
-        inferResolvedDirectCallBindingType(resolvedPath, binding) &&
-        !binding.typeName.empty()) {
+    CallSnapshotData callData;
+    if (inferCallSnapshotData(defParams, activeLocals, expr, callData) &&
+        !callData.resolvedPath.empty() &&
+        !callData.binding.typeName.empty()) {
       entries.push_back(CallBindingSnapshotEntry{
           def.fullPath,
           expr.name,
-          resolvedPath,
+          std::move(callData.resolvedPath),
           expr.sourceLine,
           expr.sourceColumn,
-          std::move(binding),
+          std::move(callData.binding),
       });
     }
   });

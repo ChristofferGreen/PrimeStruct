@@ -67,6 +67,11 @@ public:
     BindingInfo receiverBinding;
   };
 
+  struct CallSnapshotData {
+    std::string resolvedPath;
+    BindingInfo binding;
+  };
+
   struct QueryCallTypeSnapshotEntry {
     std::string scopePath;
     std::string callName;
@@ -255,6 +260,10 @@ private:
                               const std::unordered_map<std::string, BindingInfo> &activeLocals,
                               const Expr &expr,
                               QuerySnapshotData &out);
+  bool inferCallSnapshotData(const std::vector<ParameterInfo> &defParams,
+                             const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                             const Expr &expr,
+                             CallSnapshotData &out);
   bool inferTrySnapshotData(const Definition &def,
                             const std::vector<ParameterInfo> &defParams,
                             const std::unordered_map<std::string, BindingInfo> &activeLocals,

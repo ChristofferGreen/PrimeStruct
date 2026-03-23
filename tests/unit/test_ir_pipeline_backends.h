@@ -634,7 +634,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("struct LocalAutoBindingSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("struct LocalAutoTrySnapshotData {") != std::string::npos);
   CHECK(validatorHeader.find("struct QuerySnapshotData {") != std::string::npos);
+  CHECK(validatorHeader.find("struct CallSnapshotData {") != std::string::npos);
   CHECK(validatorHeader.find("bool inferQuerySnapshotData(const std::vector<ParameterInfo> &defParams,") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("bool inferCallSnapshotData(const std::vector<ParameterInfo> &defParams,") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool inferTrySnapshotData(const Definition &def,") != std::string::npos);
   CHECK(validatorHeader.find("BindingInfo initializerBinding;") != std::string::npos);
@@ -854,12 +857,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorCore.find("SemanticsValidator::queryResultTypeSnapshotForTesting()") !=
         std::string::npos);
   CHECK(validatorCore.find("bool SemanticsValidator::inferQuerySnapshotData(") != std::string::npos);
+  CHECK(validatorCore.find("bool SemanticsValidator::inferCallSnapshotData(") != std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::tryValueSnapshotForTesting()") !=
         std::string::npos);
   CHECK(validatorCore.find("if (expr.isMethodCall || !isSimpleCallName(expr, \"try\") || expr.args.size() != 1 ||") !=
         std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::callBindingSnapshotForTesting()") !=
         std::string::npos);
+  CHECK(validatorCore.find("CallSnapshotData callData;") != std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::queryReceiverBindingSnapshotForTesting()") !=
         std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::onErrorSnapshotForTesting()") !=
@@ -1291,11 +1296,15 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("initializerAnalysisExpr = &initializerAnalysisExpr->args.front();") !=
         std::string::npos);
+  CHECK(validatorInfer.find("CallSnapshotData initializerCallData;") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("inferCallSnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerCallData)") !=
+        std::string::npos);
   CHECK(validatorInfer.find("inferQuerySnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerQueryData)") !=
         std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoResolvedPaths_[bindingKey] = initializerQueryData.resolvedPath;") !=
+  CHECK(validatorInfer.find("graphLocalAutoResolvedPaths_[bindingKey] = std::move(initializerCallData.resolvedPath);") !=
         std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoInitializerBindings_[bindingKey] = initializerQueryData.binding;") !=
+  CHECK(validatorInfer.find("graphLocalAutoInitializerBindings_[bindingKey] = std::move(initializerCallData.binding);") !=
         std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerQueryData.receiverBinding);") !=
         std::string::npos);
