@@ -9290,6 +9290,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprGpuBuffer.cpp";
   const std::filesystem::path semanticsExprScalarPointerMemoryPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprScalarPointerMemory.cpp";
+  const std::filesystem::path semanticsExprResolvedCallSetupPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprResolvedCallSetup.cpp";
   const std::filesystem::path semanticsExprResolvedCallArgumentsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprResolvedCallArguments.cpp";
   const std::filesystem::path semanticsExprStructConstructorsPath =
@@ -9329,6 +9331,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(semanticsExprGpuBufferPath));
   REQUIRE(std::filesystem::exists(semanticsExprScalarPointerMemoryPath));
+  REQUIRE(std::filesystem::exists(semanticsExprResolvedCallSetupPath));
   REQUIRE(std::filesystem::exists(semanticsExprResolvedCallArgumentsPath));
   REQUIRE(std::filesystem::exists(semanticsExprStructConstructorsPath));
   REQUIRE(std::filesystem::exists(semanticsExprMapSoaBuiltinsPath));
@@ -9374,6 +9377,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
   const std::string semanticsExprGpuBufferSource = readText(semanticsExprGpuBufferPath);
   const std::string semanticsExprScalarPointerMemorySource = readText(semanticsExprScalarPointerMemoryPath);
+  const std::string semanticsExprResolvedCallSetupSource =
+      readText(semanticsExprResolvedCallSetupPath);
   const std::string semanticsExprResolvedCallArgumentsSource =
       readText(semanticsExprResolvedCallArgumentsPath);
   const std::string semanticsExprStructConstructorsSource = readText(semanticsExprStructConstructorsPath);
@@ -9470,12 +9475,21 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "              params, locals, expr, resolved,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "prepareExprResolvedCallSetup(\n"
+            "        params,\n"
+            "        locals,\n"
+            "        expr,\n"
+            "        resolved,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "validateExprResolvedStructConstructorCall(\n"
-            "            params, locals, expr, resolved, resolvedStructConstructorContext,") !=
+            "            params, locals, expr, resolved,\n"
+            "            resolvedCallSetup.resolvedStructConstructorContext,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprResolvedCallArguments(\n"
-            "            params, locals, expr, resolved, resolvedCallArgumentContext,") !=
+            "            params, locals, expr, resolved,\n"
+            "            resolvedCallSetup.resolvedCallArgumentContext,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") !=
         std::string::npos);
@@ -9960,7 +9974,22 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("auto describeMethodReflectionTarget = [&](const Expr &callExpr) -> std::string {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("const ExprArgumentValidationContext argumentValidationContext{") !=
+  CHECK(semanticsExprSource.find("const ExprArgumentValidationContext argumentValidationContext{") ==
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallSetupSource.find(
+            "contextOut.argumentValidationContext.callExpr = &expr;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "ExprResolvedStructConstructorContext resolvedStructConstructorContext{") ==
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallSetupSource.find(
+            "contextOut.resolvedStructConstructorContext = {") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "ExprResolvedCallArgumentContext resolvedCallArgumentContext{") ==
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallSetupSource.find(
+            "contextOut.resolvedCallArgumentContext = {") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
@@ -10094,6 +10123,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(
             "if (hasStructZeroArgConstructor(resolved)) {") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallSetupSource.find(
+            "void SemanticsValidator::prepareExprResolvedCallSetup(") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallSetupSource.find(
+            "contextOut.diagnosticResolved = diagnosticCallTargetPath(resolved);") !=
         std::string::npos);
   CHECK(semanticsExprResolvedCallArgumentsSource.find(
             "bool SemanticsValidator::validateExprResolvedCallArguments") !=

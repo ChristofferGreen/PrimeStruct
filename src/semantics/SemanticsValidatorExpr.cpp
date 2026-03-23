@@ -1012,50 +1012,32 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     const auto &calleeParams = paramsByDef_[resolved];
-    const std::string diagnosticResolved = diagnosticCallTargetPath(resolved);
-    const ExprArgumentValidationContext argumentValidationContext{
-        .callExpr = &expr,
-        .resolved = &resolved,
-        .diagnosticResolved = &diagnosticResolved,
-        .params = &params,
-        .locals = &locals,
-        .dispatchResolvers = &builtinCollectionDispatchResolvers,
-    };
-    std::string resolvedStructConstructorZeroArgDiagnostic;
-    if (calleeParams.empty() && structNames_.count(resolved) > 0 &&
-        expr.args.empty() && !hasNamedArguments(expr.argNames) &&
-        !expr.hasBodyArguments && expr.bodyArguments.empty()) {
-      resolvedStructConstructorZeroArgDiagnostic =
-          experimentalGfxUnavailableConstructorDiagnostic(expr, resolved);
-    }
-    ExprResolvedStructConstructorContext resolvedStructConstructorContext{
-        .isResolvedStructConstructorCall =
-            calleeParams.empty() && structNames_.count(resolved) > 0,
-        .resolvedDefinition = it->second,
-        .argumentValidationContext = &argumentValidationContext,
-        .diagnosticResolved = &diagnosticResolved,
-        .zeroArgDiagnostic = &resolvedStructConstructorZeroArgDiagnostic,
-    };
+    ExprResolvedCallSetup resolvedCallSetup;
+    prepareExprResolvedCallSetup(
+        params,
+        locals,
+        expr,
+        resolved,
+        builtinCollectionDispatchResolvers,
+        *it->second,
+        calleeParams,
+        hasMethodReceiverIndex,
+        methodReceiverIndex,
+        resolvedCallSetup);
     bool handledResolvedStructConstructor = false;
     if (!validateExprResolvedStructConstructorCall(
-            params, locals, expr, resolved, resolvedStructConstructorContext,
+            params, locals, expr, resolved,
+            resolvedCallSetup.resolvedStructConstructorContext,
             handledResolvedStructConstructor)) {
       return false;
     }
     if (handledResolvedStructConstructor) {
       return true;
     }
-    ExprResolvedCallArgumentContext resolvedCallArgumentContext{
-        .resolvedDefinition = it->second,
-        .calleeParams = &calleeParams,
-        .argumentValidationContext = &argumentValidationContext,
-        .diagnosticResolved = &diagnosticResolved,
-        .hasMethodReceiverIndex = hasMethodReceiverIndex,
-        .methodReceiverIndex = methodReceiverIndex,
-    };
     bool handledResolvedCallArguments = false;
     if (!validateExprResolvedCallArguments(
-            params, locals, expr, resolved, resolvedCallArgumentContext,
+            params, locals, expr, resolved,
+            resolvedCallSetup.resolvedCallArgumentContext,
             handledResolvedCallArguments)) {
       return false;
     }

@@ -740,6 +740,61 @@ main() {
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
+TEST_CASE("wrapper-returned struct constructor validates in resolved helper arguments") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+  [i32] count{2i32}
+}
+
+[return<thing>]
+buildThing() {
+  return(thing([count] 4i32, [value] 3i32))
+}
+
+[return<int>]
+use([thing] item) {
+  return(item.count)
+}
+
+[return<int>]
+main() {
+  return(use(buildThing()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper-returned struct constructor keeps resolved helper mismatch diagnostics") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+}
+
+[return<thing>]
+buildThing() {
+  return(thing([value] 3i32))
+}
+
+[return<int>]
+use([thing] item, [i32] extra) {
+  return(extra)
+}
+
+[return<int>]
+main() {
+  return(use(buildThing()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /use") != std::string::npos);
+}
+
 TEST_CASE("struct brace constructor works in arguments") {
   const std::string source = R"(
 [struct]

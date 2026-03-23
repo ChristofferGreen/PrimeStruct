@@ -360,6 +360,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       cwd / "src" / "semantics" / "SemanticsValidatorExprPostAccessPrechecks.cpp";
   std::filesystem::path validatorExprBuiltinContextSetupPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprBuiltinContextSetup.cpp";
+  std::filesystem::path validatorExprResolvedCallSetupPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorExprResolvedCallSetup.cpp";
   std::filesystem::path validatorExprMethodResolutionPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
   std::filesystem::path validatorExprBodyArgumentsPath =
@@ -407,6 +409,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprPostAccessPrechecks.cpp";
     validatorExprBuiltinContextSetupPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprBuiltinContextSetup.cpp";
+    validatorExprResolvedCallSetupPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprResolvedCallSetup.cpp";
     validatorExprMethodResolutionPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
     validatorExprBodyArgumentsPath =
@@ -446,6 +450,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorExprDirectCollectionFallbacksPath));
   REQUIRE(std::filesystem::exists(validatorExprPostAccessPrechecksPath));
   REQUIRE(std::filesystem::exists(validatorExprBuiltinContextSetupPath));
+  REQUIRE(std::filesystem::exists(validatorExprResolvedCallSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(validatorExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(validatorCollectionHelperRewritesPath));
@@ -483,6 +488,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       validatorExprDirectCollectionFallbacksPath,
       validatorExprPostAccessPrechecksPath,
       validatorExprBuiltinContextSetupPath,
+      validatorExprResolvedCallSetupPath,
       validatorExprMethodResolutionPath,
       validatorCollectionHelperRewritesPath,
   });
@@ -737,6 +743,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("void prepareExprLateBuiltinContext(") !=
         std::string::npos);
+  CHECK(validatorHeader.find("void prepareExprResolvedCallSetup(") !=
+        std::string::npos);
   CHECK(validatorHeader.find("void prepareExprCountCapacityMapBuiltinContext(") !=
         std::string::npos);
   CHECK(validatorHeader.find("void prepareExprLateMapSoaBuiltinContext(") !=
@@ -772,6 +780,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("prepareExprLateBuiltinContext(") !=
         std::string::npos);
   CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("prepareExprResolvedCallSetup(") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprResolvedCallSetup(") !=
         std::string::npos);
   CHECK(validatorExprMain.find("prepareExprCountCapacityMapBuiltinContext(") !=
         std::string::npos);
@@ -838,6 +850,18 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExpr.find(
             "contextOut.shouldBuiltinValidateBareMapTryAtCall =") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("const ExprArgumentValidationContext argumentValidationContext{") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("contextOut.argumentValidationContext.callExpr = &expr;") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("ExprResolvedStructConstructorContext resolvedStructConstructorContext{") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("contextOut.resolvedStructConstructorContext = {") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("ExprResolvedCallArgumentContext resolvedCallArgumentContext{") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("contextOut.resolvedCallArgumentContext = {") !=
         std::string::npos);
   CHECK(validatorExpr.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") !=
         std::string::npos);
@@ -1179,6 +1203,8 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
         std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprNumeric.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprPointerLike.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprResolvedCallSetup.cpp") !=
+        std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp") !=
         std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprReferenceEscapes.cpp") !=

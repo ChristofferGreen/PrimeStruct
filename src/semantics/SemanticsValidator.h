@@ -896,6 +896,24 @@ private:
     const std::unordered_map<std::string, BindingInfo> *locals = nullptr;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
   };
+  struct ExprResolvedCallSetup {
+    std::string diagnosticResolved;
+    ExprArgumentValidationContext argumentValidationContext;
+    std::string resolvedStructConstructorZeroArgDiagnostic;
+    ExprResolvedStructConstructorContext resolvedStructConstructorContext;
+    ExprResolvedCallArgumentContext resolvedCallArgumentContext;
+  };
+  void prepareExprResolvedCallSetup(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &resolved,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      const Definition &resolvedDefinition,
+      const std::vector<ParameterInfo> &calleeParams,
+      bool hasMethodReceiverIndex,
+      size_t methodReceiverIndex,
+      ExprResolvedCallSetup &contextOut);
   std::string expectedBindingTypeText(const BindingInfo &binding) const;
   std::string argumentStructMismatchDiagnostic(std::string_view diagnosticResolved,
                                                std::string_view paramName,
