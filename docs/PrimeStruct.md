@@ -681,10 +681,7 @@ for(
     without an intermediate binding. IR-backed auto bindings now also preserve that same `Result` metadata for direct
     `Result.ok(...)`, `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` initializer expressions, so
     later `try(...)`, `Result.error(...)`, and `Result.why(...)` calls can consume the bound local without forcing an
-    explicit `Result<...>` annotation. The same locals-aware metadata path now also covers omitted arguments whose
-    untyped default initializer is a direct `Result.map(...)` / `Result.and_then(...)` / `Result.map2(...)`
-    expression over existing `Result` locals, so callee-side `try(...)`, `Result.error(...)`, and `Result.why(...)`
-    keep working on VM/native without adding an explicit `Result<...>` parameter annotation.
+    explicit `Result<...>` annotation.
   - Direct `Result.ok(...)` expressions now participate in that same metadata flow, including `Result.and_then(...)`
     lambdas that return `Result.ok(...)` and need to inherit the input `Result` error domain instead of depending on
     an unrelated outer context. Unsupported wider payload kinds now reject through the same explicit IR-backed

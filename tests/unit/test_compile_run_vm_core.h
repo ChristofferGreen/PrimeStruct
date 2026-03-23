@@ -1514,39 +1514,6 @@ main() {
   CHECK(readFile(outPath) == "8\n5\n");
 }
 
-TEST_CASE("vm preserves inferred default Result parameters on IR-backed paths") {
-  const std::string source = R"(
-import /std/file/*
-
-[effects(io_err)]
-log_file_error([FileError] err) {
-  print_line_error(err.why())
-}
-
-[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
-score([Result<i32, FileError>] source,
-      status{ Result.map(source, []([i32] value) { return(plus(value, 1i32)) }) }) {
-  if(Result.error(status)) {
-    print_line(Result.why(status))
-    return(0i32)
-  }
-  return(try(status))
-}
-
-[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
-main() {
-  print_line(score(Result.ok(7i32)))
-  return(score(FileError.result<i32>(FileError.eof())))
-}
-)";
-  const std::string srcPath = writeTemp("vm_result_default_param_metadata.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_default_param_metadata_out.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "8\nEOF\n");
-}
-
 TEST_CASE("vm uses stdlib File helper wrappers") {
   const std::string filePath =
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_helpers.txt").string();

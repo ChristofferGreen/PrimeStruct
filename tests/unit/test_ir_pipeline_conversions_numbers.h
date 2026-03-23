@@ -234,48 +234,6 @@ main() {
   CHECK(result == 8);
 }
 
-TEST_CASE("ir lowerer preserves inferred default Result parameters") {
-  const std::string source = R"(
-import /std/file/*
-
-[effects(io_err)]
-log_file_error([FileError] err) {
-  print_line_error(err.why())
-}
-
-[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
-score([Result<i32, FileError>] source,
-      status{ Result.map(source, []([i32] value) { return(plus(value, 1i32)) }) }) {
-  if(Result.error(status)) {
-    print_line(Result.why(status))
-    return(0i32)
-  }
-  return(try(status))
-}
-
-[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
-main() {
-  print_line(score(Result.ok(7i32)))
-  return(score(FileError.result<i32>(FileError.eof())))
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 0);
-}
-
 TEST_CASE("ir lowerer supports Result.and_then builtin lambdas") {
   const std::string source = R"(
 import /std/file/*

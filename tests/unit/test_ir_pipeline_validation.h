@@ -42232,7 +42232,7 @@ TEST_CASE("ir lowerer statement binding helper infers call parameter local info"
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
-TEST_CASE("ir lowerer statement binding helper infers Result metadata for local-backed default parameters") {
+TEST_CASE("ir lowerer statement binding helper infers Result metadata for local-backed parameter initializers") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 
   primec::ir_lowerer::LocalMap locals;
