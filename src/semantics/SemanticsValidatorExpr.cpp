@@ -812,85 +812,24 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return validateExpr(params, locals,
                           *rewrittenCollectionCountCapacityCall);
     }
-    if (!expr.isMethodCall && collectionDispatchSetup.isStdNamespacedVectorCountCall &&
-        expr.args.size() == 1 &&
-        !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-        !hasImportedDefinitionPath("/std/collections/vector/count")) {
-      std::string elemType;
-      if (resolveStringTarget(expr.args.front()) || resolveArrayTarget(expr.args.front(), elemType) ||
-          builtinCollectionDispatchResolvers.resolveExperimentalVectorTarget(
-              expr.args.front(), elemType)) {
-        error_ = "unknown call target: /std/collections/vector/count";
-        return false;
-      }
+    ExprDirectCollectionFallbackContext directCollectionFallbackContext;
+    directCollectionFallbackContext.isStdNamespacedVectorCountCall =
+        collectionDispatchSetup.isStdNamespacedVectorCountCall;
+    directCollectionFallbackContext.dispatchResolvers =
+        &builtinCollectionDispatchResolvers;
+    std::optional<Expr> rewrittenDirectCollectionFallbackCall;
+    if (!validateExprDirectCollectionFallbacks(
+            params,
+            locals,
+            expr,
+            resolved,
+            directCollectionFallbackContext,
+            rewrittenDirectCollectionFallbackCall)) {
+      return false;
     }
-    Expr rewrittenVectorHelperCall;
-    if (!expr.isMethodCall &&
-        !hasNamedArguments(expr.argNames) &&
-        expr.args.size() >= 1 &&
-        ((expr.namespacePrefix.empty() &&
-          (expr.name == "at" || expr.name == "at_unsafe")) ||
-         resolved == "/std/collections/vectorAt" ||
-         resolved == "/std/collections/vectorAtUnsafe")) {
-      const bool isUnsafeHelper =
-          expr.name == "at_unsafe" ||
-          resolved == "/std/collections/vector/at_unsafe" ||
-          resolved == "/vector/at_unsafe" ||
-          resolved == "/std/collections/vectorAtUnsafe";
-      const std::string helperName = isUnsafeHelper ? "at_unsafe" : "at";
-      auto resolvesExperimentalVectorValueReceiverForBareAccess =
-          [&](const Expr &receiverExpr, std::string &elemTypeOut) -> bool {
-        elemTypeOut.clear();
-        std::string receiverTypeText;
-        if (!inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText)) {
-          return false;
-        }
-        BindingInfo inferredBinding;
-        const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
-        std::string base;
-        std::string argText;
-        if (splitTemplateTypeName(normalizedType, base, argText)) {
-          inferredBinding.typeName = normalizeBindingTypeName(base);
-          inferredBinding.typeTemplateArg = argText;
-        } else {
-          inferredBinding.typeName = normalizedType;
-          inferredBinding.typeTemplateArg.clear();
-        }
-        const std::string normalizedBase = normalizeBindingTypeName(inferredBinding.typeName);
-        if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
-          return false;
-        }
-        return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
-      };
-      std::string experimentalElemType;
-      if (resolvesExperimentalVectorValueReceiverForBareAccess(expr.args.front(), experimentalElemType)) {
-        Expr rewrittenMethodCall = expr;
-        rewrittenMethodCall.isMethodCall = true;
-        rewrittenMethodCall.name = helperName;
-        rewrittenMethodCall.namespacePrefix.clear();
-        return validateExpr(params, locals, rewrittenMethodCall);
-      }
-      bool isBuiltinMethod = false;
-      std::string methodResolved;
-      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), helperName,
-                              methodResolved, isBuiltinMethod) &&
-          !isBuiltinMethod && hasResolvableDefinitionTarget(methodResolved)) {
-        Expr rewrittenMethodCall = expr;
-        rewrittenMethodCall.isMethodCall = true;
-        rewrittenMethodCall.name = helperName;
-        rewrittenMethodCall.namespacePrefix.clear();
-        return validateExpr(params, locals, rewrittenMethodCall);
-      }
-      Expr rewrittenBareVectorHelperCall;
-      if (this->tryRewriteBareVectorHelperCall(
-              expr, helperName, builtinCollectionDispatchResolvers, rewrittenBareVectorHelperCall)) {
-        return validateExpr(params, locals, rewrittenBareVectorHelperCall);
-      }
-    } else if (this->tryRewriteBareVectorHelperCall(
-                   expr, "at", builtinCollectionDispatchResolvers, rewrittenVectorHelperCall) ||
-               this->tryRewriteBareVectorHelperCall(
-                   expr, "at_unsafe", builtinCollectionDispatchResolvers, rewrittenVectorHelperCall)) {
-      return validateExpr(params, locals, rewrittenVectorHelperCall);
+    if (rewrittenDirectCollectionFallbackCall.has_value()) {
+      return validateExpr(params, locals,
+                          *rewrittenDirectCollectionFallbackCall);
     }
     ExprCollectionAccessDispatchContext collectionAccessDispatchContext;
     collectionAccessDispatchContext.isNamespacedVectorHelperCall =

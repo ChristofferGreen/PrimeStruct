@@ -9456,6 +9456,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("bare vector at wrapper call resolves through same-path helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(at(wrapVector(), 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("bare vector at call prefers canonical helper over compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

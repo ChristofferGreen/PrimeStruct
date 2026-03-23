@@ -1,0 +1,117 @@
+#include "SemanticsValidator.h"
+
+namespace primec::semantics {
+
+bool SemanticsValidator::validateExprDirectCollectionFallbacks(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr,
+    const std::string &resolved,
+    const ExprDirectCollectionFallbackContext &context,
+    std::optional<Expr> &rewrittenExprOut) {
+  rewrittenExprOut.reset();
+  if (context.dispatchResolvers == nullptr) {
+    return true;
+  }
+
+  const auto &dispatchResolvers = *context.dispatchResolvers;
+  const auto &resolveStringTarget = dispatchResolvers.resolveStringTarget;
+  const auto &resolveArrayTarget = dispatchResolvers.resolveArrayTarget;
+
+  if (!expr.isMethodCall && context.isStdNamespacedVectorCountCall &&
+      expr.args.size() == 1 &&
+      !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
+      !hasImportedDefinitionPath("/std/collections/vector/count")) {
+    std::string elemType;
+    if (resolveStringTarget(expr.args.front()) ||
+        resolveArrayTarget(expr.args.front(), elemType) ||
+        dispatchResolvers.resolveExperimentalVectorTarget(
+            expr.args.front(), elemType)) {
+      error_ = "unknown call target: /std/collections/vector/count";
+      return false;
+    }
+  }
+
+  Expr rewrittenVectorHelperCall;
+  if (!expr.isMethodCall &&
+      !hasNamedArguments(expr.argNames) &&
+      expr.args.size() >= 1 &&
+      ((expr.namespacePrefix.empty() &&
+        (expr.name == "at" || expr.name == "at_unsafe")) ||
+       resolved == "/std/collections/vectorAt" ||
+       resolved == "/std/collections/vectorAtUnsafe")) {
+    const bool isUnsafeHelper =
+        expr.name == "at_unsafe" ||
+        resolved == "/std/collections/vector/at_unsafe" ||
+        resolved == "/vector/at_unsafe" ||
+        resolved == "/std/collections/vectorAtUnsafe";
+    const std::string helperName = isUnsafeHelper ? "at_unsafe" : "at";
+    auto resolvesExperimentalVectorValueReceiverForBareAccess =
+        [&](const Expr &receiverExpr, std::string &elemTypeOut) -> bool {
+      elemTypeOut.clear();
+      std::string receiverTypeText;
+      if (!inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText)) {
+        return false;
+      }
+      BindingInfo inferredBinding;
+      const std::string normalizedType =
+          normalizeBindingTypeName(receiverTypeText);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        inferredBinding.typeName = normalizeBindingTypeName(base);
+        inferredBinding.typeTemplateArg = argText;
+      } else {
+        inferredBinding.typeName = normalizedType;
+        inferredBinding.typeTemplateArg.clear();
+      }
+      const std::string normalizedBase =
+          normalizeBindingTypeName(inferredBinding.typeName);
+      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+        return false;
+      }
+      return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
+    };
+    std::string experimentalElemType;
+    if (resolvesExperimentalVectorValueReceiverForBareAccess(
+            expr.args.front(), experimentalElemType)) {
+      rewrittenExprOut = expr;
+      rewrittenExprOut->isMethodCall = true;
+      rewrittenExprOut->name = helperName;
+      rewrittenExprOut->namespacePrefix.clear();
+      return true;
+    }
+    bool isBuiltinMethod = false;
+    std::string methodResolved;
+    if (resolveMethodTarget(params, locals, expr.namespacePrefix,
+                            expr.args.front(), helperName, methodResolved,
+                            isBuiltinMethod) &&
+        !isBuiltinMethod &&
+        (hasDeclaredDefinitionPath(methodResolved) ||
+         hasImportedDefinitionPath(methodResolved))) {
+      rewrittenExprOut = expr;
+      rewrittenExprOut->isMethodCall = true;
+      rewrittenExprOut->name = helperName;
+      rewrittenExprOut->namespacePrefix.clear();
+      return true;
+    }
+    Expr rewrittenBareVectorHelperCall;
+    if (this->tryRewriteBareVectorHelperCall(
+            expr, helperName, dispatchResolvers,
+            rewrittenBareVectorHelperCall)) {
+      rewrittenExprOut = rewrittenBareVectorHelperCall;
+      return true;
+    }
+  } else if (this->tryRewriteBareVectorHelperCall(
+                 expr, "at", dispatchResolvers, rewrittenVectorHelperCall) ||
+             this->tryRewriteBareVectorHelperCall(
+                 expr, "at_unsafe", dispatchResolvers,
+                 rewrittenVectorHelperCall)) {
+    rewrittenExprOut = rewrittenVectorHelperCall;
+    return true;
+  }
+
+  return true;
+}
+
+} // namespace primec::semantics
