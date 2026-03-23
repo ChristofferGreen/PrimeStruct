@@ -122,7 +122,19 @@
                                                                          applyStructValueInfo,
                                                                          isStringBinding,
                                                                          info,
-                                                                         inferError);
+                                                                         inferError,
+                                                                         [&](const Expr &callExpr,
+                                                                             const LocalMap &callLocals) {
+                                                                           return resolveMethodCallDefinition(
+                                                                               callExpr, callLocals);
+                                                                         },
+                                                                         [&](const Expr &callExpr) {
+                                                                           return resolveDefinitionCall(callExpr);
+                                                                         },
+                                                                         [&](const std::string &definitionPath,
+                                                                             ReturnInfo &returnInfo) {
+                                                                           return getReturnInfo(definitionPath, returnInfo);
+                                                                         });
                         },
                         callError);
                   },

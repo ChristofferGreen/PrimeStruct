@@ -48,13 +48,24 @@ bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut) 
 bool inferCallParameterDefaultResultInfo(const Expr &expr,
                                          const LocalMap &localsForKindInference,
                                          const InferBindingExprKindFn &inferExprKind,
+                                         const std::function<const Definition *(const Expr &, const LocalMap &)>
+                                             &resolveMethodCallDefinition,
+                                         const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+                                         const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
                                          ResultExprInfo &infoOut) {
+  const auto resolveMethodCall = resolveMethodCallDefinition
+                                     ? resolveMethodCallDefinition
+                                     : [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
+  const auto resolveDefinition = resolveDefinitionCall
+                                     ? resolveDefinitionCall
+                                     : [](const Expr &) -> const Definition * { return nullptr; };
+  const auto lookupReturnInfo = getReturnInfo ? getReturnInfo : [](const std::string &, ReturnInfo &) { return false; };
   return resolveResultExprInfoFromLocals(
       expr,
       localsForKindInference,
-      [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; },
-      [](const Expr &) -> const Definition * { return nullptr; },
-      [](const std::string &, ReturnInfo &) { return false; },
+      resolveMethodCall,
+      resolveDefinition,
+      lookupReturnInfo,
       [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
       infoOut);
 }
@@ -557,7 +568,11 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                  const ApplyStructBindingInfoFn &applyStructValueInfo,
                                  const IsStringBindingFn &isStringBinding,
                                  LocalInfo &infoOut,
-                                 std::string &error) {
+                                 std::string &error,
+                                 const std::function<const Definition *(const Expr &, const LocalMap &)>
+                                     &resolveMethodCallDefinition,
+                                 const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+                                 const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo) {
   infoOut.isMutable = isBindingMutable(param);
   infoOut.isSoaVector = hasSoaVectorTypeTransform(param);
   infoOut.isArgsPack = isArgsPackBinding(param);
@@ -578,7 +593,13 @@ bool inferCallParameterLocalInfo(const Expr &param,
     }
     ResultExprInfo inferredResultInfo;
     if (inferCallParameterDefaultResultInfo(
-            param.args.front(), localsForKindInference, inferExprKind, inferredResultInfo) &&
+            param.args.front(),
+            localsForKindInference,
+            inferExprKind,
+            resolveMethodCallDefinition,
+            resolveDefinitionCall,
+            getReturnInfo,
+            inferredResultInfo) &&
         inferredResultInfo.isResult) {
       infoOut.isResult = true;
       infoOut.resultHasValue = inferredResultInfo.hasValue;
