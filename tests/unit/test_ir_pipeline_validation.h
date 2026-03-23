@@ -10832,6 +10832,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionArgumentRewrites.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionTargetValueRewritesPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionTargetValueRewrites.h";
+  const std::filesystem::path templateMonomorphExperimentalCollectionValueRewritesPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionValueRewrites.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionReceiverResolutionPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReceiverResolution.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionConstructorPathsPath =
@@ -10846,6 +10848,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphAssignmentTargetResolutionPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionArgumentRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionTargetValueRewritesPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionValueRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReceiverResolutionPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionConstructorPathsPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
@@ -10862,6 +10865,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphExperimentalCollectionArgumentRewritesPath);
   const std::string templateMonomorphExperimentalCollectionTargetValueRewritesSource =
       readText(templateMonomorphExperimentalCollectionTargetValueRewritesPath);
+  const std::string templateMonomorphExperimentalCollectionValueRewritesSource =
+      readText(templateMonomorphExperimentalCollectionValueRewritesPath);
   const std::string templateMonomorphExperimentalCollectionReceiverResolutionSource =
       readText(templateMonomorphExperimentalCollectionReceiverResolutionPath);
   const std::string templateMonomorphExperimentalCollectionConstructorPathsSource =
@@ -10883,6 +10888,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionArgumentRewrites.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionTargetValueRewrites.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionValueRewrites.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionReceiverResolution.h\"") !=
         std::string::npos);
@@ -10928,6 +10935,14 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("void rewriteExperimentalAssignTargetValue(") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("void rewriteExperimentalInitTargetValue(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool isBuiltinResultOkPayloadCall(const Expr &candidate)") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool rewriteExperimentalConstructorValueTree(Expr &candidate,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool rewriteExperimentalMapResultOkPayloadTree(Expr &candidate,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool rewriteExperimentalConstructorBinding(") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolvesExperimentalMapValueReceiver(") ==
         std::string::npos);
@@ -11024,6 +11039,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionTargetValueRewritesSource.find(
             "void rewriteExperimentalInitTargetValue(Expr &callExpr,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionValueRewritesSource.find(
+            "bool isBuiltinResultOkPayloadCall(const Expr &candidate)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionValueRewritesSource.find(
+            "bool rewriteExperimentalConstructorValueTree(Expr &candidate,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionValueRewritesSource.find(
+            "bool rewriteExperimentalMapResultOkPayloadTree(Expr &candidate,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionValueRewritesSource.find(
+            "bool rewriteExperimentalConstructorBinding(Expr &bindingExpr,") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "bool resolvesExperimentalMapValueReceiver(const Expr *receiverExpr,") !=

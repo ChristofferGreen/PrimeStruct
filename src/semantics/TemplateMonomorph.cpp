@@ -1058,6 +1058,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphExperimentalCollectionArgumentRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionTargetValueRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionValueRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionReceiverResolution.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 
@@ -1647,193 +1648,65 @@ bool rewriteExpr(Expr &expr,
   std::function<bool(const std::string &, Expr &)> rewriteExperimentalMapTargetValueForType;
   std::function<bool(const std::string &, Expr &)> rewriteExperimentalVectorTargetValueForType;
 
-  auto isBuiltinResultOkValueCall = [&](const Expr &candidate) {
-    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name != "ok" ||
-        candidate.args.size() != 2) {
-      return false;
-    }
-    const Expr &receiver = candidate.args.front();
-    return receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "Result";
-  };
-
   rewriteExperimentalMapTargetValueForType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(typeText, base, argText) && normalizeBindingTypeName(base) == "uninitialized") {
-      std::vector<std::string> storageArgs;
-      if (!splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
-        return true;
-      }
-      return rewriteExperimentalMapTargetValueForType(trimWhitespace(storageArgs.front()), valueExpr);
-    }
-    if (resolvesExperimentalMapValueTypeText(typeText, mapping, allowedParams, namespacePrefix, ctx)) {
-      return rewriteNestedExperimentalMapConstructorValue(valueExpr);
-    }
-    if (!splitTemplateTypeName(typeText, base, argText) || normalizeBindingTypeName(base) != "Result") {
-      return true;
-    }
-    std::vector<std::string> resultArgs;
-    if (!splitTopLevelTemplateArgs(argText, resultArgs) || resultArgs.size() != 2) {
-      return true;
-    }
-    if (!resolvesExperimentalMapValueTypeText(trimWhitespace(resultArgs.front()),
-                                              mapping,
-                                              allowedParams,
-                                              namespacePrefix,
-                                              ctx)) {
-      return true;
-    }
-    return rewriteNestedExperimentalMapResultOkPayloadValue(valueExpr);
+    return ::rewriteExperimentalMapTargetValueForType(typeText,
+                                                      valueExpr,
+                                                      mapping,
+                                                      allowedParams,
+                                                      namespacePrefix,
+                                                      ctx,
+                                                      rewriteNestedExperimentalMapConstructorValue,
+                                                      rewriteNestedExperimentalMapResultOkPayloadValue);
   };
   rewriteExperimentalVectorTargetValueForType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(typeText, base, argText) && normalizeBindingTypeName(base) == "uninitialized") {
-      std::vector<std::string> storageArgs;
-      if (!splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
-        return true;
-      }
-      return rewriteExperimentalVectorTargetValueForType(trimWhitespace(storageArgs.front()), valueExpr);
-    }
-    if (!resolvesExperimentalVectorValueTypeText(typeText)) {
-      return true;
-    }
-    return rewriteNestedExperimentalVectorConstructorValue(valueExpr);
+    return ::rewriteExperimentalVectorTargetValueForType(typeText,
+                                                         valueExpr,
+                                                         rewriteNestedExperimentalVectorConstructorValue);
   };
 
   auto rewriteCanonicalExperimentalMapConstructorBinding = [&](Expr &bindingExpr) -> bool {
-    if (!bindingExpr.isBinding || bindingExpr.args.size() != 1) {
-      return true;
-    }
-    BindingInfo bindingInfo;
-    const bool hasExplicitBindingTransform = hasExplicitBindingTypeTransform(bindingExpr);
-    const bool hasExplicitBindingType = extractExplicitBindingType(bindingExpr, bindingInfo);
-    if (hasExplicitBindingType) {
-      const std::string bindingTypeText = bindingTypeToString(bindingInfo);
-      if (!resolvesExperimentalMapValueTypeText(
-              bindingTypeText, mapping, allowedParams, namespacePrefix, ctx) &&
-          unwrapCollectionReceiverEnvelope(bindingInfo.typeName, bindingInfo.typeTemplateArg) == "map") {
-        return true;
-      }
-    }
-    if (!hasExplicitBindingType) {
-      if (hasExplicitBindingTransform) {
-        return true;
-      }
-      if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), params, locals, allowMathBare, ctx, bindingInfo)) {
-        return true;
-      }
-    } else if (bindingInfo.typeName == "auto") {
-      if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), params, locals, allowMathBare, ctx, bindingInfo)) {
-        return true;
-      }
-    }
-    std::string bindingTypeText = bindingInfo.typeName;
-    if (!bindingInfo.typeTemplateArg.empty()) {
-      bindingTypeText += "<" + bindingInfo.typeTemplateArg + ">";
-    }
-    return rewriteExperimentalMapTargetValueForType(bindingTypeText, bindingExpr.args.front());
+    return rewriteExperimentalConstructorBinding(
+        bindingExpr,
+        params,
+        locals,
+        allowMathBare,
+        ctx,
+        [&](const std::string &bindingTypeText) {
+          return resolvesExperimentalMapValueTypeText(bindingTypeText,
+                                                      mapping,
+                                                      allowedParams,
+                                                      namespacePrefix,
+                                                      ctx);
+        },
+        "map",
+        rewriteExperimentalMapTargetValueForType);
   };
   auto rewriteCanonicalExperimentalVectorConstructorBinding = [&](Expr &bindingExpr) -> bool {
-    if (!bindingExpr.isBinding || bindingExpr.args.size() != 1) {
-      return true;
-    }
-    BindingInfo bindingInfo;
-    const bool hasExplicitBindingTransform = hasExplicitBindingTypeTransform(bindingExpr);
-    const bool hasExplicitBindingType = extractExplicitBindingType(bindingExpr, bindingInfo);
-    if (hasExplicitBindingType) {
-      const std::string bindingTypeText = bindingTypeToString(bindingInfo);
-      if (!resolvesExperimentalVectorValueTypeText(bindingTypeText) &&
-          unwrapCollectionReceiverEnvelope(bindingInfo.typeName, bindingInfo.typeTemplateArg) == "vector") {
-        return true;
-      }
-    }
-    if (!hasExplicitBindingType) {
-      if (hasExplicitBindingTransform) {
-        return true;
-      }
-      if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), params, locals, allowMathBare, ctx, bindingInfo)) {
-        return true;
-      }
-    } else if (bindingInfo.typeName == "auto") {
-      if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), params, locals, allowMathBare, ctx, bindingInfo)) {
-        return true;
-      }
-    }
-    std::string bindingTypeText = bindingInfo.typeName;
-    if (!bindingInfo.typeTemplateArg.empty()) {
-      bindingTypeText += "<" + bindingInfo.typeTemplateArg + ">";
-    }
-    return rewriteExperimentalVectorTargetValueForType(bindingTypeText, bindingExpr.args.front());
+    return rewriteExperimentalConstructorBinding(
+        bindingExpr,
+        params,
+        locals,
+        allowMathBare,
+        ctx,
+        [&](const std::string &bindingTypeText) {
+          return resolvesExperimentalVectorValueTypeText(bindingTypeText);
+        },
+        "vector",
+        rewriteExperimentalVectorTargetValueForType);
   };
   rewriteNestedExperimentalMapConstructorValue = [&](Expr &candidate) -> bool {
-    if (candidate.isBinding && candidate.args.size() == 1) {
-      return rewriteNestedExperimentalMapConstructorValue(candidate.args.front());
-    }
-    if (candidate.kind != Expr::Kind::Call) {
-      return true;
-    }
-    if (!rewriteCanonicalExperimentalMapConstructorExpr(candidate)) {
-      return false;
-    }
-    // Keep walking through wrapper call trees once an outer destination is
-    // known to require an experimental Map value.
-    for (auto &arg : candidate.args) {
-      if (!rewriteNestedExperimentalMapConstructorValue(arg)) {
-        return false;
-      }
-    }
-    for (auto &bodyArg : candidate.bodyArguments) {
-      if (!rewriteNestedExperimentalMapConstructorValue(bodyArg)) {
-        return false;
-      }
-    }
-    return true;
+    return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {
+      return rewriteCanonicalExperimentalMapConstructorExpr(current);
+    });
   };
 
   rewriteNestedExperimentalMapResultOkPayloadValue = [&](Expr &candidate) -> bool {
-    if (candidate.isBinding && candidate.args.size() == 1) {
-      return rewriteNestedExperimentalMapResultOkPayloadValue(candidate.args.front());
-    }
-    if (candidate.kind != Expr::Kind::Call) {
-      return true;
-    }
-    if (isBuiltinResultOkValueCall(candidate)) {
-      return rewriteNestedExperimentalMapConstructorValue(candidate.args.back());
-    }
-    for (auto &arg : candidate.args) {
-      if (!rewriteNestedExperimentalMapResultOkPayloadValue(arg)) {
-        return false;
-      }
-    }
-    for (auto &bodyArg : candidate.bodyArguments) {
-      if (!rewriteNestedExperimentalMapResultOkPayloadValue(bodyArg)) {
-        return false;
-      }
-    }
-    return true;
+    return rewriteExperimentalMapResultOkPayloadTree(candidate, rewriteNestedExperimentalMapConstructorValue);
   };
   rewriteNestedExperimentalVectorConstructorValue = [&](Expr &candidate) -> bool {
-    if (candidate.isBinding && candidate.args.size() == 1) {
-      return rewriteNestedExperimentalVectorConstructorValue(candidate.args.front());
-    }
-    if (candidate.kind != Expr::Kind::Call) {
-      return true;
-    }
-    if (!rewriteCanonicalExperimentalVectorConstructorExpr(candidate)) {
-      return false;
-    }
-    for (auto &arg : candidate.args) {
-      if (!rewriteNestedExperimentalVectorConstructorValue(arg)) {
-        return false;
-      }
-    }
-    for (auto &bodyArg : candidate.bodyArguments) {
-      if (!rewriteNestedExperimentalVectorConstructorValue(bodyArg)) {
-        return false;
-      }
-    }
-    return true;
+    return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {
+      return rewriteCanonicalExperimentalVectorConstructorExpr(current);
+    });
   };
 
   if (expr.isBinding) {
