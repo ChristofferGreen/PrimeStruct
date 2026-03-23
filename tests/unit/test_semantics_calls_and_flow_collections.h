@@ -15480,6 +15480,57 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector stdlib namespaced helper auto inference probes reordered receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/push([vector<i32> mut] values, [string] value) {
+  return(11i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/push([vector<i32> mut] values, [string] value) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  [string] payload{"tag"raw_utf8}
+  [auto] inferred{/std/collections/vector/push(payload, values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector stdlib namespaced helper auto inference keeps reordered receiver alias precedence diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/push([vector<i32> mut] values, [string] value) {
+  return(11i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/push([vector<i32> mut] values, [string] value) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  [string] payload{"tag"raw_utf8}
+  [auto] inferred{/std/collections/vector/push(payload, values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected bool") != std::string::npos);
+}
+
 TEST_CASE("vector stdlib namespaced push auto inference uses canonical helper definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
