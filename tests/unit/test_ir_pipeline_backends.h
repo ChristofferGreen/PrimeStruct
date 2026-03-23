@@ -737,6 +737,16 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("void prepareExprLateBuiltinContext(") !=
         std::string::npos);
+  CHECK(validatorHeader.find("void prepareExprCountCapacityMapBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("void prepareExprLateMapSoaBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("void prepareExprLateFallbackBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("void prepareExprLateCallCompatibilityContext(") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("void prepareExprLateMapAccessBuiltinContext(") !=
+        std::string::npos);
   CHECK(validatorExprMain.find("const std::string directRemovedMapCompatibilityPath =") ==
         std::string::npos);
   CHECK(validatorExpr.find("const std::string directRemovedMapCompatibilityPath =") !=
@@ -762,6 +772,26 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("prepareExprLateBuiltinContext(") !=
         std::string::npos);
   CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("prepareExprCountCapacityMapBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprCountCapacityMapBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("prepareExprLateMapSoaBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateMapSoaBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("prepareExprLateFallbackBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateFallbackBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("prepareExprLateCallCompatibilityContext(") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateCallCompatibilityContext(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("prepareExprLateMapAccessBuiltinContext(") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateMapAccessBuiltinContext(") !=
         std::string::npos);
   CHECK(validatorExprMain.find("const bool allowStdNamespacedVectorUserReceiverProbe =") ==
         std::string::npos);
@@ -790,6 +820,24 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExpr.find(
             "contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find(
+            "countCapacityMapBuiltinContext.shouldBuiltinValidateStdNamespacedVectorCountCall =") ==
+        std::string::npos);
+  CHECK(validatorExpr.find(
+            "contextOut.shouldBuiltinValidateStdNamespacedVectorCountCall =") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find(
+            "lateFallbackBuiltinContext.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") ==
+        std::string::npos);
+  CHECK(validatorExpr.find(
+            "contextOut.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find(
+            "lateMapAccessBuiltinContext.shouldBuiltinValidateBareMapTryAtCall =") ==
+        std::string::npos);
+  CHECK(validatorExpr.find(
+            "contextOut.shouldBuiltinValidateBareMapTryAtCall =") !=
         std::string::npos);
   CHECK(validatorExpr.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") !=
         std::string::npos);

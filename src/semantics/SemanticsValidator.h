@@ -324,6 +324,17 @@ private:
       bool resolvedMethod,
       const ExprCountCapacityMapBuiltinContext &context,
       bool &handledOut);
+  void prepareExprCountCapacityMapBuiltinContext(
+      bool shouldBuiltinValidateStdNamespacedVectorCountCall,
+      bool isStdNamespacedVectorCountCall,
+      bool shouldBuiltinValidateBareMapCountCall,
+      bool isNamespacedMapCountCall,
+      bool isResolvedMapCountCall,
+      bool shouldBuiltinValidateStdNamespacedVectorCapacityCall,
+      bool isStdNamespacedVectorCapacityCall,
+      const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      ExprCountCapacityMapBuiltinContext &contextOut);
   struct ExprNamedArgumentBuiltinContext {
     bool hasVectorHelperCallResolution = false;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
@@ -385,6 +396,10 @@ private:
       bool resolvedMethod,
       const ExprLateMapSoaBuiltinContext &context,
       bool &handledOut);
+  void prepareExprLateMapSoaBuiltinContext(
+      bool shouldBuiltinValidateBareMapContainsCall,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      ExprLateMapSoaBuiltinContext &contextOut);
   struct ExprLateCollectionAccessFallbackContext {
     bool isStdNamespacedVectorAccessCall = false;
     bool shouldAllowStdAccessCompatibilityFallback = false;
@@ -415,6 +430,15 @@ private:
       bool resolvedMethod,
       const ExprLateFallbackBuiltinContext &context,
       bool &handledOut);
+  void prepareExprLateFallbackBuiltinContext(
+      bool isStdNamespacedVectorAccessCall,
+      bool shouldAllowStdAccessCompatibilityFallback,
+      bool hasStdNamespacedVectorAccessDefinition,
+      bool isStdNamespacedMapAccessCall,
+      bool hasStdNamespacedMapAccessDefinition,
+      bool shouldBuiltinValidateBareMapAccessCall,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      ExprLateFallbackBuiltinContext &contextOut);
   bool validateExprMutationBorrowBuiltins(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
@@ -423,6 +447,9 @@ private:
   struct ExprLateCallCompatibilityContext {
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
   };
+  void prepareExprLateCallCompatibilityContext(
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      ExprLateCallCompatibilityContext &contextOut);
   bool validateExprLateCallCompatibility(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
@@ -454,6 +481,12 @@ private:
     bool shouldBuiltinValidateBareMapTryAtCall = false;
     bool shouldBuiltinValidateBareMapAccessCall = false;
   };
+  void prepareExprLateMapAccessBuiltinContext(
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      bool shouldBuiltinValidateBareMapContainsCall,
+      bool shouldBuiltinValidateBareMapTryAtCall,
+      bool shouldBuiltinValidateBareMapAccessCall,
+      ExprLateMapAccessBuiltinContext &contextOut);
   bool validateExprLateMapAccessBuiltins(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,

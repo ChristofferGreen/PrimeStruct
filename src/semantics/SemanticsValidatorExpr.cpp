@@ -893,33 +893,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     ExprCountCapacityMapBuiltinContext countCapacityMapBuiltinContext;
-    countCapacityMapBuiltinContext
-        .shouldBuiltinValidateStdNamespacedVectorCountCall =
-        collectionDispatchSetup.shouldBuiltinValidateStdNamespacedVectorCountCall;
-    countCapacityMapBuiltinContext.isStdNamespacedVectorCountCall =
-        collectionDispatchSetup.isStdNamespacedVectorCountCall;
-    countCapacityMapBuiltinContext.shouldBuiltinValidateBareMapCountCall =
-        shouldBuiltinValidateBareMapCountCall;
-    countCapacityMapBuiltinContext.isNamespacedMapCountCall =
-        collectionDispatchSetup.isNamespacedMapCountCall;
-    countCapacityMapBuiltinContext.isResolvedMapCountCall =
-        collectionDispatchSetup.isResolvedMapCountCall;
-    countCapacityMapBuiltinContext
-        .shouldBuiltinValidateStdNamespacedVectorCapacityCall =
+    prepareExprCountCapacityMapBuiltinContext(
+        collectionDispatchSetup.shouldBuiltinValidateStdNamespacedVectorCountCall,
+        collectionDispatchSetup.isStdNamespacedVectorCountCall,
+        shouldBuiltinValidateBareMapCountCall,
+        collectionDispatchSetup.isNamespacedMapCountCall,
+        collectionDispatchSetup.isResolvedMapCountCall,
         collectionDispatchSetup
-            .shouldBuiltinValidateStdNamespacedVectorCapacityCall;
-    countCapacityMapBuiltinContext.isStdNamespacedVectorCapacityCall =
-        collectionDispatchSetup.isStdNamespacedVectorCapacityCall;
-    countCapacityMapBuiltinContext.resolveVectorTarget =
-        [&](const Expr &target, std::string &elemTypeOut) {
-          return resolveVectorTarget(target, elemTypeOut);
-        };
-    countCapacityMapBuiltinContext.resolveMapTarget =
-        [&](const Expr &target) { return resolveMapTarget(target); };
-    countCapacityMapBuiltinContext.dispatchResolverAdapters =
-        &builtinCollectionDispatchResolverAdapters;
-    countCapacityMapBuiltinContext.dispatchResolvers =
-        &builtinCollectionDispatchResolvers;
+            .shouldBuiltinValidateStdNamespacedVectorCapacityCall,
+        collectionDispatchSetup.isStdNamespacedVectorCapacityCall,
+        builtinCollectionDispatchResolverAdapters,
+        builtinCollectionDispatchResolvers,
+        countCapacityMapBuiltinContext);
     bool handledCountCapacityMapBuiltin = false;
     if (!validateExprCountCapacityMapBuiltins(
             params, locals, expr, resolved, resolvedMethod,
@@ -931,18 +916,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     if (it == defMap_.end() || resolvedMethod) {
       ExprLateMapSoaBuiltinContext lateMapSoaBuiltinContext;
-      lateMapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =
-          shouldBuiltinValidateBareMapContainsCall;
-      lateMapSoaBuiltinContext.resolveVectorTarget =
-          [&](const Expr &target, std::string &elemTypeOut) {
-            return resolveVectorTarget(target, elemTypeOut);
-          };
-      lateMapSoaBuiltinContext.resolveSoaVectorTarget =
-          [&](const Expr &target, std::string &elemTypeOut) {
-            return resolveSoaVectorTarget(target, elemTypeOut);
-          };
-      lateMapSoaBuiltinContext.dispatchResolvers =
-          &builtinCollectionDispatchResolvers;
+      prepareExprLateMapSoaBuiltinContext(
+          shouldBuiltinValidateBareMapContainsCall,
+          builtinCollectionDispatchResolvers,
+          lateMapSoaBuiltinContext);
       bool handledMapSoaBuiltin = false;
       if (!validateExprLateMapSoaBuiltins(
               params, locals, expr, resolved, resolvedMethod,
@@ -953,34 +930,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       ExprLateFallbackBuiltinContext lateFallbackBuiltinContext;
-      lateFallbackBuiltinContext
-          .collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =
-          collectionDispatchSetup.isStdNamespacedVectorAccessCall;
-      lateFallbackBuiltinContext.collectionAccessFallbackContext
-          .shouldAllowStdAccessCompatibilityFallback =
-          collectionDispatchSetup.shouldAllowStdAccessCompatibilityFallback;
-      lateFallbackBuiltinContext.collectionAccessFallbackContext
-          .hasStdNamespacedVectorAccessDefinition =
-          collectionDispatchSetup.hasStdNamespacedVectorAccessDefinition;
-      lateFallbackBuiltinContext
-          .collectionAccessFallbackContext.isStdNamespacedMapAccessCall =
-          collectionDispatchSetup.isStdNamespacedMapAccessCall;
-      lateFallbackBuiltinContext
-          .collectionAccessFallbackContext.hasStdNamespacedMapAccessDefinition =
-          collectionDispatchSetup.hasStdNamespacedMapAccessDefinition;
-      lateFallbackBuiltinContext.collectionAccessFallbackContext
-          .shouldBuiltinValidateBareMapAccessCall =
-          shouldBuiltinValidateBareMapAccessCall;
-      lateFallbackBuiltinContext
-          .collectionAccessFallbackContext.isNonCollectionStructAccessTarget =
-          [&](const std::string &targetPath) {
-            return isNonCollectionStructAccessTarget(targetPath);
-          };
-      lateFallbackBuiltinContext
-          .collectionAccessFallbackContext.dispatchResolvers =
-          &builtinCollectionDispatchResolvers;
-      lateFallbackBuiltinContext.dispatchResolvers =
-          &builtinCollectionDispatchResolvers;
+      prepareExprLateFallbackBuiltinContext(
+          collectionDispatchSetup.isStdNamespacedVectorAccessCall,
+          collectionDispatchSetup.shouldAllowStdAccessCompatibilityFallback,
+          collectionDispatchSetup.hasStdNamespacedVectorAccessDefinition,
+          collectionDispatchSetup.isStdNamespacedMapAccessCall,
+          collectionDispatchSetup.hasStdNamespacedMapAccessDefinition,
+          shouldBuiltinValidateBareMapAccessCall,
+          builtinCollectionDispatchResolvers,
+          lateFallbackBuiltinContext);
       bool handledLateFallbackBuiltin = false;
       if (!validateExprLateFallbackBuiltins(
               params, locals, expr, resolved, resolvedMethod,
@@ -999,8 +957,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       ExprLateCallCompatibilityContext lateCallCompatibilityContext;
-      lateCallCompatibilityContext.dispatchResolvers =
-          &builtinCollectionDispatchResolvers;
+      prepareExprLateCallCompatibilityContext(
+          builtinCollectionDispatchResolvers,
+          lateCallCompatibilityContext);
       bool handledLateCallCompatibility = false;
       if (!validateExprLateCallCompatibility(
               params, locals, expr, resolved,
@@ -1011,14 +970,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
       ExprLateMapAccessBuiltinContext lateMapAccessBuiltinContext;
-      lateMapAccessBuiltinContext.dispatchResolvers =
-          &builtinCollectionDispatchResolvers;
-      lateMapAccessBuiltinContext.shouldBuiltinValidateBareMapContainsCall =
-          shouldBuiltinValidateBareMapContainsCall;
-      lateMapAccessBuiltinContext.shouldBuiltinValidateBareMapTryAtCall =
-          shouldBuiltinValidateBareMapTryAtCall;
-      lateMapAccessBuiltinContext.shouldBuiltinValidateBareMapAccessCall =
-          shouldBuiltinValidateBareMapAccessCall;
+      prepareExprLateMapAccessBuiltinContext(
+          builtinCollectionDispatchResolvers,
+          shouldBuiltinValidateBareMapContainsCall,
+          shouldBuiltinValidateBareMapTryAtCall,
+          shouldBuiltinValidateBareMapAccessCall,
+          lateMapAccessBuiltinContext);
       bool handledLateMapAccessBuiltin = false;
       if (!validateExprLateMapAccessBuiltins(
               params, locals, expr, resolved, lateMapAccessBuiltinContext,

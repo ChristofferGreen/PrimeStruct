@@ -32,6 +32,39 @@ void SemanticsValidator::prepareExprLateBuiltinContext(
       };
 }
 
+void SemanticsValidator::prepareExprCountCapacityMapBuiltinContext(
+    bool shouldBuiltinValidateStdNamespacedVectorCountCall,
+    bool isStdNamespacedVectorCountCall,
+    bool shouldBuiltinValidateBareMapCountCall,
+    bool isNamespacedMapCountCall,
+    bool isResolvedMapCountCall,
+    bool shouldBuiltinValidateStdNamespacedVectorCapacityCall,
+    bool isStdNamespacedVectorCapacityCall,
+    const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+    ExprCountCapacityMapBuiltinContext &contextOut) {
+  contextOut = {};
+  contextOut.shouldBuiltinValidateStdNamespacedVectorCountCall =
+      shouldBuiltinValidateStdNamespacedVectorCountCall;
+  contextOut.isStdNamespacedVectorCountCall = isStdNamespacedVectorCountCall;
+  contextOut.shouldBuiltinValidateBareMapCountCall =
+      shouldBuiltinValidateBareMapCountCall;
+  contextOut.isNamespacedMapCountCall = isNamespacedMapCountCall;
+  contextOut.isResolvedMapCountCall = isResolvedMapCountCall;
+  contextOut.shouldBuiltinValidateStdNamespacedVectorCapacityCall =
+      shouldBuiltinValidateStdNamespacedVectorCapacityCall;
+  contextOut.isStdNamespacedVectorCapacityCall =
+      isStdNamespacedVectorCapacityCall;
+  contextOut.resolveVectorTarget =
+      [&](const Expr &target, std::string &elemTypeOut) {
+        return resolveVectorTarget(target, elemTypeOut);
+      };
+  contextOut.resolveMapTarget =
+      [&](const Expr &target) { return resolveMapTarget(target); };
+  contextOut.dispatchResolverAdapters = &dispatchResolverAdapters;
+  contextOut.dispatchResolvers = &dispatchResolvers;
+}
+
 void SemanticsValidator::prepareExprNamedArgumentBuiltinContext(
     bool hasVectorHelperCallResolution,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
@@ -51,6 +84,79 @@ void SemanticsValidator::prepareExprNamedArgumentBuiltinContext(
         return this->isArrayNamespacedVectorCountCompatibilityCall(
             target, dispatchResolvers);
       };
+}
+
+void SemanticsValidator::prepareExprLateMapSoaBuiltinContext(
+    bool shouldBuiltinValidateBareMapContainsCall,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+    ExprLateMapSoaBuiltinContext &contextOut) {
+  contextOut = {};
+  contextOut.shouldBuiltinValidateBareMapContainsCall =
+      shouldBuiltinValidateBareMapContainsCall;
+  contextOut.resolveVectorTarget =
+      [&](const Expr &target, std::string &elemTypeOut) {
+        return resolveVectorTarget(target, elemTypeOut);
+      };
+  contextOut.resolveSoaVectorTarget =
+      [&](const Expr &target, std::string &elemTypeOut) {
+        return resolveSoaVectorTarget(target, elemTypeOut);
+      };
+  contextOut.dispatchResolvers = &dispatchResolvers;
+}
+
+void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
+    bool isStdNamespacedVectorAccessCall,
+    bool shouldAllowStdAccessCompatibilityFallback,
+    bool hasStdNamespacedVectorAccessDefinition,
+    bool isStdNamespacedMapAccessCall,
+    bool hasStdNamespacedMapAccessDefinition,
+    bool shouldBuiltinValidateBareMapAccessCall,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+    ExprLateFallbackBuiltinContext &contextOut) {
+  contextOut = {};
+  contextOut.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =
+      isStdNamespacedVectorAccessCall;
+  contextOut.collectionAccessFallbackContext
+      .shouldAllowStdAccessCompatibilityFallback =
+      shouldAllowStdAccessCompatibilityFallback;
+  contextOut.collectionAccessFallbackContext.hasStdNamespacedVectorAccessDefinition =
+      hasStdNamespacedVectorAccessDefinition;
+  contextOut.collectionAccessFallbackContext.isStdNamespacedMapAccessCall =
+      isStdNamespacedMapAccessCall;
+  contextOut.collectionAccessFallbackContext.hasStdNamespacedMapAccessDefinition =
+      hasStdNamespacedMapAccessDefinition;
+  contextOut.collectionAccessFallbackContext.shouldBuiltinValidateBareMapAccessCall =
+      shouldBuiltinValidateBareMapAccessCall;
+  contextOut.collectionAccessFallbackContext.isNonCollectionStructAccessTarget =
+      [&](const std::string &targetPath) {
+        return isNonCollectionStructAccessTarget(targetPath);
+      };
+  contextOut.collectionAccessFallbackContext.dispatchResolvers =
+      &dispatchResolvers;
+  contextOut.dispatchResolvers = &dispatchResolvers;
+}
+
+void SemanticsValidator::prepareExprLateCallCompatibilityContext(
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+    ExprLateCallCompatibilityContext &contextOut) {
+  contextOut = {};
+  contextOut.dispatchResolvers = &dispatchResolvers;
+}
+
+void SemanticsValidator::prepareExprLateMapAccessBuiltinContext(
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+    bool shouldBuiltinValidateBareMapContainsCall,
+    bool shouldBuiltinValidateBareMapTryAtCall,
+    bool shouldBuiltinValidateBareMapAccessCall,
+    ExprLateMapAccessBuiltinContext &contextOut) {
+  contextOut = {};
+  contextOut.dispatchResolvers = &dispatchResolvers;
+  contextOut.shouldBuiltinValidateBareMapContainsCall =
+      shouldBuiltinValidateBareMapContainsCall;
+  contextOut.shouldBuiltinValidateBareMapTryAtCall =
+      shouldBuiltinValidateBareMapTryAtCall;
+  contextOut.shouldBuiltinValidateBareMapAccessCall =
+      shouldBuiltinValidateBareMapAccessCall;
 }
 
 } // namespace primec::semantics

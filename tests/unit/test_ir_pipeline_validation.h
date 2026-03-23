@@ -9442,6 +9442,30 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "        builtinCollectionDispatchResolverAdapters,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "prepareExprCountCapacityMapBuiltinContext(\n"
+            "        collectionDispatchSetup.shouldBuiltinValidateStdNamespacedVectorCountCall,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "prepareExprLateMapSoaBuiltinContext(\n"
+            "          shouldBuiltinValidateBareMapContainsCall,\n"
+            "          builtinCollectionDispatchResolvers,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "prepareExprLateFallbackBuiltinContext(\n"
+            "          collectionDispatchSetup.isStdNamespacedVectorAccessCall,\n"
+            "          collectionDispatchSetup.shouldAllowStdAccessCompatibilityFallback,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "prepareExprLateCallCompatibilityContext(\n"
+            "          builtinCollectionDispatchResolvers,\n"
+            "          lateCallCompatibilityContext);") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "prepareExprLateMapAccessBuiltinContext(\n"
+            "          builtinCollectionDispatchResolvers,\n"
+            "          shouldBuiltinValidateBareMapContainsCall,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "validateExprLateMapAccessBuiltins(\n"
             "              params, locals, expr, resolved,") !=
         std::string::npos);
@@ -9611,6 +9635,24 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprBuiltinContextSetupSource.find(
             "contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "countCapacityMapBuiltinContext.shouldBuiltinValidateStdNamespacedVectorCountCall =") ==
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.shouldBuiltinValidateStdNamespacedVectorCountCall =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "lateFallbackBuiltinContext.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") ==
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "lateMapAccessBuiltinContext.shouldBuiltinValidateBareMapTryAtCall =") ==
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.shouldBuiltinValidateBareMapTryAtCall =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("std::string gpuBuiltin;") == std::string::npos);
   CHECK(semanticsExprPostAccessPrechecksSource.find("std::string gpuBuiltin;") !=
