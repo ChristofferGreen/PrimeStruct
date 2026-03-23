@@ -31,6 +31,8 @@ struct LocalInfo {
   int32_t structSlotCount = 0;
   bool isFileHandle = false;
   bool isFileError = false;
+  std::string errorTypeName;
+  std::string errorHelperNamespacePath;
   bool isResult = false;
   bool resultHasValue = false;
   ValueKind resultValueKind = ValueKind::Unknown;
@@ -3718,11 +3720,13 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveMethodCallWithLocalsFn &resolveMethodCall,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
+                                     const InferExprKindWithLocalsFn &inferExprKind,
                                      ResultExprInfo &out);
 ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
-    const LookupReturnInfoFn &lookupReturnInfo);
+    const LookupReturnInfoFn &lookupReturnInfo,
+    const InferExprKindWithLocalsFn &inferExprKind);
 bool resolveResultWhyCallInfo(const Expr &expr,
                               const LocalMap &localsIn,
                               const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
@@ -3753,6 +3757,7 @@ enum class ResultOkMethodCallEmitResult {
   Emitted,
   Error,
 };
+std::string unsupportedPackedResultValueKindError(const std::string &builtinName);
 ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const Expr &expr,
     const LocalMap &localsIn,

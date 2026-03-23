@@ -1109,7 +1109,7 @@ TEST_CASE("ir lowerer materializes variadic borrowed FileError packs with indexe
   CHECK(result == 36);
 }
 
-TEST_CASE("ir lowerer materializes prefix spread borrowed FileError packs with indexed dereference why methods") {
+TEST_CASE("ir lowerer rejects prefix spread borrowed FileError packs") {
   const std::string source =
       "[return<int>]\n"
       "score_refs([args<Reference<FileError>>] values) {\n"
@@ -1152,19 +1152,8 @@ TEST_CASE("ir lowerer materializes prefix spread borrowed FileError packs with i
       "}\n";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 36);
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("spread argument must be final") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer materializes variadic pointer FileError packs with indexed dereference why methods") {
@@ -1225,7 +1214,7 @@ TEST_CASE("ir lowerer materializes variadic pointer FileError packs with indexed
   CHECK(result == 36);
 }
 
-TEST_CASE("ir lowerer materializes prefix spread pointer FileError packs with indexed dereference why methods") {
+TEST_CASE("ir lowerer rejects prefix spread pointer FileError packs") {
   const std::string source =
       "[return<int>]\n"
       "score_ptrs([args<Pointer<FileError>>] values) {\n"
@@ -1268,19 +1257,8 @@ TEST_CASE("ir lowerer materializes prefix spread pointer FileError packs with in
       "}\n";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 36);
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("spread argument must be final") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file methods") {

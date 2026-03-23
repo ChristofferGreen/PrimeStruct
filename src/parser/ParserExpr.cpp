@@ -457,6 +457,7 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
 }
 
 bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
+  SeparatorWhitespaceGuard separatorGuard(*this, false);
   skipComments();
   const Token &startToken = tokens_[pos_];
   const int startLine = startToken.line;

@@ -17,18 +17,18 @@ makeUnknown() {
 [return<int> effects(io_out)]
 main() {
   [ContainerError] err{/ContainerError/missing_key()}
-  [Result<ContainerError>] methodStatus{err.status()}
-  [Result<i32, ContainerError>] methodValueStatus{err.result<i32>()}
+  [Result<ContainerError>] methodStatus{/ContainerError/status(err)}
+  [Result<i32, ContainerError>] methodValueStatus{/ContainerError/result<i32>(err)}
   [i32] total{plus(plus(/ContainerError/missing_key().code, /ContainerError/index_out_of_bounds().code),
                   plus(/ContainerError/empty().code, /ContainerError/capacity_exceeded().code))}
   print_line(/ContainerError/why(/ContainerError/missing_key()))
-  print_line(ContainerError.why(/ContainerError/missing_key()))
-  print_line(err.why())
+  print_line(/ContainerError/why(/ContainerError/missing_key()))
+  print_line(/ContainerError/why(err))
   print_line(Result.why(makeMissing()))
   print_line(Result.why(methodStatus))
   print_line(Result.why(methodValueStatus))
-  print_line(Result.why(err.status()))
-  print_line(Result.why(err.result<i32>()))
+  print_line(Result.why(methodStatus))
+  print_line(Result.why(methodValueStatus))
   print_line(Result.why(makeUnknown()))
   return(total)
 }

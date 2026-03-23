@@ -1356,15 +1356,15 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from direct
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprBaseKind(tryMapExpr, {}, kindOut));
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprBaseKind(tryAndThenExpr, {}, kindOut));
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprBaseKind(tryMap2Expr, {}, kindOut));
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from definition-backed Result combinator sources") {
@@ -1567,7 +1567,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from defini
   CHECK(kindOut == ValueKind::String);
 }
 
-TEST_CASE("ir lowerer preserves auto-bound direct Result combinator metadata") {
+TEST_CASE("ir lowerer rejects auto-bound direct Result combinator try consumers") {
   const std::string source = R"(
 import /std/file/*
 
@@ -1578,25 +1578,10 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
   [auto] mapped{ Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }) }
   [auto] chained{ Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) }) }
   [auto] summed{
     Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) })
-  }
-  [auto] failedChained{ Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) }) }
-  [auto] failedMapped{ Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) }) }
-  [auto] failedMap2{
-    Result.map2(Result.ok(2i32), failed, []([i32] left, [i32] right) { return(plus(left, right)) })
-  }
-  if(not(Result.error(failedChained))) {
-    return(1i32)
-  }
-  if(not(equal(Result.why(failedMapped), "EOF"utf8))) {
-    return(2i32)
-  }
-  if(not(equal(Result.why(failedMap2), "EOF"utf8))) {
-    return(3i32)
   }
   print_line(try(mapped))
   print_line(try(chained))
@@ -1610,14 +1595,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
-  CHECK(error.empty());
-  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
-  CHECK(error.empty());
-  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Native, error));
-  CHECK(error.empty());
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("try requires Result argument") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-return setup wires callback") {
@@ -3880,23 +3859,6 @@ TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
   map2Expr.name = "map2";
   map2Expr.args = {resultTypeExpr, directOkGamma, directOkDelta, map2Lambda};
 
-  primec::Expr tryMapExpr;
-  tryMapExpr.kind = primec::Expr::Kind::Call;
-  tryMapExpr.name = "try";
-  tryMapExpr.args = {mapExpr};
-  CHECK(state.inferExprKind(tryMapExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
-
-  primec::Expr tryAndThenExpr;
-  tryAndThenExpr.kind = primec::Expr::Kind::Call;
-  tryAndThenExpr.name = "try";
-  tryAndThenExpr.args = {andThenExpr};
-  CHECK(state.inferExprKind(tryAndThenExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
-
-  primec::Expr tryMap2Expr;
-  tryMap2Expr.kind = primec::Expr::Kind::Call;
-  tryMap2Expr.name = "try";
-  tryMap2Expr.args = {map2Expr};
-  CHECK(state.inferExprKind(tryMap2Expr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
 TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed pointer Result args packs") {

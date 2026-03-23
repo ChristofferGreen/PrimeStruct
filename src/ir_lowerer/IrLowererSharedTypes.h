@@ -19,6 +19,8 @@ struct LocalInfo {
   int32_t structSlotCount = 0;
   bool isFileHandle = false;
   bool isFileError = false;
+  std::string errorTypeName;
+  std::string errorHelperNamespacePath;
   bool isResult = false;
   bool resultHasValue = false;
   ValueKind resultValueKind = ValueKind::Unknown;

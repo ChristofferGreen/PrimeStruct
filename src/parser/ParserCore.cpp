@@ -1201,7 +1201,9 @@ bool Parser::isBuiltinNameForArguments(const std::string &name) const {
 }
 
 void Parser::skipComments() {
-  while (isIgnorableToken(tokens_[pos_].kind)) {
+  while (tokens_[pos_].kind == TokenKind::Comment ||
+         (allowSeparatorWhitespace_ &&
+          (tokens_[pos_].kind == TokenKind::Comma || tokens_[pos_].kind == TokenKind::Semicolon))) {
     ++pos_;
   }
 }

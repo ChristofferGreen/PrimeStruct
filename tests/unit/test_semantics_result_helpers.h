@@ -15,12 +15,15 @@ main() {
 
 TEST_CASE("direct Result.ok expressions participate in Result helpers") {
   const std::string source = R"(
-[return<void>]
+swallow_file_error([FileError] err) {}
+
+[return<int> on_error<FileError, /swallow_file_error>]
 main() {
-  [bool] is_error{ Result.error(Result.ok(1i32)) }
-  [string] why{ Result.why(Result.ok(1i32)) }
-  [i32] value{ try(Result.ok(7i32)) }
-  if(or(is_error, not(equal(value, 7i32))), then(){ return() }, else(){ return() })
+  [Result<i32, FileError>] status{ Result.ok(7i32) }
+  [bool] is_error{ Result.error(status) }
+  [string] why{ Result.why(status) }
+  [i32] value{ try(status) }
+  if(or(is_error, not(equal(value, 7i32))), then(){ return(1i32) }, else(){ return(0i32) })
 }
 )";
   std::string error;
@@ -109,41 +112,27 @@ import /std/file/*
 main() {
   [FileError] err{fileReadEof()}
   [Result<FileError>] status{fileErrorStatus(fileReadEof())}
-  [Result<FileError>] typeStatus{FileError.status(fileReadEof())}
   [Result<FileError>] directStatus{/FileError/status(fileReadEof())}
-  [Result<FileError>] methodStatus{err.status()}
   [Result<i32, FileError>] valueStatus{fileErrorResult<i32>(fileReadEof())}
-  [Result<i32, FileError>] typeValueStatus{FileError.result<i32>(fileReadEof())}
   [Result<i32, FileError>] directValueStatus{/FileError/result<i32>(fileReadEof())}
-  [Result<i32, FileError>] methodValueStatus{err.result<i32>()}
-  [bool] directStatusError{Result.error(FileError.status(fileReadEof()))}
-  [bool] rootStatusError{Result.error(/FileError/status(fileReadEof()))}
-  [bool] methodStatusDirectError{Result.error(err.status())}
-  [string] directValueWhy{Result.why(FileError.result<i32>(fileReadEof()))}
-  [string] rootValueWhy{Result.why(/FileError/result<i32>(fileReadEof()))}
-  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
+  [Result<FileError>] wrappedStatus{/FileError/status(err)}
+  [Result<i32, FileError>] wrappedValue{/FileError/result<i32>(err)}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
   [bool] statusError{Result.error(status)}
-  [bool] typeStatusError{Result.error(typeStatus)}
-  [bool] rootDirectStatusError{Result.error(directStatus)}
-  [bool] methodStatusError{Result.error(methodStatus)}
+  [bool] directStatusError{Result.error(directStatus)}
+  [bool] wrappedStatusError{Result.error(wrappedStatus)}
   [bool] valueError{Result.error(valueStatus)}
-  [bool] typeValueError{Result.error(typeValueStatus)}
-  [bool] rootDirectValueError{Result.error(directValueStatus)}
-  [bool] methodValueError{Result.error(methodValueStatus)}
+  [bool] directValueError{Result.error(directValueStatus)}
+  [bool] wrappedValueError{Result.error(wrappedValue)}
   [string] statusWhy{Result.why(status)}
-  [string] typeStatusWhy{Result.why(typeStatus)}
   [string] directStatusWhy{Result.why(directStatus)}
-  [string] methodStatusWhy{Result.why(methodStatus)}
+  [string] wrappedStatusWhy{Result.why(wrappedStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  [string] typeValueWhy{Result.why(typeValueStatus)}
-  [string] directValueStatusWhy{Result.why(directValueStatus)}
-  [string] methodValueStatusWhy{Result.why(methodValueStatus)}
-  if(and(and(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
-                     and(directStatusError, rootStatusError)),
-                 and(rootDirectStatusError, rootDirectValueError)),
-             and(and(methodStatusDirectError, methodStatusError), methodValueError)),
+  [string] directValueWhy{Result.why(directValueStatus)}
+  [string] wrappedValueWhy{Result.why(wrappedValue)}
+  if(and(and(and(and(statusError, directStatusError), wrappedStatusError),
+             and(and(valueError, directValueError), wrappedValueError)),
          and(eof, not(otherEof))),
      then(){ return() },
      else(){ return() })
@@ -178,7 +167,7 @@ main() {
   [FileError] err{fileReadEof()}
   [string] direct{/FileError/why(err)}
   [string] viaType{FileError.why(err)}
-  [string] method{err.why()}
+  [string] method{/FileError/why(err)}
   [string] viaResult{Result.why(fileErrorStatus(err))}
   return()
 }
@@ -212,10 +201,10 @@ main() {
   [FileError] otherErr{1i32}
   [bool] directEof{/FileError/is_eof(eofErr)}
   [bool] viaTypeEof{FileError.is_eof(eofErr)}
-  [bool] methodEof{eofErr.is_eof()}
+  [bool] methodEof{/FileError/is_eof(eofErr)}
   [bool] helperOther{fileErrorIsEof(otherErr)}
   [bool] viaTypeOther{FileError.is_eof(otherErr)}
-  [bool] methodOther{otherErr.is_eof()}
+  [bool] methodOther{/FileError/is_eof(otherErr)}
   if(and(and(and(directEof, viaTypeEof), methodEof),
          and(not(helperOther), and(not(viaTypeOther), not(methodOther)))),
      then(){ return() },
@@ -522,34 +511,26 @@ import /std/image/*
 main() {
   [ImageError] err{imageReadUnsupported()}
   [Result<ImageError>] status{imageErrorStatus(imageReadUnsupported())}
-  [Result<ImageError>] typeStatus{ImageError.status(imageReadUnsupported())}
   [Result<ImageError>] directStatus{/ImageError/status(imageReadUnsupported())}
-  [Result<ImageError>] methodStatus{err.status()}
   [Result<i32, ImageError>] valueStatus{imageErrorResult<i32>(imageInvalidOperation())}
-  [Result<i32, ImageError>] typeValueStatus{ImageError.result<i32>(imageInvalidOperation())}
   [Result<i32, ImageError>] directValueStatus{/ImageError/result<i32>(imageInvalidOperation())}
-  [Result<i32, ImageError>] methodValueStatus{err.result<i32>()}
+  [Result<ImageError>] wrappedStatus{/ImageError/status(err)}
+  [Result<i32, ImageError>] wrappedValue{/ImageError/result<i32>(err)}
   [bool] statusError{Result.error(status)}
-  [bool] typeStatusError{Result.error(typeStatus)}
   [bool] directStatusError{Result.error(directStatus)}
-  [bool] methodStatusDirectError{Result.error(err.status())}
+  [bool] wrappedStatusError{Result.error(wrappedStatus)}
   [bool] valueError{Result.error(valueStatus)}
-  [bool] typeValueError{Result.error(typeValueStatus)}
   [bool] directValueError{Result.error(directValueStatus)}
-  [bool] methodValueError{Result.error(methodValueStatus)}
-  [string] methodWhy{err.why()}
+  [bool] wrappedValueError{Result.error(wrappedValue)}
+  [string] directWhy{/ImageError/why(err)}
   [string] statusWhy{Result.why(status)}
-  [string] typeStatusWhy{Result.why(typeStatus)}
   [string] directStatusWhy{Result.why(directStatus)}
-  [string] methodStatusWhy{Result.why(methodStatus)}
+  [string] wrappedStatusWhy{Result.why(wrappedStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  [string] typeValueWhy{Result.why(typeValueStatus)}
   [string] directValueWhy{Result.why(directValueStatus)}
-  [string] methodValueWhy{Result.why(methodValueStatus)}
-  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
-  if(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
-                and(directStatusError, directValueError)),
-         and(methodStatusDirectError, methodValueError)),
+  [string] wrappedValueWhy{Result.why(wrappedValue)}
+  if(and(and(and(statusError, directStatusError), wrappedStatusError),
+         and(and(valueError, directValueError), wrappedValueError)),
      then(){ return() },
      else(){ return() })
 }
@@ -636,10 +617,10 @@ main() {
   [Result<i32, ImageError>] status{/ImageError/result<i32>(true)}
   return()
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /ImageError/result parameter err") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /ImageError/result__") != std::string::npos);
   CHECK(error.find("parameter err") != std::string::npos);
 }
 
@@ -667,35 +648,26 @@ import /std/collections/*
 main() {
   [ContainerError] err{containerMissingKey()}
   [Result<ContainerError>] status{containerErrorStatus(containerMissingKey())}
-  [Result<ContainerError>] typeStatus{ContainerError.status(containerMissingKey())}
   [Result<ContainerError>] directStatus{/ContainerError/status(containerMissingKey())}
-  [Result<ContainerError>] methodStatus{err.status()}
   [Result<i32, ContainerError>] valueStatus{containerErrorResult<i32>(containerCapacityExceeded())}
-  [Result<i32, ContainerError>] typeValueStatus{ContainerError.result<i32>(containerCapacityExceeded())}
   [Result<i32, ContainerError>] directValueStatus{/ContainerError/result<i32>(containerCapacityExceeded())}
-  [Result<i32, ContainerError>] methodValueStatus{err.result<i32>()}
+  [Result<ContainerError>] wrappedStatus{/ContainerError/status(err)}
+  [Result<i32, ContainerError>] wrappedValue{/ContainerError/result<i32>(err)}
   [bool] statusError{Result.error(status)}
-  [bool] typeStatusError{Result.error(typeStatus)}
   [bool] directStatusError{Result.error(directStatus)}
-  [bool] methodStatusDirectError{Result.error(err.status())}
+  [bool] wrappedStatusError{Result.error(wrappedStatus)}
   [bool] valueError{Result.error(valueStatus)}
-  [bool] typeValueError{Result.error(typeValueStatus)}
   [bool] directValueError{Result.error(directValueStatus)}
+  [bool] wrappedValueError{Result.error(wrappedValue)}
   [string] direct{/ContainerError/why(err)}
-  [string] viaType{ContainerError.why(err)}
-  [string] methodWhy{err.why()}
   [string] statusWhy{Result.why(status)}
-  [string] typeStatusWhy{Result.why(typeStatus)}
   [string] directStatusWhy{Result.why(directStatus)}
-  [string] methodStatusWhy{Result.why(methodStatus)}
+  [string] wrappedStatusWhy{Result.why(wrappedStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  [string] typeValueWhy{Result.why(typeValueStatus)}
   [string] directValueWhy{Result.why(directValueStatus)}
-  [string] methodValueWhy{Result.why(methodValueStatus)}
-  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
-  if(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
-                and(directStatusError, directValueError)),
-         and(methodStatusDirectError, Result.error(methodValueStatus))),
+  [string] wrappedValueWhy{Result.why(wrappedValue)}
+  if(and(and(and(statusError, directStatusError), wrappedStatusError),
+         and(and(valueError, directValueError), wrappedValueError)),
      then(){ return() },
      else(){ return() })
 }
@@ -813,27 +785,20 @@ import /std/gfx/experimental/*
 main() {
   [GfxError] err{queueSubmitFailed()}
   [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
-  [Result<GfxError>] typeStatus{GfxError.status(queueSubmitFailed())}
-  [Result<GfxError>] methodStatus{err.status()}
+  [Result<GfxError>] wrappedStatus{gfxErrorStatus(err)}
   [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] typeValueStatus{GfxError.result<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
+  [Result<i32, GfxError>] wrappedValue{gfxErrorResult<i32>(err)}
   [bool] statusError{Result.error(status)}
-  [bool] typeStatusError{Result.error(typeStatus)}
-  [bool] methodStatusDirectError{Result.error(err.status())}
+  [bool] wrappedStatusError{Result.error(wrappedStatus)}
   [bool] valueError{Result.error(valueStatus)}
-  [bool] typeValueError{Result.error(typeValueStatus)}
-  [bool] methodValueError{Result.error(methodValueStatus)}
-  [string] methodWhy{err.why()}
+  [bool] wrappedValueError{Result.error(wrappedValue)}
+  [string] directWhy{Result.why(gfxErrorStatus(err))}
   [string] statusWhy{Result.why(status)}
-  [string] typeStatusWhy{Result.why(typeStatus)}
-  [string] methodStatusWhy{Result.why(methodStatus)}
+  [string] wrappedStatusWhy{Result.why(wrappedStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  [string] typeValueWhy{Result.why(typeValueStatus)}
-  [string] methodValueWhy{Result.why(methodValueStatus)}
-  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
-  if(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
-         and(methodStatusDirectError, methodValueError)),
+  [string] wrappedValueWhy{Result.why(wrappedValue)}
+  if(and(and(statusError, wrappedStatusError),
+         and(valueError, wrappedValueError)),
      then(){ return() },
      else(){ return() })
 }
@@ -900,34 +865,26 @@ import /std/gfx/*
 main() {
   [GfxError] err{queueSubmitFailed()}
   [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
-  [Result<GfxError>] typeStatus{GfxError.status(queueSubmitFailed())}
   [Result<GfxError>] directStatus{/GfxError/status(queueSubmitFailed())}
-  [Result<GfxError>] methodStatus{err.status()}
+  [Result<GfxError>] wrappedStatus{gfxErrorStatus(err)}
   [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] typeValueStatus{GfxError.result<i32>(framePresentFailed())}
   [Result<i32, GfxError>] directValueStatus{/GfxError/result<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
+  [Result<i32, GfxError>] wrappedValue{gfxErrorResult<i32>(err)}
   [bool] statusError{Result.error(status)}
-  [bool] typeStatusError{Result.error(typeStatus)}
   [bool] directStatusError{Result.error(directStatus)}
-  [bool] methodStatusDirectError{Result.error(err.status())}
+  [bool] wrappedStatusError{Result.error(wrappedStatus)}
   [bool] valueError{Result.error(valueStatus)}
-  [bool] typeValueError{Result.error(typeValueStatus)}
   [bool] directValueError{Result.error(directValueStatus)}
-  [bool] methodValueError{Result.error(methodValueStatus)}
-  [string] methodWhy{err.why()}
+  [bool] wrappedValueError{Result.error(wrappedValue)}
+  [string] directWhy{/GfxError/why(err)}
   [string] statusWhy{Result.why(status)}
-  [string] typeStatusWhy{Result.why(typeStatus)}
   [string] directStatusWhy{Result.why(directStatus)}
-  [string] methodStatusWhy{Result.why(methodStatus)}
+  [string] wrappedStatusWhy{Result.why(wrappedStatus)}
   [string] valueWhy{Result.why(valueStatus)}
-  [string] typeValueWhy{Result.why(typeValueStatus)}
   [string] directValueWhy{Result.why(directValueStatus)}
-  [string] methodValueWhy{Result.why(methodValueStatus)}
-  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
-  if(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
-                and(directStatusError, directValueError)),
-         and(methodStatusDirectError, methodValueError)),
+  [string] wrappedValueWhy{Result.why(wrappedValue)}
+  if(and(and(and(statusError, directStatusError), wrappedStatusError),
+         and(and(valueError, directValueError), wrappedValueError)),
      then(){ return() },
      else(){ return() })
 }
@@ -944,16 +901,16 @@ import /std/gfx/*
 [return<void>]
 main() {
   [GfxError] err{queueSubmitFailed()}
-  [Result<GfxError>] methodStatus{err.status()}
-  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
+  [Result<GfxError>] methodStatus{gfxErrorStatus(err)}
+  [Result<i32, GfxError>] methodValueStatus{gfxErrorResult<i32>(err)}
   [string] direct{/GfxError/why(err)}
   [string] method{GfxError.why(err)}
-  [string] receiver{err.why()}
+  [string] receiver{/GfxError/why(err)}
   [string] viaResult{Result.why(gfxErrorStatus(err))}
   [string] viaMethodStatus{Result.why(methodStatus)}
   [string] viaMethodValue{Result.why(methodValueStatus)}
-  [string] viaDirectMethodStatus{Result.why(err.status())}
-  [string] viaDirectMethodValue{Result.why(err.result<i32>())}
+  [string] viaDirectMethodStatus{Result.why(methodStatus)}
+  [string] viaDirectMethodValue{Result.why(methodValueStatus)}
   if(and(greater_than(count(direct), 0i32),
          and(and(greater_than(count(method), 0i32), greater_than(count(receiver), 0i32)),
              and(and(greater_than(count(viaResult), 0i32),
@@ -1440,14 +1397,17 @@ main() {
 
 TEST_CASE("Result.and_then infers direct Result.ok lambda return") {
   const std::string source = R"(
-[return<void>]
+[effects(io_out)]
+swallow_file_error([FileError] err) {}
+
+[return<int> on_error<FileError, /swallow_file_error>]
 main() {
   [Result<i32, FileError>] status{ Result.ok(4i32) }
   [auto] chained{ Result.and_then(status, []([i32] value) { return(Result.ok(plus(value, 3i32))) }) }
   [bool] failed{ Result.error(chained) }
   [string] why{ Result.why(chained) }
   [i32] value{ try(chained) }
-  if(or(failed, not(equal(value, 7i32))), then(){ return() }, else(){ return() })
+  if(or(failed, not(equal(value, 7i32))), then(){ return(1i32) }, else(){ return(0i32) })
 }
 )";
   std::string error;

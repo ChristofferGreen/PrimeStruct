@@ -15,6 +15,26 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool applyErrorTypeMetadata(const std::string &typeText, LocalInfo &infoOut) {
+  const std::string normalized = trimTemplateTypeText(typeText);
+  if (normalized != "FileError" && normalized != "ImageError" &&
+      normalized != "ContainerError" && normalized != "GfxError") {
+    return false;
+  }
+
+  infoOut.errorTypeName = normalized;
+  infoOut.valueKind = LocalInfo::ValueKind::Int32;
+  if (normalized == "FileError") {
+    infoOut.isFileError = true;
+    infoOut.errorHelperNamespacePath = "/std/file/FileError";
+  } else if (normalized == "ImageError") {
+    infoOut.errorHelperNamespacePath = "/std/image/ImageError";
+  } else if (normalized == "ContainerError") {
+    infoOut.errorHelperNamespacePath = "/std/collections/ContainerError";
+  }
+  return true;
+}
+
 bool hasSoaVectorTypeTransform(const Expr &expr) {
   for (const auto &transform : expr.transforms) {
     if (transform.name == "soa_vector") {
@@ -71,9 +91,7 @@ bool inferCallParameterDefaultResultInfo(const Expr &expr,
 }
 
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut) {
-  if (trimTemplateTypeText(typeText) == "FileError") {
-    infoOut.isFileError = true;
-    infoOut.valueKind = LocalInfo::ValueKind::Int32;
+  if (applyErrorTypeMetadata(typeText, infoOut)) {
     return;
   }
 
@@ -161,9 +179,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
       return;
     }
-    if (pointerTargetType == "FileError") {
-      infoOut.isFileError = true;
-      infoOut.valueKind = LocalInfo::ValueKind::Int32;
+    if (applyErrorTypeMetadata(pointerTargetType, infoOut)) {
       return;
     }
     bool pointerResultHasValue = false;
@@ -206,9 +222,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       return;
     }
     if (!splitTemplateTypeName(refTargetType, refBase, refArg)) {
-      if (refTargetType == "FileError") {
-        infoOut.isFileError = true;
-      }
+      applyErrorTypeMetadata(refTargetType, infoOut);
       const LocalInfo::ValueKind refValueKind = valueKindFromTypeName(refTargetType);
       if (refValueKind != LocalInfo::ValueKind::Unknown) {
         infoOut.valueKind = refValueKind;
@@ -625,6 +639,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
     if (transform.name == "File") {
       infoOut.isFileHandle = true;
       infoOut.valueKind = LocalInfo::ValueKind::Int64;
+    } else if (applyErrorTypeMetadata(transform.name, infoOut)) {
+      continue;
     } else if (transform.name == "Result") {
       infoOut.isResult = true;
       infoOut.resultHasValue = (transform.templateArgs.size() == 2);
@@ -684,6 +700,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
         infoOut.pointerToBuffer = true;
         infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
       }
+      applyErrorTypeMetadata(targetType, infoOut);
       bool resultHasValue = false;
       LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
       std::string resultErrorType;
@@ -702,6 +719,22 @@ bool inferCallParameterLocalInfo(const Expr &param,
     if (extractArgsPackElementTypeText(param, elementTypeText)) {
       applyArgsPackElementMetadata(elementTypeText, infoOut);
       applyArgsPackElementStructMetadata(param, elementTypeText, applyStructArrayInfo, applyStructValueInfo, infoOut);
+    }
+  }
+
+  if (infoOut.errorTypeName == "GfxError" && infoOut.errorHelperNamespacePath.empty() && param.args.size() == 1) {
+    const Expr &initExpr = param.args.front();
+    const Definition *initDef =
+        initExpr.isMethodCall ? (resolveMethodCallDefinition ? resolveMethodCallDefinition(initExpr, localsForKindInference)
+                                                             : nullptr)
+                              : (resolveDefinitionCall ? resolveDefinitionCall(initExpr) : nullptr);
+    if (initDef != nullptr) {
+      if (initDef->fullPath.rfind("/std/gfx/experimental/", 0) == 0) {
+        infoOut.errorHelperNamespacePath = "/std/gfx/experimental/GfxError";
+      } else if (initDef->fullPath.rfind("/std/gfx/", 0) == 0 ||
+                 initDef->fullPath.rfind("/GfxError/", 0) == 0) {
+        infoOut.errorHelperNamespacePath = "/std/gfx/GfxError";
+      }
     }
   }
 

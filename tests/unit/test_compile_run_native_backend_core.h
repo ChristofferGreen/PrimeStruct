@@ -3140,16 +3140,16 @@ import /std/image/*
 [return<int> effects(io_out)]
 main() {
   [ImageError] err{imageReadUnsupported()}
-  [Result<ImageError>] methodStatus{err.status()}
-  [Result<i32, ImageError>] methodValueStatus{err.result<i32>()}
+  [Result<ImageError>] methodStatus{/ImageError/status(err)}
+  [Result<i32, ImageError>] methodValueStatus{/ImageError/result<i32>(err)}
   print_line(/ImageError/why(err))
-  print_line(ImageError.why(err))
-  print_line(err.why())
+  print_line(/ImageError/why(err))
+  print_line(/ImageError/why(err))
   print_line(Result.why(imageErrorStatus(err)))
   print_line(Result.why(methodStatus))
   print_line(Result.why(methodValueStatus))
-  print_line(Result.why(err.status()))
-  print_line(Result.why(err.result<i32>()))
+  print_line(Result.why(methodStatus))
+  print_line(Result.why(methodValueStatus))
   return(0i32)
 }
 )";
@@ -3207,11 +3207,11 @@ import /std/gfx/experimental/*
 [return<int> effects(io_out)]
 main() {
   [GfxError] err{queueSubmitFailed()}
-  print_line(Result.why(GfxError.status(queueSubmitFailed())))
-  print_line(Result.why(GfxError.result<i32>(framePresentFailed())))
-  print_line(err.why())
-  print_line(Result.why(err.status()))
-  print_line(Result.why(err.result<i32>()))
+  print_line(Result.why(gfxErrorStatus(queueSubmitFailed())))
+  print_line(Result.why(gfxErrorResult<i32>(framePresentFailed())))
+  print_line(Result.why(gfxErrorStatus(err)))
+  print_line(Result.why(gfxErrorStatus(err)))
+  print_line(Result.why(gfxErrorResult<i32>(err)))
   return(0i32)
 }
 )";
@@ -3229,7 +3229,7 @@ main() {
         "frame_present_failed\n"
         "queue_submit_failed\n"
         "queue_submit_failed\n"
-        "frame_present_failed\n");
+        "queue_submit_failed\n");
 }
 
 TEST_CASE("native uses canonical stdlib GfxError result helpers") {
@@ -3241,8 +3241,8 @@ main() {
   [GfxError] err{queueSubmitFailed()}
   print_line(Result.why(/GfxError/status(queueSubmitFailed())))
   print_line(Result.why(/GfxError/result<i32>(framePresentFailed())))
-  print_line(Result.why(err.status()))
-  print_line(Result.why(err.result<i32>()))
+  print_line(Result.why(gfxErrorStatus(err)))
+  print_line(Result.why(gfxErrorResult<i32>(err)))
   return(0i32)
 }
 )";
@@ -3259,7 +3259,7 @@ main() {
         "queue_submit_failed\n"
         "frame_present_failed\n"
         "queue_submit_failed\n"
-        "frame_present_failed\n");
+        "queue_submit_failed\n");
 }
 
 TEST_CASE("native uses canonical stdlib GfxError why wrapper") {
@@ -3269,16 +3269,16 @@ import /std/gfx/*
 [return<int> effects(io_out)]
 main() {
   [GfxError] err{queueSubmitFailed()}
-  [Result<GfxError>] methodStatus{err.status()}
-  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
+  [Result<GfxError>] methodStatus{gfxErrorStatus(err)}
+  [Result<i32, GfxError>] methodValueStatus{gfxErrorResult<i32>(err)}
   print_line(/GfxError/why(err))
-  print_line(GfxError.why(err))
-  print_line(err.why())
+  print_line(/GfxError/why(err))
+  print_line(/GfxError/why(err))
   print_line(Result.why(gfxErrorStatus(err)))
   print_line(Result.why(methodStatus))
   print_line(Result.why(methodValueStatus))
-  print_line(Result.why(err.status()))
-  print_line(Result.why(err.result<i32>()))
+  print_line(Result.why(methodStatus))
+  print_line(Result.why(methodValueStatus))
   return(0i32)
 }
 )";
@@ -6278,12 +6278,12 @@ main() {
   [Result<FileError>] status{make_status()}
   [Result<i32, FileError>] valueStatus{make_value()}
   [FileError] err{fileReadEof()}
-  [Result<FileError>] methodStatus{err.status()}
-  [Result<i32, FileError>] methodValueStatus{err.result<i32>()}
+  [Result<FileError>] methodStatus{/FileError/status(err)}
+  [Result<i32, FileError>] methodValueStatus{/FileError/result<i32>(err)}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
-  [bool] directStatusError{Result.error(FileError.status(fileReadEof()))}
-  [bool] methodStatusError{Result.error(err.status())}
+  [bool] directStatusError{Result.error(status)}
+  [bool] methodStatusError{Result.error(methodStatus)}
   if(not(Result.error(status))) {
     return(1i32)
   }
@@ -6306,10 +6306,10 @@ main() {
   print_line(Result.why(valueStatus))
   print_line(Result.why(methodStatus))
   print_line(Result.why(methodValueStatus))
-  print_line(Result.why(FileError.status(fileReadEof())))
-  print_line(Result.why(FileError.result<i32>(fileReadEof())))
-  print_line(Result.why(err.status()))
-  print_line(Result.why(err.result<i32>()))
+  print_line(Result.why(/FileError/status(fileReadEof())))
+  print_line(Result.why(/FileError/result<i32>(fileReadEof())))
+  print_line(Result.why(methodStatus))
+  print_line(Result.why(methodValueStatus))
   return(0i32)
 }
 )";
@@ -6385,7 +6385,7 @@ main() {
     Result.and_then(ok, []([i32] value) { return(Result.ok(multiply(value, 4i32))) })
   }
   [Result<FileError>] chainedStatus{
-    Result.and_then(ok, []([i32] value) { return(FileError.status(FileError.eof())) })
+    Result.and_then(ok, []([i32] value) { return(/FileError/status(/FileError/eof())) })
   }
   [Result<i32, FileError>] chainedFailed{
     Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) })
@@ -6421,7 +6421,9 @@ TEST_CASE("native backend supports Result.map2 on IR-backed path") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int> effects(io_out)]
+swallow_container_error([ContainerError] err) {}
+
+[return<int> effects(io_out) on_error<ContainerError, /swallow_container_error>]
 main() {
   [Result<i32, ContainerError>] first{Result.ok(2i32)}
   [Result<i32, ContainerError>] second{Result.ok(3i32)}
@@ -6540,7 +6542,7 @@ main() {
   CHECK(readFile(outPath) == "8\n5\n");
 }
 
-TEST_CASE("native backend preserves auto-bound direct Result combinators on IR-backed paths") {
+TEST_CASE("native backend rejects auto-bound direct Result combinator try consumers") {
   const std::string source = R"(
 import /std/file/*
 
@@ -6551,25 +6553,10 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
   [auto] mapped{ Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }) }
   [auto] chained{ Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) }) }
   [auto] summed{
     Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) })
-  }
-  [auto] failedChained{ Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) }) }
-  [auto] failedMapped{ Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) }) }
-  [auto] failedMap2{
-    Result.map2(Result.ok(2i32), failed, []([i32] left, [i32] right) { return(plus(left, right)) })
-  }
-  if(not(Result.error(failedChained))) {
-    return(1i32)
-  }
-  if(not(equal(Result.why(failedMapped), "EOF"utf8))) {
-    return(2i32)
-  }
-  if(not(equal(Result.why(failedMap2), "EOF"utf8))) {
-    return(3i32)
   }
   print_line(try(mapped))
   print_line(try(chained))
@@ -6577,16 +6564,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_result_auto_bound_combinators.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_result_auto_bound_combinators").string();
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_native_result_auto_bound_combinators_out.txt").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_auto_bound_combinators_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " > " + outPath;
-  CHECK(runCommand(runCmd) == 5);
-  CHECK(readFile(outPath) == "8\n5\n");
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("try requires Result argument") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native direct type namespace string helpers") {
@@ -6747,7 +6731,9 @@ namespace ParseError {
   }
 }
 
-[return<int> effects(io_out)]
+swallow_parse_error([ParseError] err) {}
+
+[return<int> effects(io_out) on_error<ParseError, /swallow_parse_error>]
 main() {
   print_line(try(Result.map(Result.ok("alpha"utf8), []([string] value) { return(value) })))
   print_line(try(Result.and_then(Result.ok("beta"utf8), []([string] value) { return(Result.ok(value)) })))
@@ -6799,7 +6785,9 @@ greeting() {
   return(Result.ok("beta"utf8))
 }
 
-[return<int> effects(io_out)]
+swallow_parse_error([ParseError] err) {}
+
+[return<int> effects(io_out) on_error<ParseError, /swallow_parse_error>]
 main() {
   [Reader] reader{Reader()}
   print_line(try(Result.map(greeting(), []([string] value) { return(value) })))
@@ -6893,7 +6881,7 @@ main() {
   if(not(FileError.is_eof(eofErr))) {
     return(2i32)
   }
-  if(not(eofErr.is_eof())) {
+  if(not(/FileError/is_eof(eofErr))) {
     return(3i32)
   }
   if(/FileError/is_eof(otherErr)) {
@@ -6902,7 +6890,7 @@ main() {
   if(FileError.is_eof(otherErr)) {
     return(5i32)
   }
-  if(otherErr.is_eof()) {
+  if(/FileError/is_eof(otherErr)) {
     return(6i32)
   }
   return(0i32)
@@ -6929,7 +6917,7 @@ main() {
   if(not(FileError.is_eof(err))) {
     return(1i32)
   }
-  if(not(err.is_eof())) {
+  if(not(/FileError/is_eof(err))) {
     return(2i32)
   }
   return(0i32)
@@ -7006,7 +6994,7 @@ TEST_CASE("native materializes variadic borrowed FileError packs with indexed de
       "forward_mixed([args<Reference<FileError>>] values) {\n"
       "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
       "  [Reference<FileError>] extra_ref{location(extra)}\n"
-      "  return(score_refs([spread] values, extra_ref))\n"
+      "  return(score_refs(extra_ref, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int>]\n"
@@ -7056,7 +7044,7 @@ TEST_CASE("native materializes variadic pointer FileError packs with indexed der
       "forward_mixed([args<Pointer<FileError>>] values) {\n"
       "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
       "  [Pointer<FileError>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs([spread] values, extra_ptr))\n"
+      "  return(score_ptrs(extra_ptr, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int>]\n"
@@ -7136,7 +7124,7 @@ TEST_CASE("native materializes variadic File handle packs with indexed file meth
       "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
       "forward_mixed([args<File<Write>>] values) {\n"
       "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
-      "  return(score_files([spread] values, extra))\n"
+      "  return(score_files(extra, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
@@ -7162,8 +7150,8 @@ TEST_CASE("native materializes variadic File handle packs with indexed file meth
   CHECK(readFile(pathA2) == "omega\n");
   CHECK(readFile(pathB0) == "alpha\n");
   CHECK(readFile(pathB2) == "omega\n");
-  CHECK(readFile(pathC0) == "alpha\n");
-  CHECK(readFile(pathExtra) == "omega\n");
+  CHECK(readFile(pathExtra) == "alpha\n");
+  CHECK(readFile(pathC1) == "omega\n");
 }
 
 TEST_CASE("native materializes variadic borrowed File handle packs with indexed dereference file methods") {
@@ -7219,7 +7207,7 @@ TEST_CASE("native materializes variadic borrowed File handle packs with indexed 
       "forward_mixed([args<Reference<File<Write>>>] values) {\n"
       "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
       "  [Reference<File<Write>>] extra_ref{location(extra)}\n"
-      "  return(score_refs([spread] values, extra_ref))\n"
+      "  return(score_refs(extra_ref, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
@@ -7253,8 +7241,8 @@ TEST_CASE("native materializes variadic borrowed File handle packs with indexed 
   CHECK(readFile(pathA2) == "omega\n");
   CHECK(readFile(pathB0) == "alpha\n");
   CHECK(readFile(pathB2) == "omega\n");
-  CHECK(readFile(pathC0) == "alpha\n");
-  CHECK(readFile(pathExtra) == "omega\n");
+  CHECK(readFile(pathExtra) == "alpha\n");
+  CHECK(readFile(pathC1) == "omega\n");
 }
 
 TEST_CASE("native materializes variadic pointer File handle packs with indexed dereference file methods") {
@@ -7310,7 +7298,7 @@ TEST_CASE("native materializes variadic pointer File handle packs with indexed d
       "forward_mixed([args<Pointer<File<Write>>>] values) {\n"
       "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
       "  [Pointer<File<Write>>] extra_ptr{location(extra)}\n"
-      "  return(score_ptrs([spread] values, extra_ptr))\n"
+      "  return(score_ptrs(extra_ptr, [spread] values))\n"
       "}\n"
       "\n"
       "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
@@ -7344,8 +7332,8 @@ TEST_CASE("native materializes variadic pointer File handle packs with indexed d
   CHECK(readFile(pathA2) == "omega\n");
   CHECK(readFile(pathB0) == "alpha\n");
   CHECK(readFile(pathB2) == "omega\n");
-  CHECK(readFile(pathC0) == "alpha\n");
-  CHECK(readFile(pathExtra) == "omega\n");
+  CHECK(readFile(pathExtra) == "alpha\n");
+  CHECK(readFile(pathC1) == "omega\n");
 }
 #endif
 

@@ -99,6 +99,20 @@ private:
     bool previous_;
   };
 
+  struct SeparatorWhitespaceGuard {
+    SeparatorWhitespaceGuard(Parser &parser, bool enabled)
+        : parser_(parser), previous_(parser_.allowSeparatorWhitespace_) {
+      parser_.allowSeparatorWhitespace_ = enabled;
+    }
+    ~SeparatorWhitespaceGuard() { parser_.allowSeparatorWhitespace_ = previous_; }
+    SeparatorWhitespaceGuard(const SeparatorWhitespaceGuard &) = delete;
+    SeparatorWhitespaceGuard &operator=(const SeparatorWhitespaceGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool previous_;
+  };
+
   bool tryParseLoopFormAfterName(Expr &out,
                                  const std::string &namespacePrefix,
                                  const std::string &keyword,
@@ -159,6 +173,7 @@ private:
   bool allowImplicitVoidReturn_ = false;
   bool allowArgumentLabels_ = false;
   bool allowBareBindings_ = false;
+  bool allowSeparatorWhitespace_ = true;
   bool allowBraceBindings_ = true;
   bool allowBraceReturn_ = true;
   bool allowSingleBranchIfStatementBlocks_ = false;

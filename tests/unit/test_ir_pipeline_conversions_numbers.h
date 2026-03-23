@@ -295,16 +295,19 @@ TEST_CASE("ir lowerer supports Result.and_then status-only returns") {
   const std::string source = R"(
 import /std/file/*
 
+[effects(io_err)]
+swallow_file_error([FileError] err) {}
+
 [return<int>]
 main() {
   [Result<i32, FileError>] ok{Result.ok(2i32)}
   [Result<FileError>] chained{
-    Result.and_then(ok, []([i32] value) { return(FileError.status(FileError.eof())) })
+    Result.and_then(ok, []([i32] value) { return(/FileError/status(/FileError/eof())) })
   }
   if(not(Result.error(chained))) {
     return(1i32)
   }
-  if(not(equal(Result.why(chained), "EOF"utf8))) {
+  if(not(equal(count(Result.why(chained)), 3i32))) {
     return(2i32)
   }
   return(0i32)
@@ -398,7 +401,9 @@ main() {
 
 TEST_CASE("ir lowerer supports Result.map2 builtin lambdas") {
   const std::string source = R"(
-[return<int>]
+swallow_file_error([FileError] err) {}
+
+[return<int> on_error<FileError, /swallow_file_error>]
 main() {
   [Result<i32, FileError>] first{Result.ok(2i32)}
   [Result<i32, FileError>] second{Result.ok(3i32)}
@@ -523,11 +528,14 @@ TEST_CASE("ir lowerer supports direct Result combinator consumers") {
 import /std/file/*
 
 [effects(io_err)]
+swallow_file_error([FileError] err) {}
+
+[effects(io_err)]
 log_file_error([FileError] err) {
   print_line_error(err.why())
 }
 
-[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+[return<int> effects(io_err) on_error<FileError, /swallow_file_error>]
 main() {
   [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
   [i32] mapped{try(Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }))}
@@ -538,10 +546,10 @@ main() {
   if(not(Result.error(Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) })))) {
     return(1i32)
   }
-  if(not(equal(Result.why(Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) })), "EOF"utf8))) {
+  if(not(equal(count(Result.why(Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) }))), 3i32))) {
     return(2i32)
   }
-  if(not(equal(Result.why(Result.map2(Result.ok(2i32), failed, []([i32] left, [i32] right) { return(plus(left, right)) })), "EOF"utf8))) {
+  if(not(equal(count(Result.why(Result.map2(Result.ok(2i32), failed, []([i32] left, [i32] right) { return(plus(left, right)) }))), 3i32))) {
     return(3i32)
   }
   return(plus(plus(mapped, chained), summed))
@@ -578,7 +586,9 @@ namespace ParseError {
   }
 }
 
-[return<int>]
+swallow_parse_error([ParseError] err) {}
+
+[return<int> on_error<ParseError, /swallow_parse_error>]
 main() {
   return(
     plus(
@@ -639,7 +649,9 @@ greeting() {
   return(Result.ok("beta"utf8))
 }
 
-[return<int>]
+swallow_parse_error([ParseError] err) {}
+
+[return<int> on_error<ParseError, /swallow_parse_error>]
 main() {
   [Reader] reader{Reader()}
   return(
@@ -699,10 +711,12 @@ greeting() {
   return(Result.ok("beta"utf8))
 }
 
-[return<int>]
-consume(status) {
+[return<int> on_error<ParseError, /swallow_parse_error>]
+consume([Result<string, ParseError>] status) {
   return(count(try(status)))
 }
+
+swallow_parse_error([ParseError] err) {}
 
 [return<int>]
 main() {

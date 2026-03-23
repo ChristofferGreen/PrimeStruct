@@ -122,6 +122,173 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
+std::string preferredFileErrorHelperTarget(
+    std::string_view helperName,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  auto hasPath = [&](std::string_view path) { return defMap.find(std::string(path)) != defMap.end(); };
+  if (helperName == "why") {
+    if (hasPath("/std/file/FileError/why")) {
+      return "/std/file/FileError/why";
+    }
+    if (hasPath("/FileError/why")) {
+      return "/FileError/why";
+    }
+    return "";
+  }
+  if (helperName == "is_eof") {
+    if (hasPath("/std/file/FileError/is_eof")) {
+      return "/std/file/FileError/is_eof";
+    }
+    if (hasPath("/FileError/is_eof")) {
+      return "/FileError/is_eof";
+    }
+    if (hasPath("/std/file/fileErrorIsEof")) {
+      return "/std/file/fileErrorIsEof";
+    }
+    return "";
+  }
+  if (helperName == "eof") {
+    if (hasPath("/std/file/FileError/eof")) {
+      return "/std/file/FileError/eof";
+    }
+    if (hasPath("/FileError/eof")) {
+      return "/FileError/eof";
+    }
+    if (hasPath("/std/file/fileReadEof")) {
+      return "/std/file/fileReadEof";
+    }
+    return "";
+  }
+  if (helperName == "status") {
+    if (hasPath("/std/file/FileError/status")) {
+      return "/std/file/FileError/status";
+    }
+    if (hasPath("/std/file/fileErrorStatus")) {
+      return "/std/file/fileErrorStatus";
+    }
+    return "";
+  }
+  if (helperName == "result") {
+    if (hasPath("/std/file/FileError/result")) {
+      return "/std/file/FileError/result";
+    }
+    if (hasPath("/std/file/fileErrorResult")) {
+      return "/std/file/fileErrorResult";
+    }
+    return "";
+  }
+  return "";
+}
+
+std::string preferredImageErrorHelperTarget(
+    std::string_view helperName,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  auto hasPath = [&](std::string_view path) { return defMap.find(std::string(path)) != defMap.end(); };
+  if (helperName == "why") {
+    if (hasPath("/std/image/ImageError/why")) {
+      return "/std/image/ImageError/why";
+    }
+    if (hasPath("/ImageError/why")) {
+      return "/ImageError/why";
+    }
+    return "";
+  }
+  if (helperName == "status") {
+    if (hasPath("/std/image/ImageError/status")) {
+      return "/std/image/ImageError/status";
+    }
+    if (hasPath("/ImageError/status")) {
+      return "/ImageError/status";
+    }
+    if (hasPath("/std/image/imageErrorStatus")) {
+      return "/std/image/imageErrorStatus";
+    }
+    return "";
+  }
+  if (helperName == "result") {
+    if (hasPath("/std/image/ImageError/result")) {
+      return "/std/image/ImageError/result";
+    }
+    if (hasPath("/ImageError/result")) {
+      return "/ImageError/result";
+    }
+    if (hasPath("/std/image/imageErrorResult")) {
+      return "/std/image/imageErrorResult";
+    }
+    return "";
+  }
+  return "";
+}
+
+std::string preferredContainerErrorHelperTarget(
+    std::string_view helperName,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  auto hasPath = [&](std::string_view path) { return defMap.find(std::string(path)) != defMap.end(); };
+  if (helperName == "why") {
+    if (hasPath("/std/collections/ContainerError/why")) {
+      return "/std/collections/ContainerError/why";
+    }
+    if (hasPath("/ContainerError/why")) {
+      return "/ContainerError/why";
+    }
+    return "";
+  }
+  if (helperName == "status") {
+    if (hasPath("/std/collections/ContainerError/status")) {
+      return "/std/collections/ContainerError/status";
+    }
+    if (hasPath("/ContainerError/status")) {
+      return "/ContainerError/status";
+    }
+    if (hasPath("/std/collections/containerErrorStatus")) {
+      return "/std/collections/containerErrorStatus";
+    }
+    return "";
+  }
+  if (helperName == "result") {
+    if (hasPath("/std/collections/ContainerError/result")) {
+      return "/std/collections/ContainerError/result";
+    }
+    if (hasPath("/ContainerError/result")) {
+      return "/ContainerError/result";
+    }
+    if (hasPath("/std/collections/containerErrorResult")) {
+      return "/std/collections/containerErrorResult";
+    }
+    return "";
+  }
+  return "";
+}
+
+std::string preferredGfxErrorHelperTarget(
+    std::string_view helperName,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::string &resolvedTypePath = "") {
+  auto helperForBasePath = [&](std::string_view basePath) -> std::string {
+    const std::string helperPath = std::string(basePath) + "/" + std::string(helperName);
+    return defMap.find(helperPath) != defMap.end() ? helperPath : "";
+  };
+  const std::string canonicalBase = "/std/gfx/GfxError";
+  const std::string experimentalBase = "/std/gfx/experimental/GfxError";
+  if (resolvedTypePath == canonicalBase) {
+    return helperForBasePath(canonicalBase);
+  }
+  if (resolvedTypePath == experimentalBase) {
+    return helperForBasePath(experimentalBase);
+  }
+  const bool hasCanonical =
+      defMap.find(canonicalBase + "/" + std::string(helperName)) != defMap.end();
+  const bool hasExperimental =
+      defMap.find(experimentalBase + "/" + std::string(helperName)) != defMap.end();
+  if (hasCanonical && !hasExperimental) {
+    return helperForBasePath(canonicalBase);
+  }
+  if (!hasCanonical && hasExperimental) {
+    return helperForBasePath(experimentalBase);
+  }
+  return "";
+}
+
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
          helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
@@ -952,6 +1119,14 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
 
   if (!localInfo.structTypeName.empty()) {
     resolvedTypePathOut = localInfo.structTypeName;
+    return true;
+  }
+  if (!localInfo.errorHelperNamespacePath.empty()) {
+    resolvedTypePathOut = localInfo.errorHelperNamespacePath;
+    return true;
+  }
+  if (!localInfo.errorTypeName.empty()) {
+    typeNameOut = localInfo.errorTypeName;
     return true;
   }
 
@@ -2176,6 +2351,49 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     return nullptr;
   }
 
+  if (receiver->kind == Expr::Kind::Name && localsIn.find(receiver->name) == localsIn.end()) {
+    std::string normalizedMethodName = callExpr.name;
+    if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+      normalizedMethodName.erase(normalizedMethodName.begin());
+    }
+    if (normalizedMethodName.rfind("vector/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+    } else if (normalizedMethodName.rfind("array/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
+    } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+    } else if (normalizedMethodName.rfind("map/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
+    } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
+    }
+    std::string helperPath;
+    if (receiver->name == "FileError" &&
+        (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+         normalizedMethodName == "eof" || normalizedMethodName == "status" ||
+         normalizedMethodName == "result")) {
+      helperPath = preferredFileErrorHelperTarget(normalizedMethodName, defMap);
+    } else if (receiver->name == "ImageError" &&
+               (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+                normalizedMethodName == "result")) {
+      helperPath = preferredImageErrorHelperTarget(normalizedMethodName, defMap);
+    } else if (receiver->name == "ContainerError" &&
+               (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+                normalizedMethodName == "result")) {
+      helperPath = preferredContainerErrorHelperTarget(normalizedMethodName, defMap);
+    } else if (receiver->name == "GfxError" &&
+               (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+                normalizedMethodName == "result")) {
+      helperPath = preferredGfxErrorHelperTarget(normalizedMethodName, defMap);
+    }
+    if (!helperPath.empty()) {
+      auto defIt = defMap.find(helperPath);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
+  }
+
   std::string typeName;
   std::string resolvedTypePath;
   if (!resolveMethodReceiverTarget(*receiver,
@@ -2465,6 +2683,25 @@ bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
 
   auto it = localsIn.find(receiverNameExpr.name);
   if (it == localsIn.end()) {
+    if (receiverNameExpr.name == "FileError") {
+      typeNameOut = "FileError";
+      resolvedTypePathOut = "/std/file/FileError";
+      return true;
+    }
+    if (receiverNameExpr.name == "ImageError") {
+      typeNameOut = "ImageError";
+      resolvedTypePathOut = "/std/image/ImageError";
+      return true;
+    }
+    if (receiverNameExpr.name == "ContainerError") {
+      typeNameOut = "ContainerError";
+      resolvedTypePathOut = "/std/collections/ContainerError";
+      return true;
+    }
+    if (receiverNameExpr.name == "GfxError") {
+      typeNameOut = "GfxError";
+      return true;
+    }
     errorOut = "native backend does not know identifier: " + receiverNameExpr.name;
     return false;
   }

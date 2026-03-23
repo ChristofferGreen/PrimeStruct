@@ -144,7 +144,11 @@ std::string resolveCallPathFromScope(
     return expr.name;
   }
   if (!expr.namespacePrefix.empty()) {
-    std::string scoped = expr.namespacePrefix + "/" + expr.name;
+    std::string scoped = expr.namespacePrefix;
+    if (!scoped.empty() && scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    scoped += "/" + expr.name;
     if (defMap.count(scoped) > 0) {
       return scoped;
     }

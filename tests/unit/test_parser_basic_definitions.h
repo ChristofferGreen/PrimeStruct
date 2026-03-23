@@ -154,6 +154,32 @@ main() {
   REQUIRE(lambdaExpr.bodyArguments.size() == 1);
 }
 
+TEST_CASE("parses lambda expressions after earlier call arguments") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  foo(1i32, []([i32] value) { return(value) })
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &fooCall = mainDef.statements[0];
+  REQUIRE(fooCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(fooCall.name == "foo");
+  REQUIRE(fooCall.args.size() == 2);
+  CHECK(fooCall.args[0].kind == primec::Expr::Kind::Literal);
+  const auto &lambdaExpr = fooCall.args[1];
+  CHECK(lambdaExpr.isLambda);
+  CHECK(lambdaExpr.lambdaCaptures.empty());
+  REQUIRE(lambdaExpr.args.size() == 1);
+  CHECK(lambdaExpr.args[0].isBinding);
+  CHECK(lambdaExpr.hasBodyArguments);
+  REQUIRE(lambdaExpr.bodyArguments.size() == 1);
+}
+
 TEST_CASE("parses lambda return inside void definitions") {
   const std::string source = R"(
 [return<void>]
