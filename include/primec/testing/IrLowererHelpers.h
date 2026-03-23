@@ -2440,6 +2440,7 @@ struct LowerInferenceSetupBootstrapState {
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferCallExprPointerFallbackKind;
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
+  std::function<const Definition *(const Expr &)> resolveDefinitionCall;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
 };
 

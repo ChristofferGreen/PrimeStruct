@@ -130,29 +130,47 @@ bool isBaseSetupResultOrTryCall(const Expr &expr) {
 
 LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
                                                   const LocalMap &localsIn,
+                                                  const ResolveMethodCallWithLocalsFn *resolveMethodCall,
+                                                  const ResolveCallDefinitionFn *resolveDefinitionCall,
+                                                  const LookupReturnInfoFn *lookupReturnInfo,
                                                   const InferExprKindWithLocalsFn *fallbackInferExprKind);
 
 bool resolveBaseSetupResultExprInfo(const Expr &expr,
                                     const LocalMap &localsIn,
+                                    const ResolveMethodCallWithLocalsFn *resolveMethodCall,
+                                    const ResolveCallDefinitionFn *resolveDefinitionCall,
+                                    const LookupReturnInfoFn *lookupReturnInfo,
                                     const InferExprKindWithLocalsFn *fallbackInferExprKind,
                                     ResultExprInfo &out) {
-  auto resolveMethodCall = [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
-  auto resolveDefinitionCall = [](const Expr &) -> const Definition * { return nullptr; };
-  auto lookupReturnInfo = [](const std::string &, ReturnInfo &) { return false; };
+  const ResolveMethodCallWithLocalsFn noopResolveMethodCall =
+      [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
+  const ResolveCallDefinitionFn noopResolveDefinitionCall = [](const Expr &) -> const Definition * { return nullptr; };
+  const LookupReturnInfoFn noopLookupReturnInfo = [](const std::string &, ReturnInfo &) { return false; };
+  const ResolveMethodCallWithLocalsFn &resolveMethodCallFn =
+      (resolveMethodCall != nullptr && *resolveMethodCall) ? *resolveMethodCall : noopResolveMethodCall;
+  const ResolveCallDefinitionFn &resolveDefinitionCallFn =
+      (resolveDefinitionCall != nullptr && *resolveDefinitionCall) ? *resolveDefinitionCall : noopResolveDefinitionCall;
+  const LookupReturnInfoFn &lookupReturnInfoFn =
+      (lookupReturnInfo != nullptr && *lookupReturnInfo) ? *lookupReturnInfo : noopLookupReturnInfo;
   return resolveResultExprInfoFromLocals(
       expr,
       localsIn,
-      resolveMethodCall,
-      resolveDefinitionCall,
-      lookupReturnInfo,
-      [fallbackInferExprKind](const Expr &candidate, const LocalMap &candidateLocals) {
-        return inferBaseSetupSimpleExprKind(candidate, candidateLocals, fallbackInferExprKind);
+      resolveMethodCallFn,
+      resolveDefinitionCallFn,
+      lookupReturnInfoFn,
+      [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, fallbackInferExprKind](
+          const Expr &candidate, const LocalMap &candidateLocals) {
+        return inferBaseSetupSimpleExprKind(
+            candidate, candidateLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, fallbackInferExprKind);
       },
       out);
 }
 
 LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
                                                   const LocalMap &localsIn,
+                                                  const ResolveMethodCallWithLocalsFn *resolveMethodCall,
+                                                  const ResolveCallDefinitionFn *resolveDefinitionCall,
+                                                  const LookupReturnInfoFn *lookupReturnInfo,
                                                   const InferExprKindWithLocalsFn *fallbackInferExprKind) {
   switch (expr.kind) {
     case Expr::Kind::Literal:
@@ -182,7 +200,9 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
     }
     case Expr::Kind::Call: {
       ResultExprInfo resultInfo;
-      if (resolveBaseSetupResultExprInfo(expr, localsIn, fallbackInferExprKind, resultInfo) && resultInfo.isResult &&
+      if (resolveBaseSetupResultExprInfo(
+              expr, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, fallbackInferExprKind, resultInfo) &&
+          resultInfo.isResult &&
           resultInfo.hasValue) {
         return resultInfo.valueKind;
       }
@@ -307,6 +327,9 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
                                                         const LocalMap &,
                                                         UninitializedStorageAccessInfo &,
                                                         bool &)> &resolveUninitializedStorage,
+                               const ResolveMethodCallWithLocalsFn *resolveMethodCall,
+                               const ResolveCallDefinitionFn *resolveDefinitionCall,
+                               const LookupReturnInfoFn *lookupReturnInfo,
                                const InferExprKindWithLocalsFn *fallbackInferExprKind,
                                LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
@@ -470,7 +493,9 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
         }
       }
       ResultExprInfo resultInfo;
-      if (resolveBaseSetupResultExprInfo(arg, localsIn, fallbackInferExprKind, resultInfo) && resultInfo.isResult) {
+      if (resolveBaseSetupResultExprInfo(
+              arg, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, fallbackInferExprKind, resultInfo) &&
+          resultInfo.isResult) {
         kindOut = resultInfo.hasValue ? resultInfo.valueKind : LocalInfo::ValueKind::Int32;
         return true;
       }
@@ -580,6 +605,9 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
                                                stateOut.getReturnInfo,
                                                *defMap,
                                                errorOut);
+  };
+  stateOut.resolveDefinitionCall = [defMap, resolveExprPath](const Expr &callExpr) -> const Definition * {
+    return primec::ir_lowerer::resolveDefinitionCall(callExpr, *defMap, resolveExprPath);
   };
 
   stateOut.inferPointerTargetKind = [getBuiltinOperatorName](const Expr &expr,
@@ -916,12 +944,27 @@ bool runLowerInferenceExprKindCallBaseSetup(const LowerInferenceExprKindCallBase
   stateInOut.inferCallExprBaseKind =
       [inferStructExprPath, resolveStructFieldSlot, resolveUninitializedStorage, &stateInOut](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
+        const ResolveMethodCallWithLocalsFn resolveMethodCall =
+            [&stateInOut](const Expr &candidate, const LocalMap &candidateLocals) -> const Definition * {
+          return stateInOut.resolveMethodCallDefinition != nullptr
+                     ? stateInOut.resolveMethodCallDefinition(candidate, candidateLocals)
+                     : nullptr;
+        };
+        const ResolveCallDefinitionFn resolveDefinitionCall = [&stateInOut](const Expr &candidate) -> const Definition * {
+          return stateInOut.resolveDefinitionCall != nullptr ? stateInOut.resolveDefinitionCall(candidate) : nullptr;
+        };
+        const LookupReturnInfoFn lookupReturnInfo = [&stateInOut](const std::string &path, ReturnInfo &returnInfoOut) {
+          return stateInOut.getReturnInfo != nullptr ? stateInOut.getReturnInfo(path, returnInfoOut) : false;
+        };
         return inferCallExprBaseKindImpl(
             expr,
             localsIn,
             inferStructExprPath,
             resolveStructFieldSlot,
             resolveUninitializedStorage,
+            &resolveMethodCall,
+            &resolveDefinitionCall,
+            &lookupReturnInfo,
             &stateInOut.inferExprKind,
             kindOut);
       };

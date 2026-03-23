@@ -692,7 +692,10 @@ for(
     expressions for downstream string consumers such as `count(...)` and `print_line(...)` without an intermediate
     binding, and the lowerer’s call-base inference helper now resolves those same direct combinators for `try(...)`
     while reusing the configured inference state for ordinary mapped/chained arithmetic bodies instead of depending on
-    the later dispatch-only path.
+    the later dispatch-only path. That same call-base path also now resolves definition-backed and receiver-method
+    `Result` sources inside those combinators, so named helpers such as `greeting()` and method-sugar helpers such as
+    `reader.read()` can feed direct `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` consumers on
+    IR-backed VM/native paths without an intermediate local.
   - `/std/file/*` now also exposes a stdlib-owned `FileError` namespace surface: `FileError.why(err)`,
     `FileError.status(err)`, `FileError.result<T>(err)`, `FileError.eof()`, and `FileError.is_eof(err)` resolve
     through `/std/file/FileError/*` even in direct nested `Result.error(...)` / `Result.why(...)` expressions, and

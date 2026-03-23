@@ -610,6 +610,66 @@ main() {
   CHECK(result == 14);
 }
 
+TEST_CASE("ir lowerer supports definition-backed string Result combinator sources") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return("parse failed"utf8)
+  }
+}
+
+[struct]
+Reader() {
+  [i32] marker{0i32}
+}
+
+[return<Result<string, ParseError>>]
+greeting() {
+  return(Result.ok("alpha"utf8))
+}
+
+[return<Result<string, ParseError>>]
+/Reader/read([Reader] self) {
+  return(Result.ok("beta"utf8))
+}
+
+[return<int>]
+main() {
+  [Reader] reader{Reader()}
+  return(
+    plus(
+      plus(
+        count(try(Result.map(greeting(), []([string] value) { return(value) }))),
+        count(try(Result.and_then(reader.read(), []([string] value) { return(Result.ok(value)) })))
+      ),
+      count(try(Result.map2(greeting(), reader.read(), []([string] left, [string] right) { return(left) })))
+    )
+  )
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 14);
+}
+
 TEST_CASE("ir lowerer rejects wide Result.ok payloads") {
   const std::string source = R"(
 import /std/file/*
