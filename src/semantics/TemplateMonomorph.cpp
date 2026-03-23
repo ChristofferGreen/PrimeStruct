@@ -1055,6 +1055,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphTypeResolution.h"
 #include "TemplateMonomorphCollectionHelperInference.h"
+#include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphExperimentalCollectionReceiverResolution.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 
@@ -1763,138 +1764,6 @@ bool rewriteExpr(Expr &expr,
     }
     return rewriteExperimentalVectorTargetValueForType(bindingTypeText, bindingExpr.args.front());
   };
-  auto inferCallTargetBinding = [&](const Expr &bindingExpr, BindingInfo &bindingOut) -> bool {
-    const bool hasExplicitBinding = extractExplicitBindingType(bindingExpr, bindingOut);
-    if (hasExplicitBinding && bindingOut.typeName != "auto") {
-      return true;
-    }
-    if (bindingExpr.args.size() != 1) {
-      return hasExplicitBinding;
-    }
-    BindingInfo inferredBinding;
-    if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), {}, {}, allowMathBare, ctx, inferredBinding)) {
-      return hasExplicitBinding;
-    }
-    bindingOut = inferredBinding;
-    return true;
-  };
-  std::function<bool(const Expr &, BindingInfo &)> resolveAssignmentTargetBinding;
-  auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
-    if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
-      return false;
-    }
-    const Expr &receiver = target.args.front();
-    std::string receiverTypeText;
-    BindingInfo receiverInfo;
-    if (resolveAssignmentTargetBinding && resolveAssignmentTargetBinding(receiver, receiverInfo)) {
-      receiverTypeText = bindingTypeToString(receiverInfo);
-    } else if (inferBindingTypeForMonomorph(receiver, params, locals, allowMathBare, ctx, receiverInfo)) {
-      receiverTypeText = bindingTypeToString(receiverInfo);
-    }
-    if (receiverTypeText.empty()) {
-      receiverTypeText =
-          inferExprTypeTextForTemplatedVectorFallback(receiver, locals, namespacePrefix, ctx, allowMathBare);
-    }
-    if (receiverTypeText.empty()) {
-      return false;
-    }
-    receiverTypeText = normalizeBindingTypeName(receiverTypeText);
-    while (true) {
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
-        break;
-      }
-      base = normalizeBindingTypeName(base);
-      if (base != "Reference" && base != "Pointer") {
-        receiverTypeText = base;
-        break;
-      }
-      std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
-        return false;
-      }
-      receiverTypeText = normalizeBindingTypeName(args.front());
-    }
-    std::string receiverStructPath = receiverTypeText;
-    std::string receiverBase;
-    std::string receiverArgText;
-    if (splitTemplateTypeName(receiverStructPath, receiverBase, receiverArgText) && !receiverBase.empty()) {
-      receiverStructPath = normalizeBindingTypeName(receiverBase);
-    }
-    if (!receiverStructPath.empty() && receiverStructPath.front() != '/') {
-      receiverStructPath = resolveTypePath(receiverStructPath, receiver.namespacePrefix);
-    }
-    auto structIt = ctx.sourceDefs.find(receiverStructPath);
-    if (structIt == ctx.sourceDefs.end() || !isStructDefinition(structIt->second)) {
-      return false;
-    }
-    for (const auto &fieldStmt : structIt->second.statements) {
-      if (!fieldStmt.isBinding || fieldStmt.name != target.name) {
-        continue;
-      }
-      return inferCallTargetBinding(fieldStmt, bindingOut);
-    }
-    return false;
-  };
-  auto resolveDereferenceBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
-    if (target.kind != Expr::Kind::Call || target.args.size() != 1) {
-      return false;
-    }
-    std::string pointerBuiltin;
-    if (!getBuiltinPointerName(target, pointerBuiltin) || pointerBuiltin != "dereference") {
-      return false;
-    }
-    std::function<bool(const Expr &, BindingInfo &)> inferPointerBinding =
-        [&](const Expr &pointerExpr, BindingInfo &pointerOut) -> bool {
-      if (inferBindingTypeForMonomorph(pointerExpr, params, locals, allowMathBare, ctx, pointerOut)) {
-        return true;
-      }
-      if (pointerExpr.kind != Expr::Kind::Call || pointerExpr.args.size() != 1) {
-        return false;
-      }
-      std::string nestedPointerBuiltin;
-      if (!getBuiltinPointerName(pointerExpr, nestedPointerBuiltin) || nestedPointerBuiltin != "location") {
-        return false;
-      }
-      BindingInfo pointeeInfo;
-      if (!resolveAssignmentTargetBinding(pointerExpr.args.front(), pointeeInfo)) {
-        return false;
-      }
-      const std::string pointeeTypeText = bindingTypeToString(pointeeInfo);
-      if (pointeeTypeText.empty()) {
-        return false;
-      }
-      pointerOut.typeName = "Reference";
-      pointerOut.typeTemplateArg = pointeeTypeText;
-      return true;
-    };
-    BindingInfo pointerInfo;
-    if (!inferPointerBinding(target.args.front(), pointerInfo)) {
-      return false;
-    }
-    const std::string normalizedPointerType = normalizeBindingTypeName(pointerInfo.typeName);
-    if ((normalizedPointerType != "Reference" && normalizedPointerType != "Pointer") ||
-        pointerInfo.typeTemplateArg.empty()) {
-      return false;
-    }
-    std::string pointeeBase;
-    std::string pointeeArgText;
-    if (splitTemplateTypeName(pointerInfo.typeTemplateArg, pointeeBase, pointeeArgText) && !pointeeBase.empty()) {
-      bindingOut.typeName = pointeeBase;
-      bindingOut.typeTemplateArg = pointeeArgText;
-    } else {
-      bindingOut.typeName = pointerInfo.typeTemplateArg;
-      bindingOut.typeTemplateArg.clear();
-    }
-    return true;
-  };
-  resolveAssignmentTargetBinding = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
-    return inferBindingTypeForMonomorph(target, params, locals, allowMathBare, ctx, bindingOut) ||
-           resolveFieldBindingTarget(target, bindingOut) ||
-           resolveDereferenceBindingTarget(target, bindingOut);
-  };
-
   rewriteNestedExperimentalMapConstructorValue = [&](Expr &candidate) -> bool {
     if (candidate.isBinding && candidate.args.size() == 1) {
       return rewriteNestedExperimentalMapConstructorValue(candidate.args.front());
@@ -1982,7 +1851,7 @@ bool rewriteExpr(Expr &expr,
       for (const auto &paramExpr : targetDef.parameters) {
         ParameterInfo paramInfo;
         paramInfo.name = paramExpr.name;
-        inferCallTargetBinding(paramExpr, paramInfo.binding);
+        inferCallTargetBinding(paramExpr, allowMathBare, ctx, paramInfo.binding);
         if (paramExpr.args.size() == 1) {
           paramInfo.defaultExpr = &paramExpr.args.front();
         }
@@ -1995,7 +1864,7 @@ bool rewriteExpr(Expr &expr,
         }
         ParameterInfo fieldInfo;
         fieldInfo.name = fieldExpr.name;
-        inferCallTargetBinding(fieldExpr, fieldInfo.binding);
+        inferCallTargetBinding(fieldExpr, allowMathBare, ctx, fieldInfo.binding);
         if (fieldExpr.args.size() == 1) {
           fieldInfo.defaultExpr = &fieldExpr.args.front();
         }
@@ -2066,7 +1935,7 @@ bool rewriteExpr(Expr &expr,
       for (const auto &paramExpr : targetDef.parameters) {
         ParameterInfo paramInfo;
         paramInfo.name = paramExpr.name;
-        inferCallTargetBinding(paramExpr, paramInfo.binding);
+        inferCallTargetBinding(paramExpr, allowMathBare, ctx, paramInfo.binding);
         if (paramExpr.args.size() == 1) {
           paramInfo.defaultExpr = &paramExpr.args.front();
         }
@@ -2079,7 +1948,7 @@ bool rewriteExpr(Expr &expr,
         }
         ParameterInfo fieldInfo;
         fieldInfo.name = fieldExpr.name;
-        inferCallTargetBinding(fieldExpr, fieldInfo.binding);
+        inferCallTargetBinding(fieldExpr, allowMathBare, ctx, fieldInfo.binding);
         if (fieldExpr.args.size() == 1) {
           fieldInfo.defaultExpr = &fieldExpr.args.front();
         }
@@ -2390,7 +2259,8 @@ bool rewriteExpr(Expr &expr,
         return;
       }
       BindingInfo targetInfo;
-      if (!resolveAssignmentTargetBinding(expr.args.front(), targetInfo)) {
+      if (!resolveAssignmentTargetBinding(
+              expr.args.front(), params, locals, allowMathBare, namespacePrefix, ctx, targetInfo)) {
         return;
       }
       std::string targetTypeText = targetInfo.typeName;
@@ -2405,7 +2275,8 @@ bool rewriteExpr(Expr &expr,
         return;
       }
       BindingInfo targetInfo;
-      if (!resolveAssignmentTargetBinding(expr.args.front(), targetInfo)) {
+      if (!resolveAssignmentTargetBinding(
+              expr.args.front(), params, locals, allowMathBare, namespacePrefix, ctx, targetInfo)) {
         return;
       }
       std::string targetTypeText = targetInfo.typeName;
@@ -2420,7 +2291,8 @@ bool rewriteExpr(Expr &expr,
         return;
       }
       BindingInfo targetInfo;
-      if (!resolveAssignmentTargetBinding(expr.args.front(), targetInfo)) {
+      if (!resolveAssignmentTargetBinding(
+              expr.args.front(), params, locals, allowMathBare, namespacePrefix, ctx, targetInfo)) {
         return;
       }
       std::string targetTypeText = targetInfo.typeName;
@@ -2437,7 +2309,8 @@ bool rewriteExpr(Expr &expr,
         return;
       }
       BindingInfo targetInfo;
-      if (!resolveAssignmentTargetBinding(expr.args.front(), targetInfo)) {
+      if (!resolveAssignmentTargetBinding(
+              expr.args.front(), params, locals, allowMathBare, namespacePrefix, ctx, targetInfo)) {
         return;
       }
       std::string targetTypeText = targetInfo.typeName;
