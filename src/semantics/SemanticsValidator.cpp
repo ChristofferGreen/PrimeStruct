@@ -152,6 +152,7 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
         }
         bool initializerHasTry = false;
         std::string initializerTryOperandResolvedPath;
+        BindingInfo initializerTryOperandBinding;
         std::string initializerTryValueType;
         std::string initializerTryErrorType;
         ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
@@ -163,6 +164,7 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             tryIt != graphLocalAutoTryValues_.end()) {
           initializerHasTry = true;
           initializerTryOperandResolvedPath = tryIt->second.operandResolvedPath;
+          initializerTryOperandBinding = tryIt->second.operandBinding;
           initializerTryValueType = tryIt->second.valueType;
           initializerTryErrorType = tryIt->second.errorType;
           initializerTryContextReturnKind = tryIt->second.contextReturnKind;
@@ -185,6 +187,7 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             std::move(initializerResultErrorType),
             initializerHasTry,
             std::move(initializerTryOperandResolvedPath),
+            std::move(initializerTryOperandBinding),
             std::move(initializerTryValueType),
             std::move(initializerTryErrorType),
             initializerTryContextReturnKind,
@@ -414,6 +417,7 @@ SemanticsValidator::tryValueSnapshotForTesting() {
         std::move(tryData.operandResolvedPath),
         expr.sourceLine,
         expr.sourceColumn,
+        std::move(tryData.operandBinding),
         std::move(tryData.valueType),
         std::move(tryData.errorType),
         tryData.contextReturnKind,
@@ -469,6 +473,9 @@ bool SemanticsValidator::inferTrySnapshotData(const Definition &def,
 
   out.operandResolvedPath =
       expr.args.front().kind == Expr::Kind::Call ? resolveCalleePath(expr.args.front()) : std::string{};
+  withPreservedError([&]() {
+    return inferBindingTypeFromInitializer(expr.args.front(), defParams, activeLocals, out.operandBinding);
+  });
   out.valueType = resultInfo.valueType;
   out.errorType = resultInfo.errorType;
   if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {

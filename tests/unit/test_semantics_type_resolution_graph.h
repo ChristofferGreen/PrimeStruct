@@ -465,6 +465,7 @@ main() {
   CHECK(branchEntry.bindingTypeText == "i32");
   CHECK(!branchEntry.initializerHasTry);
   CHECK(branchEntry.initializerTryOperandResolvedPath.empty());
+  CHECK(branchEntry.initializerTryOperandBindingTypeText.empty());
   CHECK(branchEntry.initializerTryValueTypeText.empty());
   CHECK(branchEntry.initializerTryErrorTypeText.empty());
   CHECK(branchEntry.initializerTryContextReturnKindText.empty());
@@ -483,6 +484,7 @@ main() {
   CHECK(selectedEntry.initializerResultErrorTypeText == "ContainerError");
   CHECK(selectedEntry.initializerHasTry);
   CHECK(selectedEntry.initializerTryOperandResolvedPath == "/std/collections/map/tryAt");
+  CHECK(selectedEntry.initializerTryOperandBindingTypeText == "Result<i32, ContainerError>");
   CHECK(selectedEntry.initializerTryValueTypeText == "i32");
   CHECK(selectedEntry.initializerTryErrorTypeText == "ContainerError");
   CHECK(selectedEntry.initializerTryContextReturnKindText == "array");
@@ -523,6 +525,7 @@ main() {
   const auto &tryEntry = requireTryValueSnapshotEntry(trySnapshot, "/main", "/std/collections/map/tryAt");
   CHECK(localEntry.initializerHasTry);
   CHECK(localEntry.initializerTryOperandResolvedPath == tryEntry.operandResolvedPath);
+  CHECK(localEntry.initializerTryOperandBindingTypeText == tryEntry.operandBindingTypeText);
   CHECK(localEntry.initializerTryValueTypeText == tryEntry.valueTypeText);
   CHECK(localEntry.initializerTryErrorTypeText == tryEntry.errorTypeText);
   CHECK(localEntry.initializerTryContextReturnKindText == tryEntry.contextReturnKindText);

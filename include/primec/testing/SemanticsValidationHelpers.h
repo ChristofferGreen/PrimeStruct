@@ -89,6 +89,7 @@ struct TypeResolutionLocalBindingSnapshotEntry {
   std::string initializerResultErrorTypeText;
   bool initializerHasTry = false;
   std::string initializerTryOperandResolvedPath;
+  std::string initializerTryOperandBindingTypeText;
   std::string initializerTryValueTypeText;
   std::string initializerTryErrorTypeText;
   std::string initializerTryContextReturnKindText;
@@ -147,6 +148,7 @@ struct TypeResolutionTryValueSnapshotEntry {
   std::string operandResolvedPath;
   int sourceLine = 0;
   int sourceColumn = 0;
+  std::string operandBindingTypeText;
   std::string valueTypeText;
   std::string errorTypeText;
   std::string contextReturnKindText;

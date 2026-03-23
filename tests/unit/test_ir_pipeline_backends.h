@@ -326,6 +326,7 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(testApi.find("std::string initializerBindingTypeText;") != std::string::npos);
   CHECK(testApi.find("bool initializerHasTry = false;") != std::string::npos);
   CHECK(testApi.find("std::string initializerTryOperandResolvedPath;") != std::string::npos);
+  CHECK(testApi.find("std::string initializerTryOperandBindingTypeText;") != std::string::npos);
   CHECK(testApi.find("std::string initializerTryValueTypeText;") != std::string::npos);
   CHECK(testApi.find("std::string initializerTryErrorTypeText;") != std::string::npos);
   CHECK(testApi.find("std::string initializerTryContextReturnKindText;") != std::string::npos);
@@ -340,6 +341,7 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(testApi.find("struct TypeResolutionQueryResultTypeSnapshot") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionTryValueSnapshotEntry") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionTryValueSnapshot") != std::string::npos);
+  CHECK(testApi.find("std::string operandBindingTypeText;") != std::string::npos);
   CHECK(testApi.find("std::string onErrorErrorTypeText;") != std::string::npos);
   CHECK(testApi.find("size_t onErrorBoundArgCount = 0;") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionCallBindingSnapshotEntry") != std::string::npos);
@@ -638,12 +640,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorHeader.find("BindingInfo initializerBinding;") != std::string::npos);
   CHECK(validatorHeader.find("bool initializerHasTry = false;") != std::string::npos);
   CHECK(validatorHeader.find("std::string initializerTryOperandResolvedPath;") != std::string::npos);
+  CHECK(validatorHeader.find("BindingInfo initializerTryOperandBinding;") != std::string::npos);
   CHECK(validatorHeader.find("ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::string initializerTryOnErrorErrorType;") != std::string::npos);
   CHECK(validatorHeader.find("size_t initializerTryOnErrorBoundArgCount = 0;") != std::string::npos);
   CHECK(validatorHeader.find("std::string onErrorErrorType;") != std::string::npos);
   CHECK(validatorHeader.find("size_t onErrorBoundArgCount = 0;") != std::string::npos);
+  CHECK(validatorHeader.find("BindingInfo operandBinding;") != std::string::npos);
   CHECK(validatorHeader.find("struct QueryCallTypeSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("struct QueryBindingSnapshotEntry {") != std::string::npos);
   CHECK(validatorHeader.find("struct QueryResultTypeSnapshotEntry {") != std::string::npos);
@@ -839,6 +843,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorCore.find("initializerHasTry = true;") != std::string::npos);
   CHECK(validatorCore.find("initializerTryOperandResolvedPath = tryIt->second.operandResolvedPath;") !=
         std::string::npos);
+  CHECK(validatorCore.find("initializerTryOperandBinding = tryIt->second.operandBinding;") !=
+        std::string::npos);
   CHECK(validatorCore.find("initializerTryOnErrorErrorType = tryIt->second.onErrorErrorType;") !=
         std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::queryCallTypeSnapshotForTesting()") !=
@@ -863,6 +869,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorCore.find("const auto &context = buildDefinitionValidationContext(def);") !=
         std::string::npos);
   CHECK(validatorCore.find("if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {") !=
+        std::string::npos);
+  CHECK(validatorCore.find("inferBindingTypeFromInitializer(expr.args.front(), defParams, activeLocals, out.operandBinding)") !=
         std::string::npos);
   CHECK(validatorCore.find("context.onError->handlerPath") != std::string::npos);
   CHECK(validatorCore.find("out.onErrorErrorType = context.onError->errorType;") !=
@@ -901,8 +909,12 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(semanticsValidate.find("bindingTypeTextForSnapshot(entry.initializerBinding)") != std::string::npos);
   CHECK(semanticsValidate.find("entry.initializerHasTry") != std::string::npos);
   CHECK(semanticsValidate.find("entry.initializerTryOperandResolvedPath") != std::string::npos);
+  CHECK(semanticsValidate.find("bindingTypeTextForSnapshot(entry.initializerTryOperandBinding)") !=
+        std::string::npos);
   CHECK(semanticsValidate.find("entry.initializerTryOnErrorErrorType") != std::string::npos);
   CHECK(semanticsValidate.find("entry.initializerTryOnErrorBoundArgCount") != std::string::npos);
+  CHECK(semanticsValidate.find("bindingTypeTextForSnapshot(entry.operandBinding)") !=
+        std::string::npos);
   CHECK(semanticsValidate.find("entry.onErrorBoundArgCount") != std::string::npos);
   CHECK(semanticsValidate.find("validator.queryCallTypeSnapshotForTesting()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.queryBindingSnapshotForTesting()") != std::string::npos);
