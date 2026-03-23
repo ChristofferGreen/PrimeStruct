@@ -58,6 +58,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   graphLocalAutoReceiverBindings_.clear();
   graphLocalAutoQueryTypeTexts_.clear();
   graphLocalAutoResultTypes_.clear();
+  graphLocalAutoTryValues_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
   const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
 
@@ -355,6 +356,41 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
           graphLocalAutoResultTypes_[bindingKey] = std::move(initializerResultType);
         } else {
           graphLocalAutoResultTypes_.erase(bindingKey);
+        }
+        LocalAutoTrySnapshotData initializerTryValue;
+        if (expr.args.size() == 1 &&
+            !expr.args.front().isMethodCall &&
+            isSimpleCallName(expr.args.front(), "try") &&
+            expr.args.front().args.size() == 1 &&
+            expr.args.front().templateArgs.empty() &&
+            !expr.args.front().hasBodyArguments &&
+            expr.args.front().bodyArguments.empty()) {
+          ResultTypeInfo tryResultType;
+          if (withPreservedError([&]() {
+                return resolveResultTypeForExpr(
+                    expr.args.front().args.front(), defParams, activeLocals, tryResultType);
+              }) &&
+              tryResultType.isResult &&
+              tryResultType.hasValue &&
+              !tryResultType.valueType.empty()) {
+            initializerTryValue.operandResolvedPath =
+                expr.args.front().args.front().kind == Expr::Kind::Call
+                    ? resolveCalleePath(expr.args.front().args.front())
+                    : std::string{};
+            initializerTryValue.valueType = tryResultType.valueType;
+            initializerTryValue.errorType = tryResultType.errorType;
+            if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
+              initializerTryValue.contextReturnKind = returnKindIt->second;
+            }
+            const auto &context = buildDefinitionValidationContext(def);
+            initializerTryValue.onErrorHandlerPath =
+                context.onError.has_value() ? context.onError->handlerPath : std::string{};
+            graphLocalAutoTryValues_[bindingKey] = std::move(initializerTryValue);
+          } else {
+            graphLocalAutoTryValues_.erase(bindingKey);
+          }
+        } else {
+          graphLocalAutoTryValues_.erase(bindingKey);
         }
       }
       activeLocals.emplace(expr.name, std::move(binding));

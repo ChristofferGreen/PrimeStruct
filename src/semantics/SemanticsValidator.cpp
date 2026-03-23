@@ -144,6 +144,22 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
           initializerResultValueType = resultIt->second.valueType;
           initializerResultErrorType = resultIt->second.errorType;
         }
+        bool initializerHasTry = false;
+        std::string initializerTryOperandResolvedPath;
+        std::string initializerTryValueType;
+        std::string initializerTryErrorType;
+        ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
+        std::string initializerTryOnErrorHandlerPath;
+        if (const auto tryIt = graphLocalAutoTryValues_.find(
+                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+            tryIt != graphLocalAutoTryValues_.end()) {
+          initializerHasTry = true;
+          initializerTryOperandResolvedPath = tryIt->second.operandResolvedPath;
+          initializerTryValueType = tryIt->second.valueType;
+          initializerTryErrorType = tryIt->second.errorType;
+          initializerTryContextReturnKind = tryIt->second.contextReturnKind;
+          initializerTryOnErrorHandlerPath = tryIt->second.onErrorHandlerPath;
+        }
         entries.push_back(LocalAutoBindingSnapshotEntry{
             scopePath,
             expr.name,
@@ -156,6 +172,12 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             initializerResultHasValue,
             std::move(initializerResultValueType),
             std::move(initializerResultErrorType),
+            initializerHasTry,
+            std::move(initializerTryOperandResolvedPath),
+            std::move(initializerTryValueType),
+            std::move(initializerTryErrorType),
+            initializerTryContextReturnKind,
+            std::move(initializerTryOnErrorHandlerPath),
         });
       }
     }

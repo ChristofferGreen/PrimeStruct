@@ -380,6 +380,12 @@ bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
           entry.initializerResultHasValue,
           entry.initializerResultValueType,
           entry.initializerResultErrorType,
+          entry.initializerHasTry,
+          entry.initializerTryOperandResolvedPath,
+          entry.initializerTryValueType,
+          entry.initializerTryErrorType,
+          entry.initializerHasTry ? returnKindSnapshotName(entry.initializerTryContextReturnKind) : std::string{},
+          entry.initializerTryOnErrorHandlerPath,
       });
     }
   });

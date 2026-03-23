@@ -26,6 +26,17 @@ std::string requireTypeResolutionGraphDump(const std::string &source, const std:
   return dump;
 }
 
+const primec::semantics::TypeResolutionLocalBindingSnapshotEntry &requireLocalBindingSnapshotEntry(
+    const primec::semantics::TypeResolutionLocalBindingSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &bindingName) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.bindingName == bindingName;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 primec::semantics::TypeResolutionCallBindingSnapshotEntry requireCallBindingSnapshotEntry(
     const primec::semantics::TypeResolutionCallBindingSnapshot &snapshot,
     const std::string &scopePath,
@@ -365,6 +376,53 @@ TEST_CASE("type resolution call binding snapshot shares template-specialization 
 
   const auto &entry = requireCallBindingSnapshotEntry(snapshot, "/main", "/id__t25a78a513414c3bf");
   CHECK(entry.bindingTypeText == "i32");
+}
+
+TEST_CASE("type resolution local binding snapshot keeps shared try metadata after local flow") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<void>]
+unexpectedError([ContainerError] err) {
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc) on_error<ContainerError, /unexpectedError>]
+main() {
+  [Map<string, i32>] values{/std/collections/mapPair("left"raw_utf8, 4i32)}
+  [auto] branch{
+    if(true,
+      then(){ return(1i32) },
+      else(){ return(2i32) })
+  }
+  [auto] selected{try(values.tryAt("left"raw_utf8))}
+  return(Result.ok(plus(branch, selected)))
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &branchEntry = requireLocalBindingSnapshotEntry(snapshot, "/main", "branch");
+  CHECK(branchEntry.bindingTypeText == "i32");
+  CHECK(!branchEntry.initializerHasTry);
+  CHECK(branchEntry.initializerTryOperandResolvedPath.empty());
+  CHECK(branchEntry.initializerTryValueTypeText.empty());
+  CHECK(branchEntry.initializerTryErrorTypeText.empty());
+  CHECK(branchEntry.initializerTryContextReturnKindText.empty());
+  CHECK(branchEntry.initializerTryOnErrorHandlerPath.empty());
+
+  const auto &selectedEntry = requireLocalBindingSnapshotEntry(snapshot, "/main", "selected");
+  CHECK(selectedEntry.bindingTypeText == "i32");
+  CHECK(selectedEntry.initializerHasTry);
+  CHECK(selectedEntry.initializerTryOperandResolvedPath == "/std/collections/map/tryAt");
+  CHECK(selectedEntry.initializerTryValueTypeText == "i32");
+  CHECK(selectedEntry.initializerTryErrorTypeText == "ContainerError");
+  CHECK(selectedEntry.initializerTryContextReturnKindText == "array");
+  CHECK(selectedEntry.initializerTryOnErrorHandlerPath == "/unexpectedError");
 }
 
 TEST_SUITE_END();

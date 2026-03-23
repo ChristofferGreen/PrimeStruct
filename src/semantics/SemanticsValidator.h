@@ -36,6 +36,20 @@ public:
     bool initializerResultHasValue = false;
     std::string initializerResultValueType;
     std::string initializerResultErrorType;
+    bool initializerHasTry = false;
+    std::string initializerTryOperandResolvedPath;
+    std::string initializerTryValueType;
+    std::string initializerTryErrorType;
+    ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
+    std::string initializerTryOnErrorHandlerPath;
+  };
+
+  struct LocalAutoTrySnapshotData {
+    std::string operandResolvedPath;
+    std::string valueType;
+    std::string errorType;
+    ReturnKind contextReturnKind = ReturnKind::Unknown;
+    std::string onErrorHandlerPath;
   };
 
   struct QueryCallTypeSnapshotEntry {
@@ -1487,6 +1501,7 @@ private:
   std::unordered_map<std::string, BindingInfo> graphLocalAutoReceiverBindings_;
   std::unordered_map<std::string, std::string> graphLocalAutoQueryTypeTexts_;
   std::unordered_map<std::string, ResultTypeInfo> graphLocalAutoResultTypes_;
+  std::unordered_map<std::string, LocalAutoTrySnapshotData> graphLocalAutoTryValues_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
