@@ -10842,6 +10842,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionConstructorPaths.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionReturnRewritesPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReturnRewrites.h";
+  const std::filesystem::path templateMonomorphExperimentalCollectionReturnSetupPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReturnSetup.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
   REQUIRE(std::filesystem::exists(templateMonomorphFallbackPath));
   REQUIRE(std::filesystem::exists(templateMonomorphBindingCallPath));
@@ -10857,6 +10859,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReceiverResolutionPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionConstructorPathsPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReturnRewritesPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReturnSetupPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
   const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath);
@@ -10881,6 +10884,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphExperimentalCollectionConstructorPathsPath);
   const std::string templateMonomorphExperimentalCollectionReturnRewritesSource =
       readText(templateMonomorphExperimentalCollectionReturnRewritesPath);
+  const std::string templateMonomorphExperimentalCollectionReturnSetupSource =
+      readText(templateMonomorphExperimentalCollectionReturnSetupPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingCallInference.h\"") !=
@@ -10908,6 +10913,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionConstructorPaths.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionReturnRewrites.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionReturnSetup.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind)") ==
         std::string::npos);
@@ -10955,6 +10962,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("auto rewriteCanonicalExperimentalVectorReturnConstructors = [&](auto &self,") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("auto rewriteCanonicalExperimentalMapReturnConstructors = [&](auto &self,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("struct ExperimentalCollectionReturnRewritePlan") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("ExperimentalCollectionReturnRewritePlan inferExperimentalCollectionReturnRewritePlan(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("DefinitionReturnStatementSelection determineDefinitionReturnStatementSelection(") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolveExperimentalConstructorTargetTypeText(") ==
         std::string::npos);
@@ -11113,6 +11126,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReturnRewritesSource.find(
             "void rewriteExperimentalConstructorReturnTree(Expr &candidate, RewriteCurrentFn &&rewriteCurrent)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReturnSetupSource.find(
+            "struct ExperimentalCollectionReturnRewritePlan") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReturnSetupSource.find(
+            "ExperimentalCollectionReturnRewritePlan inferExperimentalCollectionReturnRewritePlan(") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReturnSetupSource.find(
+            "DefinitionReturnStatementSelection determineDefinitionReturnStatementSelection(const Definition &def)") !=
         std::string::npos);
 }
 
