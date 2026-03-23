@@ -2494,7 +2494,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         std::string valueType;
         keepBuiltinIndexedArgsPackMapMethod =
             keepBuiltinIndexedArgsPackMapMethod ||
-            (resolveArgsPackAccessTarget(*accessReceiver, elemType) &&
+            (dispatchResolvers.resolveArgsPackAccessTarget(*accessReceiver, elemType) &&
              extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
       }
     }

@@ -3,6 +3,36 @@
 #include <optional>
 
 namespace primec::semantics {
+namespace {
+
+bool isExperimentalMapTypeText(const std::string &typeText) {
+  std::string normalizedType = normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(normalizedType, base, argText)) {
+      return false;
+    }
+    base = normalizeBindingTypeName(base);
+    if (base == "Map" || base == "/Map" ||
+        base == "std/collections/experimental_map/Map" ||
+        base == "/std/collections/experimental_map/Map") {
+      std::vector<std::string> parts;
+      return splitTopLevelTemplateArgs(argText, parts) && parts.size() == 2;
+    }
+    if (base == "Reference" || base == "Pointer") {
+      std::vector<std::string> parts;
+      if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 1) {
+        return false;
+      }
+      normalizedType = normalizeBindingTypeName(parts.front());
+      continue;
+    }
+    return false;
+  }
+}
+
+} // namespace
 
 bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     const std::vector<ParameterInfo> &params,

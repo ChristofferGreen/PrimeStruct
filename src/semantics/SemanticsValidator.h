@@ -386,8 +386,26 @@ private:
                                        const Expr &stmt,
                                        std::unordered_map<std::string, BindingInfo> &activeLocals,
                                        DefinitionReturnInferenceState &state);
-  struct BuiltinCollectionDispatchResolverAdapters;
-  struct BuiltinCollectionDispatchResolvers;
+  struct BuiltinCollectionDispatchResolverAdapters {
+    std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;
+    std::function<bool(const Expr &, BindingInfo &)> inferCallBinding;
+  };
+  struct BuiltinCollectionDispatchResolvers {
+    std::function<bool(const Expr &, std::string &)> resolveIndexedArgsPackElementType;
+    std::function<bool(const Expr &, std::string &)> resolveDereferencedIndexedArgsPackElementType;
+    std::function<bool(const Expr &, std::string &)> resolveWrappedIndexedArgsPackElementType;
+    std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
+    std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
+    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorValueTarget;
+    std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveBufferTarget;
+    std::function<bool(const Expr &)> resolveStringTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapValueTarget;
+  };
 
   bool validateExpr(const std::vector<ParameterInfo> &params,
                     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -915,7 +933,7 @@ private:
       bool &resolvedMethod,
       bool usedMethodTarget,
       const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
-      const std::vector<Stmt> *enclosingStatements,
+      const std::vector<Expr> *enclosingStatements,
       size_t statementIndex,
       bool &handledOut);
   bool resolveExprCollectionAccessTarget(const std::vector<ParameterInfo> &params,
@@ -1014,26 +1032,6 @@ private:
       const std::unordered_map<std::string, BindingInfo> &locals,
       const BuiltinCollectionDispatchResolverAdapters &adapters,
       std::string &targetPathOut);
-  struct BuiltinCollectionDispatchResolverAdapters {
-    std::function<bool(const Expr &, BindingInfo &)> resolveBindingTarget;
-    std::function<bool(const Expr &, BindingInfo &)> inferCallBinding;
-  };
-  struct BuiltinCollectionDispatchResolvers {
-    std::function<bool(const Expr &, std::string &)> resolveIndexedArgsPackElementType;
-    std::function<bool(const Expr &, std::string &)> resolveDereferencedIndexedArgsPackElementType;
-    std::function<bool(const Expr &, std::string &)> resolveWrappedIndexedArgsPackElementType;
-    std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
-    std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
-    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
-    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorTarget;
-    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorValueTarget;
-    std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
-    std::function<bool(const Expr &, std::string &)> resolveBufferTarget;
-    std::function<bool(const Expr &)> resolveStringTarget;
-    std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
-    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapTarget;
-    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapValueTarget;
-  };
   BuiltinCollectionDispatchResolvers makeBuiltinCollectionDispatchResolvers(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,

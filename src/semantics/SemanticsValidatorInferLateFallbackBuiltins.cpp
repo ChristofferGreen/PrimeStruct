@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
+
 namespace primec::semantics {
 
 ReturnKind SemanticsValidator::inferLateFallbackReturnKind(

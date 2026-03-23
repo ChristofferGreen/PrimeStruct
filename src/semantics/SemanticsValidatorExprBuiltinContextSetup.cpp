@@ -57,10 +57,15 @@ void SemanticsValidator::prepareExprCountCapacityMapBuiltinContext(
       isStdNamespacedVectorCapacityCall;
   contextOut.resolveVectorTarget =
       [&](const Expr &target, std::string &elemTypeOut) {
-        return resolveVectorTarget(target, elemTypeOut);
+        return dispatchResolvers.resolveVectorTarget(target, elemTypeOut);
       };
-  contextOut.resolveMapTarget =
-      [&](const Expr &target) { return resolveMapTarget(target); };
+  contextOut.resolveMapTarget = [&](const Expr &target) {
+    std::string keyType;
+    std::string valueType;
+    return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
+           dispatchResolvers.resolveExperimentalMapTarget(target, keyType,
+                                                         valueType);
+  };
   contextOut.dispatchResolverAdapters = &dispatchResolverAdapters;
   contextOut.dispatchResolvers = &dispatchResolvers;
 }
@@ -95,11 +100,11 @@ void SemanticsValidator::prepareExprLateMapSoaBuiltinContext(
       shouldBuiltinValidateBareMapContainsCall;
   contextOut.resolveVectorTarget =
       [&](const Expr &target, std::string &elemTypeOut) {
-        return resolveVectorTarget(target, elemTypeOut);
+        return dispatchResolvers.resolveVectorTarget(target, elemTypeOut);
       };
   contextOut.resolveSoaVectorTarget =
       [&](const Expr &target, std::string &elemTypeOut) {
-        return resolveSoaVectorTarget(target, elemTypeOut);
+        return dispatchResolvers.resolveSoaVectorTarget(target, elemTypeOut);
       };
   contextOut.dispatchResolvers = &dispatchResolvers;
 }
@@ -129,7 +134,8 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
       shouldBuiltinValidateBareMapAccessCall;
   contextOut.collectionAccessFallbackContext.isNonCollectionStructAccessTarget =
       [&](const std::string &targetPath) {
-        return isNonCollectionStructAccessTarget(targetPath);
+        return this->hasDefinitionPath(targetPath) ||
+               this->hasImportedDefinitionPath(targetPath);
       };
   contextOut.collectionAccessFallbackContext.dispatchResolvers =
       &dispatchResolvers;

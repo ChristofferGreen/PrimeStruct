@@ -199,55 +199,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "buffer_store is only supported as a statement";
       return false;
     }
-    auto hasImportedDefinitionPath = [&](const std::string &path) {
-      std::string canonicalPath = path;
-      const size_t suffix = canonicalPath.find("__t");
-      if (suffix != std::string::npos) {
-        canonicalPath.erase(suffix);
-      }
-      const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
-      for (const auto &importPath : importPaths) {
-        if (importPath == canonicalPath) {
-          return true;
-        }
-        if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
-          const std::string prefix = importPath.substr(0, importPath.size() - 2);
-          if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-    auto hasDefinitionPath = [&](const std::string &path) {
-      return this->hasDefinitionPath(path);
-    };
-    auto isExperimentalMapTypeText = [&](const std::string &typeText) {
-      std::string normalizedType = normalizeBindingTypeName(typeText);
-      while (true) {
-        std::string base;
-        std::string argText;
-        if (!splitTemplateTypeName(normalizedType, base, argText)) {
-          return false;
-        }
-        base = normalizeBindingTypeName(base);
-        if (base == "Map" || base == "/Map" ||
-            base == "std/collections/experimental_map/Map" ||
-            base == "/std/collections/experimental_map/Map") {
-          std::vector<std::string> parts;
-          return splitTopLevelTemplateArgs(argText, parts) && parts.size() == 2;
-        }
-        if (base == "Reference" || base == "Pointer") {
-          std::vector<std::string> parts;
-          if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 1) {
-            return false;
-          }
-          normalizedType = normalizeBindingTypeName(parts.front());
-          continue;
-        }
-        return false;
-      }
-    };
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
     size_t vectorHelperCallReceiverIndex = 0;

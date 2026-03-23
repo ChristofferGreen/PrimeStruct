@@ -9,6 +9,87 @@ ReturnKind SemanticsValidator::inferScalarBuiltinReturnKind(
     bool &handled) {
   handled = false;
   std::string builtinName;
+  std::function<ReturnKind(const Expr &)> pointerTargetKind =
+      [&](const Expr &pointerExpr) -> ReturnKind {
+    if (pointerExpr.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding =
+              findParamBinding(params, pointerExpr.name)) {
+        if ((paramBinding->typeName == "Pointer" ||
+             paramBinding->typeName == "Reference") &&
+            !paramBinding->typeTemplateArg.empty()) {
+          return inferReferenceTargetKind(paramBinding->typeTemplateArg,
+                                          pointerExpr.namespacePrefix);
+        }
+        return ReturnKind::Unknown;
+      }
+      auto it = locals.find(pointerExpr.name);
+      if (it != locals.end()) {
+        if ((it->second.typeName == "Pointer" ||
+             it->second.typeName == "Reference") &&
+            !it->second.typeTemplateArg.empty()) {
+          return inferReferenceTargetKind(it->second.typeTemplateArg,
+                                          pointerExpr.namespacePrefix);
+        }
+      }
+      return ReturnKind::Unknown;
+    }
+    if (pointerExpr.kind == Expr::Kind::Call) {
+      std::string pointerName;
+      if (getBuiltinPointerName(pointerExpr, pointerName) &&
+          pointerName == "location" && pointerExpr.args.size() == 1) {
+        const Expr &target = pointerExpr.args.front();
+        if (target.kind != Expr::Kind::Name) {
+          return ReturnKind::Unknown;
+        }
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (paramBinding->typeName == "Reference" &&
+              !paramBinding->typeTemplateArg.empty()) {
+            return inferReferenceTargetKind(paramBinding->typeTemplateArg,
+                                            target.namespacePrefix);
+          }
+          return returnKindForTypeName(paramBinding->typeName);
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          if (it->second.typeName == "Reference" &&
+              !it->second.typeTemplateArg.empty()) {
+            return inferReferenceTargetKind(it->second.typeTemplateArg,
+                                            target.namespacePrefix);
+          }
+          return returnKindForTypeName(it->second.typeName);
+        }
+      }
+      if (getBuiltinMemoryName(pointerExpr, pointerName)) {
+        if (pointerName == "alloc" && pointerExpr.templateArgs.size() == 1 &&
+            pointerExpr.args.size() == 1) {
+          return inferReferenceTargetKind(pointerExpr.templateArgs.front(),
+                                          pointerExpr.namespacePrefix);
+        }
+        if (pointerName == "realloc" && pointerExpr.args.size() == 2) {
+          return pointerTargetKind(pointerExpr.args.front());
+        }
+        if (pointerName == "at" && pointerExpr.templateArgs.empty() &&
+            pointerExpr.args.size() == 3) {
+          return pointerTargetKind(pointerExpr.args.front());
+        }
+        if (pointerName == "at_unsafe" && pointerExpr.templateArgs.empty() &&
+            pointerExpr.args.size() == 2) {
+          return pointerTargetKind(pointerExpr.args.front());
+        }
+      }
+      std::string opName;
+      if (getBuiltinOperatorName(pointerExpr, opName) &&
+          (opName == "plus" || opName == "minus") &&
+          pointerExpr.args.size() == 2) {
+        ReturnKind leftKind = pointerTargetKind(pointerExpr.args[0]);
+        if (leftKind != ReturnKind::Unknown) {
+          return leftKind;
+        }
+        return pointerTargetKind(pointerExpr.args[1]);
+      }
+    }
+    return ReturnKind::Unknown;
+  };
 
   if (getBuiltinPointerName(expr, builtinName) && expr.args.size() == 1) {
     handled = true;

@@ -10,7 +10,7 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
     bool &resolvedMethod,
     bool usedMethodTarget,
     const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
-    const std::vector<Stmt> *enclosingStatements,
+    const std::vector<Expr> *enclosingStatements,
     size_t statementIndex,
     bool &handledOut) {
   handledOut = false;
