@@ -1069,6 +1069,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h"
 #include "TemplateMonomorphExecutionRewrites.h"
 #include "TemplateMonomorphDefinitionRewrites.h"
+#include "TemplateMonomorphTemplateSpecialization.h"
 
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
@@ -2137,82 +2138,9 @@ bool instantiateTemplate(const std::string &basePath,
     return false;
   }
   ctx.specializationCache.emplace(key, specializedBasePath);
-
-  std::vector<Definition> family;
-  family.reserve(ctx.sourceDefs.size());
-  for (const auto &entry : ctx.sourceDefs) {
-    if (isPathPrefix(basePath, entry.first)) {
-      family.push_back(entry.second);
-    }
-  }
-
-  std::vector<TemplateRootInfo> nestedTemplates;
-  nestedTemplates.reserve(family.size());
-  for (const auto &def : family) {
-    if (def.fullPath == basePath) {
-      continue;
-    }
-    if (!def.templateArgs.empty()) {
-      nestedTemplates.push_back({def.fullPath, def.templateArgs});
-    }
-  }
-
-  SubstMap baseMapping;
-  baseMapping.reserve(baseDef.templateArgs.size());
-  for (size_t i = 0; i < baseDef.templateArgs.size(); ++i) {
-    baseMapping.emplace(baseDef.templateArgs[i], resolvedArgs[i]);
-  }
-
-  for (const auto &def : family) {
-    Definition clone = def;
-    clone.fullPath = replacePathPrefix(def.fullPath, basePath, specializedBasePath);
-    clone.namespacePrefix = replacePathPrefix(def.namespacePrefix, basePath, specializedBasePath);
-    if (def.fullPath == basePath) {
-      clone.name = specializedName;
-      clone.templateArgs.clear();
-    }
-    if (ctx.sourceDefs.count(clone.fullPath) > 0) {
-      error = "template specialization conflicts with existing definition: " + clone.fullPath;
-      ctx.specializationCache.erase(key);
-      return false;
-    }
-
-    std::unordered_set<std::string> shadowedParams;
-    for (const auto &nested : nestedTemplates) {
-      if (isPathPrefix(nested.fullPath, def.fullPath)) {
-        for (const auto &param : nested.params) {
-          shadowedParams.insert(param);
-        }
-      }
-    }
-    SubstMap mapping = baseMapping;
-    for (const auto &param : shadowedParams) {
-      mapping.erase(param);
-    }
-    if (!rewriteDefinition(clone, mapping, shadowedParams, ctx, error)) {
-      ctx.specializationCache.erase(key);
-      return false;
-    }
-
-    ctx.sourceDefs.emplace(clone.fullPath, clone);
-    if (!clone.templateArgs.empty()) {
-      ctx.templateDefs.insert(clone.fullPath);
-    }
-
-    bool underNestedTemplate = false;
-    if (def.fullPath != basePath) {
-      for (const auto &nested : nestedTemplates) {
-        if (isPathPrefix(nested.fullPath, def.fullPath)) {
-          underNestedTemplate = true;
-          break;
-        }
-      }
-    }
-    if (!underNestedTemplate && clone.templateArgs.empty()) {
-      if (ctx.outputPaths.insert(clone.fullPath).second) {
-        ctx.outputDefs.push_back(clone);
-      }
-    }
+  if (!specializeTemplateDefinitionFamily(
+          basePath, baseDef.templateArgs, resolvedArgs, specializedBasePath, specializedName, key, ctx, error)) {
+    return false;
   }
 
   specializedPathOut = specializedBasePath;
