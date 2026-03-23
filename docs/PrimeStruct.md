@@ -707,8 +707,10 @@ for(
     `/GfxError/pipeline_create_failed()`, `/GfxError/material_create_failed()`,
     `/GfxError/frame_acquire_failed()`, `/GfxError/queue_submit_failed()`, and
     `/GfxError/frame_present_failed()` as the public root-level wrappers over the current stdlib-owned error
-    strings, result packers, and constructor values. Experimental gfx intentionally stays wrapper-free at those root
-    paths so mixed canonical+experimental imports do not collide.
+    strings, result packers, and constructor values, while receiver-style `err.why()` / `err.status()` /
+    `err.result<T>()` now explicitly prefer the matching canonical or experimental `GfxError` namespace helper
+    surface. Experimental gfx intentionally stays wrapper-free at those root paths so mixed
+    canonical+experimental imports do not collide.
   - The postfix `?` operator unwraps a `Result` or propagates the error (see Error Handling).
     - `Result.map(result, fn)` applies `fn` to the success value (if any) and returns a new `Result`.
     - `Result.and_then(result, fn)` (a.k.a. bind) applies `fn` to the success value and flattens the result.
@@ -773,9 +775,11 @@ sum_two_files([string] a, [string] b) {
     `/GfxError/swapchain_create_failed()`, `/GfxError/mesh_create_failed()`,
     `/GfxError/pipeline_create_failed()`, `/GfxError/material_create_failed()`,
     `/GfxError/frame_acquire_failed()`, `/GfxError/queue_submit_failed()`, and
-    `/GfxError/frame_present_failed()` wrappers, or import `/std/gfx/experimental/*` to use the same
-    result helpers without adding duplicate root-level gfx wrapper paths in mixed canonical+experimental
-    import graphs.
+    `/GfxError/frame_present_failed()` wrappers plus receiver-style `err.why()` / `err.status()` /
+    `err.result<T>()`, or import `/std/gfx/experimental/*` to use the same `GfxError.why(err)` /
+    `GfxError.status(err)` / `GfxError.result<T>(err)` and receiver-style `err.why()` / `err.status()` /
+    `err.result<T>()` helpers without adding duplicate root-level gfx wrapper paths in mixed
+    canonical+experimental import graphs.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.

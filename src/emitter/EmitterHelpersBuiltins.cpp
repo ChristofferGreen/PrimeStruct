@@ -1864,6 +1864,34 @@ bool resolveMethodCallPath(const Expr &call,
     }
     return "";
   };
+  auto preferredGfxErrorHelperTarget = [&](std::string_view helperName,
+                                           const std::string &resolvedStructPath) -> std::string {
+    auto helperForBasePath = [&](std::string_view basePath) -> std::string {
+      const std::string helperPath = std::string(basePath) + "/" + std::string(helperName);
+      if (defMap.find(helperPath) != defMap.end()) {
+        return helperPath;
+      }
+      return "";
+    };
+    const std::string canonicalBase = "/std/gfx/GfxError";
+    const std::string experimentalBase = "/std/gfx/experimental/GfxError";
+    if (resolvedStructPath == canonicalBase) {
+      return helperForBasePath(canonicalBase);
+    }
+    if (resolvedStructPath == experimentalBase) {
+      return helperForBasePath(experimentalBase);
+    }
+    const bool hasCanonical = defMap.find(canonicalBase + "/" + std::string(helperName)) != defMap.end();
+    const bool hasExperimental =
+        defMap.find(experimentalBase + "/" + std::string(helperName)) != defMap.end();
+    if (hasCanonical && !hasExperimental) {
+      return helperForBasePath(canonicalBase);
+    }
+    if (!hasCanonical && hasExperimental) {
+      return helperForBasePath(experimentalBase);
+    }
+    return "";
+  };
   std::string typeName;
   if (receiver.kind == Expr::Kind::Name) {
     auto it = localTypes.find(receiver.name);
@@ -1888,6 +1916,18 @@ bool resolveMethodCallPath(const Expr &call,
            normalizedMethodName == "result")) {
         resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
         return !resolvedOut.empty();
+      }
+      if (receiver.name == "GfxError" &&
+          (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+           normalizedMethodName == "result")) {
+        std::string resolvedStructPath = resolveExprPath(receiver);
+        if (findStructTypeMetadata(resolvedStructPath) == nullptr) {
+          resolvedStructPath = resolveTypePath(receiver.name, receiver.namespacePrefix);
+        }
+        resolvedOut = preferredGfxErrorHelperTarget(normalizedMethodName, resolvedStructPath);
+        if (!resolvedOut.empty()) {
+          return true;
+        }
       }
       std::string resolvedReceiverPath = resolveExprPath(receiver);
       if (findStructTypeMetadata(resolvedReceiverPath) != nullptr ||
@@ -1956,6 +1996,19 @@ bool resolveMethodCallPath(const Expr &call,
        normalizedMethodName == "result")) {
     resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
     return !resolvedOut.empty();
+  }
+  if (typeName == "GfxError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    std::string resolvedStructPath = resolveTypePath(typeName, call.namespacePrefix);
+    auto importIt = importAliases.find(typeName);
+    if (findStructTypeMetadata(resolvedStructPath) == nullptr && importIt != importAliases.end()) {
+      resolvedStructPath = importIt->second;
+    }
+    resolvedOut = preferredGfxErrorHelperTarget(normalizedMethodName, resolvedStructPath);
+    if (!resolvedOut.empty()) {
+      return true;
+    }
   }
   if (typeName == "Pointer" || typeName == "Reference") {
     return false;

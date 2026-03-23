@@ -255,6 +255,34 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return "";
   };
+  auto preferredGfxErrorHelperTarget = [&](std::string_view helperName,
+                                           const std::string &resolvedStructPath) -> std::string {
+    auto helperForBasePath = [&](std::string_view basePath) -> std::string {
+      const std::string helperPath = std::string(basePath) + "/" + std::string(helperName);
+      if (defMap_.count(helperPath) > 0) {
+        return helperPath;
+      }
+      return "";
+    };
+    const std::string canonicalBase = "/std/gfx/GfxError";
+    const std::string experimentalBase = "/std/gfx/experimental/GfxError";
+    if (resolvedStructPath == canonicalBase) {
+      return helperForBasePath(canonicalBase);
+    }
+    if (resolvedStructPath == experimentalBase) {
+      return helperForBasePath(experimentalBase);
+    }
+    const bool hasCanonical = defMap_.count(canonicalBase + "/" + std::string(helperName)) > 0;
+    const bool hasExperimental =
+        defMap_.count(experimentalBase + "/" + std::string(helperName)) > 0;
+    if (hasCanonical && !hasExperimental) {
+      return helperForBasePath(canonicalBase);
+    }
+    if (!hasCanonical && hasExperimental) {
+      return helperForBasePath(experimentalBase);
+    }
+    return "";
+  };
   auto inferPointerLikeCallReturnType = [&](const Expr &receiverExpr) -> std::string {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
       return "";
@@ -672,6 +700,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
     return !resolvedOut.empty();
   }
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "GfxError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut =
+        preferredGfxErrorHelperTarget(normalizedMethodName,
+                                      resolveStructTypePathForMethod(receiver.name,
+                                                                     receiver.namespacePrefix));
+    if (!resolvedOut.empty()) {
+      return true;
+    }
+  }
   if (typeName.empty()) {
     return false;
   }
@@ -692,6 +731,16 @@ bool SemanticsValidator::resolveInferMethodCallPath(
        normalizedMethodName == "result")) {
     resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
     return !resolvedOut.empty();
+  }
+  if (typeName == "GfxError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut =
+        preferredGfxErrorHelperTarget(normalizedMethodName,
+                                      resolveStructTypePathForMethod(typeName, expr.namespacePrefix));
+    if (!resolvedOut.empty()) {
+      return true;
+    }
   }
   if (typeName == "Pointer" || typeName == "Reference") {
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {

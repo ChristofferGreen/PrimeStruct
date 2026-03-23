@@ -1824,8 +1824,12 @@ import /std/gfx/experimental/*
 
 [return<int> effects(io_out)]
 main() {
+  [GfxError] err{queueSubmitFailed()}
   print_line(Result.why(GfxError.status(queueSubmitFailed())))
   print_line(Result.why(GfxError.result<i32>(framePresentFailed())))
+  print_line(err.why())
+  print_line(Result.why(err.status()))
+  print_line(Result.why(err.result<i32>()))
   return(0i32)
 }
 )";
@@ -1836,6 +1840,9 @@ main() {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
         "queue_submit_failed\n"
+        "frame_present_failed\n"
+        "queue_submit_failed\n"
+        "queue_submit_failed\n"
         "frame_present_failed\n");
 }
 
@@ -1845,8 +1852,11 @@ import /std/gfx/*
 
 [return<int> effects(io_out)]
 main() {
+  [GfxError] err{queueSubmitFailed()}
   print_line(Result.why(/GfxError/status(queueSubmitFailed())))
   print_line(Result.why(/GfxError/result<i32>(framePresentFailed())))
+  print_line(Result.why(err.status()))
+  print_line(Result.why(err.result<i32>()))
   return(0i32)
 }
 )";
@@ -1856,6 +1866,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
+        "queue_submit_failed\n"
+        "frame_present_failed\n"
         "queue_submit_failed\n"
         "frame_present_failed\n");
 }
@@ -1867,9 +1879,16 @@ import /std/gfx/*
 [return<int> effects(io_out)]
 main() {
   [GfxError] err{queueSubmitFailed()}
+  [Result<GfxError>] methodStatus{err.status()}
+  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
   print_line(/GfxError/why(err))
   print_line(GfxError.why(err))
+  print_line(err.why())
   print_line(Result.why(gfxErrorStatus(err)))
+  print_line(Result.why(methodStatus))
+  print_line(Result.why(methodValueStatus))
+  print_line(Result.why(err.status()))
+  print_line(Result.why(err.result<i32>()))
   return(0i32)
 }
 )";
@@ -1879,6 +1898,11 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
+        "queue_submit_failed\n"
+        "queue_submit_failed\n"
+        "queue_submit_failed\n"
+        "queue_submit_failed\n"
+        "queue_submit_failed\n"
         "queue_submit_failed\n"
         "queue_submit_failed\n"
         "queue_submit_failed\n");

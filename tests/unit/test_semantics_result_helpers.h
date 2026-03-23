@@ -811,19 +811,29 @@ import /std/gfx/experimental/*
 
 [return<void>]
 main() {
+  [GfxError] err{queueSubmitFailed()}
   [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
   [Result<GfxError>] typeStatus{GfxError.status(queueSubmitFailed())}
+  [Result<GfxError>] methodStatus{err.status()}
   [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
   [Result<i32, GfxError>] typeValueStatus{GfxError.result<i32>(framePresentFailed())}
+  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
   [bool] statusError{Result.error(status)}
   [bool] typeStatusError{Result.error(typeStatus)}
+  [bool] methodStatusDirectError{Result.error(err.status())}
   [bool] valueError{Result.error(valueStatus)}
   [bool] typeValueError{Result.error(typeValueStatus)}
+  [bool] methodValueError{Result.error(methodValueStatus)}
+  [string] methodWhy{err.why()}
   [string] statusWhy{Result.why(status)}
   [string] typeStatusWhy{Result.why(typeStatus)}
+  [string] methodStatusWhy{Result.why(methodStatus)}
   [string] valueWhy{Result.why(valueStatus)}
   [string] typeValueWhy{Result.why(typeValueStatus)}
-  if(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+  [string] methodValueWhy{Result.why(methodValueStatus)}
+  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
+  if(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+         and(methodStatusDirectError, methodValueError)),
      then(){ return() },
      else(){ return() })
 }
@@ -865,32 +875,59 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("stdlib GfxError receiver methods reject unexpected arguments") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[return<void>]
+main() {
+  [GfxError] err{queueSubmitFailed()}
+  [Result<GfxError>] status{err.status(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/gfx/experimental/GfxError/status") !=
+        std::string::npos);
+}
+
 TEST_CASE("canonical stdlib gfx error result helpers construct status and value results") {
   const std::string source = R"(
 import /std/gfx/*
 
 [return<void>]
 main() {
+  [GfxError] err{queueSubmitFailed()}
   [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
   [Result<GfxError>] typeStatus{GfxError.status(queueSubmitFailed())}
   [Result<GfxError>] directStatus{/GfxError/status(queueSubmitFailed())}
+  [Result<GfxError>] methodStatus{err.status()}
   [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
   [Result<i32, GfxError>] typeValueStatus{GfxError.result<i32>(framePresentFailed())}
   [Result<i32, GfxError>] directValueStatus{/GfxError/result<i32>(framePresentFailed())}
+  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
   [bool] statusError{Result.error(status)}
   [bool] typeStatusError{Result.error(typeStatus)}
   [bool] directStatusError{Result.error(directStatus)}
+  [bool] methodStatusDirectError{Result.error(err.status())}
   [bool] valueError{Result.error(valueStatus)}
   [bool] typeValueError{Result.error(typeValueStatus)}
   [bool] directValueError{Result.error(directValueStatus)}
+  [bool] methodValueError{Result.error(methodValueStatus)}
+  [string] methodWhy{err.why()}
   [string] statusWhy{Result.why(status)}
   [string] typeStatusWhy{Result.why(typeStatus)}
   [string] directStatusWhy{Result.why(directStatus)}
+  [string] methodStatusWhy{Result.why(methodStatus)}
   [string] valueWhy{Result.why(valueStatus)}
   [string] typeValueWhy{Result.why(typeValueStatus)}
   [string] directValueWhy{Result.why(directValueStatus)}
-  if(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
-         and(directStatusError, directValueError)),
+  [string] methodValueWhy{Result.why(methodValueStatus)}
+  [string] methodValueDirectWhy{Result.why(err.result<i32>())}
+  if(and(and(and(and(statusError, typeStatusError), and(valueError, typeValueError)),
+                and(directStatusError, directValueError)),
+         and(methodStatusDirectError, methodValueError)),
      then(){ return() },
      else(){ return() })
 }
@@ -907,11 +944,23 @@ import /std/gfx/*
 [return<void>]
 main() {
   [GfxError] err{queueSubmitFailed()}
+  [Result<GfxError>] methodStatus{err.status()}
+  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
   [string] direct{/GfxError/why(err)}
   [string] method{GfxError.why(err)}
+  [string] receiver{err.why()}
   [string] viaResult{Result.why(gfxErrorStatus(err))}
+  [string] viaMethodStatus{Result.why(methodStatus)}
+  [string] viaMethodValue{Result.why(methodValueStatus)}
+  [string] viaDirectMethodStatus{Result.why(err.status())}
+  [string] viaDirectMethodValue{Result.why(err.result<i32>())}
   if(and(greater_than(count(direct), 0i32),
-         and(greater_than(count(method), 0i32), greater_than(count(viaResult), 0i32))),
+         and(and(greater_than(count(method), 0i32), greater_than(count(receiver), 0i32)),
+             and(and(greater_than(count(viaResult), 0i32),
+                     greater_than(count(viaMethodStatus), 0i32)),
+                 and(greater_than(count(viaMethodValue), 0i32),
+                     and(greater_than(count(viaDirectMethodStatus), 0i32),
+                         greater_than(count(viaDirectMethodValue), 0i32)))))),
      then(){ return() },
      else(){ return() })
 }
@@ -960,6 +1009,22 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /GfxError/status parameter err") !=
         std::string::npos);
+}
+
+TEST_CASE("canonical stdlib GfxError receiver methods reject unexpected arguments") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<void>]
+main() {
+  [GfxError] err{queueSubmitFailed()}
+  [Result<GfxError>] status{err.status(true)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/gfx/GfxError/status") != std::string::npos);
 }
 
 TEST_CASE("canonical stdlib GfxError constructor wrappers reject unexpected arguments") {

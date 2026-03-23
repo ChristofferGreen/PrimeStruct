@@ -246,6 +246,34 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return "";
   };
+  auto preferredGfxErrorHelperTarget = [&](std::string_view helperName,
+                                           const std::string &resolvedStructPath) -> std::string {
+    auto helperForBasePath = [&](std::string_view basePath) -> std::string {
+      const std::string helperPath = std::string(basePath) + "/" + std::string(helperName);
+      if (defMap_.count(helperPath) > 0) {
+        return helperPath;
+      }
+      return "";
+    };
+    const std::string canonicalBase = "/std/gfx/GfxError";
+    const std::string experimentalBase = "/std/gfx/experimental/GfxError";
+    if (resolvedStructPath == canonicalBase) {
+      return helperForBasePath(canonicalBase);
+    }
+    if (resolvedStructPath == experimentalBase) {
+      return helperForBasePath(experimentalBase);
+    }
+    const bool hasCanonical = defMap_.count(canonicalBase + "/" + std::string(helperName)) > 0;
+    const bool hasExperimental =
+        defMap_.count(experimentalBase + "/" + std::string(helperName)) > 0;
+    if (hasCanonical && !hasExperimental) {
+      return helperForBasePath(canonicalBase);
+    }
+    if (!hasCanonical && hasExperimental) {
+      return helperForBasePath(experimentalBase);
+    }
+    return "";
+  };
 
   const std::string explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName);
   auto explicitVectorMethodPath = [&](const std::string &rawMethodName) -> std::string {
@@ -428,6 +456,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
     isBuiltinOut = false;
     return !resolvedOut.empty();
+  }
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "GfxError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut =
+        preferredGfxErrorHelperTarget(normalizedMethodName,
+                                      resolveStructTypePath(receiver.name, receiver.namespacePrefix));
+    isBuiltinOut = false;
+    if (!resolvedOut.empty()) {
+      return true;
+    }
   }
   if (receiver.kind == Expr::Kind::Name &&
       findParamBinding(params, receiver.name) == nullptr &&
@@ -1492,6 +1531,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isBuiltinOut = false;
       return !resolvedOut.empty();
     }
+    if (collectionElemType == "GfxError" &&
+        (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+         normalizedMethodName == "result")) {
+      resolvedOut =
+          preferredGfxErrorHelperTarget(normalizedMethodName,
+                                        resolveStructTypePath(collectionElemType,
+                                                              receiverExpr.namespacePrefix));
+      isBuiltinOut = false;
+      if (!resolvedOut.empty()) {
+        return true;
+      }
+    }
     std::string elemBase;
     std::string elemArgText;
     if (splitTemplateTypeName(collectionElemType, elemBase, elemArgText)) {
@@ -1804,6 +1855,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             isBuiltinOut = false;
             return !resolvedOut.empty();
           }
+          if (normalizedElemType == "GfxError" &&
+              (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+               normalizedMethodName == "result")) {
+            resolvedOut =
+                preferredGfxErrorHelperTarget(normalizedMethodName,
+                                              resolveStructTypePath(normalizedElemType,
+                                                                    receiver.namespacePrefix));
+            isBuiltinOut = false;
+            if (!resolvedOut.empty()) {
+              return true;
+            }
+          }
           if (isPrimitiveBindingTypeName(normalizedElemBaseType)) {
             resolvedOut = "/" + normalizedElemBaseType + "/" + normalizedMethodName;
             return true;
@@ -2090,6 +2153,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
     isBuiltinOut = false;
     return !resolvedOut.empty();
+  }
+  if (typeName == "GfxError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut =
+        preferredGfxErrorHelperTarget(normalizedMethodName,
+                                      resolveStructTypePath(typeName, receiver.namespacePrefix));
+    isBuiltinOut = false;
+    if (!resolvedOut.empty()) {
+      return true;
+    }
   }
   if (typeName == "string" &&
       (normalizedMethodName == "count" || normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
