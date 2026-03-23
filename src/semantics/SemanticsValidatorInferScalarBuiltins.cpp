@@ -22,7 +22,8 @@ ReturnKind SemanticsValidator::inferScalarBuiltinReturnKind(
         }
         return ReturnKind::Unknown;
       }
-      if (auto it = locals.find(pointerExpr.name); it != locals.end()) {
+      auto it = locals.find(pointerExpr.name);
+      if (it != locals.end()) {
         if ((it->second.typeName == "Pointer" ||
              it->second.typeName == "Reference") &&
             !it->second.typeTemplateArg.empty()) {
@@ -40,8 +41,7 @@ ReturnKind SemanticsValidator::inferScalarBuiltinReturnKind(
         if (target.kind != Expr::Kind::Name) {
           return ReturnKind::Unknown;
         }
-        if (const BindingInfo *paramBinding =
-                findParamBinding(params, target.name)) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
           if (paramBinding->typeName == "Reference" &&
               !paramBinding->typeTemplateArg.empty()) {
             return inferReferenceTargetKind(paramBinding->typeTemplateArg,
@@ -49,7 +49,8 @@ ReturnKind SemanticsValidator::inferScalarBuiltinReturnKind(
           }
           return returnKindForTypeName(paramBinding->typeName);
         }
-        if (auto it = locals.find(target.name); it != locals.end()) {
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
           if (it->second.typeName == "Reference" &&
               !it->second.typeTemplateArg.empty()) {
             return inferReferenceTargetKind(it->second.typeTemplateArg,

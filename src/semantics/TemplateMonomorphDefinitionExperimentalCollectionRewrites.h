@@ -9,7 +9,7 @@ void rewriteDefinitionExperimentalMapConstructorValue(Expr &valueExpr,
                                                       Context &ctx,
                                                       bool allowMathBare,
                                                       std::string &error) {
-  (void)::rewriteCanonicalExperimentalMapConstructorExpr(
+  (void)rewriteCanonicalExperimentalMapConstructorExpr(
       valueExpr, locals, params, mapping, allowedParams, namespacePrefix, ctx, allowMathBare, error);
 }
 
@@ -22,7 +22,7 @@ void rewriteDefinitionExperimentalVectorConstructorValue(Expr &valueExpr,
                                                          Context &ctx,
                                                          bool allowMathBare,
                                                          std::string &error) {
-  (void)::rewriteCanonicalExperimentalVectorConstructorExpr(
+  (void)rewriteCanonicalExperimentalVectorConstructorExpr(
       valueExpr, locals, params, mapping, allowedParams, namespacePrefix, ctx, allowMathBare, error);
 }
 

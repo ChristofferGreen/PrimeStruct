@@ -1049,6 +1049,16 @@ bool instantiateTemplate(const std::string &basePath,
                          std::string &error,
                          std::string &specializedPathOut);
 
+bool rewriteExpr(Expr &expr,
+                 const SubstMap &mapping,
+                 const std::unordered_set<std::string> &allowedParams,
+                 const std::string &namespacePrefix,
+                 Context &ctx,
+                 std::string &error,
+                 const LocalTypeMap &locals,
+                 const std::vector<ParameterInfo> &params,
+                 bool allowMathBare);
+
 #include "TemplateMonomorphFallbackTypeInference.h"
 #include "TemplateMonomorphMethodTargets.h"
 #include "TemplateMonomorphBindingCallInference.h"
@@ -1057,11 +1067,11 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphCollectionHelperInference.h"
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphExperimentalCollectionArgumentRewrites.h"
+#include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionTargetValueRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionValueRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionReceiverResolution.h"
-#include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"
 #include "TemplateMonomorphExperimentalCollectionReturnRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
 #include "TemplateMonomorphDefinitionBindingSetup.h"
@@ -1090,16 +1100,6 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
   }
   return inferBlockBodyBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut);
 }
-
-bool rewriteExpr(Expr &expr,
-                 const SubstMap &mapping,
-                 const std::unordered_set<std::string> &allowedParams,
-                 const std::string &namespacePrefix,
-                 Context &ctx,
-                 std::string &error,
-                 const LocalTypeMap &locals,
-                 const std::vector<ParameterInfo> &params,
-                 bool allowMathBare);
 
 bool inferImplicitTemplateArgs(const Definition &def,
                                const Expr &callExpr,
@@ -1499,23 +1499,23 @@ bool rewriteExpr(Expr &expr,
   std::function<bool(Expr &)> rewriteNestedExperimentalMapConstructorValue;
   std::function<bool(Expr &)> rewriteNestedExperimentalMapResultOkPayloadValue;
   std::function<bool(Expr &)> rewriteNestedExperimentalVectorConstructorValue;
-  std::function<bool(const std::string &, Expr &)> rewriteExperimentalMapTargetValueForType;
-  std::function<bool(const std::string &, Expr &)> rewriteExperimentalVectorTargetValueForType;
+  std::function<bool(const std::string &, Expr &)> rewriteMapTargetValueForResolvedType;
+  std::function<bool(const std::string &, Expr &)> rewriteVectorTargetValueForResolvedType;
 
-  rewriteExperimentalMapTargetValueForType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
-    return ::rewriteExperimentalMapTargetValueForType(typeText,
-                                                      valueExpr,
-                                                      mapping,
-                                                      allowedParams,
-                                                      namespacePrefix,
-                                                      ctx,
-                                                      rewriteNestedExperimentalMapConstructorValue,
-                                                      rewriteNestedExperimentalMapResultOkPayloadValue);
+  rewriteMapTargetValueForResolvedType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
+    return rewriteExperimentalMapTargetValueForType(typeText,
+                                                    valueExpr,
+                                                    mapping,
+                                                    allowedParams,
+                                                    namespacePrefix,
+                                                    ctx,
+                                                    rewriteNestedExperimentalMapConstructorValue,
+                                                    rewriteNestedExperimentalMapResultOkPayloadValue);
   };
-  rewriteExperimentalVectorTargetValueForType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
-    return ::rewriteExperimentalVectorTargetValueForType(typeText,
-                                                         valueExpr,
-                                                         rewriteNestedExperimentalVectorConstructorValue);
+  rewriteVectorTargetValueForResolvedType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
+    return rewriteExperimentalVectorTargetValueForType(typeText,
+                                                       valueExpr,
+                                                       rewriteNestedExperimentalVectorConstructorValue);
   };
 
   auto rewriteCanonicalExperimentalMapConstructorBinding = [&](Expr &bindingExpr) -> bool {
@@ -1533,7 +1533,7 @@ bool rewriteExpr(Expr &expr,
                                                       ctx);
         },
         "map",
-        rewriteExperimentalMapTargetValueForType);
+        rewriteMapTargetValueForResolvedType);
   };
   auto rewriteCanonicalExperimentalVectorConstructorBinding = [&](Expr &bindingExpr) -> bool {
     return rewriteExperimentalConstructorBinding(
@@ -1546,19 +1546,19 @@ bool rewriteExpr(Expr &expr,
           return resolvesExperimentalVectorValueTypeText(bindingTypeText);
         },
         "vector",
-        rewriteExperimentalVectorTargetValueForType);
+        rewriteVectorTargetValueForResolvedType);
   };
   rewriteNestedExperimentalMapConstructorValue = [&](Expr &candidate) -> bool {
     return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {
-      return ::rewriteCanonicalExperimentalMapConstructorExpr(current,
-                                                             locals,
-                                                             params,
-                                                             mapping,
-                                                             allowedParams,
-                                                             namespacePrefix,
-                                                             ctx,
-                                                             allowMathBare,
-                                                             error);
+      return rewriteCanonicalExperimentalMapConstructorExpr(current,
+                                                            locals,
+                                                            params,
+                                                            mapping,
+                                                            allowedParams,
+                                                            namespacePrefix,
+                                                            ctx,
+                                                            allowMathBare,
+                                                            error);
     });
   };
 
@@ -1567,15 +1567,15 @@ bool rewriteExpr(Expr &expr,
   };
   rewriteNestedExperimentalVectorConstructorValue = [&](Expr &candidate) -> bool {
     return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {
-      return ::rewriteCanonicalExperimentalVectorConstructorExpr(current,
-                                                                locals,
-                                                                params,
-                                                                mapping,
-                                                                allowedParams,
-                                                                namespacePrefix,
-                                                                ctx,
-                                                                allowMathBare,
-                                                                error);
+      return rewriteCanonicalExperimentalVectorConstructorExpr(current,
+                                                               locals,
+                                                               params,
+                                                               mapping,
+                                                               allowedParams,
+                                                               namespacePrefix,
+                                                               ctx,
+                                                               allowMathBare,
+                                                               error);
     });
   };
 
@@ -1829,7 +1829,7 @@ bool rewriteExpr(Expr &expr,
               allowMathBare,
               ctx,
               [&](const std::string &typeText, Expr &argExpr) {
-                return rewriteExperimentalVectorTargetValueForType(typeText, argExpr);
+                return rewriteVectorTargetValueForResolvedType(typeText, argExpr);
               })) {
         return false;
       }
@@ -1840,7 +1840,7 @@ bool rewriteExpr(Expr &expr,
               allowMathBare,
               ctx,
               [&](const std::string &typeText, Expr &argExpr) {
-                return rewriteExperimentalMapTargetValueForType(typeText, argExpr);
+                return rewriteMapTargetValueForResolvedType(typeText, argExpr);
               })) {
         return false;
       }
@@ -1853,7 +1853,7 @@ bool rewriteExpr(Expr &expr,
         namespacePrefix,
         ctx,
         [&](const std::string &targetTypeText, Expr &valueExpr) {
-          return rewriteExperimentalVectorTargetValueForType(targetTypeText, valueExpr);
+          return rewriteVectorTargetValueForResolvedType(targetTypeText, valueExpr);
         });
     rewriteExperimentalInitTargetValue(
         expr,
@@ -1863,7 +1863,7 @@ bool rewriteExpr(Expr &expr,
         namespacePrefix,
         ctx,
         [&](const std::string &targetTypeText, Expr &valueExpr) {
-          return rewriteExperimentalVectorTargetValueForType(targetTypeText, valueExpr);
+          return rewriteVectorTargetValueForResolvedType(targetTypeText, valueExpr);
         });
     rewriteExperimentalAssignTargetValue(
         expr,
@@ -1873,7 +1873,7 @@ bool rewriteExpr(Expr &expr,
         namespacePrefix,
         ctx,
         [&](const std::string &targetTypeText, Expr &valueExpr) {
-          return rewriteExperimentalMapTargetValueForType(targetTypeText, valueExpr);
+          return rewriteMapTargetValueForResolvedType(targetTypeText, valueExpr);
         });
     rewriteExperimentalInitTargetValue(
         expr,
@@ -1883,7 +1883,7 @@ bool rewriteExpr(Expr &expr,
         namespacePrefix,
         ctx,
         [&](const std::string &targetTypeText, Expr &valueExpr) {
-          return rewriteExperimentalMapTargetValueForType(targetTypeText, valueExpr);
+          return rewriteMapTargetValueForResolvedType(targetTypeText, valueExpr);
         });
   }
   if (expr.isMethodCall) {
@@ -2045,7 +2045,7 @@ bool rewriteExpr(Expr &expr,
                 allowMathBare,
                 ctx,
                 [&](const std::string &typeText, Expr &argExpr) {
-                  return rewriteExperimentalVectorTargetValueForType(typeText, argExpr);
+                  return rewriteVectorTargetValueForResolvedType(typeText, argExpr);
                 })) {
           return false;
         }
@@ -2056,7 +2056,7 @@ bool rewriteExpr(Expr &expr,
                 allowMathBare,
                 ctx,
                 [&](const std::string &typeText, Expr &argExpr) {
-                  return rewriteExperimentalMapTargetValueForType(typeText, argExpr);
+                  return rewriteMapTargetValueForResolvedType(typeText, argExpr);
                 })) {
           return false;
         }
