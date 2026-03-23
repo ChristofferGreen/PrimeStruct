@@ -377,7 +377,9 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
     return inferQueryExprTypeText(expr, defParams, activeLocals, out.typeText);
   });
   if (out.typeText.empty() && !out.binding.typeName.empty()) {
-    out.typeText = bindingTypeText(out.binding);
+    out.typeText = out.binding.typeTemplateArg.empty()
+                       ? out.binding.typeName
+                       : out.binding.typeName + "<" + out.binding.typeTemplateArg + ">";
   }
   if (!(withPreservedError([&]() {
           return resolveResultTypeForExpr(expr, defParams, activeLocals, out.resultInfo);
@@ -519,7 +521,7 @@ bool SemanticsValidator::inferTrySnapshotData(const Definition &def,
   if (context.onError.has_value()) {
     out.onErrorHandlerPath = context.onError->handlerPath;
     out.onErrorErrorType = context.onError->errorType;
-    out.onErrorBoundArgCount = context.onError->boundArgCount;
+    out.onErrorBoundArgCount = context.onError->boundArgs.size();
   }
   return true;
 }
@@ -1303,6 +1305,65 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
             params, locals, expr.args.front(), expr.name, dispatchResolvers, resolvedPath)) {
       return resolvedPath;
     }
+    const Expr &receiver = expr.args.front();
+    const std::string receiverTypeName = [&]() -> std::string {
+      if (receiver.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+          return paramBinding->typeName;
+        }
+        auto localIt = locals.find(receiver.name);
+        if (localIt != locals.end()) {
+          return localIt->second.typeName;
+        }
+        if (isPrimitiveBindingTypeName(receiver.name)) {
+          return receiver.name;
+        }
+        const std::string rootReceiverPath = "/" + receiver.name;
+        if (defMap_.find(rootReceiverPath) != defMap_.end() || structNames_.count(rootReceiverPath) > 0) {
+          return rootReceiverPath;
+        }
+        auto importIt = importAliases_.find(receiver.name);
+        if (importIt != importAliases_.end()) {
+          return importIt->second;
+        }
+        const std::string resolvedType = resolveStructTypePath(receiver.name, receiver.namespacePrefix, structNames_);
+        if (!resolvedType.empty()) {
+          return resolvedType;
+        }
+      }
+      if (receiver.kind == Expr::Kind::Call && !receiver.isMethodCall) {
+        const std::string resolvedReceiverPath = resolveCalleePath(receiver);
+        if (!resolvedReceiverPath.empty()) {
+          return resolvedReceiverPath;
+        }
+      }
+      return std::string();
+    }();
+    if (receiverTypeName.empty() || receiverTypeName == "File") {
+      return "";
+    }
+    if (isPrimitiveBindingTypeName(receiverTypeName)) {
+      return "/" + normalizeBindingTypeName(receiverTypeName) + "/" + expr.name;
+    }
+    std::string resolvedType;
+    if (!receiverTypeName.empty() && receiverTypeName.front() == '/') {
+      resolvedType = receiverTypeName;
+    } else {
+      resolvedType = resolveStructTypePath(receiverTypeName, receiver.namespacePrefix, structNames_);
+      if (resolvedType.empty()) {
+        auto importIt = importAliases_.find(receiverTypeName);
+        if (importIt != importAliases_.end()) {
+          resolvedType = importIt->second;
+        }
+      }
+      if (resolvedType.empty()) {
+        resolvedType = resolveTypePath(receiverTypeName, receiver.namespacePrefix);
+      }
+    }
+    if (resolvedType.empty()) {
+      return "";
+    }
+    return resolvedType + "/" + expr.name;
     return "";
   };
   if (expr.kind == Expr::Kind::Name) {

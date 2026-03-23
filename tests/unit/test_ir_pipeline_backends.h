@@ -879,7 +879,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("if (out.typeText.empty() && !out.binding.typeName.empty()) {") !=
         std::string::npos);
-  CHECK(validatorCore.find("out.typeText = bindingTypeText(out.binding);") !=
+  CHECK(validatorCore.find("out.typeText = out.binding.typeTemplateArg.empty()") !=
         std::string::npos);
   CHECK(validatorCore.find("const BuiltinCollectionDispatchResolvers dispatchResolvers =") !=
         std::string::npos);
@@ -917,7 +917,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorCore.find("context.onError->handlerPath") != std::string::npos);
   CHECK(validatorCore.find("out.onErrorErrorType = context.onError->errorType;") !=
         std::string::npos);
-  CHECK(validatorCore.find("out.onErrorBoundArgCount = context.onError->boundArgCount;") !=
+  CHECK(validatorCore.find("out.onErrorBoundArgCount = context.onError->boundArgs.size();") !=
         std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::forEachLocalAwareSnapshotCall(") !=
         std::string::npos);

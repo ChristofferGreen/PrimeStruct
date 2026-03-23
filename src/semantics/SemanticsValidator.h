@@ -63,6 +63,13 @@ public:
     size_t onErrorBoundArgCount = 0;
   };
 
+  struct ResultTypeInfo {
+    bool isResult = false;
+    bool hasValue = false;
+    std::string valueType;
+    std::string errorType;
+  };
+
   struct QuerySnapshotData {
     std::string resolvedPath;
     std::string typeText;
@@ -1354,12 +1361,6 @@ private:
                                           const std::vector<Expr> &statements,
                                           size_t nextIndex);
 
-  struct ResultTypeInfo {
-    bool isResult = false;
-    bool hasValue = false;
-    std::string valueType;
-    std::string errorType;
-  };
   struct OnErrorHandler {
     std::string errorType;
     std::string handlerPath;

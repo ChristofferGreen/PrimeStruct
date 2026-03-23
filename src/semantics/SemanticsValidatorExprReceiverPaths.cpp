@@ -33,6 +33,12 @@ bool SemanticsValidator::resolveNonCollectionAccessHelperPathFromTypeText(
   }
   std::string resolvedType = resolveStructTypePath(resolvedLookupType, typeNamespace, structNames_);
   if (resolvedType.empty()) {
+    auto importIt = importAliases_.find(resolvedLookupType);
+    if (importIt != importAliases_.end()) {
+      resolvedType = importIt->second;
+    }
+  }
+  if (resolvedType.empty()) {
     resolvedType = resolveTypePath(resolvedLookupType, typeNamespace);
   }
   if (resolvedType.empty() ||
