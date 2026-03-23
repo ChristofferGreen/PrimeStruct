@@ -1066,6 +1066,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
 #include "TemplateMonomorphDefinitionBindingSetup.h"
 #include "TemplateMonomorphDefinitionReturnOrchestration.h"
+#include "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h"
 
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
@@ -2098,36 +2099,8 @@ bool rewriteDefinition(Definition &def,
   const bool allowMathBare = hasMathImport(ctx);
   std::vector<ParameterInfo> params;
   LocalTypeMap locals;
-  auto rewriteCanonicalExperimentalMapConstructorValue = [&](Expr &valueExpr) {
-    (void)::rewriteCanonicalExperimentalMapConstructorExpr(valueExpr,
-                                                           locals,
-                                                           params,
-                                                           mapping,
-                                                           allowedParams,
-                                                           def.namespacePrefix,
-                                                           ctx,
-                                                           allowMathBare,
-                                                           error);
-  };
-  auto rewriteCanonicalExperimentalVectorConstructorValue = [&](Expr &valueExpr) {
-    (void)::rewriteCanonicalExperimentalVectorConstructorExpr(valueExpr,
-                                                              locals,
-                                                              params,
-                                                              mapping,
-                                                              allowedParams,
-                                                              def.namespacePrefix,
-                                                              ctx,
-                                                              allowMathBare,
-                                                              error);
-  };
   const ExperimentalCollectionReturnRewritePlan returnRewritePlan =
       inferExperimentalCollectionReturnRewritePlan(def, mapping, allowedParams, allowMathBare, ctx);
-  auto rewriteCanonicalExperimentalVectorReturnConstructors = [&](Expr &candidate) {
-    rewriteExperimentalConstructorReturnTree(candidate, rewriteCanonicalExperimentalVectorConstructorValue);
-  };
-  auto rewriteCanonicalExperimentalMapReturnConstructors = [&](Expr &candidate) {
-    rewriteExperimentalConstructorReturnTree(candidate, rewriteCanonicalExperimentalMapConstructorValue);
-  };
   params.reserve(def.parameters.size());
   locals.reserve(def.parameters.size() + def.statements.size());
   const DefinitionReturnStatementSelection returnStatementSelection =
@@ -2140,43 +2113,63 @@ bool rewriteDefinition(Definition &def,
     auto &stmt = def.statements[stmtIndex];
     const bool isReturnPathStmt = isDefinitionReturnPathStatement(stmt, stmtIndex, returnStatementSelection);
     if (isReturnPathStmt &&
-        !rewriteDefinitionReturnConstructors(stmt,
-                                             returnRewritePlan,
-                                             rewriteCanonicalExperimentalVectorReturnConstructors,
-                                             rewriteCanonicalExperimentalMapReturnConstructors,
-                                             error)) {
+        !rewriteDefinitionExperimentalReturnConstructors(stmt,
+                                                         returnRewritePlan,
+                                                         locals,
+                                                         params,
+                                                         mapping,
+                                                         allowedParams,
+                                                         def.namespacePrefix,
+                                                         ctx,
+                                                         allowMathBare,
+                                                         error)) {
       return false;
     }
     if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       return false;
     }
     if (isReturnPathStmt &&
-        !rewriteDefinitionReturnConstructors(stmt,
-                                             returnRewritePlan,
-                                             rewriteCanonicalExperimentalVectorReturnConstructors,
-                                             rewriteCanonicalExperimentalMapReturnConstructors,
-                                             error)) {
+        !rewriteDefinitionExperimentalReturnConstructors(stmt,
+                                                         returnRewritePlan,
+                                                         locals,
+                                                         params,
+                                                         mapping,
+                                                         allowedParams,
+                                                         def.namespacePrefix,
+                                                         ctx,
+                                                         allowMathBare,
+                                                         error)) {
       return false;
     }
     recordDefinitionStatementBindingLocal(stmt, params, locals, allowMathBare, ctx, locals);
   }
   if (def.returnExpr.has_value()) {
-    if (!rewriteDefinitionReturnConstructors(*def.returnExpr,
-                                             returnRewritePlan,
-                                             rewriteCanonicalExperimentalVectorReturnConstructors,
-                                             rewriteCanonicalExperimentalMapReturnConstructors,
-                                             error)) {
+    if (!rewriteDefinitionExperimentalReturnConstructors(*def.returnExpr,
+                                                         returnRewritePlan,
+                                                         locals,
+                                                         params,
+                                                         mapping,
+                                                         allowedParams,
+                                                         def.namespacePrefix,
+                                                         ctx,
+                                                         allowMathBare,
+                                                         error)) {
       return false;
     }
     if (!rewriteExpr(*def.returnExpr, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params,
                      allowMathBare)) {
       return false;
     }
-    if (!rewriteDefinitionReturnConstructors(*def.returnExpr,
-                                             returnRewritePlan,
-                                             rewriteCanonicalExperimentalVectorReturnConstructors,
-                                             rewriteCanonicalExperimentalMapReturnConstructors,
-                                             error)) {
+    if (!rewriteDefinitionExperimentalReturnConstructors(*def.returnExpr,
+                                                         returnRewritePlan,
+                                                         locals,
+                                                         params,
+                                                         mapping,
+                                                         allowedParams,
+                                                         def.namespacePrefix,
+                                                         ctx,
+                                                         allowMathBare,
+                                                         error)) {
       return false;
     }
   }
