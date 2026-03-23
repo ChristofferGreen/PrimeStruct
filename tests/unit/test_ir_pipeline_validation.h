@@ -10850,6 +10850,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphDefinitionReturnOrchestration.h";
   const std::filesystem::path templateMonomorphDefinitionExperimentalCollectionRewritesPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h";
+  const std::filesystem::path templateMonomorphExecutionRewritesPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphExecutionRewrites.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
   REQUIRE(std::filesystem::exists(templateMonomorphFallbackPath));
   REQUIRE(std::filesystem::exists(templateMonomorphBindingCallPath));
@@ -10869,6 +10871,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphDefinitionBindingSetupPath));
   REQUIRE(std::filesystem::exists(templateMonomorphDefinitionReturnOrchestrationPath));
   REQUIRE(std::filesystem::exists(templateMonomorphDefinitionExperimentalCollectionRewritesPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphExecutionRewritesPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
   const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath);
@@ -10901,6 +10904,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphDefinitionReturnOrchestrationPath);
   const std::string templateMonomorphDefinitionExperimentalCollectionRewritesSource =
       readText(templateMonomorphDefinitionExperimentalCollectionRewritesPath);
+  const std::string templateMonomorphExecutionRewritesSource =
+      readText(templateMonomorphExecutionRewritesPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingCallInference.h\"") !=
@@ -10936,6 +10941,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphDefinitionReturnOrchestration.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphDefinitionExperimentalCollectionRewrites.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExecutionRewrites.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind)") ==
         std::string::npos);
@@ -11009,6 +11016,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("void rewriteDefinitionExperimentalMapReturnConstructors(Expr &candidate,") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool rewriteDefinitionExperimentalReturnConstructors(Expr &expr,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool rewriteExecutionEntry(Execution &exec, Context &ctx, std::string &error)") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolveExperimentalConstructorTargetTypeText(") ==
         std::string::npos);
@@ -11206,6 +11215,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphDefinitionExperimentalCollectionRewritesSource.find(
             "bool rewriteDefinitionExperimentalReturnConstructors(Expr &expr,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExecutionRewritesSource.find(
+            "bool rewriteExecutionEntry(Execution &exec, Context &ctx, std::string &error)") !=
         std::string::npos);
 }
 
