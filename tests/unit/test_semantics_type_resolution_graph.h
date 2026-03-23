@@ -750,4 +750,80 @@ TEST_CASE("type resolution query call metadata stays aligned with call snapshot"
   CHECK(queryEntry.typeText == callEntry.bindingTypeText);
 }
 
+TEST_CASE("type resolution temporary receiver result metadata stays aligned") {
+  const std::string source =
+      "MyError {\n"
+      "}\n"
+      "\n"
+      "Widget {\n"
+      "  [return<Result<int, MyError>>]\n"
+      "  read() {\n"
+      "    return(Result.ok(4i32))\n"
+      "  }\n"
+      "}\n"
+      "\n"
+      "[return<Widget>]\n"
+      "makeWidget() {\n"
+      "  return(Widget())\n"
+      "}\n"
+      "\n"
+      "[return<Result<int, MyError>>]\n"
+      "main() {\n"
+      "  [auto] selected{makeWidget().read()}\n"
+      "  return(selected)\n"
+      "}\n";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot localSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, localSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryCallSnapshot queryCallSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryCallSnapshotForTesting(
+      parseProgram(source), "/main", error, queryCallSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryBindingSnapshot queryBindingSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, queryBindingSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryResultTypeSnapshot queryResultSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryResultTypeSnapshotForTesting(
+      parseProgram(source), "/main", error, queryResultSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryReceiverBindingSnapshot queryReceiverSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryReceiverBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, queryReceiverSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionCallBindingSnapshot callSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionCallBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, callSnapshot));
+  CHECK(error.empty());
+
+  const auto &localEntry = requireLocalBindingSnapshotEntry(localSnapshot, "/main", "selected");
+  const auto &callEntry = requireQueryCallSnapshotEntry(queryCallSnapshot, "/main", "/Widget/read");
+  const auto &bindingEntry = requireQueryBindingSnapshotEntry(queryBindingSnapshot, "/main", "/Widget/read");
+  const auto &resultEntry = requireQueryResultTypeSnapshotEntry(queryResultSnapshot, "/main", "/Widget/read");
+  const auto &receiverEntry = requireQueryReceiverBindingSnapshotEntry(queryReceiverSnapshot, "/main", "/Widget/read");
+  const auto &directCallEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/Widget/read");
+
+  CHECK(localEntry.bindingTypeText == "Result<i32, MyError>");
+  CHECK(localEntry.initializerResolvedPath == callEntry.resolvedPath);
+  CHECK(localEntry.initializerBindingTypeText == bindingEntry.bindingTypeText);
+  CHECK(localEntry.initializerQueryTypeText == callEntry.typeText);
+  CHECK(localEntry.initializerReceiverBindingTypeText == receiverEntry.receiverBindingTypeText);
+  CHECK(localEntry.initializerResultHasValue == resultEntry.hasValue);
+  CHECK(localEntry.initializerResultValueTypeText == resultEntry.valueTypeText);
+  CHECK(localEntry.initializerResultErrorTypeText == resultEntry.errorTypeText);
+  CHECK(callEntry.typeText == directCallEntry.bindingTypeText);
+  CHECK(bindingEntry.bindingTypeText == directCallEntry.bindingTypeText);
+  CHECK(receiverEntry.receiverBindingTypeText == "Widget");
+  CHECK(resultEntry.valueTypeText == "i32");
+  CHECK(resultEntry.errorTypeText == "MyError");
+}
+
 TEST_SUITE_END();
