@@ -10826,6 +10826,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphTypeResolution.h";
   const std::filesystem::path templateMonomorphCollectionHelperInferencePath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphCollectionHelperInference.h";
+  const std::filesystem::path templateMonomorphExperimentalCollectionReceiverResolutionPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReceiverResolution.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionConstructorPathsPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionConstructorPaths.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
@@ -10835,6 +10837,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphMethodTargetsPath));
   REQUIRE(std::filesystem::exists(templateMonomorphTypeResolutionPath));
   REQUIRE(std::filesystem::exists(templateMonomorphCollectionHelperInferencePath));
+  REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReceiverResolutionPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionConstructorPathsPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
@@ -10844,6 +10847,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   const std::string templateMonomorphTypeResolutionSource = readText(templateMonomorphTypeResolutionPath);
   const std::string templateMonomorphCollectionHelperInferenceSource =
       readText(templateMonomorphCollectionHelperInferencePath);
+  const std::string templateMonomorphExperimentalCollectionReceiverResolutionSource =
+      readText(templateMonomorphExperimentalCollectionReceiverResolutionPath);
   const std::string templateMonomorphExperimentalCollectionConstructorPathsSource =
       readText(templateMonomorphExperimentalCollectionConstructorPathsPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
@@ -10857,6 +10862,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphTypeResolution.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphCollectionHelperInference.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionReceiverResolution.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionConstructorPaths.h\"") !=
         std::string::npos);
@@ -10882,6 +10889,22 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx)") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool resolvesExperimentalMapValueReceiver(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool resolvesExperimentalMapBorrowedReceiver(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool resolvesExperimentalVectorValueReceiver(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool resolveExperimentalMapValueReceiverTemplateArgs(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool resolveExperimentalVectorValueReceiverTemplateArgs(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool hasVisibleStdCollectionsImportForPath(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("std::string experimentalMapHelperPathForCanonicalHelper(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("std::string experimentalVectorHelperPathForCanonicalHelper(") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("std::string experimentalMapConstructorHelperPath(size_t argumentCount)") ==
         std::string::npos);
@@ -10938,6 +10961,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionHelperInferenceSource.find("enum class HelperFamily { None, Vector, Map };") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "bool resolvesExperimentalMapValueReceiver(const Expr *receiverExpr,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "std::string experimentalMapConstructorHelperPath(size_t argumentCount)") !=
