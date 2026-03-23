@@ -534,7 +534,7 @@ main() {
   CHECK(localEntry.initializerTryOnErrorBoundArgCount == tryEntry.onErrorBoundArgCount);
 }
 
-TEST_CASE("type resolution try operand call metadata stays aligned with call snapshot") {
+TEST_CASE("type resolution try operand metadata stays aligned with query snapshots") {
   const std::string source = R"(
 [return<void>]
 unexpectedError([MyError] err) {
@@ -561,17 +561,23 @@ main() {
       parseProgram(source), "/main", error, trySnapshot));
   CHECK(error.empty());
 
-  primec::semantics::TypeResolutionCallBindingSnapshot callSnapshot;
-  REQUIRE(primec::semantics::computeTypeResolutionCallBindingSnapshotForTesting(
-      parseProgram(source), "/main", error, callSnapshot));
+  primec::semantics::TypeResolutionQueryBindingSnapshot queryBindingSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, queryBindingSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionQueryResultTypeSnapshot queryResultSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionQueryResultTypeSnapshotForTesting(
+      parseProgram(source), "/main", error, queryResultSnapshot));
   CHECK(error.empty());
 
   const auto &tryEntry = requireTryValueSnapshotEntry(trySnapshot, "/main", "/makeValue");
-  const auto &callEntry = requireCallBindingSnapshotEntry(callSnapshot, "/main", "/makeValue");
-  CHECK(tryEntry.operandResolvedPath == callEntry.resolvedPath);
-  CHECK(tryEntry.operandBindingTypeText == callEntry.bindingTypeText);
-  CHECK(tryEntry.valueTypeText == "i32");
-  CHECK(tryEntry.errorTypeText == "MyError");
+  const auto &bindingEntry = requireQueryBindingSnapshotEntry(queryBindingSnapshot, "/main", "/makeValue");
+  const auto &resultEntry = requireQueryResultTypeSnapshotEntry(queryResultSnapshot, "/main", "/makeValue");
+  CHECK(tryEntry.operandResolvedPath == bindingEntry.resolvedPath);
+  CHECK(tryEntry.operandBindingTypeText == bindingEntry.bindingTypeText);
+  CHECK(tryEntry.valueTypeText == resultEntry.valueTypeText);
+  CHECK(tryEntry.errorTypeText == resultEntry.errorTypeText);
 }
 
 TEST_CASE("type resolution local query metadata stays aligned with query snapshots") {

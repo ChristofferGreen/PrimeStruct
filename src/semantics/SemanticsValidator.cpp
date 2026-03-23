@@ -482,35 +482,23 @@ bool SemanticsValidator::inferTrySnapshotData(const Definition &def,
                                               LocalAutoTrySnapshotData &out) {
   out = {};
 
-  auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
-  };
-
   if (expr.isMethodCall || !isSimpleCallName(expr, "try") || expr.args.size() != 1 ||
       !expr.templateArgs.empty() || expr.hasBodyArguments || !expr.bodyArguments.empty()) {
     return false;
   }
 
-  ResultTypeInfo resultInfo;
-  if (!withPreservedError([&]() {
-        return resolveResultTypeForExpr(expr.args.front(), defParams, activeLocals, resultInfo);
-      }) ||
-      !resultInfo.isResult || !resultInfo.hasValue || resultInfo.valueType.empty()) {
+  QuerySnapshotData operandQueryData;
+  if (!inferQuerySnapshotData(defParams, activeLocals, expr.args.front(), operandQueryData) ||
+      !operandQueryData.resultInfo.isResult ||
+      !operandQueryData.resultInfo.hasValue ||
+      operandQueryData.resultInfo.valueType.empty()) {
     return false;
   }
 
-  CallSnapshotData operandCallData;
-  if (inferCallSnapshotData(defParams, activeLocals, expr.args.front(), operandCallData)) {
-    out.operandResolvedPath = std::move(operandCallData.resolvedPath);
-    out.operandBinding = std::move(operandCallData.binding);
-  }
-  out.valueType = resultInfo.valueType;
-  out.errorType = resultInfo.errorType;
+  out.operandResolvedPath = std::move(operandQueryData.resolvedPath);
+  out.operandBinding = std::move(operandQueryData.binding);
+  out.valueType = std::move(operandQueryData.resultInfo.valueType);
+  out.errorType = std::move(operandQueryData.resultInfo.errorType);
   if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
     out.contextReturnKind = returnKindIt->second;
   }

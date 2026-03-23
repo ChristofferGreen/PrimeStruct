@@ -882,11 +882,13 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {") !=
         std::string::npos);
-  CHECK(validatorCore.find("CallSnapshotData operandCallData;") !=
+  CHECK(validatorCore.find("QuerySnapshotData operandQueryData;") !=
         std::string::npos);
-  CHECK(validatorCore.find("inferCallSnapshotData(defParams, activeLocals, expr.args.front(), operandCallData)") !=
+  CHECK(validatorCore.find("inferQuerySnapshotData(defParams, activeLocals, expr.args.front(), operandQueryData)") !=
         std::string::npos);
-  CHECK(validatorCore.find("out.operandBinding = std::move(operandCallData.binding);") !=
+  CHECK(validatorCore.find("out.operandBinding = std::move(operandQueryData.binding);") !=
+        std::string::npos);
+  CHECK(validatorCore.find("out.valueType = std::move(operandQueryData.resultInfo.valueType);") !=
         std::string::npos);
   CHECK(validatorCore.find("context.onError->handlerPath") != std::string::npos);
   CHECK(validatorCore.find("out.onErrorErrorType = context.onError->errorType;") !=
