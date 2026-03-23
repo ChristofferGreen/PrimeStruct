@@ -112,6 +112,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveMethodCallWithLocalsFn &resolveMethodCall,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
+                                     const InferExprKindWithLocalsFn &inferExprKind,
                                      ResultExprInfo &out) {
   out = ResultExprInfo{};
   auto isIndexedArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
@@ -261,6 +262,15 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       }
     }
   }
+  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
+      expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result" && expr.name == "ok") {
+    out.isResult = true;
+    out.hasValue = (expr.args.size() > 1);
+    if (out.hasValue && expr.args.size() == 2 && inferExprKind) {
+      out.valueKind = inferExprKind(expr.args[1], localsIn);
+    }
+    return true;
+  }
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && expr.name == "tryAt") {
     const Definition *methodCallee = resolveMethod(expr);
     if (methodCallee == nullptr) {
@@ -300,11 +310,12 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
-    const LookupReturnInfoFn &lookupReturnInfo) {
-  return [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo](
+    const LookupReturnInfoFn &lookupReturnInfo,
+    const InferExprKindWithLocalsFn &inferExprKind) {
+  return [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind](
              const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) {
     return resolveResultExprInfoFromLocals(
-        expr, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out);
+        expr, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out);
   };
 }
 

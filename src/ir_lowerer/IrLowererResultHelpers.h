@@ -34,6 +34,7 @@ using ResolveCallDefinitionFn = std::function<const Definition *(const Expr &)>;
 using LookupDefinitionResultInfoFn = std::function<bool(const std::string &, ResultExprInfo &)>;
 using ResolveMethodCallWithLocalsFn = std::function<const Definition *(const Expr &, const LocalMap &)>;
 using LookupReturnInfoFn = std::function<bool(const std::string &, ReturnInfo &)>;
+using InferExprKindWithLocalsFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using ResolveResultExprInfoWithLocalsFn =
     std::function<bool(const Expr &, const LocalMap &, ResultExprInfo &)>;
 struct ResultWhyCallOps;
@@ -54,11 +55,13 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveMethodCallWithLocalsFn &resolveMethodCall,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
+                                     const InferExprKindWithLocalsFn &inferExprKind,
                                      ResultExprInfo &out);
 ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
-    const LookupReturnInfoFn &lookupReturnInfo);
+    const LookupReturnInfoFn &lookupReturnInfo,
+    const InferExprKindWithLocalsFn &inferExprKind);
 bool resolveResultWhyCallInfo(const Expr &expr,
                               const LocalMap &localsIn,
                               const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,

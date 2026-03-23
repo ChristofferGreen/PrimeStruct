@@ -68,6 +68,9 @@
       resolveDefinitionCall,
       [&](const std::string &path, ReturnInfo &info) -> bool {
         return getReturnInfo && getReturnInfo(path, info);
+      },
+      [&](const Expr &expr, const LocalMap &localsForKind) -> LocalInfo::ValueKind {
+        return inferExprKind(expr, localsForKind);
       });
 
   auto emitStringValueForCall = [&](const Expr &arg,

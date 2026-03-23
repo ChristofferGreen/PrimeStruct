@@ -200,6 +200,40 @@ main() {
   CHECK(result == 20);
 }
 
+TEST_CASE("ir lowerer supports Result.map with direct Result.ok source") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] mapped{
+    Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) })
+  }
+  return(try(mapped))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 8);
+}
+
 TEST_CASE("ir lowerer supports Result.and_then builtin lambdas") {
   const std::string source = R"(
 import /std/file/*
@@ -292,6 +326,40 @@ main() {
   CHECK(result == 30);
 }
 
+TEST_CASE("ir lowerer supports Result.and_then with direct Result.ok source") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] chained{
+    Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(multiply(value, 4i32))) })
+  }
+  return(try(chained))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 8);
+}
+
 TEST_CASE("ir lowerer supports Result.map2 builtin lambdas") {
   const std::string source = R"(
 [return<int>]
@@ -378,6 +446,40 @@ main() {
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 20);
+}
+
+TEST_CASE("ir lowerer supports Result.map2 with direct Result.ok sources") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] summed{
+    Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) })
+  }
+  return(try(summed))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
 }
 
 TEST_CASE("ir lowerer accepts move builtin") {
