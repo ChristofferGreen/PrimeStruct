@@ -420,6 +420,23 @@ private:
       const std::string &resolved,
       const ExprLateCallCompatibilityContext &context,
       bool &handledOut);
+  struct ExprMethodResolutionContext {
+    bool hasVectorHelperCallResolution = false;
+    std::function<void(const Expr &, std::string &, bool &, bool)> promoteCapacityToBuiltinValidation;
+    std::function<std::string(const std::string &)> unavailableMethodDiagnostic;
+  };
+  bool validateExprMethodCallTarget(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const ExprMethodResolutionContext &context,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
+      std::string &resolved,
+      bool &resolvedMethod,
+      bool &usedMethodTarget,
+      bool &hasMethodReceiverIndex,
+      size_t &methodReceiverIndex);
   struct ExprArgumentValidationContext;
   struct ExprLateMapAccessBuiltinContext {
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;

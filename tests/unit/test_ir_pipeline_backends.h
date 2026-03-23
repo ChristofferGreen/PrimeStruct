@@ -664,7 +664,19 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExpr.find("canonicalExperimentalMapHelperPath(") != std::string::npos);
   CHECK(validatorExpr.find("canonicalizeExperimentalMapHelperResolvedPath(") != std::string::npos);
   CHECK(validatorExpr.find("shouldBuiltinValidateCurrentMapWrapperHelper(") != std::string::npos);
-  CHECK(validatorExpr.find("mapNamespacedMethodCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
+  CHECK(validatorHeader.find("bool validateExprMethodCallTarget(") != std::string::npos);
+  CHECK(validatorExprMain.find("ExprMethodResolutionContext methodResolutionContext;") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("validateExprMethodCallTarget(") != std::string::npos);
+  CHECK(validatorExprMain.find("mapNamespacedMethodCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("mapNamespacedMethodCompatibilityPath(expr, params, locals, dispatchResolverAdapters)") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("error_ = \"method call missing receiver\";") == std::string::npos);
+  CHECK(validatorExpr.find("error_ = \"method call missing receiver\";") != std::string::npos);
+  CHECK(validatorExprMain.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") !=
         std::string::npos);
   CHECK(validatorExpr.find("directMapHelperCompatibilityPath(") != std::string::npos);
   CHECK(validatorExpr.find("explicitRemovedCollectionMethodPath(methodName)") !=

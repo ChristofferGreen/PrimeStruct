@@ -9258,6 +9258,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateFallbackBuiltins.cpp";
   const std::filesystem::path semanticsExprLateCallCompatibilityPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateCallCompatibility.cpp";
+  const std::filesystem::path semanticsExprMethodResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
   const std::filesystem::path semanticsExprLateMapAccessBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateMapAccessBuiltins.cpp";
   const std::filesystem::path semanticsExprMutationBorrowsPath =
@@ -9301,6 +9303,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateFallbackBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateCallCompatibilityPath));
+  REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateMapAccessBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprMutationBorrowsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
@@ -9333,6 +9336,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprLateFallbackBuiltinsPath);
   const std::string semanticsExprLateCallCompatibilitySource =
       readText(semanticsExprLateCallCompatibilityPath);
+  const std::string semanticsExprMethodResolutionSource =
+      readText(semanticsExprMethodResolutionPath);
   const std::string semanticsExprLateMapAccessBuiltinsSource =
       readText(semanticsExprLateMapAccessBuiltinsPath);
   const std::string semanticsExprMutationBorrowsSource =
@@ -9366,6 +9371,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find(
             "validateExprLateCallCompatibility(\n"
             "              params, locals, expr, resolved,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprMethodCallTarget(\n"
+            "            params,\n"
+            "            locals,\n"
+            "            expr,\n"
+            "            methodResolutionContext,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprLateMapAccessBuiltins(\n"
@@ -9447,6 +9459,19 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("std::function<bool(const Expr &)> isUnsafeReferenceExpr;") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "this->mapNamespacedMethodCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "this->mapNamespacedMethodCompatibilityPath(expr, params, locals, dispatchResolverAdapters)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("error_ = \"method call missing receiver\";") == std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find("error_ = \"method call missing receiver\";") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
@@ -9465,9 +9490,6 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("this->canonicalExperimentalMapHelperPath(") == std::string::npos);
   CHECK(semanticsExprSource.find("this->canonicalizeExperimentalMapHelperResolvedPath(") !=
-        std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "this->mapNamespacedMethodCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("this->directMapHelperCompatibilityPath(") != std::string::npos);
   CHECK(semanticsExprSource.find("this->shouldPreserveRemovedCollectionHelperPath(resolved)") ==

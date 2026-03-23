@@ -3390,6 +3390,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("capacity method keeps same-path vector helper precedence") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(77i32)
+}
+
+[return<int>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(wrapVector().capacity())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector pop alias requires mutable vector binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
