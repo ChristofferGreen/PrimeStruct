@@ -1065,6 +1065,7 @@ bool instantiateTemplate(const std::string &basePath,
 #include "TemplateMonomorphExperimentalCollectionReturnRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
 #include "TemplateMonomorphDefinitionBindingSetup.h"
+#include "TemplateMonomorphDefinitionReturnOrchestration.h"
 
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
@@ -2137,67 +2138,46 @@ bool rewriteDefinition(Definition &def,
   }
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
     auto &stmt = def.statements[stmtIndex];
-    const bool isReturnPathStmt =
-        isReturnCall(stmt) ||
-        (!returnStatementSelection.sawExplicitReturn &&
-         stmtIndex == returnStatementSelection.implicitReturnStmtIndex);
-    if (returnRewritePlan.expectedExperimentalVectorReturn && isReturnPathStmt) {
-      rewriteCanonicalExperimentalVectorReturnConstructors(stmt);
-      if (!error.empty()) {
-        return false;
-      }
-    }
-    if (returnRewritePlan.expectedExperimentalMapReturn && isReturnPathStmt) {
-      rewriteCanonicalExperimentalMapReturnConstructors(stmt);
-      if (!error.empty()) {
-        return false;
-      }
+    const bool isReturnPathStmt = isDefinitionReturnPathStatement(stmt, stmtIndex, returnStatementSelection);
+    if (isReturnPathStmt &&
+        !rewriteDefinitionReturnConstructors(stmt,
+                                             returnRewritePlan,
+                                             rewriteCanonicalExperimentalVectorReturnConstructors,
+                                             rewriteCanonicalExperimentalMapReturnConstructors,
+                                             error)) {
+      return false;
     }
     if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       return false;
     }
-    if (returnRewritePlan.expectedExperimentalVectorReturn && isReturnPathStmt) {
-      rewriteCanonicalExperimentalVectorReturnConstructors(stmt);
-      if (!error.empty()) {
-        return false;
-      }
-    }
-    if (returnRewritePlan.expectedExperimentalMapReturn && isReturnPathStmt) {
-      rewriteCanonicalExperimentalMapReturnConstructors(stmt);
-      if (!error.empty()) {
-        return false;
-      }
+    if (isReturnPathStmt &&
+        !rewriteDefinitionReturnConstructors(stmt,
+                                             returnRewritePlan,
+                                             rewriteCanonicalExperimentalVectorReturnConstructors,
+                                             rewriteCanonicalExperimentalMapReturnConstructors,
+                                             error)) {
+      return false;
     }
     recordDefinitionStatementBindingLocal(stmt, params, locals, allowMathBare, ctx, locals);
   }
   if (def.returnExpr.has_value()) {
-    if (returnRewritePlan.expectedExperimentalVectorReturn) {
-      rewriteCanonicalExperimentalVectorReturnConstructors(*def.returnExpr);
-      if (!error.empty()) {
-        return false;
-      }
-    }
-    if (returnRewritePlan.expectedExperimentalMapReturn) {
-      rewriteCanonicalExperimentalMapReturnConstructors(*def.returnExpr);
-      if (!error.empty()) {
-        return false;
-      }
+    if (!rewriteDefinitionReturnConstructors(*def.returnExpr,
+                                             returnRewritePlan,
+                                             rewriteCanonicalExperimentalVectorReturnConstructors,
+                                             rewriteCanonicalExperimentalMapReturnConstructors,
+                                             error)) {
+      return false;
     }
     if (!rewriteExpr(*def.returnExpr, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params,
                      allowMathBare)) {
       return false;
     }
-    if (returnRewritePlan.expectedExperimentalVectorReturn) {
-      rewriteCanonicalExperimentalVectorReturnConstructors(*def.returnExpr);
-      if (!error.empty()) {
-        return false;
-      }
-    }
-    if (returnRewritePlan.expectedExperimentalMapReturn) {
-      rewriteCanonicalExperimentalMapReturnConstructors(*def.returnExpr);
-      if (!error.empty()) {
-        return false;
-      }
+    if (!rewriteDefinitionReturnConstructors(*def.returnExpr,
+                                             returnRewritePlan,
+                                             rewriteCanonicalExperimentalVectorReturnConstructors,
+                                             rewriteCanonicalExperimentalMapReturnConstructors,
+                                             error)) {
+      return false;
     }
   }
   return true;

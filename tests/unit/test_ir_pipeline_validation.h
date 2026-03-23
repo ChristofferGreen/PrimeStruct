@@ -10846,6 +10846,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReturnSetup.h";
   const std::filesystem::path templateMonomorphDefinitionBindingSetupPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphDefinitionBindingSetup.h";
+  const std::filesystem::path templateMonomorphDefinitionReturnOrchestrationPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphDefinitionReturnOrchestration.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
   REQUIRE(std::filesystem::exists(templateMonomorphFallbackPath));
   REQUIRE(std::filesystem::exists(templateMonomorphBindingCallPath));
@@ -10863,6 +10865,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReturnRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReturnSetupPath));
   REQUIRE(std::filesystem::exists(templateMonomorphDefinitionBindingSetupPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphDefinitionReturnOrchestrationPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
   const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath);
@@ -10891,6 +10894,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphExperimentalCollectionReturnSetupPath);
   const std::string templateMonomorphDefinitionBindingSetupSource =
       readText(templateMonomorphDefinitionBindingSetupPath);
+  const std::string templateMonomorphDefinitionReturnOrchestrationSource =
+      readText(templateMonomorphDefinitionReturnOrchestrationPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingCallInference.h\"") !=
@@ -10922,6 +10927,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphExperimentalCollectionReturnSetup.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphDefinitionBindingSetup.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphDefinitionReturnOrchestration.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind)") ==
         std::string::npos);
@@ -10981,6 +10988,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("bool rewriteDefinitionParameters(std::vector<Expr> &parameters,") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("void recordDefinitionStatementBindingLocal(Expr &stmt,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool isDefinitionReturnPathStatement(const Expr &stmt,") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("bool rewriteDefinitionReturnConstructors(Expr &expr,") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolveExperimentalConstructorTargetTypeText(") ==
         std::string::npos);
@@ -11157,6 +11168,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphDefinitionBindingSetupSource.find(
             "void recordDefinitionStatementBindingLocal(Expr &stmt,") !=
+        std::string::npos);
+  CHECK(templateMonomorphDefinitionReturnOrchestrationSource.find(
+            "bool isDefinitionReturnPathStatement(const Expr &stmt,") !=
+        std::string::npos);
+  CHECK(templateMonomorphDefinitionReturnOrchestrationSource.find(
+            "bool rewriteDefinitionReturnConstructors(Expr &expr,") !=
         std::string::npos);
 }
 
