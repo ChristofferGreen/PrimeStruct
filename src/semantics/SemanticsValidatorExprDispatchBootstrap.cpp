@@ -7,12 +7,11 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
     const std::unordered_map<std::string, BindingInfo> &locals,
     ExprDispatchBootstrap &bootstrapOut) {
   bootstrapOut = {};
-  const auto paramsCopy = params;
-  const auto localsCopy = locals;
+  const auto *paramsPtr = &params;
+  const auto *localsPtr = &locals;
 
-  auto resolveFieldBindingTarget = [this, paramsCopy, localsCopy](
-                                       const Expr &target,
-                                       BindingInfo &bindingOut) -> bool {
+  auto resolveFieldBindingTarget = [this, paramsPtr, localsPtr](const Expr &target,
+                                                                BindingInfo &bindingOut) -> bool {
     if (!(target.kind == Expr::Kind::Call && target.isFieldAccess &&
           target.args.size() == 1)) {
       return false;
@@ -20,11 +19,10 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
     std::string structPath;
     const Expr &receiver = target.args.front();
     if (receiver.kind == Expr::Kind::Name) {
-      const BindingInfo *receiverBinding =
-          findParamBinding(paramsCopy, receiver.name);
+      const BindingInfo *receiverBinding = findParamBinding(*paramsPtr, receiver.name);
       if (!receiverBinding) {
-        auto it = localsCopy.find(receiver.name);
-        if (it != localsCopy.end()) {
+        auto it = localsPtr->find(receiver.name);
+        if (it != localsPtr->end()) {
           receiverBinding = &it->second;
         }
       }
@@ -45,8 +43,7 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
         }
       }
     } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
-      std::string inferredStruct =
-          inferStructReturnPath(receiver, paramsCopy, localsCopy);
+      std::string inferredStruct = inferStructReturnPath(receiver, *paramsPtr, *localsPtr);
       if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
         structPath = inferredStruct;
       } else {
@@ -80,7 +77,10 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
   };
 
   bootstrapOut.dispatchResolverAdapters = {
-      .resolveBindingTarget = resolveFieldBindingTarget,
+      .resolveBindingTarget =
+          [resolveFieldBindingTarget](const Expr &target, BindingInfo &bindingOut) -> bool {
+            return resolveFieldBindingTarget(target, bindingOut);
+          },
       .inferCallBinding =
           [this](const Expr &target, BindingInfo &bindingOut) -> bool {
             if (target.kind != Expr::Kind::Call) {
@@ -92,7 +92,7 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
           }};
   bootstrapOut.dispatchResolvers = makeBuiltinCollectionDispatchResolvers(
       params, locals, bootstrapOut.dispatchResolverAdapters);
-  bootstrapOut.isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {
+  bootstrapOut.isDeclaredPointerLikeCall = [this](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Call) {
       return false;
     }
@@ -107,7 +107,7 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
     return inferredReturn.typeName == "Pointer" ||
            inferredReturn.typeName == "Reference";
   };
-  bootstrapOut.resolveMapTarget = [&](const Expr &target) -> bool {
+  bootstrapOut.resolveMapTarget = [this, paramsPtr, localsPtr, &bootstrapOut](const Expr &target) -> bool {
     std::string keyType;
     std::string valueType;
     if (bootstrapOut.dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
@@ -115,34 +115,9 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
                                                                     valueType)) {
       return true;
     }
-    if (target.kind != Expr::Kind::Call) {
-      return false;
-    }
-    auto defIt = defMap_.find(resolveCalleePath(target));
-    if ((defIt == defMap_.end() || defIt->second == nullptr) &&
-        !target.name.empty() && target.name.find('/') == std::string::npos) {
-      defIt = defMap_.find("/" + target.name);
-    }
-    if (defIt == defMap_.end() || defIt->second == nullptr) {
-      return false;
-    }
-    BindingInfo inferredReturn;
-    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-      const std::string inferredTypeText =
-          inferredReturn.typeTemplateArg.empty()
-              ? inferredReturn.typeName
-              : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
-      if (returnsMapCollectionType(inferredTypeText)) {
-        return true;
-      }
-    }
-    for (const auto &transform : defIt->second->transforms) {
-      if (transform.name == "return" && transform.templateArgs.size() == 1 &&
-          returnsMapCollectionType(transform.templateArgs.front())) {
-        return true;
-      }
-    }
-    return false;
+    std::string inferredTypeText;
+    return inferQueryExprTypeText(target, *paramsPtr, *localsPtr, inferredTypeText) &&
+           returnsMapCollectionType(inferredTypeText);
   };
 }
 

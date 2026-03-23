@@ -264,7 +264,7 @@ TEST_CASE("semantics validator caches base validation contexts behind a single c
   CHECK(header.find("std::unordered_set<std::string> movedBindings_;") == std::string::npos);
   CHECK(header.find("std::unordered_set<std::string> endedReferenceBorrows_;") == std::string::npos);
   CHECK(header.find("std::string currentDefinitionPath_;") == std::string::npos);
-  CHECK(build.find("definitionValidationContexts_.try_emplace(def.fullPath, std::move(context));") !=
+  CHECK(build.find("definitionValidationContexts_.try_emplace(def.fullPath, makeDefinitionValidationContext(def));") !=
         std::string::npos);
   CHECK(build.find("executionValidationContexts_.try_emplace(exec.fullPath, makeExecutionValidationContext(exec));") !=
         std::string::npos);
@@ -278,8 +278,6 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
   std::filesystem::path graphHeaderPath = cwd / "src" / "semantics" / "TypeResolutionGraph.h";
   std::filesystem::path graphSourcePath = cwd / "src" / "semantics" / "TypeResolutionGraph.cpp";
-  std::filesystem::path graphPrepHeaderPath = cwd / "src" / "semantics" / "TypeResolutionGraphPreparation.h";
-  std::filesystem::path graphPrepSourcePath = cwd / "src" / "semantics" / "TypeResolutionGraphPreparation.cpp";
   std::filesystem::path pipelinePath = cwd / "src" / "CompilePipeline.cpp";
   std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
   std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
@@ -288,8 +286,6 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
     testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
     graphHeaderPath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.h";
     graphSourcePath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.cpp";
-    graphPrepHeaderPath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraphPreparation.h";
-    graphPrepSourcePath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraphPreparation.cpp";
     pipelinePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
     primecMainPath = cwd.parent_path() / "src" / "main.cpp";
     primevmMainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
@@ -298,8 +294,6 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   REQUIRE(std::filesystem::exists(testApiPath));
   REQUIRE(std::filesystem::exists(graphHeaderPath));
   REQUIRE(std::filesystem::exists(graphSourcePath));
-  REQUIRE(std::filesystem::exists(graphPrepHeaderPath));
-  REQUIRE(std::filesystem::exists(graphPrepSourcePath));
   REQUIRE(std::filesystem::exists(pipelinePath));
   REQUIRE(std::filesystem::exists(primecMainPath));
   REQUIRE(std::filesystem::exists(primevmMainPath));
@@ -308,85 +302,28 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   const std::string testApi = readTextFile(testApiPath);
   const std::string graphHeader = readTextFile(graphHeaderPath);
   const std::string graphSource = readTextFile(graphSourcePath);
-  const std::string graphPrepHeader = readTextFile(graphPrepHeaderPath);
-  const std::string graphPrepSource = readTextFile(graphPrepSourcePath);
   const std::string pipeline = readTextFile(pipelinePath);
   const std::string primecMain = readTextFile(primecMainPath);
   const std::string primevmMain = readTextFile(primevmMainPath);
-  CHECK(cmake.find("src/semantics/TypeResolutionGraphPreparation.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/TypeResolutionGraph.cpp") != std::string::npos);
   CHECK(cmake.find("primestruct.semantics.type_resolution_graph") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshotNode") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshotEdge") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshot") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionReturnSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionReturnSnapshot") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionLocalBindingSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionLocalBindingSnapshot") != std::string::npos);
-  CHECK(testApi.find("std::string initializerBindingTypeText;") != std::string::npos);
-  CHECK(testApi.find("bool initializerHasTry = false;") != std::string::npos);
-  CHECK(testApi.find("std::string initializerTryOperandResolvedPath;") != std::string::npos);
-  CHECK(testApi.find("std::string initializerTryOperandBindingTypeText;") != std::string::npos);
-  CHECK(testApi.find("std::string initializerTryOperandReceiverBindingTypeText;") != std::string::npos);
-  CHECK(testApi.find("std::string initializerTryOperandQueryTypeText;") != std::string::npos);
-  CHECK(testApi.find("std::string initializerTryValueTypeText;") != std::string::npos);
-  CHECK(testApi.find("std::string initializerTryErrorTypeText;") != std::string::npos);
-  CHECK(testApi.find("std::string initializerTryContextReturnKindText;") != std::string::npos);
-  CHECK(testApi.find("std::string initializerTryOnErrorHandlerPath;") != std::string::npos);
-  CHECK(testApi.find("std::string initializerTryOnErrorErrorTypeText;") != std::string::npos);
-  CHECK(testApi.find("size_t initializerTryOnErrorBoundArgCount = 0;") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionQueryCallSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionQueryCallSnapshot") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionQueryBindingSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionQueryBindingSnapshot") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionQueryResultTypeSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionQueryResultTypeSnapshot") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionTryValueSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionTryValueSnapshot") != std::string::npos);
-  CHECK(testApi.find("std::string operandBindingTypeText;") != std::string::npos);
-  CHECK(testApi.find("std::string operandReceiverBindingTypeText;") != std::string::npos);
-  CHECK(testApi.find("std::string operandQueryTypeText;") != std::string::npos);
-  CHECK(testApi.find("std::string onErrorErrorTypeText;") != std::string::npos);
-  CHECK(testApi.find("size_t onErrorBoundArgCount = 0;") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionCallBindingSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionCallBindingSnapshot") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionQueryReceiverBindingSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionQueryReceiverBindingSnapshot") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionOnErrorSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionOnErrorSnapshot") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionValidationContextSnapshotEntry") != std::string::npos);
-  CHECK(testApi.find("struct TypeResolutionValidationContextSnapshot") != std::string::npos);
-  CHECK(testApi.find("std::string returnKindText;") != std::string::npos);
   CHECK(testApi.find("buildTypeResolutionGraphForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionDependencyDagForTesting") != std::string::npos);
   CHECK(testApi.find("dumpTypeResolutionGraphForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionReturnSnapshotForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionLocalBindingSnapshotForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionQueryCallSnapshotForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionQueryBindingSnapshotForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionQueryResultTypeSnapshotForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionTryValueSnapshotForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionCallBindingSnapshotForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionQueryReceiverBindingSnapshotForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionOnErrorSnapshotForTesting") != std::string::npos);
-  CHECK(testApi.find("computeTypeResolutionValidationContextSnapshotForTesting") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionNodeKind") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionEdgeKind") != std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraphNode") != std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraphEdge") != std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraph") != std::string::npos);
   CHECK(graphHeader.find("buildTypeResolutionGraphForProgram") != std::string::npos);
-  CHECK(graphHeader.find("computeTypeResolutionDependencyDag") != std::string::npos);
   CHECK(graphHeader.find("formatTypeResolutionGraph") != std::string::npos);
-  CHECK(graphPrepHeader.find("prepareProgramForTypeResolutionAnalysis") != std::string::npos);
-  CHECK(graphPrepSource.find("prepareProgramForTypeResolutionAnalysis") != std::string::npos);
   CHECK(graphSource.find("TypeResolutionGraphBuilder") != std::string::npos);
+  CHECK(graphSource.find("monomorphizeTemplates(program, entryPath, error)") != std::string::npos);
+  CHECK(graphSource.find("rewriteConvertConstructors(program, error)") != std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraph(program)") != std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraphForProgram(std::move(program), entryPath") != std::string::npos);
-  CHECK(graphSource.find("prepareProgramForTypeResolutionAnalysis(program, entryPath, semanticTransforms, error)") !=
-        std::string::npos);
-  CHECK(graphSource.find("computeTypeResolutionDependencyDag(const TypeResolutionGraph &graph)") !=
-        std::string::npos);
   CHECK(graphSource.find("out = formatTypeResolutionGraph(graph);") != std::string::npos);
   CHECK(pipeline.find("DumpStage::TypeGraph") != std::string::npos);
   CHECK(pipeline.find("dumpStage == \"type_graph\" || dumpStage == \"type-graph\"") != std::string::npos);
@@ -440,6 +377,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   std::filesystem::path validatorCollectionHelperRewritesPath =
       cwd / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   std::filesystem::path validatorInferPath = cwd / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
+  std::filesystem::path validatorInferCollectionCountCapacityPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorInferCollectionCountCapacity.cpp";
+  std::filesystem::path validatorInferCollectionDirectCountCapacityPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorInferCollectionDirectCountCapacity.cpp";
+  std::filesystem::path validatorInferCollectionDispatchPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorInferCollectionDispatch.cpp";
+  std::filesystem::path validatorInferControlFlowPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorInferControlFlow.cpp";
   std::filesystem::path validatorInferDefinitionPath =
       cwd / "src" / "semantics" / "SemanticsValidatorInferDefinition.cpp";
   std::filesystem::path validatorInferCollectionDispatchSetupPath =
@@ -462,8 +407,6 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       cwd / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
   std::filesystem::path validatorInferUtilityPath =
       cwd / "src" / "semantics" / "SemanticsValidatorInferUtility.cpp";
-  std::filesystem::path lowerInferenceSetupPath =
-      cwd / "src" / "ir_lowerer" / "IrLowererLowerInferenceSetup.cpp";
   std::filesystem::path pipelinePath = cwd / "src" / "CompilePipeline.cpp";
   std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
   std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
@@ -509,6 +452,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
     validatorCollectionHelperRewritesPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
     validatorInferPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
+    validatorInferCollectionCountCapacityPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollectionCountCapacity.cpp";
+    validatorInferCollectionDirectCountCapacityPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollectionDirectCountCapacity.cpp";
+    validatorInferCollectionDispatchPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollectionDispatch.cpp";
+    validatorInferControlFlowPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferControlFlow.cpp";
     validatorInferDefinitionPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferDefinition.cpp";
     validatorInferCollectionDispatchSetupPath =
@@ -530,7 +481,6 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
     validatorInferUtilityPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferUtility.cpp";
-    lowerInferenceSetupPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerInferenceSetup.cpp";
     pipelinePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
     primecMainPath = cwd.parent_path() / "src" / "main.cpp";
     primevmMainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
@@ -561,6 +511,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(validatorCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(validatorInferPath));
+  REQUIRE(std::filesystem::exists(validatorInferCollectionCountCapacityPath));
+  REQUIRE(std::filesystem::exists(validatorInferCollectionDirectCountCapacityPath));
+  REQUIRE(std::filesystem::exists(validatorInferCollectionDispatchPath));
+  REQUIRE(std::filesystem::exists(validatorInferControlFlowPath));
   REQUIRE(std::filesystem::exists(validatorInferDefinitionPath));
   REQUIRE(std::filesystem::exists(validatorInferCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(validatorInferLateFallbackBuiltinsPath));
@@ -572,7 +526,6 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorInferStructReturnPath));
   REQUIRE(std::filesystem::exists(validatorInferTargetResolutionPath));
   REQUIRE(std::filesystem::exists(validatorInferUtilityPath));
-  REQUIRE(std::filesystem::exists(lowerInferenceSetupPath));
   REQUIRE(std::filesystem::exists(pipelinePath));
   REQUIRE(std::filesystem::exists(primecMainPath));
   REQUIRE(std::filesystem::exists(primevmMainPath));
@@ -611,7 +564,11 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   const std::string validatorInferMain = readTextFile(validatorInferPath);
   const std::string validatorInfer = readTextFiles({
       validatorInferPath,
+      validatorInferCollectionCountCapacityPath,
+      validatorInferCollectionDirectCountCapacityPath,
+      validatorInferCollectionDispatchPath,
       validatorCollectionsPath,
+      validatorInferControlFlowPath,
       validatorInferCollectionDispatchSetupPath,
       validatorInferLateFallbackBuiltinsPath,
       validatorInferPreDispatchCallsPath,
@@ -624,71 +581,16 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       validatorInferTargetResolutionPath,
       validatorInferUtilityPath,
   });
-  const std::string lowerInferenceSetup = readTextFile(lowerInferenceSetupPath);
   const std::string pipeline = readTextFile(pipelinePath);
   const std::string primecMain = readTextFile(primecMainPath);
   const std::string primevmMain = readTextFile(primevmMainPath);
 
-  CHECK(optionsHeader.find("typeResolver") == std::string::npos);
-  CHECK(optionsParser.find("--type-resolver") == std::string::npos);
-  CHECK(semanticsHeader.find("typeResolver") == std::string::npos);
-  CHECK(semanticsValidate.find("typeResolver") == std::string::npos);
+  CHECK(optionsHeader.find("std::string typeResolver = \"graph\";") != std::string::npos);
+  CHECK(optionsParser.find("unsupported --type-resolver value: ") != std::string::npos);
+  CHECK(optionsParser.find("--type-resolver requires a value") != std::string::npos);
+  CHECK(semanticsHeader.find("const std::string &typeResolver = \"graph\"") != std::string::npos);
+  CHECK(semanticsValidate.find("collectDiagnostics, typeResolver") != std::string::npos);
   CHECK(validatorHeader.find("bool inferUnknownReturnKindsGraph();") != std::string::npos);
-  CHECK(validatorHeader.find("struct ReturnResolutionSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("struct LocalAutoBindingSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("struct LocalAutoTrySnapshotData {") != std::string::npos);
-  CHECK(validatorHeader.find("struct QuerySnapshotData {") != std::string::npos);
-  CHECK(validatorHeader.find("struct CallSnapshotData {") != std::string::npos);
-  CHECK(validatorHeader.find("bool inferQuerySnapshotData(const std::vector<ParameterInfo> &defParams,") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("bool inferCallSnapshotData(const std::vector<ParameterInfo> &defParams,") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("bool inferTrySnapshotData(const Definition &def,") != std::string::npos);
-  CHECK(validatorHeader.find("BindingInfo initializerBinding;") != std::string::npos);
-  CHECK(validatorHeader.find("bool initializerHasTry = false;") != std::string::npos);
-  CHECK(validatorHeader.find("std::string initializerTryOperandResolvedPath;") != std::string::npos);
-  CHECK(validatorHeader.find("BindingInfo initializerTryOperandBinding;") != std::string::npos);
-  CHECK(validatorHeader.find("BindingInfo initializerTryOperandReceiverBinding;") != std::string::npos);
-  CHECK(validatorHeader.find("std::string initializerTryOperandQueryTypeText;") != std::string::npos);
-  CHECK(validatorHeader.find("ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::string initializerTryOnErrorErrorType;") != std::string::npos);
-  CHECK(validatorHeader.find("size_t initializerTryOnErrorBoundArgCount = 0;") != std::string::npos);
-  CHECK(validatorHeader.find("std::string onErrorErrorType;") != std::string::npos);
-  CHECK(validatorHeader.find("size_t onErrorBoundArgCount = 0;") != std::string::npos);
-  CHECK(validatorHeader.find("BindingInfo operandBinding;") != std::string::npos);
-  CHECK(validatorHeader.find("BindingInfo operandReceiverBinding;") != std::string::npos);
-  CHECK(validatorHeader.find("std::string operandQueryTypeText;") != std::string::npos);
-  CHECK(validatorHeader.find("struct QueryCallTypeSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("struct QueryBindingSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("struct QueryResultTypeSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("struct TryValueSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("struct CallBindingSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("struct QueryReceiverBindingSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("struct OnErrorSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("struct ValidationContextSnapshotEntry {") != std::string::npos);
-  CHECK(validatorHeader.find("ReturnKind returnKind = ReturnKind::Unknown;") != std::string::npos);
-  CHECK(validatorHeader.find("std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::vector<QueryCallTypeSnapshotEntry> queryCallTypeSnapshotForTesting();") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::vector<QueryBindingSnapshotEntry> queryBindingSnapshotForTesting();") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::vector<QueryResultTypeSnapshotEntry> queryResultTypeSnapshotForTesting();") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::vector<TryValueSnapshotEntry> tryValueSnapshotForTesting();") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("void forEachLocalAwareSnapshotCall(") != std::string::npos);
   CHECK(validatorHeader.find("void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool lookupGraphLocalAutoBinding(const std::string &scopePath,") !=
@@ -697,27 +599,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;") !=
         std::string::npos);
-  CHECK(validatorHeader.find("std::unordered_map<std::string, std::string> graphLocalAutoResolvedPaths_;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> graphLocalAutoInitializerBindings_;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> graphLocalAutoReceiverBindings_;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::unordered_map<std::string, std::string> graphLocalAutoQueryTypeTexts_;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::unordered_map<std::string, ResultTypeInfo> graphLocalAutoResultTypes_;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::unordered_map<std::string, LocalAutoTrySnapshotData> graphLocalAutoTryValues_;") !=
-        std::string::npos);
-  CHECK(validatorHeader.find("std::unordered_map<std::string, BindingInfo> returnBindings_;") !=
-        std::string::npos);
-  CHECK(validatorCore.find("if (resolveResultTypeFromTypeName(transform.templateArgs.front(), resultInfo)) {") !=
-        std::string::npos);
-  CHECK(validatorCore.find("out.onError = std::move(onErrorHandler);") !=
-        std::string::npos);
   CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnKindGraphStep") != std::string::npos);
-  CHECK(validatorHeader.find("graphTypeResolverEnabled_") == std::string::npos);
+  CHECK(validatorHeader.find("bool graphTypeResolverEnabled_ = false;") != std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool inferQueryExprTypeText(const Expr &expr,") != std::string::npos);
@@ -782,14 +666,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)") !=
         std::string::npos);
-  CHECK(validatorBuild.find("returnBindings_.clear();") != std::string::npos);
-  CHECK(validatorBuild.find("graphLocalAutoInitializerBindings_.clear();") != std::string::npos);
-  CHECK(validatorBuild.find("graphLocalAutoTryValues_.clear();") != std::string::npos);
-  CHECK(validatorBuild.find("const auto directBindingIt = returnBindings_.find(resolvedPath);") !=
-        std::string::npos);
   CHECK(validatorCollections.find("ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));") !=
-        std::string::npos);
-  CHECK(validatorCollections.find("auto cachedBindingIt = returnBindings_.find(def.fullPath);") !=
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,") !=
         std::string::npos);
@@ -845,134 +722,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("return inferQueryExprTypeText(receiverExpr, params, locals, typeTextOut);") !=
         std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::returnResolutionSnapshotForTesting() const") !=
-        std::string::npos);
-  CHECK(validatorCore.find("bool SemanticsValidator::inferTrySnapshotData(") != std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::localAutoBindingSnapshotForTesting() const") !=
-        std::string::npos);
-  CHECK(validatorCore.find("BindingInfo initializerBinding;") != std::string::npos);
-  CHECK(validatorCore.find("initializerHasTry = true;") != std::string::npos);
-  CHECK(validatorCore.find("initializerTryOperandResolvedPath = tryIt->second.operandResolvedPath;") !=
-        std::string::npos);
-  CHECK(validatorCore.find("initializerTryOperandBinding = tryIt->second.operandBinding;") !=
-        std::string::npos);
-  CHECK(validatorCore.find("initializerTryOperandReceiverBinding = tryIt->second.operandReceiverBinding;") !=
-        std::string::npos);
-  CHECK(validatorCore.find("initializerTryOperandQueryTypeText = tryIt->second.operandQueryTypeText;") !=
-        std::string::npos);
-  CHECK(validatorCore.find("initializerTryOnErrorErrorType = tryIt->second.onErrorErrorType;") !=
-        std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::queryCallTypeSnapshotForTesting()") !=
-        std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::queryBindingSnapshotForTesting()") !=
-        std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::queryResultTypeSnapshotForTesting()") !=
-        std::string::npos);
-  CHECK(validatorCore.find("bool SemanticsValidator::inferQuerySnapshotData(") != std::string::npos);
-  CHECK(validatorCore.find("bool SemanticsValidator::inferCallSnapshotData(") != std::string::npos);
-  CHECK(validatorCore.find("CallSnapshotData callData;") != std::string::npos);
-  CHECK(validatorCore.find("inferCallSnapshotData(defParams, activeLocals, expr, callData)") !=
-        std::string::npos);
-  CHECK(validatorCore.find("out.resolvedPath = std::move(callData.resolvedPath);") !=
-        std::string::npos);
-  CHECK(validatorCore.find("out.binding = std::move(callData.binding);") !=
-        std::string::npos);
-  CHECK(validatorCore.find("if (out.typeText.empty() && !out.binding.typeName.empty()) {") !=
-        std::string::npos);
-  CHECK(validatorCore.find("out.typeText = out.binding.typeTemplateArg.empty()") !=
-        std::string::npos);
-  CHECK(validatorCore.find("const BuiltinCollectionDispatchResolvers dispatchResolvers =") !=
-        std::string::npos);
-  CHECK(validatorCore.find("resolveLeadingNonCollectionAccessReceiverPath(") !=
-        std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::tryValueSnapshotForTesting()") !=
-        std::string::npos);
-  CHECK(validatorCore.find("if (expr.isMethodCall || !isSimpleCallName(expr, \"try\") || expr.args.size() != 1 ||") !=
-        std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::callBindingSnapshotForTesting()") !=
-        std::string::npos);
-  CHECK(validatorCore.find("CallSnapshotData callData;") != std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::queryReceiverBindingSnapshotForTesting()") !=
-        std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::onErrorSnapshotForTesting()") !=
-        std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::validationContextSnapshotForTesting() const") !=
-        std::string::npos);
-  CHECK(validatorCore.find("const auto &context = buildDefinitionValidationContext(def);") !=
-        std::string::npos);
-  CHECK(validatorCore.find("if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {") !=
-        std::string::npos);
-  CHECK(validatorCore.find("QuerySnapshotData operandQueryData;") !=
-        std::string::npos);
-  CHECK(validatorCore.find("inferQuerySnapshotData(defParams, activeLocals, expr.args.front(), operandQueryData)") !=
-        std::string::npos);
-  CHECK(validatorCore.find("out.operandBinding = std::move(operandQueryData.binding);") !=
-        std::string::npos);
-  CHECK(validatorCore.find("out.operandReceiverBinding = std::move(operandQueryData.receiverBinding);") !=
-        std::string::npos);
-  CHECK(validatorCore.find("out.operandQueryTypeText = std::move(operandQueryData.typeText);") !=
-        std::string::npos);
-  CHECK(validatorCore.find("out.valueType = std::move(operandQueryData.resultInfo.valueType);") !=
-        std::string::npos);
-  CHECK(validatorCore.find("context.onError->handlerPath") != std::string::npos);
-  CHECK(validatorCore.find("out.onErrorErrorType = context.onError->errorType;") !=
-        std::string::npos);
-  CHECK(validatorCore.find("out.onErrorBoundArgCount = context.onError->boundArgs.size();") !=
-        std::string::npos);
-  CHECK(validatorCore.find("SemanticsValidator::forEachLocalAwareSnapshotCall(") !=
-        std::string::npos);
-  CHECK(validatorCore.find("forEachLocalAwareSnapshotCall([&](const Definition &def,") !=
-        std::string::npos);
-  CHECK(validatorCore.find("std::vector<CallBindingSnapshotEntry> entries;\n  forEachLocalAwareSnapshotCall(") !=
-        std::string::npos);
   CHECK(validatorCore.find("auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {") ==
         std::string::npos);
   CHECK(validatorCore.find("inferExprTypeText(stmt.args.front(), defParams, defLocals, inferredLocalType)") ==
         std::string::npos);
-  CHECK(validatorHeader.find("bool hasInferredBinding = false;") != std::string::npos);
-  CHECK(validatorInfer.find("state.hasInferredBinding = true;") != std::string::npos);
-  CHECK(validatorInfer.find("returnBindings_[def.fullPath] = inferenceState.inferredBinding;") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("auto bindingIt = returnBindings_.find(def.fullPath);") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionReturnSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionLocalBindingSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionQueryCallSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionQueryBindingSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionQueryResultTypeSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionTryValueSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionCallBindingSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionQueryReceiverBindingSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionOnErrorSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("computeTypeResolutionValidationContextSnapshotForTesting(") != std::string::npos);
-  CHECK(semanticsValidate.find("runTypeResolutionSnapshot(") != std::string::npos);
-  CHECK(semanticsValidate.find("prepareProgramForTypeResolutionAnalysis(") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.returnResolutionSnapshotForTesting()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.localAutoBindingSnapshotForTesting()") != std::string::npos);
-  CHECK(semanticsValidate.find("bindingTypeTextForSnapshot(entry.initializerBinding)") != std::string::npos);
-  CHECK(semanticsValidate.find("entry.initializerHasTry") != std::string::npos);
-  CHECK(semanticsValidate.find("entry.initializerTryOperandResolvedPath") != std::string::npos);
-  CHECK(semanticsValidate.find("bindingTypeTextForSnapshot(entry.initializerTryOperandBinding)") !=
-        std::string::npos);
-  CHECK(semanticsValidate.find("bindingTypeTextForSnapshot(entry.initializerTryOperandReceiverBinding)") !=
-        std::string::npos);
-  CHECK(semanticsValidate.find("entry.initializerTryOperandQueryTypeText") !=
-        std::string::npos);
-  CHECK(semanticsValidate.find("entry.initializerTryOnErrorErrorType") != std::string::npos);
-  CHECK(semanticsValidate.find("entry.initializerTryOnErrorBoundArgCount") != std::string::npos);
-  CHECK(semanticsValidate.find("bindingTypeTextForSnapshot(entry.operandBinding)") !=
-        std::string::npos);
-  CHECK(semanticsValidate.find("bindingTypeTextForSnapshot(entry.operandReceiverBinding)") !=
-        std::string::npos);
-  CHECK(semanticsValidate.find("entry.operandQueryTypeText") != std::string::npos);
-  CHECK(semanticsValidate.find("entry.onErrorBoundArgCount") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryCallTypeSnapshotForTesting()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryBindingSnapshotForTesting()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryResultTypeSnapshotForTesting()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.tryValueSnapshotForTesting()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.callBindingSnapshotForTesting()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryReceiverBindingSnapshotForTesting()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.onErrorSnapshotForTesting()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.validationContextSnapshotForTesting()") != std::string::npos);
   CHECK(validatorExprMain.find("auto resolveCallCollectionTypePath = [&](const Expr &target, std::string &typePathOut) -> bool {") ==
         std::string::npos);
   CHECK(validatorExprMain.find("auto resolveCallCollectionTemplateArgs =") == std::string::npos);
@@ -996,7 +749,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorExprMain.find("auto isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {") ==
         std::string::npos);
-  CHECK(validatorExpr.find("bootstrapOut.isDeclaredPointerLikeCall = [&](const Expr &candidate) -> bool {") !=
+  CHECK(validatorExpr.find("bootstrapOut.isDeclaredPointerLikeCall = [this](const Expr &candidate) -> bool {") !=
         std::string::npos);
   CHECK(validatorExpr.find("bool SemanticsValidator::validateExprPreDispatchDirectCalls(") !=
         std::string::npos);
@@ -1059,7 +812,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("const auto &resolveExperimentalMapTarget =") == std::string::npos);
   CHECK(validatorExprMain.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") ==
         std::string::npos);
-  CHECK(validatorExpr.find("bootstrapOut.resolveMapTarget = [&](const Expr &target) -> bool {") !=
+  CHECK(validatorExpr.find("bootstrapOut.resolveMapTarget = [this, paramsPtr, localsPtr, &bootstrapOut](const Expr &target) -> bool {") !=
         std::string::npos);
   CHECK(validatorExpr.find("bootstrapOut.dispatchResolvers.resolveExperimentalMapTarget(target, keyType,") !=
         std::string::npos);
@@ -1332,45 +1085,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("dependencyIt->second > 0 &&") != std::string::npos);
   CHECK(validatorInfer.find("isIfCall(initializer) || isMatchCall(initializer) || isBuiltinBlockCall(initializer)") !=
         std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoInitializerBindings_.clear();") !=
-        std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, binding);") !=
         std::string::npos);
-  CHECK(validatorInfer.find("const Expr *initializerAnalysisExpr = expr.args.size() == 1 ? &expr.args.front() : nullptr;") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("const std::string initializerWrapperPath = resolveCalleePath(*initializerAnalysisExpr);") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("initializerWrapperPath == \"/Result/ok\"") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("initializerAnalysisExpr = &initializerAnalysisExpr->args.front();") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("CallSnapshotData initializerCallData;") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("inferCallSnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerCallData)") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("inferQuerySnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerQueryData)") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoResolvedPaths_[bindingKey] = std::move(initializerCallData.resolvedPath);") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoInitializerBindings_[bindingKey] = std::move(initializerCallData.binding);") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerQueryData.receiverBinding);") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoQueryTypeTexts_[bindingKey] = std::move(initializerQueryData.typeText);") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoResultTypes_[bindingKey] = std::move(initializerQueryData.resultInfo);") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("inferTrySnapshotData(def, defParams, activeLocals, expr.args.front(), initializerTryValue)") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoTryValues_[bindingKey] = std::move(initializerTryValue);") !=
-        std::string::npos);
-  CHECK(validatorInfer.find("inferQueryExprTypeText(") != std::string::npos);
-  CHECK(validatorInfer.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
-  CHECK(validatorBuild.find("if (!makeDefinitionValidationContext(def, context)) {") !=
-        std::string::npos);
-  CHECK(validatorBuild.find("definitionValidationContexts_.try_emplace(def.fullPath, std::move(context));") !=
-        std::string::npos);
-  CHECK(lowerInferenceSetup.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
+  CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
         std::string::npos);
   CHECK(validatorInfer.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
@@ -1379,7 +1096,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveDereferencedIndexedArgsPackElementType =") !=
         std::string::npos);
-  CHECK(validatorInfer.find("resolveDereferencedIndexedArgsPackElementType;") !=
+  CHECK(validatorInfer.find("resolveDereferencedIndexedArgsPackElementType =") !=
         std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveWrappedIndexedArgsPackElementType =") != std::string::npos);
   CHECK(validatorInfer.find("builtinCollectionDispatchResolvers.resolveWrappedIndexedArgsPackElementType;") !=
@@ -1504,7 +1221,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr,") !=
         std::string::npos);
-  CHECK(validatorInfer.find("validateNamedArgumentsAgainstParams(\n            calleeParams, *orderedCallArgNames, orderedArgError)") !=
+  CHECK(validatorInfer.find("validateNamedArgumentsAgainstParams(") !=
         std::string::npos);
   CHECK(validatorInfer.find("if (!ensureDefinitionReturnKindReady(*defIt->second)) {") !=
         std::string::npos);
@@ -1520,9 +1237,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("cycle member: ") != std::string::npos);
   CHECK(validatorInfer.find("allowRecursiveReturnInference_ = false;") != std::string::npos);
   CHECK(validatorInfer.find("ensureDefinitionReturnKindReady(*defIt->second)") != std::string::npos);
-  CHECK(pipeline.find("options.typeResolver") == std::string::npos);
-  CHECK(primecMain.find("--type-resolver") == std::string::npos);
-  CHECK(primevmMain.find("--type-resolver") == std::string::npos);
+  CHECK(pipeline.find("options.typeResolver") != std::string::npos);
+  CHECK(primecMain.find("[--type-resolver legacy|graph]") != std::string::npos);
+  CHECK(primevmMain.find("[--type-resolver legacy|graph]") != std::string::npos);
 }
 
 TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
@@ -1541,9 +1258,8 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(irPipeline.find("TypeResolverPipelineSnapshot") != std::string::npos);
   CHECK(irPipeline.find("runTypeResolverPipelineSnapshot") != std::string::npos);
   CHECK(irPipeline.find("#include \"test_ir_pipeline_type_resolution_parity.h\"") != std::string::npos);
-  CHECK(parityHeader.find("default type resolver keeps vm pipeline behavior stable across graph corpus") !=
+  CHECK(parityHeader.find("legacy and graph type resolvers keep diagnostics and vm ir aligned on parity corpus") !=
         std::string::npos);
-  CHECK(parityHeader.find("runTypeResolverPipelineSnapshot(testCase.source)") != std::string::npos);
   CHECK(parityHeader.find("direct_call_local_auto_struct") != std::string::npos);
   CHECK(parityHeader.find("direct_call_local_auto_collection") != std::string::npos);
   CHECK(parityHeader.find("block_local_auto_struct") != std::string::npos);
@@ -1556,7 +1272,7 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("shared_collection_receiver_classifiers") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
-  CHECK(parityHeader.find("graph type resolver still surfaces vm recursive-call lowering limits") !=
+  CHECK(parityHeader.find("grounded mutual recursion currently diverges between legacy and graph vm pipelines") !=
         std::string::npos);
 }
 
@@ -1964,14 +1680,6 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   CHECK(semanticsTestApi.find("runSemanticsValidatorStatementKnownIterationCountStep") != std::string::npos);
   CHECK(semanticsTestApi.find("runSemanticsValidatorStatementCanIterateMoreThanOnceStep") != std::string::npos);
   CHECK(semanticsTestApi.find("runSemanticsValidatorStatementIsNegativeIntegerLiteralStep") != std::string::npos);
-  CHECK(semanticsTestApi.find("computeTypeResolutionReturnSnapshotForTesting") != std::string::npos);
-  CHECK(semanticsTestApi.find("computeTypeResolutionLocalBindingSnapshotForTesting") != std::string::npos);
-  CHECK(semanticsTestApi.find("computeTypeResolutionQueryCallSnapshotForTesting") != std::string::npos);
-  CHECK(semanticsTestApi.find("computeTypeResolutionQueryBindingSnapshotForTesting") != std::string::npos);
-  CHECK(semanticsTestApi.find("computeTypeResolutionQueryResultTypeSnapshotForTesting") != std::string::npos);
-  CHECK(semanticsTestApi.find("computeTypeResolutionCallBindingSnapshotForTesting") != std::string::npos);
-  CHECK(semanticsTestApi.find("computeTypeResolutionQueryReceiverBindingSnapshotForTesting") != std::string::npos);
-  CHECK(semanticsTestApi.find("computeTypeResolutionOnErrorSnapshotForTesting") != std::string::npos);
 
   const std::string parserHelperTest = readTextFile(parserHelperTestPath);
   CHECK(parserHelperTest.find("#include \"primec/testing/ParserHelpers.h\"") != std::string::npos);
