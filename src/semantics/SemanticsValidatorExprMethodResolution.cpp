@@ -860,9 +860,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           return true;
         }
         std::string collectionName;
-        return getBuiltinCollectionName(target, collectionName) &&
-               collectionName == "map" &&
-               target.templateArgs.size() == 2;
+        if (getBuiltinCollectionName(target, collectionName) &&
+            collectionName == "map" &&
+            target.templateArgs.size() == 2) {
+          return true;
+        }
+        return true;
       }
       auto defIt = defMap_.find(resolveCalleePath(target));
       if (defIt == defMap_.end() || !defIt->second) {

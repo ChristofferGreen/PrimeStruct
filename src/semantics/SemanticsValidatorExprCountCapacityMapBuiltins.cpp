@@ -69,6 +69,35 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return validateExpr(params, locals, expr.args.front());
   }
 
+  const bool shouldBuiltinValidateMapCountCall =
+      !expr.isMethodCall && !hasNamedArguments(expr.argNames) &&
+      (context.isNamespacedMapCountCall || context.isResolvedMapCountCall ||
+       isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,
+                                                 *dispatchResolverAdapters));
+  if (shouldBuiltinValidateMapCountCall && it == defMap_.end()) {
+    handledOut = true;
+    if (!expr.templateArgs.empty()) {
+      error_ = "count does not accept template arguments";
+      return false;
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      error_ = "count does not accept block arguments";
+      return false;
+    }
+    if (expr.args.size() != 1) {
+      error_ = "argument count mismatch for builtin count";
+      return false;
+    }
+    if (!context.resolveMapTarget(expr.args.front())) {
+      if (!validateExpr(params, locals, expr.args.front())) {
+        return false;
+      }
+      error_ = "count requires map target";
+      return false;
+    }
+    return validateExpr(params, locals, expr.args.front());
+  }
+
   if (expr.isMethodCall && resolvedMethod &&
       (logicalResolvedMethod == "/std/collections/map/contains" ||
        logicalResolvedMethod == "/std/collections/map/tryAt" ||

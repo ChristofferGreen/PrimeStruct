@@ -15,6 +15,69 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     const Expr &expr,
     bool &handledOut) {
   handledOut = false;
+  auto isMutableBinding = [&](const std::string &name) -> bool {
+    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+      return paramBinding->isMutable;
+    }
+    auto it = locals.find(name);
+    return it != locals.end() && it->second.isMutable;
+  };
+  const BuiltinCollectionDispatchResolverAdapters
+      builtinCollectionDispatchResolverAdapters;
+  const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
+      makeBuiltinCollectionDispatchResolvers(
+          params, locals, builtinCollectionDispatchResolverAdapters);
+  auto isVectorOrArrayIndexedTarget = [&](const Expr &target) -> bool {
+    auto bindingTargetsVectorOrArray = [&](const BindingInfo &binding,
+                                           auto &&bindingTargetsVectorOrArrayRef)
+        -> bool {
+      const std::string normalizedTypeName =
+          normalizeBindingTypeName(binding.typeName);
+      if ((normalizedTypeName == "vector" || normalizedTypeName == "array") &&
+          !binding.typeTemplateArg.empty()) {
+        return true;
+      }
+      if ((normalizedTypeName != "Reference" &&
+           normalizedTypeName != "Pointer") ||
+          binding.typeTemplateArg.empty()) {
+        return false;
+      }
+      BindingInfo pointeeBinding;
+      const std::string normalizedPointeeType =
+          normalizeBindingTypeName(binding.typeTemplateArg);
+      std::string pointeeBase;
+      std::string pointeeArgs;
+      if (splitTemplateTypeName(normalizedPointeeType, pointeeBase,
+                                pointeeArgs)) {
+        pointeeBinding.typeName = normalizeBindingTypeName(pointeeBase);
+        pointeeBinding.typeTemplateArg = pointeeArgs;
+      } else {
+        pointeeBinding.typeName = normalizedPointeeType;
+        pointeeBinding.typeTemplateArg.clear();
+      }
+      return bindingTargetsVectorOrArrayRef(
+          pointeeBinding, bindingTargetsVectorOrArrayRef);
+    };
+    std::string elemType;
+    if (builtinCollectionDispatchResolvers.resolveVectorTarget(target, elemType) ||
+        builtinCollectionDispatchResolvers.resolveArrayTarget(target, elemType)) {
+      return true;
+    }
+    if (target.kind == Expr::Kind::Call && target.isFieldAccess &&
+        target.args.size() == 1) {
+      BindingInfo fieldBinding;
+      if (resolveStructFieldBinding(params, locals, target.args.front(),
+                                    target.name, fieldBinding) &&
+          bindingTargetsVectorOrArray(fieldBinding,
+                                      bindingTargetsVectorOrArray)) {
+        return true;
+      }
+    }
+    std::string collectionTypePath;
+    return resolveCallCollectionTypePath(target, params, locals,
+                                         collectionTypePath) &&
+           (collectionTypePath == "/vector" || collectionTypePath == "/array");
+  };
 
   auto hasActiveBorrowForBinding =
       [&](const std::string &name,
@@ -111,9 +174,6 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
                                          std::string &ignoreBorrowNameOut)
       -> bool {
     if (pointerExpr.kind == Expr::Kind::Name) {
-      if (!isMutableBinding(params, locals, pointerExpr.name)) {
-        return false;
-      }
       const BindingInfo *pointerBinding = findNamedBinding(pointerExpr.name);
       if (!pointerBinding || !isPointerLikeExpr(pointerExpr, params, locals)) {
         return false;
@@ -121,8 +181,9 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       ignoreBorrowNameOut = pointerExpr.name;
       if (!pointerBinding->referenceRoot.empty()) {
         borrowRootOut = pointerBinding->referenceRoot;
+        return isMutableBinding(pointerBinding->referenceRoot);
       }
-      return true;
+      return isMutableBinding(pointerExpr.name);
     }
     if (pointerExpr.kind != Expr::Kind::Call) {
       return false;
@@ -132,7 +193,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         pointerBuiltinName == "location" && pointerExpr.args.size() == 1) {
       const Expr &locationTarget = pointerExpr.args.front();
       if (locationTarget.kind != Expr::Kind::Name ||
-          !isMutableBinding(params, locals, locationTarget.name)) {
+          !isMutableBinding(locationTarget.name)) {
         return false;
       }
       const BindingInfo *targetBinding = findNamedBinding(locationTarget.name);
@@ -290,7 +351,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       std::string fieldTargetRootName;
       const bool allowMutableReceiverFieldWrite =
           resolveFieldTargetRootName(fieldTarget, fieldTargetRootName) &&
-          isMutableBinding(params, locals, fieldTargetRootName);
+          isMutableBinding(fieldTargetRootName);
       const bool allowLifecycleFieldWrite =
           !fieldBinding.isMutable && isNamedFieldTarget(fieldTarget, "this") &&
           isLifecycleHelperPath(currentValidationContext_.definitionPath);
@@ -308,7 +369,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       return true;
     };
     if (target.kind == Expr::Kind::Name) {
-      if (!isMutableBinding(params, locals, target.name)) {
+      if (!isMutableBinding(target.name)) {
         error_ = "assign target must be a mutable binding: " + target.name;
         return false;
       }
@@ -325,14 +386,12 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       if (getBuiltinArrayAccessName(target, accessName) &&
           target.args.size() == 2) {
         const Expr &collectionTarget = target.args.front();
-        std::string elemType;
-        if (!(resolveVectorTarget(collectionTarget, elemType) ||
-              resolveArrayTarget(collectionTarget, elemType))) {
+        if (!isVectorOrArrayIndexedTarget(collectionTarget)) {
           error_ = "assign target must be a mutable binding";
           return false;
         }
         if (collectionTarget.kind == Expr::Kind::Name) {
-          if (!isMutableBinding(params, locals, collectionTarget.name)) {
+          if (!isMutableBinding(collectionTarget.name)) {
             error_ = "assign target must be a mutable binding: " +
                      collectionTarget.name;
             return false;
@@ -362,18 +421,23 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           return false;
         }
         const Expr &pointerExpr = target.args.front();
+        if (pointerExpr.kind == Expr::Kind::Name &&
+            !isMutableBinding(pointerExpr.name)) {
+          error_ = "assign target must be a mutable binding";
+          return false;
+        }
         std::string pointerBorrowRoot;
         std::string ignoreBorrowName;
         if (!resolveMutablePointerWriteTarget(pointerExpr, pointerBorrowRoot,
                                              ignoreBorrowName)) {
           if (pointerExpr.kind == Expr::Kind::Name &&
-              !isMutableBinding(params, locals, pointerExpr.name)) {
+              !isMutableBinding(pointerExpr.name)) {
             error_ = "assign target must be a mutable binding";
             return false;
           }
           std::string locationRootName;
           if (resolveLocationRootBindingName(pointerExpr, locationRootName) &&
-              !isMutableBinding(params, locals, locationRootName)) {
+              !isMutableBinding(locationRootName)) {
             error_ =
                 "assign target must be a mutable binding: " + locationRootName;
             return false;
@@ -464,7 +528,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     const Expr &target = expr.args.front();
     if (target.kind == Expr::Kind::Name) {
-      if (!isMutableBinding(params, locals, target.name)) {
+      if (!isMutableBinding(target.name)) {
         error_ = mutateName + " target must be a mutable binding: " +
                  target.name;
         return false;
@@ -486,13 +550,13 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       if (!resolveMutablePointerWriteTarget(pointerExpr, pointerBorrowRoot,
                                            ignoreBorrowName)) {
         if (pointerExpr.kind == Expr::Kind::Name &&
-            !isMutableBinding(params, locals, pointerExpr.name)) {
+            !isMutableBinding(pointerExpr.name)) {
           error_ = mutateName + " target must be a mutable binding";
           return false;
         }
         std::string locationRootName;
         if (resolveLocationRootBindingName(pointerExpr, locationRootName) &&
-            !isMutableBinding(params, locals, locationRootName)) {
+            !isMutableBinding(locationRootName)) {
           error_ = mutateName + " target must be a mutable binding: " +
                    locationRootName;
           return false;

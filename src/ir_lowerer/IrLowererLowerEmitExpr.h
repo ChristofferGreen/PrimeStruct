@@ -717,34 +717,33 @@
         if (rewriteStdlibMapConstructorExpr(expr, rewrittenStdlibMapConstructorExpr)) {
           return emitExpr(rewrittenStdlibMapConstructorExpr, localsIn);
         }
-        auto rewriteTemporaryMapBuiltinAccessToMethodExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
-          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.size() != 2) {
+        auto rewriteTemporaryMapMethodToDirectHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty()) {
             return false;
           }
-          if (callExpr.name != "at" && callExpr.name != "at_unsafe") {
+          std::string helperName = callExpr.name;
+          if (!helperName.empty() && helperName.front() == '/') {
+            helperName.erase(helperName.begin());
+          }
+          if (helperName != "count" && helperName != "contains" && helperName != "tryAt" &&
+              helperName != "at" && helperName != "at_unsafe") {
             return false;
           }
           const Expr &receiverExpr = callExpr.args.front();
-          if (receiverExpr.kind != Expr::Kind::Call) {
-            return false;
-          }
-          const Definition *receiverDef = resolveDefinitionCall(receiverExpr);
-          if (receiverDef == nullptr) {
-            return false;
-          }
-          std::string collectionName;
-          std::vector<std::string> collectionArgs;
-          if (!ir_lowerer::inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs) ||
-              collectionName != "map" || collectionArgs.size() != 2) {
+          if (receiverExpr.kind != Expr::Kind::Call ||
+              !ir_lowerer::resolveMapAccessTargetInfo(receiverExpr, localsIn).isMapTarget) {
             return false;
           }
           rewrittenExpr = callExpr;
-          rewrittenExpr.isMethodCall = true;
+          rewrittenExpr.isMethodCall = false;
+          rewrittenExpr.namespacePrefix = "/std/collections/map";
+          rewrittenExpr.name = helperName;
+          rewrittenExpr.templateArgs.clear();
           return true;
         };
-        Expr rewrittenTemporaryMapBuiltinAccessExpr;
-        if (rewriteTemporaryMapBuiltinAccessToMethodExpr(expr, rewrittenTemporaryMapBuiltinAccessExpr)) {
-          return emitExpr(rewrittenTemporaryMapBuiltinAccessExpr, localsIn);
+        Expr rewrittenTemporaryMapMethodHelperExpr;
+        if (rewriteTemporaryMapMethodToDirectHelperExpr(expr, rewrittenTemporaryMapMethodHelperExpr)) {
+          return emitExpr(rewrittenTemporaryMapMethodHelperExpr, localsIn);
         }
         auto rewriteBareVectorHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty() ||

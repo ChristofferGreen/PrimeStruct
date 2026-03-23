@@ -34,15 +34,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     effectScope.emplace(*this, std::move(executionEffects));
   }
-  auto isMutableBinding = [&](const std::vector<ParameterInfo> &paramsIn,
-                              const std::unordered_map<std::string, BindingInfo> &localsIn,
-                              const std::string &name) -> bool {
-    if (const BindingInfo *paramBinding = findParamBinding(paramsIn, name)) {
-      return paramBinding->isMutable;
-    }
-    auto it = localsIn.find(name);
-    return it != localsIn.end() && it->second.isMutable;
-  };
   if (expr.kind == Expr::Kind::Literal) {
     return true;
   }
@@ -741,9 +732,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             : std::string();
     const bool isMapNamespacedCountCompatibilityCall =
         directRemovedMapCompatibilityPath == "/map/count";
-    const bool isMapNamespacedAccessCompatibilityCall =
-        directRemovedMapCompatibilityPath == "/map/at" ||
-        directRemovedMapCompatibilityPath == "/map/at_unsafe";
     const bool isNamespacedVectorCountCall =
         !expr.isMethodCall && !isStdNamespacedVectorCountCall &&
         isNamespacedVectorHelperCall && namespacedHelper == "count" &&
@@ -772,7 +760,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         !hasDefinitionPath(resolved);
     const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =
         isStdNamespacedVectorCapacityCall && hasStdNamespacedVectorCapacityDefinition;
-    const bool shouldSkipStdCapacityMethodFallback = false;
     const bool hasBuiltinAccessSpelling =
         !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
     const bool isStdNamespacedVectorAccessCall =
@@ -1016,7 +1003,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), expr.name, resolved,
                                         isBuiltinMethod)) {
-          if (hasBlockArgs &&
+          auto resolveInferredMapMethodFallback = [&]() -> bool {
+            const std::string helperName = expr.name;
+            if (!(helperName == "count" || helperName == "contains" ||
+                  helperName == "tryAt" || helperName == "at" ||
+                  helperName == "at_unsafe") ||
+                !resolveMapTarget(expr.args.front())) {
+              return false;
+            }
+            const std::string canonicalMapMethodTarget =
+                "/std/collections/map/" + helperName;
+            const std::string aliasMapMethodTarget =
+                "/map/" + helperName;
+            if (hasDeclaredDefinitionPath(canonicalMapMethodTarget) ||
+                hasImportedDefinitionPath(canonicalMapMethodTarget)) {
+              resolved = canonicalMapMethodTarget;
+            } else if (hasDeclaredDefinitionPath(aliasMapMethodTarget) ||
+                       hasImportedDefinitionPath(aliasMapMethodTarget)) {
+              resolved = aliasMapMethodTarget;
+            } else {
+              resolved = canonicalMapMethodTarget;
+            }
+            if (resolved.rfind("/std/collections/map/", 0) == 0 &&
+                (shouldBuiltinValidateCurrentMapWrapperHelper(helperName) ||
+                 hasImportedDefinitionPath(resolved))) {
+              isBuiltinMethod = true;
+            } else {
+              isBuiltinMethod = defMap_.count(resolved) == 0 &&
+                                !hasImportedDefinitionPath(resolved);
+            }
+            return true;
+          };
+          if (resolveInferredMapMethodFallback()) {
+          } else if (hasBlockArgs &&
               resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, resolved)) {
             isBuiltinMethod = false;
           } else {
@@ -1575,6 +1594,29 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       if (handledLateMapAccessBuiltin) {
         return true;
+      }
+      if (expr.isMethodCall &&
+          (expr.name == "count" || expr.name == "contains" ||
+           expr.name == "tryAt" || expr.name == "at" ||
+           expr.name == "at_unsafe") &&
+          !expr.args.empty() && resolveMapTarget(expr.args.front())) {
+        const std::string canonicalMapMethodTarget =
+            "/std/collections/map/" + expr.name;
+        const std::string aliasMapMethodTarget =
+            "/map/" + expr.name;
+        Expr rewrittenMapMethodCall = expr;
+        rewrittenMapMethodCall.isMethodCall = false;
+        rewrittenMapMethodCall.namespacePrefix.clear();
+        if (hasDeclaredDefinitionPath(canonicalMapMethodTarget) ||
+            hasImportedDefinitionPath(canonicalMapMethodTarget)) {
+          rewrittenMapMethodCall.name = canonicalMapMethodTarget;
+        } else if (hasDeclaredDefinitionPath(aliasMapMethodTarget) ||
+                   hasImportedDefinitionPath(aliasMapMethodTarget)) {
+          rewrittenMapMethodCall.name = aliasMapMethodTarget;
+        } else {
+          rewrittenMapMethodCall.name = canonicalMapMethodTarget;
+        }
+        return validateExpr(params, locals, rewrittenMapMethodCall);
       }
       error_ = "unknown call target: " + formatUnknownCallTarget(expr);
       return false;

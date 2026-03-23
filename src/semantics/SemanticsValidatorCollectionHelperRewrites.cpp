@@ -444,12 +444,6 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     return false;
   }
   const Expr &receiverExpr = canonicalCandidate.args[receiverIndex];
-  if (candidate.isMethodCall &&
-      receiverExpr.kind == Expr::Kind::Call &&
-      !receiverExpr.isBinding &&
-      !receiverExpr.isMethodCall) {
-    return false;
-  }
   if (!candidate.isMethodCall &&
       !candidate.templateArgs.empty() &&
       receiverExpr.kind == Expr::Kind::Call &&
@@ -460,12 +454,22 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
 
   std::string keyType;
   std::string valueType;
-  if (!dispatchResolvers.resolveExperimentalMapValueTarget(receiverExpr, keyType, valueType) &&
-      !dispatchResolvers.resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
+  const bool resolvesExperimentalMapValue =
+      dispatchResolvers.resolveExperimentalMapValueTarget(receiverExpr, keyType, valueType);
+  const bool resolvesExperimentalMap =
+      resolvesExperimentalMapValue ||
+      dispatchResolvers.resolveExperimentalMapTarget(receiverExpr, keyType, valueType);
+  const bool resolvesCanonicalMap =
+      dispatchResolvers.resolveMapTarget != nullptr &&
+      dispatchResolvers.resolveMapTarget(receiverExpr, keyType, valueType);
+  if (!resolvesExperimentalMap &&
+      !(candidate.isMethodCall && resolvesCanonicalMap)) {
     return false;
   }
   rewrittenOut = canonicalCandidate;
-  if (rewrittenOut.templateArgs.empty()) {
+  if (candidate.isMethodCall) {
+    rewrittenOut.templateArgs.clear();
+  } else if (rewrittenOut.templateArgs.empty()) {
     rewrittenOut.templateArgs = {keyType, valueType};
   }
   if (!candidate.isMethodCall) {

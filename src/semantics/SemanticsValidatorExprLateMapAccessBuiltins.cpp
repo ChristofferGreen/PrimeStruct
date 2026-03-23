@@ -114,7 +114,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         ReturnKind keyKind =
             returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
         if (keyKind != ReturnKind::Unknown) {
-          if (resolveStringTarget(keyExpr)) {
+          if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
             error_ = "contains requires map key type " + mapKeyType;
             return false;
           }
@@ -175,7 +175,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         ReturnKind keyKind =
             returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
         if (keyKind != ReturnKind::Unknown) {
-          if (resolveStringTarget(keyExpr)) {
+          if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
             error_ = "tryAt requires map key type " + mapKeyType;
             return false;
           }
@@ -242,7 +242,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           ReturnKind keyKind =
               returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
           if (keyKind != ReturnKind::Unknown) {
-            if (resolveStringTarget(keyExpr)) {
+            if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
               setMapKeyMismatch(mapKeyType);
               return false;
             }
@@ -307,7 +307,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           ReturnKind keyKind =
               returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
           if (keyKind != ReturnKind::Unknown) {
-            if (resolveStringTarget(keyExpr)) {
+            if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
               setMapKeyMismatch(mapKeyType);
               return false;
             }

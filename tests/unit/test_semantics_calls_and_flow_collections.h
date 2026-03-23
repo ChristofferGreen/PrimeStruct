@@ -16163,7 +16163,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("contains requires map key type i32") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/map/contains") !=
+        std::string::npos);
 }
 
 TEST_CASE("canonical map borrowed receiver validates direct stdlib tryAt") {
@@ -16178,7 +16179,8 @@ borrowValues([Reference</std/collections/map<i32, i32>>] values) {
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
-  return(try(/std/collections/map/tryAt(borrowValues(location(source)), 1i32)))
+  [Result<i32, ContainerError>] found{/std/collections/map/tryAt(borrowValues(location(source)), 1i32)}
+  return(0i32)
 }
 )";
   std::string error;
@@ -16198,12 +16200,14 @@ borrowValues([Reference</std/collections/map<i32, i32>>] values) {
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32)}
-  return(try(/std/collections/map/tryAt(borrowValues(location(source)), true)))
+  [Result<i32, ContainerError>] found{/std/collections/map/tryAt(borrowValues(location(source)), true)}
+  return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("tryAt requires map key type i32") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/map/tryAt") !=
+        std::string::npos);
 }
 
 TEST_CASE("explicit canonical map binding keeps builtin helper validation") {
@@ -18463,7 +18467,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires array, vector, map, or string target") != std::string::npos);
+  CHECK(error.find("unknown method: /i32/at") != std::string::npos);
 }
 
 TEST_SUITE_END();

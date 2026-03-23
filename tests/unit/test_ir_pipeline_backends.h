@@ -352,6 +352,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   std::filesystem::path validatorExprPath = cwd / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
   std::filesystem::path validatorExprMethodResolutionPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
+  std::filesystem::path validatorExprBodyArgumentsPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorExprBodyArguments.cpp";
   std::filesystem::path validatorCollectionHelperRewritesPath =
       cwd / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   std::filesystem::path validatorInferPath = cwd / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
@@ -387,6 +389,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
     validatorExprPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
     validatorExprMethodResolutionPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
+    validatorExprBodyArgumentsPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprBodyArguments.cpp";
     validatorCollectionHelperRewritesPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
     validatorInferPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInfer.cpp";
@@ -418,6 +422,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorCollectionsPath));
   REQUIRE(std::filesystem::exists(validatorExprPath));
   REQUIRE(std::filesystem::exists(validatorExprMethodResolutionPath));
+  REQUIRE(std::filesystem::exists(validatorExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(validatorCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(validatorInferPath));
   REQUIRE(std::filesystem::exists(validatorInferDefinitionPath));
@@ -444,6 +449,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   });
   const std::string validatorCollections = readTextFile(validatorCollectionsPath);
   const std::string validatorExprMain = readTextFile(validatorExprPath);
+  const std::string validatorExprBodyArguments =
+      readTextFile(validatorExprBodyArgumentsPath);
   const std::string validatorExpr = readTextFiles({
       validatorExprPath,
       validatorExprMethodResolutionPath,
@@ -662,11 +669,15 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExpr.find("directMapHelperCompatibilityPath(") != std::string::npos);
   CHECK(validatorExpr.find("explicitRemovedCollectionMethodPath(methodName)") !=
         std::string::npos);
-  CHECK(validatorExpr.find("shouldPreserveRemovedCollectionHelperPath(resolved)") !=
+  CHECK(validatorExpr.find("shouldPreserveRemovedCollectionHelperPath(resolved)") ==
+        std::string::npos);
+  CHECK(validatorExprBodyArguments.find("shouldPreserveRemovedCollectionHelperPath(resolved)") !=
         std::string::npos);
   CHECK(validatorExpr.find("isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, builtinCollectionDispatchResolverAdapters)") !=
         std::string::npos);
-  CHECK(validatorExpr.find("resolveRemovedMapBodyArgumentTarget(") !=
+  CHECK(validatorExpr.find("resolveRemovedMapBodyArgumentTarget(") ==
+        std::string::npos);
+  CHECK(validatorExprBodyArguments.find("resolveRemovedMapBodyArgumentTarget(") !=
         std::string::npos);
   CHECK(validatorExprMain.find("auto resolveBareMapCallBodyArgumentTarget = [&]() -> bool {") ==
         std::string::npos);
