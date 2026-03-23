@@ -1,5 +1,8 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
+static constexpr std::string_view IrResultOkUnsupportedMessage =
+    "IR backends only support Result.ok with 32-bit or string values";
+
 static bool compileAcrossBackendsOrExpectUnsupported(const std::string &nameStem,
                                                      const std::string &compileExeCmd,
                                                      const std::string &exePath,
@@ -601,8 +604,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend only supports Result.ok with 32-bit or string values",
-                                                "vm backend only supports Result.ok with 32-bit or string values")) {
+                                                std::string(IrResultOkUnsupportedMessage),
+                                                std::string(IrResultOkUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 4);
@@ -654,8 +657,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend only supports Result.ok with 32-bit or string values",
-                                                "vm backend only supports Result.ok with 32-bit or string values")) {
+                                                std::string(IrResultOkUnsupportedMessage),
+                                                std::string(IrResultOkUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 2);
@@ -746,8 +749,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend only supports Result.ok with 32-bit or string values",
-                                                "vm backend only supports Result.ok with 32-bit or string values")) {
+                                                std::string(IrResultOkUnsupportedMessage),
+                                                std::string(IrResultOkUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 6);
@@ -927,8 +930,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend only supports Result.ok with 32-bit or string values",
-                                                "vm backend only supports Result.ok with 32-bit or string values")) {
+                                                std::string(IrResultOkUnsupportedMessage),
+                                                std::string(IrResultOkUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 2);
@@ -1063,8 +1066,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend only supports Result.ok with 32-bit or string values",
-                                                "vm backend only supports Result.ok with 32-bit or string values")) {
+                                                std::string(IrResultOkUnsupportedMessage),
+                                                std::string(IrResultOkUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 10);
@@ -1199,8 +1202,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend only supports Result.ok with 32-bit or string values",
-                                                "vm backend only supports Result.ok with 32-bit or string values")) {
+                                                std::string(IrResultOkUnsupportedMessage),
+                                                std::string(IrResultOkUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 10);
