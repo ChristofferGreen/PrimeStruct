@@ -9272,6 +9272,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
   const std::filesystem::path semanticsExprLateMapAccessBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateMapAccessBuiltins.cpp";
+  const std::filesystem::path semanticsExprLateUnknownTargetFallbacksPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateUnknownTargetFallbacks.cpp";
   const std::filesystem::path semanticsExprMutationBorrowsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMutationBorrows.cpp";
   const std::filesystem::path semanticsExprNamedArgumentBuiltinsPath =
@@ -9322,6 +9324,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprLateCallCompatibilityPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateMapAccessBuiltinsPath));
+  REQUIRE(std::filesystem::exists(semanticsExprLateUnknownTargetFallbacksPath));
   REQUIRE(std::filesystem::exists(semanticsExprMutationBorrowsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprPointerLikePath));
@@ -9368,6 +9371,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprMethodResolutionPath);
   const std::string semanticsExprLateMapAccessBuiltinsSource =
       readText(semanticsExprLateMapAccessBuiltinsPath);
+  const std::string semanticsExprLateUnknownTargetFallbacksSource =
+      readText(semanticsExprLateUnknownTargetFallbacksPath);
   const std::string semanticsExprMutationBorrowsSource =
       readText(semanticsExprMutationBorrowsPath);
   const std::string semanticsExprNamedArgumentBuiltinsSource = readText(semanticsExprNamedArgumentBuiltinsPath);
@@ -9473,6 +9478,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find(
             "validateExprLateMapAccessBuiltins(\n"
             "              params, locals, expr, resolved,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "validateExprLateUnknownTargetFallbacks(\n"
+            "              params, locals, expr, lateUnknownTargetFallbackContext,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "prepareExprResolvedCallSetup(\n"
@@ -9991,6 +10000,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprResolvedCallSetupSource.find(
             "contextOut.resolvedCallArgumentContext = {") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "const std::string canonicalMapMethodTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "const std::string canonicalMapMethodTarget =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "error_ = \"unknown call target: \" + formatUnknownCallTarget(expr);") ==
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "error_ = \"unknown call target: \" + formatUnknownCallTarget(expr);") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprValidation.h\"") == std::string::npos);
@@ -10111,6 +10132,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
             "tryAt requires map target") !=
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "bool SemanticsValidator::validateExprLateUnknownTargetFallbacks") !=
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "const std::string aliasMapMethodTarget = \"/map/\" + expr.name;") !=
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(
             "bool SemanticsValidator::validateExprResolvedStructConstructorCall") !=

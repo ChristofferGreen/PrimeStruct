@@ -364,6 +364,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       cwd / "src" / "semantics" / "SemanticsValidatorExprResolvedCallSetup.cpp";
   std::filesystem::path validatorExprMethodResolutionPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
+  std::filesystem::path validatorExprLateUnknownTargetFallbacksPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorExprLateUnknownTargetFallbacks.cpp";
   std::filesystem::path validatorExprBodyArgumentsPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprBodyArguments.cpp";
   std::filesystem::path validatorCollectionHelperRewritesPath =
@@ -413,6 +415,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprResolvedCallSetup.cpp";
     validatorExprMethodResolutionPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
+    validatorExprLateUnknownTargetFallbacksPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprLateUnknownTargetFallbacks.cpp";
     validatorExprBodyArgumentsPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprBodyArguments.cpp";
     validatorCollectionHelperRewritesPath =
@@ -452,6 +456,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorExprBuiltinContextSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprResolvedCallSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprMethodResolutionPath));
+  REQUIRE(std::filesystem::exists(validatorExprLateUnknownTargetFallbacksPath));
   REQUIRE(std::filesystem::exists(validatorExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(validatorCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(validatorInferPath));
@@ -490,6 +495,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       validatorExprBuiltinContextSetupPath,
       validatorExprResolvedCallSetupPath,
       validatorExprMethodResolutionPath,
+      validatorExprLateUnknownTargetFallbacksPath,
       validatorCollectionHelperRewritesPath,
   });
   const std::string validatorInferMain = readTextFile(validatorInferPath);
@@ -745,6 +751,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("void prepareExprResolvedCallSetup(") !=
         std::string::npos);
+  CHECK(validatorHeader.find("struct ExprLateUnknownTargetFallbackContext") !=
+        std::string::npos);
+  CHECK(validatorHeader.find("bool validateExprLateUnknownTargetFallbacks(") !=
+        std::string::npos);
   CHECK(validatorHeader.find("void prepareExprCountCapacityMapBuiltinContext(") !=
         std::string::npos);
   CHECK(validatorHeader.find("void prepareExprLateMapSoaBuiltinContext(") !=
@@ -784,6 +794,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("prepareExprResolvedCallSetup(") !=
         std::string::npos);
   CHECK(validatorExpr.find("void SemanticsValidator::prepareExprResolvedCallSetup(") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("validateExprLateUnknownTargetFallbacks(") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(") !=
         std::string::npos);
   CHECK(validatorExprMain.find("prepareExprCountCapacityMapBuiltinContext(") !=
         std::string::npos);
@@ -862,6 +876,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorExprMain.find("ExprResolvedCallArgumentContext resolvedCallArgumentContext{") ==
         std::string::npos);
   CHECK(validatorExpr.find("contextOut.resolvedCallArgumentContext = {") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("const std::string canonicalMapMethodTarget =") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("const std::string canonicalMapMethodTarget =") !=
+        std::string::npos);
+  CHECK(validatorExprMain.find("error_ = \"unknown call target: \" + formatUnknownCallTarget(expr);") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("error_ = \"unknown call target: \" + formatUnknownCallTarget(expr);") !=
         std::string::npos);
   CHECK(validatorExpr.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") !=
         std::string::npos);
@@ -1193,6 +1215,8 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateMapAccessBuiltins.cpp") !=
         std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateMapSoaBuiltins.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp") !=
         std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprLambda.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp") != std::string::npos);

@@ -985,31 +985,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (handledLateMapAccessBuiltin) {
         return true;
       }
-      if (expr.isMethodCall &&
-          (expr.name == "count" || expr.name == "contains" ||
-           expr.name == "tryAt" || expr.name == "at" ||
-           expr.name == "at_unsafe") &&
-          !expr.args.empty() && resolveMapTarget(expr.args.front())) {
-        const std::string canonicalMapMethodTarget =
-            "/std/collections/map/" + expr.name;
-        const std::string aliasMapMethodTarget =
-            "/map/" + expr.name;
-        Expr rewrittenMapMethodCall = expr;
-        rewrittenMapMethodCall.isMethodCall = false;
-        rewrittenMapMethodCall.namespacePrefix.clear();
-        if (hasDeclaredDefinitionPath(canonicalMapMethodTarget) ||
-            hasImportedDefinitionPath(canonicalMapMethodTarget)) {
-          rewrittenMapMethodCall.name = canonicalMapMethodTarget;
-        } else if (hasDeclaredDefinitionPath(aliasMapMethodTarget) ||
-                   hasImportedDefinitionPath(aliasMapMethodTarget)) {
-          rewrittenMapMethodCall.name = aliasMapMethodTarget;
-        } else {
-          rewrittenMapMethodCall.name = canonicalMapMethodTarget;
-        }
-        return validateExpr(params, locals, rewrittenMapMethodCall);
+      ExprLateUnknownTargetFallbackContext lateUnknownTargetFallbackContext;
+      lateUnknownTargetFallbackContext.resolveMapTarget =
+          [&](const Expr &target) { return resolveMapTarget(target); };
+      bool handledLateUnknownTargetFallback = false;
+      if (!validateExprLateUnknownTargetFallbacks(
+              params, locals, expr, lateUnknownTargetFallbackContext,
+              handledLateUnknownTargetFallback)) {
+        return false;
       }
-      error_ = "unknown call target: " + formatUnknownCallTarget(expr);
-      return false;
+      if (handledLateUnknownTargetFallback) {
+        return true;
+      }
     }
     const auto &calleeParams = paramsByDef_[resolved];
     ExprResolvedCallSetup resolvedCallSetup;

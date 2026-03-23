@@ -10270,6 +10270,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("wrapper-returned canonical map method falls back to alias helper when canonical helper is absent") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(71i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+makeValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(makeValues().count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper-returned canonical map method keeps unknown call target when helpers are absent") {
+  const std::string source = R"(
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+makeValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(makeValues().count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("stdlib canonical map slash return type keeps canonical method diagnostics") {
   const std::string source = R"(
 [return<int>]

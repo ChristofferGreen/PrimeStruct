@@ -494,6 +494,15 @@ private:
       const std::string &resolved,
       const ExprLateMapAccessBuiltinContext &context,
       bool &handledOut);
+  struct ExprLateUnknownTargetFallbackContext {
+    std::function<bool(const Expr &)> resolveMapTarget;
+  };
+  bool validateExprLateUnknownTargetFallbacks(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const ExprLateUnknownTargetFallbackContext &context,
+      bool &handledOut);
   struct ExprResolvedStructConstructorContext {
     bool isResolvedStructConstructorCall = false;
     const Definition *resolvedDefinition = nullptr;
