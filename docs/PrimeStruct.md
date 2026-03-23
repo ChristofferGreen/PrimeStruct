@@ -678,7 +678,10 @@ for(
     well as the C++ emitter path, including direct `Result.ok(...)` source expressions instead of only local- or
     definition-backed `Result` inputs, and the IR-side result resolver now recognizes those direct combinator
     expressions themselves so VM/native `try(...)`, `Result.error(...)`, and `Result.why(...)` can consume them
-    without an intermediate binding.
+    without an intermediate binding. IR-backed auto bindings now also preserve that same `Result` metadata for direct
+    `Result.ok(...)`, `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` initializer expressions, so
+    later `try(...)`, `Result.error(...)`, and `Result.why(...)` calls can consume the bound local without forcing an
+    explicit `Result<...>` annotation.
   - Direct `Result.ok(...)` expressions now participate in that same metadata flow, including `Result.and_then(...)`
     lambdas that return `Result.ok(...)` and need to inherit the input `Result` error domain instead of depending on
     an unrelated outer context. Unsupported wider payload kinds now reject through the same explicit IR-backed

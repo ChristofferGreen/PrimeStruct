@@ -1470,7 +1470,7 @@ main() {
   CHECK(readFile(outPath) == "8\n5\n");
 }
 
-TEST_CASE("vm supports direct Result combinator consumers on IR-backed paths") {
+TEST_CASE("vm preserves auto-bound direct Result combinators on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
 
@@ -1482,28 +1482,33 @@ log_file_error([FileError] err) {
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
   [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
-  [i32] mapped{try(Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }))}
-  [i32] chained{try(Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) }))}
-  [i32] summed{
-    try(Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) }))
+  [auto] mapped{ Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }) }
+  [auto] chained{ Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) }) }
+  [auto] summed{
+    Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) })
   }
-  if(not(Result.error(Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) })))) {
+  [auto] failedChained{ Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) }) }
+  [auto] failedMapped{ Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) }) }
+  [auto] failedMap2{
+    Result.map2(Result.ok(2i32), failed, []([i32] left, [i32] right) { return(plus(left, right)) })
+  }
+  if(not(Result.error(failedChained))) {
     return(1i32)
   }
-  if(not(equal(Result.why(Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) })), "EOF"utf8))) {
+  if(not(equal(Result.why(failedMapped), "EOF"utf8))) {
     return(2i32)
   }
-  if(not(equal(Result.why(Result.map2(Result.ok(2i32), failed, []([i32] left, [i32] right) { return(plus(left, right)) })), "EOF"utf8))) {
+  if(not(equal(Result.why(failedMap2), "EOF"utf8))) {
     return(3i32)
   }
-  print_line(mapped)
-  print_line(chained)
-  return(summed)
+  print_line(try(mapped))
+  print_line(try(chained))
+  return(try(summed))
 }
 )";
-  const std::string srcPath = writeTemp("vm_result_direct_combinator_consumers.prime", source);
+  const std::string srcPath = writeTemp("vm_result_auto_bound_combinators.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_direct_combinator_consumers_out.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_vm_result_auto_bound_combinators_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 5);
   CHECK(readFile(outPath) == "8\n5\n");

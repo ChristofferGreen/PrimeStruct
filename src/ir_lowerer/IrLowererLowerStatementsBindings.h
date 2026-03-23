@@ -199,6 +199,26 @@
       info.mapKeyKind = mapKeyKind;
       info.mapValueKind = mapValueKind;
       info.structTypeName = structTypeName;
+      if (!hasExplicitBindingTypeTransform(stmt) && info.kind == LocalInfo::Kind::Value) {
+        ResultExprInfo inferredResultInfo;
+        if (resolveResultExprInfoFromLocals(
+                init,
+                localsIn,
+                [&](const Expr &callExpr, const LocalMap &callLocals) {
+                  return resolveMethodCallDefinition(callExpr, callLocals);
+                },
+                [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+                inferredResultInfo) &&
+            inferredResultInfo.isResult) {
+          info.isResult = true;
+          info.resultHasValue = inferredResultInfo.hasValue;
+          info.resultValueKind = inferredResultInfo.valueKind;
+          info.resultErrorType = inferredResultInfo.errorType;
+          info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        }
+      }
       for (const auto &transform : stmt.transforms) {
         if (transform.name == "soa_vector") {
           info.isSoaVector = true;
