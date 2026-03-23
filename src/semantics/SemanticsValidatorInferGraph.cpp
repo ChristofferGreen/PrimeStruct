@@ -369,36 +369,8 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         }
         LocalAutoTrySnapshotData initializerTryValue;
         if (expr.args.size() == 1 &&
-            !expr.args.front().isMethodCall &&
-            isSimpleCallName(expr.args.front(), "try") &&
-            expr.args.front().args.size() == 1 &&
-            expr.args.front().templateArgs.empty() &&
-            !expr.args.front().hasBodyArguments &&
-            expr.args.front().bodyArguments.empty()) {
-          ResultTypeInfo tryResultType;
-          if (withPreservedError([&]() {
-                return resolveResultTypeForExpr(
-                    expr.args.front().args.front(), defParams, activeLocals, tryResultType);
-              }) &&
-              tryResultType.isResult &&
-              tryResultType.hasValue &&
-              !tryResultType.valueType.empty()) {
-            initializerTryValue.operandResolvedPath =
-                expr.args.front().args.front().kind == Expr::Kind::Call
-                    ? resolveCalleePath(expr.args.front().args.front())
-                    : std::string{};
-            initializerTryValue.valueType = tryResultType.valueType;
-            initializerTryValue.errorType = tryResultType.errorType;
-            if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
-              initializerTryValue.contextReturnKind = returnKindIt->second;
-            }
-            const auto &context = buildDefinitionValidationContext(def);
-            initializerTryValue.onErrorHandlerPath =
-                context.onError.has_value() ? context.onError->handlerPath : std::string{};
-            graphLocalAutoTryValues_[bindingKey] = std::move(initializerTryValue);
-          } else {
-            graphLocalAutoTryValues_.erase(bindingKey);
-          }
+            inferTrySnapshotData(def, defParams, activeLocals, expr.args.front(), initializerTryValue)) {
+          graphLocalAutoTryValues_[bindingKey] = std::move(initializerTryValue);
         } else {
           graphLocalAutoTryValues_.erase(bindingKey);
         }

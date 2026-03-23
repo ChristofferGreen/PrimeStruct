@@ -37,6 +37,17 @@ const primec::semantics::TypeResolutionLocalBindingSnapshotEntry &requireLocalBi
   return *it;
 }
 
+const primec::semantics::TypeResolutionTryValueSnapshotEntry &requireTryValueSnapshotEntry(
+    const primec::semantics::TypeResolutionTryValueSnapshot &snapshot,
+    const std::string &scopePath,
+    const std::string &operandResolvedPath) {
+  const auto it = std::find_if(snapshot.entries.begin(), snapshot.entries.end(), [&](const auto &entry) {
+    return entry.scopePath == scopePath && entry.operandResolvedPath == operandResolvedPath;
+  });
+  REQUIRE(it != snapshot.entries.end());
+  return *it;
+}
+
 primec::semantics::TypeResolutionCallBindingSnapshotEntry requireCallBindingSnapshotEntry(
     const primec::semantics::TypeResolutionCallBindingSnapshot &snapshot,
     const std::string &scopePath,
@@ -429,6 +440,44 @@ main() {
   CHECK(selectedEntry.initializerTryErrorTypeText == "ContainerError");
   CHECK(selectedEntry.initializerTryContextReturnKindText == "array");
   CHECK(selectedEntry.initializerTryOnErrorHandlerPath == "/unexpectedError");
+}
+
+TEST_CASE("type resolution local try metadata stays aligned with try snapshot metadata") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<void>]
+unexpectedError([ContainerError] err) {
+}
+
+[return<Result<int, ContainerError>> effects(heap_alloc) on_error<ContainerError, /unexpectedError>]
+main() {
+  [Map<string, i32>] values{/std/collections/mapPair("left"raw_utf8, 4i32)}
+  [auto] selected{try(values.tryAt("left"raw_utf8))}
+  return(Result.ok(selected))
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot localSnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, localSnapshot));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionTryValueSnapshot trySnapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionTryValueSnapshotForTesting(
+      parseProgram(source), "/main", error, trySnapshot));
+  CHECK(error.empty());
+
+  const auto &localEntry = requireLocalBindingSnapshotEntry(localSnapshot, "/main", "selected");
+  const auto &tryEntry = requireTryValueSnapshotEntry(trySnapshot, "/main", "/std/collections/map/tryAt");
+  CHECK(localEntry.initializerHasTry);
+  CHECK(localEntry.initializerTryOperandResolvedPath == tryEntry.operandResolvedPath);
+  CHECK(localEntry.initializerTryValueTypeText == tryEntry.valueTypeText);
+  CHECK(localEntry.initializerTryErrorTypeText == tryEntry.errorTypeText);
+  CHECK(localEntry.initializerTryContextReturnKindText == tryEntry.contextReturnKindText);
+  CHECK(localEntry.initializerTryOnErrorHandlerPath == tryEntry.onErrorHandlerPath);
 }
 
 TEST_SUITE_END();

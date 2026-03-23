@@ -366,50 +366,25 @@ SemanticsValidator::queryResultTypeSnapshotForTesting() {
 
 std::vector<SemanticsValidator::TryValueSnapshotEntry>
 SemanticsValidator::tryValueSnapshotForTesting() {
-  auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
-  };
-
   std::vector<TryValueSnapshotEntry> entries;
   forEachLocalAwareSnapshotCall([&](const Definition &def,
                                     const std::vector<ParameterInfo> &defParams,
                                     const Expr &expr,
                                     const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    if (expr.isMethodCall || !isSimpleCallName(expr, "try") || expr.args.size() != 1 ||
-        !expr.templateArgs.empty() || expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    LocalAutoTrySnapshotData tryData;
+    if (!inferTrySnapshotData(def, defParams, activeLocals, expr, tryData)) {
       return;
     }
-
-    ResultTypeInfo resultInfo;
-    if (!withPreservedError([&]() {
-          return resolveResultTypeForExpr(expr.args.front(), defParams, activeLocals, resultInfo);
-        }) ||
-        !resultInfo.isResult || !resultInfo.hasValue || resultInfo.valueType.empty()) {
-      return;
-    }
-
-    ReturnKind contextReturnKind = ReturnKind::Unknown;
-    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
-      contextReturnKind = returnKindIt->second;
-    }
-    const auto &context = buildDefinitionValidationContext(def);
-    const std::string operandResolvedPath =
-        expr.args.front().kind == Expr::Kind::Call ? resolveCalleePath(expr.args.front()) : std::string{};
 
     entries.push_back(TryValueSnapshotEntry{
         def.fullPath,
-        operandResolvedPath,
+        std::move(tryData.operandResolvedPath),
         expr.sourceLine,
         expr.sourceColumn,
-        resultInfo.valueType,
-        resultInfo.errorType,
-        contextReturnKind,
-        context.onError.has_value() ? context.onError->handlerPath : std::string{},
+        std::move(tryData.valueType),
+        std::move(tryData.errorType),
+        tryData.contextReturnKind,
+        std::move(tryData.onErrorHandlerPath),
     });
   });
 
@@ -428,6 +403,46 @@ SemanticsValidator::tryValueSnapshotForTesting() {
   return entries;
 }
 
+bool SemanticsValidator::inferTrySnapshotData(const Definition &def,
+                                              const std::vector<ParameterInfo> &defParams,
+                                              const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                                              const Expr &expr,
+                                              LocalAutoTrySnapshotData &out) {
+  out = {};
+
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  if (expr.isMethodCall || !isSimpleCallName(expr, "try") || expr.args.size() != 1 ||
+      !expr.templateArgs.empty() || expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    return false;
+  }
+
+  ResultTypeInfo resultInfo;
+  if (!withPreservedError([&]() {
+        return resolveResultTypeForExpr(expr.args.front(), defParams, activeLocals, resultInfo);
+      }) ||
+      !resultInfo.isResult || !resultInfo.hasValue || resultInfo.valueType.empty()) {
+    return false;
+  }
+
+  out.operandResolvedPath =
+      expr.args.front().kind == Expr::Kind::Call ? resolveCalleePath(expr.args.front()) : std::string{};
+  out.valueType = resultInfo.valueType;
+  out.errorType = resultInfo.errorType;
+  if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
+    out.contextReturnKind = returnKindIt->second;
+  }
+  const auto &context = buildDefinitionValidationContext(def);
+  out.onErrorHandlerPath = context.onError.has_value() ? context.onError->handlerPath : std::string{};
+  return true;
+}
 std::vector<SemanticsValidator::CallBindingSnapshotEntry>
 SemanticsValidator::callBindingSnapshotForTesting() {
   std::vector<CallBindingSnapshotEntry> entries;

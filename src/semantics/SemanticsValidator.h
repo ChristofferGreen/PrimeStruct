@@ -233,6 +233,11 @@ private:
                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                   const std::string &methodName,
                                   std::string &resolvedOut);
+  bool inferTrySnapshotData(const Definition &def,
+                            const std::vector<ParameterInfo> &defParams,
+                            const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                            const Expr &expr,
+                            LocalAutoTrySnapshotData &out);
   bool inferBindingTypeFromInitializer(const Expr &initializer,
                                        const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,
