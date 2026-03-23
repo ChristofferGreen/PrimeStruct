@@ -877,6 +877,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorCore.find("out.binding = std::move(callData.binding);") !=
         std::string::npos);
+  CHECK(validatorCore.find("if (out.typeText.empty() && !out.binding.typeName.empty()) {") !=
+        std::string::npos);
+  CHECK(validatorCore.find("out.typeText = bindingTypeText(out.binding);") !=
+        std::string::npos);
   CHECK(validatorCore.find("SemanticsValidator::tryValueSnapshotForTesting()") !=
         std::string::npos);
   CHECK(validatorCore.find("if (expr.isMethodCall || !isSimpleCallName(expr, \"try\") || expr.args.size() != 1 ||") !=

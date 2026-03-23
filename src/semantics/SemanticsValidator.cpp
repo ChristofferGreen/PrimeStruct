@@ -376,6 +376,9 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
   withPreservedError([&]() {
     return inferQueryExprTypeText(expr, defParams, activeLocals, out.typeText);
   });
+  if (out.typeText.empty() && !out.binding.typeName.empty()) {
+    out.typeText = bindingTypeText(out.binding);
+  }
   if (!(withPreservedError([&]() {
           return resolveResultTypeForExpr(expr, defParams, activeLocals, out.resultInfo);
         }) &&
