@@ -117,6 +117,63 @@ bool inferMapContainsResultKind(const Expr &expr,
   return true;
 }
 
+LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr, const LocalMap &localsIn);
+
+bool resolveBaseSetupResultExprInfo(const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) {
+  auto resolveMethodCall = [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
+  auto resolveDefinitionCall = [](const Expr &) -> const Definition * { return nullptr; };
+  auto lookupReturnInfo = [](const std::string &, ReturnInfo &) { return false; };
+  return resolveResultExprInfoFromLocals(
+      expr,
+      localsIn,
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      [](const Expr &candidate, const LocalMap &candidateLocals) {
+        return inferBaseSetupSimpleExprKind(candidate, candidateLocals);
+      },
+      out);
+}
+
+LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr, const LocalMap &localsIn) {
+  switch (expr.kind) {
+    case Expr::Kind::Literal:
+      if (expr.isUnsigned) {
+        return LocalInfo::ValueKind::UInt64;
+      }
+      return (expr.intWidth == 64) ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+    case Expr::Kind::FloatLiteral:
+      return (expr.floatWidth == 64) ? LocalInfo::ValueKind::Float64 : LocalInfo::ValueKind::Float32;
+    case Expr::Kind::BoolLiteral:
+      return LocalInfo::ValueKind::Bool;
+    case Expr::Kind::StringLiteral:
+      return LocalInfo::ValueKind::String;
+    case Expr::Kind::Name: {
+      auto it = localsIn.find(expr.name);
+      if (it == localsIn.end()) {
+        return LocalInfo::ValueKind::Unknown;
+      }
+      if (it->second.kind == LocalInfo::Kind::Value) {
+        return it->second.valueKind;
+      }
+      if (it->second.kind == LocalInfo::Kind::Reference && !it->second.referenceToArray &&
+          !it->second.referenceToVector && !it->second.referenceToMap) {
+        return it->second.valueKind;
+      }
+      return LocalInfo::ValueKind::Unknown;
+    }
+    case Expr::Kind::Call: {
+      ResultExprInfo resultInfo;
+      if (resolveBaseSetupResultExprInfo(expr, localsIn, resultInfo) && resultInfo.isResult && resultInfo.hasValue) {
+        return resultInfo.valueKind;
+      }
+      return LocalInfo::ValueKind::Unknown;
+    }
+    default:
+      return LocalInfo::ValueKind::Unknown;
+  }
+}
+
 bool returnInfoEquals(const ReturnInfo &left, const ReturnInfo &right) {
   return left.returnsVoid == right.returnsVoid && left.returnsArray == right.returnsArray &&
          left.kind == right.kind && left.isResult == right.isResult &&
@@ -388,6 +445,11 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
             return true;
           }
         }
+      }
+      ResultExprInfo resultInfo;
+      if (resolveBaseSetupResultExprInfo(arg, localsIn, resultInfo) && resultInfo.isResult) {
+        kindOut = resultInfo.hasValue ? resultInfo.valueKind : LocalInfo::ValueKind::Int32;
+        return true;
       }
     }
     if (arg.kind == Expr::Kind::Call) {
