@@ -1,4 +1,5 @@
 #include "primec/ImportResolver.h"
+#include "primec/testing/TestScratch.h"
 
 #include "third_party/doctest.h"
 
@@ -8,9 +9,7 @@
 
 namespace {
 std::string writeTemp(const std::string &name, const std::string &contents) {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests";
-  std::filesystem::create_directories(dir);
-  auto path = dir / name;
+  const auto path = primec::testing::testScratchPath("imports_errors/" + name);
   std::ofstream file(path);
   CHECK(file.good());
   file << contents;

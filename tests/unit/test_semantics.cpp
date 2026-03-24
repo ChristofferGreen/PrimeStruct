@@ -11,6 +11,7 @@
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
+#include "primec/testing/TestScratch.h"
 
 #include "third_party/doctest.h"
 
@@ -33,10 +34,10 @@ bool usesStdImportPipeline(const std::string &source) {
 
 std::filesystem::path makeTempSemanticSourcePath() {
   static std::atomic<unsigned long long> counter{0};
-  const auto nonce = std::to_string(
-      static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
-  return std::filesystem::temp_directory_path() /
-         ("primestruct-semantics-" + nonce + "-" + std::to_string(counter++) + ".prime");
+  const auto nonce =
+      std::to_string(static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
+  return primec::testing::testScratchPath(
+      "semantics/primestruct-semantics-" + nonce + "-" + std::to_string(counter++) + ".prime");
 }
 
 bool validateProgramThroughCompilePipeline(const std::string &source,

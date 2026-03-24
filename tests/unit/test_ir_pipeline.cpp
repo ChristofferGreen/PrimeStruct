@@ -37,6 +37,7 @@
 #include "primec/testing/EmitterHelpers.h"
 #include "primec/testing/IrLowererHelpers.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
+#include "primec/testing/TestScratch.h"
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
 #endif
@@ -60,10 +61,10 @@ bool usesStdImportPipeline(const std::string &source) {
 
 std::filesystem::path makeTempIrPipelineSourcePath() {
   static std::atomic<unsigned long long> counter{0};
-  const auto nonce = std::to_string(
-      static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
-  return std::filesystem::temp_directory_path() /
-         ("primestruct-ir-pipeline-" + nonce + "-" + std::to_string(counter++) + ".prime");
+  const auto nonce =
+      std::to_string(static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count()));
+  return primec::testing::testScratchPath(
+      "ir_pipeline/primestruct-ir-pipeline-" + nonce + "-" + std::to_string(counter++) + ".prime");
 }
 
 bool parseAndValidateThroughCompilePipeline(const std::string &source,
