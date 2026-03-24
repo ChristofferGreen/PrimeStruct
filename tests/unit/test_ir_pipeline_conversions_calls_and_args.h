@@ -2256,8 +2256,7 @@ forward([args<Pointer<uninitialized<i32>>>] values) {
 [return<int>]
 forward_mixed([args<Pointer<uninitialized<i32>>>] values) {
   [uninitialized<i32>] extra{uninitialized<i32>()}
-  [Pointer<uninitialized<i32>>] extra_ptr{location(extra)}
-  return(score_ptrs(extra_ptr, [spread] values))
+  return(score_ptrs(location(extra), [spread] values))
 }
 
 [return<int>]
@@ -2265,25 +2264,17 @@ main() {
   [uninitialized<i32>] a0{uninitialized<i32>()}
   [uninitialized<i32>] a1{uninitialized<i32>()}
   [uninitialized<i32>] a2{uninitialized<i32>()}
-  [Pointer<uninitialized<i32>>] p0{location(a0)}
-  [Pointer<uninitialized<i32>>] p1{location(a1)}
-  [Pointer<uninitialized<i32>>] p2{location(a2)}
 
   [uninitialized<i32>] b0{uninitialized<i32>()}
   [uninitialized<i32>] b1{uninitialized<i32>()}
   [uninitialized<i32>] b2{uninitialized<i32>()}
-  [Pointer<uninitialized<i32>>] q0{location(b0)}
-  [Pointer<uninitialized<i32>>] q1{location(b1)}
-  [Pointer<uninitialized<i32>>] q2{location(b2)}
 
   [uninitialized<i32>] c0{uninitialized<i32>()}
   [uninitialized<i32>] c1{uninitialized<i32>()}
-  [Pointer<uninitialized<i32>>] r0{location(c0)}
-  [Pointer<uninitialized<i32>>] r1{location(c1)}
 
-  return(plus(score_ptrs(p0, p1, p2),
-              plus(forward(q0, q1, q2),
-                   forward_mixed(r0, r1))))
+  return(plus(score_ptrs(location(a0), location(a1), location(a2)),
+              plus(forward(location(b0), location(b1), location(b2)),
+                   forward_mixed(location(c0), location(c1)))))
 }
 )";
   primec::Program program;
@@ -2323,8 +2314,7 @@ forward([args<Reference<uninitialized<i32>>>] values) {
 [return<int>]
 forward_mixed([args<Reference<uninitialized<i32>>>] values) {
   [uninitialized<i32>] extra{uninitialized<i32>()}
-  [Reference<uninitialized<i32>>] extra_ref{location(extra)}
-  return(score_refs(extra_ref, [spread] values))
+  return(score_refs(location(extra), [spread] values))
 }
 
 [return<int>]
@@ -2332,25 +2322,17 @@ main() {
   [uninitialized<i32>] a0{uninitialized<i32>()}
   [uninitialized<i32>] a1{uninitialized<i32>()}
   [uninitialized<i32>] a2{uninitialized<i32>()}
-  [Reference<uninitialized<i32>>] p0{location(a0)}
-  [Reference<uninitialized<i32>>] p1{location(a1)}
-  [Reference<uninitialized<i32>>] p2{location(a2)}
 
   [uninitialized<i32>] b0{uninitialized<i32>()}
   [uninitialized<i32>] b1{uninitialized<i32>()}
   [uninitialized<i32>] b2{uninitialized<i32>()}
-  [Reference<uninitialized<i32>>] q0{location(b0)}
-  [Reference<uninitialized<i32>>] q1{location(b1)}
-  [Reference<uninitialized<i32>>] q2{location(b2)}
 
   [uninitialized<i32>] c0{uninitialized<i32>()}
   [uninitialized<i32>] c1{uninitialized<i32>()}
-  [Reference<uninitialized<i32>>] r0{location(c0)}
-  [Reference<uninitialized<i32>>] r1{location(c1)}
 
-  return(plus(score_refs(p0, p1, p2),
-              plus(forward(q0, q1, q2),
-                   forward_mixed(r0, r1))))
+  return(plus(score_refs(location(a0), location(a1), location(a2)),
+              plus(forward(location(b0), location(b1), location(b2)),
+                   forward_mixed(location(c0), location(c1)))))
 }
 )";
   primec::Program program;

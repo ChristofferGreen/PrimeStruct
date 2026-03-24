@@ -72,6 +72,9 @@ bool emitInlineDefinitionCallParameters(
         const bool expectsBuffer =
             expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToBuffer : paramInfo.pointerToBuffer;
         const bool expectsAggregate = expectsArray || expectsVector || expectsMap || expectsBuffer;
+        const auto matchesDirectStorageFlag = [&](const LocalInfo &info) {
+          return info.isUninitializedStorage == paramInfo.targetsUninitializedStorage;
+        };
 
         if (targetInfo.kind == LocalInfo::Kind::Pointer) {
           return false;
@@ -114,26 +117,33 @@ bool emitInlineDefinitionCallParameters(
                  targetInfo.structTypeName == paramInfo.structTypeName;
         }
         if (expectsArray) {
-          return targetInfo.kind == LocalInfo::Kind::Array && targetInfo.valueKind == paramInfo.valueKind;
+          return targetInfo.kind == LocalInfo::Kind::Array &&
+                 matchesDirectStorageFlag(targetInfo) &&
+                 targetInfo.valueKind == paramInfo.valueKind;
         }
         if (expectsVector) {
-          return targetInfo.kind == LocalInfo::Kind::Vector && targetInfo.valueKind == paramInfo.valueKind &&
+          return targetInfo.kind == LocalInfo::Kind::Vector &&
+                 matchesDirectStorageFlag(targetInfo) &&
+                 targetInfo.valueKind == paramInfo.valueKind &&
                  targetInfo.structTypeName == paramInfo.structTypeName &&
                  targetInfo.isSoaVector == paramInfo.isSoaVector;
         }
         if (expectsMap) {
           return targetInfo.kind == LocalInfo::Kind::Map &&
+                 matchesDirectStorageFlag(targetInfo) &&
                  targetInfo.mapKeyKind == paramInfo.mapKeyKind &&
                  targetInfo.mapValueKind == paramInfo.mapValueKind;
         }
         if (expectsBuffer) {
-          return targetInfo.kind == LocalInfo::Kind::Buffer && targetInfo.valueKind == paramInfo.valueKind;
+          return targetInfo.kind == LocalInfo::Kind::Buffer &&
+                 matchesDirectStorageFlag(targetInfo) &&
+                 targetInfo.valueKind == paramInfo.valueKind;
         }
         if (expectsAggregate) {
           return false;
         }
         return targetInfo.kind == LocalInfo::Kind::Value &&
-               targetInfo.targetsUninitializedStorage == paramInfo.targetsUninitializedStorage &&
+               matchesDirectStorageFlag(targetInfo) &&
                targetInfo.isFileHandle == paramInfo.isFileHandle &&
                targetInfo.isFileError == paramInfo.isFileError &&
                targetInfo.isResult == paramInfo.isResult &&
