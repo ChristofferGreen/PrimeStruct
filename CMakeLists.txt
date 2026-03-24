@@ -200,7 +200,11 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererLowerEntrySetup.cpp
   src/ir_lowerer/IrLowererLowerExprEmitSetup.cpp
   src/ir_lowerer/IrLowererLowerImportsStructsSetup.cpp
+  src/ir_lowerer/IrLowererLowerInferenceArrayKindSetup.cpp
   src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp
+  src/ir_lowerer/IrLowererLowerInferenceCallReturnSetup.cpp
+  src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp
+  src/ir_lowerer/IrLowererLowerInferenceFallbackSetup.cpp
   src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp
   src/ir_lowerer/IrLowererLowerInferenceSetup.cpp
   src/ir_lowerer/IrLowererLowerInlineCallActiveContextStep.cpp

@@ -9041,11 +9041,48 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceSetup.cpp";
   REQUIRE(std::filesystem::exists(inferenceSetupPath));
   const std::string inferenceSetupSource = readText(inferenceSetupPath);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceArrayKindSetup(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallReturnSetup(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallFallbackSetup(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallOperatorFallbackSetup(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallControlFlowFallbackSetup(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallPointerFallbackSetup(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindDispatchSetup(") == std::string::npos);
   CHECK(inferenceSetupSource.find("bool runLowerInferenceReturnInfoSetup(") == std::string::npos);
   CHECK(inferenceSetupSource.find("bool runLowerInferenceGetReturnInfoStep(") == std::string::npos);
   CHECK(inferenceSetupSource.find("bool runLowerInferenceGetReturnInfoCallbackSetup(") == std::string::npos);
   CHECK(inferenceSetupSource.find("bool runLowerInferenceGetReturnInfoSetup(") == std::string::npos);
   CHECK(inferenceSetupSource.find("precomputeGraphReturnInfoCache(") == std::string::npos);
+
+  const std::filesystem::path inferenceArrayKindSetupPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceArrayKindSetup.cpp";
+  REQUIRE(std::filesystem::exists(inferenceArrayKindSetupPath));
+  const std::string inferenceArrayKindSetupSource = readText(inferenceArrayKindSetupPath);
+  CHECK(inferenceArrayKindSetupSource.find("bool runLowerInferenceArrayKindSetup(") != std::string::npos);
+
+  const std::filesystem::path inferenceCallReturnSetupPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceCallReturnSetup.cpp";
+  REQUIRE(std::filesystem::exists(inferenceCallReturnSetupPath));
+  const std::string inferenceCallReturnSetupSource = readText(inferenceCallReturnSetupPath);
+  CHECK(inferenceCallReturnSetupSource.find("bool runLowerInferenceExprKindCallReturnSetup(") != std::string::npos);
+
+  const std::filesystem::path inferenceFallbackSetupPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceFallbackSetup.cpp";
+  REQUIRE(std::filesystem::exists(inferenceFallbackSetupPath));
+  const std::string inferenceFallbackSetupSource = readText(inferenceFallbackSetupPath);
+  CHECK(inferenceFallbackSetupSource.find("bool runLowerInferenceExprKindCallFallbackSetup(") != std::string::npos);
+  CHECK(inferenceFallbackSetupSource.find("bool runLowerInferenceExprKindCallOperatorFallbackSetup(") !=
+        std::string::npos);
+  CHECK(inferenceFallbackSetupSource.find("bool runLowerInferenceExprKindCallControlFlowFallbackSetup(") !=
+        std::string::npos);
+  CHECK(inferenceFallbackSetupSource.find("bool runLowerInferenceExprKindCallPointerFallbackSetup(") !=
+        std::string::npos);
+
+  const std::filesystem::path inferenceDispatchSetupPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceDispatchSetup.cpp";
+  REQUIRE(std::filesystem::exists(inferenceDispatchSetupPath));
+  const std::string inferenceDispatchSetupSource = readText(inferenceDispatchSetupPath);
+  CHECK(inferenceDispatchSetupSource.find("bool runLowerInferenceExprKindDispatchSetup(") != std::string::npos);
 
   const std::filesystem::path inferenceReturnInfoHelperPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceReturnInfoHelpers.cpp";

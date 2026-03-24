@@ -141,10 +141,10 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Split `IrLowererSetupTypeHelpers.cpp` collection helper alias/path utilities plus declared collection inference into `src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.{h,cpp}` plus `src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp`.
 - ✓ Split `IrLowererSetupTypeHelpers.cpp` receiver target + struct-path setup into `src/ir_lowerer/IrLowererSetupTypeReceiverTargetHelpers.{h,cpp}` plus `src/ir_lowerer/IrLowererSetupTypeStructPathHelpers.cpp`.
 - ✓ Split `IrLowererSetupTypeHelpers.cpp` method target + return-kind resolution out of the root file into `src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp`, `src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp`, and `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`.
-- ◐ Refactor `src/ir_lowerer/IrLowererLowerInferenceSetup.cpp` (`1561` lines) below the `700`-line target. Progress is tracked by the slices below.
+- ✓ Refactor `src/ir_lowerer/IrLowererLowerInferenceSetup.cpp` (`312` lines) below the `700`-line target by extracting base-kind helpers, return-info helpers, array-kind setup, direct call-return setup, and expr-kind fallback/dispatch orchestration into dedicated helper units.
 - ✓ Split `IrLowererLowerInferenceSetup.cpp` base literal/name/call kind helpers plus map/file/result base setup utilities into `src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.{h,cpp}`.
 - ✓ Split `IrLowererLowerInferenceSetup.cpp` return-info solve, graph-cache precompute, and get-return-info callback setup into `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp`.
-- ○ Split `IrLowererLowerInferenceSetup.cpp` array-kind, direct call-return, and expr-kind fallback setup orchestration into dedicated helper units.
+- ✓ Split `IrLowererLowerInferenceSetup.cpp` array-kind, direct call-return, and expr-kind fallback setup orchestration into `src/ir_lowerer/IrLowererLowerInferenceArrayKindSetup.cpp`, `src/ir_lowerer/IrLowererLowerInferenceCallReturnSetup.cpp`, `src/ir_lowerer/IrLowererLowerInferenceFallbackSetup.cpp`, and `src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp`.
 - ○ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`1973` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterHelpersBuiltins.cpp` (`1695` lines) below the `700`-line target.
 - ○ Refactor `src/native_emitter/NativeEmitterInternals.h` (`1619` lines) below the `700`-line target.
