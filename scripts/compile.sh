@@ -65,6 +65,15 @@ else
   BUILD_JOBS=4
 fi
 TEST_JOBS="${PRIMESTRUCT_TEST_JOBS:-11}"
+
+print_command() {
+  local prefix="$1"
+  shift
+  printf '%s' "$prefix"
+  printf '%q ' "$@"
+  printf '\n'
+}
+
 if [[ $COVERAGE -eq 1 ]]; then
   if [[ $RUN_TESTS -eq 0 ]]; then
     echo "[compile.sh] ERROR: --coverage requires tests; remove --skip-tests." >&2
@@ -124,7 +133,9 @@ if [[ $RUN_TESTS -eq 1 ]]; then
     rm -rf "$report_dir"
     mkdir -p "$profile_dir"
 
-    (cd "$BUILD_DIR" && LLVM_PROFILE_FILE="$profile_dir/%p-%m.profraw" ctest --output-on-failure --parallel "$TEST_JOBS")
+    test_cmd=(ctest --output-on-failure --parallel "$TEST_JOBS")
+    print_command "[compile.sh] Running tests: " LLVM_PROFILE_FILE="$profile_dir/%p-%m.profraw" "${test_cmd[@]}"
+    (cd "$BUILD_DIR" && LLVM_PROFILE_FILE="$profile_dir/%p-%m.profraw" "${test_cmd[@]}")
 
     if ! compgen -G "$profile_dir/*.profraw" >/dev/null; then
       echo "[compile.sh] WARN: no .profraw files produced; coverage report skipped." >&2
@@ -164,7 +175,9 @@ if [[ $RUN_TESTS -eq 1 ]]; then
     "$LLVM_COV" show "${coverage_args[@]}" "${bins[@]}" -instr-profile "$profdata" \
       -format=html -output-dir "$report_dir/html" -show-instantiations -show-line-counts-or-regions
   else
-    (cd "$BUILD_DIR" && ctest --output-on-failure --progress --parallel "$TEST_JOBS")
+    test_cmd=(ctest --output-on-failure --progress --parallel "$TEST_JOBS")
+    print_command "[compile.sh] Running tests: " "${test_cmd[@]}"
+    (cd "$BUILD_DIR" && "${test_cmd[@]}")
   fi
 fi
 
