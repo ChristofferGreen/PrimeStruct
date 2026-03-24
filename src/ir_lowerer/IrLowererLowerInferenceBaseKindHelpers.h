@@ -1,6 +1,8 @@
 #pragma once
 
 #include "IrLowererLowerInferenceSetup.h"
+#include "IrLowererResultHelpers.h"
+#include "IrLowererUninitializedTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 

@@ -4,8 +4,6 @@
 
 namespace primec::emitter {
 
-namespace {
-
 void appendUniqueCandidate(std::vector<std::string> &candidates, const std::string &candidate) {
   if (candidate.empty()) {
     return;
@@ -17,6 +15,8 @@ void appendUniqueCandidate(std::vector<std::string> &candidates, const std::stri
   }
   candidates.push_back(candidate);
 }
+
+namespace {
 
 std::vector<std::string> metadataPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;

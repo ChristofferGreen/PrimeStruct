@@ -3,32 +3,12 @@
 #include <string_view>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 
 namespace {
-
-bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
-  if (expr.name.empty()) {
-    return false;
-  }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized[0] == '/') {
-    normalized.erase(0, 1);
-  }
-  constexpr std::string_view mapPrefix = "map/";
-  constexpr std::string_view stdMapPrefix = "std/collections/map/";
-  if (normalized.rfind(mapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(mapPrefix.size());
-    return true;
-  }
-  if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdMapPrefix.size());
-    return true;
-  }
-  return false;
-}
 
 bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   auto matchesHelper = [&](std::string_view basePath) {
@@ -121,14 +101,6 @@ Expr makeInlineEmitDirectTypeNamespaceCall(const Expr &callExpr, const Definitio
 }
 
 } // namespace
-
-bool isMapBuiltinName(const Expr &expr, const char *name) {
-  if (isSimpleCallName(expr, name)) {
-    return true;
-  }
-  std::string aliasName;
-  return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
-}
 
 bool isMapContainsHelperName(const Expr &expr) {
   return isMapBuiltinName(expr, "contains");

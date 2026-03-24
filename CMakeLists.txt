@@ -233,6 +233,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.cpp
   src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.cpp
   src/ir_lowerer/IrLowererOperatorComparisonHelpers.cpp
+  src/ir_lowerer/IrLowererOperatorConversionsAndCallsControlHelpers.cpp
   src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp
   src/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.cpp
   src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp

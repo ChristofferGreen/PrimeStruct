@@ -173,7 +173,9 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Split `EmitterExprCalls.h` file and collection access builtin emission paths into `src/emitter/EmitterExprCollectionBuiltinCalls.h`, `src/emitter/EmitterExprFileAccessCalls.h`, and `src/emitter/EmitterExprCollectionAccessAtCalls.h`.
 - ✓ Refactor `src/emitter/EmitterEmitSetup.h` (`545` lines) below the `700`-line target by extracting setup return-kind and struct-return inference into `src/emitter/EmitterEmitSetupReturnInference.h`.
 - ✓ Split `EmitterEmitSetup.h` setup return-kind and struct-return inference into `src/emitter/EmitterEmitSetupReturnInference.h`.
-- ○ Refactor `src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp` (`1427` lines) below the `700`-line target.
+- ○ Refactor `src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp` (`1219` lines) below the `700`-line target by extracting control-expression tail handling into `src/ir_lowerer/IrLowererOperatorConversionsAndCallsControlHelpers.cpp` and splitting the remaining conversion/call operator body into dedicated helper units.
+- ✓ Split `IrLowererOperatorConversionsAndCallsHelpers.cpp` control-expression tail handling into `src/ir_lowerer/IrLowererOperatorConversionsAndCallsControlHelpers.cpp`.
+- ○ Split `IrLowererOperatorConversionsAndCallsHelpers.cpp` conversion/call operator body plus pointer/aggregate resolution helpers into dedicated helper unit(s).
 - ○ Refactor `src/IrToCppEmitter.cpp` (`1421` lines) below the `700`-line target.
 - ○ Refactor `src/parser/ParserCore.cpp` (`1289` lines) below the `700`-line target.
 - ○ Refactor `src/parser/ParserLists.cpp` (`1245` lines) below the `700`-line target.

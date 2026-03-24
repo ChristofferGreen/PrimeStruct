@@ -1,4 +1,5 @@
 #include "EmitterHelpers.h"
+#include "EmitterBuiltinCallPathHelpersInternal.h"
 
 namespace primec::emitter {
 

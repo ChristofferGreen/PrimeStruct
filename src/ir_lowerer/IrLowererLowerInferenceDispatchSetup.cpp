@@ -1,5 +1,6 @@
 #include "IrLowererLowerInferenceSetup.h"
 
+#include "IrLowererHelpers.h"
 #include "IrLowererLowerInferenceBaseKindHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"

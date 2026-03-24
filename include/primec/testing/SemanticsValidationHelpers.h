@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "primec/Ast.h"
@@ -232,6 +234,19 @@ std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(co
                                                                               bool allowBoolCount);
 bool runSemanticsValidatorStatementCanIterateMoreThanOnceStep(const Expr &countExpr, bool allowBoolCount);
 bool runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(const Expr &expr);
+std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix);
+bool validateBuiltinMapKeyType(const std::string &typeName,
+                               const std::vector<std::string> *templateArgs,
+                               std::string &error);
+bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
+bool isRootBuiltinName(const std::string &name);
+bool isExplicitRemovedCollectionCallAlias(std::string rawPath);
+bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
+bool lowerMatchToIf(const Expr &expr, Expr &out, std::string &error);
+std::string runSemanticsReturnKindNameStep(const Definition &def,
+                                           const std::unordered_set<std::string> &structNames,
+                                           const std::unordered_map<std::string, std::string> &importAliases,
+                                           std::string &error);
 StronglyConnectedComponentsSnapshot computeStronglyConnectedComponentsForTesting(
     uint32_t nodeCount,
     const std::vector<StronglyConnectedComponentsTestEdge> &edges);

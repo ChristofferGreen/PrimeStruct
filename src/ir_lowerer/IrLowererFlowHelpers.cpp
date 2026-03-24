@@ -1,5 +1,7 @@
 #include "IrLowererFlowHelpers.h"
 
+#include "IrLowererHelpers.h"
+
 #include <cstdlib>
 #include <cstring>
 #include <utility>

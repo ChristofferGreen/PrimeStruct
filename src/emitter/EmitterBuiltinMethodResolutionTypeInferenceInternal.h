@@ -12,6 +12,7 @@ struct MethodResolutionMetadataView {
   const std::unordered_map<std::string, std::string> &returnStructs;
 };
 
+void appendUniqueCandidate(std::vector<std::string> &candidates, const std::string &candidate);
 std::string typeNameFromResolvedCandidates(const MethodResolutionMetadataView &view,
                                            const std::vector<std::string> &resolvedCandidates);
 bool extractCollectionElementTypeFromReturnType(const std::string &typeName, std::string &typeOut);

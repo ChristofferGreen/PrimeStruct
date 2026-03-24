@@ -1008,6 +1008,9 @@ bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
                          int32_t srcPtrLocal,
                          int32_t slotCount,
                          const std::function<int32_t()> &allocTempLocal);
+void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+                                        int32_t srcPtrLocal,
+                                        const std::string &structTypeName);
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        LocalInfo::ValueKind kind,
                        bool equals,

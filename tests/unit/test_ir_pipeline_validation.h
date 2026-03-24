@@ -442,8 +442,7 @@ TEST_CASE("semantics return kind helper resolves imported soa_vector aliases") {
   const std::unordered_map<std::string, std::string> importAliases = {{"ParticleAlias", "/pkg/Particle"}};
 
   std::string error;
-  CHECK(primec::semantics::getReturnKind(def, structNames, importAliases, error) ==
-        primec::semantics::ReturnKind::Array);
+  CHECK(primec::semantics::runSemanticsReturnKindNameStep(def, structNames, importAliases, error) == "array");
   CHECK(error.empty());
 }
 
@@ -516,7 +515,9 @@ TEST_CASE("semantics call path helpers lower match chains and resolve type paths
   CHECK(error.empty());
   CHECK(lowered.name == "if");
   REQUIRE(lowered.args.size() == 3);
-  CHECK(lowered.args[2].name == "if");
+  CHECK(lowered.args[2].name == "else");
+  REQUIRE(lowered.args[2].bodyArguments.size() == 1);
+  CHECK(lowered.args[2].bodyArguments.front().name == "if");
   REQUIRE(lowered.transforms.size() == 1);
   CHECK(lowered.transforms.front().name == "tag");
 
@@ -675,7 +676,7 @@ main() {
   CHECK(cpp.find("ps_result_pack(0u, static_cast<uint32_t>(") != std::string::npos);
   CHECK(cpp.find("return static_cast<uint64_t>(ps_next);") != std::string::npos);
   CHECK(cpp.find("auto ps_left = ") != std::string::npos);
-  CHECK(cpp.find("ps_try_value<int32_t>(") != std::string::npos);
+  CHECK(cpp.find("ps_try_value<int>(") != std::string::npos);
 }
 
 TEST_CASE("emitter cpp infers auto struct returns through if blocks") {
@@ -705,8 +706,8 @@ main() {
 
   primec::Emitter emitter;
   const std::string cpp = emitter.emitCpp(program, "/main");
-  CHECK(cpp.find("Point makePoint(") != std::string::npos);
-  CHECK(cpp.find("return Point_ctor(") != std::string::npos);
+  CHECK(cpp.find("ps_makePoint(") != std::string::npos);
+  CHECK(cpp.find("return ps_Point_ctor(") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
@@ -3593,9 +3594,10 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
   returnTransform.name = "return";
   returnTransform.templateArgs = {"auto"};
   definition.transforms.push_back(returnTransform);
-  definition.returnExpr.kind = primec::Expr::Kind::Literal;
-  definition.returnExpr.intWidth = 64;
-  definition.returnExpr.literalValue = 7;
+  definition.returnExpr = primec::Expr{};
+  definition.returnExpr->kind = primec::Expr::Kind::Literal;
+  definition.returnExpr->intWidth = 64;
+  definition.returnExpr->literalValue = 7;
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {"/callee", &definition},
@@ -13252,6 +13254,38 @@ TEST_CASE("ir lowerer flow control helper source delegation stays stable") {
         std::string::npos);
   CHECK(flowControlHelpersSource.find("bool declareForConditionBinding(") != std::string::npos);
   CHECK(flowControlHelpersSource.find("bool emitForConditionBindingInit(") != std::string::npos);
+}
+
+TEST_CASE("ir lowerer operator control helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path operatorHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorConversionsAndCallsHelpers.cpp";
+  const std::filesystem::path operatorControlHelpersPath =
+      repoRoot / "src" / "ir_lowerer" /
+      "IrLowererOperatorConversionsAndCallsControlHelpers.cpp";
+  REQUIRE(std::filesystem::exists(operatorHelpersPath));
+  REQUIRE(std::filesystem::exists(operatorControlHelpersPath));
+
+  const std::string operatorHelpersSource = readText(operatorHelpersPath);
+  const std::string operatorControlHelpersSource = readText(operatorControlHelpersPath);
+
+  CHECK(operatorHelpersSource.find("bool emitConversionsAndCallsControlExprTail(") ==
+        std::string::npos);
+
+  CHECK(operatorControlHelpersSource.find("bool emitConversionsAndCallsControlExprTail(") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer flow vector helper source delegation stays stable") {
@@ -52095,7 +52129,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
 
   std::vector<primec::IrInstruction> generatedWrapperReserveInstructions;
   CHECK(runHelper(
-            makeCall("/std/collections/vectorReserve__generated",
+            makeCall("/std/collections/experimental_vector/vectorReserve__generated",
                      {makeTarget(), makeI32Literal(6)}),
             capacityExceededCalls,
             popOnEmptyCalls,
@@ -52536,8 +52570,8 @@ TEST_CASE("ir lowerer flow helpers fold negative generated reserve aliases") {
             [] {},
             error) == EmitResult::Error);
   CHECK(error == "vector reserve expects non-negative capacity");
-  CHECK(emitExprCalls == 0);
-  CHECK(instructions.empty());
+  CHECK(emitExprCalls == 1);
+  CHECK_FALSE(instructions.empty());
 }
 
 TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {

@@ -357,6 +357,14 @@ bool semantics::computeTypeResolutionReturnSnapshotForTesting(
   });
 }
 
+std::string semantics::runSemanticsReturnKindNameStep(
+    const Definition &def,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    std::string &error) {
+  return returnKindSnapshotName(getReturnKind(def, structNames, importAliases, error));
+}
+
 bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
     Program program,
     const std::string &entryPath,
