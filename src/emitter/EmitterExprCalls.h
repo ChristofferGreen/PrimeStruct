@@ -471,21 +471,31 @@
           std::string packBase;
           std::string packArgText;
           if (splitTemplateTypeName(packedParamInfo.typeTemplateArg, packBase, packArgText) &&
-              normalizeBindingTypeName(packBase) == "Reference" &&
               isSimpleCallName(packedArgExpr, "location") && packedArgExpr.args.size() == 1) {
-            return "std::ref(" +
-                   emitExpr(packedArgExpr.args.front(),
-                            nameMap,
-                            paramMap,
-                            defMap,
-                            structTypeMap,
-                            importAliases,
-                            localTypes,
-                            returnKinds,
-                            resultInfos,
-                            returnStructs,
-                            allowMathBare) +
-                   ")";
+            const std::string normalizedPackBase = normalizeBindingTypeName(packBase);
+            const Expr &locationTarget = packedArgExpr.args.front();
+            const std::string targetExpr =
+                emitExpr(locationTarget,
+                         nameMap,
+                         paramMap,
+                         defMap,
+                         structTypeMap,
+                         importAliases,
+                         localTypes,
+                         returnKinds,
+                         resultInfos,
+                         returnStructs,
+                         allowMathBare);
+            if (normalizedPackBase == "Reference") {
+              return "std::ref(" + targetExpr + ")";
+            }
+            if (normalizedPackBase == "Pointer" && locationTarget.kind == Expr::Kind::Name) {
+              auto localIt = localTypes.find(locationTarget.name);
+              if (localIt != localTypes.end() &&
+                  normalizeBindingTypeName(localIt->second.typeName) == "Reference") {
+                return "(&ps_deref(" + targetExpr + "))";
+              }
+            }
           }
           return emitExpr(packedArgExpr,
                           nameMap,
