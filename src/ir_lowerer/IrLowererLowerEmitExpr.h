@@ -449,6 +449,26 @@
             function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
             function.instructions.push_back({IrOpcode::MulI64, 0});
             function.instructions.push_back({IrOpcode::SubI64, 0});
+            if (!resultInfo.valueStructType.empty()) {
+              LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
+              if (!ir_lowerer::resolveSupportedPackedResultStructValueKind(
+                      resultInfo.valueStructType,
+                      [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                        return resolveStructSlotLayout(structPath, layoutOut);
+                      },
+                      packedStructKind)) {
+                error = ir_lowerer::unsupportedPackedResultValueKindError("try");
+                return false;
+              }
+              (void)packedStructKind;
+              const int32_t baseLocal = nextLocal;
+              ++nextLocal;
+              const int32_t ptrLocal = nextLocal++;
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+              function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            }
             size_t jumpEnd = function.instructions.size();
             function.instructions.push_back({IrOpcode::Jump, 0});
             size_t errorIndex = function.instructions.size();
@@ -882,7 +902,14 @@
               return inferExprKind(valueExpr, valueLocals);
             },
             [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+              return inferStructExprPath(valueExpr, valueLocals);
+            },
+            [&](const Expr &valueExpr, const LocalMap &valueLocals) {
               return emitExpr(valueExpr, valueLocals);
+            },
+            [&]() { return allocTempLocal(); },
+            [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+              return resolveStructSlotLayout(structPath, layoutOut);
             },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             error);

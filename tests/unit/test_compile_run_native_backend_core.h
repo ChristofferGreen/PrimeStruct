@@ -7284,6 +7284,46 @@ main() {
         "container capacity exceeded\nimage_invalid_operation\nqueue_submit_failed\n");
 }
 
+TEST_CASE("native backend supports direct single-slot struct Result.ok payloads on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+
+[struct]
+Label() {
+  [i32] code{0i32}
+}
+
+[return<Result<Label, FileError>>]
+make_label() {
+  return(Result.ok(Label([code] 7i32)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Label] value{try(make_label())}
+  print_line(value.code)
+  return(value.code)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_result_single_slot_struct_payload_ir_backed.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_single_slot_struct_payload_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_single_slot_struct_payload_ir_backed_out.txt")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 7);
+  CHECK(readFile(outPath) == "7\n");
+}
+
 TEST_CASE("native backend supports block-bodied Result.and_then lambdas on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

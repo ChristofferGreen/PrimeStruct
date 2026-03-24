@@ -36,6 +36,7 @@ struct LocalInfo {
   bool isResult = false;
   bool resultHasValue = false;
   ValueKind resultValueKind = ValueKind::Unknown;
+  std::string resultValueStructType;
   std::string resultErrorType;
   enum class StringSource { None, TableIndex, ArgvIndex, RuntimeIndex } stringSource = StringSource::None;
   int32_t stringIndex = -1;
@@ -64,6 +65,7 @@ struct ReturnInfo {
   bool isResult = false;
   bool resultHasValue = false;
   LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+  std::string resultValueStructType;
   std::string resultErrorType;
 };
 
@@ -3698,6 +3700,7 @@ struct ResultExprInfo {
   bool isResult = false;
   bool hasValue = false;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  std::string valueStructType;
   std::string errorType;
 };
 
@@ -3706,6 +3709,7 @@ struct LocalResultInfo {
   bool isResult = false;
   bool resultHasValue = false;
   LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+  std::string resultValueStructType;
   std::string resultErrorType;
   bool isFileHandle = false;
 };
@@ -3773,11 +3777,18 @@ enum class ResultOkMethodCallEmitResult {
   Error,
 };
 std::string unsupportedPackedResultValueKindError(const std::string &builtinName);
+bool resolveSupportedPackedResultStructValueKind(
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    LocalInfo::ValueKind &out);
 ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const Expr &expr,
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error);
 ResultErrorMethodCallEmitResult tryEmitResultErrorCall(

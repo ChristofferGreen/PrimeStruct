@@ -51268,6 +51268,13 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
   primec::ir_lowerer::LocalMap locals;
   std::vector<primec::IrInstruction> instructions;
   std::string error;
+  const auto inferNoStruct = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return std::string{};
+  };
+  const auto allocTempLocal = []() { return 19; };
+  const auto resolveNoStructLayout = [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+    return false;
+  };
 
   expr.args = {resultType};
   CHECK(primec::ir_lowerer::tryEmitResultOkCall(
@@ -51276,7 +51283,10 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return ValueKind::Unknown;
             },
+            inferNoStruct,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            allocTempLocal,
+            resolveNoStructLayout,
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) ==
         EmitResult::Emitted);
@@ -51293,7 +51303,10 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return ValueKind::Unknown;
             },
+            inferNoStruct,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            allocTempLocal,
+            resolveNoStructLayout,
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) ==
         EmitResult::NotHandled);
@@ -51309,10 +51322,13 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               inferCalled = true;
               return ValueKind::Bool;
             },
+            inferNoStruct,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               emitCalled = true;
               return true;
             },
+            allocTempLocal,
+            resolveNoStructLayout,
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) ==
         EmitResult::Emitted);
@@ -51327,7 +51343,10 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return ValueKind::Int32;
             },
+            inferNoStruct,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            allocTempLocal,
+            resolveNoStructLayout,
             [&](primec::IrOpcode, uint64_t) {},
             error) ==
         EmitResult::Error);
@@ -51342,10 +51361,13 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return ValueKind::String;
             },
+            inferNoStruct,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               emitCalled = true;
               return true;
             },
+            allocTempLocal,
+            resolveNoStructLayout,
             [&](primec::IrOpcode, uint64_t) {},
             error) ==
         EmitResult::Emitted);
@@ -51360,10 +51382,13 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return ValueKind::Int64;
             },
+            inferNoStruct,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               emitCalled = true;
               return true;
             },
+            allocTempLocal,
+            resolveNoStructLayout,
             [&](primec::IrOpcode, uint64_t) {},
             error) ==
         EmitResult::Error);
@@ -51377,11 +51402,81 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return ValueKind::Int32;
             },
+            inferNoStruct,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            allocTempLocal,
+            resolveNoStructLayout,
             [&](primec::IrOpcode, uint64_t) {},
             error) ==
         EmitResult::Error);
   CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer result helpers pack single-slot struct Result.ok values") {
+  using EmitResult = primec::ir_lowerer::ResultOkMethodCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.isMethodCall = true;
+  expr.name = "ok";
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Name;
+  valueExpr.name = "label";
+  expr.args = {resultType, valueExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo labelInfo;
+  labelInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  labelInfo.valueKind = ValueKind::Int64;
+  labelInfo.structTypeName = "/pkg/Label";
+  labelInfo.index = 7;
+  locals.emplace("label", labelInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Int64;
+            },
+            [](const primec::Expr &value, const primec::ir_lowerer::LocalMap &) {
+              return value.kind == primec::Expr::Kind::Name && value.name == "label" ? "/pkg/Label" : std::string{};
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::LoadLocal, 7});
+              return true;
+            },
+            []() { return 23; },
+            [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+              if (structPath != "/pkg/Label") {
+                return false;
+              }
+              layoutOut = primec::ir_lowerer::StructSlotLayoutInfo{};
+              layoutOut.structPath = structPath;
+              layoutOut.totalSlots = 1;
+              primec::ir_lowerer::StructSlotFieldInfo field;
+              field.slotOffset = 0;
+              field.slotCount = 1;
+              field.valueKind = ValueKind::Int32;
+              layoutOut.fields.push_back(field);
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) ==
+        EmitResult::Emitted);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 }
 
 TEST_CASE("ir lowerer result helpers resolve definition result metadata") {
@@ -51472,6 +51567,46 @@ TEST_CASE("ir lowerer result helpers resolve from locals and return-info lookups
   unknownName.name = "missing";
   CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       unknownName, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+}
+
+TEST_CASE("ir lowerer result helpers resolve direct Result.ok struct payload metadata") {
+  primec::Definition labelDef;
+  labelDef.fullPath = "/pkg/Label";
+  labelDef.transforms.push_back(primec::Transform{"struct"});
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr labelCall;
+  labelCall.kind = primec::Expr::Kind::Call;
+  labelCall.name = "Label";
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultName, labelCall};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [&](const primec::Expr &expr) -> const primec::Definition * {
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "Label") {
+      return &labelDef;
+    }
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      okExpr, {}, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(out.valueStructType == "/pkg/Label");
 }
 
 TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {

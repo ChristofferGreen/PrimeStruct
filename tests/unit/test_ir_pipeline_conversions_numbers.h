@@ -287,6 +287,49 @@ main() {
   CHECK(result == 15);
 }
 
+TEST_CASE("ir lowerer supports direct single-slot struct Result.ok payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[struct]
+Label() {
+  [i32] code{0i32}
+}
+
+[return<Result<Label, FileError>>]
+make_label() {
+  return(Result.ok(Label([code] 7i32)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Label] value{try(make_label())}
+  print_line(value.code)
+  return(value.code)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
 TEST_CASE("ir lowerer rejects Result.ok composite struct payloads") {
   const std::string source = R"(
 import /std/collections/*

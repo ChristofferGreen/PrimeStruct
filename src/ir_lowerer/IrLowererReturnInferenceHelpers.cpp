@@ -164,6 +164,17 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
       info.isResult = true;
       info.resultHasValue = resultHasValue;
       info.resultValueKind = resultValueKind;
+      if (resultHasValue && resultValueKind == LocalInfo::ValueKind::Unknown) {
+        std::string base;
+        std::string argList;
+        std::vector<std::string> args;
+        if (splitTemplateTypeName(typeName, base, argList) && splitTemplateArgs(argList, args) && args.size() == 2) {
+          std::string structPath;
+          if (resolveStructTypeName(trimTemplateTypeText(args.front()), def.namespacePrefix, structPath)) {
+            info.resultValueStructType = std::move(structPath);
+          }
+        }
+      }
       info.resultErrorType = resultErrorType;
       info.kind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       break;

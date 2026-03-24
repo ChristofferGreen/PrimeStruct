@@ -213,6 +213,15 @@
       LocalInfo::ValueKind mapValueKind = bindingTypeInfo.mapValueKind;
       std::string structTypeName = bindingTypeInfo.structTypeName;
       LocalInfo info;
+      auto assignDeclaredResultStructType = [&](const std::string &typeText) {
+        if (!info.resultHasValue || info.resultValueKind != LocalInfo::ValueKind::Unknown) {
+          return;
+        }
+        std::string structPath;
+        if (resolveStructTypeName(trimTemplateTypeText(typeText), stmt.namespacePrefix, structPath)) {
+          info.resultValueStructType = std::move(structPath);
+        }
+      };
       info.isMutable = isBindingMutable(stmt);
       info.kind = kind;
       info.valueKind = valueKind;
@@ -235,6 +244,7 @@
           info.isResult = true;
           info.resultHasValue = inferredResultInfo.hasValue;
           info.resultValueKind = inferredResultInfo.valueKind;
+          info.resultValueStructType = inferredResultInfo.valueStructType;
           info.resultErrorType = inferredResultInfo.errorType;
           info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
         }
@@ -350,6 +360,9 @@
           info.resultValueKind =
               info.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
                                   : LocalInfo::ValueKind::Unknown;
+          if (info.resultHasValue && !transform.templateArgs.empty()) {
+            assignDeclaredResultStructType(transform.templateArgs.front());
+          }
           info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
           if (!transform.templateArgs.empty()) {
             info.resultErrorType = transform.templateArgs.back();
@@ -374,6 +387,9 @@
             info.isResult = true;
             info.resultHasValue = resultHasValue;
             info.resultValueKind = resultValueKind;
+            if (info.resultHasValue) {
+              assignDeclaredResultStructType(targetType);
+            }
             info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
             info.resultErrorType = resultErrorType;
           }

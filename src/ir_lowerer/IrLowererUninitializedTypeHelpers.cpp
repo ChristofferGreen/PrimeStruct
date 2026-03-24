@@ -607,6 +607,20 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       return "";
     }
     if (exprIn.kind == Expr::Kind::Call) {
+      if (!exprIn.isMethodCall && isSimpleCallName(exprIn, "try") && exprIn.args.size() == 1) {
+        const Expr &resultExpr = exprIn.args.front();
+        if (resultExpr.kind == Expr::Kind::Name) {
+          auto localIt = localsInExpr.find(resultExpr.name);
+          if (localIt != localsInExpr.end() && !localIt->second.resultValueStructType.empty()) {
+            return localIt->second.resultValueStructType;
+          }
+        }
+        if (resultExpr.kind == Expr::Kind::Call && resultExpr.isMethodCall && resultExpr.args.size() == 2 &&
+            resultExpr.args.front().kind == Expr::Kind::Name && resultExpr.args.front().name == "Result" &&
+            resultExpr.name == "ok") {
+          return inferStructExprPath(resultExpr.args[1], localsInExpr);
+        }
+      }
       if (exprIn.isFieldAccess && exprIn.args.size() == 1) {
         const std::string receiverStruct = inferStructExprPath(exprIn.args.front(), localsInExpr);
         if (!receiverStruct.empty()) {

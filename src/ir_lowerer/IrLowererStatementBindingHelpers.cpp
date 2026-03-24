@@ -701,6 +701,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
       infoOut.isResult = true;
       infoOut.resultHasValue = inferredResultInfo.hasValue;
       infoOut.resultValueKind = inferredResultInfo.valueKind;
+      infoOut.resultValueStructType = inferredResultInfo.valueStructType;
       infoOut.resultErrorType = inferredResultInfo.errorType;
       infoOut.valueKind = infoOut.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
     }

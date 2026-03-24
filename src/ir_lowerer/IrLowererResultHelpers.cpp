@@ -107,6 +107,7 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
     bindingInfo.isResult = true;
     bindingInfo.resultHasValue = bindingResultInfo.hasValue;
     bindingInfo.resultValueKind = bindingResultInfo.valueKind;
+    bindingInfo.resultValueStructType = bindingResultInfo.valueStructType;
     bindingInfo.resultErrorType =
         !bindingResultInfo.errorType.empty() ? bindingResultInfo.errorType : declaredErrorType;
     bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
@@ -145,6 +146,12 @@ bool mergeControlFlowResultInfos(const ResultExprInfo &first,
       return false;
     }
     out.valueKind = first.valueKind != LocalInfo::ValueKind::Unknown ? first.valueKind : second.valueKind;
+    if (!first.valueStructType.empty() && !second.valueStructType.empty() &&
+        first.valueStructType != second.valueStructType) {
+      return false;
+    }
+    out.valueStructType =
+        !first.valueStructType.empty() ? first.valueStructType : second.valueStructType;
   }
 
   if (!first.errorType.empty() && !second.errorType.empty() && first.errorType != second.errorType) {
@@ -152,6 +159,32 @@ bool mergeControlFlowResultInfos(const ResultExprInfo &first,
   }
   out.errorType = !first.errorType.empty() ? first.errorType : second.errorType;
   return true;
+}
+
+bool inferDirectResultValueStructType(const Expr &expr,
+                                      const LocalMap &localsIn,
+                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                      std::string &structTypeOut) {
+  structTypeOut.clear();
+  if (expr.kind == Expr::Kind::Name) {
+    auto localIt = localsIn.find(expr.name);
+    if (localIt != localsIn.end() && !localIt->second.structTypeName.empty()) {
+      structTypeOut = localIt->second.structTypeName;
+      return true;
+    }
+    return false;
+  }
+
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+
+  const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
+  if (callee != nullptr && isStructDefinition(*callee)) {
+    structTypeOut = callee->fullPath;
+    return true;
+  }
+  return false;
 }
 
 bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
@@ -250,6 +283,7 @@ bool resolveResultExprInfo(const Expr &expr,
       out.isResult = true;
       out.hasValue = local.resultHasValue;
       out.valueKind = local.resultValueKind;
+      out.valueStructType = local.resultValueStructType;
       out.errorType = local.resultErrorType;
       return true;
     }
@@ -272,6 +306,12 @@ bool resolveResultExprInfo(const Expr &expr,
       if (expr.args.front().name == "Result" && expr.name == "ok") {
         out.isResult = true;
         out.hasValue = (expr.args.size() > 1);
+        if (out.hasValue && expr.args.size() == 2) {
+          const Definition *valueDef = resolveDefinitionCall ? resolveDefinitionCall(expr.args[1]) : nullptr;
+          if (valueDef != nullptr && isStructDefinition(*valueDef)) {
+            out.valueStructType = valueDef->fullPath;
+          }
+        }
         return true;
       }
       const LocalResultInfo local = lookupLocal(expr.args.front().name);
@@ -368,6 +408,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     local.isResult = it->second.isResult;
     local.resultHasValue = it->second.resultHasValue;
     local.resultValueKind = it->second.resultValueKind;
+    local.resultValueStructType = it->second.resultValueStructType;
     local.resultErrorType = it->second.resultErrorType;
     local.isFileHandle = it->second.isFileHandle;
     return local;
@@ -383,6 +424,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     resultOut.isResult = true;
     resultOut.hasValue = info.resultHasValue;
     resultOut.valueKind = info.resultValueKind;
+    resultOut.valueStructType = info.resultValueStructType;
     resultOut.errorType = info.resultErrorType;
     return true;
   };
@@ -443,6 +485,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       out.isResult = true;
       out.hasValue = local.resultHasValue;
       out.valueKind = local.resultValueKind;
+      out.valueStructType = local.resultValueStructType;
       out.errorType = local.resultErrorType;
       return true;
     }
@@ -459,6 +502,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
         out.isResult = true;
         out.hasValue = local.resultHasValue;
         out.valueKind = local.resultValueKind;
+        out.valueStructType = local.resultValueStructType;
         out.errorType = local.resultErrorType;
         return true;
       }
@@ -495,8 +539,13 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result" && expr.name == "ok") {
     out.isResult = true;
     out.hasValue = (expr.args.size() > 1);
-    if (out.hasValue && expr.args.size() == 2 && inferExprKind) {
-      out.valueKind = inferExprKind(expr.args[1], localsIn);
+    if (out.hasValue && expr.args.size() == 2) {
+      std::string valueStructType;
+      if (inferDirectResultValueStructType(expr.args[1], localsIn, resolveDefinitionCall, valueStructType)) {
+        out.valueStructType = std::move(valueStructType);
+      } else if (inferExprKind) {
+        out.valueKind = inferExprKind(expr.args[1], localsIn);
+      }
     }
     return true;
   }
@@ -692,6 +741,33 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
          kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::String;
 }
 
+bool resolveSupportedPackedResultStructValueKind(
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    LocalInfo::ValueKind &out) {
+  out = LocalInfo::ValueKind::Unknown;
+  if (structType.empty() || !resolveStructSlotLayout) {
+    return false;
+  }
+
+  StructSlotLayoutInfo layout;
+  if (!resolveStructSlotLayout(structType, layout)) {
+    return false;
+  }
+  if (layout.totalSlots != 1 || layout.fields.size() != 1) {
+    return false;
+  }
+
+  const StructSlotFieldInfo &field = layout.fields.front();
+  if (field.slotOffset != 0 || field.slotCount != 1 || !field.structPath.empty() ||
+      !isSupportedPackedResultValueKind(field.valueKind)) {
+    return false;
+  }
+
+  out = field.valueKind;
+  return true;
+}
+
 std::string unsupportedPackedResultValueKindError(const std::string &builtinName) {
   return "IR backends only support " + builtinName + " with 32-bit or string values";
 }
@@ -700,7 +776,10 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const Expr &expr,
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
   if (!(expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
@@ -716,13 +795,31 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     return ResultOkMethodCallEmitResult::Error;
   }
   const LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
-  if (!isSupportedPackedResultValueKind(argKind)) {
+  if (isSupportedPackedResultValueKind(argKind)) {
+    if (!emitExpr(expr.args[1], localsIn)) {
+      return ResultOkMethodCallEmitResult::Error;
+    }
+    return ResultOkMethodCallEmitResult::Emitted;
+  }
+
+  const std::string structType = inferStructExprPath ? inferStructExprPath(expr.args[1], localsIn) : std::string{};
+  LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
+  if (!resolveSupportedPackedResultStructValueKind(structType, resolveStructSlotLayout, packedStructKind)) {
     error = unsupportedPackedResultValueKindError("Result.ok");
     return ResultOkMethodCallEmitResult::Error;
   }
+  (void)packedStructKind;
   if (!emitExpr(expr.args[1], localsIn)) {
     return ResultOkMethodCallEmitResult::Error;
   }
+  if (!allocTempLocal) {
+    error = "native backend missing temporary local for Result.ok";
+    return ResultOkMethodCallEmitResult::Error;
+  }
+  const int32_t ptrLocal = allocTempLocal();
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::LoadIndirect, 0);
   return ResultOkMethodCallEmitResult::Emitted;
 }
 
