@@ -3947,11 +3947,11 @@ import /std/gfx/experimental/*
 [return<int> effects(io_out)]
 main() {
   [GfxError] err{queueSubmitFailed()}
-  print_line(Result.why(gfxErrorStatus(queueSubmitFailed())))
-  print_line(Result.why(gfxErrorResult<i32>(framePresentFailed())))
-  print_line(Result.why(gfxErrorStatus(err)))
-  print_line(Result.why(gfxErrorStatus(err)))
-  print_line(Result.why(gfxErrorResult<i32>(err)))
+  print_line(Result.why(GfxError.status(queueSubmitFailed())))
+  print_line(Result.why(GfxError.result<i32>(framePresentFailed())))
+  print_line(Result.why(GfxError.status(err)))
+  print_line(Result.why(GfxError.status(err)))
+  print_line(Result.why(GfxError.result<i32>(err)))
   return(0i32)
 }
 )";
@@ -3981,8 +3981,8 @@ main() {
   [GfxError] err{queueSubmitFailed()}
   print_line(Result.why(GfxError.status(queueSubmitFailed())))
   print_line(Result.why(GfxError.result<i32>(framePresentFailed())))
-  print_line(Result.why(gfxErrorStatus(err)))
-  print_line(Result.why(gfxErrorResult<i32>(err)))
+  print_line(Result.why(GfxError.status(err)))
+  print_line(Result.why(GfxError.result<i32>(err)))
   return(0i32)
 }
 )";
@@ -4009,12 +4009,12 @@ import /std/gfx/*
 [return<int> effects(io_out)]
 main() {
   [GfxError] err{queueSubmitFailed()}
-  [Result<GfxError>] methodStatus{gfxErrorStatus(err)}
-  [Result<i32, GfxError>] methodValueStatus{gfxErrorResult<i32>(err)}
+  [Result<GfxError>] methodStatus{GfxError.status(err)}
+  [Result<i32, GfxError>] methodValueStatus{GfxError.result<i32>(err)}
   print_line(GfxError.why(err))
   print_line(GfxError.why(err))
   print_line(err.why())
-  print_line(Result.why(gfxErrorStatus(err)))
+  print_line(Result.why(GfxError.status(err)))
   print_line(Result.why(methodStatus))
   print_line(Result.why(methodValueStatus))
   print_line(Result.why(methodStatus))
@@ -4048,9 +4048,9 @@ import /std/gfx/*
 
 [return<int> effects(io_out)]
 main() {
-  print_line(Result.why(gfxErrorStatus(GfxError.window_create_failed())))
-  print_line(Result.why(gfxErrorStatus(GfxError.device_create_failed())))
-  print_line(Result.why(gfxErrorStatus(GfxError.frame_present_failed())))
+  print_line(Result.why(GfxError.status(GfxError.window_create_failed())))
+  print_line(Result.why(GfxError.status(GfxError.device_create_failed())))
+  print_line(Result.why(GfxError.status(GfxError.frame_present_failed())))
   return(0i32)
 }
 )";

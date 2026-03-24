@@ -831,15 +831,15 @@ import /std/gfx/experimental/*
 [return<void>]
 main() {
   [GfxError] err{queueSubmitFailed()}
-  [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
-  [Result<GfxError>] wrappedStatus{gfxErrorStatus(err)}
-  [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] wrappedValue{gfxErrorResult<i32>(err)}
+  [Result<GfxError>] status{GfxError.status(queueSubmitFailed())}
+  [Result<GfxError>] wrappedStatus{GfxError.status(err)}
+  [Result<i32, GfxError>] valueStatus{GfxError.result<i32>(framePresentFailed())}
+  [Result<i32, GfxError>] wrappedValue{GfxError.result<i32>(err)}
   [bool] statusError{Result.error(status)}
   [bool] wrappedStatusError{Result.error(wrappedStatus)}
   [bool] valueError{Result.error(valueStatus)}
   [bool] wrappedValueError{Result.error(wrappedValue)}
-  [string] directWhy{Result.why(gfxErrorStatus(err))}
+  [string] directWhy{Result.why(GfxError.status(err))}
   [string] statusWhy{Result.why(status)}
   [string] wrappedStatusWhy{Result.why(wrappedStatus)}
   [string] valueWhy{Result.why(valueStatus)}
@@ -855,20 +855,19 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib gfx error status helper rejects non gfx errors") {
+TEST_CASE("experimental stdlib gfx package status alias is removed") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
 [return<void>]
 main() {
-  [Result<GfxError>] status{gfxErrorStatus(true)}
+  [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/gfx/experimental/gfxErrorStatus parameter err") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: gfxErrorStatus") != std::string::npos);
 }
 
 TEST_CASE("stdlib GfxError status helper rejects non gfx errors") {
@@ -911,12 +910,12 @@ import /std/gfx/*
 [return<void>]
 main() {
   [GfxError] err{queueSubmitFailed()}
-  [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
+  [Result<GfxError>] status{GfxError.status(queueSubmitFailed())}
   [Result<GfxError>] directStatus{GfxError.status(queueSubmitFailed())}
-  [Result<GfxError>] wrappedStatus{gfxErrorStatus(err)}
-  [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
+  [Result<GfxError>] wrappedStatus{GfxError.status(err)}
+  [Result<i32, GfxError>] valueStatus{GfxError.result<i32>(framePresentFailed())}
   [Result<i32, GfxError>] directValueStatus{GfxError.result<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] wrappedValue{gfxErrorResult<i32>(err)}
+  [Result<i32, GfxError>] wrappedValue{GfxError.result<i32>(err)}
   [bool] statusError{Result.error(status)}
   [bool] directStatusError{Result.error(directStatus)}
   [bool] wrappedStatusError{Result.error(wrappedStatus)}
@@ -948,12 +947,12 @@ import /std/gfx/*
 [return<void>]
 main() {
   [GfxError] err{queueSubmitFailed()}
-  [Result<GfxError>] methodStatus{gfxErrorStatus(err)}
-  [Result<i32, GfxError>] methodValueStatus{gfxErrorResult<i32>(err)}
+  [Result<GfxError>] methodStatus{GfxError.status(err)}
+  [Result<i32, GfxError>] methodValueStatus{GfxError.result<i32>(err)}
   [string] direct{GfxError.why(err)}
   [string] method{GfxError.why(err)}
   [string] receiver{err.why()}
-  [string] viaResult{Result.why(gfxErrorStatus(err))}
+  [string] viaResult{Result.why(GfxError.status(err))}
   [string] viaMethodStatus{Result.why(methodStatus)}
   [string] viaMethodValue{Result.why(methodValueStatus)}
   [string] viaDirectMethodStatus{Result.why(methodStatus)}
@@ -989,14 +988,29 @@ main() {
   [GfxError] frameErr{GfxError.frame_acquire_failed()}
   [GfxError] queueErr{GfxError.queue_submit_failed()}
   [GfxError] presentErr{GfxError.frame_present_failed()}
-  [string] windowWhy{Result.why(gfxErrorStatus(windowErr))}
-  [string] presentWhy{Result.why(gfxErrorStatus(presentErr))}
+  [string] windowWhy{Result.why(GfxError.status(windowErr))}
+  [string] presentWhy{Result.why(GfxError.status(presentErr))}
   return()
 }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("canonical stdlib gfx package value alias is removed") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<void>]
+main() {
+  [Result<i32, GfxError>] value{gfxErrorResult<i32>(framePresentFailed())}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: gfxErrorResult") != std::string::npos);
 }
 
 TEST_CASE("canonical root GfxError compatibility wrappers are removed") {
