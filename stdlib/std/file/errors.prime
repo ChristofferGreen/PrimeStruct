@@ -32,19 +32,9 @@ namespace std {
     return(/std/file/FileError/eof())
   }
 
-  [public return<Result<FileError>>]
-  fileErrorStatus([FileError] err) {
-    return(/std/file/FileError/status(err))
-  }
-
   [public return<bool>]
   fileErrorIsEof([FileError] err) {
     return(/std/file/FileError/is_eof(err))
-  }
-
-  [public return<Result<T, FileError>>]
-  fileErrorResult<T>([FileError] err) {
-    return(/std/file/FileError/result<T>(err))
   }
   }
 }

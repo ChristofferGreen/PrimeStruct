@@ -171,17 +171,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       if (defMap_.count("/std/file/FileError/status") > 0) {
         return "/std/file/FileError/status";
       }
-      if (defMap_.count("/std/file/fileErrorStatus") > 0) {
-        return "/std/file/fileErrorStatus";
-      }
       return "";
     }
     if (helperName == "result") {
       if (defMap_.count("/std/file/FileError/result") > 0) {
         return "/std/file/FileError/result";
-      }
-      if (defMap_.count("/std/file/fileErrorResult") > 0) {
-        return "/std/file/fileErrorResult";
       }
       return "";
     }

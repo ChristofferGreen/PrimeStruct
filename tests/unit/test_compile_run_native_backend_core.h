@@ -124,7 +124,7 @@ TEST_CASE("native uses stdlib File helper wrappers") {
       "}\n"
       "[effects(io_err)]\n"
       "log_file_error([FileError] err) {\n"
-      "  print_line_error(Result.why(fileErrorStatus(err)))\n"
+      "  print_line_error(Result.why(FileError.status(err)))\n"
       "}\n";
   const std::string srcPath = writeTemp("native_stdlib_file_helpers.prime", source);
   const std::string exePath =
@@ -172,7 +172,7 @@ TEST_CASE("native uses stdlib File open helper wrappers") {
       "}\n"
       "[effects(io_err)]\n"
       "log_file_error([FileError] err) {\n"
-      "  print_line_error(Result.why(fileErrorStatus(err)))\n"
+      "  print_line_error(Result.why(FileError.status(err)))\n"
       "}\n";
   const std::string srcPath = writeTemp("native_stdlib_file_open_helpers.prime", source);
   const std::string exePath =
@@ -212,7 +212,7 @@ TEST_CASE("native stdlib File close helper disarms the original handle") {
       "}\n"
       "[effects(io_err)]\n"
       "log_file_error([FileError] err) {\n"
-      "  print_line_error(Result.why(fileErrorStatus(err)))\n"
+      "  print_line_error(Result.why(FileError.status(err)))\n"
       "}\n";
   const std::string srcPath = writeTemp("native_stdlib_file_close_helper.prime", source);
   const std::string exePath =
@@ -252,7 +252,7 @@ TEST_CASE("native uses stdlib File string helper wrappers") {
       "}\n"
       "[effects(io_err)]\n"
       "log_file_error([FileError] err) {\n"
-      "  print_line_error(Result.why(fileErrorStatus(err)))\n"
+      "  print_line_error(Result.why(FileError.status(err)))\n"
       "}\n";
   const std::string srcPath = writeTemp("native_stdlib_file_string_helpers.prime", source);
   const std::string exePath =
@@ -293,7 +293,7 @@ TEST_CASE("native uses stdlib File multi-value helper wrappers") {
       "}\n"
       "[effects(io_err)]\n"
       "log_file_error([FileError] err) {\n"
-      "  print_line_error(Result.why(fileErrorStatus(err)))\n"
+      "  print_line_error(Result.why(FileError.status(err)))\n"
       "}\n";
   const std::string srcPath = writeTemp("native_stdlib_file_multi_helpers.prime", source);
   const std::string exePath =
@@ -8065,7 +8065,7 @@ main() {
   print_line(FileError.why(err))
   print_line(FileError.why(err))
   print_line(err.why())
-  print_line(Result.why(fileErrorStatus(err)))
+  print_line(Result.why(FileError.status(err)))
   return(0i32)
 }
 )";

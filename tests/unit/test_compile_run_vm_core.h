@@ -1958,7 +1958,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(fileErrorStatus(err)))
+  print_line_error(Result.why(FileError.status(err)))
 }
 )";
   std::string program = source;
@@ -2009,7 +2009,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(fileErrorStatus(err)))
+  print_line_error(Result.why(FileError.status(err)))
 }
 )";
   std::string program = source;
@@ -2058,7 +2058,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(fileErrorStatus(err)))
+  print_line_error(Result.why(FileError.status(err)))
 }
 )";
   std::string program = source;
@@ -2101,7 +2101,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(fileErrorStatus(err)))
+  print_line_error(Result.why(FileError.status(err)))
 }
 )";
   std::string program = source;
@@ -2145,7 +2145,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(fileErrorStatus(err)))
+  print_line_error(Result.why(FileError.status(err)))
 }
 )";
   std::string program = source;
@@ -2803,7 +2803,7 @@ main() {
   print_line(FileError.why(err))
   print_line(FileError.why(err))
   print_line(err.why())
-  print_line(Result.why(fileErrorStatus(err)))
+  print_line(Result.why(FileError.status(err)))
   return(0i32)
 }
 )";

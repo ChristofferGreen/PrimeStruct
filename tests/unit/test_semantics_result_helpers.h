@@ -111,9 +111,9 @@ import /std/file/*
 [return<void>]
 main() {
   [FileError] err{fileReadEof()}
-  [Result<FileError>] status{fileErrorStatus(fileReadEof())}
+  [Result<FileError>] status{FileError.status(fileReadEof())}
   [Result<FileError>] directStatus{FileError.status(fileReadEof())}
-  [Result<i32, FileError>] valueStatus{fileErrorResult<i32>(fileReadEof())}
+  [Result<i32, FileError>] valueStatus{FileError.result<i32>(fileReadEof())}
   [Result<i32, FileError>] directValueStatus{FileError.result<i32>(fileReadEof())}
   [Result<FileError>] wrappedStatus{FileError.status(err)}
   [Result<i32, FileError>] wrappedValue{FileError.result<i32>(err)}
@@ -168,7 +168,7 @@ main() {
   [string] direct{FileError.why(err)}
   [string] viaType{FileError.why(err)}
   [string] method{err.why()}
-  [string] viaResult{Result.why(fileErrorStatus(err))}
+  [string] viaResult{Result.why(FileError.status(err))}
   return()
 }
 )";
@@ -238,7 +238,7 @@ import /std/file/*
 main() {
   [FileError] direct{FileError.eof()}
   [FileError] viaType{FileError.eof()}
-  [Result<FileError>] status{fileErrorStatus(FileError.eof())}
+  [Result<FileError>] status{FileError.status(FileError.eof())}
   [bool] eof{direct.is_eof()}
   [bool] typeEof{FileError.is_eof(viaType)}
   [bool] statusError{Result.error(status)}
@@ -277,6 +277,36 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /FileError/status") != std::string::npos);
+}
+
+TEST_CASE("stdlib FileError package status alias is removed") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [Result<FileError>] status{fileErrorStatus(fileReadEof())}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: fileErrorStatus") != std::string::npos);
+}
+
+TEST_CASE("stdlib FileError package value alias is removed") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [Result<i32, FileError>] value{fileErrorResult<i32>(fileReadEof())}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: fileErrorResult") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError result methods reject unexpected arguments") {
