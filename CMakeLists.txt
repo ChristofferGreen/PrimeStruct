@@ -43,6 +43,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/parser/ParserHelpers.cpp
   src/parser/ParserLists.cpp
   src/semantics/SemanticsBindingTypeHelpers.cpp
+  src/semantics/SemanticsReturnKindHelpers.cpp
   src/semantics/SemanticsHelpersCore.cpp
   src/semantics/SemanticsHelpersValidation.cpp
   src/semantics/TemplateMonomorph.cpp

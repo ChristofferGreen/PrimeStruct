@@ -247,6 +247,25 @@ TEST_CASE("semantics binding type helpers validate nested templates and map keys
   CHECK(error == "map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Particle");
 }
 
+TEST_CASE("semantics return kind helper resolves imported soa_vector aliases") {
+  primec::Definition def;
+  def.fullPath = "/pkg/main";
+  def.namespacePrefix = "/pkg";
+
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back("soa_vector<ParticleAlias>");
+  def.transforms.push_back(returnTransform);
+
+  const std::unordered_set<std::string> structNames = {"/pkg/Particle"};
+  const std::unordered_map<std::string, std::string> importAliases = {{"ParticleAlias", "/pkg/Particle"}};
+
+  std::string error;
+  CHECK(primec::semantics::getReturnKind(def, structNames, importAliases, error) ==
+        primec::semantics::ReturnKind::Array);
+  CHECK(error.empty());
+}
+
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*
@@ -11758,6 +11777,36 @@ TEST_CASE("semantics binding type helper source delegation stays stable") {
   CHECK(semanticsBindingTypeHelpersSource.find("ReturnKind returnKindForTypeName(") != std::string::npos);
   CHECK(semanticsBindingTypeHelpersSource.find("std::string resolveStructTypePath(") != std::string::npos);
   CHECK(semanticsBindingTypeHelpersSource.find("bool isSoaVectorStructElementType(") != std::string::npos);
+}
+
+TEST_CASE("semantics return kind helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path semanticsHelpersCorePath =
+      repoRoot / "src" / "semantics" / "SemanticsHelpersCore.cpp";
+  const std::filesystem::path semanticsReturnKindHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsReturnKindHelpers.cpp";
+  REQUIRE(std::filesystem::exists(semanticsHelpersCorePath));
+  REQUIRE(std::filesystem::exists(semanticsReturnKindHelpersPath));
+
+  const std::string semanticsHelpersCoreSource = readText(semanticsHelpersCorePath);
+  const std::string semanticsReturnKindHelpersSource = readText(semanticsReturnKindHelpersPath);
+
+  CHECK(semanticsHelpersCoreSource.find("ReturnKind getReturnKind(") == std::string::npos);
+
+  CHECK(semanticsReturnKindHelpersSource.find("ReturnKind getReturnKind(") != std::string::npos);
+  CHECK(semanticsReturnKindHelpersSource.find("soa_vector return type requires struct element type on ") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator passes source delegation stays stable") {
