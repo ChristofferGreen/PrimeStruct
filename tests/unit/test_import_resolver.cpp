@@ -12,8 +12,12 @@
 #include <vector>
 
 namespace {
+std::filesystem::path importResolverPath(std::string_view relativePath) {
+  return primec::testing::testScratchPath("imports_resolver/" + std::string(relativePath));
+}
+
 std::string writeTemp(const std::string &name, const std::string &contents) {
-  const auto path = primec::testing::testScratchPath("imports_resolver/" + name);
+  const auto path = importResolverPath(name);
   std::ofstream file(path);
   CHECK(file.good());
   file << contents;
@@ -128,8 +132,8 @@ TEST_CASE("expands import with tight comment") {
 }
 
 TEST_CASE("expands import with bare slash path") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_path_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_path_root";
+  auto baseDir = importResolverPath("include_bare_path_base");
+  auto includeRoot = importResolverPath("include_bare_path_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -147,8 +151,8 @@ TEST_CASE("expands import with bare slash path") {
 }
 
 TEST_CASE("expands bare slash imports with semicolons") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_semicolon_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_semicolon_root";
+  auto baseDir = importResolverPath("include_bare_semicolon_base");
+  auto includeRoot = importResolverPath("include_bare_semicolon_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -168,8 +172,8 @@ TEST_CASE("expands bare slash imports with semicolons") {
 }
 
 TEST_CASE("expands bare slash imports with whitespace separators") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_ws_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_ws_root";
+  auto baseDir = importResolverPath("include_bare_ws_base");
+  auto includeRoot = importResolverPath("include_bare_ws_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -189,8 +193,8 @@ TEST_CASE("expands bare slash imports with whitespace separators") {
 }
 
 TEST_CASE("bare slash import does not use absolute filesystem path") {
-  auto absRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_absolute";
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_absolute_base";
+  auto absRoot = importResolverPath("include_bare_absolute");
+  auto baseDir = importResolverPath("include_bare_absolute_base");
   std::filesystem::remove_all(absRoot);
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(absRoot);
@@ -207,8 +211,8 @@ TEST_CASE("bare slash import does not use absolute filesystem path") {
 }
 
 TEST_CASE("resolves versioned import with single quotes") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_single_quote_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_single_quote_root";
+  auto baseDir = importResolverPath("include_single_quote_base");
+  auto includeRoot = importResolverPath("include_single_quote_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -270,7 +274,7 @@ TEST_CASE("ignores duplicate imports") {
 }
 
 TEST_CASE("ignores duplicate imports with equivalent relative paths") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_duplicate_relative";
+  auto baseDir = importResolverPath("include_duplicate_relative");
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
 
@@ -361,8 +365,8 @@ TEST_CASE("ignores import keyword after path separator") {
 }
 
 TEST_CASE("resolves import from import path") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_search_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_search_root";
+  auto baseDir = importResolverPath("include_search_base");
+  auto includeRoot = importResolverPath("include_search_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -380,8 +384,8 @@ TEST_CASE("resolves import from import path") {
 }
 
 TEST_CASE("resolves relative import from import path") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_relative_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_relative_root";
+  auto baseDir = importResolverPath("include_relative_base");
+  auto includeRoot = importResolverPath("include_relative_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -416,8 +420,8 @@ TEST_CASE("supports semicolon separated imports") {
 }
 
 TEST_CASE("allows comments around version attribute") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_comment_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_comment_root";
+  auto baseDir = importResolverPath("include_version_comment_base");
+  auto includeRoot = importResolverPath("include_version_comment_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -437,8 +441,8 @@ TEST_CASE("allows comments around version attribute") {
 }
 
 TEST_CASE("allows comments containing > in import list") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_comment_bracket_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_comment_bracket_root";
+  auto baseDir = importResolverPath("include_comment_bracket_base");
+  auto includeRoot = importResolverPath("include_comment_bracket_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -458,8 +462,8 @@ TEST_CASE("allows comments containing > in import list") {
 }
 
 TEST_CASE("resolves versioned absolute import from import path") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_root";
+  auto baseDir = importResolverPath("include_version_abs_base");
+  auto includeRoot = importResolverPath("include_version_abs_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -480,9 +484,9 @@ TEST_CASE("resolves versioned absolute import from import path") {
 }
 
 TEST_CASE("selects newest import version across roots") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_multi_base";
-  auto includeRootA = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_multi_a";
-  auto includeRootB = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_multi_b";
+  auto baseDir = importResolverPath("include_version_multi_base");
+  auto includeRootA = importResolverPath("include_version_multi_a");
+  auto includeRootB = importResolverPath("include_version_multi_b");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRootA);
   std::filesystem::remove_all(includeRootB);
@@ -505,9 +509,9 @@ TEST_CASE("selects newest import version across roots") {
 }
 
 TEST_CASE("rejects import version mismatch across paths") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_mismatch_base";
-  auto includeRootA = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_mismatch_a";
-  auto includeRootB = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_mismatch_b";
+  auto baseDir = importResolverPath("include_version_mismatch_base");
+  auto includeRootA = importResolverPath("include_version_mismatch_a");
+  auto includeRootB = importResolverPath("include_version_mismatch_b");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRootA);
   std::filesystem::remove_all(includeRootB);
@@ -531,8 +535,8 @@ TEST_CASE("rejects import version mismatch across paths") {
 }
 
 TEST_CASE("resolves versioned relative import from import path") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_rel_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_rel_root";
+  auto baseDir = importResolverPath("include_version_rel_base");
+  auto includeRoot = importResolverPath("include_version_rel_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
@@ -556,8 +560,8 @@ TEST_CASE("resolves versioned import from archive root") {
   if (!hasZipTools()) {
     return;
   }
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_root";
+  auto baseDir = importResolverPath("include_zip_base");
+  auto includeRoot = importResolverPath("include_zip_root");
   auto archiveSource = includeRoot / "archive_src";
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
@@ -583,8 +587,8 @@ TEST_CASE("resolves versioned import from archives in stable order") {
   if (!hasZipTools()) {
     return;
   }
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_stable_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_stable_root";
+  auto baseDir = importResolverPath("include_zip_stable_base");
+  auto includeRoot = importResolverPath("include_zip_stable_root");
   auto archiveSourceA = includeRoot / "archive_src_a";
   auto archiveSourceB = includeRoot / "archive_src_b";
   std::filesystem::remove_all(baseDir);
@@ -616,8 +620,8 @@ TEST_CASE("resolves versioned import from zip root directly") {
   if (!hasZipTools()) {
     return;
   }
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_direct_base";
-  auto archiveRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_direct_root";
+  auto baseDir = importResolverPath("include_zip_direct_base");
+  auto archiveRoot = importResolverPath("include_zip_direct_root");
   auto archiveSource = archiveRoot / "archive_src";
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(archiveRoot);
@@ -640,7 +644,7 @@ TEST_CASE("resolves versioned import from zip root directly") {
 }
 
 TEST_CASE("resolves versioned absolute import using base directory") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_base_dir";
+  auto baseDir = importResolverPath("include_version_base_dir");
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
 
@@ -657,7 +661,7 @@ TEST_CASE("resolves versioned absolute import using base directory") {
 }
 
 TEST_CASE("resolves exact import version") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_versions_exact";
+  auto baseDir = importResolverPath("include_versions_exact");
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
 
@@ -676,7 +680,7 @@ TEST_CASE("resolves exact import version") {
 }
 
 TEST_CASE("selects newest matching import version") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_versions_latest";
+  auto baseDir = importResolverPath("include_versions_latest");
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
 
@@ -696,7 +700,7 @@ TEST_CASE("selects newest matching import version") {
 }
 
 TEST_CASE("expands directory import contents") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_dir";
+  auto baseDir = importResolverPath("include_dir");
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
 
@@ -718,7 +722,7 @@ TEST_CASE("expands directory import contents") {
 }
 
 TEST_CASE("skips private subdirectories in directory import") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_dir_private";
+  auto baseDir = importResolverPath("include_dir_private");
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
 
@@ -737,7 +741,7 @@ TEST_CASE("skips private subdirectories in directory import") {
 }
 
 TEST_CASE("rejects private import root directory") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_root";
+  auto baseDir = importResolverPath("include_private_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir / "_private");
 
@@ -753,7 +757,7 @@ TEST_CASE("rejects private import root directory") {
 }
 
 TEST_CASE("import resolver uses injected process runner for archive extraction errors") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_injected_runner_fail";
+  auto baseDir = importResolverPath("include_injected_runner_fail");
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
 
@@ -779,7 +783,7 @@ TEST_CASE("import resolver supports injected process runner success path") {
   if (!hasZipTools()) {
     return;
   }
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_injected_runner_ok";
+  auto baseDir = importResolverPath("include_injected_runner_ok");
   auto archiveRoot = baseDir / "archive_root";
   auto archiveSource = archiveRoot / "archive_src";
   std::filesystem::remove_all(baseDir);

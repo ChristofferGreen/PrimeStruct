@@ -8,8 +8,12 @@
 #include <string>
 
 namespace {
+std::filesystem::path importErrorsPath(std::string_view relativePath) {
+  return primec::testing::testScratchPath("imports_errors/" + std::string(relativePath));
+}
+
 std::string writeTemp(const std::string &name, const std::string &contents) {
-  const auto path = primec::testing::testScratchPath("imports_errors/" + name);
+  const auto path = importErrorsPath(name);
   std::ofstream file(path);
   CHECK(file.good());
   file << contents;
@@ -201,7 +205,7 @@ TEST_CASE("unquoted import path with dot fails") {
 }
 
 TEST_CASE("import version mismatch across paths fails") {
-  auto tempRoot = std::filesystem::temp_directory_path() / "primec_tests";
+  auto tempRoot = importErrorsPath("include_versions");
   auto rootA = tempRoot / "include_versions_a";
   auto rootB = tempRoot / "include_versions_b";
   writeFile(rootA / "1.2.0" / "lib" / "a" / "module.prime", "// LIB_A\n");
@@ -236,7 +240,7 @@ TEST_CASE("unquoted import path with import keyword fails") {
 }
 
 TEST_CASE("invalid import version fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bad_version";
+  auto dir = importErrorsPath("include_bad_version");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   const std::string srcPath =
@@ -250,7 +254,7 @@ TEST_CASE("invalid import version fails") {
 }
 
 TEST_CASE("import version with too many parts fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_too_many_parts";
+  auto dir = importErrorsPath("include_version_too_many_parts");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   const std::string srcPath =
@@ -264,7 +268,7 @@ TEST_CASE("import version with too many parts fails") {
 }
 
 TEST_CASE("empty import version fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_empty_version";
+  auto dir = importErrorsPath("include_empty_version");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   const std::string srcPath =
@@ -278,7 +282,7 @@ TEST_CASE("empty import version fails") {
 }
 
 TEST_CASE("invalid import version with single quotes fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bad_version_single";
+  auto dir = importErrorsPath("include_bad_version_single");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   const std::string srcPath =
@@ -292,7 +296,7 @@ TEST_CASE("invalid import version with single quotes fails") {
 }
 
 TEST_CASE("missing import version directory fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_missing_version";
+  auto dir = importErrorsPath("include_missing_version");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   const std::string srcPath =
@@ -306,7 +310,7 @@ TEST_CASE("missing import version directory fails") {
 }
 
 TEST_CASE("missing import minor version fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_missing_version_minor";
+  auto dir = importErrorsPath("include_missing_version_minor");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   writeFile(dir / "1.1.9" / "lib.prime", "// LIB\n");
@@ -322,7 +326,7 @@ TEST_CASE("missing import minor version fails") {
 }
 
 TEST_CASE("missing import minor version with single quotes fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_missing_version_minor_single";
+  auto dir = importErrorsPath("include_missing_version_minor_single");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   writeFile(dir / "1.1.9" / "lib.prime", "// LIB\n");
@@ -338,7 +342,7 @@ TEST_CASE("missing import minor version with single quotes fails") {
 }
 
 TEST_CASE("missing import major version fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_missing_version_major";
+  auto dir = importErrorsPath("include_missing_version_major");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   const std::string srcPath =
@@ -352,7 +356,7 @@ TEST_CASE("missing import major version fails") {
 }
 
 TEST_CASE("missing import major version with single quotes fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_missing_version_major_single";
+  auto dir = importErrorsPath("include_missing_version_major_single");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   const std::string srcPath =
@@ -366,7 +370,7 @@ TEST_CASE("missing import major version with single quotes fails") {
 }
 
 TEST_CASE("absolute versioned import without roots fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_no_root";
+  auto dir = importErrorsPath("include_version_abs_no_root");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   const std::string srcPath =
@@ -379,8 +383,8 @@ TEST_CASE("absolute versioned import without roots fails") {
 }
 
 TEST_CASE("import version mismatch fails") {
-  auto rootA = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_root_a";
-  auto rootB = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_root_b";
+  auto rootA = importErrorsPath("include_version_root_a");
+  auto rootB = importErrorsPath("include_version_root_b");
   std::filesystem::remove_all(rootA);
   std::filesystem::remove_all(rootB);
   std::filesystem::create_directories(rootA);
@@ -400,7 +404,7 @@ TEST_CASE("import version mismatch fails") {
 }
 
 TEST_CASE("private import path fails") {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_dir";
+  auto dir = importErrorsPath("include_private_dir");
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   const std::filesystem::path privateFile = dir / "_private" / "lib.prime";
@@ -416,8 +420,8 @@ TEST_CASE("private import path fails") {
 }
 
 TEST_CASE("private import path fails from import root") {
-  auto root = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_root";
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_base";
+  auto root = importErrorsPath("include_private_root");
+  auto baseDir = importErrorsPath("include_private_base");
   std::filesystem::remove_all(root);
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(root);
@@ -435,8 +439,8 @@ TEST_CASE("private import path fails from import root") {
 }
 
 TEST_CASE("import directory without prime files fails") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_empty_base";
-  auto includeDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_empty_dir";
+  auto baseDir = importErrorsPath("include_empty_base");
+  auto includeDir = importErrorsPath("include_empty_dir");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeDir);
   std::filesystem::create_directories(baseDir);
@@ -454,7 +458,7 @@ TEST_CASE("import directory without prime files fails") {
 }
 
 TEST_CASE("logical import version requires import roots") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_logical_version_empty";
+  auto baseDir = importErrorsPath("include_logical_version_empty");
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
   const std::string srcPath =
@@ -468,8 +472,8 @@ TEST_CASE("logical import version requires import roots") {
 }
 
 TEST_CASE("versioned import fails when file missing") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_missing_file_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_missing_file_root";
+  auto baseDir = importErrorsPath("include_version_missing_file_base");
+  auto includeRoot = importErrorsPath("include_version_missing_file_root");
   std::filesystem::remove_all(baseDir);
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(baseDir);
