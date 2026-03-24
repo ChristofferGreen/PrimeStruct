@@ -286,6 +286,64 @@ TEST_CASE("semantics builtin path helpers classify roots and collection aliases"
   CHECK(primec::semantics::isExplicitRemovedCollectionCallAlias("/array/count"));
 }
 
+TEST_CASE("semantics call path helpers lower match chains and resolve type paths") {
+  primec::Expr matchExpr;
+  matchExpr.kind = primec::Expr::Kind::Call;
+  matchExpr.name = "match";
+  matchExpr.namespacePrefix = "/pkg/Thing";
+  primec::Transform transform;
+  transform.name = "tag";
+  matchExpr.transforms.push_back(transform);
+
+  primec::Expr subject;
+  subject.kind = primec::Expr::Kind::Name;
+  subject.name = "choice";
+  matchExpr.args.push_back(subject);
+
+  primec::Expr caseOne;
+  caseOne.kind = primec::Expr::Kind::Call;
+  caseOne.name = "case";
+  primec::Expr patternOne;
+  patternOne.kind = primec::Expr::Kind::Literal;
+  patternOne.literalValue = 1;
+  caseOne.args.push_back(patternOne);
+  caseOne.hasBodyArguments = true;
+  primec::Expr branchOne;
+  branchOne.kind = primec::Expr::Kind::Name;
+  branchOne.name = "left";
+  caseOne.bodyArguments.push_back(branchOne);
+  matchExpr.args.push_back(caseOne);
+
+  primec::Expr caseTwo = caseOne;
+  caseTwo.args.front().literalValue = 2;
+  caseTwo.bodyArguments.front().name = "right";
+  matchExpr.args.push_back(caseTwo);
+
+  primec::Expr elseBlock;
+  elseBlock.kind = primec::Expr::Kind::Call;
+  elseBlock.name = "else";
+  elseBlock.hasBodyArguments = true;
+  primec::Expr fallback;
+  fallback.kind = primec::Expr::Kind::Name;
+  fallback.name = "fallback";
+  elseBlock.bodyArguments.push_back(fallback);
+  matchExpr.args.push_back(elseBlock);
+
+  primec::Expr lowered;
+  std::string error;
+  REQUIRE(primec::semantics::lowerMatchToIf(matchExpr, lowered, error));
+  CHECK(error.empty());
+  CHECK(lowered.name == "if");
+  REQUIRE(lowered.args.size() == 3);
+  CHECK(lowered.args[2].name == "if");
+  REQUIRE(lowered.transforms.size() == 1);
+  CHECK(lowered.transforms.front().name == "tag");
+
+  CHECK(primec::semantics::resolveTypePath("Thing", "/pkg/Thing") == "/pkg/Thing");
+  CHECK(primec::semantics::resolveTypePath("Inner", "/pkg/Thing") == "/pkg/Thing/Inner");
+  CHECK(primec::semantics::resolveTypePath("/root/Exact", "/pkg/Thing") == "/root/Exact");
+}
+
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*
@@ -11861,6 +11919,42 @@ TEST_CASE("semantics builtin path helper source delegation stays stable") {
   CHECK(semanticsBuiltinPathHelpersSource.find("bool getBuiltinMathName(") != std::string::npos);
   CHECK(semanticsBuiltinPathHelpersSource.find("bool isExplicitRemovedCollectionCallAlias(") != std::string::npos);
   CHECK(semanticsBuiltinPathHelpersSource.find("bool getNamespacedCollectionHelperName(") != std::string::npos);
+}
+
+TEST_CASE("semantics call path helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path semanticsHelpersCorePath =
+      repoRoot / "src" / "semantics" / "SemanticsHelpersCore.cpp";
+  const std::filesystem::path semanticsCallPathHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsCallPathHelpers.cpp";
+  REQUIRE(std::filesystem::exists(semanticsHelpersCorePath));
+  REQUIRE(std::filesystem::exists(semanticsCallPathHelpersPath));
+
+  const std::string semanticsHelpersCoreSource = readText(semanticsHelpersCorePath);
+  const std::string semanticsCallPathHelpersSource = readText(semanticsCallPathHelpersPath);
+
+  CHECK(semanticsHelpersCoreSource.find("bool isAssignCall(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("bool isSimpleCallName(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("bool lowerMatchToIf(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("bool getPathSpaceBuiltin(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("std::string resolveTypePath(") == std::string::npos);
+
+  CHECK(semanticsCallPathHelpersSource.find("bool isAssignCall(") != std::string::npos);
+  CHECK(semanticsCallPathHelpersSource.find("bool isSimpleCallName(") != std::string::npos);
+  CHECK(semanticsCallPathHelpersSource.find("bool lowerMatchToIf(") != std::string::npos);
+  CHECK(semanticsCallPathHelpersSource.find("bool getPathSpaceBuiltin(") != std::string::npos);
+  CHECK(semanticsCallPathHelpersSource.find("std::string resolveTypePath(") != std::string::npos);
 }
 
 TEST_CASE("semantics validator passes source delegation stays stable") {
