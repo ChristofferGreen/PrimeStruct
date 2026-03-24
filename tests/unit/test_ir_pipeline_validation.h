@@ -2709,7 +2709,10 @@ TEST_CASE("ir lowerer inference return-info setup handles declared return transf
           .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
           },
-          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+            if (expr.kind == primec::Expr::Kind::Literal && expr.intWidth == 64) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+            }
             return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
           },
           .isFileErrorBinding = [](const primec::Expr &) { return false; },
@@ -2885,7 +2888,10 @@ TEST_CASE("ir lowerer inference return-info setup infers implicit auto map retur
           .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
           },
-          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+            if (expr.kind == primec::Expr::Kind::Literal && expr.intWidth == 64) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+            }
             return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
           },
           .isFileErrorBinding = [](const primec::Expr &) { return false; },
@@ -3155,8 +3161,11 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
   definition.fullPath = "/callee";
   primec::Transform returnTransform;
   returnTransform.name = "return";
-  returnTransform.templateArgs = {"i64"};
+  returnTransform.templateArgs = {"auto"};
   definition.transforms.push_back(returnTransform);
+  definition.returnExpr.kind = primec::Expr::Kind::Literal;
+  definition.returnExpr.intWidth = 64;
+  definition.returnExpr.literalValue = 7;
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {"/callee", &definition},
@@ -3182,7 +3191,10 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
           .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
           },
-          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+            if (expr.kind == primec::Expr::Kind::Literal && expr.intWidth == 64) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+            }
             return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
           },
           .isFileErrorBinding = [](const primec::Expr &) { return false; },
@@ -3203,6 +3215,9 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
       error));
   CHECK(error.empty());
   CHECK(static_cast<bool>(getReturnInfo));
+  CHECK(returnInfoCache.count("/callee") == 1);
+
+  defMap.clear();
 
   primec::ir_lowerer::ReturnInfo outInfo;
   CHECK(getReturnInfo("/callee", outInfo));
@@ -9021,6 +9036,27 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(inferenceHeaderSource.find("inferCallExprControlFlowFallbackKind(expr, localsIn, error, controlFlowKind)") ==
         std::string::npos);
   CHECK(inferenceHeaderSource.find("returnInfoCache.find(path)") == std::string::npos);
+
+  const std::filesystem::path inferenceSetupPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceSetup.cpp";
+  REQUIRE(std::filesystem::exists(inferenceSetupPath));
+  const std::string inferenceSetupSource = readText(inferenceSetupPath);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceReturnInfoSetup(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceGetReturnInfoStep(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceGetReturnInfoCallbackSetup(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("bool runLowerInferenceGetReturnInfoSetup(") == std::string::npos);
+  CHECK(inferenceSetupSource.find("precomputeGraphReturnInfoCache(") == std::string::npos);
+
+  const std::filesystem::path inferenceReturnInfoHelperPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceReturnInfoHelpers.cpp";
+  REQUIRE(std::filesystem::exists(inferenceReturnInfoHelperPath));
+  const std::string inferenceReturnInfoHelperSource = readText(inferenceReturnInfoHelperPath);
+  CHECK(inferenceReturnInfoHelperSource.find("bool runLowerInferenceReturnInfoSetup(") != std::string::npos);
+  CHECK(inferenceReturnInfoHelperSource.find("bool runLowerInferenceGetReturnInfoStep(") != std::string::npos);
+  CHECK(inferenceReturnInfoHelperSource.find("bool runLowerInferenceGetReturnInfoCallbackSetup(") !=
+        std::string::npos);
+  CHECK(inferenceReturnInfoHelperSource.find("bool runLowerInferenceGetReturnInfoSetup(") != std::string::npos);
+  CHECK(inferenceReturnInfoHelperSource.find("precomputeGraphReturnInfoCache(") != std::string::npos);
 
   const std::filesystem::path returnInfoHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerReturnInfo.h";
   REQUIRE(std::filesystem::exists(returnInfoHeaderPath));
