@@ -11,7 +11,6 @@ list(APPEND PrimeStructManagedBackendSuites
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 112
@@ -20,7 +19,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.pointers"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 32
@@ -29,7 +27,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.pointers"
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_core.h"
@@ -40,7 +37,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_numbers.h"
@@ -51,7 +47,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_calls_and_args.h"
@@ -64,7 +59,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_calls_and_args.h"
@@ -77,7 +71,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.backends"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 102
@@ -86,7 +79,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.backends"
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_cpp"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 37
@@ -95,7 +87,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_cpp"
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_glsl"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 58
@@ -104,7 +95,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_glsl"
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.validation"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 863
@@ -113,7 +103,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.validation"
 
 addPrimeStructManagedDoctestSuite("primestruct.vm.debug.session"
   TARGET PrimeStruct_backend_tests
-  NO_UNIQUE_TMPDIR
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 21

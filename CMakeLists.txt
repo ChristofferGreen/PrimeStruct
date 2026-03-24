@@ -526,7 +526,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
 
   function(addPrimeStructDoctestSuite suite)
-    set(options NO_UNIQUE_TMPDIR RUN_SERIAL)
+    set(options RUN_SERIAL)
     set(oneValueArgs TARGET TIMEOUT LABEL SHARD_NAME FIRST LAST SOURCE_FILE TEST_CASE TEST_CASE_EXCLUDE)
     cmake_parse_arguments(PrimeStructSuite "${options}" "${oneValueArgs}" "" ${ARGN})
     if (NOT PrimeStructSuite_TARGET)
@@ -562,14 +562,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
                               "--last=${PrimeStructSuite_LAST}")
     endif()
 
-    if (PrimeStructSuite_NO_UNIQUE_TMPDIR OR PrimeStructSuite_TARGET STREQUAL "PrimeStruct_backend_tests")
-      add_test(NAME "${testName}"
-               COMMAND $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
-    else()
-      add_test(NAME "${testName}"
-               COMMAND bash "${CMAKE_SOURCE_DIR}/scripts/run_with_unique_tmpdir.sh"
-                       $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
-    endif()
+    add_test(NAME "${testName}"
+             COMMAND $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
     set_tests_properties("${testName}" PROPERTIES TIMEOUT "${PrimeStructSuite_TIMEOUT}")
     if (PrimeStructSuite_LABEL)
       set_tests_properties("${testName}" PROPERTIES LABELS "${PrimeStructSuite_LABEL}")
@@ -580,7 +574,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   endfunction()
 
   function(addPrimeStructManagedDoctestSuite suite)
-    set(options NO_UNIQUE_TMPDIR RUN_SERIAL)
+    set(options RUN_SERIAL)
     set(oneValueArgs TARGET TIMEOUT LABEL SOURCE_FILE TEST_CASE TEST_CASE_EXCLUDE TOTAL_CASES SHARD_PREFIX CASES_PER_SHARD RANGE_FIRST RANGE_LAST)
     cmake_parse_arguments(PrimeStructManaged "${options}" "${oneValueArgs}" "" ${ARGN})
     if (NOT PrimeStructManaged_CASES_PER_SHARD)
@@ -618,9 +612,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endif()
     if (PrimeStructManaged_TEST_CASE_EXCLUDE)
       list(APPEND commonArgs TEST_CASE_EXCLUDE "${PrimeStructManaged_TEST_CASE_EXCLUDE}")
-    endif()
-    if (PrimeStructManaged_NO_UNIQUE_TMPDIR)
-      list(APPEND commonArgs NO_UNIQUE_TMPDIR)
     endif()
     if (PrimeStructManaged_RUN_SERIAL)
       list(APPEND commonArgs RUN_SERIAL)
@@ -1106,7 +1097,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_imports_versions.h")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "block_and_operator_rewrites"
                                  SOURCE_FILE "*test_compile_run_imports_blocks.h")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 NO_UNIQUE_TMPDIR
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "operations_and_collections"
                                  SOURCE_FILE "*test_compile_run_imports_operations.h")
       # This shard compiles and runs enough native helper cases that it becomes

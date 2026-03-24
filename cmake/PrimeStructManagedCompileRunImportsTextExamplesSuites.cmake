@@ -20,7 +20,6 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 900
-                                  NO_UNIQUE_TMPDIR
                                   RUN_SERIAL
                                   SHARD_PREFIX "operations_and_collections"
                                   SOURCE_FILE "*test_compile_run_imports_operations.h"

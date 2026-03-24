@@ -8,7 +8,6 @@ list(APPEND PrimeStructManagedMiscSuites
 
 addPrimeStructManagedDoctestSuite("primestruct.dumps.ast_ir"
   TARGET PrimeStruct_misc_tests
-  NO_UNIQUE_TMPDIR
   RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 43
@@ -16,7 +15,6 @@ addPrimeStructManagedDoctestSuite("primestruct.dumps.ast_ir"
 )
 addPrimeStructManagedDoctestSuite("primestruct.imports.errors"
   TARGET PrimeStruct_misc_tests
-  NO_UNIQUE_TMPDIR
   RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 37
@@ -24,7 +22,6 @@ addPrimeStructManagedDoctestSuite("primestruct.imports.errors"
 )
 addPrimeStructManagedDoctestSuite("primestruct.imports.resolver"
   TARGET PrimeStruct_misc_tests
-  NO_UNIQUE_TMPDIR
   RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 38
@@ -32,7 +29,6 @@ addPrimeStructManagedDoctestSuite("primestruct.imports.resolver"
 )
 addPrimeStructManagedDoctestSuite("primestruct.lexer"
   TARGET PrimeStruct_misc_tests
-  NO_UNIQUE_TMPDIR
   RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 19
@@ -40,7 +36,6 @@ addPrimeStructManagedDoctestSuite("primestruct.lexer"
 )
 addPrimeStructManagedDoctestSuite("primestruct.semantics.manual"
   TARGET PrimeStruct_misc_tests
-  NO_UNIQUE_TMPDIR
   RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 145
@@ -58,7 +53,6 @@ list(APPEND PrimeStructManagedParserSuites
 
 addPrimeStructManagedDoctestSuite("primestruct.parser.basic"
   TARGET PrimeStruct_parser_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 305
@@ -66,7 +60,6 @@ addPrimeStructManagedDoctestSuite("primestruct.parser.basic"
 )
 addPrimeStructManagedDoctestSuite("primestruct.parser.errors.identifiers"
   TARGET PrimeStruct_parser_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 29
@@ -74,7 +67,6 @@ addPrimeStructManagedDoctestSuite("primestruct.parser.errors.identifiers"
 )
 addPrimeStructManagedDoctestSuite("primestruct.parser.errors.punctuation"
   TARGET PrimeStruct_parser_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 17
@@ -82,7 +74,6 @@ addPrimeStructManagedDoctestSuite("primestruct.parser.errors.punctuation"
 )
 addPrimeStructManagedDoctestSuite("primestruct.parser.errors.literals"
   TARGET PrimeStruct_parser_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 44
@@ -90,7 +81,6 @@ addPrimeStructManagedDoctestSuite("primestruct.parser.errors.literals"
 )
 addPrimeStructManagedDoctestSuite("primestruct.parser.errors.named_args"
   TARGET PrimeStruct_parser_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 13
@@ -98,7 +88,6 @@ addPrimeStructManagedDoctestSuite("primestruct.parser.errors.named_args"
 )
 addPrimeStructManagedDoctestSuite("primestruct.parser.errors.transforms"
   TARGET PrimeStruct_parser_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 49
@@ -116,7 +105,6 @@ list(APPEND PrimeStructManagedTextFilterSuites
 
 addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.basics"
   TARGET PrimeStruct_text_filter_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 17
@@ -124,7 +112,6 @@ addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.basics"
 )
 addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.rewrites"
   TARGET PrimeStruct_text_filter_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 44
@@ -132,7 +119,6 @@ addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.rewrites"
 )
 addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.implicit_utf8"
   TARGET PrimeStruct_text_filter_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 55
@@ -140,7 +126,6 @@ addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.implicit_ut
 )
 addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.implicit_i32"
   TARGET PrimeStruct_text_filter_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 19
@@ -148,7 +133,6 @@ addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.implicit_i3
 )
 addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.collections"
   TARGET PrimeStruct_text_filter_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 15
@@ -156,7 +140,6 @@ addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.collections
 )
 addPrimeStructManagedDoctestSuite("primestruct.text_filters.helpers"
   TARGET PrimeStruct_text_filter_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 22

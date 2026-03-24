@@ -31,7 +31,6 @@ list(APPEND PrimeStructManagedSemanticsSuites
 
 set(PrimeStructManagedSemanticsCommon
   TARGET PrimeStruct_semantics_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 300
   LABEL "parallel-safe"
 )
@@ -90,7 +89,6 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.math_imports"
   TARGET PrimeStruct_semantics_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 900
   LABEL "parallel-safe"
   TOTAL_CASES 39
@@ -186,7 +184,6 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.result_helpers"
   TARGET PrimeStruct_semantics_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 600
   LABEL "serial-required"
   RUN_SERIAL
@@ -248,7 +245,6 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.imports"
   TARGET PrimeStruct_semantics_tests
-  NO_UNIQUE_TMPDIR
   TIMEOUT 900
   LABEL "parallel-safe"
   TOTAL_CASES 52
