@@ -50394,6 +50394,218 @@ TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer conversions helper lowers location on borrowed scalar args-pack access") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Call;
+  targetExpr.name = "at";
+  targetExpr.args = {receiverExpr, indexExpr};
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "location";
+  expr.args = {targetExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  valuesInfo.index = 4;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("values", valuesInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      locals,
+      nextLocal,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        if (valueExpr.kind != primec::Expr::Kind::Call || valueExpr.name != "at" || valueExpr.args.size() != 2) {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::LoadLocal, 41});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      []() {},
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 1u);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 41u);
+}
+
+TEST_CASE("ir lowerer conversions helper lowers location on borrowed struct args-pack method access") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 2;
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Call;
+  targetExpr.isMethodCall = true;
+  targetExpr.name = "at_unsafe";
+  targetExpr.args = {receiverExpr, indexExpr};
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "location";
+  expr.args = {targetExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  valuesInfo.index = 5;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  valuesInfo.structTypeName = "/pkg/Pair";
+  locals.emplace("values", valuesInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      locals,
+      nextLocal,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        if (valueExpr.kind != primec::Expr::Kind::Call || !valueExpr.isMethodCall ||
+            valueExpr.name != "at_unsafe" || valueExpr.args.size() != 2) {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::LoadLocal, 42});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      []() {},
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 1u);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 42u);
+}
+
+TEST_CASE("ir lowerer conversions helper rejects location on value args-pack access") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Call;
+  targetExpr.name = "at";
+  targetExpr.args = {receiverExpr, indexExpr};
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "location";
+  expr.args = {targetExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  valuesInfo.index = 6;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("values", valuesInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      locals,
+      nextLocal,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      []() {},
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK_FALSE(ok);
+  CHECK(handled);
+  CHECK(error == "location requires a local binding");
+}
+
 TEST_CASE("ir lowerer conversions control-tail helper lowers if blocks") {
   primec::Expr cond;
   cond.kind = primec::Expr::Kind::BoolLiteral;

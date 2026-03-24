@@ -585,6 +585,27 @@ bool emitConversionsAndCallsOperatorExpr(
           }
 	          if (builtin == "location") {
 	            const Expr &target = expr.args.front();
+	            auto isBorrowedArgsPackAccessTarget = [&](const Expr &candidate) {
+	              const Expr *receiver = nullptr;
+	              std::string accessName;
+	              if (getBuiltinArrayAccessName(candidate, accessName) &&
+	                  candidate.args.size() == 2 &&
+	                  (accessName == "at" || accessName == "at_unsafe")) {
+	                receiver = &candidate.args.front();
+	              } else if (candidate.kind == Expr::Kind::Call &&
+	                         candidate.isMethodCall &&
+	                         candidate.args.size() == 2 &&
+	                         (candidate.name == "at" || candidate.name == "at_unsafe")) {
+	                receiver = &candidate.args.front();
+	              }
+	              if (receiver == nullptr || receiver->kind != Expr::Kind::Name) {
+	                return false;
+	              }
+	              auto it = localsIn.find(receiver->name);
+	              return it != localsIn.end() &&
+	                     it->second.isArgsPack &&
+	                     it->second.argsPackElementKind == LocalInfo::Kind::Reference;
+	            };
 	            if (target.kind == Expr::Kind::Name) {
 	              auto it = localsIn.find(target.name);
 	              if (it == localsIn.end()) {
@@ -600,6 +621,9 @@ bool emitConversionsAndCallsOperatorExpr(
 	                instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
 	              }
 	              return true;
+	            }
+	            if (target.kind == Expr::Kind::Call && isBorrowedArgsPackAccessTarget(target)) {
+	              return emitExpr(target, localsIn);
 	            }
 	            if (target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1) {
 	              const Expr &receiver = target.args.front();
