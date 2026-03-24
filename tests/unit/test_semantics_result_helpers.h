@@ -422,6 +422,23 @@ main() {
   CHECK(error.find("unknown call target: /File/write") != std::string::npos);
 }
 
+TEST_CASE("stdlib File open slash-call helpers require stdlib import") {
+  const std::string source = R"(
+[effects(file_write), return<void>]
+write_out() {
+  /File/open_write("hello.txt"utf8)
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /File/open_write") != std::string::npos);
+}
+
 TEST_CASE("stdlib File close slash-call helper requires explicit template args") {
   const std::string source = R"(
 import /std/file/*

@@ -56855,6 +56855,40 @@ TEST_CASE("ir lowerer file write helpers dispatch File constructor calls") {
   CHECK(error == "File requires Read, Write, or Append mode");
 }
 
+TEST_CASE("parseAndValidate rewrites imported File constructor entry points through stdlib open helpers") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<int> effects(file_write)]
+main() {
+  [Result<File<Write>, FileError>] opened{File<Write>("out.txt"utf8)}
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  const primec::Definition *mainDef = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/main") {
+      mainDef = &def;
+      break;
+    }
+  }
+  REQUIRE(mainDef != nullptr);
+  REQUIRE(mainDef->statements.size() == 2);
+  const primec::Expr &binding = mainDef->statements.front();
+  REQUIRE(binding.isBinding);
+  REQUIRE(binding.args.size() == 1);
+  REQUIRE(binding.args.front().kind == primec::Expr::Kind::Call);
+  CHECK(binding.args.front().name == "/File/open_write");
+  CHECK(binding.args.front().templateArgs.empty());
+  REQUIRE(binding.args.front().args.size() == 1);
+  CHECK(binding.args.front().args.front().kind == primec::Expr::Kind::StringLiteral);
+}
+
 TEST_CASE("ir lowerer file write helpers emit write steps") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

@@ -136,6 +136,55 @@ TEST_CASE("native uses stdlib File helper wrappers") {
   CHECK(readFile(outPath) == "6566\nCDE");
 }
 
+TEST_CASE("native uses stdlib File open helper wrappers") {
+  const std::string filePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_open_helpers.txt").string();
+  const std::string stdoutPath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_open_helpers_out.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(filePath);
+  const std::string source =
+      "import /std/file/*\n"
+      "[return<Result<FileError>> effects(file_read, file_write, io_out) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] writer{/File/open_write(\"" + escapedPath + "\"utf8)?}\n"
+      "  writer.write(\"alpha\"utf8)?\n"
+      "  writer.close()?\n"
+      "  [File<Append>] appender{/File/open_append(\"" + escapedPath + "\"utf8)?}\n"
+      "  appender.write_line(\"omega\"utf8)?\n"
+      "  appender.close()?\n"
+      "  [File<Read>] reader{/File/open_read(\"" + escapedPath + "\"utf8)?}\n"
+      "  [i32 mut] first{0i32}\n"
+      "  reader.read_byte(first)?\n"
+      "  print_line(first)\n"
+      "  reader.close()?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(Result.why(fileErrorStatus(err)))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("native_stdlib_file_open_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_file_open_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + stdoutPath) == 0);
+  CHECK(readFile(filePath) == "alphaomega\n");
+  CHECK(readFile(stdoutPath) == "97\n");
+}
+
 TEST_CASE("native stdlib File close helper disarms the original handle") {
   const std::string filePath =
       (testScratchPath("") / "primec_native_stdlib_file_close_helper.txt").string();

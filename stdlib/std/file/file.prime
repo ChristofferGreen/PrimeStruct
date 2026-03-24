@@ -1,3 +1,18 @@
+[public effects(file_read), return<Result<File<Read>, FileError>>]
+/File/open_read([string] path) {
+  return(File<Read>(path))
+}
+
+[public effects(file_write), return<Result<File<Write>, FileError>>]
+/File/open_write([string] path) {
+  return(File<Write>(path))
+}
+
+[public effects(file_write), return<Result<File<Append>, FileError>>]
+/File/open_append([string] path) {
+  return(File<Append>(path))
+}
+
 [public effects(file_read), return<Result<FileError>>]
 /File/read_byte<Mode, T>([File<Mode>] self, [T mut] value) {
   return(/file/read_byte(self, value))

@@ -1972,6 +1972,64 @@ log_file_error([FileError] err) {
   CHECK(readFile(filePath) == "6566\nCDE");
 }
 
+TEST_CASE("vm uses stdlib File open helper wrappers") {
+  const std::string filePath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_open_helpers.txt").string();
+  const std::string stdoutPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_open_helpers_out.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string source = R"(
+import /std/file/*
+
+[return<Result<FileError>> effects(file_read, file_write, io_out) on_error<FileError, /log_file_error>]
+main() {
+  [File<Write>] writer{/File/open_write("__PATH__"utf8)?}
+  writer.write("alpha"utf8)?
+  writer.close()?
+  [File<Append>] appender{/File/open_append("__PATH__"utf8)?}
+  appender.write_line("omega"utf8)?
+  appender.close()?
+  [File<Read>] reader{/File/open_read("__PATH__"utf8)?}
+  [i32 mut] first{0i32}
+  reader.read_byte(first)?
+  print_line(first)
+  reader.close()?
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(Result.why(fileErrorStatus(err)))
+}
+)";
+  std::string program = source;
+  const std::string placeholder = "__PATH__";
+  size_t pathPos = program.find(placeholder);
+  REQUIRE(pathPos != std::string::npos);
+  program.replace(pathPos, placeholder.size(), escape(filePath));
+  pathPos = program.find(placeholder);
+  REQUIRE(pathPos != std::string::npos);
+  program.replace(pathPos, placeholder.size(), escape(filePath));
+  pathPos = program.find(placeholder);
+  REQUIRE(pathPos != std::string::npos);
+  program.replace(pathPos, placeholder.size(), escape(filePath));
+  const std::string srcPath = writeTemp("vm_stdlib_file_open_helpers.prime", program);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + stdoutPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(filePath) == "alphaomega\n");
+  CHECK(readFile(stdoutPath) == "97\n");
+}
+
 TEST_CASE("vm stdlib File close helper disarms the original handle") {
   const std::string filePath =
       (testScratchPath("") / "primec_vm_stdlib_file_close_helper.txt").string();

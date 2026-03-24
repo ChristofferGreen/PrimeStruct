@@ -882,7 +882,9 @@ Draft constraints:
   - String return types, string array returns, and string pointer/reference bindings are rejected.
   - Block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected.
   - `print*` and vector helper calls are statement-only; expression usage is rejected.
-  - `File<Mode>(path)` requires a string literal or literal-backed binding.
+  - `File<Mode>(path)` requires a string literal or literal-backed binding; with `import /std/file/*`, that
+    constructor-shaped surface rewrites through stdlib `/File/open_read(...)`, `/File/open_write(...)`, or
+    `/File/open_append(...)` wrappers while the underlying file-open substrate remains builtin.
   - `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept
     `i32`, `bool`, `f32`, literal-backed `string`, `File<Mode>` handles, the single-slot int-backed stdlib error
     structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), `array<T>` / `vector<T>` handles whose

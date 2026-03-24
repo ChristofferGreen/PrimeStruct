@@ -778,7 +778,10 @@ sum_two_files([string] a, [string] b) {
     `/FileError/status(err)` / `/FileError/result<T>(err)` wrappers instead of hand-packing `FileError` results or
     hard-coding the EOF status code, plus receiver-style `err.status()` / `err.result<T>()`, `fileErrorIsEof(err)`,
     `/FileError/why([FileError] err)`, `/FileError/eof()`, and `/FileError/is_eof([FileError] err)` for explicit
-    type-owned access to the current stdlib FileError helper surface.
+    type-owned access to the current stdlib FileError helper surface. The same import also exposes
+    `.prime`-authored `/File/open_read(...)`, `/File/open_write(...)`, and `/File/open_append(...)` wrappers so the
+    common constructor-shaped `File<Mode>(path)` surface can resolve through stdlib-owned helpers while the host file
+    substrate remains builtin and effect-gated underneath.
     Import `/std/collections/*` to use `.prime`-authored `containerErrorStatus(err)` /
     `containerErrorResult<T>(err)` compatibility helpers, the type-owned `ContainerError.status(err)` /
     `ContainerError.result<T>(err)` namespace surface, or the public `/ContainerError/status(err)` /
@@ -836,14 +839,17 @@ sum_two_files([string] a, [string] b) {
   - Import `/std/file/*` for the current stdlib-authored file helper layer:
     `fileReadEof()`, `fileErrorStatus(err)`, `fileErrorIsEof(err)`, `fileErrorResult<T>(err)`,
     `/FileError/why([FileError] err)`, `/FileError/eof()`, `/FileError/is_eof([FileError] err)`,
+    `/File/open_read(...)`, `/File/open_write(...)`, `/File/open_append(...)`,
     `/File/read_byte(...)`, zero-to-five-value heterogenous `/File/write(...)` and
     `/File/write_line(...)` overload families,
     `/File/write_byte(...)`, `/File/write_bytes(...)`, `/File/flush(...)`, and
     `/File/close<Mode>(...)`.
-    Imported method/free-call sugar now prefers those `.prime` wrappers for `read_byte`, `write`,
-    `write_line`, `write_byte`, `write_bytes`, `flush`, and `close` across that current
-    zero-to-five-value overload family, while `File<Mode>(path)` and wider multi-value
-    `write(...)` / `write_line(...)` arities remain builtin substrate for now.
+    Imported constructor-shaped `File<Mode>(path)` calls now route through those `.prime`
+    mode-specific open wrappers, and imported method/free-call sugar now prefers the same stdlib
+    layer for `read_byte`, `write`, `write_line`, `write_byte`, `write_bytes`, `flush`, and
+    `close` across that current zero-to-five-value overload family, while the underlying host
+    open/read/write/close substrate plus wider multi-value `write(...)` / `write_line(...)`
+    arities remain builtin for now.
   - The stdlib file layer also defines `/FileError/why([FileError] err)` as the public wrapper over the
     intrinsic file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned
     helper surface while platform-specific code-to-string translation stays builtin substrate. It also defines

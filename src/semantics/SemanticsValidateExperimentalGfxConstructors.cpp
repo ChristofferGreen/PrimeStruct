@@ -387,16 +387,22 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     return std::nullopt;
   };
 
-  auto rewriteExpr = [&](auto &self, Expr &expr, const std::string &namespacePrefix,
+  auto isFileOpenWrapperDefinition = [](const std::string &definitionPath) {
+    return definitionPath == "/File/open_read" || definitionPath == "/File/open_write" ||
+           definitionPath == "/File/open_append" || definitionPath == "/std/file/File/open_read" ||
+           definitionPath == "/std/file/File/open_write" || definitionPath == "/std/file/File/open_append";
+  };
+
+  auto rewriteExpr = [&](auto &self, Expr &expr, const std::string &namespacePrefix, const std::string &currentDefinitionPath,
                          const LocalBindings &locals) -> bool {
     for (auto &arg : expr.args) {
-      if (!self(self, arg, namespacePrefix, locals)) {
+      if (!self(self, arg, namespacePrefix, currentDefinitionPath, locals)) {
         return false;
       }
     }
     LocalBindings bodyLocals = locals;
     for (auto &arg : expr.bodyArguments) {
-      if (!self(self, arg, namespacePrefix, bodyLocals)) {
+      if (!self(self, arg, namespacePrefix, currentDefinitionPath, bodyLocals)) {
         return false;
       }
       rememberBinding(arg, namespacePrefix, bodyLocals);
@@ -405,6 +411,28 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
       return true;
     }
     if (!expr.isMethodCall) {
+      if (!isFileOpenWrapperDefinition(currentDefinitionPath) && isSimpleCallName(expr, "File") &&
+          expr.templateArgs.size() == 1 && expr.args.size() == 1 && !expr.hasBodyArguments &&
+          expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames)) {
+        if (expr.templateArgs.front() == "Read" && hasImportedDefinitionPath("/File/open_read")) {
+          expr.name = "/File/open_read";
+          expr.namespacePrefix.clear();
+          expr.templateArgs.clear();
+          return true;
+        }
+        if (expr.templateArgs.front() == "Write" && hasImportedDefinitionPath("/File/open_write")) {
+          expr.name = "/File/open_write";
+          expr.namespacePrefix.clear();
+          expr.templateArgs.clear();
+          return true;
+        }
+        if (expr.templateArgs.front() == "Append" && hasImportedDefinitionPath("/File/open_append")) {
+          expr.name = "/File/open_append";
+          expr.namespacePrefix.clear();
+          expr.templateArgs.clear();
+          return true;
+        }
+      }
       if (expr.name == "/File/read_byte" && hasImportedDefinitionPath("/File/read_byte")) {
         expr.isMethodCall = true;
         expr.name = "read_byte";
@@ -651,19 +679,19 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
   for (auto &def : program.definitions) {
     LocalBindings locals;
     for (auto &param : def.parameters) {
-      if (!rewriteExpr(rewriteExpr, param, def.namespacePrefix, locals)) {
+      if (!rewriteExpr(rewriteExpr, param, def.namespacePrefix, def.fullPath, locals)) {
         return false;
       }
       rememberBinding(param, def.namespacePrefix, locals);
     }
     for (auto &stmt : def.statements) {
-      if (!rewriteExpr(rewriteExpr, stmt, def.namespacePrefix, locals)) {
+      if (!rewriteExpr(rewriteExpr, stmt, def.namespacePrefix, def.fullPath, locals)) {
         return false;
       }
       rememberBinding(stmt, def.namespacePrefix, locals);
     }
     if (def.returnExpr.has_value()) {
-      if (!rewriteExpr(rewriteExpr, *def.returnExpr, def.namespacePrefix, locals)) {
+      if (!rewriteExpr(rewriteExpr, *def.returnExpr, def.namespacePrefix, def.fullPath, locals)) {
         return false;
       }
     }
@@ -671,13 +699,13 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
   for (auto &exec : program.executions) {
     LocalBindings locals;
     for (auto &arg : exec.arguments) {
-      if (!rewriteExpr(rewriteExpr, arg, exec.namespacePrefix, locals)) {
+      if (!rewriteExpr(rewriteExpr, arg, exec.namespacePrefix, exec.fullPath, locals)) {
         return false;
       }
       rememberBinding(arg, exec.namespacePrefix, locals);
     }
     for (auto &arg : exec.bodyArguments) {
-      if (!rewriteExpr(rewriteExpr, arg, exec.namespacePrefix, locals)) {
+      if (!rewriteExpr(rewriteExpr, arg, exec.namespacePrefix, exec.fullPath, locals)) {
         return false;
       }
       rememberBinding(arg, exec.namespacePrefix, locals);
