@@ -1204,6 +1204,34 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup wires callback") {
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprBaseKind(fileCall, locals, kindOut));
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::ir_lowerer::LocalInfo mapInfo;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+  locals.emplace("values", mapInfo);
+
+  primec::Expr valuesNameExpr;
+  valuesNameExpr.kind = primec::Expr::Kind::Name;
+  valuesNameExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::Expr tryAtExpr;
+  tryAtExpr.kind = primec::Expr::Kind::Call;
+  tryAtExpr.name = "/std/collections/map/tryAt";
+  tryAtExpr.args = {valuesNameExpr, keyExpr};
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args = {tryAtExpr};
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(tryExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-base setup validates dependencies") {
