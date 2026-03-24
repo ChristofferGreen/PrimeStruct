@@ -593,26 +593,65 @@
         };
 
         auto emitPackedArgExpr = [&](const Expr &packedArgExpr) -> std::string {
+          std::function<std::string(const Expr &)> emitPackedLocationLValue =
+              [&](const Expr &locationTarget) -> std::string {
+            if (locationTarget.kind == Expr::Kind::Call && locationTarget.isFieldAccess &&
+                locationTarget.args.size() == 1) {
+              const Expr &receiver = locationTarget.args.front();
+              std::string receiverText;
+              if (receiver.kind == Expr::Kind::Call && receiver.isFieldAccess && receiver.args.size() == 1) {
+                receiverText = emitPackedLocationLValue(receiver);
+              } else {
+                receiverText =
+                    emitExpr(receiver,
+                             nameMap,
+                             paramMap,
+                             defMap,
+                             structTypeMap,
+                             importAliases,
+                             localTypes,
+                             returnKinds,
+                             resultInfos,
+                             returnStructs,
+                             allowMathBare);
+                BindingInfo receiverBinding;
+                if (resolveExprBinding(receiver, receiverBinding)) {
+                  const std::string normalizedReceiverType =
+                      normalizeBindingTypeName(receiverBinding.typeName);
+                  if (normalizedReceiverType == "Reference" || normalizedReceiverType == "Pointer") {
+                    receiverText = "ps_deref(" + receiverText + ")";
+                  }
+                }
+              }
+              return receiverText + "." + locationTarget.name;
+            }
+
+            return emitExpr(locationTarget,
+                            nameMap,
+                            paramMap,
+                            defMap,
+                            structTypeMap,
+                            importAliases,
+                            localTypes,
+                            returnKinds,
+                            resultInfos,
+                            returnStructs,
+                            allowMathBare);
+          };
+
           std::string packBase;
           std::string packArgText;
           if (splitTemplateTypeName(packedParamInfo.typeTemplateArg, packBase, packArgText) &&
               isSimpleCallName(packedArgExpr, "location") && packedArgExpr.args.size() == 1) {
             const std::string normalizedPackBase = normalizeBindingTypeName(packBase);
             const Expr &locationTarget = packedArgExpr.args.front();
-            const std::string targetExpr =
-                emitExpr(locationTarget,
-                         nameMap,
-                         paramMap,
-                         defMap,
-                         structTypeMap,
-                         importAliases,
-                         localTypes,
-                         returnKinds,
-                         resultInfos,
-                         returnStructs,
-                         allowMathBare);
+            const std::string targetExpr = emitPackedLocationLValue(locationTarget);
             if (normalizedPackBase == "Reference") {
               return "std::ref(" + targetExpr + ")";
+            }
+            if (normalizedPackBase == "Pointer" && locationTarget.kind == Expr::Kind::Call &&
+                locationTarget.isFieldAccess && locationTarget.args.size() == 1) {
+              return "(&(" + targetExpr + "))";
             }
             if (normalizedPackBase == "Pointer") {
               BindingInfo locationBinding;

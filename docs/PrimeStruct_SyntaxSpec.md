@@ -437,8 +437,9 @@ Bottom-level form therefore has:
   direct explicit `location(local)` packed call arguments for borrowed packs, and scalar/struct `args<Pointer<T>>`
   packs there also accept direct explicit `location(ref)` packed call arguments when the caller local is already a
   `Reference<T>`, including same-file helper-returned and imported-helper-alias `Reference<T>` expressions that feed
-  `location(...)` plus borrowed pack access forms like `at(values, i)`, `values.at(i)`, and
-  `values.at_unsafe(i)`; other unsupported non-string element support remains a separate follow-up slice.
+  `location(...)`, borrowed pack access forms like `at(values, i)`, `values.at(i)`, and
+  `values.at_unsafe(i)`, plus borrowed struct-field lvalues derived from those pack accesses such as
+  `location(values.at(i).field)`; other unsupported non-string element support remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 
