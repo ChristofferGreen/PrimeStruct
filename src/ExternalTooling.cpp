@@ -39,7 +39,14 @@ bool compileSpirv(const ProcessRunner &runner,
 bool compileCppExecutable(const ProcessRunner &runner,
                           const std::filesystem::path &cppPath,
                           const std::filesystem::path &outputPath) {
-  return commandSucceeds(runner, {"clang++", "-std=c++23", "-O0", cppPath.string(), "-o", outputPath.string()});
+  return commandSucceeds(runner,
+                         {"clang++",
+                          "-std=c++23",
+                          "-O0",
+                          "-ftrivial-auto-var-init=pattern",
+                          cppPath.string(),
+                          "-o",
+                          outputPath.string()});
 }
 
 } // namespace primec
