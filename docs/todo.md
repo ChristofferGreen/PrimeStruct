@@ -137,9 +137,9 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/semantics/TemplateMonomorph.cpp` final monomorphize orchestration below the `700`-line target: move import-alias setup plus definition/execution rewrite coordination into dedicated units, leaving a thin `monomorphizeTemplates(...)` entrypoint.
 
 **Group 10 - Remaining oversized-file queue**
-- ◐ Refactor `src/ir_lowerer/IrLowererSetupTypeHelpers.cpp` (`2925` lines) below the `700`-line target. Progress is tracked by the slices below.
+- ◐ Refactor `src/ir_lowerer/IrLowererSetupTypeHelpers.cpp` (`1460` lines) below the `700`-line target. Progress is tracked by the slices below.
 - ✓ Split `IrLowererSetupTypeHelpers.cpp` collection helper alias/path utilities plus declared collection inference into `src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.{h,cpp}` plus `src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp`.
-- ○ Split `IrLowererSetupTypeHelpers.cpp` receiver target + struct-path setup out of the root file.
+- ✓ Split `IrLowererSetupTypeHelpers.cpp` receiver target + struct-path setup into `src/ir_lowerer/IrLowererSetupTypeReceiverTargetHelpers.{h,cpp}` plus `src/ir_lowerer/IrLowererSetupTypeStructPathHelpers.cpp`.
 - ○ Split `IrLowererSetupTypeHelpers.cpp` method target + return-kind resolution out of the root file.
 - ○ Refactor `src/ir_lowerer/IrLowererLowerInferenceSetup.cpp` (`1976` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`1973` lines) below the `700`-line target.

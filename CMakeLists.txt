@@ -230,7 +230,9 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererSetupMathHelpers.cpp
   src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp
   src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp
+  src/ir_lowerer/IrLowererSetupTypeReceiverTargetHelpers.cpp
   src/ir_lowerer/IrLowererSetupTypeHelpers.cpp
+  src/ir_lowerer/IrLowererSetupTypeStructPathHelpers.cpp
   src/ir_lowerer/IrLowererStatementBindingHelpers.cpp
   src/ir_lowerer/IrLowererStatementCallHelpers.cpp
   src/ir_lowerer/IrLowererStringCallHelpers.cpp

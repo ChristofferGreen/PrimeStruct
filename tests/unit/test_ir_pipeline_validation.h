@@ -21995,6 +21995,33 @@ TEST_CASE("ir lowerer setup type helper dispatches receiver target resolution") 
   CHECK(resolvedTypePath == "/pkg/Ctor");
 }
 
+TEST_CASE("ir lowerer setup type helper resolves imported name receiver structs") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr nameReceiver;
+  nameReceiver.kind = primec::Expr::Kind::Name;
+  nameReceiver.name = "Ctor";
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(nameReceiver,
+                                                        {},
+                                                        "length",
+                                                        {{"Ctor", "/imports/Ctor"}},
+                                                        {"/imports/Ctor"},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName.empty());
+  CHECK(resolvedTypePath == "/imports/Ctor");
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper resolves indexed args-pack vector receivers") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;
