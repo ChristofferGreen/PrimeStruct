@@ -831,14 +831,14 @@ sum_two_files([string] a, [string] b) {
     `fileReadEof()`, `fileErrorIsEof(err)`,
     `FileError.why(err)`, `FileError.eof()`, `FileError.is_eof(err)`,
     `/File/open_read(...)`, `/File/open_write(...)`, `/File/open_append(...)`,
-    `/File/read_byte(...)`, zero-to-seven-value heterogenous `/File/write(...)` and
+    `/File/read_byte(...)`, zero-to-eight-value heterogenous `/File/write(...)` and
     `/File/write_line(...)` overload families,
     `/File/write_byte(...)`, `/File/write_bytes(...)`, `/File/flush(...)`, and
     `/File/close<Mode>(...)`.
     Imported constructor-shaped `File<Mode>(path)` calls now route through those `.prime`
     mode-specific open wrappers, and imported method/free-call sugar now prefers the same stdlib
     layer for `read_byte`, `write`, `write_line`, `write_byte`, `write_bytes`, `flush`, and
-    `close` across that current zero-to-seven-value overload family, while the underlying host
+    `close` across that current zero-to-eight-value overload family, while the underlying host
     open/read/write/close substrate plus wider multi-value `write(...)` / `write_line(...)`
     arities remain builtin for now.
   - The stdlib file layer defines `FileError.why(err)` as the public type-owned wrapper over the intrinsic
