@@ -428,7 +428,8 @@ Bottom-level form therefore has:
   `tryAt(...)` payload-kind inference for `auto` bindings, `Pointer<map<K, V>>` packs also preserve indexed downstream `contains()` / `at()` /
   `at_unsafe()` lookup access, and borrowed/pointer map packs preserve that same count and lookup surface through
   explicit indexed `dereference(...)` receiver wrappers. Scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
-  `dereference(...)`, `Reference<uninitialized<i32>>` packs preserve indexed downstream `dereference(...)`-based
+  `dereference(...)`, those same scalar and struct `Reference<T>` / `Pointer<T>` packs also materialize direct explicit `location(local)` call arguments across direct calls plus pure/mixed spread forwarding,
+  `Reference<uninitialized<i32>>` packs preserve indexed downstream `dereference(...)`-based
   `init(...)` and `take(...)`, and struct `Pointer<T>` plus struct `Reference<T>` packs preserve indexed downstream
   field/helper access; other unsupported non-string element support remains a separate follow-up slice.
 

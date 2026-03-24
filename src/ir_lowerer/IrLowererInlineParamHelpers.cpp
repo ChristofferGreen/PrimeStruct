@@ -43,6 +43,73 @@ bool emitInlineDefinitionCallParameters(
           (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
            paramInfo.argsPackElementKind == LocalInfo::Kind::Reference);
 
+      auto isDirectLocationOfNamedLocal = [&](const Expr &argExpr,
+                                             const LocalInfo *&targetInfoOut) -> bool {
+        targetInfoOut = nullptr;
+        if (!isSimpleCallName(argExpr, "location") || argExpr.args.size() != 1) {
+          return false;
+        }
+        const Expr &targetExpr = argExpr.args.front();
+        if (targetExpr.kind != Expr::Kind::Name) {
+          return false;
+        }
+        auto it = callerLocals.find(targetExpr.name);
+        if (it == callerLocals.end()) {
+          return false;
+        }
+        targetInfoOut = &it->second;
+        return true;
+      };
+
+      auto matchesWrappedLocationTarget = [&](const LocalInfo &targetInfo,
+                                             LocalInfo::Kind expectedKind) -> bool {
+        const bool expectsArray =
+            expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToArray : paramInfo.pointerToArray;
+        const bool expectsVector =
+            expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToVector : paramInfo.pointerToVector;
+        const bool expectsMap =
+            expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToMap : paramInfo.pointerToMap;
+        const bool expectsBuffer =
+            expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToBuffer : paramInfo.pointerToBuffer;
+        const bool expectsAggregate = expectsArray || expectsVector || expectsMap || expectsBuffer;
+
+        if (targetInfo.kind == LocalInfo::Kind::Pointer) {
+          return false;
+        }
+        if (targetInfo.kind == LocalInfo::Kind::Reference) {
+          return false;
+        }
+        if (expectsArray) {
+          return targetInfo.kind == LocalInfo::Kind::Array && targetInfo.valueKind == paramInfo.valueKind;
+        }
+        if (expectsVector) {
+          return targetInfo.kind == LocalInfo::Kind::Vector && targetInfo.valueKind == paramInfo.valueKind &&
+                 targetInfo.structTypeName == paramInfo.structTypeName &&
+                 targetInfo.isSoaVector == paramInfo.isSoaVector;
+        }
+        if (expectsMap) {
+          return targetInfo.kind == LocalInfo::Kind::Map &&
+                 targetInfo.mapKeyKind == paramInfo.mapKeyKind &&
+                 targetInfo.mapValueKind == paramInfo.mapValueKind;
+        }
+        if (expectsBuffer) {
+          return targetInfo.kind == LocalInfo::Kind::Buffer && targetInfo.valueKind == paramInfo.valueKind;
+        }
+        if (expectsAggregate) {
+          return false;
+        }
+        return targetInfo.kind == LocalInfo::Kind::Value &&
+               targetInfo.targetsUninitializedStorage == paramInfo.targetsUninitializedStorage &&
+               targetInfo.isFileHandle == paramInfo.isFileHandle &&
+               targetInfo.isFileError == paramInfo.isFileError &&
+               targetInfo.isResult == paramInfo.isResult &&
+               targetInfo.resultHasValue == paramInfo.resultHasValue &&
+               targetInfo.resultValueKind == paramInfo.resultValueKind &&
+               targetInfo.resultErrorType == paramInfo.resultErrorType &&
+               targetInfo.valueKind == paramInfo.valueKind &&
+               targetInfo.structTypeName == paramInfo.structTypeName;
+      };
+
       auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||
             paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||
@@ -58,62 +125,82 @@ bool emitInlineDefinitionCallParameters(
         }
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
             !paramInfo.referenceToArray && !paramInfo.referenceToVector && !paramInfo.referenceToMap) {
-          if (argExpr.kind != Expr::Kind::Name) {
-            error = "variadic parameter type mismatch";
-            return false;
+          if (argExpr.kind == Expr::Kind::Name) {
+            auto it = callerLocals.find(argExpr.name);
+            if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Reference ||
+                it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap ||
+                it->second.referenceToBuffer != paramInfo.referenceToBuffer ||
+                it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
+                it->second.isFileHandle != paramInfo.isFileHandle ||
+                it->second.isFileError != paramInfo.isFileError ||
+                it->second.isResult != paramInfo.isResult ||
+                it->second.resultHasValue != paramInfo.resultHasValue ||
+                it->second.resultValueKind != paramInfo.resultValueKind ||
+                it->second.resultErrorType != paramInfo.resultErrorType ||
+                it->second.valueKind != paramInfo.valueKind ||
+                it->second.structTypeName != paramInfo.structTypeName) {
+              error = "variadic parameter type mismatch";
+              return false;
+            }
+            emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
+            return true;
           }
-          auto it = callerLocals.find(argExpr.name);
-          if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Reference ||
-              it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap ||
-              it->second.referenceToBuffer != paramInfo.referenceToBuffer ||
-              it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
-              it->second.isFileHandle != paramInfo.isFileHandle ||
-              it->second.isFileError != paramInfo.isFileError ||
-              it->second.isResult != paramInfo.isResult ||
-              it->second.resultHasValue != paramInfo.resultHasValue ||
-              it->second.resultValueKind != paramInfo.resultValueKind ||
-              it->second.resultErrorType != paramInfo.resultErrorType ||
-              it->second.valueKind != paramInfo.valueKind ||
-              it->second.structTypeName != paramInfo.structTypeName) {
-            error = "variadic parameter type mismatch";
-            return false;
+          const LocalInfo *locationTargetInfo = nullptr;
+          if (isDirectLocationOfNamedLocal(argExpr, locationTargetInfo) &&
+              locationTargetInfo != nullptr &&
+              matchesWrappedLocationTarget(*locationTargetInfo, LocalInfo::Kind::Reference)) {
+            if (!emitExpr(argExpr, callerLocals)) {
+              return false;
+            }
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
+            return true;
           }
-          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
-          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
-          return true;
+          error = "variadic parameter type mismatch";
+          return false;
         }
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer) {
-          if (argExpr.kind != Expr::Kind::Name) {
-            error = "variadic parameter type mismatch";
-            return false;
+          if (argExpr.kind == Expr::Kind::Name) {
+            auto it = callerLocals.find(argExpr.name);
+            if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Pointer ||
+                it->second.pointerToArray != paramInfo.pointerToArray ||
+                it->second.pointerToBuffer != paramInfo.pointerToBuffer ||
+                it->second.isSoaVector != paramInfo.isSoaVector ||
+                it->second.pointerToVector != paramInfo.pointerToVector ||
+                it->second.pointerToMap != paramInfo.pointerToMap ||
+                it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
+                it->second.isFileHandle != paramInfo.isFileHandle ||
+                it->second.isFileError != paramInfo.isFileError ||
+                it->second.isResult != paramInfo.isResult ||
+                it->second.resultHasValue != paramInfo.resultHasValue ||
+                it->second.resultValueKind != paramInfo.resultValueKind ||
+                it->second.resultErrorType != paramInfo.resultErrorType ||
+                (paramInfo.pointerToMap &&
+                 (it->second.mapKeyKind != paramInfo.mapKeyKind ||
+                  it->second.mapValueKind != paramInfo.mapValueKind)) ||
+                it->second.valueKind != paramInfo.valueKind ||
+                it->second.structTypeName != paramInfo.structTypeName) {
+              error = "variadic parameter type mismatch";
+              return false;
+            }
+            if (!emitExpr(argExpr, callerLocals)) {
+              return false;
+            }
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
+            return true;
           }
-          auto it = callerLocals.find(argExpr.name);
-          if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Pointer ||
-              it->second.pointerToArray != paramInfo.pointerToArray ||
-              it->second.pointerToBuffer != paramInfo.pointerToBuffer ||
-              it->second.isSoaVector != paramInfo.isSoaVector ||
-              it->second.pointerToVector != paramInfo.pointerToVector ||
-              it->second.pointerToMap != paramInfo.pointerToMap ||
-              it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
-              it->second.isFileHandle != paramInfo.isFileHandle ||
-              it->second.isFileError != paramInfo.isFileError ||
-              it->second.isResult != paramInfo.isResult ||
-              it->second.resultHasValue != paramInfo.resultHasValue ||
-              it->second.resultValueKind != paramInfo.resultValueKind ||
-              it->second.resultErrorType != paramInfo.resultErrorType ||
-              (paramInfo.pointerToMap &&
-               (it->second.mapKeyKind != paramInfo.mapKeyKind ||
-                it->second.mapValueKind != paramInfo.mapValueKind)) ||
-              it->second.valueKind != paramInfo.valueKind ||
-              it->second.structTypeName != paramInfo.structTypeName) {
-            error = "variadic parameter type mismatch";
-            return false;
+          const LocalInfo *locationTargetInfo = nullptr;
+          if (isDirectLocationOfNamedLocal(argExpr, locationTargetInfo) &&
+              locationTargetInfo != nullptr &&
+              matchesWrappedLocationTarget(*locationTargetInfo, LocalInfo::Kind::Pointer)) {
+            if (!emitExpr(argExpr, callerLocals)) {
+              return false;
+            }
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
+            return true;
           }
-          if (!emitExpr(argExpr, callerLocals)) {
-            return false;
-          }
-          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
-          return true;
+          error = "variadic parameter type mismatch";
+          return false;
         }
         if (paramInfo.valueKind == LocalInfo::ValueKind::String) {
           LocalInfo::StringSource source = LocalInfo::StringSource::None;

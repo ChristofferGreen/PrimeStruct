@@ -1490,25 +1490,17 @@ main() {
   [i32] a0{1i32}
   [i32] a1{2i32}
   [i32] a2{3i32}
-  [Reference<i32>] r0{location(a0)}
-  [Reference<i32>] r1{location(a1)}
-  [Reference<i32>] r2{location(a2)}
 
   [i32] b0{4i32}
   [i32] b1{5i32}
   [i32] b2{6i32}
-  [Reference<i32>] s0{location(b0)}
-  [Reference<i32>] s1{location(b1)}
-  [Reference<i32>] s2{location(b2)}
 
   [i32] c0{7i32}
   [i32] c1{8i32}
-  [Reference<i32>] t0{location(c0)}
-  [Reference<i32>] t1{location(c1)}
 
-  return(plus(score_refs(r0, r1, r2),
-              plus(forward(s0, s1, s2),
-                   forward_mixed(t0, t1))))
+  return(plus(score_refs(location(a0), location(a1), location(a2)),
+              plus(forward(location(b0), location(b1), location(b2)),
+                   forward_mixed(location(c0), location(c1)))))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_reference.prime", source);
@@ -1554,25 +1546,17 @@ main() {
   [Pair] a0{Pair(7i32)}
   [Pair] a1{Pair(8i32)}
   [Pair] a2{Pair(9i32)}
-  [Reference<Pair>] r0{location(a0)}
-  [Reference<Pair>] r1{location(a1)}
-  [Reference<Pair>] r2{location(a2)}
 
   [Pair] b0{Pair(11i32)}
   [Pair] b1{Pair(12i32)}
   [Pair] b2{Pair(13i32)}
-  [Reference<Pair>] s0{location(b0)}
-  [Reference<Pair>] s1{location(b1)}
-  [Reference<Pair>] s2{location(b2)}
 
   [Pair] c0{Pair(15i32)}
   [Pair] c1{Pair(17i32)}
-  [Reference<Pair>] t0{location(c0)}
-  [Reference<Pair>] t1{location(c1)}
 
-  return(plus(score_refs(r0, r1, r2),
-              plus(forward(s0, s1, s2),
-                   forward_mixed(t0, t1))))
+  return(plus(score_refs(location(a0), location(a1), location(a2)),
+              plus(forward(location(b0), location(b1), location(b2)),
+                   forward_mixed(location(c0), location(c1)))))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_reference.prime", source);
@@ -1618,25 +1602,17 @@ main() {
   [Pair] a0{Pair(7i32)}
   [Pair] a1{Pair(8i32)}
   [Pair] a2{Pair(9i32)}
-  [Pointer<Pair>] p0{location(a0)}
-  [Pointer<Pair>] p1{location(a1)}
-  [Pointer<Pair>] p2{location(a2)}
 
   [Pair] b0{Pair(11i32)}
   [Pair] b1{Pair(12i32)}
   [Pair] b2{Pair(13i32)}
-  [Pointer<Pair>] q0{location(b0)}
-  [Pointer<Pair>] q1{location(b1)}
-  [Pointer<Pair>] q2{location(b2)}
 
   [Pair] c0{Pair(15i32)}
   [Pair] c1{Pair(17i32)}
-  [Pointer<Pair>] r0{location(c0)}
-  [Pointer<Pair>] r1{location(c1)}
 
-  return(plus(score_ptrs(p0, p1, p2),
-              plus(forward(q0, q1, q2),
-                   forward_mixed(r0, r1))))
+  return(plus(score_ptrs(location(a0), location(a1), location(a2)),
+              plus(forward(location(b0), location(b1), location(b2)),
+                   forward_mixed(location(c0), location(c1)))))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_pointer.prime", source);
@@ -1672,25 +1648,17 @@ main() {
   [i32] a0{1i32}
   [i32] a1{2i32}
   [i32] a2{3i32}
-  [Pointer<i32>] p0{location(a0)}
-  [Pointer<i32>] p1{location(a1)}
-  [Pointer<i32>] p2{location(a2)}
 
   [i32] b0{4i32}
   [i32] b1{5i32}
   [i32] b2{6i32}
-  [Pointer<i32>] q0{location(b0)}
-  [Pointer<i32>] q1{location(b1)}
-  [Pointer<i32>] q2{location(b2)}
 
   [i32] c0{7i32}
   [i32] c1{8i32}
-  [Pointer<i32>] r0{location(c0)}
-  [Pointer<i32>] r1{location(c1)}
 
-  return(plus(score_ptrs(p0, p1, p2),
-              plus(forward(q0, q1, q2),
-                   forward_mixed(r0, r1))))
+  return(plus(score_ptrs(location(a0), location(a1), location(a2)),
+              plus(forward(location(b0), location(b1), location(b2)),
+                   forward_mixed(location(c0), location(c1)))))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_pointer.prime", source);
