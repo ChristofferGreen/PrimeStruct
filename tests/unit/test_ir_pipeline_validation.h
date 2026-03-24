@@ -266,6 +266,26 @@ TEST_CASE("semantics return kind helper resolves imported soa_vector aliases") {
   CHECK(error.empty());
 }
 
+TEST_CASE("semantics builtin path helpers classify roots and collection aliases") {
+  CHECK(primec::semantics::isRootBuiltinName("/std/gpu/global_id_x"));
+  CHECK_FALSE(primec::semantics::isRootBuiltinName("/std/collections/vector/count"));
+
+  primec::Expr helperExpr;
+  helperExpr.kind = primec::Expr::Kind::Call;
+  helperExpr.name = "/std/collections/vector/count__t12";
+
+  std::string collectionName;
+  std::string helperName;
+  REQUIRE(primec::semantics::getNamespacedCollectionHelperName(helperExpr, collectionName, helperName));
+  CHECK(collectionName == "vector");
+  CHECK(helperName == "count");
+
+  primec::Expr removedAliasExpr = helperExpr;
+  removedAliasExpr.name = "/array/count";
+  CHECK_FALSE(primec::semantics::getNamespacedCollectionHelperName(removedAliasExpr, collectionName, helperName));
+  CHECK(primec::semantics::isExplicitRemovedCollectionCallAlias("/array/count"));
+}
+
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*
@@ -11807,6 +11827,40 @@ TEST_CASE("semantics return kind helper source delegation stays stable") {
   CHECK(semanticsReturnKindHelpersSource.find("ReturnKind getReturnKind(") != std::string::npos);
   CHECK(semanticsReturnKindHelpersSource.find("soa_vector return type requires struct element type on ") !=
         std::string::npos);
+}
+
+TEST_CASE("semantics builtin path helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path semanticsHelpersCorePath =
+      repoRoot / "src" / "semantics" / "SemanticsHelpersCore.cpp";
+  const std::filesystem::path semanticsBuiltinPathHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsBuiltinPathHelpers.cpp";
+  REQUIRE(std::filesystem::exists(semanticsHelpersCorePath));
+  REQUIRE(std::filesystem::exists(semanticsBuiltinPathHelpersPath));
+
+  const std::string semanticsHelpersCoreSource = readText(semanticsHelpersCorePath);
+  const std::string semanticsBuiltinPathHelpersSource = readText(semanticsBuiltinPathHelpersPath);
+
+  CHECK(semanticsHelpersCoreSource.find("bool getBuiltinOperatorName(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("bool getBuiltinMathName(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("bool isExplicitRemovedCollectionCallAlias(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("bool getNamespacedCollectionHelperName(") == std::string::npos);
+
+  CHECK(semanticsBuiltinPathHelpersSource.find("bool getBuiltinOperatorName(") != std::string::npos);
+  CHECK(semanticsBuiltinPathHelpersSource.find("bool getBuiltinMathName(") != std::string::npos);
+  CHECK(semanticsBuiltinPathHelpersSource.find("bool isExplicitRemovedCollectionCallAlias(") != std::string::npos);
+  CHECK(semanticsBuiltinPathHelpersSource.find("bool getNamespacedCollectionHelperName(") != std::string::npos);
 }
 
 TEST_CASE("semantics validator passes source delegation stays stable") {
