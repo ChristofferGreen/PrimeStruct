@@ -619,7 +619,7 @@ TEST_CASE("ir to cpp emitter writes call and callvoid dispatch") {
   std::string error;
   REQUIRE(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
-  CHECK(cpp.find("static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
+  CHECK(cpp.find("static int64_t ps_fn_0(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
                  "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);") != std::string::npos);
   CHECK(cpp.find("ps_fn_1(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
   CHECK(cpp.find("int64_t callValue = ps_fn_2(stack, sp, heapSlots, heapAllocations, argc, argv);") !=

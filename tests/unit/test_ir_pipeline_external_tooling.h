@@ -90,14 +90,7 @@ TEST_CASE("external tooling uses injected runner for cpp compile command") {
   CHECK(primec::compileCppExecutable(runner, "/tmp/source.cpp", "/tmp/program"));
   REQUIRE(runner.commands.size() == 1);
   CHECK(runner.commands.front() ==
-        std::vector<std::string>{
-            "clang++",
-            "-std=c++23",
-            "-O0",
-            "-ftrivial-auto-var-init=pattern",
-            "/tmp/source.cpp",
-            "-o",
-            "/tmp/program"});
+        std::vector<std::string>{"clang++", "-std=c++23", "-O0", "/tmp/source.cpp", "-o", "/tmp/program"});
 }
 
 TEST_SUITE_END();

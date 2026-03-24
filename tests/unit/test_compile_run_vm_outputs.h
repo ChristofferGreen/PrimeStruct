@@ -1458,10 +1458,10 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find(
-            "static int64_t ps_fn_0(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
+            "static int64_t ps_fn_0(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
             "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);") != std::string::npos);
   CHECK(output.find(
-            "static int64_t ps_fn_1(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
+            "static int64_t ps_fn_1(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
             "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);") != std::string::npos);
   CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }

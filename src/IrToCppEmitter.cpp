@@ -268,6 +268,7 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        break;\n";
   };
   const auto emitCompareI32 = [&](const char *op) {
+    emitStackUnderflowGuard(2, "compare");
     out << "        int32_t right = static_cast<int32_t>(stack[--sp]);\n";
     out << "        int32_t left = static_cast<int32_t>(stack[--sp]);\n";
     out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
@@ -283,6 +284,7 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        break;\n";
   };
   const auto emitCompareI64 = [&](const char *op) {
+    emitStackUnderflowGuard(2, "compare");
     out << "        int64_t right = static_cast<int64_t>(stack[--sp]);\n";
     out << "        int64_t left = static_cast<int64_t>(stack[--sp]);\n";
     out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
@@ -290,6 +292,7 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        break;\n";
   };
   const auto emitCompareU64 = [&](const char *op) {
+    emitStackUnderflowGuard(2, "compare");
     out << "        uint64_t right = stack[--sp];\n";
     out << "        uint64_t left = stack[--sp];\n";
     out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
@@ -305,6 +308,7 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        break;\n";
   };
   const auto emitCompareF32 = [&](const char *op) {
+    emitStackUnderflowGuard(2, "compare");
     out << "        float right = psBitsToF32(stack[--sp]);\n";
     out << "        float left = psBitsToF32(stack[--sp]);\n";
     out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
@@ -312,6 +316,7 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        break;\n";
   };
   const auto emitCompareF64 = [&](const char *op) {
+    emitStackUnderflowGuard(2, "compare");
     out << "        double right = psBitsToF64(stack[--sp]);\n";
     out << "        double left = psBitsToF64(stack[--sp]);\n";
     out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
@@ -378,6 +383,7 @@ bool emitInstruction(const IrInstruction &instruction,
         error = "IrToCppEmitter local index out of range at instruction " + std::to_string(index);
         return false;
       }
+      emitStackUnderflowGuard(1, "store");
       out << "        locals[" << instruction.imm << "] = stack[--sp];\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
@@ -393,6 +399,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::LoadIndirect:
+      emitStackUnderflowGuard(1, "load indirect");
       out << "        uint64_t loadIndirectAddress = stack[--sp];\n";
       out << "        if ((loadIndirectAddress % " << IrSlotBytes << "ull) != 0ull) {\n";
       out << "          std::cerr << \"unaligned indirect address in IR\\n\";\n";
@@ -417,6 +424,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::StoreIndirect:
+      emitStackUnderflowGuard(2, "store indirect");
       out << "        uint64_t storeIndirectValue = stack[--sp];\n";
       out << "        uint64_t storeIndirectAddress = stack[--sp];\n";
       out << "        if ((storeIndirectAddress % " << IrSlotBytes << "ull) != 0ull) {\n";
@@ -443,6 +451,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::HeapAlloc:
+      emitStackUnderflowGuard(1, "heap alloc");
       out << "        uint64_t heapAllocSlotCount = stack[--sp];\n";
       out << "        uint64_t heapAllocAddress = 0ull;\n";
       out << "        if (!psHeapAlloc(heapAllocSlotCount, heapSlots, heapAllocations, heapAllocAddress)) {\n";
@@ -454,6 +463,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::HeapFree:
+      emitStackUnderflowGuard(1, "heap free");
       out << "        if (!psHeapFree(stack[--sp], heapSlots, heapAllocations)) {\n";
       out << "          std::cerr << \"invalid heap free address in IR\\n\";\n";
       out << "          return 1;\n";
@@ -462,6 +472,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::HeapRealloc:
+      emitStackUnderflowGuard(2, "heap realloc");
       out << "        uint64_t heapReallocSlotCount = stack[--sp];\n";
       out << "        uint64_t heapReallocAddress = stack[--sp];\n";
       out << "        uint64_t heapReallocResult = 0ull;\n";
@@ -479,8 +490,8 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "          std::cerr << \"IR stack underflow on dup\\n\";\n";
       out << "          return 1;\n";
       out << "        }\n";
-      out << "        stack[sp] = stack[sp - 1];\n";
-      out << "        ++sp;\n";
+      out << "        uint64_t dupValue = stack[sp - 1];\n";
+      out << "        stack[sp++] = dupValue;\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
@@ -506,6 +517,7 @@ bool emitInstruction(const IrInstruction &instruction,
       emitBinaryI32("/", "div");
       return true;
     case IrOpcode::NegI32:
+      emitStackUnderflowGuard(1, "negate");
       out << "        int32_t value = static_cast<int32_t>(stack[sp - 1]);\n";
       out << "        stack[sp - 1] = static_cast<uint64_t>(-value);\n";
       out << "        pc = " << nextIndex << ";\n";
@@ -532,6 +544,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::NegI64:
+      emitStackUnderflowGuard(1, "negate");
       out << "        int64_t value = static_cast<int64_t>(stack[sp - 1]);\n";
       out << "        stack[sp - 1] = static_cast<uint64_t>(-value);\n";
       out << "        pc = " << nextIndex << ";\n";
@@ -598,6 +611,7 @@ bool emitInstruction(const IrInstruction &instruction,
       emitBinaryF32("/", "float op");
       return true;
     case IrOpcode::NegF32:
+      emitStackUnderflowGuard(1, "negate");
       out << "        float value = psBitsToF32(stack[sp - 1]);\n";
       out << "        stack[sp - 1] = psF32ToBits(-value);\n";
       out << "        pc = " << nextIndex << ";\n";
@@ -652,30 +666,35 @@ bool emitInstruction(const IrInstruction &instruction,
       emitBinaryF64("/", "float op");
       return true;
     case IrOpcode::NegF64:
+      emitStackUnderflowGuard(1, "negate");
       out << "        double value = psBitsToF64(stack[sp - 1]);\n";
       out << "        stack[sp - 1] = psF64ToBits(-value);\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertI32ToF32:
+      emitStackUnderflowGuard(1, "convert");
       out << "        int32_t value = static_cast<int32_t>(stack[--sp]);\n";
       out << "        stack[sp++] = psF32ToBits(static_cast<float>(value));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertI64ToF32:
+      emitStackUnderflowGuard(1, "convert");
       out << "        int64_t value = static_cast<int64_t>(stack[--sp]);\n";
       out << "        stack[sp++] = psF32ToBits(static_cast<float>(value));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertU64ToF32:
+      emitStackUnderflowGuard(1, "convert");
       out << "        uint64_t value = stack[--sp];\n";
       out << "        stack[sp++] = psF32ToBits(static_cast<float>(value));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertF32ToI32:
+      emitStackUnderflowGuard(1, "convert");
       out << "        float value = psBitsToF32(stack[--sp]);\n";
       out << "        int32_t converted = psConvertF32ToI32(value);\n";
       out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(converted));\n";
@@ -683,6 +702,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertF32ToI64:
+      emitStackUnderflowGuard(1, "convert");
       out << "        float value = psBitsToF32(stack[--sp]);\n";
       out << "        int64_t converted = psConvertF32ToI64(value);\n";
       out << "        stack[sp++] = static_cast<uint64_t>(converted);\n";
@@ -690,6 +710,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertF32ToU64:
+      emitStackUnderflowGuard(1, "convert");
       out << "        float value = psBitsToF32(stack[--sp]);\n";
       out << "        uint64_t converted = psConvertF32ToU64(value);\n";
       out << "        stack[sp++] = converted;\n";
@@ -697,24 +718,28 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertI32ToF64:
+      emitStackUnderflowGuard(1, "convert");
       out << "        int32_t value = static_cast<int32_t>(stack[--sp]);\n";
       out << "        stack[sp++] = psF64ToBits(static_cast<double>(value));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertI64ToF64:
+      emitStackUnderflowGuard(1, "convert");
       out << "        int64_t value = static_cast<int64_t>(stack[--sp]);\n";
       out << "        stack[sp++] = psF64ToBits(static_cast<double>(value));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertU64ToF64:
+      emitStackUnderflowGuard(1, "convert");
       out << "        uint64_t value = stack[--sp];\n";
       out << "        stack[sp++] = psF64ToBits(static_cast<double>(value));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertF64ToI32:
+      emitStackUnderflowGuard(1, "convert");
       out << "        double value = psBitsToF64(stack[--sp]);\n";
       out << "        int32_t converted = psConvertF64ToI32(value);\n";
       out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(converted));\n";
@@ -722,6 +747,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertF64ToI64:
+      emitStackUnderflowGuard(1, "convert");
       out << "        double value = psBitsToF64(stack[--sp]);\n";
       out << "        int64_t converted = psConvertF64ToI64(value);\n";
       out << "        stack[sp++] = static_cast<uint64_t>(converted);\n";
@@ -729,6 +755,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertF64ToU64:
+      emitStackUnderflowGuard(1, "convert");
       out << "        double value = psBitsToF64(stack[--sp]);\n";
       out << "        uint64_t converted = psConvertF64ToU64(value);\n";
       out << "        stack[sp++] = converted;\n";
@@ -736,12 +763,14 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertF32ToF64:
+      emitStackUnderflowGuard(1, "convert");
       out << "        float value = psBitsToF32(stack[--sp]);\n";
       out << "        stack[sp++] = psF64ToBits(static_cast<double>(value));\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::ConvertF64ToF32:
+      emitStackUnderflowGuard(1, "convert");
       out << "        double value = psBitsToF64(stack[--sp]);\n";
       out << "        stack[sp++] = psF32ToBits(static_cast<float>(value));\n";
       out << "        pc = " << nextIndex << ";\n";
@@ -760,6 +789,7 @@ bool emitInstruction(const IrInstruction &instruction,
         error = "IrToCppEmitter jump target out of range at instruction " + std::to_string(index);
         return false;
       }
+      emitStackUnderflowGuard(1, "jump");
       out << "        int64_t cond = static_cast<int64_t>(stack[--sp]);\n";
       out << "        pc = (cond == 0) ? " << instruction.imm << " : " << nextIndex << ";\n";
       out << "        break;\n";
@@ -1042,6 +1072,7 @@ bool emitInstruction(const IrInstruction &instruction,
         error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
         return false;
       }
+      emitStackUnderflowGuard(1, "string byte");
       out << "        uint64_t stringByteIndex = stack[--sp];\n";
       out << "        if (stringByteIndex >= "
           << context.stringLengths[static_cast<size_t>(instruction.imm)] << "ull) {\n";
@@ -1123,6 +1154,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "#include <cstdint>\n";
   body << "#include <limits>\n";
   body << "#include <string>\n";
+  body << "#include <deque>\n";
   body << "#include <vector>\n";
   if (needsClampI32ConvertHelpers || needsClampI64ConvertHelpers || needsClampU64ConvertHelpers) {
     body << "#include <cmath>\n";
@@ -1404,10 +1436,27 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "  }\n";
   body << "  return false;\n";
   body << "}\n\n";
+  body << "struct PsStack {\n";
+  body << "  explicit PsStack(std::size_t initialSize) : slots(initialSize, 0ull) {}\n";
+  body << "  uint64_t &operator[](std::size_t index) {\n";
+  body << "    if (index >= slots.size()) {\n";
+  body << "      std::size_t newSize = slots.empty() ? 1024ull : slots.size();\n";
+  body << "      while (index >= newSize) {\n";
+  body << "        newSize *= 2ull;\n";
+  body << "      }\n";
+  body << "      slots.resize(newSize, 0ull);\n";
+  body << "    }\n";
+  body << "    return slots[index];\n";
+  body << "  }\n";
+  body << "  const uint64_t &operator[](std::size_t index) const {\n";
+  body << "    return slots[index];\n";
+  body << "  }\n";
+  body << "  std::deque<uint64_t> slots;\n";
+  body << "};\n\n";
 
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     body << "static int64_t " << irFunctionSymbol(functionIndex)
-         << "(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
+         << "(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
             "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);\n";
   }
   body << "\n";
@@ -1426,7 +1475,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     const IrFunction &function = module.functions[functionIndex];
     const size_t localCount = computeLocalCount(function);
     body << "static int64_t " << irFunctionSymbol(functionIndex)
-         << "(uint64_t *stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
+         << "(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
             "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv) {\n";
     body << "  std::vector<uint64_t> locals(" << localCount << "ull, 0ull);\n";
     body << "  std::size_t pc = 0;\n";
@@ -1451,7 +1500,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   }
 
   body << "static int64_t ps_entry_" << static_cast<size_t>(module.entryIndex) << "(int argc, char **argv) {\n";
-  body << "  uint64_t stack[1024] = {};\n";
+  body << "  PsStack stack(1024ull);\n";
   body << "  std::size_t sp = 0;\n";
   body << "  std::vector<uint64_t> heapSlots;\n";
   body << "  std::vector<PsHeapAllocation> heapAllocations;\n";
