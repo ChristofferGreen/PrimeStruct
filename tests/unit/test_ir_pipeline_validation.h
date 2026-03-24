@@ -12911,6 +12911,68 @@ TEST_CASE("ir lowerer flow buffer helper source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer flow control helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path flowHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowHelpers.cpp";
+  const std::filesystem::path flowControlHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowControlHelpers.cpp";
+  REQUIRE(std::filesystem::exists(flowHelpersPath));
+  REQUIRE(std::filesystem::exists(flowControlHelpersPath));
+
+  const std::string flowHelpersSource = readText(flowHelpersPath);
+  const std::string flowControlHelpersSource = readText(flowControlHelpersPath);
+
+  CHECK(flowHelpersSource.find("void emitFileCloseIfValid(") == std::string::npos);
+  CHECK(flowHelpersSource.find("void emitFileScopeCleanup(") == std::string::npos);
+  CHECK(flowHelpersSource.find("void emitAllFileScopeCleanup(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool emitStructCopyFromPtrs(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool emitStructCopySlots(") == std::string::npos);
+  CHECK(flowHelpersSource.find("void emitDisarmTemporaryStructAfterCopy(") == std::string::npos);
+  CHECK(flowHelpersSource.find("const char *resolveGpuBuiltinLocalName(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool emitGpuBuiltinLoad(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool resolveCountedLoopKind(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool emitCountedLoopPrologue(") == std::string::npos);
+  CHECK(flowHelpersSource.find("void emitCountedLoopIterationStep(") == std::string::npos);
+  CHECK(flowHelpersSource.find("void patchCountedLoopEnd(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool emitBodyStatements(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool emitBodyStatementsWithFileScope(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool declareForConditionBinding(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool emitForConditionBindingInit(") == std::string::npos);
+
+  CHECK(flowControlHelpersSource.find("void emitFileCloseIfValid(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("void emitFileScopeCleanup(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("void emitAllFileScopeCleanup(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("bool emitStructCopyFromPtrs(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("bool emitStructCopySlots(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("void emitDisarmTemporaryStructAfterCopy(") !=
+        std::string::npos);
+  CHECK(flowControlHelpersSource.find("const char *resolveGpuBuiltinLocalName(") !=
+        std::string::npos);
+  CHECK(flowControlHelpersSource.find("bool emitGpuBuiltinLoad(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("bool resolveCountedLoopKind(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("bool emitCountedLoopPrologue(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("void emitCountedLoopIterationStep(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("void patchCountedLoopEnd(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("bool emitBodyStatements(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("bool emitBodyStatementsWithFileScope(") !=
+        std::string::npos);
+  CHECK(flowControlHelpersSource.find("bool declareForConditionBinding(") != std::string::npos);
+  CHECK(flowControlHelpersSource.find("bool emitForConditionBindingInit(") != std::string::npos);
+}
+
 TEST_CASE("vm heap helpers source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -50860,6 +50922,45 @@ TEST_CASE("ir lowerer flow helpers emit struct copy sequences") {
   instructions.clear();
   CHECK(primec::ir_lowerer::emitStructCopyFromPtrs(instructions, 2, 3, 0));
   CHECK(instructions.empty());
+
+  std::vector<primec::IrInstruction> disarmInstructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    disarmInstructions.push_back({op, imm});
+  };
+  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+      emitInstruction,
+      17,
+      "/std/collections/experimental_vector/Vector");
+  REQUIRE(disarmInstructions.size() == 6);
+  CHECK(disarmInstructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(disarmInstructions[0].imm == 17);
+  CHECK(disarmInstructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(disarmInstructions[1].imm == 48);
+  CHECK(disarmInstructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(disarmInstructions[3].op == primec::IrOpcode::PushI32);
+  CHECK(disarmInstructions[3].imm == 0);
+  CHECK(disarmInstructions[4].op == primec::IrOpcode::StoreIndirect);
+  CHECK(disarmInstructions[5].op == primec::IrOpcode::Pop);
+
+  disarmInstructions.clear();
+  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+      emitInstruction,
+      19,
+      "/std/collections/experimental_map/Map__i32_i32");
+  REQUIRE(disarmInstructions.size() == 12);
+  CHECK(disarmInstructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(disarmInstructions[0].imm == 19);
+  CHECK(disarmInstructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(disarmInstructions[1].imm == 48);
+  CHECK(disarmInstructions[7].op == primec::IrOpcode::PushI64);
+  CHECK(disarmInstructions[7].imm == 112);
+
+  disarmInstructions.clear();
+  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+      emitInstruction,
+      21,
+      "/pkg/Widget");
+  CHECK(disarmInstructions.empty());
 }
 
 TEST_CASE("ir lowerer flow helpers emit compare-to-zero sequences") {
