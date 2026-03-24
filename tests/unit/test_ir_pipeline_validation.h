@@ -35759,6 +35759,230 @@ TEST_CASE("ir lowerer inline param helper materializes struct pointer variadic a
   CHECK(instructions[7].imm == 3u);
 }
 
+TEST_CASE("ir lowerer inline param helper materializes scalar reference variadic args packs from direct location(reference) expressions") {
+  primec::Expr valuesParam;
+  valuesParam.kind = primec::Expr::Kind::Name;
+  valuesParam.isBinding = true;
+  valuesParam.name = "values";
+
+  primec::Expr firstTarget;
+  firstTarget.kind = primec::Expr::Kind::Name;
+  firstTarget.name = "left";
+  primec::Expr firstArg;
+  firstArg.kind = primec::Expr::Kind::Call;
+  firstArg.name = "location";
+  firstArg.args.push_back(firstTarget);
+  firstArg.argNames.push_back(std::nullopt);
+
+  primec::Expr secondTarget;
+  secondTarget.kind = primec::Expr::Kind::Name;
+  secondTarget.name = "right";
+  primec::Expr secondArg;
+  secondArg.kind = primec::Expr::Kind::Call;
+  secondArg.name = "location";
+  secondArg.args.push_back(secondTarget);
+  secondArg.argNames.push_back(std::nullopt);
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo leftInfo;
+  leftInfo.index = 21;
+  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  callerLocals.emplace("left", leftInfo);
+
+  primec::ir_lowerer::LocalInfo rightInfo;
+  rightInfo.index = 22;
+  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  callerLocals.emplace("right", rightInfo);
+
+  int32_t nextLocal = 3;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {valuesParam},
+      {nullptr},
+      {&firstArg, &secondArg},
+      0,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.isArgsPack = true;
+        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
+        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
+            arg.args.front().kind != primec::Expr::Kind::Name) {
+          return false;
+        }
+        auto it = locals.find(arg.args.front().name);
+        if (it == locals.end()) {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+        return true;
+      },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error));
+
+  CHECK(error.empty());
+  CHECK(nextLocal == 7);
+  REQUIRE(calleeLocals.count("values") == 1u);
+  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
+  REQUIRE(instructions.size() == 8u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 2u);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 4u);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].imm == 21u);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 5u);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 22u);
+  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[5].imm == 6u);
+  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[6].imm == 4u);
+  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[7].imm == 3u);
+}
+
+TEST_CASE("ir lowerer inline param helper materializes struct reference variadic args packs from direct location(reference) expressions") {
+  primec::Expr valuesParam;
+  valuesParam.kind = primec::Expr::Kind::Name;
+  valuesParam.isBinding = true;
+  valuesParam.name = "values";
+
+  primec::Expr firstTarget;
+  firstTarget.kind = primec::Expr::Kind::Name;
+  firstTarget.name = "left";
+  primec::Expr firstArg;
+  firstArg.kind = primec::Expr::Kind::Call;
+  firstArg.name = "location";
+  firstArg.args.push_back(firstTarget);
+  firstArg.argNames.push_back(std::nullopt);
+
+  primec::Expr secondTarget;
+  secondTarget.kind = primec::Expr::Kind::Name;
+  secondTarget.name = "right";
+  primec::Expr secondArg;
+  secondArg.kind = primec::Expr::Kind::Call;
+  secondArg.name = "location";
+  secondArg.args.push_back(secondTarget);
+  secondArg.argNames.push_back(std::nullopt);
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo leftInfo;
+  leftInfo.index = 21;
+  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  leftInfo.structTypeName = "/pkg/Pair";
+  callerLocals.emplace("left", leftInfo);
+
+  primec::ir_lowerer::LocalInfo rightInfo;
+  rightInfo.index = 22;
+  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  rightInfo.structTypeName = "/pkg/Pair";
+  callerLocals.emplace("right", rightInfo);
+
+  int32_t nextLocal = 3;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {valuesParam},
+      {nullptr},
+      {&firstArg, &secondArg},
+      0,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        infoOut.isArgsPack = true;
+        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+        infoOut.structTypeName = "/pkg/Pair";
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
+        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
+            arg.args.front().kind != primec::Expr::Kind::Name) {
+          return false;
+        }
+        auto it = locals.find(arg.args.front().name);
+        if (it == locals.end()) {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+        return true;
+      },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error));
+
+  CHECK(error.empty());
+  CHECK(nextLocal == 7);
+  REQUIRE(calleeLocals.count("values") == 1u);
+  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
+  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
+  REQUIRE(instructions.size() == 8u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 2u);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 4u);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].imm == 21u);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 5u);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 22u);
+  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[5].imm == 6u);
+  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[6].imm == 4u);
+  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[7].imm == 3u);
+}
+
 TEST_CASE("ir lowerer inline param helper rejects direct location(reference) pointer variadic type mismatch") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;

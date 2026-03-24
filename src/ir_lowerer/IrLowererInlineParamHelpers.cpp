@@ -84,9 +84,6 @@ bool emitInlineDefinitionCallParameters(
           return false;
         }
         if (targetInfo.kind == LocalInfo::Kind::Reference) {
-          if (expectedKind != LocalInfo::Kind::Pointer) {
-            return false;
-          }
           if (expectsArray) {
             return targetInfo.referenceToArray && targetInfo.valueKind == paramInfo.valueKind;
           }
