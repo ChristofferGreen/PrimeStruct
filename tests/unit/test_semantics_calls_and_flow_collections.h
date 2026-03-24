@@ -1837,6 +1837,25 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("declared canonical map access positional reorder keeps key diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/at([/std/collections/map<string, i32>] values, [string] key) {
+  return(86i32)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(/std/collections/map/at(1i32, values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
+}
+
 TEST_CASE("map wrapper temporary capacity reports vector target diagnostic") {
   const std::string source = R"(
 wrapMapAuto() {
@@ -9951,7 +9970,7 @@ forward_ptrs([args<Pointer<File<Write>>>] values) {
 forward_ptrs_mixed([args<Pointer<File<Write>>>] values) {
   [File<Write>] extra{File<Write>("extra_named_ptr.txt"utf8)?}
   [Pointer<File<Write>>] extra_ptr{location(extra)}
-  return(score_ptrs([spread] values, extra_ptr))
+  return(score_ptrs(extra_ptr, [spread] values))
 }
 
 [return<int> effects(file_write) on_error<FileError, /swallow_file_error>]
@@ -10019,7 +10038,7 @@ forward_refs([args<Reference<File<Read>>>] values) {
 forward_refs_mixed([args<Reference<File<Read>>>] values) {
   [File<Read>] extra{File<Read>("extra_named_ref.txt"utf8)?}
   [Reference<File<Read>>] extra_ref{location(extra)}
-  return(score_refs([spread] values, extra_ref))
+  return(score_refs(extra_ref, [spread] values))
 }
 
 [return<int> effects(file_read) on_error<FileError, /swallow_file_error>]
@@ -10040,7 +10059,7 @@ forward_ptrs([args<Pointer<File<Read>>>] values) {
 forward_ptrs_mixed([args<Pointer<File<Read>>>] values) {
   [File<Read>] extra{File<Read>("extra_named_ptr.txt"utf8)?}
   [Pointer<File<Read>>] extra_ptr{location(extra)}
-  return(score_ptrs([spread] values, extra_ptr))
+  return(score_ptrs(extra_ptr, [spread] values))
 }
 
 [return<int> effects(file_read) on_error<FileError, /swallow_file_error>]

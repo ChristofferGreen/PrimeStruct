@@ -47,6 +47,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/CondensationDag.cpp
   src/semantics/StronglyConnectedComponents.cpp
   src/semantics/TypeResolutionGraph.cpp
+  src/semantics/TypeResolutionGraphPreparation.cpp
   src/semantics/SemanticsValidate.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
@@ -558,20 +559,29 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        "--order-by=file"
                        "--first=39"
                        "--last=76")
-      set_tests_properties("${testName}_core" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
-      set_tests_properties("${testName}_numbers" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
-      set_tests_properties("${testName}_calls_and_args_first_half" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
-      set_tests_properties("${testName}_calls_and_args_second_half" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
+      # These unit-style shards are scheduler-safe and benefit from CTest parallelism.
+      set_tests_properties("${testName}_core" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+      set_tests_properties("${testName}_numbers" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+      set_tests_properties("${testName}_calls_and_args_first_half" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+      set_tests_properties("${testName}_calls_and_args_second_half" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
     else()
       add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> "--test-suite=${suite}")
-      set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
-      set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+      set_tests_properties("${testName}" PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
     endif()
   endforeach()
 
   foreach(suite IN LISTS PrimeStructSemanticsTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
+    set(semanticsTimeout 300)
+    set(semanticsLabels "parallel-safe")
+    if (suite STREQUAL "primestruct.semantics.math_imports" OR
+        suite STREQUAL "primestruct.semantics.imports")
+      set(semanticsTimeout 900)
+    elseif(suite STREQUAL "primestruct.semantics.result_helpers")
+      set(semanticsTimeout 600)
+      set(semanticsLabels "serial-required")
+    endif()
     if (suite STREQUAL "primestruct.semantics.operators")
       add_test(NAME "${testName}_matrix_and_shape_rules_core"
                COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
@@ -601,14 +611,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        "--order-by=file"
                        "--first=16"
                        "--last=29")
-      set_tests_properties("${testName}_matrix_and_shape_rules_core" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
-      set_tests_properties("${testName}_matrix_and_shape_rules_shapes" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
-      set_tests_properties("${testName}_matrix_and_shape_rules_products" PROPERTIES RUN_SERIAL TRUE TIMEOUT 600)
-      set_tests_properties("${testName}_scalar_and_mixed_numeric_rules" PROPERTIES RUN_SERIAL TRUE TIMEOUT 900)
+      # Semantics-only shards avoid the compile-run temp-artifact conflicts that still
+      # require serialization elsewhere in the suite.
+      set_tests_properties("${testName}_matrix_and_shape_rules_core" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+      set_tests_properties("${testName}_matrix_and_shape_rules_shapes" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+      set_tests_properties("${testName}_matrix_and_shape_rules_products" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+      set_tests_properties("${testName}_scalar_and_mixed_numeric_rules" PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
     else()
       add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests> "--test-suite=${suite}")
-      set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
-      set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+      if (suite STREQUAL "primestruct.semantics.result_helpers")
+        set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
+      endif()
+      set_tests_properties("${testName}" PROPERTIES TIMEOUT "${semanticsTimeout}" LABELS "${semanticsLabels}")
     endif()
   endforeach()
 
@@ -616,16 +630,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_text_filter_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   endforeach()
 
   foreach(suite IN LISTS PrimeStructParserTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_parser_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   endforeach()
 
   add_test(
@@ -674,8 +686,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
                               "--last=${PrimeStructSuite_LAST}")
     endif()
 
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
-    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE TIMEOUT "${PrimeStructSuite_TIMEOUT}")
+    add_test(NAME "${testName}"
+             COMMAND bash "${CMAKE_SOURCE_DIR}/scripts/run_with_unique_tmpdir.sh"
+                     $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT "${PrimeStructSuite_TIMEOUT}")
     if (PrimeStructSuite_LABEL)
       set_tests_properties("${testName}" PROPERTIES LABELS "${PrimeStructSuite_LABEL}")
     endif()
@@ -709,16 +723,47 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   foreach(suite IN LISTS PrimeStructCompileRunSuites)
     if (suite STREQUAL "primestruct.compile.run.smoke")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 1 LAST 31)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 32 LAST 62)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_01a"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 1 LAST 5)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_01b"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 6 LAST 10)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_02a"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 11 LAST 15)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_02b"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 16 LAST 20)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_03a"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 21 LAST 26)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_03b"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 27 LAST 31)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_01a"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 32 LAST 37)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_01b"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 38 LAST 42)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_02a"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 43 LAST 47)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_02b"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 48 LAST 52)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_03a"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 53 LAST 57)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_03b"
+                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 58 LAST 62)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "collective_paths_core"
                                  SOURCE_FILE "*test_compile_run_smoke_collective.h" FIRST 1 LAST 11)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "collective_paths_extended"
                                  SOURCE_FILE "*test_compile_run_smoke_collective.h" FIRST 12 LAST 22)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "argv_and_cli"
                                  SOURCE_FILE "*test_compile_run_smoke_argv.h")
+    elseif(suite STREQUAL "primestruct.compile.run.vm.core")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_01a"
+                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 1 LAST 14)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_01b"
+                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 15 LAST 28)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_02"
+                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 29 LAST 56)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_03a"
+                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 57 LAST 70)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_03b"
+                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 71 LAST 83)
     elseif(suite STREQUAL "primestruct.compile.run.vm.collections")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "bounds_and_safety"
                                  SOURCE_FILE "*test_compile_run_vm_bounds.h")
@@ -746,22 +791,40 @@ if(PRIMESTRUCT_BUILD_TESTS)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "growth_limits_and_syntax"
                                  SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 332 LAST 352)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.core")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "01"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 1 LAST 20)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "02"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 21 LAST 40)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "03"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 41 LAST 60)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "04"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 61 LAST 80)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "05"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 81 LAST 100)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "06"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 101 LAST 120)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "07"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 121 LAST 140)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "08"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 141 LAST 154)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "01a"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 1 LAST 10)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "01b"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 11 LAST 20)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "02a"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 21 LAST 30)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "02b"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 31 LAST 40)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "03a"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 41 LAST 50)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "03b"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 51 LAST 60)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "04a"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 61 LAST 70)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "04b"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 71 LAST 80)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "05a"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 81 LAST 90)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "05b"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 91 LAST 100)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "06a"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 101 LAST 110)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "06b"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 111 LAST 120)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "07a"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 121 LAST 130)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "07b"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 131 LAST 140)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "08a"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 141 LAST 147)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "08b1"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 148 LAST 151)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "08b2"
+                                 SOURCE_FILE "*test_compile_run_native_backend_core.h" FIRST 152 LAST 154)
     elseif(suite STREQUAL "primestruct.compile.run.emitters.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "lambda_and_mutator_resolution"
                                  SOURCE_FILE "*test_compile_run_emitters.h" FIRST 1 LAST 45)

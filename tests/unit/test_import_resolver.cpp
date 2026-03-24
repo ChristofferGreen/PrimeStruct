@@ -204,7 +204,7 @@ TEST_CASE("bare slash import does not use absolute filesystem path") {
   std::string error;
   primec::ImportResolver resolver;
   CHECK(!resolver.expandImports(srcPath, source, error));
-  CHECK(error.find("failed to read import") != std::string::npos);
+  CHECK(error.find("invalid slash path identifier") != std::string::npos);
 }
 
 TEST_CASE("resolves versioned import with single quotes") {

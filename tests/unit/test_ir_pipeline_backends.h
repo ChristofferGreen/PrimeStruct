@@ -264,7 +264,7 @@ TEST_CASE("semantics validator caches base validation contexts behind a single c
   CHECK(header.find("std::unordered_set<std::string> movedBindings_;") == std::string::npos);
   CHECK(header.find("std::unordered_set<std::string> endedReferenceBorrows_;") == std::string::npos);
   CHECK(header.find("std::string currentDefinitionPath_;") == std::string::npos);
-  CHECK(build.find("definitionValidationContexts_.try_emplace(def.fullPath, makeDefinitionValidationContext(def));") !=
+  CHECK(build.find("definitionValidationContexts_.try_emplace(def.fullPath, std::move(context));") !=
         std::string::npos);
   CHECK(build.find("executionValidationContexts_.try_emplace(exec.fullPath, makeExecutionValidationContext(exec));") !=
         std::string::npos);
@@ -320,11 +320,12 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(graphHeader.find("buildTypeResolutionGraphForProgram") != std::string::npos);
   CHECK(graphHeader.find("formatTypeResolutionGraph") != std::string::npos);
   CHECK(graphSource.find("TypeResolutionGraphBuilder") != std::string::npos);
-  CHECK(graphSource.find("monomorphizeTemplates(program, entryPath, error)") != std::string::npos);
-  CHECK(graphSource.find("rewriteConvertConstructors(program, error)") != std::string::npos);
+  CHECK(graphSource.find("prepareProgramForTypeResolutionAnalysis(program, entryPath, semanticTransforms, error)") !=
+        std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraph(program)") != std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraphForProgram(std::move(program), entryPath") != std::string::npos);
   CHECK(graphSource.find("out = formatTypeResolutionGraph(graph);") != std::string::npos);
+  CHECK(cmake.find("src/semantics/TypeResolutionGraphPreparation.cpp") != std::string::npos);
   CHECK(pipeline.find("DumpStage::TypeGraph") != std::string::npos);
   CHECK(pipeline.find("dumpStage == \"type_graph\" || dumpStage == \"type-graph\"") != std::string::npos);
   CHECK(pipeline.find("semantics::buildTypeResolutionGraphForProgram(") != std::string::npos);
@@ -585,11 +586,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   const std::string primecMain = readTextFile(primecMainPath);
   const std::string primevmMain = readTextFile(primevmMainPath);
 
-  CHECK(optionsHeader.find("std::string typeResolver = \"graph\";") != std::string::npos);
-  CHECK(optionsParser.find("unsupported --type-resolver value: ") != std::string::npos);
-  CHECK(optionsParser.find("--type-resolver requires a value") != std::string::npos);
-  CHECK(semanticsHeader.find("const std::string &typeResolver = \"graph\"") != std::string::npos);
-  CHECK(semanticsValidate.find("collectDiagnostics, typeResolver") != std::string::npos);
+  CHECK(optionsHeader.find("typeResolver") == std::string::npos);
+  CHECK(optionsParser.find("--type-resolver") == std::string::npos);
+  CHECK(semanticsHeader.find("typeResolver") == std::string::npos);
+  CHECK(semanticsValidate.find("collectDiagnostics") != std::string::npos);
   CHECK(validatorHeader.find("bool inferUnknownReturnKindsGraph();") != std::string::npos);
   CHECK(validatorHeader.find("void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);") !=
         std::string::npos);
@@ -601,7 +601,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnKindGraphStep") != std::string::npos);
-  CHECK(validatorHeader.find("bool graphTypeResolverEnabled_ = false;") != std::string::npos);
+  CHECK(validatorHeader.find("graphTypeResolverEnabled_") == std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool inferQueryExprTypeText(const Expr &expr,") != std::string::npos);
@@ -1087,7 +1087,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, binding);") !=
         std::string::npos);
-  CHECK(validatorInfer.find("computeCondensationDag(") != std::string::npos);
+  CHECK(validatorInfer.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
   CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
         std::string::npos);
   CHECK(validatorInfer.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
@@ -1237,9 +1237,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(validatorInfer.find("cycle member: ") != std::string::npos);
   CHECK(validatorInfer.find("allowRecursiveReturnInference_ = false;") != std::string::npos);
   CHECK(validatorInfer.find("ensureDefinitionReturnKindReady(*defIt->second)") != std::string::npos);
-  CHECK(pipeline.find("options.typeResolver") != std::string::npos);
-  CHECK(primecMain.find("[--type-resolver legacy|graph]") != std::string::npos);
-  CHECK(primevmMain.find("[--type-resolver legacy|graph]") != std::string::npos);
+  CHECK(pipeline.find("options.typeResolver") == std::string::npos);
+  CHECK(primecMain.find("[--type-resolver legacy|graph]") == std::string::npos);
+  CHECK(primevmMain.find("[--type-resolver legacy|graph]") == std::string::npos);
 }
 
 TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
@@ -1258,7 +1258,7 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(irPipeline.find("TypeResolverPipelineSnapshot") != std::string::npos);
   CHECK(irPipeline.find("runTypeResolverPipelineSnapshot") != std::string::npos);
   CHECK(irPipeline.find("#include \"test_ir_pipeline_type_resolution_parity.h\"") != std::string::npos);
-  CHECK(parityHeader.find("legacy and graph type resolvers keep diagnostics and vm ir aligned on parity corpus") !=
+  CHECK(parityHeader.find("default type resolver keeps vm pipeline behavior stable across graph corpus") !=
         std::string::npos);
   CHECK(parityHeader.find("direct_call_local_auto_struct") != std::string::npos);
   CHECK(parityHeader.find("direct_call_local_auto_collection") != std::string::npos);
@@ -1272,7 +1272,7 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHeader.find("shared_collection_receiver_classifiers") != std::string::npos);
   CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
-  CHECK(parityHeader.find("grounded mutual recursion currently diverges between legacy and graph vm pipelines") !=
+  CHECK(parityHeader.find("graph type resolver still surfaces vm recursive-call lowering limits") !=
         std::string::npos);
 }
 

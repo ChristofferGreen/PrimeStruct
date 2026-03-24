@@ -2572,6 +2572,7 @@ struct LowerInferenceGetReturnInfoSetupInput {
   std::string *error = nullptr;
 };
 struct LowerInferenceSetupInput {
+  const Program *program = nullptr;
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   const std::unordered_map<std::string, std::string> *importAliases = nullptr;
   const std::unordered_set<std::string> *structNames = nullptr;

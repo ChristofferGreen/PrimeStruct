@@ -486,8 +486,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     }
 
     const bool probePositionalReorderedReceiver =
-        (!isStdNamespacedVectorCanonicalHelperCall ||
-         hasVisibleStdNamespacedVectorCompatibilityHelper) &&
+        !isStdNamespacedVectorCanonicalHelperCall &&
         !hasNamedArgs && expr.args.size() > 1 &&
         (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
          expr.args.front().kind == Expr::Kind::FloatLiteral ||

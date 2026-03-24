@@ -741,6 +741,10 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
           errorOut)) {
     return false;
   }
+  if (input.program == nullptr) {
+    errorOut = "native backend missing inference setup dependency: program";
+    return false;
+  }
 
   auto &returnInfoCache = stateOut.returnInfoCache;
   auto &returnInferenceStack = stateOut.returnInferenceStack;

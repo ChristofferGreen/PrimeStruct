@@ -285,9 +285,10 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<soa_vector<Particle>>]
+[return<i32>]
 main() {
-  return(soa_vector<Particle>())
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(0i32)
 }
 )";
   primec::Program program;
@@ -855,7 +856,9 @@ TEST_CASE("ir lowerer inference setup bootstrap validates dependencies") {
 }
 
 TEST_CASE("ir lowerer inference setup orchestrates callbacks") {
-  primec::Definition callee;
+  primec::Program program;
+  program.definitions.emplace_back();
+  primec::Definition &callee = program.definitions.back();
   callee.fullPath = "/callee";
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {"/callee", &callee},
@@ -867,6 +870,7 @@ TEST_CASE("ir lowerer inference setup orchestrates callbacks") {
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceSetup(
       {
+          .program = &program,
           .defMap = &defMap,
           .importAliases = &importAliases,
           .structNames = &structNames,
@@ -3117,7 +3121,9 @@ TEST_CASE("ir lowerer inference get-return-info callback setup validates depende
 }
 
 TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
-  primec::Definition definition;
+  primec::Program program;
+  program.definitions.emplace_back();
+  primec::Definition &definition = program.definitions.back();
   definition.fullPath = "/callee";
   primec::Transform returnTransform;
   returnTransform.name = "return";
@@ -3135,6 +3141,7 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceGetReturnInfoSetup(
       {
+          .program = &program,
           .defMap = &defMap,
           .returnInfoCache = &returnInfoCache,
           .returnInferenceStack = &returnInferenceStack,
@@ -3176,10 +3183,13 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
 }
 
 TEST_CASE("ir lowerer inference get-return-info setup validates dependencies") {
+  primec::Program program;
   std::function<bool(const std::string &, primec::ir_lowerer::ReturnInfo &)> getReturnInfo;
   std::string error;
   CHECK_FALSE(primec::ir_lowerer::runLowerInferenceGetReturnInfoSetup(
-      {},
+      {
+          .program = &program,
+      },
       getReturnInfo,
       error));
   CHECK(error == "native backend missing inference get-return-info setup dependency: defMap");
@@ -3187,14 +3197,18 @@ TEST_CASE("ir lowerer inference get-return-info setup validates dependencies") {
 }
 
 TEST_CASE("ir lowerer inference preserves map reference parameter info for canonical count auto wrappers") {
-  primec::Definition canonicalCountDef;
+  primec::Program program;
+  program.definitions.reserve(2);
+  program.definitions.emplace_back();
+  program.definitions.emplace_back();
+  primec::Definition &canonicalCountDef = program.definitions[0];
+  primec::Definition &projectDef = program.definitions[1];
   canonicalCountDef.fullPath = "/std/collections/map/count";
   primec::Transform countReturnTransform;
   countReturnTransform.name = "return";
   countReturnTransform.templateArgs = {"int"};
   canonicalCountDef.transforms.push_back(countReturnTransform);
 
-  primec::Definition projectDef;
   projectDef.fullPath = "/project";
   primec::Transform projectReturnTransform;
   projectReturnTransform.name = "return";
@@ -3233,6 +3247,7 @@ TEST_CASE("ir lowerer inference preserves map reference parameter info for canon
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceSetup(
       {
+          .program = &program,
           .defMap = &defMap,
           .importAliases = &importAliases,
           .structNames = &structNames,
@@ -48041,7 +48056,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [&](primec::IrOpcode, uint64_t) {},
             error) ==
         EmitResult::Error);
-  CHECK(error == "native backend only supports Result.ok with 32-bit or string values");
+  CHECK(error == "IR backends only support Result.ok with 32-bit or string values");
   CHECK_FALSE(emitCalled);
 
   error.clear();
@@ -48126,16 +48141,17 @@ TEST_CASE("ir lowerer result helpers resolve from locals and return-info lookups
     info.resultErrorType = "MethodError";
     return true;
   };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
-      localNameExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+      localNameExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.errorType == "FileError");
 
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
-      methodCallExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+      methodCallExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK_FALSE(out.hasValue);
   CHECK(out.errorType == "MethodError");
@@ -48144,7 +48160,7 @@ TEST_CASE("ir lowerer result helpers resolve from locals and return-info lookups
   unknownName.kind = primec::Expr::Kind::Name;
   unknownName.name = "missing";
   CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
-      unknownName, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+      unknownName, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
 }
 
 TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {
@@ -48168,9 +48184,10 @@ TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   const auto resolveResultExprInfo = primec::ir_lowerer::makeResolveResultExprInfoFromLocals(
-      resolveMethodCall, resolveDefinitionCall, lookupReturnInfo);
+      resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind);
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(resolveResultExprInfo(localNameExpr, locals, out));
@@ -48215,10 +48232,11 @@ TEST_CASE("ir lowerer result helpers resolve indexed args-pack Result expression
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
-      accessExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+      accessExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
@@ -48265,10 +48283,11 @@ TEST_CASE("ir lowerer result helpers resolve indexed args-pack file handle metho
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
-      writeExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+      writeExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK_FALSE(out.hasValue);
   CHECK(out.errorType == "FileError");
@@ -48319,10 +48338,11 @@ TEST_CASE("ir lowerer result helpers resolve indexed borrowed args-pack file han
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
-      writeExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+      writeExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK_FALSE(out.hasValue);
   CHECK(out.errorType == "FileError");
@@ -48373,10 +48393,11 @@ TEST_CASE("ir lowerer result helpers resolve indexed pointer args-pack file hand
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
-      writeExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+      writeExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK_FALSE(out.hasValue);
   CHECK(out.errorType == "FileError");
@@ -48419,10 +48440,11 @@ TEST_CASE("ir lowerer result helpers resolve indexed dereferenced args-pack Resu
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
-      dereferenceExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+      dereferenceExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
@@ -48466,10 +48488,11 @@ TEST_CASE("ir lowerer result helpers resolve indexed dereferenced args-pack Resu
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
-      dereferenceExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+      dereferenceExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
