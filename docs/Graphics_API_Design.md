@@ -17,7 +17,9 @@ import/type-surface coverage, the explicit experimental `.prime`
 `GraphicsSubstrate` token/config boundary for create/acquire/submit/present
 operations, constructor-shaped `Window(...)`, `Device()`, and `Buffer<T>(count)`
 entry points that now rewrite through dedicated stdlib helpers on both the
-experimental and canonical paths, fallible `Device.create_swapchain(...)`,
+experimental and canonical paths, a private canonical `.prime`
+`GraphicsSubstrate.createWindow(...)` / `createDevice(...)` / `createQueue(...)`
+boundary behind the `/std/gfx/*` constructor helpers, fallible `Device.create_swapchain(...)`,
 `Device.create_mesh(...)`, and `Swapchain.frame()` wrapper paths, and a
 type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)` entry
 point for the locked v1 vertex wire type. The non-Result

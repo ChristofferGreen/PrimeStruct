@@ -4496,6 +4496,29 @@ main() {
   }
 }
 
+TEST_CASE("canonical gfx constructor helpers remain behind private substrate boundary") {
+  auto resolveStdlibPath = [](const std::string &name) -> std::filesystem::path {
+    std::filesystem::path path = std::filesystem::current_path() / "stdlib" / "std" / "gfx" / name;
+    if (!std::filesystem::exists(path)) {
+      path = std::filesystem::current_path().parent_path() / "stdlib" / "std" / "gfx" / name;
+    }
+    return path;
+  };
+
+  const std::filesystem::path gfxStdlibPath = resolveStdlibPath("gfx.prime");
+  REQUIRE(std::filesystem::exists(gfxStdlibPath));
+  const std::string gfxStdlib = readFile(gfxStdlibPath.string());
+
+  CHECK(gfxStdlib.find("[struct]\n  GraphicsSubstrate() {") != std::string::npos);
+  CHECK(gfxStdlib.find("createWindow([SubstrateWindowConfig] config)") != std::string::npos);
+  CHECK(gfxStdlib.find("createDevice([SubstrateDeviceConfig] config)") != std::string::npos);
+  CHECK(gfxStdlib.find("createQueue([SubstrateDeviceConfig] config)") != std::string::npos);
+  CHECK(gfxStdlib.find("GraphicsSubstrate.createWindow(config)?") != std::string::npos);
+  CHECK(gfxStdlib.find("GraphicsSubstrate.createDevice(config)?") != std::string::npos);
+  CHECK(gfxStdlib.find("GraphicsSubstrate.createQueue(config)?") != std::string::npos);
+  CHECK(gfxStdlib.find("[public struct]\n  GraphicsSubstrate() {") == std::string::npos);
+}
+
 TEST_CASE("rejects stdlib version flag") {
   const std::string source = R"(
 [return<int>]

@@ -1054,6 +1054,67 @@ main() {
   CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
+TEST_CASE("canonical gfx window constructor entry point validates through stdlib helper") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Window] window{Window([title] "PrimeStruct"utf8, [width] 1280i32, [height] 720i32)?}
+  return(plus(window.width, window.height))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical gfx profile literals keep deterministic reject") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Device] device{Device([profile] "metal-osx"utf8)?}
+  return(device.token)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument: profile") != std::string::npos);
+}
+
+TEST_CASE("canonical gfx device constructor entry point validates through stdlib helper") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Device] device{Device()?}
+  [Queue] queue{device.default_queue()}
+  return(plus(device.token, queue.token))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental gfx Buffer constructor entry point validates through builtin rewrite") {
   const std::string source = R"(
 import /std/gfx/experimental/*

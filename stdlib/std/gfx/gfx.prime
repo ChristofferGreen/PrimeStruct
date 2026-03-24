@@ -239,6 +239,51 @@ namespace std {
     }
   }
 
+  [struct]
+  GraphicsSubstrate() {
+  }
+
+  [struct]
+  SubstrateWindowConfig() {
+    [i32] hostToken{0i32}
+    [i32] width{0i32}
+    [i32] height{0i32}
+  }
+
+  [struct]
+  SubstrateDeviceConfig() {
+    [Window] window{Window([token] 0i32, [width] 0i32, [height] 0i32)}
+    [i32] deviceToken{0i32}
+    [i32] queueToken{0i32}
+  }
+
+  namespace GraphicsSubstrate {
+    [return<Result<i32, GfxError>>]
+    createWindow([SubstrateWindowConfig] config) {
+      if(or(less_than(config.hostToken, 1i32),
+            or(less_than(config.width, 1i32), less_than(config.height, 1i32)))) {
+        return(gfxErrorResult<i32>(windowCreateFailed()))
+      }
+      return(Result.ok(config.hostToken))
+    }
+
+    [return<Result<i32, GfxError>>]
+    createDevice([SubstrateDeviceConfig] config) {
+      if(or(less_than(config.window.token, 1i32), less_than(config.deviceToken, 1i32))) {
+        return(gfxErrorResult<i32>(deviceCreateFailed()))
+      }
+      return(Result.ok(config.deviceToken))
+    }
+
+    [return<Result<i32, GfxError>>]
+    createQueue([SubstrateDeviceConfig] config) {
+      if(or(less_than(config.window.token, 1i32), less_than(config.queueToken, 1i32))) {
+        return(gfxErrorResult<i32>(deviceCreateFailed()))
+      }
+      return(Result.ok(config.queueToken))
+    }
+  }
+
   [public struct]
   Buffer<T>() {
     [public i32] token{0i32}
@@ -382,16 +427,21 @@ namespace std {
 
   [return<Result<Window, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
   windowCreate([string] title, [i32] width, [i32] height) {
-    if(or(less_than(width, 1i32), less_than(height, 1i32))) {
-      return(gfxErrorResult<Window>(windowCreateFailed()))
+    [SubstrateWindowConfig] config{
+      SubstrateWindowConfig([hostToken] 1i32, [width] width, [height] height)
     }
-    return(Result.ok(Window([token] 1i32, [width] width, [height] height)))
+    [i32] windowToken{GraphicsSubstrate.createWindow(config)?}
+    return(Result.ok(Window([token] windowToken, [width] width, [height] height)))
   }
 
   [return<Result<Device, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
   deviceCreate() {
-    [i32] deviceToken{2i32}
-    [i32] queueToken{3i32}
+    [Window] window{Window([token] 1i32, [width] 1i32, [height] 1i32)}
+    [SubstrateDeviceConfig] config{
+      SubstrateDeviceConfig([window] window, [deviceToken] 2i32, [queueToken] 3i32)
+    }
+    [i32] deviceToken{GraphicsSubstrate.createDevice(config)?}
+    [i32] queueToken{GraphicsSubstrate.createQueue(config)?}
     if(not_equal(queueToken, plus(deviceToken, 1i32))) {
       return(gfxErrorResult<Device>(deviceCreateFailed()))
     }
