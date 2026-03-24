@@ -20,6 +20,7 @@ namespace primec {
 using namespace emitter;
 
 #include "EmitterEmitSetup.h"
+#include "EmitterEmitSetupReturnInference.h"
 #include "EmitterEmitPrelude.h"
 #include "EmitterEmitBody.h"
 

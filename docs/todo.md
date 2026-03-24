@@ -171,7 +171,8 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Split `EmitterExprCalls.h` `Result.ok/error/why/map/and_then/map2` plus bare `try(...)` expression emission into `src/emitter/EmitterExprResultCalls.h`.
 - ✓ Split `EmitterExprCalls.h` collection helper path/type-probe/access fallback logic into `src/emitter/EmitterExprCollectionTypeHelpers.h` plus `src/emitter/EmitterExprCollectionFallbackHelpers.h`.
 - ✓ Split `EmitterExprCalls.h` file and collection access builtin emission paths into `src/emitter/EmitterExprCollectionBuiltinCalls.h`, `src/emitter/EmitterExprFileAccessCalls.h`, and `src/emitter/EmitterExprCollectionAccessAtCalls.h`.
-- ○ Refactor `src/emitter/EmitterEmitSetup.h` (`1458` lines) below the `700`-line target.
+- ✓ Refactor `src/emitter/EmitterEmitSetup.h` (`545` lines) below the `700`-line target by extracting setup return-kind and struct-return inference into `src/emitter/EmitterEmitSetupReturnInference.h`.
+- ✓ Split `EmitterEmitSetup.h` setup return-kind and struct-return inference into `src/emitter/EmitterEmitSetupReturnInference.h`.
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp` (`1427` lines) below the `700`-line target.
 - ○ Refactor `src/IrToCppEmitter.cpp` (`1421` lines) below the `700`-line target.
 - ○ Refactor `src/parser/ParserCore.cpp` (`1289` lines) below the `700`-line target.
@@ -187,6 +188,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/IrPrinter.cpp` (`943` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidator.cpp` (`938` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp` (`924` lines) below the `700`-line target.
+- ○ Refactor `src/emitter/EmitterEmitSetupReturnInference.h` (`914` lines) below the `700`-line target.
 - ○ Refactor `src/text_filter/TextFilterPipelineEnvelope.cpp` (`906` lines) below the `700`-line target.
 - ○ Refactor `src/primevm_main.cpp` (`868` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterHelpersTypes.cpp` (`857` lines) below the `700`-line target.

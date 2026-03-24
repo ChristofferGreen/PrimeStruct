@@ -678,6 +678,37 @@ main() {
   CHECK(cpp.find("ps_try_value<int32_t>(") != std::string::npos);
 }
 
+TEST_CASE("emitter cpp infers auto struct returns through if blocks") {
+  const std::string source = R"(
+[struct]
+Point() {
+  [i32] value{0i32}
+}
+
+[return<auto>]
+makePoint([bool] choose) {
+  if(choose,
+     then() { return(Point(1i32)) },
+     else() { return(Point(2i32)) })
+}
+
+[return<int>]
+main() {
+  [Point] point{makePoint(true)}
+  return(point.value)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::Emitter emitter;
+  const std::string cpp = emitter.emitCpp(program, "/main");
+  CHECK(cpp.find("Point makePoint(") != std::string::npos);
+  CHECK(cpp.find("return Point_ctor(") != std::string::npos);
+}
+
 TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
   const std::string source = R"(
 Particle() {
@@ -9586,12 +9617,25 @@ TEST_CASE("emitter emit setup source delegation stays stable") {
   CHECK(emitterSetupHeaderSource.find("runEmitterEmitSetupMathImport(program)") != std::string::npos);
   CHECK(emitterSetupHeaderSource.find("runEmitterEmitSetupLifecycleHelperMatchStep(def.fullPath)") !=
         std::string::npos);
+  CHECK(emitterSetupHeaderSource.find("inferDefinitionReturnKind = [&](const Definition &def)") ==
+        std::string::npos);
+  CHECK(emitterSetupHeaderSource.find("collectionHelperPathCandidates(resolvedPath)") == std::string::npos);
+
+  const std::filesystem::path emitterSetupReturnInferenceHeaderPath =
+      repoRoot / "src" / "emitter" / "EmitterEmitSetupReturnInference.h";
+  REQUIRE(std::filesystem::exists(emitterSetupReturnInferenceHeaderPath));
+  const std::string emitterSetupReturnInferenceHeaderSource = readText(emitterSetupReturnInferenceHeaderPath);
+  CHECK(emitterSetupReturnInferenceHeaderSource.find("inferDefinitionReturnKind = [&](const Definition &def)") !=
+        std::string::npos);
+  CHECK(emitterSetupReturnInferenceHeaderSource.find("collectionHelperPathCandidates(resolvedPath)") !=
+        std::string::npos);
 
   const std::filesystem::path emitterEmitPath = repoRoot / "src" / "emitter" / "EmitterEmit.cpp";
   REQUIRE(std::filesystem::exists(emitterEmitPath));
   const std::string emitterEmitSource = readText(emitterEmitPath);
   CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupMathImport.h\"") != std::string::npos);
   CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupLifecycleHelperStep.h\"") != std::string::npos);
+  CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupReturnInference.h\"") != std::string::npos);
 }
 
 TEST_CASE("emitter expr source delegation stays stable") {
