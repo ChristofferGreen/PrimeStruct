@@ -7602,6 +7602,57 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("native backend supports map Result payloads on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+import /std/collections/*
+
+[return<Result<map<i32, i32>, FileError>>]
+make_values() {
+  return(Result.ok(map<i32, i32>(1i32, 7i32, 3i32, 9i32)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [map<i32, i32>] direct{try(make_values())}
+  [map<i32, i32>] mapped{try(Result.map(make_values(), []([map<i32, i32>] values) {
+    return(values)
+  }))}
+  [map<i32, i32>] chained{try(Result.and_then(make_values(), []([map<i32, i32>] values) {
+    return(Result.ok(values))
+  }))}
+  [map<i32, i32>] summed{try(Result.map2(make_values(), make_values(), []([map<i32, i32>] left, [map<i32, i32>] right) {
+    return(right)
+  }))}
+  print_line(mapCount<i32, i32>(direct))
+  print_line(try(direct.tryAt(1i32)))
+  print_line(try(mapped.tryAt(3i32)))
+  print_line(try(chained.tryAt(1i32)))
+  print_line(mapCount<i32, i32>(summed))
+  print_line(try(summed.tryAt(3i32)))
+  return(plus(try(direct.tryAt(1i32)),
+              plus(try(mapped.tryAt(3i32)),
+                   plus(try(chained.tryAt(1i32)), try(summed.tryAt(3i32))))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_result_map_payload_ir_backed.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_map_payload_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_map_payload_ir_backed_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 32);
+  CHECK(readFile(outPath) == "2\n7\n9\n7\n2\n9\n");
+}
+
 TEST_CASE("native backend rejects auto-bound direct Result combinator try consumers") {
   const std::string source = R"(
 import /std/file/*

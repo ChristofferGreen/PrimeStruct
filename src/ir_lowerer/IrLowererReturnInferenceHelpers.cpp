@@ -191,12 +191,13 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
       info.resultHasValue = resultHasValue;
       std::string resultValueType;
       info.resultValueCollectionKind = LocalInfo::Kind::Value;
+      info.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
       info.resultValueIsFileHandle =
           resultHasValue && extractResultValueTypeText(typeName, resultValueType) &&
           isFileHandleTypeText(resultValueType);
       if (resultHasValue && !resultValueType.empty()) {
         resolveSupportedResultCollectionType(
-            resultValueType, info.resultValueCollectionKind, info.resultValueKind);
+            resultValueType, info.resultValueCollectionKind, info.resultValueKind, &info.resultValueMapKeyKind);
       }
       if (info.resultValueIsFileHandle) {
         info.resultValueKind = LocalInfo::ValueKind::Int64;
@@ -287,11 +288,13 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
       bindingInfo.resultHasValue = (transform.templateArgs.size() == 2);
       bindingInfo.resultValueKind = LocalInfo::ValueKind::Unknown;
       bindingInfo.resultValueCollectionKind = LocalInfo::Kind::Value;
+      bindingInfo.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
       if (bindingInfo.resultHasValue && !transform.templateArgs.empty()) {
         resolveSupportedResultCollectionType(
             transform.templateArgs.front(),
             bindingInfo.resultValueCollectionKind,
-            bindingInfo.resultValueKind);
+            bindingInfo.resultValueKind,
+            &bindingInfo.resultValueMapKeyKind);
         if (bindingInfo.resultValueCollectionKind == LocalInfo::Kind::Value) {
           bindingInfo.resultValueKind = valueKindFromTypeName(transform.templateArgs.front());
         }

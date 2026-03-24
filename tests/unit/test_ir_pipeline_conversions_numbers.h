@@ -585,13 +585,66 @@ main() {
   CHECK(result == 11);
 }
 
-TEST_CASE("ir lowerer rejects Result payloads that remain unsupported") {
+TEST_CASE("ir lowerer supports map Result payloads") {
   const std::string source = R"(
 import /std/file/*
+import /std/collections/*
 
+[return<Result<map<i32, i32>, FileError>>]
+make_values() {
+  return(Result.ok(map<i32, i32>(1i32, 7i32, 3i32, 9i32)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [map<i32, i32>] direct{try(make_values())}
+  [map<i32, i32>] mapped{try(Result.map(make_values(), []([map<i32, i32>] values) {
+    return(values)
+  }))}
+  [map<i32, i32>] chained{try(Result.and_then(make_values(), []([map<i32, i32>] values) {
+    return(Result.ok(values))
+  }))}
+  [map<i32, i32>] summed{try(Result.map2(make_values(), make_values(), []([map<i32, i32>] left, [map<i32, i32>] right) {
+    return(right)
+  }))}
+  print_line(mapCount<i32, i32>(direct))
+  print_line(try(direct.tryAt(1i32)))
+  print_line(try(mapped.tryAt(3i32)))
+  print_line(try(chained.tryAt(1i32)))
+  print_line(mapCount<i32, i32>(summed))
+  print_line(try(summed.tryAt(3i32)))
+  return(plus(try(direct.tryAt(1i32)),
+              plus(try(mapped.tryAt(3i32)),
+                   plus(try(chained.tryAt(1i32)), try(summed.tryAt(3i32))))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 32);
+}
+
+TEST_CASE("ir lowerer rejects Buffer Result payloads that remain unsupported") {
+  const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [Buffer<i32>] values{Buffer<i32>(3i32)}
   [auto] wrapped{Result.ok(values)}
   print_line(Result.error(wrapped))
   return(0i32)

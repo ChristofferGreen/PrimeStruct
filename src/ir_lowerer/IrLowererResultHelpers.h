@@ -18,6 +18,7 @@ struct ResultExprInfo {
   bool hasValue = false;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::Kind valueCollectionKind = LocalInfo::Kind::Value;
+  LocalInfo::ValueKind valueMapKeyKind = LocalInfo::ValueKind::Unknown;
   bool valueIsFileHandle = false;
   std::string valueStructType;
   std::string errorType;
@@ -29,6 +30,7 @@ struct LocalResultInfo {
   bool resultHasValue = false;
   LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::Kind resultValueCollectionKind = LocalInfo::Kind::Value;
+  LocalInfo::ValueKind resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
   bool resultValueIsFileHandle = false;
   std::string resultValueStructType;
   std::string resultErrorType;
@@ -198,7 +200,8 @@ bool emitResultWhyCallWithComposedOps(
 bool isSupportedPackedResultCollectionKind(LocalInfo::Kind kind);
 bool resolveSupportedResultCollectionType(const std::string &typeText,
                                           LocalInfo::Kind &collectionKindOut,
-                                          LocalInfo::ValueKind &valueKindOut);
+                                          LocalInfo::ValueKind &valueKindOut,
+                                          LocalInfo::ValueKind *mapKeyKindOut = nullptr);
 bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind);
 bool isSupportedPackedResultValueInfo(const ResultExprInfo &info,
                                      const std::function<bool(const std::string &, StructSlotLayoutInfo &)>

@@ -588,15 +588,24 @@
             }
             std::string collectionName;
             if (!valueExpr.isMethodCall && getBuiltinCollectionName(valueExpr, collectionName) &&
-                valueExpr.templateArgs.size() == 1) {
+                ((collectionName == "array" || collectionName == "vector") && valueExpr.templateArgs.size() == 1 ||
+                 (collectionName == "map" && valueExpr.templateArgs.size() == 2))) {
               if (collectionName == "array") {
                 collectionKindOut = LocalInfo::Kind::Array;
               } else if (collectionName == "vector") {
                 collectionKindOut = LocalInfo::Kind::Vector;
+              } else if (collectionName == "map") {
+                if (valueKindFromTypeName(trimTemplateTypeText(valueExpr.templateArgs.front())) ==
+                    LocalInfo::ValueKind::Unknown) {
+                  return false;
+                }
+                collectionKindOut = LocalInfo::Kind::Map;
               } else {
                 return false;
               }
-              collectionValueKindOut = valueKindFromTypeName(trimTemplateTypeText(valueExpr.templateArgs.front()));
+              collectionValueKindOut = valueKindFromTypeName(
+                  trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::Map ? valueExpr.templateArgs.back()
+                                                                                : valueExpr.templateArgs.front()));
               return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
             }
             const Definition *callee = resolveDefinitionCall(valueExpr);
@@ -605,18 +614,34 @@
             }
             std::string declaredCollection;
             std::vector<std::string> declaredCollectionArgs;
-            if (!ir_lowerer::inferDeclaredReturnCollection(*callee, declaredCollection, declaredCollectionArgs) ||
-                declaredCollectionArgs.size() != 1) {
+            if (!ir_lowerer::inferDeclaredReturnCollection(*callee, declaredCollection, declaredCollectionArgs)) {
               return false;
             }
             if (declaredCollection == "array") {
+              if (declaredCollectionArgs.size() != 1) {
+                return false;
+              }
               collectionKindOut = LocalInfo::Kind::Array;
             } else if (declaredCollection == "vector") {
+              if (declaredCollectionArgs.size() != 1) {
+                return false;
+              }
               collectionKindOut = LocalInfo::Kind::Vector;
+            } else if (declaredCollection == "map") {
+              if (declaredCollectionArgs.size() != 2) {
+                return false;
+              }
+              if (valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front())) ==
+                  LocalInfo::ValueKind::Unknown) {
+                return false;
+              }
+              collectionKindOut = LocalInfo::Kind::Map;
             } else {
               return false;
             }
-            collectionValueKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
+            collectionValueKindOut = valueKindFromTypeName(
+                trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::Map ? declaredCollectionArgs.back()
+                                                                              : declaredCollectionArgs.front()));
             return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
           };
           LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
@@ -781,6 +806,10 @@
             paramInfo.index = payloadLocal;
             paramInfo.kind = sourceResultInfo.valueCollectionKind;
             paramInfo.valueKind = sourceResultInfo.valueKind;
+            if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::Map) {
+              paramInfo.mapKeyKind = sourceResultInfo.valueMapKeyKind;
+              paramInfo.mapValueKind = sourceResultInfo.valueKind;
+            }
           } else if (!sourceResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo)) {
               error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map");
@@ -889,6 +918,10 @@
             paramInfo.index = payloadLocal;
             paramInfo.kind = sourceResultInfo.valueCollectionKind;
             paramInfo.valueKind = sourceResultInfo.valueKind;
+            if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::Map) {
+              paramInfo.mapKeyKind = sourceResultInfo.valueMapKeyKind;
+              paramInfo.mapValueKind = sourceResultInfo.valueKind;
+            }
           } else if (!sourceResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo)) {
               error = ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then");
@@ -1051,6 +1084,10 @@
             leftParamInfo.index = leftPayloadLocal;
             leftParamInfo.kind = leftResultInfo.valueCollectionKind;
             leftParamInfo.valueKind = leftResultInfo.valueKind;
+            if (leftResultInfo.valueCollectionKind == LocalInfo::Kind::Map) {
+              leftParamInfo.mapKeyKind = leftResultInfo.valueMapKeyKind;
+              leftParamInfo.mapValueKind = leftResultInfo.valueKind;
+            }
           } else if (!leftResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(leftPayloadLocal, leftResultInfo.valueStructType, leftParamInfo)) {
               error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
@@ -1074,6 +1111,10 @@
             rightParamInfo.index = rightPayloadLocal;
             rightParamInfo.kind = rightResultInfo.valueCollectionKind;
             rightParamInfo.valueKind = rightResultInfo.valueKind;
+            if (rightResultInfo.valueCollectionKind == LocalInfo::Kind::Map) {
+              rightParamInfo.mapKeyKind = rightResultInfo.valueMapKeyKind;
+              rightParamInfo.mapValueKind = rightResultInfo.valueKind;
+            }
           } else if (!rightResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(rightPayloadLocal, rightResultInfo.valueStructType, rightParamInfo)) {
               error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");

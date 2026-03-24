@@ -222,6 +222,7 @@ bool returnInfoEquals(const ReturnInfo &left, const ReturnInfo &right) {
          left.resultHasValue == right.resultHasValue &&
          left.resultValueKind == right.resultValueKind &&
          left.resultValueCollectionKind == right.resultValueCollectionKind &&
+         left.resultValueMapKeyKind == right.resultValueMapKeyKind &&
          left.resultErrorType == right.resultErrorType;
 }
 

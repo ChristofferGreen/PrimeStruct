@@ -244,10 +244,12 @@
       };
       auto assignDeclaredResultCollection = [&](const std::string &typeText) {
         info.resultValueCollectionKind = LocalInfo::Kind::Value;
+        info.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
         if (!info.resultHasValue) {
           return;
         }
-        resolveSupportedResultCollectionType(typeText, info.resultValueCollectionKind, info.resultValueKind);
+        resolveSupportedResultCollectionType(
+            typeText, info.resultValueCollectionKind, info.resultValueKind, &info.resultValueMapKeyKind);
       };
       info.isMutable = isBindingMutable(stmt);
       info.kind = kind;
@@ -272,6 +274,7 @@
           info.resultHasValue = inferredResultInfo.hasValue;
           info.resultValueKind = inferredResultInfo.valueKind;
           info.resultValueCollectionKind = inferredResultInfo.valueCollectionKind;
+          info.resultValueMapKeyKind = inferredResultInfo.valueMapKeyKind;
           info.resultValueIsFileHandle = inferredResultInfo.valueIsFileHandle;
           info.resultValueStructType = inferredResultInfo.valueStructType;
           info.resultErrorType = inferredResultInfo.errorType;
@@ -388,6 +391,7 @@
           info.resultHasValue = (transform.templateArgs.size() == 2);
           info.resultValueKind = LocalInfo::ValueKind::Unknown;
           info.resultValueCollectionKind = LocalInfo::Kind::Value;
+          info.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
           if (info.resultHasValue && !transform.templateArgs.empty()) {
             assignDeclaredResultCollection(transform.templateArgs.front());
             if (info.resultValueCollectionKind == LocalInfo::Kind::Value) {
@@ -424,6 +428,7 @@
             info.resultHasValue = resultHasValue;
             info.resultValueKind = resultValueKind;
             info.resultValueCollectionKind = LocalInfo::Kind::Value;
+            info.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
             if (info.resultHasValue) {
               std::string resultValueType;
               if (extractDeclaredResultValueType(targetType, resultValueType)) {

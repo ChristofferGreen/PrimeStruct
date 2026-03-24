@@ -886,10 +886,11 @@ Draft constraints:
   - `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept
     `i32`, `bool`, `f32`, literal-backed `string`, `File<Mode>` handles, the single-slot int-backed stdlib error
     structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), `array<T>` / `vector<T>` handles whose
-    element kinds already fit the current collection contract, and ordinary user structs that can stay on the
+    element kinds already fit the current collection contract, `map<K, V>` handles whose key/value kinds already
+    fit that same map contract, and ordinary user structs that can stay on the
     existing stack-backed struct path. Downstream `try(...)` preserves `File<Mode>` and collection handles,
     rebuilds single-slot struct payloads, and keeps multi-slot struct payloads on that same pointer-backed path on
-    VM/native; `map<K, V>`, `Buffer<T>`, and other remaining wider non-struct payloads remain unsupported.
+    VM/native; `Buffer<T>` and other remaining wider non-struct payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.
 - Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
 - VM/native consume the PSIR v16 opcode set (see design doc) and deserialization rejects unknown opcodes.
