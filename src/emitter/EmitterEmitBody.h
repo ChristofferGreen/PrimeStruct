@@ -280,7 +280,7 @@
               out << pad << type << " & " << stmt.name;
             }
           } else {
-            bool needsConst = !binding.isMutable;
+            bool needsConst = !binding.isMutable && !isAliasingBinding(binding);
             if (needsConst && type.rfind("const ", 0) == 0) {
               needsConst = false;
             }

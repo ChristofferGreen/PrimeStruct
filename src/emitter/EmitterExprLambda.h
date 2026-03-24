@@ -431,7 +431,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         }
         out << paramType << " & " << param.name;
       } else {
-        bool needsConst = !paramInfo.isMutable;
+        bool needsConst = !paramInfo.isMutable && !isAliasingBinding(paramInfo);
         if (needsConst && paramType.rfind("const ", 0) == 0) {
           needsConst = false;
         }
@@ -559,7 +559,7 @@ std::string Emitter::emitExpr(const Expr &expr,
           out << "; ";
           return;
         }
-        bool needsConst = !binding.isMutable;
+        bool needsConst = !binding.isMutable && !isAliasingBinding(binding);
         const bool useRef = !binding.isMutable && !binding.isCopy && !stmt.args.empty() && isReferenceCandidate(binding);
         if (hasExplicitType) {
           std::string type = bindingTypeToCpp(binding, stmt.namespacePrefix, importAliases, structTypeMap);

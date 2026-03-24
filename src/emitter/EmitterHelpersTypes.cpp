@@ -300,6 +300,11 @@ bool isReferenceCandidate(const BindingInfo &info) {
   return true;
 }
 
+bool isAliasingBinding(const BindingInfo &info) {
+  const std::string typeName = normalizeBindingTypeName(info.typeName);
+  return typeName == "Reference" || typeName == "Pointer";
+}
+
 std::string bindingTypeToCpp(const BindingInfo &info);
 
 std::string bindingTypeToCpp(const std::string &typeName) {
@@ -316,6 +321,13 @@ std::string bindingTypeToCpp(const std::string &typeName) {
         elemType = "void";
       }
       return elemType + " *";
+    }
+    if (base == "Reference") {
+      std::string elemType = bindingTypeToCpp(arg);
+      if (elemType.empty()) {
+        elemType = "void";
+      }
+      return "std::reference_wrapper<" + elemType + ">";
     }
     if (base == "array" || base == "vector" || base == "args") {
       std::vector<std::string> args;
@@ -451,6 +463,13 @@ std::string bindingTypeToCpp(const std::string &typeName,
         elemType = "void";
       }
       return elemType + " *";
+    }
+    if (base == "Reference") {
+      std::string elemType = bindingTypeToCpp(arg, namespacePrefix, importAliases, structTypeMap);
+      if (elemType.empty()) {
+        elemType = "void";
+      }
+      return "std::reference_wrapper<" + elemType + ">";
     }
     if (base == "array" || base == "vector" || base == "args") {
       std::vector<std::string> args;

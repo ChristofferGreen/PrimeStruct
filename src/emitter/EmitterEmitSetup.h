@@ -353,7 +353,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       out << paramType << " & " << param.name;
       return;
     }
-    bool needsConst = !paramInfo.isMutable;
+    bool needsConst = !paramInfo.isMutable && !isAliasingBinding(paramInfo);
     if (needsConst && paramType.rfind("const ", 0) == 0) {
       needsConst = false;
     }

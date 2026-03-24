@@ -34,7 +34,8 @@ EmitterExprControlBuiltinBlockBindingExplicitStepResult runEmitterExprControlBui
       out << type << " & " << stmt.name;
     }
   } else {
-    out << (needsConst ? "const " : "") << type << " " << stmt.name;
+    const bool emitConst = needsConst && !isAliasingBinding(binding);
+    out << (emitConst ? "const " : "") << type << " " << stmt.name;
   }
 
   if (!stmt.args.empty() && emitExpr) {

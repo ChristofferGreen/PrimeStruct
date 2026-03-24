@@ -7,6 +7,7 @@
   out << "#include <cstdlib>\n";
   out << "#include <cstring>\n";
   out << "#include <fcntl.h>\n";
+  out << "#include <functional>\n";
   out << "#include <string>\n";
   out << "#include <string_view>\n";
   out << "#include <sys/stat.h>\n";
@@ -26,6 +27,18 @@
   out << "template <typename T, typename Offset>\n";
   out << "static inline T *ps_pointer_add(T &ref, Offset offset) {\n";
   out << "  return ps_pointer_add(&ref, offset);\n";
+  out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline T &ps_deref(T *ptr) {\n";
+  out << "  return *ptr;\n";
+  out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline T &ps_deref(std::reference_wrapper<T> ref) {\n";
+  out << "  return ref.get();\n";
+  out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline T &ps_deref(T &ref) {\n";
+  out << "  return ref;\n";
   out << "}\n";
   out << "template <typename T>\n";
   out << "static inline T ps_builtin_abs(T value) {\n";

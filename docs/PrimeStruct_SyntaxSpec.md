@@ -430,8 +430,11 @@ Bottom-level form therefore has:
   explicit indexed `dereference(...)` receiver wrappers. Scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
   `dereference(...)`, those same scalar and struct `Reference<T>` / `Pointer<T>` packs also materialize direct explicit `location(local)` call arguments across direct calls plus pure/mixed spread forwarding, and those same scalar and struct `Pointer<T>` packs also accept direct explicit `location(ref)` call arguments when the caller local is already a `Reference<T>`,
   `Pointer<uninitialized<i32>>` plus `Reference<uninitialized<i32>>` packs also accept direct explicit `location(local)` call arguments while preserving indexed downstream `dereference(...)`-based
-  `init(...)` and `take(...)`, and struct `Pointer<T>` plus struct `Reference<T>` packs preserve indexed downstream
-  field/helper access; other unsupported non-string element support remains a separate follow-up slice.
+  `init(...)` and `take(...)`, struct `Pointer<T>` plus struct `Reference<T>` packs preserve indexed downstream
+  field/helper access, and the legacy C++ emitter now materializes borrowed `args<Reference<T>>` packs through
+  `std::reference_wrapper<T>` element storage so indexed `dereference(...)` plus borrowed uninitialized scalar/struct
+  `init(...)` / `take(...)` execute across direct/pure/mixed forwarding; other unsupported non-string element support
+  remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 

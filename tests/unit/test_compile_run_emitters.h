@@ -15570,4 +15570,71 @@ main() {
   CHECK(runCommand(exePath) == 27);
 }
 
+TEST_CASE("C++ emitter materializes variadic borrowed uninitialized struct packs with indexed init and take") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<int>]
+score_refs([args<Reference<uninitialized<Pair>>>] values) {
+  init(dereference(values[0i32]), Pair(1i32, 2i32))
+  init(dereference(values.at(1i32)), Pair(3i32, 4i32))
+  init(dereference(values.at_unsafe(2i32)), Pair(5i32, 6i32))
+  [Pair] first{take(dereference(values[0i32]))}
+  [Pair] second{take(dereference(values.at(1i32)))}
+  [Pair] third{take(dereference(values.at_unsafe(2i32)))}
+  return(plus(first.left, plus(second.right, third.left)))
+}
+
+[return<int>]
+forward([args<Reference<uninitialized<Pair>>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference<uninitialized<Pair>>>] values) {
+  [uninitialized<Pair>] extra{uninitialized<Pair>()}
+  [Reference<uninitialized<Pair>>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
+}
+
+[return<int>]
+main() {
+  [uninitialized<Pair>] a0{uninitialized<Pair>()}
+  [uninitialized<Pair>] a1{uninitialized<Pair>()}
+  [uninitialized<Pair>] a2{uninitialized<Pair>()}
+  [Reference<uninitialized<Pair>>] p0{location(a0)}
+  [Reference<uninitialized<Pair>>] p1{location(a1)}
+  [Reference<uninitialized<Pair>>] p2{location(a2)}
+
+  [uninitialized<Pair>] b0{uninitialized<Pair>()}
+  [uninitialized<Pair>] b1{uninitialized<Pair>()}
+  [uninitialized<Pair>] b2{uninitialized<Pair>()}
+  [Reference<uninitialized<Pair>>] q0{location(b0)}
+  [Reference<uninitialized<Pair>>] q1{location(b1)}
+  [Reference<uninitialized<Pair>>] q2{location(b2)}
+
+  [uninitialized<Pair>] c0{uninitialized<Pair>()}
+  [uninitialized<Pair>] c1{uninitialized<Pair>()}
+  [Reference<uninitialized<Pair>>] r0{location(c0)}
+  [Reference<uninitialized<Pair>>] r1{location(c1)}
+
+  return(plus(score_refs(p0, p1, p2),
+              plus(forward(q0, q1, q2),
+                   forward_mixed(r0, r1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_reference_uninitialized_struct.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_reference_uninitialized_struct_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 30);
+}
+
 TEST_SUITE_END();

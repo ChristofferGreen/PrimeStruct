@@ -283,8 +283,23 @@
     char pointerOp = '\0';
     if (getBuiltinPointerOperator(expr, pointerOp) && expr.args.size() == 1) {
       std::ostringstream out;
-      out << "(" << pointerOp
-          << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
+      const std::string valueExpr =
+          emitExpr(expr.args[0],
+                   nameMap,
+                   paramMap,
+                   defMap,
+                   structTypeMap,
+                   importAliases,
+                   localTypes,
+                   returnKinds,
+                   resultInfos,
+                   returnStructs,
+                   allowMathBare);
+      if (pointerOp == '*') {
+        out << "ps_deref(" << valueExpr << ")";
+      } else {
+        out << "(" << pointerOp << valueExpr << ")";
+      }
       return out.str();
     }
     std::string collection;

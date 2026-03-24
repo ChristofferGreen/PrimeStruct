@@ -31,6 +31,7 @@ bool isBindingAuxTransformName(const std::string &name);
 bool hasExplicitBindingTypeTransform(const Expr &expr);
 BindingInfo getBindingInfo(const Expr &expr);
 bool isReferenceCandidate(const BindingInfo &info);
+bool isAliasingBinding(const BindingInfo &info);
 std::string bindingTypeToCpp(const BindingInfo &info);
 std::string bindingTypeToCpp(const std::string &typeName);
 std::string bindingTypeToCpp(const BindingInfo &info,
