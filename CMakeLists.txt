@@ -649,7 +649,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_include_layers PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
 
   function(addPrimeStructDoctestSuite suite)
-    set(options)
+    set(options NO_UNIQUE_TMPDIR)
     set(oneValueArgs TARGET TIMEOUT LABEL SHARD_NAME FIRST LAST SOURCE_FILE TEST_CASE TEST_CASE_EXCLUDE)
     cmake_parse_arguments(PrimeStructSuite "${options}" "${oneValueArgs}" "" ${ARGN})
     if (NOT PrimeStructSuite_TARGET)
@@ -670,7 +670,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
       set(testName "${testName}_${shardId}")
     endif()
 
-    set(commandArgs "--test-suite=${suite}")
+    set(commandArgs "--test-suite=${suite}" "--order-by=file")
     if (PrimeStructSuite_SOURCE_FILE)
       list(APPEND commandArgs "--source-file=${PrimeStructSuite_SOURCE_FILE}")
     endif()
@@ -681,14 +681,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
       list(APPEND commandArgs "--test-case-exclude=${PrimeStructSuite_TEST_CASE_EXCLUDE}")
     endif()
     if (PrimeStructSuite_FIRST AND PrimeStructSuite_LAST)
-      list(APPEND commandArgs "--order-by=file"
-                              "--first=${PrimeStructSuite_FIRST}"
+      list(APPEND commandArgs "--first=${PrimeStructSuite_FIRST}"
                               "--last=${PrimeStructSuite_LAST}")
     endif()
 
-    add_test(NAME "${testName}"
-             COMMAND bash "${CMAKE_SOURCE_DIR}/scripts/run_with_unique_tmpdir.sh"
-                     $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
+    if (PrimeStructSuite_NO_UNIQUE_TMPDIR)
+      add_test(NAME "${testName}"
+               COMMAND $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
+    else()
+      add_test(NAME "${testName}"
+               COMMAND bash "${CMAKE_SOURCE_DIR}/scripts/run_with_unique_tmpdir.sh"
+                       $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
+    endif()
     set_tests_properties("${testName}" PROPERTIES TIMEOUT "${PrimeStructSuite_TIMEOUT}")
     if (PrimeStructSuite_LABEL)
       set_tests_properties("${testName}" PROPERTIES LABELS "${PrimeStructSuite_LABEL}")
@@ -977,8 +981,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_imports_versions.h")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "block_and_operator_rewrites"
                                  SOURCE_FILE "*test_compile_run_imports_blocks.h")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "operations_and_collections"
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 NO_UNIQUE_TMPDIR
+                                 SHARD_NAME "operations_and_collections"
                                  SOURCE_FILE "*test_compile_run_imports_operations.h")
+      # This shard compiles and runs enough native helper cases that it becomes
+      # resource-sensitive under the default parallel ctest load on macOS.
+      set_tests_properties("PrimeStruct_primestruct_compile_run_imports_operations_and_collections"
+                           PROPERTIES RUN_SERIAL TRUE)
     elseif(suite STREQUAL "primestruct.compile.run.text_filters")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "flag_and_transform_basics"
                                  SOURCE_FILE "*test_compile_run_text_filters_core.h" FIRST 1 LAST 28)
