@@ -126,7 +126,21 @@
             [&]() { return allocTempLocal(); },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             [&](int32_t localIndex) { fileScopeStack.back().push_back(localIndex); },
-            error)) {
+            error,
+            [&](const Expr &argExpr, const LocalMap &locals, LocalInfo &infoOut, std::string &errorOut) {
+              return ir_lowerer::inferInlineParameterExprLocalInfo(
+                  argExpr,
+                  locals,
+                  inferExprKind,
+                  applyStructArrayInfo,
+                  applyStructValueInfo,
+                  infoOut,
+                  errorOut,
+                  [&](const Expr &callExpr, const LocalMap &callLocals) {
+                    return resolveMethodCallDefinition(callExpr, callLocals);
+                  },
+                  [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); });
+            })) {
       inlineStack.erase(callee.fullPath);
       return false;
     }

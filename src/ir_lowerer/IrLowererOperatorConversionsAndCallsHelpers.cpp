@@ -138,7 +138,8 @@ bool emitConversionsAndCallsOperatorExpr(
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
     std::vector<IrInstruction> &instructions,
     bool &handled,
-    std::string &error) {
+    std::string &error,
+    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall) {
   handled = true;
   std::string builtin;
         if (getBuiltinConvertName(expr)) {
@@ -580,27 +581,43 @@ bool emitConversionsAndCallsOperatorExpr(
             error = builtin + " requires exactly one argument";
             return false;
           }
-          if (builtin == "location") {
-            const Expr &target = expr.args.front();
-            if (target.kind != Expr::Kind::Name) {
-              error = "location requires a local binding";
-              return false;
-            }
-            auto it = localsIn.find(target.name);
-            if (it == localsIn.end()) {
-              error = "location requires a local binding";
-              return false;
-            }
-            if (it->second.kind == LocalInfo::Kind::Reference || !it->second.structTypeName.empty() ||
-                it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
-                it->second.isSoaVector ||
-                it->second.kind == LocalInfo::Kind::Map || it->second.kind == LocalInfo::Kind::Buffer) {
-              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-            } else {
-              instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
-            }
-            return true;
-          }
+	          if (builtin == "location") {
+	            const Expr &target = expr.args.front();
+	            if (target.kind == Expr::Kind::Name) {
+	              auto it = localsIn.find(target.name);
+	              if (it == localsIn.end()) {
+	                error = "location requires a local binding";
+	                return false;
+	              }
+	              if (it->second.kind == LocalInfo::Kind::Reference || !it->second.structTypeName.empty() ||
+	                  it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
+	                  it->second.isSoaVector ||
+	                  it->second.kind == LocalInfo::Kind::Map || it->second.kind == LocalInfo::Kind::Buffer) {
+	                instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+	              } else {
+	                instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
+	              }
+	              return true;
+	            }
+	            if (target.kind == Expr::Kind::Call && !target.isMethodCall && resolveDefinitionCall != nullptr) {
+	              const Definition *callee = resolveDefinitionCall(target);
+	              if (callee != nullptr) {
+	                for (const auto &transform : callee->transforms) {
+	                  if (transform.name != "return" || transform.templateArgs.size() != 1) {
+	                    continue;
+	                  }
+	                  std::string base;
+	                  std::string arg;
+	                  if (splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, arg) &&
+	                      normalizeCollectionBindingTypeName(base) == "Reference") {
+	                    return emitExpr(target, localsIn);
+	                  }
+	                }
+	              }
+	            }
+	            error = "location requires a local binding";
+	            return false;
+	          }
           const Expr &pointerExpr = expr.args.front();
           if (pointerExpr.kind == Expr::Kind::Name) {
             auto it = localsIn.find(pointerExpr.name);

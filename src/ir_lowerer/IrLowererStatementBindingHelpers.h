@@ -113,6 +113,16 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                      &resolveMethodCallDefinition = {},
                                  const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
                                  const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo = {});
+bool inferInlineParameterExprLocalInfo(
+    const Expr &expr,
+    const LocalMap &localsForKindInference,
+    const InferBindingExprKindFn &inferExprKind,
+    const ApplyStructBindingInfoFn &applyStructArrayInfo,
+    const ApplyStructBindingInfoFn &applyStructValueInfo,
+    LocalInfo &infoOut,
+    std::string &error,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition = {},
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {});
 bool emitStringStatementBindingInitializer(const Expr &stmt,
                                            const Expr &init,
                                            LocalMap &localsIn,

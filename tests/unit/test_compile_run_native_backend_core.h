@@ -1580,6 +1580,11 @@ Pair() {
   return(plus(self.value, 1i32))
 }
 
+[return<Reference<Pair>>]
+borrow_ref([Reference<Pair>] value) {
+  return(value)
+}
+
 [return<int>]
 score_ptrs([args<Pointer<Pair>>] values) {
   return(plus(values[0i32].value, values[2i32].score()))
@@ -1594,7 +1599,7 @@ forward([args<Pointer<Pair>>] values) {
 forward_mixed([args<Pointer<Pair>>] values) {
   [Pair] extra{Pair(5i32)}
   [Reference<Pair>] extra_ref{location(extra)}
-  return(score_ptrs(location(extra_ref), [spread] values))
+  return(score_ptrs(location(borrow_ref(extra_ref)), [spread] values))
 }
 
 [return<int>]
@@ -1618,9 +1623,14 @@ main() {
   [Reference<Pair>] t0{location(c0)}
   [Reference<Pair>] t1{location(c1)}
 
-  return(plus(score_ptrs(location(r0), location(r1), location(r2)),
-              plus(forward(location(s0), location(s1), location(s2)),
-                   forward_mixed(location(t0), location(t1)))))
+  return(plus(score_ptrs(location(borrow_ref(r0)),
+                         location(borrow_ref(r1)),
+                         location(borrow_ref(r2))),
+              plus(forward(location(borrow_ref(s0)),
+                           location(borrow_ref(s1)),
+                           location(borrow_ref(s2))),
+                   forward_mixed(location(borrow_ref(t0)),
+                                 location(borrow_ref(t1))))))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_pointer.prime", source);
@@ -1634,6 +1644,11 @@ main() {
 
 TEST_CASE("native materializes variadic scalar pointer packs with indexed dereference") {
   const std::string source = R"(
+[return<Reference<i32>>]
+borrow_ref([Reference<i32>] value) {
+  return(value)
+}
+
 [return<int>]
 score_ptrs([args<Pointer<i32>>] values) {
   return(plus(dereference(values[0i32]), dereference(values[2i32])))
@@ -1648,7 +1663,7 @@ forward([args<Pointer<i32>>] values) {
 forward_mixed([args<Pointer<i32>>] values) {
   [i32] extra{1i32}
   [Reference<i32>] extra_ref{location(extra)}
-  return(score_ptrs(location(extra_ref), [spread] values))
+  return(score_ptrs(location(borrow_ref(extra_ref)), [spread] values))
 }
 
 [return<int>]
@@ -1672,9 +1687,14 @@ main() {
   [Reference<i32>] t0{location(c0)}
   [Reference<i32>] t1{location(c1)}
 
-  return(plus(score_ptrs(location(r0), location(r1), location(r2)),
-              plus(forward(location(s0), location(s1), location(s2)),
-                   forward_mixed(location(t0), location(t1)))))
+  return(plus(score_ptrs(location(borrow_ref(r0)),
+                         location(borrow_ref(r1)),
+                         location(borrow_ref(r2))),
+              plus(forward(location(borrow_ref(s0)),
+                           location(borrow_ref(s1)),
+                           location(borrow_ref(s2))),
+                   forward_mixed(location(borrow_ref(t0)),
+                                 location(borrow_ref(t1))))))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_pointer.prime", source);

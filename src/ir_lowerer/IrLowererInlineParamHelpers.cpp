@@ -24,7 +24,8 @@ bool emitInlineDefinitionCallParameters(
     const AllocInlineParameterTempLocalFn &allocTempLocal,
     const EmitInlineParameterInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
-    std::string &error) {
+    std::string &error,
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
   for (size_t i = 0; i < callParams.size(); ++i) {
     const Expr &param = callParams[i];
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;
@@ -43,22 +44,25 @@ bool emitInlineDefinitionCallParameters(
           (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
            paramInfo.argsPackElementKind == LocalInfo::Kind::Reference);
 
-      auto isDirectLocationOfNamedLocal = [&](const Expr &argExpr,
-                                             const LocalInfo *&targetInfoOut) -> bool {
-        targetInfoOut = nullptr;
+      auto inferDirectLocationTargetInfo = [&](const Expr &argExpr,
+                                               LocalInfo &targetInfoOut) -> bool {
+        targetInfoOut = LocalInfo{};
         if (!isSimpleCallName(argExpr, "location") || argExpr.args.size() != 1) {
           return false;
         }
         const Expr &targetExpr = argExpr.args.front();
-        if (targetExpr.kind != Expr::Kind::Name) {
+        if (targetExpr.kind == Expr::Kind::Name) {
+          auto it = callerLocals.find(targetExpr.name);
+          if (it == callerLocals.end()) {
+            return false;
+          }
+          targetInfoOut = it->second;
+          return true;
+        }
+        if (!inferExprLocalInfo) {
           return false;
         }
-        auto it = callerLocals.find(targetExpr.name);
-        if (it == callerLocals.end()) {
-          return false;
-        }
-        targetInfoOut = &it->second;
-        return true;
+        return inferExprLocalInfo(targetExpr, callerLocals, targetInfoOut, error);
       };
 
       auto matchesWrappedLocationTarget = [&](const LocalInfo &targetInfo,
@@ -190,10 +194,9 @@ bool emitInlineDefinitionCallParameters(
             emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
             return true;
           }
-          const LocalInfo *locationTargetInfo = nullptr;
-          if (isDirectLocationOfNamedLocal(argExpr, locationTargetInfo) &&
-              locationTargetInfo != nullptr &&
-              matchesWrappedLocationTarget(*locationTargetInfo, LocalInfo::Kind::Reference)) {
+          LocalInfo locationTargetInfo;
+          if (inferDirectLocationTargetInfo(argExpr, locationTargetInfo) &&
+              matchesWrappedLocationTarget(locationTargetInfo, LocalInfo::Kind::Reference)) {
             if (!emitExpr(argExpr, callerLocals)) {
               return false;
             }
@@ -233,10 +236,9 @@ bool emitInlineDefinitionCallParameters(
             emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
             return true;
           }
-          const LocalInfo *locationTargetInfo = nullptr;
-          if (isDirectLocationOfNamedLocal(argExpr, locationTargetInfo) &&
-              locationTargetInfo != nullptr &&
-              matchesWrappedLocationTarget(*locationTargetInfo, LocalInfo::Kind::Pointer)) {
+          LocalInfo locationTargetInfo;
+          if (inferDirectLocationTargetInfo(argExpr, locationTargetInfo) &&
+              matchesWrappedLocationTarget(locationTargetInfo, LocalInfo::Kind::Pointer)) {
             if (!emitExpr(argExpr, callerLocals)) {
               return false;
             }

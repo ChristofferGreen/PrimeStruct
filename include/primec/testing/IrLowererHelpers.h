@@ -1788,6 +1788,8 @@ using EmitInlineParameterStringValueFn =
 using InferInlineParameterStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using InferInlineParameterExprKindFn =
     std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+using InferInlineParameterExprLocalInfoFn =
+    std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)>;
 using ResolveInlineParameterStructSlotLayoutFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
 using EmitInlineParameterExprFn = std::function<bool(const Expr &, const LocalMap &)>;
 using EmitInlineParameterStructCopySlotsFn = std::function<bool(int32_t, int32_t, int32_t)>;
@@ -1814,7 +1816,8 @@ bool emitInlineDefinitionCallParameters(
     const AllocInlineParameterTempLocalFn &allocTempLocal,
     const EmitInlineParameterInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
-    std::string &error);
+    std::string &error,
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {});
 
 // END IrLowererInlineParamHelpers.h
 
@@ -3597,7 +3600,8 @@ bool emitConversionsAndCallsOperatorExpr(
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
     std::vector<IrInstruction> &instructions,
     bool &handled,
-    std::string &error);
+    std::string &error,
+    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall = {});
 
 bool emitConversionsAndCallsControlExprTail(
     const Expr &expr,
@@ -4007,6 +4011,16 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                      &resolveMethodCallDefinition = {},
                                  const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
                                  const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo = {});
+bool inferInlineParameterExprLocalInfo(
+    const Expr &expr,
+    const LocalMap &localsForKindInference,
+    const InferBindingExprKindFn &inferExprKind,
+    const ApplyStructBindingInfoFn &applyStructArrayInfo,
+    const ApplyStructBindingInfoFn &applyStructValueInfo,
+    LocalInfo &infoOut,
+    std::string &error,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition = {},
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {});
 bool emitStringStatementBindingInitializer(const Expr &stmt,
                                            const Expr &init,
                                            LocalMap &localsIn,

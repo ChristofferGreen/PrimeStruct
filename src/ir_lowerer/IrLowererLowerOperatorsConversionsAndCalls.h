@@ -25,24 +25,25 @@
                   slotCount = layout.totalSlots;
                   return true;
                 },
-                [&](const std::string &structTypeName,
-                    const std::string &fieldName,
-                    int32_t &slotOffset,
-                    int32_t &slotCount,
+	                [&](const std::string &structTypeName,
+	                    const std::string &fieldName,
+	                    int32_t &slotOffset,
+	                    int32_t &slotCount,
                     std::string &fieldStructPath) {
                   StructSlotFieldInfo fieldInfo;
                   if (!resolveStructFieldSlot(structTypeName, fieldName, fieldInfo)) {
                     return false;
                   }
                   slotOffset = fieldInfo.slotOffset;
-                  slotCount = fieldInfo.slotCount;
-                  fieldStructPath = fieldInfo.structPath;
-                  return true;
-                },
-                emitStructCopyFromPtrs,
-                function.instructions,
-                handledConversionsAndCalls,
-                error)) {
+	                  slotCount = fieldInfo.slotCount;
+	                  fieldStructPath = fieldInfo.structPath;
+	                  return true;
+	                },
+	                emitStructCopyFromPtrs,
+	                function.instructions,
+	                handledConversionsAndCalls,
+	                error,
+	                [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); })) {
           return false;
         }
         if (handledConversionsAndCalls) {

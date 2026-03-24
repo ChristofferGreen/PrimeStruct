@@ -19,6 +19,8 @@ using EmitInlineParameterStringValueFn =
 using InferInlineParameterStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using InferInlineParameterExprKindFn =
     std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+using InferInlineParameterExprLocalInfoFn =
+    std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)>;
 using ResolveInlineParameterStructSlotLayoutFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
 using EmitInlineParameterExprFn = std::function<bool(const Expr &, const LocalMap &)>;
 using EmitInlineParameterStructCopySlotsFn = std::function<bool(int32_t, int32_t, int32_t)>;
@@ -45,6 +47,7 @@ bool emitInlineDefinitionCallParameters(
     const AllocInlineParameterTempLocalFn &allocTempLocal,
     const EmitInlineParameterInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
-    std::string &error);
+    std::string &error,
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {});
 
 } // namespace primec::ir_lowerer

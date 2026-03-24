@@ -759,6 +759,68 @@ bool inferCallParameterLocalInfo(const Expr &param,
   return true;
 }
 
+bool inferInlineParameterExprLocalInfo(
+    const Expr &expr,
+    const LocalMap &localsForKindInference,
+    const InferBindingExprKindFn &inferExprKind,
+    const ApplyStructBindingInfoFn &applyStructArrayInfo,
+    const ApplyStructBindingInfoFn &applyStructValueInfo,
+    LocalInfo &infoOut,
+    std::string &error,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall) {
+  infoOut = LocalInfo{};
+  error.clear();
+
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsForKindInference.find(expr.name);
+    if (it == localsForKindInference.end()) {
+      return false;
+    }
+    infoOut = it->second;
+    return true;
+  }
+
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+
+  const Definition *callee = nullptr;
+  if (expr.isMethodCall && resolveMethodCallDefinition) {
+    callee = resolveMethodCallDefinition(expr, localsForKindInference);
+  } else if (resolveDefinitionCall) {
+    callee = resolveDefinitionCall(expr);
+  }
+  if (callee == nullptr) {
+    return false;
+  }
+
+  std::string returnTypeText;
+  for (const auto &transform : callee->transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    returnTypeText = trimTemplateTypeText(transform.templateArgs.front());
+    break;
+  }
+  if (returnTypeText.empty() || returnTypeText == "void" || returnTypeText == "auto") {
+    return false;
+  }
+
+  infoOut.valueKind = inferExprKind(expr, localsForKindInference);
+  applyArgsPackElementMetadata(returnTypeText, infoOut);
+  applyArgsPackElementStructMetadata(expr, returnTypeText, applyStructArrayInfo, applyStructValueInfo, infoOut);
+  infoOut.kind = (infoOut.argsPackElementKind == LocalInfo::Kind::Value) ? LocalInfo::Kind::Value
+                                                                          : infoOut.argsPackElementKind;
+  infoOut.isArgsPack = false;
+  infoOut.argsPackElementKind = LocalInfo::Kind::Value;
+  if (infoOut.valueKind == LocalInfo::ValueKind::Unknown && !infoOut.structTypeName.empty()) {
+    infoOut.valueKind = LocalInfo::ValueKind::Int64;
+  }
+  return infoOut.kind != LocalInfo::Kind::Value || infoOut.valueKind != LocalInfo::ValueKind::Unknown ||
+         !infoOut.structTypeName.empty() || infoOut.isFileHandle || infoOut.isFileError || infoOut.isResult;
+}
+
 bool selectUninitializedStorageZeroInstruction(LocalInfo::Kind kind,
                                                LocalInfo::ValueKind valueKind,
                                                const std::string &bindingName,

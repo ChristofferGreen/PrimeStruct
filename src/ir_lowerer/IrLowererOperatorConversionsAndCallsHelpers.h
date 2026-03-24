@@ -75,7 +75,8 @@ bool emitConversionsAndCallsOperatorExpr(
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
     std::vector<IrInstruction> &instructions,
     bool &handled,
-    std::string &error);
+    std::string &error,
+    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall = {});
 
 bool emitConversionsAndCallsControlExprTail(
     const Expr &expr,
