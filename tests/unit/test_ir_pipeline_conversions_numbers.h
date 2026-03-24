@@ -257,8 +257,8 @@ main() {
       []([ImageError] value) { return(Result.ok(/ImageError/invalid_operation())) })
   }
   [Result<GfxError, FileError>] summedGfx{
-    Result.map2(Result.ok(/GfxError/frame_acquire_failed()),
-      Result.ok(/GfxError/queue_submit_failed()),
+    Result.map2(Result.ok(GfxError.frame_acquire_failed()),
+      Result.ok(GfxError.queue_submit_failed()),
       []([GfxError] left, [GfxError] right) { return(right) })
   }
   [ContainerError] container{try(mappedContainer)}

@@ -3979,8 +3979,8 @@ import /std/gfx/*
 [return<int> effects(io_out)]
 main() {
   [GfxError] err{queueSubmitFailed()}
-  print_line(Result.why(/GfxError/status(queueSubmitFailed())))
-  print_line(Result.why(/GfxError/result<i32>(framePresentFailed())))
+  print_line(Result.why(GfxError.status(queueSubmitFailed())))
+  print_line(Result.why(GfxError.result<i32>(framePresentFailed())))
   print_line(Result.why(gfxErrorStatus(err)))
   print_line(Result.why(gfxErrorResult<i32>(err)))
   return(0i32)
@@ -4002,7 +4002,7 @@ main() {
         "queue_submit_failed\n");
 }
 
-TEST_CASE("native uses canonical stdlib GfxError why wrapper") {
+TEST_CASE("native uses canonical stdlib GfxError why helpers") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -4011,9 +4011,9 @@ main() {
   [GfxError] err{queueSubmitFailed()}
   [Result<GfxError>] methodStatus{gfxErrorStatus(err)}
   [Result<i32, GfxError>] methodValueStatus{gfxErrorResult<i32>(err)}
-  print_line(/GfxError/why(err))
-  print_line(/GfxError/why(err))
-  print_line(/GfxError/why(err))
+  print_line(GfxError.why(err))
+  print_line(GfxError.why(err))
+  print_line(err.why())
   print_line(Result.why(gfxErrorStatus(err)))
   print_line(Result.why(methodStatus))
   print_line(Result.why(methodValueStatus))
@@ -4042,15 +4042,15 @@ main() {
         "queue_submit_failed\n");
 }
 
-TEST_CASE("native uses canonical stdlib GfxError constructor wrappers") {
+TEST_CASE("native uses canonical stdlib GfxError constructors") {
   const std::string source = R"(
 import /std/gfx/*
 
 [return<int> effects(io_out)]
 main() {
-  print_line(Result.why(gfxErrorStatus(/GfxError/window_create_failed())))
-  print_line(Result.why(gfxErrorStatus(/GfxError/device_create_failed())))
-  print_line(Result.why(gfxErrorStatus(/GfxError/frame_present_failed())))
+  print_line(Result.why(gfxErrorStatus(GfxError.window_create_failed())))
+  print_line(Result.why(gfxErrorStatus(GfxError.device_create_failed())))
+  print_line(Result.why(gfxErrorStatus(GfxError.frame_present_failed())))
   return(0i32)
 }
 )";
@@ -7305,8 +7305,8 @@ main() {
       []([ImageError] value) { return(Result.ok(/ImageError/invalid_operation())) })
   }
   [Result<GfxError, FileError>] summedGfx{
-    Result.map2(Result.ok(/GfxError/frame_acquire_failed()),
-      Result.ok(/GfxError/queue_submit_failed()),
+    Result.map2(Result.ok(GfxError.frame_acquire_failed()),
+      Result.ok(GfxError.queue_submit_failed()),
       []([GfxError] left, [GfxError] right) { return(right) })
   }
   [ContainerError] container{try(mappedContainer)}

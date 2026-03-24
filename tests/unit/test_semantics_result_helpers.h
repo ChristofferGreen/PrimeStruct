@@ -882,10 +882,10 @@ import /std/gfx/*
 main() {
   [GfxError] err{queueSubmitFailed()}
   [Result<GfxError>] status{gfxErrorStatus(queueSubmitFailed())}
-  [Result<GfxError>] directStatus{/GfxError/status(queueSubmitFailed())}
+  [Result<GfxError>] directStatus{GfxError.status(queueSubmitFailed())}
   [Result<GfxError>] wrappedStatus{gfxErrorStatus(err)}
   [Result<i32, GfxError>] valueStatus{gfxErrorResult<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] directValueStatus{/GfxError/result<i32>(framePresentFailed())}
+  [Result<i32, GfxError>] directValueStatus{GfxError.result<i32>(framePresentFailed())}
   [Result<i32, GfxError>] wrappedValue{gfxErrorResult<i32>(err)}
   [bool] statusError{Result.error(status)}
   [bool] directStatusError{Result.error(directStatus)}
@@ -893,7 +893,7 @@ main() {
   [bool] valueError{Result.error(valueStatus)}
   [bool] directValueError{Result.error(directValueStatus)}
   [bool] wrappedValueError{Result.error(wrappedValue)}
-  [string] directWhy{/GfxError/why(err)}
+  [string] directWhy{GfxError.why(err)}
   [string] statusWhy{Result.why(status)}
   [string] directStatusWhy{Result.why(directStatus)}
   [string] wrappedStatusWhy{Result.why(wrappedStatus)}
@@ -911,7 +911,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical stdlib gfx error why wrapper returns explicit strings") {
+TEST_CASE("canonical stdlib gfx error helpers return explicit strings") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -920,9 +920,9 @@ main() {
   [GfxError] err{queueSubmitFailed()}
   [Result<GfxError>] methodStatus{gfxErrorStatus(err)}
   [Result<i32, GfxError>] methodValueStatus{gfxErrorResult<i32>(err)}
-  [string] direct{/GfxError/why(err)}
+  [string] direct{GfxError.why(err)}
   [string] method{GfxError.why(err)}
-  [string] receiver{/GfxError/why(err)}
+  [string] receiver{err.why()}
   [string] viaResult{Result.why(gfxErrorStatus(err))}
   [string] viaMethodStatus{Result.why(methodStatus)}
   [string] viaMethodValue{Result.why(methodValueStatus)}
@@ -944,21 +944,21 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical stdlib GfxError constructor wrappers expose type-owned error values") {
+TEST_CASE("canonical stdlib GfxError constructors expose type-owned error values") {
   const std::string source = R"(
 import /std/gfx/*
 
 [return<void>]
 main() {
-  [GfxError] windowErr{/GfxError/window_create_failed()}
-  [GfxError] deviceErr{/GfxError/device_create_failed()}
-  [GfxError] swapchainErr{/GfxError/swapchain_create_failed()}
-  [GfxError] meshErr{/GfxError/mesh_create_failed()}
-  [GfxError] pipelineErr{/GfxError/pipeline_create_failed()}
-  [GfxError] materialErr{/GfxError/material_create_failed()}
-  [GfxError] frameErr{/GfxError/frame_acquire_failed()}
-  [GfxError] queueErr{/GfxError/queue_submit_failed()}
-  [GfxError] presentErr{/GfxError/frame_present_failed()}
+  [GfxError] windowErr{GfxError.window_create_failed()}
+  [GfxError] deviceErr{GfxError.device_create_failed()}
+  [GfxError] swapchainErr{GfxError.swapchain_create_failed()}
+  [GfxError] meshErr{GfxError.mesh_create_failed()}
+  [GfxError] pipelineErr{GfxError.pipeline_create_failed()}
+  [GfxError] materialErr{GfxError.material_create_failed()}
+  [GfxError] frameErr{GfxError.frame_acquire_failed()}
+  [GfxError] queueErr{GfxError.queue_submit_failed()}
+  [GfxError] presentErr{GfxError.frame_present_failed()}
   [string] windowWhy{Result.why(gfxErrorStatus(windowErr))}
   [string] presentWhy{Result.why(gfxErrorStatus(presentErr))}
   return()
@@ -969,20 +969,19 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical stdlib gfx error status helper rejects non gfx errors") {
+TEST_CASE("canonical root GfxError compatibility wrappers are removed") {
   const std::string source = R"(
 import /std/gfx/*
 
 [return<void>]
 main() {
-  [Result<GfxError>] status{/GfxError/status(true)}
+  [Result<GfxError>] status{/GfxError/status(queueSubmitFailed())}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /GfxError/status parameter err") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: /GfxError/status") != std::string::npos);
 }
 
 TEST_CASE("canonical stdlib GfxError receiver methods reject unexpected arguments") {
@@ -1001,34 +1000,34 @@ main() {
   CHECK(error.find("argument count mismatch for /std/gfx/GfxError/status") != std::string::npos);
 }
 
-TEST_CASE("canonical stdlib GfxError constructor wrappers reject unexpected arguments") {
+TEST_CASE("canonical stdlib GfxError constructors reject unexpected arguments") {
   const std::string source = R"(
 import /std/gfx/*
 
 [return<void>]
 main() {
-  [GfxError] err{/GfxError/window_create_failed(true)}
+  [GfxError] err{GfxError.window_create_failed(true)}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /GfxError/window_create_failed") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/gfx/GfxError/window_create_failed") != std::string::npos);
 }
 
-TEST_CASE("canonical stdlib gfx error why wrapper rejects non gfx errors") {
+TEST_CASE("canonical stdlib gfx error why helper rejects non gfx errors") {
   const std::string source = R"(
 import /std/gfx/*
 
 [return<void>]
 main() {
-  [string] why{/GfxError/why(true)}
+  [string] why{GfxError.why(true)}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /GfxError/why parameter err") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/gfx/GfxError/why parameter err") != std::string::npos);
 }
 
 TEST_CASE("stdlib gfx Buffer helpers cover experimental method and slash-call wrappers") {
