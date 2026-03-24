@@ -467,6 +467,39 @@
           packElementType = "int";
         }
 
+        auto emitPackedArgExpr = [&](const Expr &packedArgExpr) -> std::string {
+          std::string packBase;
+          std::string packArgText;
+          if (splitTemplateTypeName(packedParamInfo.typeTemplateArg, packBase, packArgText) &&
+              normalizeBindingTypeName(packBase) == "Reference" &&
+              isSimpleCallName(packedArgExpr, "location") && packedArgExpr.args.size() == 1) {
+            return "std::ref(" +
+                   emitExpr(packedArgExpr.args.front(),
+                            nameMap,
+                            paramMap,
+                            defMap,
+                            structTypeMap,
+                            importAliases,
+                            localTypes,
+                            returnKinds,
+                            resultInfos,
+                            returnStructs,
+                            allowMathBare) +
+                   ")";
+          }
+          return emitExpr(packedArgExpr,
+                          nameMap,
+                          paramMap,
+                          defMap,
+                          structTypeMap,
+                          importAliases,
+                          localTypes,
+                          returnKinds,
+                          resultInfos,
+                          returnStructs,
+                          allowMathBare);
+        };
+
         std::ostringstream packOut;
         if (packedArgs.empty()) {
           packOut << "std::vector<" << packElementType << ">{}";
@@ -494,17 +527,7 @@
               if (i > 0) {
                 packOut << ", ";
               }
-              packOut << emitExpr(*packedArgs[i],
-                                  nameMap,
-                                  paramMap,
-                                  defMap,
-                                  structTypeMap,
-                                  importAliases,
-                                  localTypes,
-                                  returnKinds,
-                                  resultInfos,
-                                  returnStructs,
-                                  allowMathBare);
+              packOut << emitPackedArgExpr(*packedArgs[i]);
             }
             packOut << "}";
             if (spreadArg != nullptr) {

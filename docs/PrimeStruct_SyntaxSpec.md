@@ -433,8 +433,9 @@ Bottom-level form therefore has:
   `init(...)` and `take(...)`, struct `Pointer<T>` plus struct `Reference<T>` packs preserve indexed downstream
   field/helper access, and the legacy C++ emitter now materializes borrowed `args<Reference<T>>` packs through
   `std::reference_wrapper<T>` element storage so indexed `dereference(...)` plus borrowed uninitialized scalar/struct
-  `init(...)` / `take(...)` execute across direct/pure/mixed forwarding; other unsupported non-string element support
-  remains a separate follow-up slice.
+  `init(...)` / `take(...)` execute across direct/pure/mixed forwarding, and that same emitted path now also accepts
+  direct explicit `location(local)` packed call arguments for borrowed packs; other unsupported non-string element
+  support remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 

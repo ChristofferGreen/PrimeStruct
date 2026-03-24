@@ -15530,8 +15530,7 @@ forward([args<Reference<uninitialized<i32>>>] values) {
 [return<int>]
 forward_mixed([args<Reference<uninitialized<i32>>>] values) {
   [uninitialized<i32>] extra{uninitialized<i32>()}
-  [Reference<uninitialized<i32>>] extra_ref{location(extra)}
-  return(score_refs(extra_ref, [spread] values))
+  return(score_refs(location(extra), [spread] values))
 }
 
 [return<int>]
@@ -15539,25 +15538,17 @@ main() {
   [uninitialized<i32>] a0{uninitialized<i32>()}
   [uninitialized<i32>] a1{uninitialized<i32>()}
   [uninitialized<i32>] a2{uninitialized<i32>()}
-  [Reference<uninitialized<i32>>] p0{location(a0)}
-  [Reference<uninitialized<i32>>] p1{location(a1)}
-  [Reference<uninitialized<i32>>] p2{location(a2)}
 
   [uninitialized<i32>] b0{uninitialized<i32>()}
   [uninitialized<i32>] b1{uninitialized<i32>()}
   [uninitialized<i32>] b2{uninitialized<i32>()}
-  [Reference<uninitialized<i32>>] q0{location(b0)}
-  [Reference<uninitialized<i32>>] q1{location(b1)}
-  [Reference<uninitialized<i32>>] q2{location(b2)}
 
   [uninitialized<i32>] c0{uninitialized<i32>()}
   [uninitialized<i32>] c1{uninitialized<i32>()}
-  [Reference<uninitialized<i32>>] r0{location(c0)}
-  [Reference<uninitialized<i32>>] r1{location(c1)}
 
-  return(plus(score_refs(p0, p1, p2),
-              plus(forward(q0, q1, q2),
-                   forward_mixed(r0, r1))))
+  return(plus(score_refs(location(a0), location(a1), location(a2)),
+              plus(forward(location(b0), location(b1), location(b2)),
+                   forward_mixed(location(c0), location(c1)))))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_reference_uninitialized_scalar.prime", source);
@@ -15597,8 +15588,7 @@ forward([args<Reference<uninitialized<Pair>>>] values) {
 [return<int>]
 forward_mixed([args<Reference<uninitialized<Pair>>>] values) {
   [uninitialized<Pair>] extra{uninitialized<Pair>()}
-  [Reference<uninitialized<Pair>>] extra_ref{location(extra)}
-  return(score_refs(extra_ref, [spread] values))
+  return(score_refs(location(extra), [spread] values))
 }
 
 [return<int>]
@@ -15606,25 +15596,17 @@ main() {
   [uninitialized<Pair>] a0{uninitialized<Pair>()}
   [uninitialized<Pair>] a1{uninitialized<Pair>()}
   [uninitialized<Pair>] a2{uninitialized<Pair>()}
-  [Reference<uninitialized<Pair>>] p0{location(a0)}
-  [Reference<uninitialized<Pair>>] p1{location(a1)}
-  [Reference<uninitialized<Pair>>] p2{location(a2)}
 
   [uninitialized<Pair>] b0{uninitialized<Pair>()}
   [uninitialized<Pair>] b1{uninitialized<Pair>()}
   [uninitialized<Pair>] b2{uninitialized<Pair>()}
-  [Reference<uninitialized<Pair>>] q0{location(b0)}
-  [Reference<uninitialized<Pair>>] q1{location(b1)}
-  [Reference<uninitialized<Pair>>] q2{location(b2)}
 
   [uninitialized<Pair>] c0{uninitialized<Pair>()}
   [uninitialized<Pair>] c1{uninitialized<Pair>()}
-  [Reference<uninitialized<Pair>>] r0{location(c0)}
-  [Reference<uninitialized<Pair>>] r1{location(c1)}
 
-  return(plus(score_refs(p0, p1, p2),
-              plus(forward(q0, q1, q2),
-                   forward_mixed(r0, r1))))
+  return(plus(score_refs(location(a0), location(a1), location(a2)),
+              plus(forward(location(b0), location(b1), location(b2)),
+                   forward_mixed(location(c0), location(c1)))))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_reference_uninitialized_struct.prime", source);
