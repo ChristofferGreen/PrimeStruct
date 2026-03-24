@@ -165,7 +165,8 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Split `IrLowererFlowHelpers.cpp` buffer init/load/call helpers into `src/ir_lowerer/IrLowererFlowBufferHelpers.cpp`.
 - ✓ Split `IrLowererFlowHelpers.cpp` file-scope cleanup, struct copy/disarm, gpu builtin load, and counted-loop/body helpers into `src/ir_lowerer/IrLowererFlowControlHelpers.cpp`.
 - ✓ Split `IrLowererFlowHelpers.cpp` vector mutator alias/literal folding plus vector statement helper logic into `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`.
-- ○ Refactor `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp` (`1099` lines) below the `700`-line target.
+- ✓ Refactor `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp` (`543` lines) below the `700`-line target by extracting vector helper name resolution, receiver normalization, target validation, and literal integer folding into `src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp`.
+- ✓ Split `IrLowererFlowVectorHelpers.cpp` vector helper name resolution, receiver normalization, target validation, and literal integer folding into `src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp`.
 - ○ Refactor `src/emitter/EmitterExprCalls.h` (`1512` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterEmitSetup.h` (`1458` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp` (`1427` lines) below the `700`-line target.

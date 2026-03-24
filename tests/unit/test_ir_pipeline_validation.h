@@ -12987,36 +12987,47 @@ TEST_CASE("ir lowerer flow vector helper source delegation stays stable") {
       std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
                                                              : std::filesystem::path("..");
 
-  const std::filesystem::path flowHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowHelpers.cpp";
   const std::filesystem::path flowVectorHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererFlowVectorHelpers.cpp";
-  REQUIRE(std::filesystem::exists(flowHelpersPath));
+  const std::filesystem::path flowVectorResolutionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowVectorResolutionHelpers.cpp";
   REQUIRE(std::filesystem::exists(flowVectorHelpersPath));
+  REQUIRE(std::filesystem::exists(flowVectorResolutionHelpersPath));
 
-  const std::string flowHelpersSource = readText(flowHelpersPath);
   const std::string flowVectorHelpersSource = readText(flowVectorHelpersPath);
+  const std::string flowVectorResolutionHelpersSource =
+      readText(flowVectorResolutionHelpersPath);
 
-  CHECK(flowHelpersSource.find("bool resolveVectorMutatorAliasName(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool resolveVectorMutatorName(") == std::string::npos);
-  CHECK(flowHelpersSource.find("SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(") ==
+  CHECK(flowVectorHelpersSource.find("bool resolveVectorMutatorAliasName(") == std::string::npos);
+  CHECK(flowVectorHelpersSource.find("bool resolveVectorMutatorName(") == std::string::npos);
+  CHECK(flowVectorHelpersSource.find(
+            "SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(") ==
         std::string::npos);
-  CHECK(flowHelpersSource.find(
+  CHECK(flowVectorHelpersSource.find(
             "UnsignedLiteralIntegerEvalResult tryEvaluateUnsignedLiteralIntegerExpr(") ==
         std::string::npos);
-  CHECK(flowHelpersSource.find("VectorStatementHelperEmitResult tryEmitVectorStatementHelper(") ==
-        std::string::npos);
-
-  CHECK(flowVectorHelpersSource.find("bool resolveVectorMutatorAliasName(") != std::string::npos);
-  CHECK(flowVectorHelpersSource.find("bool resolveVectorMutatorName(") != std::string::npos);
   CHECK(flowVectorHelpersSource.find(
-            "SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(") !=
-        std::string::npos);
-  CHECK(flowVectorHelpersSource.find(
-            "UnsignedLiteralIntegerEvalResult tryEvaluateUnsignedLiteralIntegerExpr(") !=
+            "VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(") ==
         std::string::npos);
   CHECK(flowVectorHelpersSource.find(
             "VectorStatementHelperEmitResult tryEmitVectorStatementHelper(") !=
+        std::string::npos);
+
+  CHECK(flowVectorResolutionHelpersSource.find("bool resolveVectorMutatorAliasName(") !=
+        std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find("bool resolveVectorMutatorName(") !=
+        std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find(
+            "SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(") !=
+        std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find(
+            "UnsignedLiteralIntegerEvalResult tryEvaluateUnsignedLiteralIntegerExpr(") !=
+        std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find(
+            "VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(") !=
+        std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find(
+            "VectorStatementHelperEmitResult tryEmitVectorStatementHelper(") ==
         std::string::npos);
 }
 
@@ -51800,6 +51811,22 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   }
   CHECK(reserveHasHeapAlloc);
   CHECK(reserveHasAllocFailureCheck);
+
+  std::vector<primec::IrInstruction> generatedWrapperReserveInstructions;
+  CHECK(runHelper(
+            makeCall("/std/collections/vectorReserve__generated",
+                     {makeTarget(), makeI32Literal(6)}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            &generatedWrapperReserveInstructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(reserveNegativeCalls == 2);
+  CHECK(reserveExceededCalls == 4);
+  CHECK_FALSE(generatedWrapperReserveInstructions.empty());
 
   CHECK(runHelper(
             makeCall("remove_at", {makeTarget(), makeI32Literal(1)}),
