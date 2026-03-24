@@ -9800,6 +9800,49 @@ TEST_CASE("native emitter internals io source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("native emitter internals arithmetic source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path nativeEmitterInternalsPath =
+      repoRoot / "src" / "native_emitter" / "NativeEmitterInternals.h";
+  const std::filesystem::path nativeEmitterInternalsArm64ArithmeticPath =
+      repoRoot / "src" / "native_emitter" / "NativeEmitterInternalsArm64Arithmetic.h";
+  REQUIRE(std::filesystem::exists(nativeEmitterInternalsPath));
+  REQUIRE(std::filesystem::exists(nativeEmitterInternalsArm64ArithmeticPath));
+
+  const std::string nativeEmitterInternalsSource = readText(nativeEmitterInternalsPath);
+  const std::string nativeEmitterInternalsArm64ArithmeticSource =
+      readText(nativeEmitterInternalsArm64ArithmeticPath);
+
+  CHECK(nativeEmitterInternalsSource.find("#include \"NativeEmitterInternalsArm64Arithmetic.h\"") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("void emitAdd();") != std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("size_t emitJumpPlaceholder();") != std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("void emitBinaryOp(uint32_t opWord);") != std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitAdd(") == std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline size_t Arm64Emitter::emitJumpPlaceholder(") ==
+        std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitCompareAndPush(") ==
+        std::string::npos);
+
+  CHECK(nativeEmitterInternalsArm64ArithmeticSource.find("inline void Arm64Emitter::emitAdd(") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsArm64ArithmeticSource.find("inline size_t Arm64Emitter::emitJumpPlaceholder(") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsArm64ArithmeticSource.find("inline void Arm64Emitter::emitCompareAndPush(") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantics validator expr source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

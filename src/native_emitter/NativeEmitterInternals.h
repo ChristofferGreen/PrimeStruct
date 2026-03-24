@@ -303,261 +303,67 @@ class Arm64Emitter {
     patchJump(jumpDone, static_cast<int32_t>(doneIndex - jumpDone));
   }
 
-  void emitDup() {
-    emitPopReg(0);
-    emitPushReg(0);
-    emitPushReg(0);
-  }
-
-  void emitPop() {
-    emitPopReg(0);
-  }
-
-  void emitAdd() {
-    emitBinaryOp(encodeAddReg(0, 1, 0));
-  }
-
-  void emitSub() {
-    emitBinaryOp(encodeSubReg(0, 1, 0));
-  }
-
-  void emitMul() {
-    emitBinaryOp(encodeMulReg(0, 1, 0));
-  }
-
-  void emitDiv() {
-    emitBinaryOp(encodeSdivReg(0, 1, 0));
-  }
-
-  void emitDivU() {
-    emitBinaryOp(encodeUdivReg(0, 1, 0));
-  }
-
-  void emitNeg() {
-    emitPopReg(0);
-    emit(encodeSubReg(0, 31, 0));
-    emitPushReg(0);
-  }
-
-  void emitAddF32() {
-    emitFloatBinaryOp(false, kFaddD0D0D1, kFaddS0S0S1);
-  }
-
-  void emitSubF32() {
-    emitFloatBinaryOp(false, kFsubD0D0D1, kFsubS0S0S1);
-  }
-
-  void emitMulF32() {
-    emitFloatBinaryOp(false, kFmulD0D0D1, kFmulS0S0S1);
-  }
-
-  void emitDivF32() {
-    emitFloatBinaryOp(false, kFdivD0D0D1, kFdivS0S0S1);
-  }
-
-  void emitNegF32() {
-    emitFloatUnaryOp(false, kFnegD0, kFnegS0);
-  }
-
-  void emitAddF64() {
-    emitFloatBinaryOp(true, kFaddD0D0D1, kFaddS0S0S1);
-  }
-
-  void emitSubF64() {
-    emitFloatBinaryOp(true, kFsubD0D0D1, kFsubS0S0S1);
-  }
-
-  void emitMulF64() {
-    emitFloatBinaryOp(true, kFmulD0D0D1, kFmulS0S0S1);
-  }
-
-  void emitDivF64() {
-    emitFloatBinaryOp(true, kFdivD0D0D1, kFdivS0S0S1);
-  }
-
-  void emitNegF64() {
-    emitFloatUnaryOp(true, kFnegD0, kFnegS0);
-  }
-
-  void emitCmpEq() {
-    emitCompareAndPush(CondCode::Eq);
-  }
-
-  void emitCmpNe() {
-    emitCompareAndPush(CondCode::Ne);
-  }
-
-  void emitCmpLt() {
-    emitCompareAndPush(CondCode::Lt);
-  }
-
-  void emitCmpLe() {
-    emitCompareAndPush(CondCode::Le);
-  }
-
-  void emitCmpGt() {
-    emitCompareAndPush(CondCode::Gt);
-  }
-
-  void emitCmpGe() {
-    emitCompareAndPush(CondCode::Ge);
-  }
-
-  void emitCmpLtU() {
-    emitCompareAndPush(CondCode::Lo);
-  }
-
-  void emitCmpLeU() {
-    emitCompareAndPush(CondCode::Ls);
-  }
-
-  void emitCmpGtU() {
-    emitCompareAndPush(CondCode::Hi);
-  }
-
-  void emitCmpGeU() {
-    emitCompareAndPush(CondCode::Hs);
-  }
-
-  void emitCmpEqF32() {
-    emitCompareAndPushFloat(false, CondCode::Eq);
-  }
-
-  void emitCmpNeF32() {
-    emitCompareAndPushFloat(false, CondCode::Ne);
-  }
-
-  void emitCmpLtF32() {
-    emitCompareAndPushFloat(false, CondCode::Lt);
-  }
-
-  void emitCmpLeF32() {
-    emitCompareAndPushFloat(false, CondCode::Le);
-  }
-
-  void emitCmpGtF32() {
-    emitCompareAndPushFloat(false, CondCode::Gt);
-  }
-
-  void emitCmpGeF32() {
-    emitCompareAndPushFloat(false, CondCode::Ge);
-  }
-
-  void emitCmpEqF64() {
-    emitCompareAndPushFloat(true, CondCode::Eq);
-  }
-
-  void emitCmpNeF64() {
-    emitCompareAndPushFloat(true, CondCode::Ne);
-  }
-
-  void emitCmpLtF64() {
-    emitCompareAndPushFloat(true, CondCode::Lt);
-  }
-
-  void emitCmpLeF64() {
-    emitCompareAndPushFloat(true, CondCode::Le);
-  }
-
-  void emitCmpGtF64() {
-    emitCompareAndPushFloat(true, CondCode::Gt);
-  }
-
-  void emitCmpGeF64() {
-    emitCompareAndPushFloat(true, CondCode::Ge);
-  }
-
-  void emitConvertI32ToF32() {
-    emitConvertIntToFloat(false, false);
-  }
-
-  void emitConvertI32ToF64() {
-    emitConvertIntToFloat(true, false);
-  }
-
-  void emitConvertI64ToF32() {
-    emitConvertIntToFloat(false, false);
-  }
-
-  void emitConvertI64ToF64() {
-    emitConvertIntToFloat(true, false);
-  }
-
-  void emitConvertU64ToF32() {
-    emitConvertIntToFloat(false, true);
-  }
-
-  void emitConvertU64ToF64() {
-    emitConvertIntToFloat(true, true);
-  }
-
-  void emitConvertF32ToI32() {
-    emitConvertFloatToInt(false, false);
-  }
-
-  void emitConvertF32ToI64() {
-    emitConvertFloatToInt(false, false);
-  }
-
-  void emitConvertF32ToU64() {
-    emitConvertFloatToInt(false, true);
-  }
-
-  void emitConvertF64ToI32() {
-    emitConvertFloatToInt(true, false);
-  }
-
-  void emitConvertF64ToI64() {
-    emitConvertFloatToInt(true, false);
-  }
-
-  void emitConvertF64ToU64() {
-    emitConvertFloatToInt(true, true);
-  }
-
-  void emitConvertF32ToF64() {
-    emitConvertFloatToFloat(false);
-  }
-
-  void emitConvertF64ToF32() {
-    emitConvertFloatToFloat(true);
-  }
-
-  size_t emitJumpPlaceholder() {
-    flushValueStackCache();
-    size_t index = currentWordIndex();
-    emit(encodeB(0));
-    return index;
-  }
-
-  size_t emitCallPlaceholder() {
-    flushValueStackCache();
-    size_t index = currentWordIndex();
-    emit(encodeBl(0));
-    return index;
-  }
-
-  size_t emitJumpIfZeroPlaceholder() {
-    emitPopReg(0);
-    emitCompareRegZero(0);
-    return emitCondBranchPlaceholder(CondCode::Eq);
-  }
-
-  void patchJump(size_t index, int32_t offsetWords) {
-    patchWord(index, encodeB(offsetWords));
-  }
-
-  void patchCall(size_t index, int32_t offsetWords) {
-    patchWord(index, encodeBl(offsetWords));
-  }
-
-  void patchJumpIfZero(size_t index, int32_t offsetWords) {
-    patchCondBranch(index, offsetWords, CondCode::Eq);
-  }
-
-  void emitPushReg0() {
-    emitPushReg(0);
-  }
+  void emitDup();
+  void emitPop();
+  void emitAdd();
+  void emitSub();
+  void emitMul();
+  void emitDiv();
+  void emitDivU();
+  void emitNeg();
+  void emitAddF32();
+  void emitSubF32();
+  void emitMulF32();
+  void emitDivF32();
+  void emitNegF32();
+  void emitAddF64();
+  void emitSubF64();
+  void emitMulF64();
+  void emitDivF64();
+  void emitNegF64();
+  void emitCmpEq();
+  void emitCmpNe();
+  void emitCmpLt();
+  void emitCmpLe();
+  void emitCmpGt();
+  void emitCmpGe();
+  void emitCmpLtU();
+  void emitCmpLeU();
+  void emitCmpGtU();
+  void emitCmpGeU();
+  void emitCmpEqF32();
+  void emitCmpNeF32();
+  void emitCmpLtF32();
+  void emitCmpLeF32();
+  void emitCmpGtF32();
+  void emitCmpGeF32();
+  void emitCmpEqF64();
+  void emitCmpNeF64();
+  void emitCmpLtF64();
+  void emitCmpLeF64();
+  void emitCmpGtF64();
+  void emitCmpGeF64();
+  void emitConvertI32ToF32();
+  void emitConvertI32ToF64();
+  void emitConvertI64ToF32();
+  void emitConvertI64ToF64();
+  void emitConvertU64ToF32();
+  void emitConvertU64ToF64();
+  void emitConvertF32ToI32();
+  void emitConvertF32ToI64();
+  void emitConvertF32ToU64();
+  void emitConvertF64ToI32();
+  void emitConvertF64ToI64();
+  void emitConvertF64ToU64();
+  void emitConvertF32ToF64();
+  void emitConvertF64ToF32();
+  size_t emitJumpPlaceholder();
+  size_t emitCallPlaceholder();
+  size_t emitJumpIfZeroPlaceholder();
+  void patchJump(size_t index, int32_t offsetWords);
+  void patchCall(size_t index, int32_t offsetWords);
+  void patchJumpIfZero(size_t index, int32_t offsetWords);
+  void emitPushReg0();
 
   size_t currentWordIndex() const {
     return code_.size();
@@ -733,154 +539,20 @@ class Arm64Emitter {
     }
   }
 
-  void emitBinaryOp(uint32_t opWord) {
-    emitPopReg(0);
-    emitPopReg(1);
-    emit(opWord);
-    emitPushReg(0);
-  }
-
-  void emitFloatBinaryOp(bool isF64, uint32_t opD, uint32_t opS) {
-    emitPopReg(0);
-    emitPopReg(1);
-    if (isF64) {
-      emit(encodeFmovDX(0, 1));
-      emit(encodeFmovDX(1, 0));
-      emit(opD);
-      emit(encodeFmovXD(0, 0));
-    } else {
-      emit(encodeFmovSW(0, 1));
-      emit(encodeFmovSW(1, 0));
-      emit(opS);
-      emit(encodeFmovWS(0, 0));
-    }
-    emitPushReg(0);
-  }
-
-  void emitFloatUnaryOp(bool isF64, uint32_t opD, uint32_t opS) {
-    emitPopReg(0);
-    if (isF64) {
-      emit(encodeFmovDX(0, 0));
-      emit(opD);
-      emit(encodeFmovXD(0, 0));
-    } else {
-      emit(encodeFmovSW(0, 0));
-      emit(opS);
-      emit(encodeFmovWS(0, 0));
-    }
-    emitPushReg(0);
-  }
-
-  void emitCompareAndPushFloat(bool isF64, CondCode cond) {
-    emitPopReg(0);
-    emitPopReg(1);
-    if (isF64) {
-      emit(encodeFmovDX(0, 1));
-      emit(encodeFmovDX(1, 0));
-      emit(kFcmpD0D1);
-    } else {
-      emit(encodeFmovSW(0, 1));
-      emit(encodeFmovSW(1, 0));
-      emit(kFcmpS0S1);
-    }
-    emit(encodeBCond(6, static_cast<uint8_t>(cond)));
-    emitMovImm64(0, 0);
-    emit(encodeB(5));
-    emitMovImm64(0, 1);
-    emitPushReg(0);
-  }
-
-  void emitConvertIntToFloat(bool toF64, bool isUnsigned) {
-    emitPopReg(0);
-    if (isUnsigned) {
-      emit(toF64 ? kUcvtfD0X0 : kUcvtfS0X0);
-    } else {
-      emit(toF64 ? kScvtfD0X0 : kScvtfS0X0);
-    }
-    if (toF64) {
-      emit(encodeFmovXD(0, 0));
-    } else {
-      emit(encodeFmovWS(0, 0));
-    }
-    emitPushReg(0);
-  }
-
-  void emitConvertFloatToInt(bool fromF64, bool isUnsigned) {
-    emitPopReg(0);
-    if (fromF64) {
-      emit(encodeFmovDX(0, 0));
-    } else {
-      emit(encodeFmovSW(0, 0));
-      emit(kFcvtD0S0);
-    }
-    emit(isUnsigned ? kFcvtzuX0D0 : kFcvtzsX0D0);
-    emitPushReg(0);
-  }
-
-  void emitConvertFloatToFloat(bool fromF64) {
-    emitPopReg(0);
-    if (fromF64) {
-      emit(encodeFmovDX(0, 0));
-      emit(kFcvtS0D0);
-      emit(encodeFmovWS(0, 0));
-    } else {
-      emit(encodeFmovSW(0, 0));
-      emit(kFcvtD0S0);
-      emit(encodeFmovXD(0, 0));
-    }
-    emitPushReg(0);
-  }
-
-  void emitCompareRegZero(uint8_t reg) {
-    emit(encodeSubsReg(31, reg, 31));
-  }
-
-  void emitCompareReg(uint8_t left, uint8_t right) {
-    emit(encodeSubsReg(31, left, right));
-  }
-
-  size_t emitCondBranchPlaceholder(CondCode cond) {
-    flushValueStackCache();
-    size_t index = currentWordIndex();
-    emit(encodeBCond(0, static_cast<uint8_t>(cond)));
-    emit(encodeB(0));
-    return index;
-  }
-
-  void patchCondBranch(size_t index, int32_t offsetWords, CondCode cond) {
-    constexpr int32_t kMinCond = -(1 << 18);
-    constexpr int32_t kMaxCond = (1 << 18) - 1;
-    if (offsetWords >= kMinCond && offsetWords <= kMaxCond) {
-      patchWord(index, encodeBCond(offsetWords, static_cast<uint8_t>(cond)));
-      patchWord(index + 1, encodeB(1));
-      return;
-    }
-    CondCode inverted = invertCond(cond);
-    patchWord(index, encodeBCond(2, static_cast<uint8_t>(inverted)));
-    patchWord(index + 1, encodeB(offsetWords - 1));
-  }
-
-  size_t emitCbzPlaceholder(uint8_t reg) {
-    size_t index = currentWordIndex();
-    emit(encodeCbz(reg, 0));
-    return index;
-  }
-
-  void patchCbz(size_t index, uint8_t reg, int32_t offsetWords) {
-    patchWord(index, encodeCbz(reg, offsetWords));
-  }
-
-  void emitCompareAndPush(CondCode cond) {
-    emitPopReg(0);
-    emitPopReg(1);
-    emit(encodeSubsReg(31, 1, 0));
-    // Offsets assume emitMovImm64 emits 4 instructions and emitPushReg emits 2.
-    emit(encodeBCond(6, static_cast<uint8_t>(cond)));
-    emitMovImm64(0, 0);
-    emit(encodeB(5));
-    emitMovImm64(0, 1);
-    emitPushReg(0);
-  }
+  void emitBinaryOp(uint32_t opWord);
+  void emitFloatBinaryOp(bool isF64, uint32_t opD, uint32_t opS);
+  void emitFloatUnaryOp(bool isF64, uint32_t opD, uint32_t opS);
+  void emitCompareAndPushFloat(bool isF64, CondCode cond);
+  void emitConvertIntToFloat(bool toF64, bool isUnsigned);
+  void emitConvertFloatToInt(bool fromF64, bool isUnsigned);
+  void emitConvertFloatToFloat(bool fromF64);
+  void emitCompareRegZero(uint8_t reg);
+  void emitCompareReg(uint8_t left, uint8_t right);
+  size_t emitCondBranchPlaceholder(CondCode cond);
+  void patchCondBranch(size_t index, int32_t offsetWords, CondCode cond);
+  size_t emitCbzPlaceholder(uint8_t reg);
+  void patchCbz(size_t index, uint8_t reg, int32_t offsetWords);
+  void emitCompareAndPush(CondCode cond);
 
   void emitPushReg(uint8_t reg) {
     counters_.valueStackPushCount += 1;
@@ -1246,6 +918,7 @@ class Arm64Emitter {
   bool valueStackCacheEnabled_ = true;
 };
 
+#include "NativeEmitterInternalsArm64Arithmetic.h"
 #include "NativeEmitterInternalsArm64Io.h"
 
 bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &error);
