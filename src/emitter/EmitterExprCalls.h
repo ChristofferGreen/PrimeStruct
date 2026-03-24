@@ -753,6 +753,11 @@
             const Expr &locationTarget = packedArgExpr.args.front();
             const std::string targetExpr = emitPackedLocationLValue(locationTarget);
             if (normalizedPackBase == "Reference") {
+              BindingInfo locationBinding;
+              if (resolveExprBinding(locationTarget, locationBinding) &&
+                  normalizeBindingTypeName(locationBinding.typeName) == "Reference") {
+                return "std::ref(ps_deref(" + targetExpr + "))";
+              }
               return "std::ref(" + targetExpr + ")";
             }
             if (normalizedPackBase == "Pointer" && locationTarget.kind == Expr::Kind::Call &&
