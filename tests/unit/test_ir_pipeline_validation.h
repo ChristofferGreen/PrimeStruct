@@ -51609,6 +51609,57 @@ TEST_CASE("ir lowerer result helpers resolve direct Result.ok struct payload met
   CHECK(out.valueStructType == "/pkg/Label");
 }
 
+TEST_CASE("ir lowerer result helpers resolve Result.map struct payload metadata") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo localResult;
+  localResult.isResult = true;
+  localResult.resultHasValue = true;
+  localResult.resultValueStructType = "/pkg/Label";
+  localResult.resultErrorType = "FileError";
+  locals.emplace("source", localResult);
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr sourceExpr;
+  sourceExpr.kind = primec::Expr::Kind::Name;
+  sourceExpr.name = "source";
+
+  primec::Expr paramExpr;
+  paramExpr.kind = primec::Expr::Kind::Name;
+  paramExpr.name = "value";
+
+  primec::Expr lambdaExpr;
+  lambdaExpr.isLambda = true;
+  lambdaExpr.args.push_back(paramExpr);
+  lambdaExpr.bodyArguments.push_back(paramExpr);
+
+  primec::Expr mapExpr;
+  mapExpr.kind = primec::Expr::Kind::Call;
+  mapExpr.isMethodCall = true;
+  mapExpr.name = "map";
+  mapExpr.args = {resultName, sourceExpr, lambdaExpr};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      mapExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueStructType == "/pkg/Label");
+}
+
 TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo localResult;

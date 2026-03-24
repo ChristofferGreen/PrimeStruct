@@ -330,6 +330,57 @@ main() {
   CHECK(result == 7);
 }
 
+TEST_CASE("ir lowerer supports single-slot struct Result combinator payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[struct]
+Label() {
+  [i32] code{0i32}
+}
+
+[return<Result<Label, FileError>>]
+make_label([i32] code) {
+  return(Result.ok(Label([code] code)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  print_line(try(Result.map(make_label(2i32), []([Label] value) {
+    return(Label([code] plus(value.code, 5i32)))
+  })).code)
+  print_line(try(Result.and_then(make_label(2i32), []([Label] value) {
+    return(Result.ok(Label([code] plus(value.code, 3i32))))
+  })).code)
+  [Label] summed{try(Result.map2(make_label(2i32), make_label(5i32), []([Label] left, [Label] right) {
+    return(Label([code] plus(left.code, right.code)))
+  }))}
+  print_line(summed.code)
+  return(plus(7i32, plus(5i32, summed.code)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 19);
+}
+
 TEST_CASE("ir lowerer rejects Result.ok composite struct payloads") {
   const std::string source = R"(
 import /std/collections/*
@@ -355,6 +406,45 @@ main() {
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.find("IR backends only support Result.ok with 32-bit or string values") != std::string::npos);
+}
+
+TEST_CASE("ir lowerer rejects Result.map composite struct payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[struct]
+Label() {
+  [i32] code{0i32}
+}
+
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Result<Label, FileError>>]
+make_label() {
+  return(Result.ok(Label([code] 7i32)))
+}
+
+[return<int>]
+main() {
+  [Result<Pair, FileError>] mapped{
+    Result.map(make_label(), []([Label] value) { return(Pair([left] value.code, [right] 2i32)) })
+  }
+  if(Result.error(mapped), then(){ return(1i32) }, else(){ return(0i32) })
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("IR backends only support Result.map with 32-bit or string values") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports Result.and_then builtin lambdas") {

@@ -713,10 +713,10 @@ for(
     `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and
     `/ContainerError/capacity_exceeded()` expose the current constructor values on the same public type-owned
     surface, and unknown codes fall back to `"container error"`. On current IR-backed backends, `Result.ok(value)`
-    supports `i32`, `bool`, `f32`, `string`, the single-slot int-backed stdlib error structs (`FileError`,
-    `ImageError`, `ContainerError`, `GfxError`), and direct generic single-slot user structs whose only field uses
-    that same packed scalar-or-string contract. Downstream `try(...)` rebuilds those direct single-slot struct
-    payloads on VM/native, while generic combinator-carried struct payloads and wider multi-slot payloads remain
+    plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` support `i32`, `bool`, `f32`, `string`,
+    the single-slot int-backed stdlib error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), and
+    generic single-slot user structs whose only field uses that same packed scalar-or-string contract. Downstream
+    `try(...)` rebuilds those single-slot struct payloads on VM/native, while wider multi-slot payloads remain
     follow-up work. Value-carrying container helpers such as `mapTryAt` can now return string values when the
     underlying container path supports them.
   - Canonical and experimental stdlib gfx use `Result<GfxError>` / `Result<T, GfxError>` as their shared error

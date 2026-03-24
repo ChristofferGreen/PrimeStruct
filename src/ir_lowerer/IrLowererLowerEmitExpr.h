@@ -541,6 +541,63 @@
           }
           return true;
         };
+        auto resolvePackedResultPayloadInfo = [&](const Expr &valueExpr,
+                                                  const LocalMap &valueLocals,
+                                                  LocalInfo::ValueKind &packedKindOut,
+                                                  std::string &structTypeOut) -> bool {
+          packedKindOut = inferExprKind(valueExpr, valueLocals);
+          structTypeOut.clear();
+          if (ir_lowerer::isSupportedPackedResultValueKind(packedKindOut)) {
+            return true;
+          }
+          structTypeOut = inferStructExprPath(valueExpr, valueLocals);
+          if (ir_lowerer::resolveSupportedPackedResultStructValueKind(
+                  structTypeOut,
+                  [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(structPath, layoutOut);
+                  },
+                  packedKindOut)) {
+            return true;
+          }
+          packedKindOut = LocalInfo::ValueKind::Unknown;
+          structTypeOut.clear();
+          return false;
+        };
+        auto materializePackedResultStructLocal = [&](int32_t payloadLocal,
+                                                      const std::string &structType,
+                                                      LocalInfo &paramInfo) {
+          const int32_t baseLocal = nextLocal;
+          ++nextLocal;
+          const int32_t ptrLocal = nextLocal++;
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+          paramInfo.index = ptrLocal;
+          paramInfo.kind = LocalInfo::Kind::Value;
+          paramInfo.valueKind = LocalInfo::ValueKind::Int64;
+          paramInfo.structTypeName = structType;
+        };
+        auto emitPackedResultValueExpr = [&](const Expr &valueExpr,
+                                             const LocalMap &valueLocals,
+                                             const std::string &builtinName) -> bool {
+          LocalInfo::ValueKind packedValueKind = LocalInfo::ValueKind::Unknown;
+          std::string structType;
+          if (!resolvePackedResultPayloadInfo(valueExpr, valueLocals, packedValueKind, structType)) {
+            error = ir_lowerer::unsupportedPackedResultValueKindError(builtinName);
+            return false;
+          }
+          if (!emitExpr(valueExpr, valueLocals)) {
+            return false;
+          }
+          if (!structType.empty()) {
+            const int32_t ptrLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          }
+          return true;
+        };
         auto tryEmitResultMapCall = [&](const Expr &callExpr, const LocalMap &callLocals) -> std::optional<bool> {
           if (!(callExpr.isMethodCall && callExpr.name == "map" && callExpr.args.size() == 3 &&
                 callExpr.args.front().kind == Expr::Kind::Name && callExpr.args.front().name == "Result")) {
@@ -558,7 +615,16 @@
             error = "Result.map requires value Result";
             return false;
           }
-          if (!ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind)) {
+          LocalInfo::ValueKind sourcePackedKind = LocalInfo::ValueKind::Unknown;
+          if ((!sourceResultInfo.valueStructType.empty() &&
+               !ir_lowerer::resolveSupportedPackedResultStructValueKind(
+                   sourceResultInfo.valueStructType,
+                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                     return resolveStructSlotLayout(structPath, layoutOut);
+                   },
+                   sourcePackedKind)) ||
+              (sourceResultInfo.valueStructType.empty() &&
+               !ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind))) {
             error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map");
             return false;
           }
@@ -604,10 +670,15 @@
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
-          paramInfo.index = payloadLocal;
-          paramInfo.kind = LocalInfo::Kind::Value;
-          paramInfo.valueKind = sourceResultInfo.valueKind;
-          if (sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
+          if (!sourceResultInfo.valueStructType.empty()) {
+            materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo);
+          } else {
+            paramInfo.index = payloadLocal;
+            paramInfo.kind = LocalInfo::Kind::Value;
+            paramInfo.valueKind = sourceResultInfo.valueKind;
+          }
+          if (sourceResultInfo.valueStructType.empty() &&
+              sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
             paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
           }
           lambdaLocals[lambdaExpr.args.front().name] = paramInfo;
@@ -617,12 +688,7 @@
             return false;
           }
 
-          const LocalInfo::ValueKind mappedValueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
-          if (!ir_lowerer::isSupportedPackedResultValueKind(mappedValueKind)) {
-            error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map");
-            return false;
-          }
-          if (!emitExpr(*mappedValueExpr, lambdaLocals)) {
+          if (!emitPackedResultValueExpr(*mappedValueExpr, lambdaLocals, "Result.map")) {
             return false;
           }
           const size_t jumpEnd = function.instructions.size();
@@ -653,7 +719,16 @@
             error = "Result.and_then requires value Result";
             return false;
           }
-          if (!ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind)) {
+          LocalInfo::ValueKind sourcePackedKind = LocalInfo::ValueKind::Unknown;
+          if ((!sourceResultInfo.valueStructType.empty() &&
+               !ir_lowerer::resolveSupportedPackedResultStructValueKind(
+                   sourceResultInfo.valueStructType,
+                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                     return resolveStructSlotLayout(structPath, layoutOut);
+                   },
+                   sourcePackedKind)) ||
+              (sourceResultInfo.valueStructType.empty() &&
+               !ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind))) {
             error = ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then");
             return false;
           }
@@ -699,10 +774,15 @@
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
-          paramInfo.index = payloadLocal;
-          paramInfo.kind = LocalInfo::Kind::Value;
-          paramInfo.valueKind = sourceResultInfo.valueKind;
-          if (sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
+          if (!sourceResultInfo.valueStructType.empty()) {
+            materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo);
+          } else {
+            paramInfo.index = payloadLocal;
+            paramInfo.kind = LocalInfo::Kind::Value;
+            paramInfo.valueKind = sourceResultInfo.valueKind;
+          }
+          if (sourceResultInfo.valueStructType.empty() &&
+              sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
             paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
           }
           lambdaLocals[lambdaExpr.args.front().name] = paramInfo;
@@ -720,7 +800,15 @@
             return false;
           }
           if (chainedResultInfo.hasValue &&
-              !ir_lowerer::isSupportedPackedResultValueKind(chainedResultInfo.valueKind)) {
+              (( !chainedResultInfo.valueStructType.empty() &&
+                 !ir_lowerer::resolveSupportedPackedResultStructValueKind(
+                     chainedResultInfo.valueStructType,
+                     [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                       return resolveStructSlotLayout(structPath, layoutOut);
+                     },
+                     sourcePackedKind)) ||
+               (chainedResultInfo.valueStructType.empty() &&
+                !ir_lowerer::isSupportedPackedResultValueKind(chainedResultInfo.valueKind)))) {
             error = ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then");
             return false;
           }
@@ -763,8 +851,26 @@
             error = "Result.map2 requires matching error types";
             return false;
           }
-          if (!ir_lowerer::isSupportedPackedResultValueKind(leftResultInfo.valueKind) ||
-              !ir_lowerer::isSupportedPackedResultValueKind(rightResultInfo.valueKind)) {
+          LocalInfo::ValueKind leftPackedKind = LocalInfo::ValueKind::Unknown;
+          LocalInfo::ValueKind rightPackedKind = LocalInfo::ValueKind::Unknown;
+          if ((!leftResultInfo.valueStructType.empty() &&
+               !ir_lowerer::resolveSupportedPackedResultStructValueKind(
+                   leftResultInfo.valueStructType,
+                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                     return resolveStructSlotLayout(structPath, layoutOut);
+                   },
+                   leftPackedKind)) ||
+              (leftResultInfo.valueStructType.empty() &&
+               !ir_lowerer::isSupportedPackedResultValueKind(leftResultInfo.valueKind)) ||
+              (!rightResultInfo.valueStructType.empty() &&
+               !ir_lowerer::resolveSupportedPackedResultStructValueKind(
+                   rightResultInfo.valueStructType,
+                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                     return resolveStructSlotLayout(structPath, layoutOut);
+                   },
+                   rightPackedKind)) ||
+              (rightResultInfo.valueStructType.empty() &&
+               !ir_lowerer::isSupportedPackedResultValueKind(rightResultInfo.valueKind))) {
             error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
             return false;
           }
@@ -835,19 +941,29 @@
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo leftParamInfo;
-          leftParamInfo.index = leftPayloadLocal;
-          leftParamInfo.kind = LocalInfo::Kind::Value;
-          leftParamInfo.valueKind = leftResultInfo.valueKind;
-          if (leftResultInfo.valueKind == LocalInfo::ValueKind::String) {
+          if (!leftResultInfo.valueStructType.empty()) {
+            materializePackedResultStructLocal(leftPayloadLocal, leftResultInfo.valueStructType, leftParamInfo);
+          } else {
+            leftParamInfo.index = leftPayloadLocal;
+            leftParamInfo.kind = LocalInfo::Kind::Value;
+            leftParamInfo.valueKind = leftResultInfo.valueKind;
+          }
+          if (leftResultInfo.valueStructType.empty() &&
+              leftResultInfo.valueKind == LocalInfo::ValueKind::String) {
             leftParamInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
           }
           lambdaLocals[lambdaExpr.args[0].name] = leftParamInfo;
 
           LocalInfo rightParamInfo;
-          rightParamInfo.index = rightPayloadLocal;
-          rightParamInfo.kind = LocalInfo::Kind::Value;
-          rightParamInfo.valueKind = rightResultInfo.valueKind;
-          if (rightResultInfo.valueKind == LocalInfo::ValueKind::String) {
+          if (!rightResultInfo.valueStructType.empty()) {
+            materializePackedResultStructLocal(rightPayloadLocal, rightResultInfo.valueStructType, rightParamInfo);
+          } else {
+            rightParamInfo.index = rightPayloadLocal;
+            rightParamInfo.kind = LocalInfo::Kind::Value;
+            rightParamInfo.valueKind = rightResultInfo.valueKind;
+          }
+          if (rightResultInfo.valueStructType.empty() &&
+              rightResultInfo.valueKind == LocalInfo::ValueKind::String) {
             rightParamInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
           }
           lambdaLocals[lambdaExpr.args[1].name] = rightParamInfo;
@@ -857,12 +973,7 @@
             return false;
           }
 
-          const LocalInfo::ValueKind mappedValueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
-          if (!ir_lowerer::isSupportedPackedResultValueKind(mappedValueKind)) {
-            error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
-            return false;
-          }
-          if (!emitExpr(*mappedValueExpr, lambdaLocals)) {
+          if (!emitPackedResultValueExpr(*mappedValueExpr, lambdaLocals, "Result.map2")) {
             return false;
           }
           const size_t jumpEnd = function.instructions.size();

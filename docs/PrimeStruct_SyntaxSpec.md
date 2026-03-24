@@ -883,11 +883,11 @@ Draft constraints:
   - Block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected.
   - `print*` and vector helper calls are statement-only; expression usage is rejected.
   - `File<Mode>(path)` requires a string literal or literal-backed binding.
-  - `Result.ok(value)` currently accepts `i32`, `bool`, `f32`, literal-backed `string`, the single-slot
-    int-backed stdlib error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), and direct generic
-    single-slot user structs whose only field fits that same packed scalar-or-string contract. Downstream
-    `try(...)` reconstruction supports that direct single-slot struct path on VM/native; generic combinator-carried
-    struct payloads and wider multi-slot payloads remain unsupported.
+  - `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept
+    `i32`, `bool`, `f32`, literal-backed `string`, the single-slot int-backed stdlib error structs (`FileError`,
+    `ImageError`, `ContainerError`, `GfxError`), and generic single-slot user structs whose only field fits that
+    same packed scalar-or-string contract. Downstream `try(...)` reconstruction supports that single-slot struct
+    path on VM/native; wider multi-slot payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.
 - Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
 - VM/native consume the PSIR v16 opcode set (see design doc) and deserialization rejects unknown opcodes.

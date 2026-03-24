@@ -187,6 +187,35 @@ bool inferDirectResultValueStructType(const Expr &expr,
   return false;
 }
 
+void applyResultValueInfoToLocal(const ResultExprInfo &resultInfo, LocalInfo &paramInfo) {
+  paramInfo.kind = LocalInfo::Kind::Value;
+  if (!resultInfo.valueStructType.empty()) {
+    paramInfo.valueKind = LocalInfo::ValueKind::Int64;
+    paramInfo.structTypeName = resultInfo.valueStructType;
+    return;
+  }
+  paramInfo.valueKind = resultInfo.valueKind;
+  if (resultInfo.valueKind == LocalInfo::ValueKind::String) {
+    paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
+  }
+}
+
+void applyDirectResultValueMetadata(const Expr &valueExpr,
+                                    const LocalMap &localsIn,
+                                    const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                    const InferExprKindWithLocalsFn &inferExprKind,
+                                    ResultExprInfo &out) {
+  std::string valueStructType;
+  if (inferDirectResultValueStructType(valueExpr, localsIn, resolveDefinitionCall, valueStructType)) {
+    out.valueStructType = std::move(valueStructType);
+    out.valueKind = LocalInfo::ValueKind::Unknown;
+    return;
+  }
+  if (inferExprKind) {
+    out.valueKind = inferExprKind(valueExpr, localsIn);
+  }
+}
+
 bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
                                const LocalMap &localsIn,
                                const ResolveMethodCallWithLocalsFn &resolveMethodCall,
@@ -540,12 +569,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.isResult = true;
     out.hasValue = (expr.args.size() > 1);
     if (out.hasValue && expr.args.size() == 2) {
-      std::string valueStructType;
-      if (inferDirectResultValueStructType(expr.args[1], localsIn, resolveDefinitionCall, valueStructType)) {
-        out.valueStructType = std::move(valueStructType);
-      } else if (inferExprKind) {
-        out.valueKind = inferExprKind(expr.args[1], localsIn);
-      }
+      applyDirectResultValueMetadata(expr.args[1], localsIn, resolveDefinitionCall, inferExprKind, out);
     }
     return true;
   }
@@ -564,11 +588,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     LocalMap lambdaLocals = localsIn;
     LocalInfo paramInfo;
-    paramInfo.kind = LocalInfo::Kind::Value;
-    paramInfo.valueKind = sourceResultInfo.valueKind;
-    if (sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
-      paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
-    }
+    applyResultValueInfoToLocal(sourceResultInfo, paramInfo);
     lambdaLocals[expr.args[2].args.front().name] = paramInfo;
 
     const Expr *mappedValueExpr = nullptr;
@@ -579,9 +599,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     out.isResult = true;
     out.hasValue = true;
-    if (inferExprKind) {
-      out.valueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
-    }
+    applyDirectResultValueMetadata(*mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, out);
     out.errorType = sourceResultInfo.errorType;
     return true;
   }
@@ -600,11 +618,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     LocalMap lambdaLocals = localsIn;
     LocalInfo paramInfo;
-    paramInfo.kind = LocalInfo::Kind::Value;
-    paramInfo.valueKind = sourceResultInfo.valueKind;
-    if (sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
-      paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
-    }
+    applyResultValueInfoToLocal(sourceResultInfo, paramInfo);
     lambdaLocals[expr.args[2].args.front().name] = paramInfo;
 
     const Expr *chainedResultExpr = nullptr;
@@ -659,19 +673,11 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     LocalMap lambdaLocals = localsIn;
     LocalInfo leftParamInfo;
-    leftParamInfo.kind = LocalInfo::Kind::Value;
-    leftParamInfo.valueKind = leftResultInfo.valueKind;
-    if (leftResultInfo.valueKind == LocalInfo::ValueKind::String) {
-      leftParamInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
-    }
+    applyResultValueInfoToLocal(leftResultInfo, leftParamInfo);
     lambdaLocals[expr.args[3].args.front().name] = leftParamInfo;
 
     LocalInfo rightParamInfo;
-    rightParamInfo.kind = LocalInfo::Kind::Value;
-    rightParamInfo.valueKind = rightResultInfo.valueKind;
-    if (rightResultInfo.valueKind == LocalInfo::ValueKind::String) {
-      rightParamInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
-    }
+    applyResultValueInfoToLocal(rightResultInfo, rightParamInfo);
     lambdaLocals[expr.args[3].args[1].name] = rightParamInfo;
 
     const Expr *mappedValueExpr = nullptr;
@@ -682,9 +688,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     out.isResult = true;
     out.hasValue = true;
-    if (inferExprKind) {
-      out.valueKind = inferExprKind(*mappedValueExpr, lambdaLocals);
-    }
+    applyDirectResultValueMetadata(*mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, out);
     out.errorType = !leftResultInfo.errorType.empty() ? leftResultInfo.errorType : rightResultInfo.errorType;
     return true;
   }
