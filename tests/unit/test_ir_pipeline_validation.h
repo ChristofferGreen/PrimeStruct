@@ -254,6 +254,42 @@ TEST_CASE("emitter builtin call path helpers preserve canonical compatibility fa
         "/std/collections/map/at");
 }
 
+TEST_CASE("emitter collection inference helpers classify string access through element deduction") {
+  primec::Emitter::BindingInfo stringVectorBinding;
+  stringVectorBinding.typeName = "vector";
+  stringVectorBinding.typeTemplateArg = "string";
+
+  primec::Emitter::BindingInfo intVectorBinding;
+  intVectorBinding.typeName = "vector";
+  intVectorBinding.typeTemplateArg = "i32";
+
+  std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {
+      {"names", stringVectorBinding},
+      {"values", intVectorBinding},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "names";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  primec::Expr stringAtCall;
+  stringAtCall.kind = primec::Expr::Kind::Call;
+  stringAtCall.name = "at";
+  stringAtCall.args = {receiverExpr, indexExpr};
+  CHECK(primec::emitter::isStringValue(stringAtCall, localTypes));
+
+  primec::Expr intReceiverExpr = receiverExpr;
+  intReceiverExpr.name = "values";
+  primec::Expr intAtCall = stringAtCall;
+  intAtCall.args.front() = intReceiverExpr;
+  CHECK_FALSE(primec::emitter::isStringValue(intAtCall, localTypes));
+}
+
 TEST_CASE("semantics binding type helpers validate nested templates and map keys") {
   std::vector<std::string> parts;
   CHECK(primec::semantics::splitTopLevelTemplateArgs("map<i32, vector<f32>>, Pointer<string>", parts));
@@ -9507,6 +9543,41 @@ TEST_CASE("emitter builtin call path helper source delegation stays stable") {
         std::string::npos);
   CHECK(emitterBuiltinCallPathHelpersSource.find("bool getBuiltinArrayAccessNameLocal(") != std::string::npos);
   CHECK(emitterBuiltinCallPathHelpersSource.find("std::string preferredFileMethodTargetLocal(") !=
+        std::string::npos);
+}
+
+TEST_CASE("emitter builtin collection inference helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path emitterHelpersBuiltinsPath =
+      repoRoot / "src" / "emitter" / "EmitterHelpersBuiltins.cpp";
+  const std::filesystem::path emitterBuiltinCollectionInferenceHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinCollectionInferenceHelpers.cpp";
+  REQUIRE(std::filesystem::exists(emitterHelpersBuiltinsPath));
+  REQUIRE(std::filesystem::exists(emitterBuiltinCollectionInferenceHelpersPath));
+
+  const std::string emitterHelpersBuiltinsSource = readText(emitterHelpersBuiltinsPath);
+  const std::string emitterBuiltinCollectionInferenceHelpersSource =
+      readText(emitterBuiltinCollectionInferenceHelpersPath);
+
+  CHECK(emitterHelpersBuiltinsSource.find("bool isArrayValue(") == std::string::npos);
+  CHECK(emitterHelpersBuiltinsSource.find("bool inferCollectionElementTypeNameFromExpr(") == std::string::npos);
+  CHECK(emitterHelpersBuiltinsSource.find("std::string inferAccessCallTypeName(") == std::string::npos);
+
+  CHECK(emitterBuiltinCollectionInferenceHelpersSource.find("bool isArrayValue(") != std::string::npos);
+  CHECK(emitterBuiltinCollectionInferenceHelpersSource.find("bool inferCollectionElementTypeNameFromExpr(") !=
+        std::string::npos);
+  CHECK(emitterBuiltinCollectionInferenceHelpersSource.find("std::string inferAccessCallTypeName(") !=
         std::string::npos);
 }
 
