@@ -27948,6 +27948,55 @@ TEST_CASE("ir lowerer setup type infers referenced declared collection receivers
   CHECK(typeName == "map");
 }
 
+TEST_CASE("ir lowerer setup type helper resolves experimental vector helper aliases") {
+  primec::Expr helperExpr;
+  helperExpr.kind = primec::Expr::Kind::Call;
+  helperExpr.name = "/std/collections/experimental_vector/vectorRemoveSwap__generated";
+
+  std::string collectionName;
+  std::string helperName;
+  REQUIRE(primec::ir_lowerer::getNamespacedCollectionHelperName(helperExpr, collectionName, helperName));
+  CHECK(collectionName == "vector");
+  CHECK(helperName == "remove_swap");
+}
+
+TEST_CASE("ir lowerer setup type helper infers literal map constructor returns") {
+  primec::Definition def;
+
+  primec::Expr returnExpr;
+  returnExpr.kind = primec::Expr::Kind::Call;
+  returnExpr.name = "/std/collections/mapDouble";
+
+  primec::Expr intKey;
+  intKey.kind = primec::Expr::Kind::Literal;
+  intKey.intWidth = 32;
+  intKey.literalValue = 1;
+
+  primec::Expr textValue;
+  textValue.kind = primec::Expr::Kind::StringLiteral;
+  textValue.stringValue = "one";
+
+  primec::Expr intKey2;
+  intKey2.kind = primec::Expr::Kind::Literal;
+  intKey2.intWidth = 32;
+  intKey2.literalValue = 2;
+
+  primec::Expr textValue2;
+  textValue2.kind = primec::Expr::Kind::StringLiteral;
+  textValue2.stringValue = "two";
+
+  returnExpr.args = {intKey, textValue, intKey2, textValue2};
+  def.returnExpr = returnExpr;
+
+  std::string collectionName;
+  std::vector<std::string> collectionArgs;
+  REQUIRE(primec::ir_lowerer::inferDeclaredReturnCollection(def, collectionName, collectionArgs));
+  CHECK(collectionName == "map");
+  REQUIRE(collectionArgs.size() == 2u);
+  CHECK(collectionArgs[0] == "i32");
+  CHECK(collectionArgs[1] == "string");
+}
+
 TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
   primec::Definition callee;
   callee.fullPath = "/pkg/do_work";
