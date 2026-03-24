@@ -51271,6 +51271,9 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
   const auto inferNoStruct = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
     return std::string{};
   };
+  const auto neverFileHandle = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return false;
+  };
   const auto allocTempLocal = []() { return 19; };
   const auto resolveNoStructLayout = [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
     return false;
@@ -51284,6 +51287,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Unknown;
             },
             inferNoStruct,
+            neverFileHandle,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             allocTempLocal,
             resolveNoStructLayout,
@@ -51304,6 +51308,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Unknown;
             },
             inferNoStruct,
+            neverFileHandle,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             allocTempLocal,
             resolveNoStructLayout,
@@ -51323,6 +51328,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Bool;
             },
             inferNoStruct,
+            neverFileHandle,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               emitCalled = true;
               return true;
@@ -51344,6 +51350,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Int32;
             },
             inferNoStruct,
+            neverFileHandle,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             allocTempLocal,
             resolveNoStructLayout,
@@ -51362,6 +51369,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::String;
             },
             inferNoStruct,
+            neverFileHandle,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               emitCalled = true;
               return true;
@@ -51383,6 +51391,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Int64;
             },
             inferNoStruct,
+            neverFileHandle,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               emitCalled = true;
               return true;
@@ -51392,10 +51401,49 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [&](primec::IrOpcode, uint64_t) {},
             error) ==
         EmitResult::Error);
-  CHECK(error == "IR backends only support Result.ok with 32-bit or string values");
+  CHECK(error == "IR backends only support Result.ok with packed payload values");
   CHECK_FALSE(emitCalled);
 
+  emitCalled = false;
+  primec::Expr fileValueExpr;
+  fileValueExpr.kind = primec::Expr::Kind::Name;
+  fileValueExpr.name = "file";
+  expr.args = {resultType, fileValueExpr};
+  primec::ir_lowerer::LocalInfo fileInfo;
+  fileInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  fileInfo.valueKind = ValueKind::Int64;
+  fileInfo.isFileHandle = true;
+  fileInfo.index = 23;
+  locals.emplace("file", fileInfo);
   error.clear();
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Int64;
+            },
+            inferNoStruct,
+            [](const primec::Expr &value, const primec::ir_lowerer::LocalMap &valueLocals) {
+              if (value.kind != primec::Expr::Kind::Name) {
+                return false;
+              }
+              auto it = valueLocals.find(value.name);
+              return it != valueLocals.end() && it->second.isFileHandle;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              emitCalled = true;
+              return true;
+            },
+            allocTempLocal,
+            resolveNoStructLayout,
+            [&](primec::IrOpcode, uint64_t) {},
+            error) ==
+        EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitCalled);
+
+  error.clear();
+  expr.args = {resultType, valueExpr};
   CHECK(primec::ir_lowerer::tryEmitResultOkCall(
             expr,
             locals,
@@ -51403,6 +51451,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Int32;
             },
             inferNoStruct,
+            neverFileHandle,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             allocTempLocal,
             resolveNoStructLayout,
@@ -51449,6 +51498,7 @@ TEST_CASE("ir lowerer result helpers pack single-slot struct Result.ok values") 
             [](const primec::Expr &value, const primec::ir_lowerer::LocalMap &) {
               return value.kind == primec::Expr::Kind::Name && value.name == "label" ? "/pkg/Label" : std::string{};
             },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               instructions.push_back({primec::IrOpcode::LoadLocal, 7});
               return true;
@@ -51658,6 +51708,90 @@ TEST_CASE("ir lowerer result helpers resolve Result.map struct payload metadata"
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueStructType == "/pkg/Label");
+}
+
+TEST_CASE("ir lowerer result helpers resolve file handle Result payload metadata") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo fileLocal;
+  fileLocal.isFileHandle = true;
+  fileLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("file", fileLocal);
+
+  primec::ir_lowerer::LocalInfo resultLocal;
+  resultLocal.isResult = true;
+  resultLocal.resultHasValue = true;
+  resultLocal.resultValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  resultLocal.resultValueIsFileHandle = true;
+  resultLocal.resultErrorType = "FileError";
+  locals.emplace("source", resultLocal);
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr fileExpr;
+  fileExpr.kind = primec::Expr::Kind::Name;
+  fileExpr.name = "file";
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultName, fileExpr};
+
+  primec::Expr sourceExpr;
+  sourceExpr.kind = primec::Expr::Kind::Name;
+  sourceExpr.name = "source";
+
+  primec::Expr paramExpr;
+  paramExpr.kind = primec::Expr::Kind::Name;
+  paramExpr.name = "opened";
+
+  primec::Expr lambdaExpr;
+  lambdaExpr.isLambda = true;
+  lambdaExpr.args.push_back(paramExpr);
+  lambdaExpr.bodyArguments.push_back(paramExpr);
+
+  primec::Expr mapExpr;
+  mapExpr.kind = primec::Expr::Kind::Call;
+  mapExpr.isMethodCall = true;
+  mapExpr.name = "map";
+  mapExpr.args = {resultName, sourceExpr, lambdaExpr};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+    if (expr.kind == primec::Expr::Kind::Name) {
+      auto localIt = localsIn.find(expr.name);
+      if (localIt != localsIn.end()) {
+        return localIt->second.valueKind;
+      }
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      okExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.valueStructType.empty());
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      mapExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.valueStructType.empty());
 }
 
 TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {

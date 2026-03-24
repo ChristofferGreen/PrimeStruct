@@ -298,7 +298,7 @@ module {
 
 ### Backend Type Support (v1)
 - **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64`. `array`/`vector`/`map` support numeric/bool values; map string keys must be string literals or literal-backed bindings. Strings are limited to literals/literal-backed bindings for print/map contexts; string returns are supported for literal-backed values, while string arrays and string pointers/references are rejected. `convert<T>` supports `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
-- **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++ emitter); string comparisons are rejected and string literals are limited to print/count/index/map contexts; string array returns and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)` requires a string literal or literal-backed binding; `Result.ok(value)` currently accepts `i32`, `bool`, `f32`, literal-backed `string`, and the single-slot int-backed stdlib error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`) only; unsupported math or GPU builtins fail.
+- **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++ emitter); string comparisons are rejected and string literals are limited to print/count/index/map contexts; string array returns and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)` requires a string literal or literal-backed binding; `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept `i32`, `bool`, `f32`, literal-backed `string`, packed `File<Mode>` handles, the single-slot int-backed stdlib error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), and generic single-slot user structs whose only field fits that same packed scalar-or-string contract; unsupported math or GPU builtins fail.
 - **GLSL:** numeric/bool scalar locals (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`) plus nominal `Vec2`, `Vec3`, `Vec4`, `Quat`, `Mat2`, `Mat3`, and `Mat4` bindings; string literals and other non-supported composites are rejected, and entry definitions must return `void`. `convert<T>` targets match the numeric/bool list above.
 - **GLSL emitter restrictions (current):** at most one `return()` statement; static bindings are rejected; assign/increment/decrement require local mutable targets; control flow must use canonical forms (`if(cond, then() { ... }, else() { ... })`, `loop(count, body() { ... })`, `while(cond, body() { ... })`, `for(init, cond, step, body() { ... })`); builtins require positional args with no template/block arguments, and unsupported builtins fail.
 - **GLSL type support (current):** scalar `bool`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64` plus nominal `Vec2`, `Vec3`, `Vec4`, `Quat`, `Mat2`, `Mat3`, and `Mat4`. Using `i64`/`u64` or `f64` emits `GL_ARB_gpu_shader_int64`/`GL_ARB_gpu_shader_fp64` requirements. Arrays, strings, general structs, pointers/references, maps, and other unsupported composites are rejected.
@@ -714,11 +714,12 @@ for(
     `/ContainerError/capacity_exceeded()` expose the current constructor values on the same public type-owned
     surface, and unknown codes fall back to `"container error"`. On current IR-backed backends, `Result.ok(value)`
     plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` support `i32`, `bool`, `f32`, `string`,
-    the single-slot int-backed stdlib error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), and
-    generic single-slot user structs whose only field uses that same packed scalar-or-string contract. Downstream
-    `try(...)` rebuilds those single-slot struct payloads on VM/native, while wider multi-slot payloads remain
-    follow-up work. Value-carrying container helpers such as `mapTryAt` can now return string values when the
-    underlying container path supports them.
+    packed `File<Mode>` handles, the single-slot int-backed stdlib error structs (`FileError`, `ImageError`,
+    `ContainerError`, `GfxError`), and generic single-slot user structs whose only field uses that same packed
+    scalar-or-string contract. Downstream `try(...)` preserves those packed `File<Mode>` handles and rebuilds those
+    single-slot struct payloads on VM/native, while wider multi-slot payloads remain follow-up work. Value-carrying
+    container helpers such as `mapTryAt` can now return string values when the underlying container path supports
+    them.
   - Canonical and experimental stdlib gfx use `Result<GfxError>` / `Result<T, GfxError>` as their shared error
     contract; `GfxError.status(err)` / `GfxError.result<T>(err)` now own the type-level packing surface for
     `/std/gfx/*` and `/std/gfx/experimental/*` while `gfxErrorStatus(err)` / `gfxErrorResult<T>(err)` remain

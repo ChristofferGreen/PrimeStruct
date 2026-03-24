@@ -119,6 +119,9 @@ bool emitInlineDefinitionCallParameters(
                  targetInfo.isResult == paramInfo.isResult &&
                  targetInfo.resultHasValue == paramInfo.resultHasValue &&
                  targetInfo.resultValueKind == paramInfo.resultValueKind &&
+                 targetInfo.resultValueCollectionKind == paramInfo.resultValueCollectionKind &&
+                 targetInfo.resultValueMapKeyKind == paramInfo.resultValueMapKeyKind &&
+                 targetInfo.resultValueIsFileHandle == paramInfo.resultValueIsFileHandle &&
                  targetInfo.resultErrorType == paramInfo.resultErrorType &&
                  matchesWrappedScalarOrStructValueKind(targetInfo) &&
                  targetInfo.structTypeName == paramInfo.structTypeName;
@@ -156,6 +159,9 @@ bool emitInlineDefinitionCallParameters(
                targetInfo.isResult == paramInfo.isResult &&
                targetInfo.resultHasValue == paramInfo.resultHasValue &&
                targetInfo.resultValueKind == paramInfo.resultValueKind &&
+               targetInfo.resultValueCollectionKind == paramInfo.resultValueCollectionKind &&
+               targetInfo.resultValueMapKeyKind == paramInfo.resultValueMapKeyKind &&
+               targetInfo.resultValueIsFileHandle == paramInfo.resultValueIsFileHandle &&
                targetInfo.resultErrorType == paramInfo.resultErrorType &&
                matchesWrappedScalarOrStructValueKind(targetInfo) &&
                targetInfo.structTypeName == paramInfo.structTypeName;
@@ -187,6 +193,9 @@ bool emitInlineDefinitionCallParameters(
                 it->second.isResult != paramInfo.isResult ||
                 it->second.resultHasValue != paramInfo.resultHasValue ||
                 it->second.resultValueKind != paramInfo.resultValueKind ||
+                it->second.resultValueCollectionKind != paramInfo.resultValueCollectionKind ||
+                it->second.resultValueMapKeyKind != paramInfo.resultValueMapKeyKind ||
+                it->second.resultValueIsFileHandle != paramInfo.resultValueIsFileHandle ||
                 it->second.resultErrorType != paramInfo.resultErrorType ||
                 it->second.valueKind != paramInfo.valueKind ||
                 it->second.structTypeName != paramInfo.structTypeName) {
@@ -224,6 +233,9 @@ bool emitInlineDefinitionCallParameters(
                 it->second.isResult != paramInfo.isResult ||
                 it->second.resultHasValue != paramInfo.resultHasValue ||
                 it->second.resultValueKind != paramInfo.resultValueKind ||
+                it->second.resultValueCollectionKind != paramInfo.resultValueCollectionKind ||
+                it->second.resultValueMapKeyKind != paramInfo.resultValueMapKeyKind ||
+                it->second.resultValueIsFileHandle != paramInfo.resultValueIsFileHandle ||
                 it->second.resultErrorType != paramInfo.resultErrorType ||
                 (paramInfo.pointerToMap &&
                  (it->second.mapKeyKind != paramInfo.mapKeyKind ||
@@ -295,6 +307,9 @@ bool emitInlineDefinitionCallParameters(
                 it->second.isResult != paramInfo.isResult ||
                 it->second.resultHasValue != paramInfo.resultHasValue ||
                 it->second.resultValueKind != paramInfo.resultValueKind ||
+                it->second.resultValueCollectionKind != paramInfo.resultValueCollectionKind ||
+                it->second.resultValueMapKeyKind != paramInfo.resultValueMapKeyKind ||
+                it->second.resultValueIsFileHandle != paramInfo.resultValueIsFileHandle ||
                 it->second.resultErrorType != paramInfo.resultErrorType ||
                 it->second.valueKind != paramInfo.valueKind ||
                 it->second.structTypeName != paramInfo.structTypeName) {
@@ -326,6 +341,9 @@ bool emitInlineDefinitionCallParameters(
                 it->second.isResult != paramInfo.isResult ||
                 it->second.resultHasValue != paramInfo.resultHasValue ||
                 it->second.resultValueKind != paramInfo.resultValueKind ||
+                it->second.resultValueCollectionKind != paramInfo.resultValueCollectionKind ||
+                it->second.resultValueMapKeyKind != paramInfo.resultValueMapKeyKind ||
+                it->second.resultValueIsFileHandle != paramInfo.resultValueIsFileHandle ||
                 it->second.resultErrorType != paramInfo.resultErrorType ||
                 (paramInfo.pointerToMap &&
                  (it->second.mapKeyKind != paramInfo.mapKeyKind ||
@@ -402,6 +420,9 @@ bool emitInlineDefinitionCallParameters(
         if (callerIt->second.isResult != paramInfo.isResult ||
             callerIt->second.resultHasValue != paramInfo.resultHasValue ||
             callerIt->second.resultValueKind != paramInfo.resultValueKind ||
+            callerIt->second.resultValueCollectionKind != paramInfo.resultValueCollectionKind ||
+            callerIt->second.resultValueMapKeyKind != paramInfo.resultValueMapKeyKind ||
+            callerIt->second.resultValueIsFileHandle != paramInfo.resultValueIsFileHandle ||
             callerIt->second.resultErrorType != paramInfo.resultErrorType) {
           error = "variadic parameter type mismatch";
           return false;
@@ -454,6 +475,9 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.isResult = callerIt->second.isResult;
         paramInfo.resultHasValue = callerIt->second.resultHasValue;
         paramInfo.resultValueKind = callerIt->second.resultValueKind;
+        paramInfo.resultValueCollectionKind = callerIt->second.resultValueCollectionKind;
+        paramInfo.resultValueMapKeyKind = callerIt->second.resultValueMapKeyKind;
+        paramInfo.resultValueIsFileHandle = callerIt->second.resultValueIsFileHandle;
         paramInfo.resultErrorType = callerIt->second.resultErrorType;
         paramInfo.targetsUninitializedStorage = callerIt->second.targetsUninitializedStorage;
         calleeLocals.emplace(param.name, paramInfo);

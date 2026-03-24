@@ -39,6 +39,27 @@ bool isResultBuiltinCall(const Expr &expr, const std::string &name, size_t argCo
          !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result";
 }
 
+bool isFileHandleTypeText(const std::string &typeText) {
+  std::string base;
+  std::string arg;
+  return splitTemplateTypeName(trimTemplateTypeText(typeText), base, arg) &&
+         normalizeCollectionBindingTypeName(base) == "File";
+}
+
+bool extractResultValueTypeText(const std::string &typeText, std::string &valueTypeOut) {
+  valueTypeOut.clear();
+  std::string base;
+  std::string argList;
+  std::vector<std::string> args;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argList) ||
+      normalizeCollectionBindingTypeName(base) != "Result" ||
+      !splitTemplateArgs(argList, args) || args.size() != 2) {
+    return false;
+  }
+  valueTypeOut = trimTemplateTypeText(args.front());
+  return true;
+}
+
 void applyDeclaredResultBindingMetadata(const Expr &bindingExpr, LocalInfo &bindingInfo) {
   for (const auto &transform : bindingExpr.transforms) {
     if (transform.name == "Result") {
@@ -47,6 +68,12 @@ void applyDeclaredResultBindingMetadata(const Expr &bindingExpr, LocalInfo &bind
       bindingInfo.resultValueKind =
           bindingInfo.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
                                      : LocalInfo::ValueKind::Unknown;
+      bindingInfo.resultValueIsFileHandle =
+          bindingInfo.resultHasValue && !transform.templateArgs.empty() &&
+          isFileHandleTypeText(transform.templateArgs.front());
+      if (bindingInfo.resultValueIsFileHandle) {
+        bindingInfo.resultValueKind = LocalInfo::ValueKind::Int64;
+      }
       bindingInfo.resultErrorType = transform.templateArgs.empty() ? std::string{} : transform.templateArgs.back();
       bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       continue;
@@ -68,6 +95,13 @@ void applyDeclaredResultBindingMetadata(const Expr &bindingExpr, LocalInfo &bind
     bindingInfo.isResult = true;
     bindingInfo.resultHasValue = resultHasValue;
     bindingInfo.resultValueKind = resultValueKind;
+    std::string resultValueType;
+    bindingInfo.resultValueIsFileHandle =
+        resultHasValue && extractResultValueTypeText(transform.templateArgs.front(), resultValueType) &&
+        isFileHandleTypeText(resultValueType);
+    if (bindingInfo.resultValueIsFileHandle) {
+      resultValueKind = LocalInfo::ValueKind::Int64;
+    }
     bindingInfo.resultErrorType = resultErrorType;
     bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
   }
@@ -107,6 +141,7 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
     bindingInfo.isResult = true;
     bindingInfo.resultHasValue = bindingResultInfo.hasValue;
     bindingInfo.resultValueKind = bindingResultInfo.valueKind;
+    bindingInfo.resultValueIsFileHandle = bindingResultInfo.valueIsFileHandle;
     bindingInfo.resultValueStructType = bindingResultInfo.valueStructType;
     bindingInfo.resultErrorType =
         !bindingResultInfo.errorType.empty() ? bindingResultInfo.errorType : declaredErrorType;
@@ -145,7 +180,13 @@ bool mergeControlFlowResultInfos(const ResultExprInfo &first,
         first.valueKind != second.valueKind) {
       return false;
     }
+    if (first.valueIsFileHandle != second.valueIsFileHandle &&
+        ((first.valueKind != LocalInfo::ValueKind::Unknown && second.valueKind != LocalInfo::ValueKind::Unknown) ||
+         !first.valueStructType.empty() || !second.valueStructType.empty())) {
+      return false;
+    }
     out.valueKind = first.valueKind != LocalInfo::ValueKind::Unknown ? first.valueKind : second.valueKind;
+    out.valueIsFileHandle = first.valueIsFileHandle || second.valueIsFileHandle;
     if (!first.valueStructType.empty() && !second.valueStructType.empty() &&
         first.valueStructType != second.valueStructType) {
       return false;
@@ -168,9 +209,14 @@ bool inferDirectResultValueStructType(const Expr &expr,
   structTypeOut.clear();
   if (expr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(expr.name);
-    if (localIt != localsIn.end() && !localIt->second.structTypeName.empty()) {
-      structTypeOut = localIt->second.structTypeName;
-      return true;
+    if (localIt != localsIn.end()) {
+      if (!localIt->second.structTypeName.empty()) {
+        structTypeOut = localIt->second.structTypeName;
+        return true;
+      }
+      if (localIt->second.isFileHandle) {
+        return false;
+      }
     }
     return false;
   }
@@ -189,6 +235,11 @@ bool inferDirectResultValueStructType(const Expr &expr,
 
 void applyResultValueInfoToLocal(const ResultExprInfo &resultInfo, LocalInfo &paramInfo) {
   paramInfo.kind = LocalInfo::Kind::Value;
+  if (resultInfo.valueIsFileHandle) {
+    paramInfo.valueKind = LocalInfo::ValueKind::Int64;
+    paramInfo.isFileHandle = true;
+    return;
+  }
   if (!resultInfo.valueStructType.empty()) {
     paramInfo.valueKind = LocalInfo::ValueKind::Int64;
     paramInfo.structTypeName = resultInfo.valueStructType;
@@ -205,10 +256,20 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
                                     const ResolveCallDefinitionFn &resolveDefinitionCall,
                                     const InferExprKindWithLocalsFn &inferExprKind,
                                     ResultExprInfo &out) {
+  if (valueExpr.kind == Expr::Kind::Name) {
+    auto localIt = localsIn.find(valueExpr.name);
+    if (localIt != localsIn.end() && localIt->second.isFileHandle) {
+      out.valueKind = LocalInfo::ValueKind::Int64;
+      out.valueIsFileHandle = true;
+      out.valueStructType.clear();
+      return;
+    }
+  }
   std::string valueStructType;
   if (inferDirectResultValueStructType(valueExpr, localsIn, resolveDefinitionCall, valueStructType)) {
     out.valueStructType = std::move(valueStructType);
     out.valueKind = LocalInfo::ValueKind::Unknown;
+    out.valueIsFileHandle = false;
     return;
   }
   if (inferExprKind) {
@@ -312,6 +373,7 @@ bool resolveResultExprInfo(const Expr &expr,
       out.isResult = true;
       out.hasValue = local.resultHasValue;
       out.valueKind = local.resultValueKind;
+      out.valueIsFileHandle = local.resultValueIsFileHandle;
       out.valueStructType = local.resultValueStructType;
       out.errorType = local.resultErrorType;
       return true;
@@ -326,6 +388,8 @@ bool resolveResultExprInfo(const Expr &expr,
   if (!expr.isMethodCall && expr.name == "File") {
     out.isResult = true;
     out.hasValue = true;
+    out.valueKind = LocalInfo::ValueKind::Int64;
+    out.valueIsFileHandle = true;
     out.errorType = "FileError";
     return true;
   }
@@ -437,6 +501,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     local.isResult = it->second.isResult;
     local.resultHasValue = it->second.resultHasValue;
     local.resultValueKind = it->second.resultValueKind;
+    local.resultValueIsFileHandle = it->second.resultValueIsFileHandle;
     local.resultValueStructType = it->second.resultValueStructType;
     local.resultErrorType = it->second.resultErrorType;
     local.isFileHandle = it->second.isFileHandle;
@@ -453,6 +518,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     resultOut.isResult = true;
     resultOut.hasValue = info.resultHasValue;
     resultOut.valueKind = info.resultValueKind;
+    resultOut.valueIsFileHandle = info.resultValueIsFileHandle;
     resultOut.valueStructType = info.resultValueStructType;
     resultOut.errorType = info.resultErrorType;
     return true;
@@ -514,6 +580,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       out.isResult = true;
       out.hasValue = local.resultHasValue;
       out.valueKind = local.resultValueKind;
+      out.valueIsFileHandle = local.resultValueIsFileHandle;
       out.valueStructType = local.resultValueStructType;
       out.errorType = local.resultErrorType;
       return true;
@@ -531,6 +598,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
         out.isResult = true;
         out.hasValue = local.resultHasValue;
         out.valueKind = local.resultValueKind;
+        out.valueIsFileHandle = local.resultValueIsFileHandle;
         out.valueStructType = local.resultValueStructType;
         out.errorType = local.resultErrorType;
         return true;
@@ -745,6 +813,20 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
          kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::String;
 }
 
+bool isSupportedPackedResultValueInfo(
+    const ResultExprInfo &info,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout) {
+  if (info.valueIsFileHandle && info.valueKind == LocalInfo::ValueKind::Int64) {
+    return true;
+  }
+  if (!info.valueStructType.empty()) {
+    LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
+    return resolveSupportedPackedResultStructValueKind(
+        info.valueStructType, resolveStructSlotLayout, packedStructKind);
+  }
+  return isSupportedPackedResultValueKind(info.valueKind);
+}
+
 bool resolveSupportedPackedResultStructValueKind(
     const std::string &structType,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
@@ -773,7 +855,7 @@ bool resolveSupportedPackedResultStructValueKind(
 }
 
 std::string unsupportedPackedResultValueKindError(const std::string &builtinName) {
-  return "IR backends only support " + builtinName + " with 32-bit or string values";
+  return "IR backends only support " + builtinName + " with packed payload values";
 }
 
 ResultOkMethodCallEmitResult tryEmitResultOkCall(
@@ -781,6 +863,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<bool(const Expr &, const LocalMap &)> &isFileHandleExpr,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
@@ -799,6 +882,13 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     return ResultOkMethodCallEmitResult::Error;
   }
   const LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
+  if (isFileHandleExpr && argKind == LocalInfo::ValueKind::Int64 &&
+      isFileHandleExpr(expr.args[1], localsIn)) {
+    if (!emitExpr(expr.args[1], localsIn)) {
+      return ResultOkMethodCallEmitResult::Error;
+    }
+    return ResultOkMethodCallEmitResult::Emitted;
+  }
   if (isSupportedPackedResultValueKind(argKind)) {
     if (!emitExpr(expr.args[1], localsIn)) {
       return ResultOkMethodCallEmitResult::Error;

@@ -17,6 +17,7 @@ struct ResultExprInfo {
   bool isResult = false;
   bool hasValue = false;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  bool valueIsFileHandle = false;
   std::string valueStructType;
   std::string errorType;
 };
@@ -26,6 +27,7 @@ struct LocalResultInfo {
   bool isResult = false;
   bool resultHasValue = false;
   LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+  bool resultValueIsFileHandle = false;
   std::string resultValueStructType;
   std::string resultErrorType;
   bool isFileHandle = false;
@@ -99,6 +101,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<bool(const Expr &, const LocalMap &)> &isFileHandleExpr,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
@@ -190,6 +193,9 @@ bool emitResultWhyCallWithComposedOps(
     const std::function<bool(int32_t)> &emitFileErrorWhy,
     std::string &error);
 bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind);
+bool isSupportedPackedResultValueInfo(const ResultExprInfo &info,
+                                     const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
+                                         &resolveStructSlotLayout);
 bool resolveSupportedPackedResultStructValueKind(
     const std::string &structType,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,

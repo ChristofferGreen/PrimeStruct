@@ -10,6 +10,31 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool isFileHandleTypeText(const std::string &typeText) {
+  std::string base;
+  std::string arg;
+  return splitTemplateTypeName(trimTemplateTypeText(typeText), base, arg) &&
+         normalizeCollectionBindingTypeName(base) == "File";
+}
+
+bool extractResultValueTypeText(const std::string &typeText, std::string &valueTypeOut) {
+  valueTypeOut.clear();
+  std::string base;
+  std::string argList;
+  std::vector<std::string> args;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argList) ||
+      normalizeCollectionBindingTypeName(base) != "Result" ||
+      !splitTemplateArgs(argList, args) || args.size() != 2) {
+    return false;
+  }
+  valueTypeOut = trimTemplateTypeText(args.front());
+  return true;
+}
+
+} // namespace
+
 bool analyzeEntryReturnTransforms(const Definition &entryDef,
                                   const std::string &entryPath,
                                   EntryReturnConfig &out,
@@ -163,7 +188,12 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
       info.returnsVoid = false;
       info.isResult = true;
       info.resultHasValue = resultHasValue;
-      info.resultValueKind = resultValueKind;
+      std::string resultValueType;
+      info.resultValueIsFileHandle =
+          resultHasValue && extractResultValueTypeText(typeName, resultValueType) &&
+          isFileHandleTypeText(resultValueType);
+      info.resultValueKind =
+          info.resultValueIsFileHandle ? LocalInfo::ValueKind::Int64 : resultValueKind;
       if (resultHasValue && resultValueKind == LocalInfo::ValueKind::Unknown) {
         std::string base;
         std::string argList;
@@ -248,6 +278,12 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
       bindingInfo.resultValueKind =
           bindingInfo.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
                                      : LocalInfo::ValueKind::Unknown;
+      bindingInfo.resultValueIsFileHandle =
+          bindingInfo.resultHasValue && !transform.templateArgs.empty() &&
+          isFileHandleTypeText(transform.templateArgs.front());
+      if (bindingInfo.resultValueIsFileHandle) {
+        bindingInfo.resultValueKind = LocalInfo::ValueKind::Int64;
+      }
       bindingInfo.resultErrorType = transform.templateArgs.empty() ? "" : transform.templateArgs.back();
       bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64
                                                          : LocalInfo::ValueKind::Int32;

@@ -434,6 +434,14 @@
           };
 
           if (resultInfo.hasValue) {
+            if (!ir_lowerer::isSupportedPackedResultValueInfo(
+                    resultInfo,
+                    [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                      return resolveStructSlotLayout(structPath, layoutOut);
+                    })) {
+              error = ir_lowerer::unsupportedPackedResultValueKindError("try");
+              return false;
+            }
             const int32_t errorLocal = allocTempLocal();
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
             function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
@@ -500,6 +508,13 @@
           function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
           return true;
         }
+        auto isFileHandleExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+          if (valueExpr.kind != Expr::Kind::Name) {
+            return false;
+          }
+          auto localIt = valueLocals.find(valueExpr.name);
+          return localIt != valueLocals.end() && localIt->second.isFileHandle;
+        };
         auto resolveResultLambdaValueExpr =
             [&](const Expr &lambdaExpr,
                 LocalMap &lambdaLocals,
@@ -547,6 +562,9 @@
                                                   std::string &structTypeOut) -> bool {
           packedKindOut = inferExprKind(valueExpr, valueLocals);
           structTypeOut.clear();
+          if (isFileHandleExpr(valueExpr, valueLocals) && packedKindOut == LocalInfo::ValueKind::Int64) {
+            return true;
+          }
           if (ir_lowerer::isSupportedPackedResultValueKind(packedKindOut)) {
             return true;
           }
@@ -615,16 +633,11 @@
             error = "Result.map requires value Result";
             return false;
           }
-          LocalInfo::ValueKind sourcePackedKind = LocalInfo::ValueKind::Unknown;
-          if ((!sourceResultInfo.valueStructType.empty() &&
-               !ir_lowerer::resolveSupportedPackedResultStructValueKind(
-                   sourceResultInfo.valueStructType,
-                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-                     return resolveStructSlotLayout(structPath, layoutOut);
-                   },
-                   sourcePackedKind)) ||
-              (sourceResultInfo.valueStructType.empty() &&
-               !ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind))) {
+          if (!ir_lowerer::isSupportedPackedResultValueInfo(
+                  sourceResultInfo,
+                  [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(structPath, layoutOut);
+                  })) {
             error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map");
             return false;
           }
@@ -676,6 +689,7 @@
             paramInfo.index = payloadLocal;
             paramInfo.kind = LocalInfo::Kind::Value;
             paramInfo.valueKind = sourceResultInfo.valueKind;
+            paramInfo.isFileHandle = sourceResultInfo.valueIsFileHandle;
           }
           if (sourceResultInfo.valueStructType.empty() &&
               sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
@@ -719,16 +733,11 @@
             error = "Result.and_then requires value Result";
             return false;
           }
-          LocalInfo::ValueKind sourcePackedKind = LocalInfo::ValueKind::Unknown;
-          if ((!sourceResultInfo.valueStructType.empty() &&
-               !ir_lowerer::resolveSupportedPackedResultStructValueKind(
-                   sourceResultInfo.valueStructType,
-                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-                     return resolveStructSlotLayout(structPath, layoutOut);
-                   },
-                   sourcePackedKind)) ||
-              (sourceResultInfo.valueStructType.empty() &&
-               !ir_lowerer::isSupportedPackedResultValueKind(sourceResultInfo.valueKind))) {
+          if (!ir_lowerer::isSupportedPackedResultValueInfo(
+                  sourceResultInfo,
+                  [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(structPath, layoutOut);
+                  })) {
             error = ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then");
             return false;
           }
@@ -780,6 +789,7 @@
             paramInfo.index = payloadLocal;
             paramInfo.kind = LocalInfo::Kind::Value;
             paramInfo.valueKind = sourceResultInfo.valueKind;
+            paramInfo.isFileHandle = sourceResultInfo.valueIsFileHandle;
           }
           if (sourceResultInfo.valueStructType.empty() &&
               sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
@@ -800,15 +810,11 @@
             return false;
           }
           if (chainedResultInfo.hasValue &&
-              (( !chainedResultInfo.valueStructType.empty() &&
-                 !ir_lowerer::resolveSupportedPackedResultStructValueKind(
-                     chainedResultInfo.valueStructType,
-                     [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-                       return resolveStructSlotLayout(structPath, layoutOut);
-                     },
-                     sourcePackedKind)) ||
-               (chainedResultInfo.valueStructType.empty() &&
-                !ir_lowerer::isSupportedPackedResultValueKind(chainedResultInfo.valueKind)))) {
+              !ir_lowerer::isSupportedPackedResultValueInfo(
+                  chainedResultInfo,
+                  [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(structPath, layoutOut);
+                  })) {
             error = ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then");
             return false;
           }
@@ -851,26 +857,16 @@
             error = "Result.map2 requires matching error types";
             return false;
           }
-          LocalInfo::ValueKind leftPackedKind = LocalInfo::ValueKind::Unknown;
-          LocalInfo::ValueKind rightPackedKind = LocalInfo::ValueKind::Unknown;
-          if ((!leftResultInfo.valueStructType.empty() &&
-               !ir_lowerer::resolveSupportedPackedResultStructValueKind(
-                   leftResultInfo.valueStructType,
-                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-                     return resolveStructSlotLayout(structPath, layoutOut);
-                   },
-                   leftPackedKind)) ||
-              (leftResultInfo.valueStructType.empty() &&
-               !ir_lowerer::isSupportedPackedResultValueKind(leftResultInfo.valueKind)) ||
-              (!rightResultInfo.valueStructType.empty() &&
-               !ir_lowerer::resolveSupportedPackedResultStructValueKind(
-                   rightResultInfo.valueStructType,
-                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-                     return resolveStructSlotLayout(structPath, layoutOut);
-                   },
-                   rightPackedKind)) ||
-              (rightResultInfo.valueStructType.empty() &&
-               !ir_lowerer::isSupportedPackedResultValueKind(rightResultInfo.valueKind))) {
+          if (!ir_lowerer::isSupportedPackedResultValueInfo(
+                  leftResultInfo,
+                  [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(structPath, layoutOut);
+                  }) ||
+              !ir_lowerer::isSupportedPackedResultValueInfo(
+                  rightResultInfo,
+                  [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(structPath, layoutOut);
+                  })) {
             error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
             return false;
           }
@@ -947,6 +943,7 @@
             leftParamInfo.index = leftPayloadLocal;
             leftParamInfo.kind = LocalInfo::Kind::Value;
             leftParamInfo.valueKind = leftResultInfo.valueKind;
+            leftParamInfo.isFileHandle = leftResultInfo.valueIsFileHandle;
           }
           if (leftResultInfo.valueStructType.empty() &&
               leftResultInfo.valueKind == LocalInfo::ValueKind::String) {
@@ -961,6 +958,7 @@
             rightParamInfo.index = rightPayloadLocal;
             rightParamInfo.kind = LocalInfo::Kind::Value;
             rightParamInfo.valueKind = rightResultInfo.valueKind;
+            rightParamInfo.isFileHandle = rightResultInfo.valueIsFileHandle;
           }
           if (rightResultInfo.valueStructType.empty() &&
               rightResultInfo.valueKind == LocalInfo::ValueKind::String) {
@@ -1014,6 +1012,9 @@
             },
             [&](const Expr &valueExpr, const LocalMap &valueLocals) {
               return inferStructExprPath(valueExpr, valueLocals);
+            },
+            [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+              return isFileHandleExpr(valueExpr, valueLocals);
             },
             [&](const Expr &valueExpr, const LocalMap &valueLocals) {
               return emitExpr(valueExpr, valueLocals);

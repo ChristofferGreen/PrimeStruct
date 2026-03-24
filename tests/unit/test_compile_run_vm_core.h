@@ -1594,6 +1594,77 @@ main() {
   CHECK(readFile(outPath) == "7\n5\n7\n");
 }
 
+TEST_CASE("vm supports File Result payloads on IR-backed paths") {
+  const std::string filePath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_file_payload_ir_backed.txt").string();
+  {
+    std::ofstream file(filePath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write("ABC", 3);
+    REQUIRE(file.good());
+  }
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(filePath);
+  const std::string source =
+      "import /std/file/*\n"
+      "[return<Result<File<Read>, FileError>> effects(file_read)]\n"
+      "open_file([string] path) {\n"
+      "  [File<Read>] file{ File<Read>(path)? }\n"
+      "  return(Result.ok(file))\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(err.why())\n"
+      "}\n"
+      "[return<int> effects(file_read, io_out, io_err) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [Result<File<Read>, FileError>] mapped{\n"
+      "    Result.map(open_file(\"" + escapedPath +
+      "\"utf8), []([File<Read>] file) { return(file) })\n"
+      "  }\n"
+      "  [Result<File<Read>, FileError>] chained{\n"
+      "    Result.and_then(open_file(\"" + escapedPath +
+      "\"utf8), []([File<Read>] file) { return(Result.ok(file)) })\n"
+      "  }\n"
+      "  [Result<File<Read>, FileError>] summed{\n"
+      "    Result.map2(open_file(\"" + escapedPath + "\"utf8), open_file(\"" + escapedPath +
+      "\"utf8), []([File<Read>] left, [File<Read>] right) { return(left) })\n"
+      "  }\n"
+      "  [File<Read>] mappedFile{try(mapped)}\n"
+      "  [File<Read>] chainedFile{try(chained)}\n"
+      "  [File<Read>] summedFile{try(summed)}\n"
+      "  [i32 mut] first{0i32}\n"
+      "  [i32 mut] second{0i32}\n"
+      "  [i32 mut] third{0i32}\n"
+      "  mappedFile.read_byte(first)?\n"
+      "  chainedFile.read_byte(second)?\n"
+      "  summedFile.read_byte(third)?\n"
+      "  print_line(first)\n"
+      "  print_line(second)\n"
+      "  print_line(third)\n"
+      "  mappedFile.close()?\n"
+      "  chainedFile.close()?\n"
+      "  summedFile.close()?\n"
+      "  return(plus(first, plus(second, third)))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("vm_result_file_payload_ir_backed.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_file_payload_ir_backed_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 195);
+  CHECK(readFile(outPath) == "65\n65\n65\n");
+}
+
 TEST_CASE("vm supports block-bodied Result.and_then lambdas on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

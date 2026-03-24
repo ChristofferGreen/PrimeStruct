@@ -222,6 +222,13 @@
           info.resultValueStructType = std::move(structPath);
         }
       };
+      auto assignDeclaredResultFileHandle = [&](const std::string &typeText) {
+        std::string base;
+        std::string arg;
+        info.resultValueIsFileHandle =
+            info.resultHasValue && splitTemplateTypeName(trimTemplateTypeText(typeText), base, arg) &&
+            normalizeCollectionBindingTypeName(base) == "File";
+      };
       info.isMutable = isBindingMutable(stmt);
       info.kind = kind;
       info.valueKind = valueKind;
@@ -244,6 +251,7 @@
           info.isResult = true;
           info.resultHasValue = inferredResultInfo.hasValue;
           info.resultValueKind = inferredResultInfo.valueKind;
+          info.resultValueIsFileHandle = inferredResultInfo.valueIsFileHandle;
           info.resultValueStructType = inferredResultInfo.valueStructType;
           info.resultErrorType = inferredResultInfo.errorType;
           info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
@@ -361,6 +369,10 @@
               info.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
                                   : LocalInfo::ValueKind::Unknown;
           if (info.resultHasValue && !transform.templateArgs.empty()) {
+            assignDeclaredResultFileHandle(transform.templateArgs.front());
+            if (info.resultValueIsFileHandle) {
+              info.resultValueKind = LocalInfo::ValueKind::Int64;
+            }
             assignDeclaredResultStructType(transform.templateArgs.front());
           }
           info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
@@ -388,6 +400,10 @@
             info.resultHasValue = resultHasValue;
             info.resultValueKind = resultValueKind;
             if (info.resultHasValue) {
+              assignDeclaredResultFileHandle(targetType);
+              if (info.resultValueIsFileHandle) {
+                info.resultValueKind = LocalInfo::ValueKind::Int64;
+              }
               assignDeclaredResultStructType(targetType);
             }
             info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
