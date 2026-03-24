@@ -402,8 +402,10 @@ Bottom-level form therefore has:
   materialization, status-only `Result<Error>` packs preserve indexed `Result.error(...)` and `Result.why(...)`
   behavior across those same forwarding modes, `FileError` packs preserve indexed downstream `why()` mapping across
   those same forwarding modes, `Reference<FileError>` packs preserve indexed downstream `dereference(...).why()`
-  mapping across those same forwarding modes, `Pointer<FileError>` packs preserve indexed downstream
-  `dereference(...).why()` mapping across those same forwarding modes, `Reference<Result<T, Error>>` packs preserve
+  mapping plus canonical free-builtin `at([values] values, [index] i).why()` receivers across those same forwarding
+  modes, `Pointer<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping plus canonical
+  free-builtin `at([values] values, [index] i).why()` receivers across those same forwarding modes,
+  `Reference<Result<T, Error>>` packs preserve
   indexed downstream `dereference(...)`, `try(...)`, and `Result.why(...)` access across those same forwarding modes,
   status-only `Reference<Result<Error>>` packs preserve indexed downstream `dereference(...)`, `Result.error(...)`,
   and `Result.why(...)` access across those same forwarding modes, `Pointer<Result<T, Error>>` packs preserve indexed

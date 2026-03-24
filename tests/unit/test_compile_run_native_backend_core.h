@@ -7078,6 +7078,94 @@ TEST_CASE("native materializes variadic pointer FileError packs with indexed der
   CHECK(runCommand(exePath) == 36);
 }
 
+TEST_CASE("native materializes variadic wrapped FileError packs with named free builtin at receivers") {
+  const std::string source =
+      "[return<int>]\n"
+      "score_refs([args<Reference<FileError>>] values) {\n"
+      "  return(plus(count(at([values] values, [index] 0i32).why()),\n"
+      "              count(at([values] values, [index] minus(count(values), 1i32)).why())))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward_refs([args<Reference<FileError>>] values) {\n"
+      "  return(score_refs([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward_refs_mixed([args<Reference<FileError>>] values) {\n"
+      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
+      "  [Reference<FileError>] extra_ref{location(extra)}\n"
+      "  return(score_refs(extra_ref, [spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "score_ptrs([args<Pointer<FileError>>] values) {\n"
+      "  return(plus(count(at([values] values, [index] 0i32).why()),\n"
+      "              count(at([values] values, [index] minus(count(values), 1i32)).why())))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward_ptrs([args<Pointer<FileError>>] values) {\n"
+      "  return(score_ptrs([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward_ptrs_mixed([args<Pointer<FileError>>] values) {\n"
+      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
+      "  [Pointer<FileError>] extra_ptr{location(extra)}\n"
+      "  return(score_ptrs(extra_ptr, [spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "main() {\n"
+      "  [FileError] a0{" + std::to_string(EACCES) + "i32}\n"
+      "  [FileError] a1{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] a2{" + std::to_string(EEXIST) + "i32}\n"
+      "  [Reference<FileError>] r0{location(a0)}\n"
+      "  [Reference<FileError>] r1{location(a1)}\n"
+      "  [Reference<FileError>] r2{location(a2)}\n"
+      "  [FileError] b0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] b1{" + std::to_string(EEXIST) + "i32}\n"
+      "  [FileError] b2{" + std::to_string(EACCES) + "i32}\n"
+      "  [Reference<FileError>] s0{location(b0)}\n"
+      "  [Reference<FileError>] s1{location(b1)}\n"
+      "  [Reference<FileError>] s2{location(b2)}\n"
+      "  [FileError] c0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] c1{" + std::to_string(EEXIST) + "i32}\n"
+      "  [Reference<FileError>] t0{location(c0)}\n"
+      "  [Reference<FileError>] t1{location(c1)}\n"
+      "  [FileError] d0{" + std::to_string(EACCES) + "i32}\n"
+      "  [FileError] d1{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] d2{" + std::to_string(EEXIST) + "i32}\n"
+      "  [Pointer<FileError>] p0{location(d0)}\n"
+      "  [Pointer<FileError>] p1{location(d1)}\n"
+      "  [Pointer<FileError>] p2{location(d2)}\n"
+      "  [FileError] e0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] e1{" + std::to_string(EEXIST) + "i32}\n"
+      "  [FileError] e2{" + std::to_string(EACCES) + "i32}\n"
+      "  [Pointer<FileError>] q0{location(e0)}\n"
+      "  [Pointer<FileError>] q1{location(e1)}\n"
+      "  [Pointer<FileError>] q2{location(e2)}\n"
+      "  [FileError] f0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] f1{" + std::to_string(EEXIST) + "i32}\n"
+      "  [Pointer<FileError>] u0{location(f0)}\n"
+      "  [Pointer<FileError>] u1{location(f1)}\n"
+      "  return(plus(score_refs(r0, r1, r2),\n"
+      "              plus(forward_refs(s0, s1, s2),\n"
+      "                   plus(forward_refs_mixed(t0, t1),\n"
+      "                        plus(score_ptrs(p0, p1, p2),\n"
+      "                             plus(forward_ptrs(q0, q1, q2),\n"
+      "                                  forward_ptrs_mixed(u0, u1)))))))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_native_variadic_named_args_wrapped_file_error.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_variadic_named_args_wrapped_file_error").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 72);
+}
+
 TEST_CASE("native materializes variadic File handle packs with indexed file methods") {
   auto escape = [](const std::string &text) {
     std::string out;

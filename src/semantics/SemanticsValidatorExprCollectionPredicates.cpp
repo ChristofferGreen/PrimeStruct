@@ -113,9 +113,13 @@ bool SemanticsValidator::isNamedArgsPackWrappedFileBuiltinAccessCall(
   if (pointeeType.empty() || pointeeType == elemType) {
     return false;
   }
+  const std::string normalizedPointeeType = normalizeBindingTypeName(pointeeType);
+  if (normalizedPointeeType == "FileError") {
+    return true;
+  }
   std::string base;
   std::string argText;
-  return splitTemplateTypeName(normalizeBindingTypeName(pointeeType), base, argText) &&
+  return splitTemplateTypeName(normalizedPointeeType, base, argText) &&
          normalizeBindingTypeName(base) == "File" && !argText.empty();
 }
 

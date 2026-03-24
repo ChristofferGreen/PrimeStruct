@@ -9906,11 +9906,93 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("variadic wrapped FileError packs still reject named free builtin at calls") {
+TEST_CASE("variadic wrapped FileError packs accept canonical named free builtin at receivers") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<FileError>>] values) {
   [auto] head{at([values] values, [index] 0i32).why()}
+  [auto] tail{at([values] values, [index] minus(count(values), 1i32)).why()}
+  return(plus(count(head), count(tail)))
+}
+
+[return<int>]
+forward_refs([args<Reference<FileError>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int>]
+forward_refs_mixed([args<Reference<FileError>>] values) {
+  [FileError] extra{15i32}
+  [Reference<FileError>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
+}
+
+[return<int>]
+score_ptrs([args<Pointer<FileError>>] values) {
+  [auto] head{at([values] values, [index] 0i32).why()}
+  [auto] tail{at([values] values, [index] minus(count(values), 1i32)).why()}
+  return(plus(count(head), count(tail)))
+}
+
+[return<int>]
+forward_ptrs([args<Pointer<FileError>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_ptrs_mixed([args<Pointer<FileError>>] values) {
+  [FileError] extra{16i32}
+  [Pointer<FileError>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [FileError] a0{13i32}
+  [FileError] a1{14i32}
+  [Reference<FileError>] r0{location(a0)}
+  [Reference<FileError>] r1{location(a1)}
+
+  [FileError] b0{17i32}
+  [FileError] b1{18i32}
+  [Reference<FileError>] s0{location(b0)}
+  [Reference<FileError>] s1{location(b1)}
+
+  [FileError] c0{19i32}
+  [Reference<FileError>] t0{location(c0)}
+
+  [FileError] d0{20i32}
+  [FileError] d1{21i32}
+  [Pointer<FileError>] p0{location(d0)}
+  [Pointer<FileError>] p1{location(d1)}
+
+  [FileError] e0{22i32}
+  [FileError] e1{23i32}
+  [Pointer<FileError>] q0{location(e0)}
+  [Pointer<FileError>] q1{location(e1)}
+
+  [FileError] f0{24i32}
+  [Pointer<FileError>] u0{location(f0)}
+
+  return(plus(score_refs(r0, r1),
+              plus(forward_refs(s0, s1),
+                   plus(forward_refs_mixed(t0),
+                        plus(score_ptrs(p0, p1),
+                             plus(forward_ptrs(q0, q1),
+                                  forward_ptrs_mixed(u0)))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("variadic wrapped FileError packs still reject noncanonical named free builtin at labels") {
+  const std::string source = R"(
+[return<int>]
+score_refs([args<Reference<FileError>>] values) {
+  [auto] head{at([value] values, [index] 0i32).why()}
   return(count(head))
 }
 
