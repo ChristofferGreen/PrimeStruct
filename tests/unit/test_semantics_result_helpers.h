@@ -406,22 +406,30 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib File multi-value helpers cover imported method and slash-call wrappers") {
+TEST_CASE("stdlib File six-value helpers cover imported method and slash-call wrappers") {
   const std::string source = R"(
 import /std/file/*
 
 [effects(file_write), return<void>]
 write_out([File<Write>] file) {
-  [Result<FileError>] directWrite{/File/write<Write, string, i32, string>(file, "alpha"utf8, 7i32, "omega"utf8)}
-  [Result<FileError>] directWriteLine{/File/write_line<Write, i32, string, i32, string, i32>(
+  [Result<FileError>] directWrite{/File/write<Write, string, i32, string, i32, string, i32>(
+      file,
+      "alpha"utf8,
+      7i32,
+      "omega"utf8,
+      8i32,
+      "delta"utf8,
+      9i32)}
+  [Result<FileError>] directWriteLine{/File/write_line<Write, i32, string, i32, string, i32, string>(
       file,
       255i32,
       " "utf8,
       0i32,
       " "utf8,
-      0i32)}
-  [Result<FileError>] methodWrite{file.write("left"utf8, 1i32, "right"utf8)}
-  [Result<FileError>] methodWriteLine{file.write_line()}
+      0i32,
+      "!"utf8)}
+  [Result<FileError>] methodWrite{file.write("left"utf8, 1i32, "mid"utf8, 2i32, "right"utf8, 3i32)}
+  [Result<FileError>] methodWriteLine{file.write_line(4i32, " "utf8, 5i32, " "utf8, 6i32, "?"utf8)}
   return()
 }
 
@@ -433,6 +441,25 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("stdlib File seven-value slash-call wrappers remain unresolved") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(file_write), return<void>]
+write_out([File<Write>] file) {
+  /File/write_line<Write, i32, i32, i32, i32, i32, i32, i32>(file, 1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32)
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("/std/file/File/write_line") != std::string::npos);
 }
 
 TEST_CASE("stdlib File text slash-call helpers require stdlib import") {

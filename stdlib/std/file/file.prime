@@ -55,6 +55,18 @@
 }
 
 [public effects(file_write), return<Result<FileError>>]
+/File/write<Mode, A, B, C, D, E, F>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth,
+    [E] fifth,
+    [F] sixth) {
+  return(self.write(first, second, third, fourth, fifth, sixth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
 /File/write_line<Mode>([File<Mode>] self) {
   return(self.write_line())
 }
@@ -93,6 +105,18 @@
     [D] fourth,
     [E] fifth) {
   return(self.write_line(first, second, third, fourth, fifth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/write_line<Mode, A, B, C, D, E, F>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth,
+    [E] fifth,
+    [F] sixth) {
+  return(self.write_line(first, second, third, fourth, fifth, sixth))
 }
 
 [public effects(file_write), return<Result<FileError>>]

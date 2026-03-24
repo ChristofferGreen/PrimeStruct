@@ -2115,7 +2115,7 @@ log_file_error([FileError] err) {
   CHECK(readFile(filePath) == "alphaomega\n");
 }
 
-TEST_CASE("vm uses stdlib File multi-value helper wrappers") {
+TEST_CASE("vm uses stdlib File six-value helper wrappers") {
   const std::string filePath =
       (testScratchPath("") / "primec_vm_stdlib_file_multi_helpers.txt").string();
   const auto escape = [](const std::string &text) {
@@ -2135,10 +2135,24 @@ import /std/file/*
 [return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
 main() {
   [File<Write>] file{ File<Write>("__PATH__"utf8)? }
-  /File/write<Write, string, i32, string>(file, "alpha"utf8, 7i32, "omega"utf8)?
-  /File/write_line<Write, i32, string, i32, string, i32>(file, 255i32, " "utf8, 0i32, " "utf8, 0i32)?
-  file.write("left"utf8, 1i32, "right"utf8)?
-  file.write_line()?
+  /File/write<Write, string, i32, string, i32, string, i32>(
+      file,
+      "prefix"utf8,
+      1i32,
+      "-"utf8,
+      2i32,
+      "-"utf8,
+      3i32)?
+  /File/write_line<Write, string, i32, string, i32, string, i32>(
+      file,
+      "alpha"utf8,
+      7i32,
+      "omega"utf8,
+      8i32,
+      "delta"utf8,
+      9i32)?
+  file.write("left"utf8, 1i32, "mid"utf8, 2i32, "right"utf8, 3i32)?
+  file.write_line(4i32, " "utf8, 5i32, " "utf8, 6i32, "!"utf8)?
   file.close()?
   return(Result.ok())
 }
@@ -2153,10 +2167,10 @@ log_file_error([FileError] err) {
   const size_t pathPos = program.find(placeholder);
   REQUIRE(pathPos != std::string::npos);
   program.replace(pathPos, placeholder.size(), escape(filePath));
-  const std::string srcPath = writeTemp("vm_stdlib_file_multi_helpers.prime", program);
+  const std::string srcPath = writeTemp("vm_stdlib_file_six_value_helpers.prime", program);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(filePath) == "alpha7omega255 0 0\nleft1right\n");
+  CHECK(readFile(filePath) == "prefix1-2-3alpha7omega8delta9\nleft1mid2right34 5 6!\n");
 }
 
 TEST_CASE("vm resolves templated helper overload families by exact arity") {
