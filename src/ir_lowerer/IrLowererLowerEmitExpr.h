@@ -458,24 +458,31 @@
             function.instructions.push_back({IrOpcode::MulI64, 0});
             function.instructions.push_back({IrOpcode::SubI64, 0});
             if (!resultInfo.valueStructType.empty()) {
+              bool isPackedSingleSlot = false;
               LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
-              if (!ir_lowerer::resolveSupportedPackedResultStructValueKind(
+              int32_t slotCount = 0;
+              if (!ir_lowerer::resolveSupportedResultStructPayloadInfo(
                       resultInfo.valueStructType,
                       [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
                         return resolveStructSlotLayout(structPath, layoutOut);
                       },
-                      packedStructKind)) {
+                      isPackedSingleSlot,
+                      packedStructKind,
+                      slotCount)) {
                 error = ir_lowerer::unsupportedPackedResultValueKindError("try");
                 return false;
               }
               (void)packedStructKind;
-              const int32_t baseLocal = nextLocal;
-              ++nextLocal;
-              const int32_t ptrLocal = nextLocal++;
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-              function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              (void)slotCount;
+              if (isPackedSingleSlot) {
+                const int32_t baseLocal = nextLocal;
+                ++nextLocal;
+                const int32_t ptrLocal = nextLocal++;
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+                function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              }
             }
             size_t jumpEnd = function.instructions.size();
             function.instructions.push_back({IrOpcode::Jump, 0});
@@ -568,13 +575,21 @@
           if (ir_lowerer::isSupportedPackedResultValueKind(packedKindOut)) {
             return true;
           }
-          structTypeOut = inferStructExprPath(valueExpr, valueLocals);
-          if (ir_lowerer::resolveSupportedPackedResultStructValueKind(
-                  structTypeOut,
+          const std::string inferredStructType = inferStructExprPath(valueExpr, valueLocals);
+          bool isPackedSingleSlot = false;
+          LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
+          int32_t slotCount = 0;
+          if (ir_lowerer::resolveSupportedResultStructPayloadInfo(
+                  inferredStructType,
                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
                     return resolveStructSlotLayout(structPath, layoutOut);
                   },
-                  packedKindOut)) {
+                  isPackedSingleSlot,
+                  packedStructKind,
+                  slotCount)) {
+            (void)slotCount;
+            structTypeOut = inferredStructType;
+            packedKindOut = isPackedSingleSlot ? packedStructKind : LocalInfo::ValueKind::Unknown;
             return true;
           }
           packedKindOut = LocalInfo::ValueKind::Unknown;
@@ -583,18 +598,40 @@
         };
         auto materializePackedResultStructLocal = [&](int32_t payloadLocal,
                                                       const std::string &structType,
-                                                      LocalInfo &paramInfo) {
+                                                      LocalInfo &paramInfo) -> bool {
+          bool isPackedSingleSlot = false;
+          LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
+          int32_t slotCount = 0;
+          if (!ir_lowerer::resolveSupportedResultStructPayloadInfo(
+                  structType,
+                  [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(structPath, layoutOut);
+                  },
+                  isPackedSingleSlot,
+                  packedStructKind,
+                  slotCount)) {
+            return false;
+          }
+          (void)packedStructKind;
           const int32_t baseLocal = nextLocal;
-          ++nextLocal;
+          nextLocal += slotCount;
           const int32_t ptrLocal = nextLocal++;
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(slotCount - 1))});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
           function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+          if (isPackedSingleSlot) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+          } else if (!emitStructCopyFromPtrs(ptrLocal, payloadLocal, slotCount)) {
+            return false;
+          }
           paramInfo.index = ptrLocal;
           paramInfo.kind = LocalInfo::Kind::Value;
           paramInfo.valueKind = LocalInfo::ValueKind::Int64;
           paramInfo.structTypeName = structType;
+          return true;
         };
         auto emitPackedResultValueExpr = [&](const Expr &valueExpr,
                                              const LocalMap &valueLocals,
@@ -608,7 +645,7 @@
           if (!emitExpr(valueExpr, valueLocals)) {
             return false;
           }
-          if (!structType.empty()) {
+          if (!structType.empty() && packedValueKind != LocalInfo::ValueKind::Unknown) {
             const int32_t ptrLocal = allocTempLocal();
             function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
@@ -684,7 +721,10 @@
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
           if (!sourceResultInfo.valueStructType.empty()) {
-            materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo);
+            if (!materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo)) {
+              error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map");
+              return false;
+            }
           } else {
             paramInfo.index = payloadLocal;
             paramInfo.kind = LocalInfo::Kind::Value;
@@ -784,7 +824,10 @@
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
           if (!sourceResultInfo.valueStructType.empty()) {
-            materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo);
+            if (!materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo)) {
+              error = ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then");
+              return false;
+            }
           } else {
             paramInfo.index = payloadLocal;
             paramInfo.kind = LocalInfo::Kind::Value;
@@ -938,7 +981,10 @@
           LocalMap lambdaLocals = callLocals;
           LocalInfo leftParamInfo;
           if (!leftResultInfo.valueStructType.empty()) {
-            materializePackedResultStructLocal(leftPayloadLocal, leftResultInfo.valueStructType, leftParamInfo);
+            if (!materializePackedResultStructLocal(leftPayloadLocal, leftResultInfo.valueStructType, leftParamInfo)) {
+              error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
+              return false;
+            }
           } else {
             leftParamInfo.index = leftPayloadLocal;
             leftParamInfo.kind = LocalInfo::Kind::Value;
@@ -953,7 +999,10 @@
 
           LocalInfo rightParamInfo;
           if (!rightResultInfo.valueStructType.empty()) {
-            materializePackedResultStructLocal(rightPayloadLocal, rightResultInfo.valueStructType, rightParamInfo);
+            if (!materializePackedResultStructLocal(rightPayloadLocal, rightResultInfo.valueStructType, rightParamInfo)) {
+              error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
+              return false;
+            }
           } else {
             rightParamInfo.index = rightPayloadLocal;
             rightParamInfo.kind = LocalInfo::Kind::Value;

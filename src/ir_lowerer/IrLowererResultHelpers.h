@@ -196,6 +196,12 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind);
 bool isSupportedPackedResultValueInfo(const ResultExprInfo &info,
                                      const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
                                          &resolveStructSlotLayout);
+bool resolveSupportedResultStructPayloadInfo(
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    bool &isPackedSingleSlotOut,
+    LocalInfo::ValueKind &packedKindOut,
+    int32_t &slotCountOut);
 bool resolveSupportedPackedResultStructValueKind(
     const std::string &structType,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,

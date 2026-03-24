@@ -813,6 +813,55 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
          kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::String;
 }
 
+bool resolveSupportedResultStructPayloadInfo(
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    bool &isPackedSingleSlotOut,
+    LocalInfo::ValueKind &packedKindOut,
+    int32_t &slotCountOut) {
+  isPackedSingleSlotOut = false;
+  packedKindOut = LocalInfo::ValueKind::Unknown;
+  slotCountOut = 0;
+  if (structType.empty() || !resolveStructSlotLayout) {
+    return false;
+  }
+
+  const std::string trimmedType = trimTemplateTypeText(structType);
+  std::string baseType = trimmedType;
+  std::string templateArgs;
+  std::string parsedBaseType;
+  if (splitTemplateTypeName(trimmedType, parsedBaseType, templateArgs)) {
+    baseType = trimTemplateTypeText(parsedBaseType);
+  } else {
+    baseType = trimTemplateTypeText(baseType);
+  }
+  const std::string normalizedBase = normalizeCollectionBindingTypeName(baseType);
+  if (normalizedBase == "File" || normalizedBase == "array" || normalizedBase == "vector" ||
+      normalizedBase == "map" || normalizedBase == "Buffer") {
+    return false;
+  }
+
+  StructSlotLayoutInfo layout;
+  if (!resolveStructSlotLayout(structType, layout) || layout.totalSlots <= 0) {
+    return false;
+  }
+  slotCountOut = layout.totalSlots;
+
+  if (layout.totalSlots != 1 || layout.fields.size() != 1) {
+    return true;
+  }
+
+  const StructSlotFieldInfo &field = layout.fields.front();
+  if (field.slotOffset != 0 || field.slotCount != 1 || !field.structPath.empty() ||
+      !isSupportedPackedResultValueKind(field.valueKind)) {
+    return true;
+  }
+
+  isPackedSingleSlotOut = true;
+  packedKindOut = field.valueKind;
+  return true;
+}
+
 bool isSupportedPackedResultValueInfo(
     const ResultExprInfo &info,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout) {
@@ -820,9 +869,11 @@ bool isSupportedPackedResultValueInfo(
     return true;
   }
   if (!info.valueStructType.empty()) {
+    bool isPackedSingleSlot = false;
     LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
-    return resolveSupportedPackedResultStructValueKind(
-        info.valueStructType, resolveStructSlotLayout, packedStructKind);
+    int32_t slotCount = 0;
+    return resolveSupportedResultStructPayloadInfo(
+        info.valueStructType, resolveStructSlotLayout, isPackedSingleSlot, packedStructKind, slotCount);
   }
   return isSupportedPackedResultValueKind(info.valueKind);
 }
@@ -832,30 +883,17 @@ bool resolveSupportedPackedResultStructValueKind(
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     LocalInfo::ValueKind &out) {
   out = LocalInfo::ValueKind::Unknown;
-  if (structType.empty() || !resolveStructSlotLayout) {
+  bool isPackedSingleSlot = false;
+  int32_t slotCount = 0;
+  if (!resolveSupportedResultStructPayloadInfo(
+          structType, resolveStructSlotLayout, isPackedSingleSlot, out, slotCount)) {
     return false;
   }
-
-  StructSlotLayoutInfo layout;
-  if (!resolveStructSlotLayout(structType, layout)) {
-    return false;
-  }
-  if (layout.totalSlots != 1 || layout.fields.size() != 1) {
-    return false;
-  }
-
-  const StructSlotFieldInfo &field = layout.fields.front();
-  if (field.slotOffset != 0 || field.slotCount != 1 || !field.structPath.empty() ||
-      !isSupportedPackedResultValueKind(field.valueKind)) {
-    return false;
-  }
-
-  out = field.valueKind;
-  return true;
+  return isPackedSingleSlot;
 }
 
 std::string unsupportedPackedResultValueKindError(const std::string &builtinName) {
-  return "IR backends only support " + builtinName + " with packed payload values";
+  return "IR backends only support " + builtinName + " with supported payload values";
 }
 
 ResultOkMethodCallEmitResult tryEmitResultOkCall(
@@ -897,14 +935,21 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
   }
 
   const std::string structType = inferStructExprPath ? inferStructExprPath(expr.args[1], localsIn) : std::string{};
+  bool isPackedSingleSlot = false;
   LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
-  if (!resolveSupportedPackedResultStructValueKind(structType, resolveStructSlotLayout, packedStructKind)) {
+  int32_t slotCount = 0;
+  if (!resolveSupportedResultStructPayloadInfo(
+          structType, resolveStructSlotLayout, isPackedSingleSlot, packedStructKind, slotCount)) {
     error = unsupportedPackedResultValueKindError("Result.ok");
     return ResultOkMethodCallEmitResult::Error;
   }
   (void)packedStructKind;
+  (void)slotCount;
   if (!emitExpr(expr.args[1], localsIn)) {
     return ResultOkMethodCallEmitResult::Error;
+  }
+  if (!isPackedSingleSlot) {
+    return ResultOkMethodCallEmitResult::Emitted;
   }
   if (!allocTempLocal) {
     error = "native backend missing temporary local for Result.ok";

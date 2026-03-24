@@ -884,11 +884,11 @@ Draft constraints:
   - `print*` and vector helper calls are statement-only; expression usage is rejected.
   - `File<Mode>(path)` requires a string literal or literal-backed binding.
   - `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept
-    `i32`, `bool`, `f32`, literal-backed `string`, packed `File<Mode>` handles, the single-slot int-backed stdlib
-    error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), and generic single-slot user structs
-    whose only field fits that same packed scalar-or-string contract. Downstream `try(...)` preserves packed
-    `File<Mode>` handles and supports that single-slot struct reconstruction path on VM/native; wider multi-slot
-    payloads remain unsupported.
+    `i32`, `bool`, `f32`, literal-backed `string`, `File<Mode>` handles, the single-slot int-backed stdlib error
+    structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), and ordinary user structs that can stay on
+    the existing stack-backed struct path. Downstream `try(...)` preserves `File<Mode>` handles, rebuilds
+    single-slot struct payloads, and keeps multi-slot struct payloads on that same pointer-backed path on
+    VM/native; remaining non-struct wider payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.
 - Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
 - VM/native consume the PSIR v16 opcode set (see design doc) and deserialization rejects unknown opcodes.

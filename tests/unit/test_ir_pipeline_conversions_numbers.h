@@ -162,7 +162,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("IR backends only support Result.map with packed payload values") != std::string::npos);
+  CHECK(error.find("IR backends only support Result.map with supported payload values") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports Result.map f32 payloads") {
@@ -425,59 +425,32 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer rejects Result.ok composite struct payloads") {
-  const std::string source = R"(
-import /std/collections/*
-
-[struct]
-Pair() {
-  [i32] left{0i32}
-  [i32] right{0i32}
-}
-
-[return<int>]
-main() {
-  [Result<Pair, ContainerError>] ok{Result.ok(Pair([left] 1i32, [right] 2i32))}
-  if(Result.error(ok), then(){ return(1i32) }, else(){ return(0i32) })
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("IR backends only support Result.ok with packed payload values") != std::string::npos);
-}
-
-TEST_CASE("ir lowerer rejects Result.map composite struct payloads") {
+TEST_CASE("ir lowerer supports direct multi-slot struct Result.ok payloads") {
   const std::string source = R"(
 import /std/file/*
 
 [struct]
-Label() {
-  [i32] code{0i32}
-}
-
-[struct]
 Pair() {
   [i32] left{0i32}
   [i32] right{0i32}
 }
 
-[return<Result<Label, FileError>>]
-make_label() {
-  return(Result.ok(Label([code] 7i32)))
+[return<Result<Pair, FileError>>]
+make_pair() {
+  return(Result.ok(Pair([left] 1i32, [right] 2i32)))
 }
 
-[return<int>]
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [Result<Pair, FileError>] mapped{
-    Result.map(make_label(), []([Label] value) { return(Pair([left] value.code, [right] 2i32)) })
-  }
-  if(Result.error(mapped), then(){ return(1i32) }, else(){ return(0i32) })
+  [Pair] value{try(make_pair())}
+  print_line(value.left)
+  print_line(value.right)
+  return(plus(value.left, value.right))
 }
 )";
   primec::Program program;
@@ -487,8 +460,71 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("IR backends only support Result.map with packed payload values") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
+}
+
+TEST_CASE("ir lowerer supports multi-slot struct Result combinator payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Result<Pair, FileError>>]
+make_pair([i32] left, [i32] right) {
+  return(Result.ok(Pair([left] left, [right] right)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Pair] mapped{try(Result.map(make_pair(2i32, 3i32), []([Pair] value) {
+    return(Pair([left] plus(value.left, 5i32), [right] plus(value.right, 7i32)))
+  }))}
+  [Pair] chained{try(Result.and_then(make_pair(2i32, 3i32), []([Pair] value) {
+    return(Result.ok(Pair([left] plus(value.left, value.right), [right] 9i32)))
+  }))}
+  [Pair] summed{try(Result.map2(make_pair(1i32, 4i32), make_pair(2i32, 5i32), []([Pair] left, [Pair] right) {
+    return(Pair([left] plus(left.left, right.left), [right] plus(left.right, right.right)))
+  }))}
+  print_line(mapped.left)
+  print_line(mapped.right)
+  print_line(chained.left)
+  print_line(chained.right)
+  print_line(summed.left)
+  print_line(summed.right)
+  return(plus(mapped.left, plus(mapped.right, plus(chained.left, plus(chained.right, plus(summed.left, summed.right))))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 33);
 }
 
 TEST_CASE("ir lowerer supports Result.and_then builtin lambdas") {
@@ -545,7 +581,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("IR backends only support Result.and_then with packed payload values") != std::string::npos);
+  CHECK(error.find("IR backends only support Result.and_then with supported payload values") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports Result.and_then status-only returns") {
@@ -720,7 +756,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("IR backends only support Result.and_then with packed payload values") != std::string::npos);
+  CHECK(error.find("IR backends only support Result.and_then with supported payload values") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports Result.map2 builtin lambdas") {
@@ -774,7 +810,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("IR backends only support Result.map2 with packed payload values") != std::string::npos);
+  CHECK(error.find("IR backends only support Result.map2 with supported payload values") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports Result.map2 f32 payloads") {
@@ -1126,7 +1162,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("IR backends only support Result.ok with packed payload values") != std::string::npos);
+  CHECK(error.find("IR backends only support Result.ok with supported payload values") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer accepts move builtin") {

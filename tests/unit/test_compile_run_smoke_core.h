@@ -1,7 +1,7 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
 static constexpr std::string_view IrResultOkUnsupportedMessage =
-    "IR backends only support Result.ok with packed payload values";
+    "IR backends only support Result.ok with supported payload values";
 
 static bool compileAcrossBackendsOrExpectUnsupported(const std::string &nameStem,
                                                      const std::string &compileExeCmd,

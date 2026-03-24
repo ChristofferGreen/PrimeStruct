@@ -7450,6 +7450,67 @@ TEST_CASE("native backend supports File Result payloads on IR-backed paths") {
   CHECK(readFile(outPath) == "65\n65\n65\n");
 }
 
+TEST_CASE("native backend supports multi-slot struct Result payloads on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Result<Pair, FileError>>]
+make_pair([i32] left, [i32] right) {
+  return(Result.ok(Pair([left] left, [right] right)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Pair] direct{try(make_pair(1i32, 2i32))}
+  [Pair] mapped{try(Result.map(make_pair(2i32, 3i32), []([Pair] value) {
+    return(Pair([left] plus(value.left, 5i32), [right] plus(value.right, 7i32)))
+  }))}
+  [Pair] chained{try(Result.and_then(make_pair(2i32, 3i32), []([Pair] value) {
+    return(Result.ok(Pair([left] plus(value.left, value.right), [right] 9i32)))
+  }))}
+  [Pair] summed{try(Result.map2(make_pair(1i32, 4i32), make_pair(2i32, 5i32), []([Pair] left, [Pair] right) {
+    return(Pair([left] plus(left.left, right.left), [right] plus(left.right, right.right)))
+  }))}
+  print_line(direct.left)
+  print_line(direct.right)
+  print_line(mapped.left)
+  print_line(mapped.right)
+  print_line(chained.left)
+  print_line(chained.right)
+  print_line(summed.left)
+  print_line(summed.right)
+  return(plus(direct.left,
+    plus(direct.right,
+      plus(mapped.left,
+        plus(mapped.right,
+          plus(chained.left, plus(chained.right, plus(summed.left, summed.right))))))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_result_multi_slot_struct_payload_ir_backed.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_multi_slot_struct_payload_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_multi_slot_struct_payload_ir_backed_out.txt")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 36);
+  CHECK(readFile(outPath) == "1\n2\n7\n10\n5\n9\n3\n9\n");
+}
+
 TEST_CASE("native backend supports block-bodied Result.and_then lambdas on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

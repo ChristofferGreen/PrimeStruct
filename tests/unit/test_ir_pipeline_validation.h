@@ -51401,7 +51401,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
             [&](primec::IrOpcode, uint64_t) {},
             error) ==
         EmitResult::Error);
-  CHECK(error == "IR backends only support Result.ok with packed payload values");
+  CHECK(error == "IR backends only support Result.ok with supported payload values");
   CHECK_FALSE(emitCalled);
 
   emitCalled = false;
@@ -51527,6 +51527,79 @@ TEST_CASE("ir lowerer result helpers pack single-slot struct Result.ok values") 
   CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+}
+
+TEST_CASE("ir lowerer result helpers preserve multi-slot struct Result.ok values") {
+  using EmitResult = primec::ir_lowerer::ResultOkMethodCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.isMethodCall = true;
+  expr.name = "ok";
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Name;
+  valueExpr.name = "pair";
+  expr.args = {resultType, valueExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pairInfo;
+  pairInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  pairInfo.valueKind = ValueKind::Int64;
+  pairInfo.structTypeName = "/pkg/Pair";
+  pairInfo.index = 9;
+  locals.emplace("pair", pairInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Int64;
+            },
+            [](const primec::Expr &value, const primec::ir_lowerer::LocalMap &) {
+              return value.kind == primec::Expr::Kind::Name && value.name == "pair" ? "/pkg/Pair" : std::string{};
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::LoadLocal, 9});
+              return true;
+            },
+            []() -> int32_t {
+              CHECK(false);
+              return 0;
+            },
+            [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+              if (structPath != "/pkg/Pair") {
+                return false;
+              }
+              layoutOut = primec::ir_lowerer::StructSlotLayoutInfo{};
+              layoutOut.structPath = structPath;
+              layoutOut.totalSlots = 2;
+              primec::ir_lowerer::StructSlotFieldInfo left;
+              left.slotOffset = 0;
+              left.slotCount = 1;
+              left.valueKind = ValueKind::Int32;
+              layoutOut.fields.push_back(left);
+              primec::ir_lowerer::StructSlotFieldInfo right;
+              right.slotOffset = 1;
+              right.slotCount = 1;
+              right.valueKind = ValueKind::Int32;
+              layoutOut.fields.push_back(right);
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) ==
+        EmitResult::Emitted);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
 }
 
 TEST_CASE("ir lowerer result helpers resolve definition result metadata") {
