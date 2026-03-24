@@ -290,6 +290,51 @@ TEST_CASE("emitter collection inference helpers classify string access through e
   CHECK_FALSE(primec::emitter::isStringValue(intAtCall, localTypes));
 }
 
+TEST_CASE("emitter method resolution prefers canonical map metadata fallback") {
+  primec::Emitter::BindingInfo mapBinding;
+  mapBinding.typeName = "map";
+  mapBinding.typeTemplateArg = "i32, Widget";
+
+  std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {
+      {"values", mapBinding},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "at";
+  methodCall.args = {receiverExpr, keyExpr};
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::Emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/std/collections/map/at", "/pkg/Widget"},
+  };
+
+  std::string resolved;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/std/collections/map/at");
+
+  primec::Expr removedAliasCall = methodCall;
+  removedAliasCall.name = "/map/at";
+  resolved = "unchanged";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+      removedAliasCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved.empty());
+}
+
 TEST_CASE("semantics binding type helpers validate nested templates and map keys") {
   std::vector<std::string> parts;
   CHECK(primec::semantics::splitTopLevelTemplateArgs("map<i32, vector<f32>>, Pointer<string>", parts));
@@ -9578,6 +9623,39 @@ TEST_CASE("emitter builtin collection inference helper source delegation stays s
   CHECK(emitterBuiltinCollectionInferenceHelpersSource.find("bool inferCollectionElementTypeNameFromExpr(") !=
         std::string::npos);
   CHECK(emitterBuiltinCollectionInferenceHelpersSource.find("std::string inferAccessCallTypeName(") !=
+        std::string::npos);
+}
+
+TEST_CASE("emitter builtin method resolution helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path emitterHelpersBuiltinsPath =
+      repoRoot / "src" / "emitter" / "EmitterHelpersBuiltins.cpp";
+  const std::filesystem::path emitterBuiltinMethodResolutionHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionHelpers.cpp";
+  REQUIRE(std::filesystem::exists(emitterHelpersBuiltinsPath));
+  REQUIRE(std::filesystem::exists(emitterBuiltinMethodResolutionHelpersPath));
+
+  const std::string emitterHelpersBuiltinsSource = readText(emitterHelpersBuiltinsPath);
+  const std::string emitterBuiltinMethodResolutionHelpersSource =
+      readText(emitterBuiltinMethodResolutionHelpersPath);
+
+  CHECK(emitterHelpersBuiltinsSource.find("bool resolveMethodCallPath(") == std::string::npos);
+
+  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("bool resolveMethodCallPath(") != std::string::npos);
+  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("std::string preferredFileErrorHelperTarget") !=
+        std::string::npos);
+  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("std::string normalizedMethodName = call.name;") !=
         std::string::npos);
 }
 
