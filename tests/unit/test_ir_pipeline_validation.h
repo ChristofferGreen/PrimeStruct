@@ -574,6 +574,44 @@ main() {
   CHECK(cpp.find("ps_array_count(") != std::string::npos);
 }
 
+TEST_CASE("emitter cpp lowers direct Result combinator calls") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] mapped{
+    Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) })
+  }
+  [Result<i32, FileError>] chained{
+    Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) })
+  }
+  [Result<i32, FileError>] summed{
+    Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) })
+  }
+  print_line(try(mapped))
+  print_line(try(chained))
+  return(try(summed))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::Emitter emitter;
+  const std::string cpp = emitter.emitCpp(program, "/main");
+  CHECK(cpp.find("ps_result_pack(0u, static_cast<uint32_t>(") != std::string::npos);
+  CHECK(cpp.find("return static_cast<uint64_t>(ps_next);") != std::string::npos);
+  CHECK(cpp.find("auto ps_left = ") != std::string::npos);
+  CHECK(cpp.find("ps_try_value<int32_t>(") != std::string::npos);
+}
+
 TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
   const std::string source = R"(
 Particle() {
@@ -9629,6 +9667,42 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlMethodPathStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
+}
+
+TEST_CASE("emitter expr result call source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path emitterExprCallsPath = repoRoot / "src" / "emitter" / "EmitterExprCalls.h";
+  REQUIRE(std::filesystem::exists(emitterExprCallsPath));
+  const std::string emitterExprCallsSource = readText(emitterExprCallsPath);
+  CHECK(emitterExprCallsSource.find("#include \"EmitterExprResultCalls.h\"") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("expr.args.front().name == \"Result\" && expr.name == \"ok\"") ==
+        std::string::npos);
+  CHECK(emitterExprCallsSource.find("expr.args.front().name == \"Result\" && expr.name == \"map2\"") ==
+        std::string::npos);
+  CHECK(emitterExprCallsSource.find("isSimpleCallName(expr, \"try\") && expr.args.size() == 1") ==
+        std::string::npos);
+
+  const std::filesystem::path emitterExprResultCallsPath =
+      repoRoot / "src" / "emitter" / "EmitterExprResultCalls.h";
+  REQUIRE(std::filesystem::exists(emitterExprResultCallsPath));
+  const std::string emitterExprResultCallsSource = readText(emitterExprResultCallsPath);
+  CHECK(emitterExprResultCallsSource.find("expr.args.front().name == \"Result\" && expr.name == \"ok\"") !=
+        std::string::npos);
+  CHECK(emitterExprResultCallsSource.find("expr.args.front().name == \"Result\" && expr.name == \"map2\"") !=
+        std::string::npos);
+  CHECK(emitterExprResultCallsSource.find("isSimpleCallName(expr, \"try\") && expr.args.size() == 1") !=
+        std::string::npos);
 }
 
 TEST_CASE("emitter builtin call path helper source delegation stays stable") {
