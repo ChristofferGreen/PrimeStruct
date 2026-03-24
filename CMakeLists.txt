@@ -845,38 +845,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     if (suite IN_LIST PrimeStructManagedCompileRunSuites)
       continue()
     endif()
-    if (suite STREQUAL "primestruct.compile.run.smoke")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_01a"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 1 LAST 5)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_01b"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 6 LAST 10)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_02a"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 11 LAST 15)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_02b"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 16 LAST 20)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_03a"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 21 LAST 26)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_foundation_03b"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 27 LAST 31)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_01a"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 32 LAST 37)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_01b"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 38 LAST 42)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_02a"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 43 LAST 47)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_02b"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 48 LAST 52)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_03a"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 53 LAST 57)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_paths_wasm_and_debug_03b"
-                                 SOURCE_FILE "*test_compile_run_smoke_core.h" FIRST 58 LAST 62)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "collective_paths_core"
-                                 SOURCE_FILE "*test_compile_run_smoke_collective.h" FIRST 1 LAST 11)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "collective_paths_extended"
-                                 SOURCE_FILE "*test_compile_run_smoke_collective.h" FIRST 12 LAST 22)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "argv_and_cli"
-                                 SOURCE_FILE "*test_compile_run_smoke_argv.h")
-    elseif(suite STREQUAL "primestruct.compile.run.vm.core")
+    if (suite STREQUAL "primestruct.compile.run.vm.core")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_01a"
                                  SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 1 LAST 14)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_01b"

@@ -83,7 +83,7 @@ addPrimeStructManagedDoctestSuite(
   SOURCE_FILE "*test_semantics_entry_operators.h"
   RANGE_FIRST 16
   RANGE_LAST 29
-  CASES_PER_SHARD 10
+  CASES_PER_SHARD 5
   SHARD_PREFIX "scalar_and_mixed_numeric_rules"
 )
 
@@ -94,6 +94,7 @@ addPrimeStructManagedDoctestSuite(
   TIMEOUT 900
   LABEL "parallel-safe"
   TOTAL_CASES 39
+  CASES_PER_SHARD 4
   SHARD_PREFIX "math_imports"
 )
 
@@ -108,6 +109,7 @@ addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.builtins_numeric"
   ${PrimeStructManagedSemanticsCommon}
   TOTAL_CASES 22
+  CASES_PER_SHARD 5
   SHARD_PREFIX "builtins_numeric"
 )
 
@@ -189,6 +191,7 @@ addPrimeStructManagedDoctestSuite(
   LABEL "serial-required"
   RUN_SERIAL
   TOTAL_CASES 76
+  CASES_PER_SHARD 2
   SHARD_PREFIX "result_helpers"
 )
 
@@ -224,6 +227,7 @@ addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.numeric_builtins"
   ${PrimeStructManagedSemanticsCommon}
   TOTAL_CASES 33
+  CASES_PER_SHARD 5
   SHARD_PREFIX "calls_flow_numeric_builtins"
 )
 
@@ -248,6 +252,7 @@ addPrimeStructManagedDoctestSuite(
   TIMEOUT 900
   LABEL "parallel-safe"
   TOTAL_CASES 52
+  CASES_PER_SHARD 4
   SHARD_PREFIX "imports"
 )
 

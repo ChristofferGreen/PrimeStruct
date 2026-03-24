@@ -15,7 +15,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 112
-  CASES_PER_SHARD 10
+  CASES_PER_SHARD 4
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.pointers"
@@ -24,7 +24,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.pointers"
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 32
-  CASES_PER_SHARD 10
+  CASES_PER_SHARD 3
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
