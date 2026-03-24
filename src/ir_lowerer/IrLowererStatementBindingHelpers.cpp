@@ -90,6 +90,29 @@ bool inferCallParameterDefaultResultInfo(const Expr &expr,
       infoOut);
 }
 
+bool inferIndexedArgsPackElementLocalInfo(const Expr &expr,
+                                          const LocalMap &localsForKindInference,
+                                          LocalInfo &infoOut) {
+  std::string accessName;
+  if (!getBuiltinArrayAccessName(expr, accessName) || accessName.empty() || expr.args.size() != 2 ||
+      expr.args.front().kind != Expr::Kind::Name) {
+    return false;
+  }
+
+  auto it = localsForKindInference.find(expr.args.front().name);
+  if (it == localsForKindInference.end() || !it->second.isArgsPack) {
+    return false;
+  }
+
+  infoOut = it->second;
+  infoOut.kind = (infoOut.argsPackElementKind == LocalInfo::Kind::Value) ? LocalInfo::Kind::Value
+                                                                          : infoOut.argsPackElementKind;
+  infoOut.isArgsPack = false;
+  infoOut.argsPackElementKind = LocalInfo::Kind::Value;
+  infoOut.argsPackElementCount = -1;
+  return true;
+}
+
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut) {
   if (applyErrorTypeMetadata(typeText, infoOut)) {
     return;
@@ -783,6 +806,10 @@ bool inferInlineParameterExprLocalInfo(
 
   if (expr.kind != Expr::Kind::Call) {
     return false;
+  }
+
+  if (inferIndexedArgsPackElementLocalInfo(expr, localsForKindInference, infoOut)) {
+    return true;
   }
 
   const Definition *callee = nullptr;
