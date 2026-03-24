@@ -180,17 +180,24 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("variadic reference packs still reject top-level uninitialized storage elements") {
+TEST_CASE("variadic reference packs allow top-level uninitialized storage elements") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<uninitialized<i32>>>] values) {
-  return(0i32)
+  init(dereference(values[0i32]), 7i32)
+  return(take(dereference(values.at_unsafe(0i32))))
+}
+
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] ref{location(storage)}
+  return(score_refs(ref))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/score_refs", error));
-  CHECK(error.find("uninitialized storage is not allowed as template argument to user-defined types") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("memory at validates checked pointer access") {

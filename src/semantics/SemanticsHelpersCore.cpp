@@ -493,7 +493,9 @@ bool parseBindingInfo(const Expr &expr,
       return false;
     }
     elementBase = normalizeBindingTypeName(trimTypeText(elementBase));
-    if (elementBase != "Pointer") {
+    const bool isPointerElement = elementBase == "Pointer";
+    const bool isReferenceElement = elementBase == "Reference";
+    if (!isPointerElement && !isReferenceElement) {
       return false;
     }
     std::vector<std::string> elementArgs;
@@ -504,7 +506,8 @@ bool parseBindingInfo(const Expr &expr,
     std::string targetType = elementArgs.front();
     if (extractTopLevelUninitializedTarget(targetType, targetType)) {
       if (containsUninitializedType(targetType)) {
-        elementError = "uninitialized storage is not allowed in pointer targets";
+        elementError = isPointerElement ? "uninitialized storage is not allowed in pointer targets"
+                                        : "uninitialized storage is not allowed in reference targets";
         return false;
       }
     } else if (containsUninitializedType(elementArgs.front())) {
@@ -514,7 +517,8 @@ bool parseBindingInfo(const Expr &expr,
 
     std::string unsupportedTarget;
     if (!isSupportedPointerReferenceTarget(targetType, unsupportedTarget)) {
-      elementError = "unsupported pointer target type: " + unsupportedTarget;
+      elementError = isPointerElement ? "unsupported pointer target type: " + unsupportedTarget
+                                      : "unsupported reference target type: " + unsupportedTarget;
       return false;
     }
     return true;
