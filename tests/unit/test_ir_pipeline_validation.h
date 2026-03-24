@@ -574,6 +574,26 @@ main() {
   CHECK(cpp.find("ps_array_count(") != std::string::npos);
 }
 
+TEST_CASE("emitter cpp lowers bare contains for map values") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(contains(values, 1i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::Emitter emitter;
+  const std::string cpp = emitter.emitCpp(program, "/main");
+  CHECK(cpp.find("ps_map_contains(") != std::string::npos);
+}
+
 TEST_CASE("emitter cpp lowers direct Result combinator calls") {
   const std::string source = R"(
 import /std/file/*
@@ -9702,6 +9722,57 @@ TEST_CASE("emitter expr result call source delegation stays stable") {
   CHECK(emitterExprResultCallsSource.find("expr.args.front().name == \"Result\" && expr.name == \"map2\"") !=
         std::string::npos);
   CHECK(emitterExprResultCallsSource.find("isSimpleCallName(expr, \"try\") && expr.args.size() == 1") !=
+        std::string::npos);
+}
+
+TEST_CASE("emitter expr collection helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path emitterExprCallsPath = repoRoot / "src" / "emitter" / "EmitterExprCalls.h";
+  REQUIRE(std::filesystem::exists(emitterExprCallsPath));
+  const std::string emitterExprCallsSource = readText(emitterExprCallsPath);
+  CHECK(emitterExprCallsSource.find("#include \"EmitterExprCollectionTypeHelpers.h\"") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("#include \"EmitterExprCollectionFallbackHelpers.h\"") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("auto normalizedTypePath = [](const std::string &typePath) -> std::string {") ==
+        std::string::npos);
+  CHECK(emitterExprCallsSource.find("auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {") ==
+        std::string::npos);
+  CHECK(emitterExprCallsSource.find("auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {") ==
+        std::string::npos);
+  CHECK(emitterExprCallsSource.find("auto preferBareMapHelperPath = [&](const Expr &candidate, const char *helperName) {") ==
+        std::string::npos);
+
+  const std::filesystem::path emitterExprCollectionTypeHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCollectionTypeHelpers.h";
+  REQUIRE(std::filesystem::exists(emitterExprCollectionTypeHelpersPath));
+  const std::string emitterExprCollectionTypeHelpersSource = readText(emitterExprCollectionTypeHelpersPath);
+  CHECK(emitterExprCollectionTypeHelpersSource.find(
+            "auto normalizedTypePath = [](const std::string &typePath) -> std::string {") != std::string::npos);
+  CHECK(emitterExprCollectionTypeHelpersSource.find(
+            "auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {") != std::string::npos);
+
+  const std::filesystem::path emitterExprCollectionFallbackHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCollectionFallbackHelpers.h";
+  REQUIRE(std::filesystem::exists(emitterExprCollectionFallbackHelpersPath));
+  const std::string emitterExprCollectionFallbackHelpersSource =
+      readText(emitterExprCollectionFallbackHelpersPath);
+  CHECK(emitterExprCollectionFallbackHelpersSource.find(
+            "auto isNoHelperExplicitMapAccessCallFallback = [&](const Expr &candidate) {") != std::string::npos);
+  CHECK(emitterExprCollectionFallbackHelpersSource.find(
+            "auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {") !=
+        std::string::npos);
+  CHECK(emitterExprCollectionFallbackHelpersSource.find(
+            "auto preferBareMapHelperPath = [&](const Expr &candidate, const char *helperName) {") !=
         std::string::npos);
 }
 
