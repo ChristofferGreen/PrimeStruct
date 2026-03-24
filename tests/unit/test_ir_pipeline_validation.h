@@ -230,6 +230,30 @@ TEST_CASE("shared simple-call helpers reject removed array count alias") {
   CHECK_FALSE(primec::emitter::isSimpleCallName(removedAliasCall, "count"));
 }
 
+TEST_CASE("emitter builtin call path helpers preserve canonical compatibility fallbacks") {
+  const std::unordered_map<std::string, std::string> preferredNameMap = {
+      {"/std/collections/vector/filter", "/std/collections/vector/filter"},
+      {"/array/find", "/array/find"},
+      {"/std/collections/map/at", "/std/collections/map/at"},
+      {"/map/remove", "/map/remove"},
+  };
+
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("/vector/filter", preferredNameMap) ==
+        "/std/collections/vector/filter");
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("/std/collections/vector/find", preferredNameMap) ==
+        "/array/find");
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("/map/at", preferredNameMap) ==
+        "/std/collections/map/at");
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("/std/collections/map/remove", preferredNameMap) ==
+        "/map/remove");
+
+  const std::unordered_map<std::string, std::string> excludedAliasOnlyMap = {
+      {"/map/at", "/map/at"},
+  };
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("/std/collections/map/at", excludedAliasOnlyMap) ==
+        "/std/collections/map/at");
+}
+
 TEST_CASE("semantics binding type helpers validate nested templates and map keys") {
   std::vector<std::string> parts;
   CHECK(primec::semantics::splitTopLevelTemplateArgs("map<i32, vector<f32>>, Pointer<string>", parts));
@@ -9448,6 +9472,42 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlMethodPathStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
+}
+
+TEST_CASE("emitter builtin call path helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path emitterHelpersBuiltinsPath =
+      repoRoot / "src" / "emitter" / "EmitterHelpersBuiltins.cpp";
+  const std::filesystem::path emitterBuiltinCallPathHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinCallPathHelpers.cpp";
+  REQUIRE(std::filesystem::exists(emitterHelpersBuiltinsPath));
+  REQUIRE(std::filesystem::exists(emitterBuiltinCallPathHelpersPath));
+
+  const std::string emitterHelpersBuiltinsSource = readText(emitterHelpersBuiltinsPath);
+  const std::string emitterBuiltinCallPathHelpersSource = readText(emitterBuiltinCallPathHelpersPath);
+
+  CHECK(emitterHelpersBuiltinsSource.find("bool getBuiltinOperator(") == std::string::npos);
+  CHECK(emitterHelpersBuiltinsSource.find("std::string preferVectorStdlibHelperPath(") == std::string::npos);
+  CHECK(emitterHelpersBuiltinsSource.find("bool getBuiltinArrayAccessNameLocal(") == std::string::npos);
+  CHECK(emitterHelpersBuiltinsSource.find("std::string preferredFileMethodTargetLocal(") == std::string::npos);
+
+  CHECK(emitterBuiltinCallPathHelpersSource.find("bool getBuiltinOperator(") != std::string::npos);
+  CHECK(emitterBuiltinCallPathHelpersSource.find("std::string preferVectorStdlibHelperPath(") !=
+        std::string::npos);
+  CHECK(emitterBuiltinCallPathHelpersSource.find("bool getBuiltinArrayAccessNameLocal(") != std::string::npos);
+  CHECK(emitterBuiltinCallPathHelpersSource.find("std::string preferredFileMethodTargetLocal(") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable") {

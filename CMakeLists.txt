@@ -304,6 +304,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/emitter/EmitterExprControlMethodPathStep.cpp
   src/emitter/EmitterExprControlStringLiteralStep.cpp
   src/emitter/EmitterExprControlNameStep.cpp
+  src/emitter/EmitterBuiltinCallPathHelpers.cpp
   src/emitter/EmitterHelpersBuiltins.cpp
   src/emitter/EmitterHelpersTypes.cpp
   src/glsl_emitter/GlslEmitter.cpp
