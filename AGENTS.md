@@ -43,7 +43,9 @@ build and layout solidify.
   outside the struct should use an explicit `self` parameter if they want method-call sugar.
 
 ## Build/test workflow
-- **Primary entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).
+- Prefer compiling the project and running tests in release mode via `./scripts/compile.sh --release`; use debug builds when deeper debugging is needed.
+- **Primary entry:** `./scripts/compile.sh --release` (Release build in `build-release`, runs tests).
+- **Debug entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).
 - **Clean debug build:** `./scripts/compile.sh --clean` (deletes `build-debug` before configuring).
 - **Release build:** `./scripts/compile.sh --release` (Release build in `build-release`).
 - **Clean release build:** `./scripts/compile.sh --clean --release` (deletes `build-release` before configuring).
@@ -54,8 +56,8 @@ build and layout solidify.
 - **Coverage:** `./scripts/compile.sh --coverage` builds with clang coverage flags, runs tests, and writes reports to `build-debug/coverage/coverage.txt` plus `build-debug/coverage/html/`.
 - **Coverage helper:** `./scripts/code_coverage.sh` runs a clean debug coverage build, prints total function/line coverage, and prints artifact paths.
 - **Lines-of-code helper:** `./scripts/lines_of_code.sh` reports line totals for `src/` and `include/`.
-- **CTest:** from `build-debug/` run `ctest --output-on-failure`.
-- **Direct test binary runs:** execute `build-debug/PrimeStruct_backend_tests` from `build-debug/` so compile-run suites can resolve `./primec`; use `PrimeStruct_misc_tests`, `PrimeStruct_semantics_tests`, `PrimeStruct_text_filter_tests`, or `PrimeStruct_parser_tests` for narrower doctest runs.
+- **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`; use `build-debug/` when investigating failures in more detail.
+- **Direct test binary runs:** prefer executing `build-release/PrimeStruct_backend_tests` from `build-release/` so compile-run suites can resolve `./primec`; use the matching `PrimeStruct_misc_tests`, `PrimeStruct_semantics_tests`, `PrimeStruct_text_filter_tests`, or `PrimeStruct_parser_tests` binaries there for narrower doctest runs. Switch to the `build-debug/` binaries when deeper debugging is needed.
 
 ## Generated artifacts
 - Debug builds go in `build-debug/`; release builds go in `build-release/`.
