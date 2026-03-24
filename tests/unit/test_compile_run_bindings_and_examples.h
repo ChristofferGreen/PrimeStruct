@@ -142,6 +142,84 @@ TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.compile.run.examples");
 
+static std::string spinningCubeBackendProbeCacheSignature(const std::filesystem::path &cubePath) {
+  std::string signature = cubePath.lexically_normal().string();
+  auto appendPathStamp = [&](const std::filesystem::path &path) {
+    signature += "\n";
+    signature += path.lexically_normal().string();
+    std::error_code ec;
+    const auto size = std::filesystem::file_size(path, ec);
+    signature += "\nsize=";
+    signature += ec ? "missing" : std::to_string(size);
+    ec.clear();
+    const auto lastWrite = std::filesystem::last_write_time(path, ec);
+    signature += "\nmtime=";
+    signature += ec ? "missing" : std::to_string(lastWrite.time_since_epoch().count());
+  };
+
+  appendPathStamp(cubePath);
+  appendPathStamp(std::filesystem::current_path() / "primec");
+  return signature;
+}
+
+static bool readSpinningCubeBackendProbeCache(const std::filesystem::path &cachePath,
+                                              const std::string &signature,
+                                              int &cachedValue) {
+  std::ifstream cache(cachePath);
+  if (!cache.good()) {
+    return false;
+  }
+
+  std::string resultLine;
+  if (!std::getline(cache, resultLine)) {
+    return false;
+  }
+
+  std::stringstream buffer;
+  buffer << cache.rdbuf();
+  if (buffer.str() != signature) {
+    return false;
+  }
+
+  if (resultLine == "1") {
+    cachedValue = 1;
+    return true;
+  }
+  if (resultLine == "0") {
+    cachedValue = 0;
+    return true;
+  }
+  return false;
+}
+
+static void writeSpinningCubeBackendProbeCache(const std::filesystem::path &cachePath,
+                                               const std::string &signature,
+                                               int cachedValue) {
+  std::error_code ec;
+  std::filesystem::create_directories(cachePath.parent_path(), ec);
+  if (ec) {
+    return;
+  }
+
+  const std::filesystem::path tmpPath = cachePath.string() + ".tmp";
+  {
+    std::ofstream cache(tmpPath);
+    if (!cache.good()) {
+      return;
+    }
+    cache << cachedValue << "\n" << signature;
+    if (!cache.good()) {
+      return;
+    }
+  }
+
+  std::filesystem::rename(tmpPath, cachePath, ec);
+  if (ec) {
+    ec.clear();
+    std::filesystem::remove(tmpPath, ec);
+  }
+}
+
 static bool spinningCubeBackendsSupportArrayReturns() {
   static int cached = -1;
   if (cached != -1) {
@@ -157,6 +235,19 @@ static bool spinningCubeBackendsSupportArrayReturns() {
     return true;
   }
 
+  const std::filesystem::path cachePath =
+      std::filesystem::current_path() / ".primec_test_cache" / "spinning_cube_backend_probe.txt";
+  const std::string cacheSignature = spinningCubeBackendProbeCacheSignature(cubePath);
+  if (readSpinningCubeBackendProbeCache(cachePath, cacheSignature, cached)) {
+    return cached == 1;
+  }
+
+  auto storeResult = [&](int value) {
+    cached = value;
+    writeSpinningCubeBackendProbeCache(cachePath, cacheSignature, value);
+    return value == 1;
+  };
+
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_spinning_cube_backend_probe.err.txt").string();
   const std::string cmd =
@@ -165,8 +256,7 @@ static bool spinningCubeBackendsSupportArrayReturns() {
   const int code = runCommand(cmd);
   const std::string errorText = readFile(errPath);
   if (code != 0 && errorText.find("only supports returning array values") != std::string::npos) {
-    cached = 0;
-    return false;
+    return storeResult(0);
   }
 
   const std::string wasmProbePath =
@@ -182,12 +272,10 @@ static bool spinningCubeBackendsSupportArrayReturns() {
       (wasmErrorText.find("unsupported effect mask bits for wasm-browser target") != std::string::npos ||
        wasmErrorText.find("graphics stdlib runtime substrate unavailable for wasm-browser target: /std/gfx/*") !=
            std::string::npos)) {
-    cached = 0;
-    return false;
+    return storeResult(0);
   }
 
-  cached = 1;
-  return true;
+  return storeResult(1);
 }
 
 TEST_CASE("compiles examples to IR") {

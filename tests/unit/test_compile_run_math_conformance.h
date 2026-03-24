@@ -41,6 +41,12 @@ void checkMathConformance(const std::string &source, const std::string &name) {
 #endif
 }
 
+void checkMathConformanceVmParity(const std::string &source, const std::string &name) {
+  const std::string baseline = runMathConformance(source, name, "exe");
+  const std::string vmOut = runMathConformance(source, name, "vm");
+  CHECK(vmOut == baseline);
+}
+
 struct LabeledSample {
   std::string label;
   std::string value;
@@ -2411,7 +2417,7 @@ main() {
   return(0i32)
 }
 )";
-  checkMathConformance(source, "math_conformance_policy");
+  checkMathConformanceVmParity(source, "math_conformance_policy");
 }
 
 TEST_CASE("math conformance integer pow negative exponent") {
