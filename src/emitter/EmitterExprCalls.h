@@ -467,6 +467,65 @@
           packElementType = "int";
         }
 
+        auto resolveDefinitionReturnBinding = [&](const Definition &def, BindingInfo &bindingOut) -> bool {
+          for (const auto &transform : def.transforms) {
+            if (transform.name != "return" || transform.templateArgs.size() != 1) {
+              continue;
+            }
+            bindingOut = BindingInfo{};
+            std::string base;
+            std::string arg;
+            const std::string &returnType = transform.templateArgs.front();
+            if (splitTemplateTypeName(returnType, base, arg)) {
+              bindingOut.typeName = normalizeBindingTypeName(base);
+              bindingOut.typeTemplateArg = arg;
+            } else {
+              bindingOut.typeName = normalizeBindingTypeName(returnType);
+            }
+            return !bindingOut.typeName.empty();
+          }
+          return false;
+        };
+
+        auto resolveExprBinding = [&](const Expr &candidate, BindingInfo &bindingOut) -> bool {
+          if (candidate.kind == Expr::Kind::Name) {
+            auto localIt = localTypes.find(candidate.name);
+            if (localIt != localTypes.end()) {
+              bindingOut = localIt->second;
+              return true;
+            }
+          }
+
+          std::string resolvedPath;
+          if (candidate.kind == Expr::Kind::Call) {
+            if (candidate.isMethodCall) {
+              if (!resolveMethodCallPath(candidate,
+                                         defMap,
+                                         localTypes,
+                                         importAliases,
+                                         structTypeMap,
+                                         returnKinds,
+                                         returnStructs,
+                                         resolvedPath)) {
+                resolvedPath.clear();
+              }
+            } else {
+              resolvedPath = resolveExprPath(candidate);
+            }
+          } else if (candidate.kind == Expr::Kind::Name) {
+            resolvedPath = resolveExprPath(candidate);
+          }
+
+          if (resolvedPath.empty()) {
+            return false;
+          }
+          auto defIt = defMap.find(resolvedPath);
+          if (defIt == defMap.end() || defIt->second == nullptr) {
+            return false;
+          }
+          return resolveDefinitionReturnBinding(*defIt->second, bindingOut);
+        };
+
         auto emitPackedArgExpr = [&](const Expr &packedArgExpr) -> std::string {
           std::string packBase;
           std::string packArgText;
@@ -489,10 +548,10 @@
             if (normalizedPackBase == "Reference") {
               return "std::ref(" + targetExpr + ")";
             }
-            if (normalizedPackBase == "Pointer" && locationTarget.kind == Expr::Kind::Name) {
-              auto localIt = localTypes.find(locationTarget.name);
-              if (localIt != localTypes.end() &&
-                  normalizeBindingTypeName(localIt->second.typeName) == "Reference") {
+            if (normalizedPackBase == "Pointer") {
+              BindingInfo locationBinding;
+              if (resolveExprBinding(locationTarget, locationBinding) &&
+                  normalizeBindingTypeName(locationBinding.typeName) == "Reference") {
                 return "(&ps_deref(" + targetExpr + "))";
               }
             }

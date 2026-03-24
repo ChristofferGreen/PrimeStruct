@@ -436,7 +436,8 @@ Bottom-level form therefore has:
   `init(...)` / `take(...)` execute across direct/pure/mixed forwarding, that same emitted path now also accepts
   direct explicit `location(local)` packed call arguments for borrowed packs, and scalar/struct `args<Pointer<T>>`
   packs there also accept direct explicit `location(ref)` packed call arguments when the caller local is already a
-  `Reference<T>`; other unsupported non-string element support remains a separate follow-up slice.
+  `Reference<T>`, including helper-returned `Reference<T>` expressions that feed `location(...)`; other unsupported
+  non-string element support remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 
