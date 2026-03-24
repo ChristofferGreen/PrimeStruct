@@ -9843,6 +9843,62 @@ TEST_CASE("native emitter internals arithmetic source delegation stays stable") 
         std::string::npos);
 }
 
+TEST_CASE("native emitter internals core source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path nativeEmitterInternalsPath =
+      repoRoot / "src" / "native_emitter" / "NativeEmitterInternals.h";
+  const std::filesystem::path nativeEmitterInternalsArm64CorePath =
+      repoRoot / "src" / "native_emitter" / "NativeEmitterInternalsArm64Core.h";
+  REQUIRE(std::filesystem::exists(nativeEmitterInternalsPath));
+  REQUIRE(std::filesystem::exists(nativeEmitterInternalsArm64CorePath));
+
+  const std::string nativeEmitterInternalsSource = readText(nativeEmitterInternalsPath);
+  const std::string nativeEmitterInternalsArm64CoreSource =
+      readText(nativeEmitterInternalsArm64CorePath);
+
+  CHECK(nativeEmitterInternalsSource.find("#include \"NativeEmitterInternalsArm64Core.h\"") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("void emitHeapAlloc();") != std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("void emitReturn();") != std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("void emitPushReg(uint8_t reg);") != std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("static uint32_t encodeAddSpImm(uint16_t imm);") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("void flushValueStackCache();") != std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitHeapAlloc(") ==
+        std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitReturn(") ==
+        std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitPushReg(") ==
+        std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline uint32_t Arm64Emitter::encodeAddSpImm(") ==
+        std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::flushValueStackCache(") ==
+        std::string::npos);
+
+  CHECK(nativeEmitterInternalsArm64CoreSource.find("inline void Arm64Emitter::emitHeapAlloc(") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsArm64CoreSource.find("inline void Arm64Emitter::emitReturn(") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsArm64CoreSource.find("inline void Arm64Emitter::emitPushReg(") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsArm64CoreSource.find("inline uint32_t Arm64Emitter::encodeAddSpImm(") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsArm64CoreSource.find(
+            "inline void Arm64Emitter::flushValueStackCache(") != std::string::npos);
+}
+
 TEST_CASE("semantics validator expr source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

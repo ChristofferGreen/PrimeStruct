@@ -157,10 +157,10 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Refactor `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp` (`414` lines) below the `700`-line target by extracting method-resolution metadata/path utilities plus primitive/collection type inference into `src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp`.
 - ✓ Split `EmitterBuiltinMethodResolutionHelpers.cpp` method-resolution metadata/path utilities plus primitive/collection type inference into `src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp`.
 - ✓ Refactor `src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp` (`490` lines) below the `700`-line target by extracting metadata-path candidate normalization and return-metadata utilities into `src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp`.
-- ○ Refactor `src/native_emitter/NativeEmitterInternals.h` (`934` lines) below the `700`-line target. Progress is tracked by the slices below.
+- ✓ Refactor `src/native_emitter/NativeEmitterInternals.h` (`508` lines) below the `700`-line target by extracting ARM64 print/string/file I/O plus syscall formatting helpers into `src/native_emitter/NativeEmitterInternalsArm64Io.h`, arithmetic/comparison/conversion/branch helpers into `src/native_emitter/NativeEmitterInternalsArm64Arithmetic.h`, and heap/encoding/stack-cache/core emission helpers into `src/native_emitter/NativeEmitterInternalsArm64Core.h`.
 - ✓ Split `NativeEmitterInternals.h` ARM64 print/string/file I/O plus syscall formatting helpers into `src/native_emitter/NativeEmitterInternalsArm64Io.h`.
 - ✓ Split `NativeEmitterInternals.h` ARM64 arithmetic, comparison, conversion, and branch helpers into `src/native_emitter/NativeEmitterInternalsArm64Arithmetic.h`.
-- ○ Split `NativeEmitterInternals.h` ARM64 heap, encoding, stack-cache, and core emission helpers into dedicated header(s).
+- ✓ Split `NativeEmitterInternals.h` ARM64 heap, encoding, stack-cache, and core emission helpers into `src/native_emitter/NativeEmitterInternalsArm64Core.h`.
 - ○ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`1568` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterExprCalls.h` (`1512` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterEmitSetup.h` (`1458` lines) below the `700`-line target.
