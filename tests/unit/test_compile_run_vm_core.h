@@ -1472,6 +1472,37 @@ main() {
   CHECK(readFile(outPath) == "8\n5\n");
 }
 
+TEST_CASE("vm supports block-bodied Result.and_then lambdas on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] ok{Result.ok(2i32)}
+  [Result<i32, FileError>] chained{
+    Result.and_then(ok, []([i32] value) {
+      [i32] adjusted{plus(value, 1i32)}
+      if(greater_than(adjusted, 2i32),
+        then(){ return(Result.ok(multiply(adjusted, 3i32))) },
+        else(){ return(Result.ok(0i32)) })
+    })
+  }
+  return(try(chained))
+}
+)";
+  const std::string srcPath = writeTemp("vm_result_and_then_block_body_ir_backed.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_and_then_block_body_ir_backed_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 9);
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("vm rejects auto-bound direct Result combinator try consumers") {
   const std::string source = R"(
 import /std/file/*

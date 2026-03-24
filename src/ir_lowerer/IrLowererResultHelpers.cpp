@@ -7,6 +7,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -38,6 +39,161 @@ bool isResultBuiltinCall(const Expr &expr, const std::string &name, size_t argCo
          !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result";
 }
 
+void applyDeclaredResultBindingMetadata(const Expr &bindingExpr, LocalInfo &bindingInfo) {
+  for (const auto &transform : bindingExpr.transforms) {
+    if (transform.name == "Result") {
+      bindingInfo.isResult = true;
+      bindingInfo.resultHasValue = (transform.templateArgs.size() == 2);
+      bindingInfo.resultValueKind =
+          bindingInfo.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
+                                     : LocalInfo::ValueKind::Unknown;
+      bindingInfo.resultErrorType = transform.templateArgs.empty() ? std::string{} : transform.templateArgs.back();
+      bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+      continue;
+    }
+    if ((transform.name != "Reference" && transform.name != "Pointer") || transform.templateArgs.size() != 1) {
+      continue;
+    }
+
+    bool resultHasValue = false;
+    LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+    std::string resultErrorType;
+    if (!parseResultTypeName(trimTemplateTypeText(transform.templateArgs.front()),
+                             resultHasValue,
+                             resultValueKind,
+                             resultErrorType)) {
+      continue;
+    }
+
+    bindingInfo.isResult = true;
+    bindingInfo.resultHasValue = resultHasValue;
+    bindingInfo.resultValueKind = resultValueKind;
+    bindingInfo.resultErrorType = resultErrorType;
+    bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+  }
+}
+
+bool populateMetadataBindingInfo(const Expr &bindingExpr,
+                                 LocalMap &localsIn,
+                                 const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+                                 const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                 const LookupReturnInfoFn &lookupReturnInfo,
+                                 const InferExprKindWithLocalsFn &inferExprKind) {
+  if (bindingExpr.name.empty() || bindingExpr.args.empty()) {
+    return false;
+  }
+
+  LocalInfo bindingInfo;
+  bindingInfo.kind = LocalInfo::Kind::Value;
+  if (inferExprKind) {
+    bindingInfo.valueKind = inferExprKind(bindingExpr.args.front(), localsIn);
+    if (bindingInfo.valueKind == LocalInfo::ValueKind::String) {
+      bindingInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
+    }
+  }
+
+  applyDeclaredResultBindingMetadata(bindingExpr, bindingInfo);
+
+  ResultExprInfo bindingResultInfo;
+  if (resolveResultExprInfoFromLocals(bindingExpr.args.front(),
+                                      localsIn,
+                                      resolveMethodCall,
+                                      resolveDefinitionCall,
+                                      lookupReturnInfo,
+                                      inferExprKind,
+                                      bindingResultInfo) &&
+      bindingResultInfo.isResult) {
+    const std::string declaredErrorType = bindingInfo.resultErrorType;
+    bindingInfo.isResult = true;
+    bindingInfo.resultHasValue = bindingResultInfo.hasValue;
+    bindingInfo.resultValueKind = bindingResultInfo.valueKind;
+    bindingInfo.resultErrorType =
+        !bindingResultInfo.errorType.empty() ? bindingResultInfo.errorType : declaredErrorType;
+    bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+  }
+
+  localsIn[bindingExpr.name] = bindingInfo;
+  return true;
+}
+
+bool isInlineBodyBlockEnvelope(const Expr &candidate, const ResolveCallDefinitionFn &resolveDefinitionCall) {
+  if (!isBlockCall(candidate) || candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+    return false;
+  }
+  if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+    return false;
+  }
+  if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+    return false;
+  }
+  return !resolveDefinitionCall || resolveDefinitionCall(candidate) == nullptr;
+}
+
+bool mergeControlFlowResultInfos(const ResultExprInfo &first,
+                                 const ResultExprInfo &second,
+                                 ResultExprInfo &out) {
+  out = ResultExprInfo{};
+  if (!first.isResult || !second.isResult || first.hasValue != second.hasValue) {
+    return false;
+  }
+
+  out.isResult = true;
+  out.hasValue = first.hasValue;
+  if (out.hasValue) {
+    if (first.valueKind != LocalInfo::ValueKind::Unknown && second.valueKind != LocalInfo::ValueKind::Unknown &&
+        first.valueKind != second.valueKind) {
+      return false;
+    }
+    out.valueKind = first.valueKind != LocalInfo::ValueKind::Unknown ? first.valueKind : second.valueKind;
+  }
+
+  if (!first.errorType.empty() && !second.errorType.empty() && first.errorType != second.errorType) {
+    return false;
+  }
+  out.errorType = !first.errorType.empty() ? first.errorType : second.errorType;
+  return true;
+}
+
+bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
+                               const LocalMap &localsIn,
+                               const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+                               const ResolveCallDefinitionFn &resolveDefinitionCall,
+                               const LookupReturnInfoFn &lookupReturnInfo,
+                               const InferExprKindWithLocalsFn &inferExprKind,
+                               ResultExprInfo &out) {
+  out = ResultExprInfo{};
+  LocalMap bodyLocals = localsIn;
+
+  for (size_t i = 0; i < bodyExprs.size(); ++i) {
+    const Expr &bodyExpr = bodyExprs[i];
+    const bool isLast = (i + 1 == bodyExprs.size());
+    if (bodyExpr.isBinding) {
+      if (!populateMetadataBindingInfo(
+              bodyExpr, bodyLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind)) {
+        return false;
+      }
+      continue;
+    }
+
+    const Expr *valueExpr = nullptr;
+    if (isSimpleCallName(bodyExpr, "return")) {
+      if (bodyExpr.args.size() != 1 || !isLast) {
+        return false;
+      }
+      valueExpr = &bodyExpr.args.front();
+    } else if (isLast) {
+      valueExpr = &bodyExpr;
+    } else {
+      continue;
+    }
+
+    return resolveResultExprInfoFromLocals(
+        *valueExpr, bodyLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out);
+  }
+
+  return false;
+}
+
 bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
                                              LocalMap &lambdaLocals,
                                              const ResolveMethodCallWithLocalsFn &resolveMethodCall,
@@ -54,35 +210,10 @@ bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
     const Expr &bodyExpr = lambdaExpr.bodyArguments[i];
     const bool isLast = (i + 1 == lambdaExpr.bodyArguments.size());
     if (bodyExpr.isBinding) {
-      if (bodyExpr.name.empty() || bodyExpr.args.empty()) {
+      if (!populateMetadataBindingInfo(
+              bodyExpr, lambdaLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind)) {
         return false;
       }
-
-      LocalInfo bindingInfo;
-      bindingInfo.kind = LocalInfo::Kind::Value;
-      if (inferExprKind) {
-        bindingInfo.valueKind = inferExprKind(bodyExpr.args.front(), lambdaLocals);
-        if (bindingInfo.valueKind == LocalInfo::ValueKind::String) {
-          bindingInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
-        }
-      }
-
-      ResultExprInfo bindingResultInfo;
-      if (resolveResultExprInfoFromLocals(bodyExpr.args.front(),
-                                          lambdaLocals,
-                                          resolveMethodCall,
-                                          resolveDefinitionCall,
-                                          lookupReturnInfo,
-                                          inferExprKind,
-                                          bindingResultInfo) &&
-          bindingResultInfo.isResult) {
-        bindingInfo.isResult = true;
-        bindingInfo.resultHasValue = bindingResultInfo.hasValue;
-        bindingInfo.resultValueKind = bindingResultInfo.valueKind;
-        bindingInfo.resultErrorType = bindingResultInfo.errorType;
-      }
-
-      lambdaLocals[bodyExpr.name] = bindingInfo;
       continue;
     }
 
@@ -332,6 +463,33 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
         return true;
       }
     }
+  }
+  if (isIfCall(expr) && expr.args.size() == 3) {
+    auto resolveBranchResultInfo = [&](const Expr &branchExpr, ResultExprInfo &branchOut) {
+      if (isInlineBodyBlockEnvelope(branchExpr, resolveDefinitionCall)) {
+        return resolveBodyResultExprInfo(
+            branchExpr.bodyArguments,
+            localsIn,
+            resolveMethodCall,
+            resolveDefinitionCall,
+            lookupReturnInfo,
+            inferExprKind,
+            branchOut);
+      }
+      return resolveResultExprInfoFromLocals(
+          branchExpr, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, branchOut);
+    };
+
+    ResultExprInfo thenResultInfo;
+    ResultExprInfo elseResultInfo;
+    if (!resolveBranchResultInfo(expr.args[1], thenResultInfo) || !resolveBranchResultInfo(expr.args[2], elseResultInfo)) {
+      return false;
+    }
+    return mergeControlFlowResultInfos(thenResultInfo, elseResultInfo, out);
+  }
+  if (isInlineBodyBlockEnvelope(expr, resolveDefinitionCall)) {
+    return resolveBodyResultExprInfo(
+        expr.bodyArguments, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out);
   }
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
       expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result" && expr.name == "ok") {
