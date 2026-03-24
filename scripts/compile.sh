@@ -175,7 +175,7 @@ if [[ $RUN_TESTS -eq 1 ]]; then
     "$LLVM_COV" show "${coverage_args[@]}" "${bins[@]}" -instr-profile "$profdata" \
       -format=html -output-dir "$report_dir/html" -show-instantiations -show-line-counts-or-regions
   else
-    test_cmd=(ctest --output-on-failure --progress --parallel "$TEST_JOBS")
+    test_cmd=(ctest --output-on-failure --parallel "$TEST_JOBS")
     print_command "[compile.sh] Running tests: " "${test_cmd[@]}"
     (cd "$BUILD_DIR" && "${test_cmd[@]}")
   fi
