@@ -1176,6 +1176,35 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical gfx pipeline entry point validates through stdlib helper") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(GfxError.why(err))
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main() {
+  [Device] device{Device()?}
+  [Pipeline] pipeline{
+    device.create_pipeline(
+      [shader] ShaderLibrary.CubeBasic,
+      [vertex_type] VertexColored,
+      [color_format] ColorFormat.Bgra8Unorm,
+      [depth_format] DepthFormat.Depth32F
+    )?
+  }
+  [Material] material{pipeline.material()?}
+  return(plus(pipeline.token, material.token))
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental gfx pipeline entry point rejects unsupported vertex_type") {
   const std::string source = R"(
 import /std/gfx/experimental/*

@@ -20,11 +20,18 @@ entry points that now rewrite through dedicated stdlib helpers on both the
 experimental and canonical paths, a private canonical `.prime`
 `GraphicsSubstrate.createWindow(...)` / `createDevice(...)` / `createQueue(...)`
 boundary behind the `/std/gfx/*` constructor helpers, fallible `Device.create_swapchain(...)`,
-`Device.create_mesh(...)`, and `Swapchain.frame()` wrapper paths, and a
+`Device.create_mesh(...)`, and `Swapchain.frame()` wrapper paths, a matching
+private canonical `.prime` `GraphicsSubstrate.createSwapchain(...)` /
+`createMesh(...)` / `createPipeline(...)` / `acquireFrame(...)` helper layer
+behind those canonical wrappers, and a
 type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)` entry
 point for the locked v1 vertex wire type. The non-Result
 `Frame.render_pass(...)` plus `RenderPass.draw_mesh(...)` / `RenderPass.end()`
 path preserves deterministic zero-token / no-op fallback on invalid handles,
+and the canonical path now also routes `render_pass(...)`, `draw_mesh(...)`,
+`end()`, `submit(...)`, and `present()` through a private `.prime`
+`GraphicsSubstrate.openRenderPass(...)` / `drawMesh(...)` /
+`endRenderPass(...)` / `submitFrame(...)` / `presentFrame(...)` layer,
 and canonical plus experimental `Buffer<T>` now also expose `.prime`-authored
 `load(index)` / `store(index, value)` compute-storage wrappers alongside the
 existing `count()` / `empty()` / `is_valid()` / `readback()` / `allocate(...)`

@@ -70,7 +70,9 @@ semantics after canonicalization.
   and exercises that wrapper path across exe/vm/native, and
   `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites
   through the matching pipeline helper. The canonical `/std/gfx/*` entry
-  points now mirror that same helper-backed slice in `.prime` and also have
+  points now mirror that same helper-backed slice in `.prime`, with the
+  constructor/resource/frame/pass/submit/present wrappers now routing through
+  a private canonical `GraphicsSubstrate` helper layer there, and also have
   real compile-run conformance across exe/vm/native. Canonical and
   experimental gfx imports now reject deterministically on wasm
   (`wasm-browser`, `wasm-wasi`) and shader-only (`glsl`, `spirv`) emits until
