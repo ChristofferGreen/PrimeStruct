@@ -35383,6 +35383,133 @@ TEST_CASE("ir lowerer statement binding helper infers borrowed struct args-pack 
   CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Value);
 }
 
+TEST_CASE("ir lowerer statement binding helper infers borrowed scalar args-pack field access local info") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  valuesInfo.structTypeName = "/pkg/Holder";
+  locals.emplace("values", valuesInfo);
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 1;
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.args = {receiverExpr, indexExpr};
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Call;
+  fieldExpr.isFieldAccess = true;
+  fieldExpr.name = "value";
+  fieldExpr.args = {accessExpr};
+
+  primec::ir_lowerer::LocalInfo info;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
+      fieldExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      info,
+      error,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * { return nullptr; },
+      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "at") {
+          return std::string("/pkg/Holder");
+        }
+        return std::string{};
+      },
+      [](const std::string &structPath,
+         const std::string &fieldName,
+         primec::ir_lowerer::StructSlotFieldInfo &fieldInfoOut) {
+        if (structPath != "/pkg/Holder" || fieldName != "value") {
+          return false;
+        }
+        fieldInfoOut.name = "value";
+        fieldInfoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        return true;
+      }));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.structTypeName.empty());
+  CHECK_FALSE(info.isArgsPack);
+}
+
+TEST_CASE("ir lowerer statement binding helper infers borrowed struct args-pack field access local info") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  valuesInfo.structTypeName = "/pkg/Holder";
+  locals.emplace("values", valuesInfo);
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 2;
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.isMethodCall = true;
+  accessExpr.name = "at_unsafe";
+  accessExpr.args = {receiverExpr, indexExpr};
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Call;
+  fieldExpr.isFieldAccess = true;
+  fieldExpr.name = "pair";
+  fieldExpr.args = {accessExpr};
+
+  primec::ir_lowerer::LocalInfo info;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
+      fieldExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      info,
+      error,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * { return nullptr; },
+      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "at_unsafe") {
+          return std::string("/pkg/Holder");
+        }
+        return std::string{};
+      },
+      [](const std::string &structPath,
+         const std::string &fieldName,
+         primec::ir_lowerer::StructSlotFieldInfo &fieldInfoOut) {
+        if (structPath != "/pkg/Holder" || fieldName != "pair") {
+          return false;
+        }
+        fieldInfoOut.name = "pair";
+        fieldInfoOut.structPath = "/pkg/Pair";
+        return true;
+      }));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(info.structTypeName == "/pkg/Pair");
+  CHECK_FALSE(info.isArgsPack);
+}
+
 TEST_CASE("ir lowerer inline param helper materializes uninitialized scalar reference variadic args packs from direct location expressions") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;

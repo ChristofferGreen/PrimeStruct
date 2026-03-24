@@ -599,6 +599,31 @@ bool emitConversionsAndCallsOperatorExpr(
 	              }
 	              return true;
 	            }
+	            if (target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1) {
+	              const Expr &receiver = target.args.front();
+	              const std::string receiverStruct = inferStructExprPath(receiver, localsIn);
+	              if (receiverStruct.empty()) {
+	                error = "field access requires struct receiver";
+	                return false;
+	              }
+	              StructSlotFieldInfo fieldInfo;
+	              if (!resolveStructFieldSlot(receiverStruct, target.name, fieldInfo)) {
+	                error = "unknown struct field: " + target.name;
+	                return false;
+	              }
+	              if (!emitExpr(receiver, localsIn)) {
+	                return false;
+	              }
+	              const int32_t ptrLocal = allocTempLocal();
+	              instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+	              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+	              const uint64_t offsetBytes = static_cast<uint64_t>(fieldInfo.slotOffset) * IrSlotBytes;
+	              if (offsetBytes != 0) {
+	                instructions.push_back({IrOpcode::PushI64, offsetBytes});
+	                instructions.push_back({IrOpcode::AddI64, 0});
+	              }
+	              return true;
+	            }
 	            if (target.kind == Expr::Kind::Call && !target.isMethodCall && resolveDefinitionCall != nullptr) {
 	              const Definition *callee = resolveDefinitionCall(target);
 	              if (callee != nullptr) {

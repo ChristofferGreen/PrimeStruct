@@ -139,7 +139,15 @@
                   [&](const Expr &callExpr, const LocalMap &callLocals) {
                     return resolveMethodCallDefinition(callExpr, callLocals);
                   },
-                  [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); });
+                  [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                  [&](const Expr &callExpr, const LocalMap &callLocals) {
+                    return inferStructExprPath(callExpr, callLocals);
+                  },
+                  [&](const std::string &structPath,
+                      const std::string &fieldName,
+                      StructSlotFieldInfo &fieldInfoOut) {
+                    return resolveStructFieldSlot(structPath, fieldName, fieldInfoOut);
+                  });
             })) {
       inlineStack.erase(callee.fullPath);
       return false;

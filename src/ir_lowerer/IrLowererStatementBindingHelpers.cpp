@@ -113,6 +113,33 @@ bool inferIndexedArgsPackElementLocalInfo(const Expr &expr,
   return true;
 }
 
+bool inferFieldAccessLocalInfo(const Expr &expr,
+                               const LocalMap &localsForKindInference,
+                               const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+                               const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
+                                   &resolveStructFieldSlot,
+                               LocalInfo &infoOut) {
+  if (!expr.isFieldAccess || expr.args.size() != 1 || !inferStructExprPath || !resolveStructFieldSlot) {
+    return false;
+  }
+
+  const std::string receiverStruct = inferStructExprPath(expr.args.front(), localsForKindInference);
+  if (receiverStruct.empty()) {
+    return false;
+  }
+
+  StructSlotFieldInfo fieldInfo;
+  if (!resolveStructFieldSlot(receiverStruct, expr.name, fieldInfo)) {
+    return false;
+  }
+
+  infoOut = LocalInfo{};
+  infoOut.kind = LocalInfo::Kind::Value;
+  infoOut.valueKind = fieldInfo.valueKind;
+  infoOut.structTypeName = fieldInfo.structPath;
+  return infoOut.valueKind != LocalInfo::ValueKind::Unknown || !infoOut.structTypeName.empty();
+}
+
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut) {
   if (applyErrorTypeMetadata(typeText, infoOut)) {
     return;
@@ -791,7 +818,10 @@ bool inferInlineParameterExprLocalInfo(
     LocalInfo &infoOut,
     std::string &error,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
-    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall) {
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
+        &resolveStructFieldSlot) {
   infoOut = LocalInfo{};
   error.clear();
 
@@ -809,6 +839,11 @@ bool inferInlineParameterExprLocalInfo(
   }
 
   if (inferIndexedArgsPackElementLocalInfo(expr, localsForKindInference, infoOut)) {
+    return true;
+  }
+
+  if (inferFieldAccessLocalInfo(
+          expr, localsForKindInference, inferStructExprPath, resolveStructFieldSlot, infoOut)) {
     return true;
   }
 

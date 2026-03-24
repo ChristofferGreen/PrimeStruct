@@ -2444,6 +2444,166 @@ main() {
   CHECK(result == 75);
 }
 
+TEST_CASE("ir lowerer materializes variadic scalar pointer packs from borrowed pack field access") {
+  const std::string source = R"(
+[struct]
+Holder() {
+  [i32] value{0i32}
+}
+
+[return<int>]
+score_ptrs([args<Pointer<i32>>] values) {
+  return(plus(dereference(values[0i32]), dereference(values[2i32])))
+}
+
+[return<int>]
+score_from_fields([args<Reference<Holder>>] values) {
+  return(score_ptrs(location(at(values, 0i32).value),
+                    location(values.at(1i32).value),
+                    location(values.at_unsafe(2i32).value)))
+}
+
+[return<int>]
+forward([args<Reference<Holder>>] values) {
+  return(score_from_fields([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference<Holder>>] values) {
+  [Holder] extra{Holder(1i32)}
+  return(score_ptrs(location(values.at(0i32).value),
+                    location(extra.value),
+                    location(at(values, 1i32).value)))
+}
+
+[return<int>]
+main() {
+  [Holder] a0{Holder(1i32)}
+  [Holder] a1{Holder(2i32)}
+  [Holder] a2{Holder(3i32)}
+  [Reference<Holder>] r0{location(a0)}
+  [Reference<Holder>] r1{location(a1)}
+  [Reference<Holder>] r2{location(a2)}
+
+  [Holder] b0{Holder(4i32)}
+  [Holder] b1{Holder(5i32)}
+  [Holder] b2{Holder(6i32)}
+  [Reference<Holder>] s0{location(b0)}
+  [Reference<Holder>] s1{location(b1)}
+  [Reference<Holder>] s2{location(b2)}
+
+  [Holder] c0{Holder(7i32)}
+  [Holder] c1{Holder(8i32)}
+  [Reference<Holder>] t0{location(c0)}
+  [Reference<Holder>] t1{location(c1)}
+
+  return(plus(score_from_fields(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 29);
+}
+
+TEST_CASE("ir lowerer materializes variadic struct pointer packs from borrowed pack field access") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] value{0i32}
+
+  [return<int>]
+  score() {
+    return(plus(self.value, 1i32))
+  }
+}
+
+[struct]
+Holder() {
+  [Pair] pair{Pair()}
+}
+
+[return<int>]
+score_ptrs([args<Pointer<Pair>>] values) {
+  return(plus(values[0i32].value, values[2i32].score()))
+}
+
+[return<int>]
+score_from_fields([args<Reference<Holder>>] values) {
+  return(score_ptrs(location(values.at(0i32).pair),
+                    location(at(values, 1i32).pair),
+                    location(values.at_unsafe(2i32).pair)))
+}
+
+[return<int>]
+forward([args<Reference<Holder>>] values) {
+  return(score_from_fields([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference<Holder>>] values) {
+  [Holder] extra{Holder(Pair(5i32))}
+  return(score_ptrs(location(values.at(0i32).pair),
+                    location(extra.pair),
+                    location(at(values, 1i32).pair)))
+}
+
+[return<int>]
+main() {
+  [Holder] a0{Holder(Pair(7i32))}
+  [Holder] a1{Holder(Pair(8i32))}
+  [Holder] a2{Holder(Pair(9i32))}
+  [Reference<Holder>] r0{location(a0)}
+  [Reference<Holder>] r1{location(a1)}
+  [Reference<Holder>] r2{location(a2)}
+
+  [Holder] b0{Holder(Pair(11i32))}
+  [Holder] b1{Holder(Pair(12i32))}
+  [Holder] b2{Holder(Pair(13i32))}
+  [Reference<Holder>] s0{location(b0)}
+  [Reference<Holder>] s1{location(b1)}
+  [Reference<Holder>] s2{location(b2)}
+
+  [Holder] c0{Holder(Pair(15i32))}
+  [Holder] c1{Holder(Pair(17i32))}
+  [Reference<Holder>] t0{location(c0)}
+  [Reference<Holder>] t1{location(c1)}
+
+  return(plus(score_from_fields(r0, r1, r2),
+              plus(forward(s0, s1, s2),
+                   forward_mixed(t0, t1))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 75);
+}
+
 TEST_CASE("ir lowerer materializes variadic pointer uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<int>]
