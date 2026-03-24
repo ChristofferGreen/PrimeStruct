@@ -12973,6 +12973,53 @@ TEST_CASE("ir lowerer flow control helper source delegation stays stable") {
   CHECK(flowControlHelpersSource.find("bool emitForConditionBindingInit(") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer flow vector helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path flowHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowHelpers.cpp";
+  const std::filesystem::path flowVectorHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowVectorHelpers.cpp";
+  REQUIRE(std::filesystem::exists(flowHelpersPath));
+  REQUIRE(std::filesystem::exists(flowVectorHelpersPath));
+
+  const std::string flowHelpersSource = readText(flowHelpersPath);
+  const std::string flowVectorHelpersSource = readText(flowVectorHelpersPath);
+
+  CHECK(flowHelpersSource.find("bool resolveVectorMutatorAliasName(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool resolveVectorMutatorName(") == std::string::npos);
+  CHECK(flowHelpersSource.find("SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(") ==
+        std::string::npos);
+  CHECK(flowHelpersSource.find(
+            "UnsignedLiteralIntegerEvalResult tryEvaluateUnsignedLiteralIntegerExpr(") ==
+        std::string::npos);
+  CHECK(flowHelpersSource.find("VectorStatementHelperEmitResult tryEmitVectorStatementHelper(") ==
+        std::string::npos);
+
+  CHECK(flowVectorHelpersSource.find("bool resolveVectorMutatorAliasName(") != std::string::npos);
+  CHECK(flowVectorHelpersSource.find("bool resolveVectorMutatorName(") != std::string::npos);
+  CHECK(flowVectorHelpersSource.find(
+            "SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(") !=
+        std::string::npos);
+  CHECK(flowVectorHelpersSource.find(
+            "UnsignedLiteralIntegerEvalResult tryEvaluateUnsignedLiteralIntegerExpr(") !=
+        std::string::npos);
+  CHECK(flowVectorHelpersSource.find(
+            "VectorStatementHelperEmitResult tryEmitVectorStatementHelper(") !=
+        std::string::npos);
+}
+
 TEST_CASE("vm heap helpers source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -52111,6 +52158,78 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             error) == EmitResult::Error);
   CHECK(error == "reserve requires integer capacity");
+}
+
+TEST_CASE("ir lowerer flow helpers fold negative generated reserve aliases") {
+  using EmitResult = primec::ir_lowerer::VectorStatementHelperEmitResult;
+  using Kind = primec::ir_lowerer::LocalInfo::Kind;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  auto makeName = [](const std::string &name) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    return expr;
+  };
+  auto makeI32Literal = [](uint64_t value) {
+    primec::Expr literal;
+    literal.kind = primec::Expr::Kind::Literal;
+    literal.intWidth = 32;
+    literal.literalValue = value;
+    return literal;
+  };
+  auto makeCall = [](const std::string &name, std::vector<primec::Expr> args) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.name = name;
+    call.args = std::move(args);
+    return call;
+  };
+
+  primec::Expr negativeCapacity = makeCall("minus", {makeI32Literal(0), makeI32Literal(1)});
+  primec::Expr reserveCall =
+      makeCall("/std/collections/experimental_vector/vectorReserve__generated",
+               {makeName("v"), negativeCapacity});
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = Kind::Vector;
+  vectorInfo.valueKind = ValueKind::Int32;
+  vectorInfo.isMutable = true;
+  vectorInfo.index = 4;
+  locals.emplace("v", vectorInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTempLocal = 30;
+  int emitExprCalls = 0;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            reserveCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Literal ||
+                  (expr.kind == primec::Expr::Kind::Call && expr.name == "minus")) {
+                return ValueKind::Int32;
+              }
+              return ValueKind::Unknown;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "vector reserve expects non-negative capacity");
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {

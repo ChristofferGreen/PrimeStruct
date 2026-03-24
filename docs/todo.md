@@ -161,10 +161,11 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Split `NativeEmitterInternals.h` ARM64 print/string/file I/O plus syscall formatting helpers into `src/native_emitter/NativeEmitterInternalsArm64Io.h`.
 - ✓ Split `NativeEmitterInternals.h` ARM64 arithmetic, comparison, conversion, and branch helpers into `src/native_emitter/NativeEmitterInternalsArm64Arithmetic.h`.
 - ✓ Split `NativeEmitterInternals.h` ARM64 heap, encoding, stack-cache, and core emission helpers into `src/native_emitter/NativeEmitterInternalsArm64Core.h`.
-- ○ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`1166` lines) below the `700`-line target. Progress is tracked by the slices below.
+- ✓ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`132` lines) below the `700`-line target by extracting buffer init/load/call helpers into `src/ir_lowerer/IrLowererFlowBufferHelpers.cpp`, file-scope cleanup/struct copy+disarm/gpu builtin load/counted-loop+body helpers into `src/ir_lowerer/IrLowererFlowControlHelpers.cpp`, and vector mutator alias/literal folding plus vector statement helper logic into `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`.
 - ✓ Split `IrLowererFlowHelpers.cpp` buffer init/load/call helpers into `src/ir_lowerer/IrLowererFlowBufferHelpers.cpp`.
 - ✓ Split `IrLowererFlowHelpers.cpp` file-scope cleanup, struct copy/disarm, gpu builtin load, and counted-loop/body helpers into `src/ir_lowerer/IrLowererFlowControlHelpers.cpp`.
-- ○ Split `IrLowererFlowHelpers.cpp` vector mutator alias/literal folding plus vector statement helper logic into dedicated helper unit(s).
+- ✓ Split `IrLowererFlowHelpers.cpp` vector mutator alias/literal folding plus vector statement helper logic into `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`.
+- ○ Refactor `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp` (`1099` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterExprCalls.h` (`1512` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterEmitSetup.h` (`1458` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp` (`1427` lines) below the `700`-line target.
