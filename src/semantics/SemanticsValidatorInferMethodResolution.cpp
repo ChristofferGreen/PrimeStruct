@@ -21,6 +21,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;
   const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;
   const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;
+  const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;
   const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;
   const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;
   auto resolveExperimentalMapTarget = [&](const Expr &target,
@@ -56,6 +57,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
       return "/" + base;
+    }
+    if (base == "Buffer" && args.size() == 1) {
+      return "/Buffer";
     }
     if (isMapCollectionTypeName(base) && args.size() == 2) {
       return "/map";
@@ -309,6 +313,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return canonical;
   };
+  auto preferredBufferMethodTargetForCall = [&](const std::string &helperName) {
+    const std::string canonical = "/std/gfx/Buffer/" + helperName;
+    const std::string experimental = "/std/gfx/experimental/Buffer/" + helperName;
+    if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    if (hasDefinitionPath(experimental) || hasImportedDefinitionPath(experimental)) {
+      return experimental;
+    }
+    return canonical;
+  };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (normalizedMethodName == "count") {
       if (collectionTypePath == "/array") {
@@ -331,9 +346,20 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = preferredMapMethodTargetForCall(receiver, "count");
         return true;
       }
+      if (collectionTypePath == "/Buffer") {
+        resolvedOut = preferredBufferMethodTargetForCall("count");
+        return true;
+      }
     }
     if (normalizedMethodName == "capacity" && collectionTypePath == "/vector") {
       resolvedOut = preferredBareVectorHelperTarget("capacity");
+      return true;
+    }
+    if ((normalizedMethodName == "empty" || normalizedMethodName == "is_valid" ||
+         normalizedMethodName == "readback" || normalizedMethodName == "load" ||
+         normalizedMethodName == "store") &&
+        collectionTypePath == "/Buffer") {
+      resolvedOut = preferredBufferMethodTargetForCall(normalizedMethodName);
       return true;
     }
     if (normalizedMethodName == "contains" && collectionTypePath == "/map") {
@@ -403,6 +429,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
     }
+    std::string receiverCollectionTypePath;
+    if (resolveCallCollectionTypePath(receiver, params, locals, receiverCollectionTypePath) &&
+        resolveCollectionMethodFromTypePath(receiverCollectionTypePath)) {
+      return true;
+    }
     std::string receiverTypeText;
     if (inferQueryExprTypeText(receiver, params, locals, receiverTypeText) &&
         !receiverTypeText.empty()) {
@@ -423,6 +454,12 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = "/" + normalizedReceiverType + "/" + normalizedMethodName;
         return true;
       }
+    }
+    std::string bufferElemType;
+    if (resolveBufferTarget != nullptr && resolveBufferTarget(receiver, bufferElemType) &&
+        !bufferElemType.empty()) {
+      resolvedOut = preferredBufferMethodTargetForCall(normalizedMethodName);
+      return true;
     }
     resolvedType = inferStructReturnPath(receiver, params, locals);
     if (!resolvedType.empty()) {

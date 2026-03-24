@@ -2669,6 +2669,9 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
     if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
       return "/" + base;
     }
+    if (base == "Buffer" && args.size() == 1) {
+      return "/Buffer";
+    }
     if ((base == "Vector" || base == "std/collections/experimental_vector/Vector") &&
         args.size() == 1) {
       return "/vector";
@@ -2683,6 +2686,11 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
     return false;
   }
 
+  const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters;
+  const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
+      makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters);
+  const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;
+
   std::string targetTypeText;
   if (inferQueryExprTypeText(target, params, locals, targetTypeText)) {
     const std::string inferred = inferCollectionTypePathFromType(targetTypeText, inferCollectionTypePathFromType);
@@ -2690,6 +2698,12 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
       typePathOut = inferred;
       return true;
     }
+  }
+
+  std::string bufferElemType;
+  if (resolveBufferTarget != nullptr && resolveBufferTarget(target, bufferElemType) && !bufferElemType.empty()) {
+    typePathOut = "/Buffer";
+    return true;
   }
 
   const std::string resolvedTarget = resolvedCallPath(target);

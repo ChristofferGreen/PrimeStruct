@@ -1138,6 +1138,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental stdlib gfx Buffer arg-pack method receivers cover value, borrowed, and pointer packs") {
+  const std::string source = R"(
+import /std/gfx/experimental/*
+
+[compute workgroup_size(1, 1, 1)]
+/copy_values([args<Buffer<i32>>] values) {
+  [i32] viaMethod{values.at(0i32).load(0i32)}
+  values[0i32].store(0i32, viaMethod)
+  return()
+}
+
+[compute workgroup_size(1, 1, 1)]
+/copy_refs([args<Reference<Buffer<i32>>>] values) {
+  [i32] viaMethod{dereference(values.at(0i32)).load(0i32)}
+  dereference(values[0i32]).store(0i32, viaMethod)
+  return()
+}
+
+[compute workgroup_size(1, 1, 1)]
+/copy_ptrs([args<Pointer<Buffer<i32>>>] values) {
+  [i32] viaMethod{dereference(values.at(0i32)).load(0i32)}
+  dereference(values[0i32]).store(0i32, viaMethod)
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib gfx Buffer allocation helpers cover experimental slash-call wrappers") {
   const std::string source = R"(
 import /std/gfx/experimental/*

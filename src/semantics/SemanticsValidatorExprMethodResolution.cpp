@@ -1207,6 +1207,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return setCollectionMethodTarget(preferredMapHelper);
   };
+  auto preferredBufferMethodTarget = [&](const std::string &helperName) {
+    const std::string canonical = "/std/gfx/Buffer/" + helperName;
+    const std::string experimental = "/std/gfx/experimental/Buffer/" + helperName;
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    if (hasDeclaredDefinitionPath(experimental) || hasImportedDefinitionPath(experimental)) {
+      return experimental;
+    }
+    return canonical;
+  };
   auto preferExplicitCanonicalVectorHelperForReceiver = [&](const Expr &receiverExpr) -> bool {
     if (explicitVectorHelperPath.empty() ||
         explicitVectorHelperPath.rfind("/std/collections/vector/", 0) != 0) {
@@ -1331,9 +1342,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (collectionTypePath == "/map") {
         return setPreferredMapMethodTarget(receiver, "count");
       }
+      if (collectionTypePath == "/Buffer") {
+        return setCollectionMethodTarget(preferredBufferMethodTarget("count"));
+      }
     }
     if (normalizedMethodName == "capacity" && collectionTypePath == "/vector") {
       return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
+    }
+    if ((normalizedMethodName == "empty" || normalizedMethodName == "is_valid" ||
+         normalizedMethodName == "readback" || normalizedMethodName == "load" ||
+         normalizedMethodName == "store") &&
+        collectionTypePath == "/Buffer") {
+      return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
     }
     if (normalizedMethodName == "contains" && collectionTypePath == "/map") {
       return setPreferredMapMethodTarget(receiver, "contains");
@@ -1389,6 +1409,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       elemBase = normalizeBindingTypeName(elemBase);
       if (elemBase == "vector" || elemBase == "array" || elemBase == "soa_vector") {
         return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
+      }
+      if (elemBase == "Buffer" &&
+          (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
+           normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
+           normalizedMethodName == "load" || normalizedMethodName == "store")) {
+        return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
       }
       if (isMapCollectionTypeName(elemBase)) {
         return setPreferredMapMethodTarget(receiverExpr, normalizedMethodName);

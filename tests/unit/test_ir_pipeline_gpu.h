@@ -322,4 +322,78 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("lowers canonical stdlib Buffer arg-pack method receivers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[compute workgroup_size(1, 1, 1)]
+/score_values([args<Buffer<i32>>] values) {
+  [i32] head{values.at(0i32).load(0i32)}
+  [i32] tail{values.at_unsafe(minus(count(values), 1i32)).load(0i32)}
+  values[0i32].store(0i32, plus(head, tail))
+}
+
+[compute workgroup_size(1, 1, 1)]
+/score_refs([args<Reference<Buffer<i32>>>] values) {
+  [i32] head{dereference(values.at(0i32)).load(0i32)}
+  [i32] tail{dereference(values.at_unsafe(minus(count(values), 1i32))).load(0i32)}
+  dereference(values[0i32]).store(0i32, plus(head, tail))
+}
+
+[compute workgroup_size(1, 1, 1)]
+/score_ptrs([args<Pointer<Buffer<i32>>>] values) {
+  [i32] head{dereference(values.at(0i32)).load(0i32)}
+  [i32] tail{dereference(values.at_unsafe(minus(count(values), 1i32))).load(0i32)}
+  dereference(values[0i32]).store(0i32, plus(head, tail))
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  [array<i32>] a0{array<i32>(1i32)}
+  [array<i32>] a1{array<i32>(3i32)}
+  [array<i32>] a2{array<i32>(4i32)}
+  [Buffer<i32>] b0{/std/gfx/Buffer/upload(a0)}
+  [Buffer<i32>] b1{/std/gfx/Buffer/upload(a1)}
+  [Buffer<i32>] b2{/std/gfx/Buffer/upload(a2)}
+
+  [array<i32>] c0{array<i32>(5i32)}
+  [array<i32>] c1{array<i32>(6i32)}
+  [array<i32>] c2{array<i32>(8i32)}
+  [Buffer<i32>] d0{/std/gfx/Buffer/upload(c0)}
+  [Buffer<i32>] d1{/std/gfx/Buffer/upload(c1)}
+  [Buffer<i32>] d2{/std/gfx/Buffer/upload(c2)}
+  [Reference<Buffer<i32>>] r0{location(d0)}
+  [Reference<Buffer<i32>>] r1{location(d1)}
+  [Reference<Buffer<i32>>] r2{location(d2)}
+
+  [array<i32>] e0{array<i32>(7i32)}
+  [array<i32>] e1{array<i32>(9i32)}
+  [array<i32>] e2{array<i32>(2i32)}
+  [Buffer<i32>] f0{/std/gfx/Buffer/upload(e0)}
+  [Buffer<i32>] f1{/std/gfx/Buffer/upload(e1)}
+  [Buffer<i32>] f2{/std/gfx/Buffer/upload(e2)}
+  [Pointer<Buffer<i32>>] p0{location(f0)}
+  [Pointer<Buffer<i32>>] p1{location(f1)}
+  [Pointer<Buffer<i32>>] p2{location(f2)}
+
+  /std/gpu/dispatch(/score_values, 1i32, 1i32, 1i32, b0, b1, b2)
+  /std/gpu/dispatch(/score_refs, 1i32, 1i32, 1i32, r0, r1, r2)
+  /std/gpu/dispatch(/score_ptrs, 1i32, 1i32, 1i32, p0, p1, p2)
+
+  [array<i32>] out0{b0.readback()}
+  [array<i32>] out1{d0.readback()}
+  [array<i32>] out2{f0.readback()}
+  return(plus(out0[0i32], plus(out1[0i32], out2[0i32])))
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+  primec::IrLowerer lowerer;
+  primec::IrModule ir;
+  CHECK(lowerer.lower(program, "/main", {}, {}, ir, error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();
