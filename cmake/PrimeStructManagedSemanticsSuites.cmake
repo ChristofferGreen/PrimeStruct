@@ -252,7 +252,7 @@ addPrimeStructManagedDoctestSuite(
   TIMEOUT 900
   LABEL "parallel-safe"
   TOTAL_CASES 52
-  CASES_PER_SHARD 4
+  CASES_PER_SHARD 1
   SHARD_PREFIX "imports"
 )
 
