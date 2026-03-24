@@ -46,6 +46,16 @@ bool isFileHandleTypeText(const std::string &typeText) {
          normalizeCollectionBindingTypeName(base) == "File";
 }
 
+bool isBufferHandleCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding) {
+    return false;
+  }
+  return expr.name == "Buffer" || expr.name == "/std/gfx/Buffer" ||
+         expr.name == "/std/gfx/experimental/Buffer" ||
+         expr.name.rfind("/std/gfx/Buffer__t", 0) == 0 ||
+         expr.name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
+}
+
 bool extractResultValueTypeText(const std::string &typeText, std::string &valueTypeOut) {
   valueTypeOut.clear();
   std::string base;
@@ -328,6 +338,9 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
           valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.front())));
     }
   }
+  if (!expr.isMethodCall && isBufferHandleCall(expr) && expr.templateArgs.size() == 1) {
+    return assignCollection(LocalInfo::Kind::Buffer, expr.templateArgs.front());
+  }
 
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
   if (callee == nullptr) {
@@ -354,6 +367,11 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     }
     collectionKindOut = LocalInfo::Kind::Map;
     mapKeyKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
+  } else if (declaredCollection == "Buffer") {
+    if (declaredCollectionArgs.size() != 1) {
+      return false;
+    }
+    collectionKindOut = LocalInfo::Kind::Buffer;
   } else {
     return false;
   }
@@ -982,7 +1000,8 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
 }
 
 bool isSupportedPackedResultCollectionKind(LocalInfo::Kind kind) {
-  return kind == LocalInfo::Kind::Array || kind == LocalInfo::Kind::Vector || kind == LocalInfo::Kind::Map;
+  return kind == LocalInfo::Kind::Array || kind == LocalInfo::Kind::Vector ||
+         kind == LocalInfo::Kind::Map || kind == LocalInfo::Kind::Buffer;
 }
 
 bool resolveSupportedResultCollectionType(const std::string &typeText,
@@ -1026,6 +1045,11 @@ bool resolveSupportedResultCollectionType(const std::string &typeText,
     if (mapKeyKindOut != nullptr) {
       *mapKeyKindOut = mapKeyKind;
     }
+  } else if (base == "Buffer") {
+    if (args.size() != 1) {
+      return false;
+    }
+    collectionKindOut = LocalInfo::Kind::Buffer;
   } else {
     return false;
   }

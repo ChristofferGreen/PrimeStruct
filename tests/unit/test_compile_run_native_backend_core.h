@@ -7653,6 +7653,61 @@ main() {
   CHECK(readFile(outPath) == "2\n7\n9\n7\n2\n9\n");
 }
 
+TEST_CASE("native backend supports Buffer Result payloads on IR-backed paths") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<Result<Buffer<i32>, GfxError>> effects(gpu_dispatch)]
+make_buffer() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(Result.ok(/std/gfx/Buffer/upload(values)))
+}
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
+main() {
+  [Buffer<i32>] direct{try(make_buffer())}
+  [Buffer<i32>] mapped{try(Result.map(make_buffer(), []([Buffer<i32>] values) {
+    return(values)
+  }))}
+  [Buffer<i32>] chained{try(Result.and_then(make_buffer(), []([Buffer<i32>] values) {
+    return(Result.ok(values))
+  }))}
+  [Buffer<i32>] summed{try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) {
+    return(right)
+  }))}
+  [array<i32>] directOut{direct.readback()}
+  [array<i32>] mappedOut{mapped.readback()}
+  [array<i32>] chainedOut{chained.readback()}
+  [array<i32>] summedOut{summed.readback()}
+  print_line(directOut.count())
+  print_line(directOut[0i32])
+  print_line(mappedOut[1i32])
+  print_line(chainedOut[2i32])
+  print_line(summedOut.count())
+  print_line(summedOut[2i32])
+  return(plus(directOut[0i32],
+              plus(mappedOut[1i32],
+                   plus(chainedOut[2i32], summedOut[2i32]))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_result_buffer_payload_ir_backed.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_buffer_payload_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_buffer_payload_ir_backed_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 11);
+  CHECK(readFile(outPath) == "3\n1\n2\n3\n3\n3\n");
+}
+
 TEST_CASE("native backend rejects auto-bound direct Result combinator try consumers") {
   const std::string source = R"(
 import /std/file/*

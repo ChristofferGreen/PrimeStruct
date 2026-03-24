@@ -640,13 +640,73 @@ main() {
   CHECK(result == 32);
 }
 
-TEST_CASE("ir lowerer rejects Buffer Result payloads that remain unsupported") {
+TEST_CASE("ir lowerer supports Buffer Result payloads") {
   const std::string source = R"(
-[return<int> effects(io_out)]
+import /std/gfx/*
+
+[return<Result<Buffer<i32>, GfxError>> effects(gpu_dispatch)]
+make_buffer() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(Result.ok(/std/gfx/Buffer/upload(values)))
+}
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
 main() {
-  [Buffer<i32>] values{Buffer<i32>(3i32)}
-  [auto] wrapped{Result.ok(values)}
-  print_line(Result.error(wrapped))
+  [Buffer<i32>] direct{try(make_buffer())}
+  [Buffer<i32>] mapped{try(Result.map(make_buffer(), []([Buffer<i32>] values) {
+    return(values)
+  }))}
+  [Buffer<i32>] chained{try(Result.and_then(make_buffer(), []([Buffer<i32>] values) {
+    return(Result.ok(values))
+  }))}
+  [Buffer<i32>] summed{try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) {
+    return(right)
+  }))}
+  [array<i32>] directOut{direct.readback()}
+  [array<i32>] mappedOut{mapped.readback()}
+  [array<i32>] chainedOut{chained.readback()}
+  [array<i32>] summedOut{summed.readback()}
+  print_line(directOut.count())
+  print_line(directOut[0i32])
+  print_line(mappedOut[1i32])
+  print_line(chainedOut[2i32])
+  print_line(summedOut.count())
+  print_line(summedOut[2i32])
+  return(plus(directOut[0i32],
+              plus(mappedOut[1i32],
+                   plus(chainedOut[2i32], summedOut[2i32]))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
+}
+
+TEST_CASE("ir lowerer rejects f64 Result payloads that remain unsupported") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [auto] wrapped{Result.ok(0.5f64)}
+  if(Result.error(wrapped)) {
+    return(1i32)
+  }
   return(0i32)
 }
 )";

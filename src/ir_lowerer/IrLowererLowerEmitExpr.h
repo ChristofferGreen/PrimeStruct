@@ -569,6 +569,15 @@
                                                   std::string &structTypeOut) -> bool {
           packedKindOut = inferExprKind(valueExpr, valueLocals);
           structTypeOut.clear();
+          auto isBufferHandleCall = [&](const Expr &candidate) {
+            if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.isBinding) {
+              return false;
+            }
+            return candidate.name == "Buffer" || candidate.name == "/std/gfx/Buffer" ||
+                   candidate.name == "/std/gfx/experimental/Buffer" ||
+                   candidate.name.rfind("/std/gfx/Buffer__t", 0) == 0 ||
+                   candidate.name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
+          };
           auto resolveCollectionPayload = [&](LocalInfo::Kind &collectionKindOut,
                                              LocalInfo::ValueKind &collectionValueKindOut) {
             collectionKindOut = LocalInfo::Kind::Value;
@@ -589,11 +598,14 @@
             std::string collectionName;
             if (!valueExpr.isMethodCall && getBuiltinCollectionName(valueExpr, collectionName) &&
                 ((collectionName == "array" || collectionName == "vector") && valueExpr.templateArgs.size() == 1 ||
+                 (collectionName == "Buffer" && valueExpr.templateArgs.size() == 1) ||
                  (collectionName == "map" && valueExpr.templateArgs.size() == 2))) {
               if (collectionName == "array") {
                 collectionKindOut = LocalInfo::Kind::Array;
               } else if (collectionName == "vector") {
                 collectionKindOut = LocalInfo::Kind::Vector;
+              } else if (collectionName == "Buffer") {
+                collectionKindOut = LocalInfo::Kind::Buffer;
               } else if (collectionName == "map") {
                 if (valueKindFromTypeName(trimTemplateTypeText(valueExpr.templateArgs.front())) ==
                     LocalInfo::ValueKind::Unknown) {
@@ -606,6 +618,11 @@
               collectionValueKindOut = valueKindFromTypeName(
                   trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::Map ? valueExpr.templateArgs.back()
                                                                                 : valueExpr.templateArgs.front()));
+              return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
+            }
+            if (!valueExpr.isMethodCall && isBufferHandleCall(valueExpr) && valueExpr.templateArgs.size() == 1) {
+              collectionKindOut = LocalInfo::Kind::Buffer;
+              collectionValueKindOut = valueKindFromTypeName(trimTemplateTypeText(valueExpr.templateArgs.front()));
               return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
             }
             const Definition *callee = resolveDefinitionCall(valueExpr);
@@ -636,6 +653,11 @@
                 return false;
               }
               collectionKindOut = LocalInfo::Kind::Map;
+            } else if (declaredCollection == "Buffer") {
+              if (declaredCollectionArgs.size() != 1) {
+                return false;
+              }
+              collectionKindOut = LocalInfo::Kind::Buffer;
             } else {
               return false;
             }
