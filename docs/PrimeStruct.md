@@ -840,7 +840,9 @@ sum_two_files([string] a, [string] b) {
     layer for `read_byte`, `write`, `write_line`, `write_byte`, `write_bytes`, `flush`, and
     `close` across that current zero-to-nine-value overload family, while the underlying host
     open/read/write/close substrate plus wider multi-value `write(...)` / `write_line(...)`
-    arities remain builtin for now.
+    arities stay intentionally capped there for now: ten-plus values now produce an explicit
+    stdlib-facade diagnostic instead of extending the fixed overload ladder further before
+    concrete `[args<T>]` runtime support lands.
   - The stdlib file layer defines `FileError.why(err)` as the public type-owned wrapper over the intrinsic
     file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned helper
     surface while platform-specific code-to-string translation stays builtin substrate. It also defines
