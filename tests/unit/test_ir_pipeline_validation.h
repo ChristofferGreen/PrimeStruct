@@ -594,6 +594,52 @@ main() {
   CHECK(cpp.find("ps_map_contains(") != std::string::npos);
 }
 
+TEST_CASE("emitter cpp lowers file open write helpers") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(file_write, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [File<Write>] file{File<Write>("out.txt"utf8)?}
+  file.write_line("hello"utf8)?
+  file.close()?
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::Emitter emitter;
+  const std::string cpp = emitter.emitCpp(program, "/main");
+  CHECK(cpp.find("ps_file_open_write(") != std::string::npos);
+  CHECK(cpp.find("ps_file_write_line(") != std::string::npos);
+  CHECK(cpp.find("ps_file_close(") != std::string::npos);
+}
+
+TEST_CASE("emitter cpp lowers direct map at access") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at(map<i32, i32>(7i32, 8i32), 7i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::Emitter emitter;
+  const std::string cpp = emitter.emitCpp(program, "/main");
+  CHECK(cpp.find("ps_map_at(") != std::string::npos);
+}
+
 TEST_CASE("emitter cpp lowers direct Result combinator calls") {
   const std::string source = R"(
 import /std/file/*
@@ -9774,6 +9820,52 @@ TEST_CASE("emitter expr collection helper source delegation stays stable") {
   CHECK(emitterExprCollectionFallbackHelpersSource.find(
             "auto preferBareMapHelperPath = [&](const Expr &candidate, const char *helperName) {") !=
         std::string::npos);
+}
+
+TEST_CASE("emitter expr collection access source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path emitterExprCallsPath = repoRoot / "src" / "emitter" / "EmitterExprCalls.h";
+  REQUIRE(std::filesystem::exists(emitterExprCallsPath));
+  const std::string emitterExprCallsSource = readText(emitterExprCallsPath);
+  CHECK(emitterExprCallsSource.find("#include \"EmitterExprCollectionBuiltinCalls.h\"") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("#include \"EmitterExprFileAccessCalls.h\"") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("#include \"EmitterExprCollectionAccessAtCalls.h\"") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"contains\") && expr.args.size() == 2 &&") ==
+        std::string::npos);
+  CHECK(emitterExprCallsSource.find("if (full.rfind(\"/file/\", 0) == 0) {") == std::string::npos);
+  CHECK(emitterExprCallsSource.find("if ((isSimpleCallName(expr, \"at\") ||") == std::string::npos);
+
+  const std::filesystem::path emitterExprCollectionBuiltinCallsPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCollectionBuiltinCalls.h";
+  REQUIRE(std::filesystem::exists(emitterExprCollectionBuiltinCallsPath));
+  const std::string emitterExprCollectionBuiltinCallsSource = readText(emitterExprCollectionBuiltinCallsPath);
+  CHECK(emitterExprCollectionBuiltinCallsSource.find("ps_map_contains(") != std::string::npos);
+  CHECK(emitterExprCollectionBuiltinCallsSource.find("ps_vector_capacity(") != std::string::npos);
+
+  const std::filesystem::path emitterExprFileAccessCallsPath =
+      repoRoot / "src" / "emitter" / "EmitterExprFileAccessCalls.h";
+  REQUIRE(std::filesystem::exists(emitterExprFileAccessCallsPath));
+  const std::string emitterExprFileAccessCallsSource = readText(emitterExprFileAccessCallsPath);
+  CHECK(emitterExprFileAccessCallsSource.find("ps_file_open_write(") != std::string::npos);
+  CHECK(emitterExprFileAccessCallsSource.find("ps_file_close(") != std::string::npos);
+
+  const std::filesystem::path emitterExprCollectionAccessAtCallsPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCollectionAccessAtCalls.h";
+  REQUIRE(std::filesystem::exists(emitterExprCollectionAccessAtCallsPath));
+  const std::string emitterExprCollectionAccessAtCallsSource = readText(emitterExprCollectionAccessAtCallsPath);
+  CHECK(emitterExprCollectionAccessAtCallsSource.find("ps_map_at(") != std::string::npos);
+  CHECK(emitterExprCollectionAccessAtCallsSource.find("ps_array_at_unsafe(") != std::string::npos);
 }
 
 TEST_CASE("emitter builtin call path helper source delegation stays stable") {

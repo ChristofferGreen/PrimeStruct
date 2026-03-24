@@ -167,11 +167,10 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Split `IrLowererFlowHelpers.cpp` vector mutator alias/literal folding plus vector statement helper logic into `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`.
 - ✓ Refactor `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp` (`543` lines) below the `700`-line target by extracting vector helper name resolution, receiver normalization, target validation, and literal integer folding into `src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp`.
 - ✓ Split `IrLowererFlowVectorHelpers.cpp` vector helper name resolution, receiver normalization, target validation, and literal integer folding into `src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp`.
-- ○ Refactor `src/emitter/EmitterExprCalls.h` (`1352` lines) below the `700`-line target. Progress is tracked by the slices below.
+- ✓ Refactor `src/emitter/EmitterExprCalls.h` (`531` lines) below the `700`-line target by extracting `Result.ok/error/why/map/and_then/map2` plus bare `try(...)` emission into `src/emitter/EmitterExprResultCalls.h`, collection helper path/type-probe/access fallback logic into `src/emitter/EmitterExprCollectionTypeHelpers.h` plus `src/emitter/EmitterExprCollectionFallbackHelpers.h`, and file/collection builtin emission paths into `src/emitter/EmitterExprCollectionBuiltinCalls.h`, `src/emitter/EmitterExprFileAccessCalls.h`, and `src/emitter/EmitterExprCollectionAccessAtCalls.h`.
 - ✓ Split `EmitterExprCalls.h` `Result.ok/error/why/map/and_then/map2` plus bare `try(...)` expression emission into `src/emitter/EmitterExprResultCalls.h`.
 - ✓ Split `EmitterExprCalls.h` collection helper path/type-probe/access fallback logic into `src/emitter/EmitterExprCollectionTypeHelpers.h` plus `src/emitter/EmitterExprCollectionFallbackHelpers.h`.
-- ○ Split `EmitterExprCalls.h` file and collection access builtin emission paths into dedicated helper include fragment(s).
-- ○ Split `EmitterExprCalls.h` math/operator/constructor/final call-ordering logic into dedicated helper include fragment(s).
+- ✓ Split `EmitterExprCalls.h` file and collection access builtin emission paths into `src/emitter/EmitterExprCollectionBuiltinCalls.h`, `src/emitter/EmitterExprFileAccessCalls.h`, and `src/emitter/EmitterExprCollectionAccessAtCalls.h`.
 - ○ Refactor `src/emitter/EmitterEmitSetup.h` (`1458` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp` (`1427` lines) below the `700`-line target.
 - ○ Refactor `src/IrToCppEmitter.cpp` (`1421` lines) below the `700`-line target.
