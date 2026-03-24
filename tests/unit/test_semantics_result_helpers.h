@@ -112,11 +112,11 @@ import /std/file/*
 main() {
   [FileError] err{fileReadEof()}
   [Result<FileError>] status{fileErrorStatus(fileReadEof())}
-  [Result<FileError>] directStatus{/FileError/status(fileReadEof())}
+  [Result<FileError>] directStatus{FileError.status(fileReadEof())}
   [Result<i32, FileError>] valueStatus{fileErrorResult<i32>(fileReadEof())}
-  [Result<i32, FileError>] directValueStatus{/FileError/result<i32>(fileReadEof())}
-  [Result<FileError>] wrappedStatus{/FileError/status(err)}
-  [Result<i32, FileError>] wrappedValue{/FileError/result<i32>(err)}
+  [Result<i32, FileError>] directValueStatus{FileError.result<i32>(fileReadEof())}
+  [Result<FileError>] wrappedStatus{FileError.status(err)}
+  [Result<i32, FileError>] wrappedValue{FileError.result<i32>(err)}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
   [bool] statusError{Result.error(status)}
@@ -165,9 +165,9 @@ import /std/file/*
 [return<void>]
 main() {
   [FileError] err{fileReadEof()}
-  [string] direct{/FileError/why(err)}
+  [string] direct{FileError.why(err)}
   [string] viaType{FileError.why(err)}
-  [string] method{/FileError/why(err)}
+  [string] method{err.why()}
   [string] viaResult{Result.why(fileErrorStatus(err))}
   return()
 }
@@ -199,12 +199,12 @@ import /std/file/*
 main() {
   [FileError] eofErr{fileReadEof()}
   [FileError] otherErr{1i32}
-  [bool] directEof{/FileError/is_eof(eofErr)}
+  [bool] directEof{FileError.is_eof(eofErr)}
   [bool] viaTypeEof{FileError.is_eof(eofErr)}
-  [bool] methodEof{/FileError/is_eof(eofErr)}
+  [bool] methodEof{eofErr.is_eof()}
   [bool] helperOther{fileErrorIsEof(otherErr)}
   [bool] viaTypeOther{FileError.is_eof(otherErr)}
-  [bool] methodOther{/FileError/is_eof(otherErr)}
+  [bool] methodOther{otherErr.is_eof()}
   if(and(and(and(directEof, viaTypeEof), methodEof),
          and(not(helperOther), and(not(viaTypeOther), not(methodOther)))),
      then(){ return() },
@@ -236,9 +236,9 @@ import /std/file/*
 
 [return<void>]
 main() {
-  [FileError] direct{/FileError/eof()}
+  [FileError] direct{FileError.eof()}
   [FileError] viaType{FileError.eof()}
-  [Result<FileError>] status{fileErrorStatus(/FileError/eof())}
+  [Result<FileError>] status{fileErrorStatus(FileError.eof())}
   [bool] eof{direct.is_eof()}
   [bool] typeEof{FileError.is_eof(viaType)}
   [bool] statusError{Result.error(status)}
@@ -249,34 +249,34 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-TEST_CASE("stdlib FileError why wrapper rejects non file errors") {
+TEST_CASE("stdlib FileError root why alias is removed") {
   const std::string source = R"(
 import /std/file/*
 
 [return<void>]
 main() {
-  [string] why{/FileError/why(true)}
+  [string] why{/FileError/why(fileReadEof())}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /FileError/why parameter err") != std::string::npos);
+  CHECK(error.find("unknown call target: /FileError/why") != std::string::npos);
 }
 
-TEST_CASE("stdlib FileError result wrappers reject non file errors") {
+TEST_CASE("stdlib FileError root result aliases are removed") {
   const std::string source = R"(
 import /std/file/*
 
 [return<void>]
 main() {
-  [Result<FileError>] status{/FileError/status(true)}
+  [Result<FileError>] status{/FileError/status(fileReadEof())}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /FileError/status parameter err") != std::string::npos);
+  CHECK(error.find("unknown call target: /FileError/status") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError result methods reject unexpected arguments") {
@@ -295,19 +295,19 @@ main() {
   CHECK(error.find("argument count mismatch for /std/file/FileError/status") != std::string::npos);
 }
 
-TEST_CASE("stdlib FileError eof wrapper rejects non file errors") {
+TEST_CASE("stdlib FileError root eof aliases are removed") {
   const std::string source = R"(
 import /std/file/*
 
 [return<void>]
 main() {
-  [bool] eof{/FileError/is_eof(true)}
+  [bool] eof{/FileError/is_eof(fileReadEof())}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /FileError/is_eof parameter err") != std::string::npos);
+  CHECK(error.find("unknown call target: /FileError/is_eof") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError eof wrapper rejects unexpected arguments") {

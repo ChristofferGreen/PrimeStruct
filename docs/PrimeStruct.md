@@ -699,11 +699,11 @@ for(
     IR-backed VM/native paths without an intermediate local.
   - `/std/file/*` now also exposes a stdlib-owned `FileError` namespace surface: `FileError.why(err)`,
     `FileError.status(err)`, `FileError.result<T>(err)`, `FileError.eof()`, and `FileError.is_eof(err)` resolve
-    through `/std/file/FileError/*` even in direct nested `Result.error(...)` / `Result.why(...)` expressions, and
-    the public root-level `/FileError/status(...)`, `/FileError/result<T>(...)`, `/FileError/why(...)`,
-    `/FileError/eof()`, and `/FileError/is_eof(...)` wrappers now remain as compatibility aliases over that same
-    type-owned implementation, while receiver-style `err.status()` / `err.result<T>()` method sugar now routes
-    through the same stdlib-owned FileError helpers as `err.why()` / `err.is_eof()`.
+    through `/std/file/FileError/*` even in direct nested `Result.error(...)` / `Result.why(...)` expressions, while
+    receiver-style `err.status()` / `err.result<T>()` method sugar now routes through the same stdlib-owned FileError
+    helpers as `err.why()` / `err.is_eof()`. The old root `/FileError/*` compatibility wrappers are removed, while
+    the package-level `fileErrorStatus(err)` / `fileErrorResult<T>(err)` helpers remain as compatibility aliases over
+    that same type-owned implementation.
   - Stdlib containers use `Result<ContainerError>` / `Result<T, ContainerError>` as the shared error contract;
     `ContainerError.status(err)` / `ContainerError.result<T>(err)` now own the type-level packing surface while
     `containerErrorStatus(err)` / `containerErrorResult<T>(err)` remain compatibility helpers,
@@ -770,11 +770,10 @@ sum_two_files([string] a, [string] b) {
     `on_error<ErrorType, Handler>(...)`; on error, the handler runs and the definition returns the raw error code.
   - **Current stdlib progress:** import `/std/file/*` to use `.prime`-authored `fileReadEof()`,
     `fileErrorStatus(err)` / `fileErrorResult<T>(err)` compatibility helpers, the type-owned
-    `FileError.status(err)` / `FileError.result<T>(err)` namespace surface, or the public
-    `/FileError/status(err)` / `/FileError/result<T>(err)` wrappers instead of hand-packing `FileError` results or
-    hard-coding the EOF status code, plus receiver-style `err.status()` / `err.result<T>()`, `fileErrorIsEof(err)`,
-    `/FileError/why([FileError] err)`, `/FileError/eof()`, and `/FileError/is_eof([FileError] err)` for explicit
-    type-owned access to the current stdlib FileError helper surface. The same import also exposes
+    `FileError.status(err)` / `FileError.result<T>(err)` namespace surface instead of hand-packing `FileError`
+    results or hard-coding the EOF status code, plus receiver-style `err.status()` / `err.result<T>()`,
+    `fileErrorIsEof(err)`, and the type-owned `FileError.why(err)` / `FileError.eof()` / `FileError.is_eof(err)`
+    helpers for explicit access to the current stdlib FileError helper surface. The same import also exposes
     `.prime`-authored `/File/open_read(...)`, `/File/open_write(...)`, and `/File/open_append(...)` wrappers so the
     common constructor-shaped `File<Mode>(path)` surface can resolve through stdlib-owned helpers while the host file
     substrate remains builtin and effect-gated underneath.
@@ -831,7 +830,7 @@ sum_two_files([string] a, [string] b) {
   - `read_byte(...)` reports deterministic end-of-file as `EOF`.
   - Import `/std/file/*` for the current stdlib-authored file helper layer:
     `fileReadEof()`, `fileErrorStatus(err)`, `fileErrorIsEof(err)`, `fileErrorResult<T>(err)`,
-    `/FileError/why([FileError] err)`, `/FileError/eof()`, `/FileError/is_eof([FileError] err)`,
+    `FileError.why(err)`, `FileError.eof()`, `FileError.is_eof(err)`,
     `/File/open_read(...)`, `/File/open_write(...)`, `/File/open_append(...)`,
     `/File/read_byte(...)`, zero-to-five-value heterogenous `/File/write(...)` and
     `/File/write_line(...)` overload families,
@@ -843,12 +842,11 @@ sum_two_files([string] a, [string] b) {
     `close` across that current zero-to-five-value overload family, while the underlying host
     open/read/write/close substrate plus wider multi-value `write(...)` / `write_line(...)`
     arities remain builtin for now.
-  - The stdlib file layer also defines `/FileError/why([FileError] err)` as the public wrapper over the
-    intrinsic file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned
-    helper surface while platform-specific code-to-string translation stays builtin substrate. It also defines
-    `/FileError/eof()` so EOF values can be constructed from the same type-owned stdlib surface, plus
-    `/FileError/is_eof([FileError] err)` so EOF classification can use that same surface via either direct calls or
-    `err.is_eof()`.
+  - The stdlib file layer defines `FileError.why(err)` as the public type-owned wrapper over the intrinsic
+    file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned helper
+    surface while platform-specific code-to-string translation stays builtin substrate. It also defines
+    `FileError.eof()` so EOF values can be constructed from the same type-owned stdlib surface, plus
+    `FileError.is_eof(err)` so EOF classification can use that same surface via direct calls or `err.is_eof()`.
 - **Effect requirement:** read-only file operations require `effects(file_read)` and write/append operations require `effects(file_write)`. `file_write` also implies `file_read` for compatibility.
 - **Example:**
   ```

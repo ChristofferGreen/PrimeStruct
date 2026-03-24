@@ -789,7 +789,7 @@ swallow_file_error([FileError] err) {}
 main() {
   [Result<i32, FileError>] ok{Result.ok(2i32)}
   [Result<FileError>] chained{
-    Result.and_then(ok, []([i32] value) { return(/FileError/status(/FileError/eof())) })
+    Result.and_then(ok, []([i32] value) { return(FileError.status(FileError.eof())) })
   }
   if(not(Result.error(chained))) {
     return(1i32)
@@ -1091,7 +1091,7 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_err) on_error<FileError, /swallow_file_error>]
 main() {
-  [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
+  [Result<i32, FileError>] failed{FileError.result<i32>(fileReadEof())}
   [i32] mapped{try(Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }))}
   [i32] chained{try(Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) }))}
   [i32] summed{

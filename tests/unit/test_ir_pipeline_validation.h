@@ -53396,10 +53396,10 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
   CHECK_FALSE(fileErrorCalled);
 
   primec::Definition fileErrorWhyDef;
-  fileErrorWhyDef.fullPath = "/FileError/why";
+  fileErrorWhyDef.fullPath = "/std/file/FileError/why";
   fileErrorWhyDef.parameters.resize(1);
   std::unordered_map<std::string, const primec::Definition *> fileErrorDefMap{
-      {"/FileError/why", &fileErrorWhyDef},
+      {"/std/file/FileError/why", &fileErrorWhyDef},
   };
 
   inlineCalled = false;
@@ -53423,7 +53423,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
             [](const std::string &) { return 0; },
             [](const std::string &, const std::string &, std::string &) { return false; },
             [](const std::string &path, primec::ir_lowerer::ReturnInfo &returnInfoOut) {
-              if (path != "/FileError/why") {
+              if (path != "/std/file/FileError/why") {
                 return false;
               }
               returnInfoOut = primec::ir_lowerer::ReturnInfo{};
@@ -53440,7 +53440,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
             },
             [&](const primec::Expr &, const primec::Definition &callee, const primec::ir_lowerer::LocalMap &) {
               inlineCalled = true;
-              CHECK(callee.fullPath == "/FileError/why");
+              CHECK(callee.fullPath == "/std/file/FileError/why");
               return true;
             },
             [&](int32_t) {

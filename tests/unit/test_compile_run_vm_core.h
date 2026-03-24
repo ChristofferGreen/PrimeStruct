@@ -1225,12 +1225,12 @@ import /std/file/*
 
 [return<Result<FileError>>]
 make_status() {
-  return(/FileError/status(fileReadEof()))
+  return(FileError.status(fileReadEof()))
 }
 
 [return<Result<i32, FileError>>]
 make_value() {
-  return(/FileError/result<i32>(fileReadEof()))
+  return(FileError.result<i32>(fileReadEof()))
 }
 
 [return<int> effects(io_out)]
@@ -1238,8 +1238,8 @@ main() {
   [Result<FileError>] status{make_status()}
   [Result<i32, FileError>] valueStatus{make_value()}
   [FileError] err{fileReadEof()}
-  [Result<FileError>] methodStatus{/FileError/status(err)}
-  [Result<i32, FileError>] methodValueStatus{/FileError/result<i32>(err)}
+  [Result<FileError>] methodStatus{FileError.status(err)}
+  [Result<i32, FileError>] methodValueStatus{FileError.result<i32>(err)}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
   [bool] directStatusError{Result.error(status)}
@@ -1266,8 +1266,8 @@ main() {
   print_line(Result.why(valueStatus))
   print_line(Result.why(methodStatus))
   print_line(Result.why(methodValueStatus))
-  print_line(Result.why(/FileError/status(fileReadEof())))
-  print_line(Result.why(/FileError/result<i32>(fileReadEof())))
+  print_line(Result.why(FileError.status(fileReadEof())))
+  print_line(Result.why(FileError.result<i32>(fileReadEof())))
   print_line(Result.why(methodStatus))
   print_line(Result.why(methodValueStatus))
   return(0i32)
@@ -1293,7 +1293,7 @@ log_file_error([FileError] err) {
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
   [Result<i32, FileError>] ok{Result.ok(2i32)}
-  [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
+  [Result<i32, FileError>] failed{FileError.result<i32>(fileReadEof())}
   [Result<i32, FileError>] mappedOk{
     Result.map(ok, []([i32] value) { return(multiply(value, 4i32)) })
   }
@@ -1330,12 +1330,12 @@ log_file_error([FileError] err) {
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
   [Result<i32, FileError>] ok{Result.ok(2i32)}
-  [Result<i32, FileError>] failed{/FileError/result<i32>(fileReadEof())}
+  [Result<i32, FileError>] failed{FileError.result<i32>(fileReadEof())}
   [Result<i32, FileError>] chainedOk{
     Result.and_then(ok, []([i32] value) { return(Result.ok(multiply(value, 4i32))) })
   }
   [Result<FileError>] chainedStatus{
-    Result.and_then(ok, []([i32] value) { return(/FileError/status(/FileError/eof())) })
+    Result.and_then(ok, []([i32] value) { return(FileError.status(FileError.eof())) })
   }
   [Result<i32, FileError>] chainedFailed{
     Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) })
@@ -2800,7 +2800,7 @@ main() {
   if(not(fileErrorIsEof(err))) {
     return(1i32)
   }
-  print_line(/FileError/why(err))
+  print_line(FileError.why(err))
   print_line(FileError.why(err))
   print_line(err.why())
   print_line(Result.why(fileErrorStatus(err)))
@@ -2823,22 +2823,22 @@ import /std/file/*
 main() {
   [FileError] eofErr{fileReadEof()}
   [FileError] otherErr{1i32}
-  if(not(/FileError/is_eof(eofErr))) {
+  if(not(FileError.is_eof(eofErr))) {
     return(1i32)
   }
   if(not(FileError.is_eof(eofErr))) {
     return(2i32)
   }
-  if(not(/FileError/is_eof(eofErr))) {
+  if(not(eofErr.is_eof())) {
     return(3i32)
   }
-  if(/FileError/is_eof(otherErr)) {
+  if(FileError.is_eof(otherErr)) {
     return(4i32)
   }
   if(FileError.is_eof(otherErr)) {
     return(5i32)
   }
-  if(/FileError/is_eof(otherErr)) {
+  if(otherErr.is_eof()) {
     return(6i32)
   }
   return(0i32)
@@ -2856,12 +2856,12 @@ import /std/file/*
 [return<int> effects(io_out)]
 main() {
   [FileError] err{FileError.eof()}
-  print_line(/FileError/why(err))
+  print_line(FileError.why(err))
   print_line(FileError.why(err))
   if(not(FileError.is_eof(err))) {
     return(1i32)
   }
-  if(not(/FileError/is_eof(err))) {
+  if(not(err.is_eof())) {
     return(2i32)
   }
   return(0i32)
