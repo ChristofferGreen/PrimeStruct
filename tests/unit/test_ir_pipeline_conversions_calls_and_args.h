@@ -2127,8 +2127,8 @@ forward([args<Pointer<Pair>>] values) {
 [return<int>]
 forward_mixed([args<Pointer<Pair>>] values) {
   [Pair] extra{Pair(5i32)}
-  [Pointer<Pair>] extra_ptr{location(extra)}
-  return(score_ptrs(extra_ptr, [spread] values))
+  [Reference<Pair>] extra_ref{location(extra)}
+  return(score_ptrs(location(extra_ref), [spread] values))
 }
 
 [return<int>]
@@ -2136,17 +2136,25 @@ main() {
   [Pair] a0{Pair(7i32)}
   [Pair] a1{Pair(8i32)}
   [Pair] a2{Pair(9i32)}
+  [Reference<Pair>] r0{location(a0)}
+  [Reference<Pair>] r1{location(a1)}
+  [Reference<Pair>] r2{location(a2)}
 
   [Pair] b0{Pair(11i32)}
   [Pair] b1{Pair(12i32)}
   [Pair] b2{Pair(13i32)}
+  [Reference<Pair>] s0{location(b0)}
+  [Reference<Pair>] s1{location(b1)}
+  [Reference<Pair>] s2{location(b2)}
 
   [Pair] c0{Pair(15i32)}
   [Pair] c1{Pair(17i32)}
+  [Reference<Pair>] t0{location(c0)}
+  [Reference<Pair>] t1{location(c1)}
 
-  return(plus(score_ptrs(location(a0), location(a1), location(a2)),
-              plus(forward(location(b0), location(b1), location(b2)),
-                   forward_mixed(location(c0), location(c1)))))
+  return(plus(score_ptrs(location(r0), location(r1), location(r2)),
+              plus(forward(location(s0), location(s1), location(s2)),
+                   forward_mixed(location(t0), location(t1)))))
 }
 )";
   primec::Program program;
@@ -2181,8 +2189,8 @@ forward([args<Pointer<i32>>] values) {
 [return<int>]
 forward_mixed([args<Pointer<i32>>] values) {
   [i32] extra{1i32}
-  [Pointer<i32>] extra_ptr{location(extra)}
-  return(score_ptrs(extra_ptr, [spread] values))
+  [Reference<i32>] extra_ref{location(extra)}
+  return(score_ptrs(location(extra_ref), [spread] values))
 }
 
 [return<int>]
@@ -2190,17 +2198,25 @@ main() {
   [i32] a0{1i32}
   [i32] a1{2i32}
   [i32] a2{3i32}
+  [Reference<i32>] r0{location(a0)}
+  [Reference<i32>] r1{location(a1)}
+  [Reference<i32>] r2{location(a2)}
 
   [i32] b0{4i32}
   [i32] b1{5i32}
   [i32] b2{6i32}
+  [Reference<i32>] s0{location(b0)}
+  [Reference<i32>] s1{location(b1)}
+  [Reference<i32>] s2{location(b2)}
 
   [i32] c0{7i32}
   [i32] c1{8i32}
+  [Reference<i32>] t0{location(c0)}
+  [Reference<i32>] t1{location(c1)}
 
-  return(plus(score_ptrs(location(a0), location(a1), location(a2)),
-              plus(forward(location(b0), location(b1), location(b2)),
-                   forward_mixed(location(c0), location(c1)))))
+  return(plus(score_ptrs(location(r0), location(r1), location(r2)),
+              plus(forward(location(s0), location(s1), location(s2)),
+                   forward_mixed(location(t0), location(t1)))))
 }
 )";
   primec::Program program;

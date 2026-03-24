@@ -77,7 +77,41 @@ bool emitInlineDefinitionCallParameters(
           return false;
         }
         if (targetInfo.kind == LocalInfo::Kind::Reference) {
-          return false;
+          if (expectedKind != LocalInfo::Kind::Pointer) {
+            return false;
+          }
+          if (expectsArray) {
+            return targetInfo.referenceToArray && targetInfo.valueKind == paramInfo.valueKind;
+          }
+          if (expectsVector) {
+            return targetInfo.referenceToVector && targetInfo.valueKind == paramInfo.valueKind &&
+                   targetInfo.structTypeName == paramInfo.structTypeName &&
+                   targetInfo.isSoaVector == paramInfo.isSoaVector;
+          }
+          if (expectsMap) {
+            return targetInfo.referenceToMap &&
+                   targetInfo.mapKeyKind == paramInfo.mapKeyKind &&
+                   targetInfo.mapValueKind == paramInfo.mapValueKind;
+          }
+          if (expectsBuffer) {
+            return targetInfo.referenceToBuffer && targetInfo.valueKind == paramInfo.valueKind;
+          }
+          if (expectsAggregate) {
+            return false;
+          }
+          return !targetInfo.referenceToArray &&
+                 !targetInfo.referenceToVector &&
+                 !targetInfo.referenceToMap &&
+                 !targetInfo.referenceToBuffer &&
+                 targetInfo.targetsUninitializedStorage == paramInfo.targetsUninitializedStorage &&
+                 targetInfo.isFileHandle == paramInfo.isFileHandle &&
+                 targetInfo.isFileError == paramInfo.isFileError &&
+                 targetInfo.isResult == paramInfo.isResult &&
+                 targetInfo.resultHasValue == paramInfo.resultHasValue &&
+                 targetInfo.resultValueKind == paramInfo.resultValueKind &&
+                 targetInfo.resultErrorType == paramInfo.resultErrorType &&
+                 targetInfo.valueKind == paramInfo.valueKind &&
+                 targetInfo.structTypeName == paramInfo.structTypeName;
         }
         if (expectsArray) {
           return targetInfo.kind == LocalInfo::Kind::Array && targetInfo.valueKind == paramInfo.valueKind;
