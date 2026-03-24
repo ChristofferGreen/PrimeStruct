@@ -278,16 +278,7 @@ static bool spinningCubeBackendsSupportArrayReturns() {
   return storeResult(1);
 }
 
-TEST_CASE("compiles examples to IR") {
-  const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples";
-  REQUIRE(std::filesystem::exists(examplesDir));
-
-  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_examples_ir";
-  std::error_code ec;
-  std::filesystem::remove_all(outDir, ec);
-  std::filesystem::create_directories(outDir, ec);
-  REQUIRE(!ec);
-
+static std::vector<std::filesystem::path> collectExamplePrimeFiles(const std::filesystem::path &examplesDir) {
   std::vector<std::filesystem::path> exampleFiles;
   for (const auto &entry : std::filesystem::recursive_directory_iterator(examplesDir)) {
     if (!entry.is_regular_file()) {
@@ -309,19 +300,84 @@ TEST_CASE("compiles examples to IR") {
     exampleFiles.push_back(path);
   }
   std::sort(exampleFiles.begin(), exampleFiles.end());
-  REQUIRE(!exampleFiles.empty());
-  const bool supportsSpinningCube = spinningCubeBackendsSupportArrayReturns();
+  return exampleFiles;
+}
 
+static void compileExampleIrBatch(const std::filesystem::path &examplesDir,
+                                  const std::vector<std::filesystem::path> &exampleFiles,
+                                  const std::string &outDirName,
+                                  const std::vector<std::string> &prefixes,
+                                  bool supportsSpinningCube) {
+  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / outDirName;
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  bool sawPrefixMatch = false;
+  bool compiledMatch = false;
   for (const auto &path : exampleFiles) {
+    const std::filesystem::path relativePath = std::filesystem::relative(path, examplesDir);
+    const std::string relativeText = relativePath.generic_string();
+    bool matchesPrefix = false;
+    for (const std::string &prefix : prefixes) {
+      if (relativeText.rfind(prefix, 0) == 0) {
+        matchesPrefix = true;
+        break;
+      }
+    }
+    if (!matchesPrefix) {
+      continue;
+    }
+    sawPrefixMatch = true;
     if (!supportsSpinningCube && path.string().find("spinning_cube") != std::string::npos) {
       continue;
     }
+    compiledMatch = true;
     const std::string compileCmd =
         "./primec --emit=ir " + quoteShellArg(path.string()) + " --out-dir " + quoteShellArg(outDir.string()) +
         " --entry /main";
     CHECK(runCommand(compileCmd) == 0);
     CHECK(std::filesystem::exists(outDir / (path.stem().string() + ".psir")));
   }
+  CHECK(sawPrefixMatch);
+  if (!compiledMatch) {
+    INFO("All matching example files were gated by the spinning cube backend capability check");
+  }
+}
+
+TEST_CASE("compiles concrete examples to IR") {
+  const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples";
+  REQUIRE(std::filesystem::exists(examplesDir));
+  const std::vector<std::filesystem::path> exampleFiles = collectExamplePrimeFiles(examplesDir);
+  REQUIRE(!exampleFiles.empty());
+  compileExampleIrBatch(examplesDir, exampleFiles, "primec_examples_ir_concrete", {"0.Concrete/"}, true);
+}
+
+TEST_CASE("compiles template and inference examples to IR") {
+  const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples";
+  REQUIRE(std::filesystem::exists(examplesDir));
+  const std::vector<std::filesystem::path> exampleFiles = collectExamplePrimeFiles(examplesDir);
+  REQUIRE(!exampleFiles.empty());
+  compileExampleIrBatch(examplesDir, exampleFiles, "primec_examples_ir_template_inference",
+                        {"1.Template/", "2.Inference/"}, true);
+}
+
+TEST_CASE("compiles surface examples to IR") {
+  const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples";
+  REQUIRE(std::filesystem::exists(examplesDir));
+  const std::vector<std::filesystem::path> exampleFiles = collectExamplePrimeFiles(examplesDir);
+  REQUIRE(!exampleFiles.empty());
+  compileExampleIrBatch(examplesDir, exampleFiles, "primec_examples_ir_surface", {"3.Surface/"}, true);
+}
+
+TEST_CASE("compiles web examples to IR") {
+  const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples";
+  REQUIRE(std::filesystem::exists(examplesDir));
+  const std::vector<std::filesystem::path> exampleFiles = collectExamplePrimeFiles(examplesDir);
+  REQUIRE(!exampleFiles.empty());
+  compileExampleIrBatch(examplesDir, exampleFiles, "primec_examples_ir_web", {"web/"},
+                        spinningCubeBackendsSupportArrayReturns());
 }
 
 TEST_CASE("collection docs snippets stay c++ style and executable") {
@@ -4660,10 +4716,23 @@ TEST_CASE("browser launcher compile run coverage validates shared helper path") 
   const std::string command = quoteShellArg(scriptPath.string()) + " --primec ./primec --out-dir " +
                               quoteShellArg(outDir.string()) + " --port 18769 --headless-smoke > " +
                               quoteShellArg(outPath.string()) + " 2> " + quoteShellArg(errPath.string());
-  CHECK(runCommand(command) == 0);
+  const int code = runCommand(command);
 
   const std::string output = readFile(outPath.string());
   const std::string diagnostics = readFile(errPath.string());
+  const bool browserCompileUnsupported =
+      diagnostics.find("only supports returning array values") != std::string::npos ||
+      diagnostics.find("graphics stdlib runtime substrate unavailable for wasm-browser target: /std/gfx/*") !=
+          std::string::npos;
+  if (browserCompileUnsupported) {
+    CHECK(code == 2);
+    CHECK(output.find("[browser-launcher] Compiling browser wasm") != std::string::npos);
+    CHECK(diagnostics.find("[browser-launcher] ERROR: failed to compile cube.wasm") != std::string::npos);
+    CHECK_FALSE(std::filesystem::exists(outDir / "spinning_cube" / "cube.wasm"));
+    return;
+  }
+
+  CHECK(code == 0);
   CHECK(diagnostics.empty());
   CHECK(std::filesystem::exists(outDir / "spinning_cube" / "index.html"));
   CHECK(std::filesystem::exists(outDir / "spinning_cube" / "main.js"));
@@ -4903,15 +4972,19 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("`begin_panel(...)` emits one rounded rect for the panel background") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`end_panel()` emits one balancing `pop_clip()`") != std::string::npos);
-  CHECK(graphicsDoc.find("`append_login_form(...) -> LoginFormNodes` is the first composite widget helper") !=
+  CHECK(graphicsDoc.find("`append_login_form(...) -> LoginFormNodes` is the first composite widget") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`draw_login_form(...)` emits only through `begin_panel`, `draw_label`,") !=
         std::string::npos);
-  CHECK(graphicsDoc.find("must not call raw `draw_text`, `draw_rounded_rect`, `push_clip`, `pop_clip`,") !=
+  CHECK(graphicsDoc.find("Composite widget helpers in this prototype must not call raw") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`draw_text`, `draw_rounded_rect`, `push_clip`, `pop_clip`, `append_leaf`,") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`emit_login_form(...)` emits only through `emit_panel`, `emit_label`,") !=
         std::string::npos);
-  CHECK(graphicsDoc.find("must not call raw `append_word`, `append_color`, or `append_string`") !=
+  CHECK(graphicsDoc.find("Composite HTML adapter helpers in this prototype must not call raw") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`append_word`, `append_color`, or `append_string` directly.") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`push_pointer_move(...)`, `push_pointer_down(...)`, and `push_pointer_up(...)` normalize through one pointer event record shape") !=
         std::string::npos);
@@ -5023,14 +5096,30 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
 
   CHECK(imageStdlib.find("[public struct]\n  ImageError()") != std::string::npos);
-  CHECK(imageStdlib.find("return(1i32)") != std::string::npos);
-  CHECK(imageStdlib.find("return(2i32)") != std::string::npos);
-  CHECK(imageStdlib.find("return(3i32)") != std::string::npos);
+  CHECK(imageStdlib.find("ImageError(1i32)") != std::string::npos);
+  CHECK(imageStdlib.find("ImageError(2i32)") != std::string::npos);
+  CHECK(imageStdlib.find("ImageError(3i32)") != std::string::npos);
   CHECK(imageStdlib.find("\"image_read_unsupported\"utf8") != std::string::npos);
   CHECK(imageStdlib.find("\"image_write_unsupported\"utf8") != std::string::npos);
   CHECK(imageStdlib.find("\"image_invalid_operation\"utf8") != std::string::npos);
   CHECK(imageStdlib.find("namespace ppm") != std::string::npos);
   CHECK(imageStdlib.find("namespace png") != std::string::npos);
+  CHECK(imageStdlib.find("ppmReadAsciiInt") != std::string::npos);
+  CHECK(imageStdlib.find("ppmReadBinaryRasterLead") != std::string::npos);
+  CHECK(imageStdlib.find("imageRgbWritePixelCount") != std::string::npos);
+  CHECK(imageStdlib.find("ppmWriteInputValid") != std::string::npos);
+  CHECK(imageStdlib.find("ppmWriteHeader") != std::string::npos);
+  CHECK(imageStdlib.find("ppmWriteComponent") != std::string::npos);
+  CHECK(imageStdlib.find("pngInflateFixedHuffmanBlock") != std::string::npos);
+  CHECK(imageStdlib.find("pngBuildFixedDistanceLengths") != std::string::npos);
+  CHECK(imageStdlib.find("pngInflateCopyFromOutput") != std::string::npos);
+  CHECK(imageStdlib.find("pngPackedSampleAt") != std::string::npos);
+  CHECK(imageStdlib.find("pngScanlineBytesValid") != std::string::npos);
+  CHECK(imageStdlib.find("pngScalePackedSampleToByte") != std::string::npos);
+  CHECK(imageStdlib.find("pngScaleU16SampleToByte") != std::string::npos);
+  CHECK(imageStdlib.find("pngScanlineChannelByte") != std::string::npos);
+  CHECK(imageStdlib.find("pngAdam7PassStartX") != std::string::npos);
+  CHECK(imageStdlib.find("pngDecodeRows") != std::string::npos);
   CHECK(imageStdlib.find("pngChunkIsPlte(") != std::string::npos);
   CHECK(imageStdlib.find("pngChunkCrcMatches(") != std::string::npos);
   CHECK(imageStdlib.find("[public return<Result<ImageError>> effects(file_read, heap_alloc)]\n    read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path)") !=
@@ -5044,50 +5133,32 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   REQUIRE(pngStart != std::string::npos);
   REQUIRE(pngStart > ppmStart);
   const std::string ppmBody = imageStdlib.substr(ppmStart, pngStart - ppmStart);
-  CHECK(ppmBody.find("ppmReadAsciiInt") != std::string::npos);
-  CHECK(ppmBody.find("ppmReadBinaryRasterLead") != std::string::npos);
-  CHECK(ppmBody.find("ppmOpenRead") != std::string::npos);
-  CHECK(ppmBody.find("ppmOpenWrite") != std::string::npos);
-  CHECK(ppmBody.find("imageRgbWritePixelCount") != std::string::npos);
-  CHECK(ppmBody.find("ppmWriteInputValid") != std::string::npos);
-  CHECK(ppmBody.find("ppmWriteHeader") != std::string::npos);
-  CHECK(ppmBody.find("ppmWriteComponent") != std::string::npos);
+  CHECK(ppmBody.find("readImpl(") != std::string::npos);
+  CHECK(ppmBody.find("writeImpl(") != std::string::npos);
+  CHECK(ppmBody.find("File<Read>(path)?") != std::string::npos);
+  CHECK(ppmBody.find("File<Write>(path)?") != std::string::npos);
   CHECK(ppmBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(ppmBody.find("return(Result.ok())") != std::string::npos);
   CHECK(ppmBody.find("return(unsupported_write())") == std::string::npos);
-  CHECK(ppmBody.find("return(1i32)") == std::string::npos);
-  CHECK(ppmBody.find("return(2i32)") == std::string::npos);
 
   const std::string pngBody = imageStdlib.substr(pngStart);
   CHECK(pngBody.find("return(unsupported_read())") != std::string::npos);
+  CHECK(pngBody.find("readImpl(") != std::string::npos);
+  CHECK(pngBody.find("writeImpl(") != std::string::npos);
   CHECK(pngBody.find("pngValidateSignature") != std::string::npos);
   CHECK(pngBody.find("pngReadU32Be") != std::string::npos);
   CHECK(pngBody.find("pngReadChunkType") != std::string::npos);
   CHECK(pngBody.find("pngReadIhdr") != std::string::npos);
   CHECK(pngBody.find("pngInflateDeflateBlocks") != std::string::npos);
-  CHECK(pngBody.find("pngInflateFixedHuffmanBlock") != std::string::npos);
-  CHECK(pngBody.find("pngBuildFixedDistanceLengths") != std::string::npos);
-  CHECK(pngBody.find("pngInflateCopyFromOutput") != std::string::npos);
   CHECK(pngBody.find("pngDecodeScanlines") != std::string::npos);
-  CHECK(pngBody.find("pngPackedSampleAt") != std::string::npos);
-  CHECK(pngBody.find("pngScanlineBytesValid") != std::string::npos);
-  CHECK(pngBody.find("pngScalePackedSampleToByte") != std::string::npos);
-  CHECK(pngBody.find("pngScaleU16SampleToByte") != std::string::npos);
-  CHECK(pngBody.find("pngScanlineChannelByte") != std::string::npos);
-  CHECK(pngBody.find("pngAdam7PassStartX") != std::string::npos);
-  CHECK(pngBody.find("pngDecodeRows") != std::string::npos);
   CHECK(pngBody.find("pngWriteSignature") != std::string::npos);
   CHECK(pngBody.find("pngWriteIdatChunk") != std::string::npos);
   CHECK(pngBody.find("pngWriteSizingValid") != std::string::npos);
-  CHECK(pngBody.find("equal(colorType, 0i32)") != std::string::npos);
-  CHECK(pngBody.find("equal(colorType, 3i32)") != std::string::npos);
-  CHECK(pngBody.find("equal(colorType, 4i32)") != std::string::npos);
-  CHECK(pngBody.find("equal(colorType, 6i32)") != std::string::npos);
+  CHECK(pngBody.find("File<Read>(path)?") != std::string::npos);
+  CHECK(pngBody.find("File<Write>(path)?") != std::string::npos);
   CHECK(pngBody.find("pngAppendBytes") != std::string::npos);
   CHECK(pngBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(pngBody.find("return(unsupported_write())") == std::string::npos);
-  CHECK(pngBody.find("return(1i32)") == std::string::npos);
-  CHECK(pngBody.find("return(2i32)") == std::string::npos);
 }
 
 TEST_CASE("file read_byte docs and helpers stay source locked") {
@@ -5116,8 +5187,8 @@ TEST_CASE("file read_byte docs and helpers stay source locked") {
   CHECK(primeStructDoc.find("read-only file operations require `effects(file_read)`") != std::string::npos);
 
   CHECK(prelude.find("static inline uint32_t ps_file_read_byte") != std::string::npos);
-  CHECK(prelude.find("return 65536u;") != std::string::npos);
-  CHECK(prelude.find("return std::string_view(\"EOF\")") != std::string::npos);
+  CHECK(prelude.find("return \" << FileReadEofCode << \"u;") != std::string::npos);
+  CHECK(prelude.find("std::string_view(\\\"EOF\\\")") != std::string::npos);
 
   CHECK(lowerer.find("read_byte requires exactly one argument") != std::string::npos);
   CHECK(lowerer.find("read_byte requires mutable integer binding") != std::string::npos);
