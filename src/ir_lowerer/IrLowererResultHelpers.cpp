@@ -60,14 +60,31 @@ bool extractResultValueTypeText(const std::string &typeText, std::string &valueT
   return true;
 }
 
+void assignDeclaredResultCollectionInfo(const std::string &typeText,
+                                        LocalInfo::Kind &collectionKindOut,
+                                        LocalInfo::ValueKind &valueKindOut) {
+  collectionKindOut = LocalInfo::Kind::Value;
+  valueKindOut = LocalInfo::ValueKind::Unknown;
+  if (!resolveSupportedResultCollectionType(typeText, collectionKindOut, valueKindOut)) {
+    collectionKindOut = LocalInfo::Kind::Value;
+    valueKindOut = LocalInfo::ValueKind::Unknown;
+  }
+}
+
 void applyDeclaredResultBindingMetadata(const Expr &bindingExpr, LocalInfo &bindingInfo) {
   for (const auto &transform : bindingExpr.transforms) {
     if (transform.name == "Result") {
       bindingInfo.isResult = true;
       bindingInfo.resultHasValue = (transform.templateArgs.size() == 2);
-      bindingInfo.resultValueKind =
-          bindingInfo.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
-                                     : LocalInfo::ValueKind::Unknown;
+      bindingInfo.resultValueKind = LocalInfo::ValueKind::Unknown;
+      bindingInfo.resultValueCollectionKind = LocalInfo::Kind::Value;
+      if (bindingInfo.resultHasValue && !transform.templateArgs.empty()) {
+        assignDeclaredResultCollectionInfo(
+            transform.templateArgs.front(), bindingInfo.resultValueCollectionKind, bindingInfo.resultValueKind);
+        if (bindingInfo.resultValueCollectionKind == LocalInfo::Kind::Value) {
+          bindingInfo.resultValueKind = valueKindFromTypeName(transform.templateArgs.front());
+        }
+      }
       bindingInfo.resultValueIsFileHandle =
           bindingInfo.resultHasValue && !transform.templateArgs.empty() &&
           isFileHandleTypeText(transform.templateArgs.front());
@@ -95,12 +112,19 @@ void applyDeclaredResultBindingMetadata(const Expr &bindingExpr, LocalInfo &bind
     bindingInfo.isResult = true;
     bindingInfo.resultHasValue = resultHasValue;
     bindingInfo.resultValueKind = resultValueKind;
+    bindingInfo.resultValueCollectionKind = LocalInfo::Kind::Value;
     std::string resultValueType;
+    if (resultHasValue) {
+      assignDeclaredResultCollectionInfo(
+          extractResultValueTypeText(transform.templateArgs.front(), resultValueType) ? resultValueType : std::string{},
+          bindingInfo.resultValueCollectionKind,
+          bindingInfo.resultValueKind);
+    }
     bindingInfo.resultValueIsFileHandle =
         resultHasValue && extractResultValueTypeText(transform.templateArgs.front(), resultValueType) &&
         isFileHandleTypeText(resultValueType);
     if (bindingInfo.resultValueIsFileHandle) {
-      resultValueKind = LocalInfo::ValueKind::Int64;
+      bindingInfo.resultValueKind = LocalInfo::ValueKind::Int64;
     }
     bindingInfo.resultErrorType = resultErrorType;
     bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
@@ -141,6 +165,7 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
     bindingInfo.isResult = true;
     bindingInfo.resultHasValue = bindingResultInfo.hasValue;
     bindingInfo.resultValueKind = bindingResultInfo.valueKind;
+    bindingInfo.resultValueCollectionKind = bindingResultInfo.valueCollectionKind;
     bindingInfo.resultValueIsFileHandle = bindingResultInfo.valueIsFileHandle;
     bindingInfo.resultValueStructType = bindingResultInfo.valueStructType;
     bindingInfo.resultErrorType =
@@ -187,6 +212,10 @@ bool mergeControlFlowResultInfos(const ResultExprInfo &first,
     }
     out.valueKind = first.valueKind != LocalInfo::ValueKind::Unknown ? first.valueKind : second.valueKind;
     out.valueIsFileHandle = first.valueIsFileHandle || second.valueIsFileHandle;
+    if (first.valueCollectionKind != second.valueCollectionKind) {
+      return false;
+    }
+    out.valueCollectionKind = first.valueCollectionKind;
     if (!first.valueStructType.empty() && !second.valueStructType.empty() &&
         first.valueStructType != second.valueStructType) {
       return false;
@@ -233,7 +262,72 @@ bool inferDirectResultValueStructType(const Expr &expr,
   return false;
 }
 
+bool inferDirectResultValueCollectionInfo(const Expr &expr,
+                                          const LocalMap &localsIn,
+                                          const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                          LocalInfo::Kind &collectionKindOut,
+                                          LocalInfo::ValueKind &valueKindOut) {
+  collectionKindOut = LocalInfo::Kind::Value;
+  valueKindOut = LocalInfo::ValueKind::Unknown;
+  if (expr.kind == Expr::Kind::Name) {
+    auto localIt = localsIn.find(expr.name);
+    if (localIt == localsIn.end()) {
+      return false;
+    }
+    if (!isSupportedPackedResultCollectionKind(localIt->second.kind)) {
+      return false;
+    }
+    collectionKindOut = localIt->second.kind;
+    valueKindOut = localIt->second.valueKind;
+    return valueKindOut != LocalInfo::ValueKind::Unknown;
+  }
+
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+
+  std::string collectionName;
+  if (!expr.isMethodCall && getBuiltinCollectionName(expr, collectionName)) {
+    const auto assignCollection = [&](LocalInfo::Kind kind, const std::string &elemType) {
+      collectionKindOut = kind;
+      valueKindOut = valueKindFromTypeName(trimTemplateTypeText(elemType));
+      return valueKindOut != LocalInfo::ValueKind::Unknown;
+    };
+    if (collectionName == "array" && expr.templateArgs.size() == 1) {
+      return assignCollection(LocalInfo::Kind::Array, expr.templateArgs.front());
+    }
+    if (collectionName == "vector" && expr.templateArgs.size() == 1) {
+      return assignCollection(LocalInfo::Kind::Vector, expr.templateArgs.front());
+    }
+  }
+
+  const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
+  if (callee == nullptr) {
+    return false;
+  }
+  std::string declaredCollection;
+  std::vector<std::string> declaredCollectionArgs;
+  if (!inferDeclaredReturnCollection(*callee, declaredCollection, declaredCollectionArgs) ||
+      declaredCollectionArgs.size() != 1) {
+    return false;
+  }
+  if (declaredCollection == "array") {
+    collectionKindOut = LocalInfo::Kind::Array;
+  } else if (declaredCollection == "vector") {
+    collectionKindOut = LocalInfo::Kind::Vector;
+  } else {
+    return false;
+  }
+  valueKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
+  return valueKindOut != LocalInfo::ValueKind::Unknown;
+}
+
 void applyResultValueInfoToLocal(const ResultExprInfo &resultInfo, LocalInfo &paramInfo) {
+  paramInfo.kind = resultInfo.valueCollectionKind;
+  if (isSupportedPackedResultCollectionKind(resultInfo.valueCollectionKind)) {
+    paramInfo.valueKind = resultInfo.valueKind;
+    return;
+  }
   paramInfo.kind = LocalInfo::Kind::Value;
   if (resultInfo.valueIsFileHandle) {
     paramInfo.valueKind = LocalInfo::ValueKind::Int64;
@@ -264,6 +358,16 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
       out.valueStructType.clear();
       return;
     }
+  }
+  LocalInfo::Kind valueCollectionKind = LocalInfo::Kind::Value;
+  LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
+  if (inferDirectResultValueCollectionInfo(
+          valueExpr, localsIn, resolveDefinitionCall, valueCollectionKind, collectionValueKind)) {
+    out.valueCollectionKind = valueCollectionKind;
+    out.valueKind = collectionValueKind;
+    out.valueStructType.clear();
+    out.valueIsFileHandle = false;
+    return;
   }
   std::string valueStructType;
   if (inferDirectResultValueStructType(valueExpr, localsIn, resolveDefinitionCall, valueStructType)) {
@@ -373,6 +477,7 @@ bool resolveResultExprInfo(const Expr &expr,
       out.isResult = true;
       out.hasValue = local.resultHasValue;
       out.valueKind = local.resultValueKind;
+      out.valueCollectionKind = local.resultValueCollectionKind;
       out.valueIsFileHandle = local.resultValueIsFileHandle;
       out.valueStructType = local.resultValueStructType;
       out.errorType = local.resultErrorType;
@@ -501,6 +606,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     local.isResult = it->second.isResult;
     local.resultHasValue = it->second.resultHasValue;
     local.resultValueKind = it->second.resultValueKind;
+    local.resultValueCollectionKind = it->second.resultValueCollectionKind;
     local.resultValueIsFileHandle = it->second.resultValueIsFileHandle;
     local.resultValueStructType = it->second.resultValueStructType;
     local.resultErrorType = it->second.resultErrorType;
@@ -518,6 +624,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     resultOut.isResult = true;
     resultOut.hasValue = info.resultHasValue;
     resultOut.valueKind = info.resultValueKind;
+    resultOut.valueCollectionKind = info.resultValueCollectionKind;
     resultOut.valueIsFileHandle = info.resultValueIsFileHandle;
     resultOut.valueStructType = info.resultValueStructType;
     resultOut.errorType = info.resultErrorType;
@@ -580,6 +687,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       out.isResult = true;
       out.hasValue = local.resultHasValue;
       out.valueKind = local.resultValueKind;
+      out.valueCollectionKind = local.resultValueCollectionKind;
       out.valueIsFileHandle = local.resultValueIsFileHandle;
       out.valueStructType = local.resultValueStructType;
       out.errorType = local.resultErrorType;
@@ -598,6 +706,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
         out.isResult = true;
         out.hasValue = local.resultHasValue;
         out.valueKind = local.resultValueKind;
+        out.valueCollectionKind = local.resultValueCollectionKind;
         out.valueIsFileHandle = local.resultValueIsFileHandle;
         out.valueStructType = local.resultValueStructType;
         out.errorType = local.resultErrorType;
@@ -813,6 +922,36 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
          kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::String;
 }
 
+bool isSupportedPackedResultCollectionKind(LocalInfo::Kind kind) {
+  return kind == LocalInfo::Kind::Array || kind == LocalInfo::Kind::Vector;
+}
+
+bool resolveSupportedResultCollectionType(const std::string &typeText,
+                                          LocalInfo::Kind &collectionKindOut,
+                                          LocalInfo::ValueKind &valueKindOut) {
+  collectionKindOut = LocalInfo::Kind::Value;
+  valueKindOut = LocalInfo::ValueKind::Unknown;
+  std::string base;
+  std::string argList;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argList)) {
+    return false;
+  }
+  base = normalizeCollectionBindingTypeName(base);
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argList, args) || args.size() != 1) {
+    return false;
+  }
+  if (base == "array") {
+    collectionKindOut = LocalInfo::Kind::Array;
+  } else if (base == "vector") {
+    collectionKindOut = LocalInfo::Kind::Vector;
+  } else {
+    return false;
+  }
+  valueKindOut = valueKindFromTypeName(trimTemplateTypeText(args.front()));
+  return valueKindOut != LocalInfo::ValueKind::Unknown;
+}
+
 bool resolveSupportedResultStructPayloadInfo(
     const std::string &structType,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
@@ -865,6 +1004,9 @@ bool resolveSupportedResultStructPayloadInfo(
 bool isSupportedPackedResultValueInfo(
     const ResultExprInfo &info,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout) {
+  if (isSupportedPackedResultCollectionKind(info.valueCollectionKind)) {
+    return info.valueKind != LocalInfo::ValueKind::Unknown;
+  }
   if (info.valueIsFileHandle && info.valueKind == LocalInfo::ValueKind::Int64) {
     return true;
   }
@@ -901,6 +1043,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isFileHandleExpr,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
@@ -928,6 +1071,16 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     return ResultOkMethodCallEmitResult::Emitted;
   }
   if (isSupportedPackedResultValueKind(argKind)) {
+    if (!emitExpr(expr.args[1], localsIn)) {
+      return ResultOkMethodCallEmitResult::Error;
+    }
+    return ResultOkMethodCallEmitResult::Emitted;
+  }
+  LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
+  LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
+  if (inferDirectResultValueCollectionInfo(
+          expr.args[1], localsIn, resolveDefinitionCall, collectionKind, collectionValueKind) &&
+      isSupportedPackedResultCollectionKind(collectionKind)) {
     if (!emitExpr(expr.args[1], localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
     }

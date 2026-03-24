@@ -206,11 +206,19 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     infoOut.isResult = true;
     infoOut.resultHasValue = resultHasValue;
     std::string resultValueType;
+    infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
     infoOut.resultValueIsFileHandle =
         resultHasValue && extractResultValueTypeText(typeText, resultValueType) &&
         isFileHandleTypeText(resultValueType);
-    infoOut.resultValueKind =
-        infoOut.resultValueIsFileHandle ? LocalInfo::ValueKind::Int64 : resultValueKind;
+    if (resultHasValue && !resultValueType.empty()) {
+      resolveSupportedResultCollectionType(
+          resultValueType, infoOut.resultValueCollectionKind, infoOut.resultValueKind);
+    }
+    if (infoOut.resultValueIsFileHandle) {
+      infoOut.resultValueKind = LocalInfo::ValueKind::Int64;
+    } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
+      infoOut.resultValueKind = resultValueKind;
+    }
     infoOut.resultErrorType = resultErrorType;
     infoOut.valueKind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
     return;
@@ -301,11 +309,19 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.isResult = true;
       infoOut.resultHasValue = pointerResultHasValue;
       std::string resultValueType;
+      infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
       infoOut.resultValueIsFileHandle =
           pointerResultHasValue && extractResultValueTypeText(pointerTargetType, resultValueType) &&
           isFileHandleTypeText(resultValueType);
-      infoOut.resultValueKind =
-          infoOut.resultValueIsFileHandle ? LocalInfo::ValueKind::Int64 : pointerResultValueKind;
+      if (pointerResultHasValue && !resultValueType.empty()) {
+        resolveSupportedResultCollectionType(
+            resultValueType, infoOut.resultValueCollectionKind, infoOut.resultValueKind);
+      }
+      if (infoOut.resultValueIsFileHandle) {
+        infoOut.resultValueKind = LocalInfo::ValueKind::Int64;
+      } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
+        infoOut.resultValueKind = pointerResultValueKind;
+      }
       infoOut.resultErrorType = pointerResultErrorType;
       infoOut.valueKind = pointerResultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       return;
@@ -331,11 +347,19 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.isResult = true;
       infoOut.resultHasValue = refResultHasValue;
       std::string resultValueType;
+      infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
       infoOut.resultValueIsFileHandle =
           refResultHasValue && extractResultValueTypeText(refTargetType, resultValueType) &&
           isFileHandleTypeText(resultValueType);
-      infoOut.resultValueKind =
-          infoOut.resultValueIsFileHandle ? LocalInfo::ValueKind::Int64 : refResultValueKind;
+      if (refResultHasValue && !resultValueType.empty()) {
+        resolveSupportedResultCollectionType(
+            resultValueType, infoOut.resultValueCollectionKind, infoOut.resultValueKind);
+      }
+      if (infoOut.resultValueIsFileHandle) {
+        infoOut.resultValueKind = LocalInfo::ValueKind::Int64;
+      } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
+        infoOut.resultValueKind = refResultValueKind;
+      }
       infoOut.resultErrorType = refResultErrorType;
       infoOut.valueKind = refResultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       return;
@@ -737,6 +761,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
       infoOut.isResult = true;
       infoOut.resultHasValue = inferredResultInfo.hasValue;
       infoOut.resultValueKind = inferredResultInfo.valueKind;
+      infoOut.resultValueCollectionKind = inferredResultInfo.valueCollectionKind;
       infoOut.resultValueIsFileHandle = inferredResultInfo.valueIsFileHandle;
       infoOut.resultValueStructType = inferredResultInfo.valueStructType;
       infoOut.resultErrorType = inferredResultInfo.errorType;
@@ -765,9 +790,17 @@ bool inferCallParameterLocalInfo(const Expr &param,
     } else if (transform.name == "Result") {
       infoOut.isResult = true;
       infoOut.resultHasValue = (transform.templateArgs.size() == 2);
-      infoOut.resultValueKind =
-          infoOut.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
-                                 : LocalInfo::ValueKind::Unknown;
+      infoOut.resultValueKind = LocalInfo::ValueKind::Unknown;
+      infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
+      if (infoOut.resultHasValue && !transform.templateArgs.empty()) {
+        resolveSupportedResultCollectionType(
+            transform.templateArgs.front(),
+            infoOut.resultValueCollectionKind,
+            infoOut.resultValueKind);
+        if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
+          infoOut.resultValueKind = valueKindFromTypeName(transform.templateArgs.front());
+        }
+      }
       infoOut.resultValueIsFileHandle =
           infoOut.resultHasValue && !transform.templateArgs.empty() &&
           isFileHandleTypeText(transform.templateArgs.front());
@@ -835,11 +868,19 @@ bool inferCallParameterLocalInfo(const Expr &param,
         infoOut.isResult = true;
         infoOut.resultHasValue = resultHasValue;
         std::string resultValueType;
+        infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
         infoOut.resultValueIsFileHandle =
             resultHasValue && extractResultValueTypeText(targetType, resultValueType) &&
             isFileHandleTypeText(resultValueType);
-        infoOut.resultValueKind =
-            infoOut.resultValueIsFileHandle ? LocalInfo::ValueKind::Int64 : resultValueKind;
+        if (resultHasValue && !resultValueType.empty()) {
+          resolveSupportedResultCollectionType(
+              resultValueType, infoOut.resultValueCollectionKind, infoOut.resultValueKind);
+        }
+        if (infoOut.resultValueIsFileHandle) {
+          infoOut.resultValueKind = LocalInfo::ValueKind::Int64;
+        } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
+          infoOut.resultValueKind = resultValueKind;
+        }
         infoOut.valueKind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
         infoOut.resultErrorType = resultErrorType;
       }

@@ -527,6 +527,87 @@ main() {
   CHECK(result == 33);
 }
 
+TEST_CASE("ir lowerer supports array and vector Result payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<Result<array<i32>, FileError>>]
+make_numbers() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(Result.ok(values))
+}
+
+[return<Result<vector<i32>, FileError>>]
+make_vector() {
+  return(Result.ok(vector<i32>(4i32, 5i32)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [array<i32>] direct{try(make_numbers())}
+  [array<i32>] mapped{try(Result.map(make_numbers(), []([array<i32>] values) {
+    return(values)
+  }))}
+  [vector<i32>] chained{try(Result.and_then(make_vector(), []([vector<i32>] values) {
+    return(Result.ok(values))
+  }))}
+  [array<i32>] summed{try(Result.map2(make_numbers(), make_numbers(), []([array<i32>] left, [array<i32>] right) {
+    return(right)
+  }))}
+  print_line(count(direct))
+  print_line(direct[0i32])
+  print_line(mapped[1i32])
+  print_line(chained[1i32])
+  print_line(count(summed))
+  print_line(summed[2i32])
+  return(plus(direct[0i32], plus(mapped[1i32], plus(chained[1i32], summed[2i32]))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
+}
+
+TEST_CASE("ir lowerer rejects Result payloads that remain unsupported") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<int> effects(io_out)]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [auto] wrapped{Result.ok(values)}
+  print_line(Result.error(wrapped))
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("IR backends only support Result.ok with supported payload values") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer supports Result.and_then builtin lambdas") {
   const std::string source = R"(
 import /std/file/*

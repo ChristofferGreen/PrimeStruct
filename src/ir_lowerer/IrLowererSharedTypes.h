@@ -24,6 +24,7 @@ struct LocalInfo {
   bool isResult = false;
   bool resultHasValue = false;
   ValueKind resultValueKind = ValueKind::Unknown;
+  Kind resultValueCollectionKind = Kind::Value;
   bool resultValueIsFileHandle = false;
   std::string resultValueStructType;
   std::string resultErrorType;
@@ -54,6 +55,7 @@ struct ReturnInfo {
   bool isResult = false;
   bool resultHasValue = false;
   LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::Kind resultValueCollectionKind = LocalInfo::Kind::Value;
   bool resultValueIsFileHandle = false;
   std::string resultValueStructType;
   std::string resultErrorType;

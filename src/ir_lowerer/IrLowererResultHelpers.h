@@ -17,6 +17,7 @@ struct ResultExprInfo {
   bool isResult = false;
   bool hasValue = false;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::Kind valueCollectionKind = LocalInfo::Kind::Value;
   bool valueIsFileHandle = false;
   std::string valueStructType;
   std::string errorType;
@@ -27,6 +28,7 @@ struct LocalResultInfo {
   bool isResult = false;
   bool resultHasValue = false;
   LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::Kind resultValueCollectionKind = LocalInfo::Kind::Value;
   bool resultValueIsFileHandle = false;
   std::string resultValueStructType;
   std::string resultErrorType;
@@ -101,6 +103,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
     const std::function<bool(const Expr &, const LocalMap &)> &isFileHandleExpr,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
@@ -192,6 +195,10 @@ bool emitResultWhyCallWithComposedOps(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
     std::string &error);
+bool isSupportedPackedResultCollectionKind(LocalInfo::Kind kind);
+bool resolveSupportedResultCollectionType(const std::string &typeText,
+                                          LocalInfo::Kind &collectionKindOut,
+                                          LocalInfo::ValueKind &valueKindOut);
 bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind);
 bool isSupportedPackedResultValueInfo(const ResultExprInfo &info,
                                      const std::function<bool(const std::string &, StructSlotLayoutInfo &)>

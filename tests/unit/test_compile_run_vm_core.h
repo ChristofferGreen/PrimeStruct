@@ -1721,6 +1721,55 @@ main() {
   CHECK(readFile(outPath) == "1\n2\n7\n10\n5\n9\n3\n9\n");
 }
 
+TEST_CASE("vm supports array and vector Result payloads on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<Result<array<i32>, FileError>>]
+make_numbers() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(Result.ok(values))
+}
+
+[return<Result<vector<i32>, FileError>>]
+make_vector() {
+  return(Result.ok(vector<i32>(4i32, 5i32)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [array<i32>] direct{try(make_numbers())}
+  [array<i32>] mapped{try(Result.map(make_numbers(), []([array<i32>] values) {
+    return(values)
+  }))}
+  [vector<i32>] chained{try(Result.and_then(make_vector(), []([vector<i32>] values) {
+    return(Result.ok(values))
+  }))}
+  [array<i32>] summed{try(Result.map2(make_numbers(), make_numbers(), []([array<i32>] left, [array<i32>] right) {
+    return(right)
+  }))}
+  print_line(count(direct))
+  print_line(direct[0i32])
+  print_line(mapped[1i32])
+  print_line(chained[1i32])
+  print_line(count(summed))
+  print_line(summed[2i32])
+  return(plus(direct[0i32], plus(mapped[1i32], plus(chained[1i32], summed[2i32]))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_result_array_vector_payload_ir_backed.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_array_vector_payload_ir_backed_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 11);
+  CHECK(readFile(outPath) == "3\n1\n2\n5\n3\n3\n");
+}
+
 TEST_CASE("vm supports block-bodied Result.and_then lambdas on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

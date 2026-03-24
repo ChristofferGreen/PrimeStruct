@@ -213,6 +213,19 @@
       LocalInfo::ValueKind mapValueKind = bindingTypeInfo.mapValueKind;
       std::string structTypeName = bindingTypeInfo.structTypeName;
       LocalInfo info;
+      auto extractDeclaredResultValueType = [&](const std::string &typeText, std::string &valueTypeOut) {
+        valueTypeOut.clear();
+        std::string base;
+        std::string argList;
+        std::vector<std::string> args;
+        if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argList) ||
+            normalizeCollectionBindingTypeName(base) != "Result" ||
+            !splitTemplateArgs(argList, args) || args.size() != 2) {
+          return false;
+        }
+        valueTypeOut = trimTemplateTypeText(args.front());
+        return true;
+      };
       auto assignDeclaredResultStructType = [&](const std::string &typeText) {
         if (!info.resultHasValue || info.resultValueKind != LocalInfo::ValueKind::Unknown) {
           return;
@@ -228,6 +241,13 @@
         info.resultValueIsFileHandle =
             info.resultHasValue && splitTemplateTypeName(trimTemplateTypeText(typeText), base, arg) &&
             normalizeCollectionBindingTypeName(base) == "File";
+      };
+      auto assignDeclaredResultCollection = [&](const std::string &typeText) {
+        info.resultValueCollectionKind = LocalInfo::Kind::Value;
+        if (!info.resultHasValue) {
+          return;
+        }
+        resolveSupportedResultCollectionType(typeText, info.resultValueCollectionKind, info.resultValueKind);
       };
       info.isMutable = isBindingMutable(stmt);
       info.kind = kind;
@@ -251,6 +271,7 @@
           info.isResult = true;
           info.resultHasValue = inferredResultInfo.hasValue;
           info.resultValueKind = inferredResultInfo.valueKind;
+          info.resultValueCollectionKind = inferredResultInfo.valueCollectionKind;
           info.resultValueIsFileHandle = inferredResultInfo.valueIsFileHandle;
           info.resultValueStructType = inferredResultInfo.valueStructType;
           info.resultErrorType = inferredResultInfo.errorType;
@@ -365,10 +386,13 @@
         } else if (transform.name == "Result") {
           info.isResult = true;
           info.resultHasValue = (transform.templateArgs.size() == 2);
-          info.resultValueKind =
-              info.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
-                                  : LocalInfo::ValueKind::Unknown;
+          info.resultValueKind = LocalInfo::ValueKind::Unknown;
+          info.resultValueCollectionKind = LocalInfo::Kind::Value;
           if (info.resultHasValue && !transform.templateArgs.empty()) {
+            assignDeclaredResultCollection(transform.templateArgs.front());
+            if (info.resultValueCollectionKind == LocalInfo::Kind::Value) {
+              info.resultValueKind = valueKindFromTypeName(transform.templateArgs.front());
+            }
             assignDeclaredResultFileHandle(transform.templateArgs.front());
             if (info.resultValueIsFileHandle) {
               info.resultValueKind = LocalInfo::ValueKind::Int64;
@@ -399,7 +423,12 @@
             info.isResult = true;
             info.resultHasValue = resultHasValue;
             info.resultValueKind = resultValueKind;
+            info.resultValueCollectionKind = LocalInfo::Kind::Value;
             if (info.resultHasValue) {
+              std::string resultValueType;
+              if (extractDeclaredResultValueType(targetType, resultValueType)) {
+                assignDeclaredResultCollection(resultValueType);
+              }
               assignDeclaredResultFileHandle(targetType);
               if (info.resultValueIsFileHandle) {
                 info.resultValueKind = LocalInfo::ValueKind::Int64;

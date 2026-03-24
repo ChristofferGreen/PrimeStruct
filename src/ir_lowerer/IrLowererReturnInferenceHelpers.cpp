@@ -3,6 +3,7 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererResultHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -189,12 +190,21 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
       info.isResult = true;
       info.resultHasValue = resultHasValue;
       std::string resultValueType;
+      info.resultValueCollectionKind = LocalInfo::Kind::Value;
       info.resultValueIsFileHandle =
           resultHasValue && extractResultValueTypeText(typeName, resultValueType) &&
           isFileHandleTypeText(resultValueType);
-      info.resultValueKind =
-          info.resultValueIsFileHandle ? LocalInfo::ValueKind::Int64 : resultValueKind;
-      if (resultHasValue && resultValueKind == LocalInfo::ValueKind::Unknown) {
+      if (resultHasValue && !resultValueType.empty()) {
+        resolveSupportedResultCollectionType(
+            resultValueType, info.resultValueCollectionKind, info.resultValueKind);
+      }
+      if (info.resultValueIsFileHandle) {
+        info.resultValueKind = LocalInfo::ValueKind::Int64;
+      } else if (info.resultValueCollectionKind == LocalInfo::Kind::Value) {
+        info.resultValueKind = resultValueKind;
+      }
+      if (resultHasValue && info.resultValueKind == LocalInfo::ValueKind::Unknown &&
+          info.resultValueCollectionKind == LocalInfo::Kind::Value) {
         std::string base;
         std::string argList;
         std::vector<std::string> args;
@@ -275,9 +285,17 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
     } else if (transform.name == "Result") {
       bindingInfo.isResult = true;
       bindingInfo.resultHasValue = (transform.templateArgs.size() == 2);
-      bindingInfo.resultValueKind =
-          bindingInfo.resultHasValue ? valueKindFromTypeName(transform.templateArgs.front())
-                                     : LocalInfo::ValueKind::Unknown;
+      bindingInfo.resultValueKind = LocalInfo::ValueKind::Unknown;
+      bindingInfo.resultValueCollectionKind = LocalInfo::Kind::Value;
+      if (bindingInfo.resultHasValue && !transform.templateArgs.empty()) {
+        resolveSupportedResultCollectionType(
+            transform.templateArgs.front(),
+            bindingInfo.resultValueCollectionKind,
+            bindingInfo.resultValueKind);
+        if (bindingInfo.resultValueCollectionKind == LocalInfo::Kind::Value) {
+          bindingInfo.resultValueKind = valueKindFromTypeName(transform.templateArgs.front());
+        }
+      }
       bindingInfo.resultValueIsFileHandle =
           bindingInfo.resultHasValue && !transform.templateArgs.empty() &&
           isFileHandleTypeText(transform.templateArgs.front());

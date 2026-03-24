@@ -569,6 +569,63 @@
                                                   std::string &structTypeOut) -> bool {
           packedKindOut = inferExprKind(valueExpr, valueLocals);
           structTypeOut.clear();
+          auto resolveCollectionPayload = [&](LocalInfo::Kind &collectionKindOut,
+                                             LocalInfo::ValueKind &collectionValueKindOut) {
+            collectionKindOut = LocalInfo::Kind::Value;
+            collectionValueKindOut = LocalInfo::ValueKind::Unknown;
+            if (valueExpr.kind == Expr::Kind::Name) {
+              auto localIt = valueLocals.find(valueExpr.name);
+              if (localIt == valueLocals.end() ||
+                  !ir_lowerer::isSupportedPackedResultCollectionKind(localIt->second.kind)) {
+                return false;
+              }
+              collectionKindOut = localIt->second.kind;
+              collectionValueKindOut = localIt->second.valueKind;
+              return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
+            }
+            if (valueExpr.kind != Expr::Kind::Call) {
+              return false;
+            }
+            std::string collectionName;
+            if (!valueExpr.isMethodCall && getBuiltinCollectionName(valueExpr, collectionName) &&
+                valueExpr.templateArgs.size() == 1) {
+              if (collectionName == "array") {
+                collectionKindOut = LocalInfo::Kind::Array;
+              } else if (collectionName == "vector") {
+                collectionKindOut = LocalInfo::Kind::Vector;
+              } else {
+                return false;
+              }
+              collectionValueKindOut = valueKindFromTypeName(trimTemplateTypeText(valueExpr.templateArgs.front()));
+              return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
+            }
+            const Definition *callee = resolveDefinitionCall(valueExpr);
+            if (callee == nullptr) {
+              return false;
+            }
+            std::string declaredCollection;
+            std::vector<std::string> declaredCollectionArgs;
+            if (!ir_lowerer::inferDeclaredReturnCollection(*callee, declaredCollection, declaredCollectionArgs) ||
+                declaredCollectionArgs.size() != 1) {
+              return false;
+            }
+            if (declaredCollection == "array") {
+              collectionKindOut = LocalInfo::Kind::Array;
+            } else if (declaredCollection == "vector") {
+              collectionKindOut = LocalInfo::Kind::Vector;
+            } else {
+              return false;
+            }
+            collectionValueKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
+            return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
+          };
+          LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
+          LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
+          if (resolveCollectionPayload(collectionKind, collectionValueKind) &&
+              ir_lowerer::isSupportedPackedResultCollectionKind(collectionKind)) {
+            packedKindOut = collectionValueKind;
+            return true;
+          }
           if (isFileHandleExpr(valueExpr, valueLocals) && packedKindOut == LocalInfo::ValueKind::Int64) {
             return true;
           }
@@ -720,7 +777,11 @@
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
-          if (!sourceResultInfo.valueStructType.empty()) {
+          if (ir_lowerer::isSupportedPackedResultCollectionKind(sourceResultInfo.valueCollectionKind)) {
+            paramInfo.index = payloadLocal;
+            paramInfo.kind = sourceResultInfo.valueCollectionKind;
+            paramInfo.valueKind = sourceResultInfo.valueKind;
+          } else if (!sourceResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo)) {
               error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map");
               return false;
@@ -731,7 +792,8 @@
             paramInfo.valueKind = sourceResultInfo.valueKind;
             paramInfo.isFileHandle = sourceResultInfo.valueIsFileHandle;
           }
-          if (sourceResultInfo.valueStructType.empty() &&
+          if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::Value &&
+              sourceResultInfo.valueStructType.empty() &&
               sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
             paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
           }
@@ -823,7 +885,11 @@
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
-          if (!sourceResultInfo.valueStructType.empty()) {
+          if (ir_lowerer::isSupportedPackedResultCollectionKind(sourceResultInfo.valueCollectionKind)) {
+            paramInfo.index = payloadLocal;
+            paramInfo.kind = sourceResultInfo.valueCollectionKind;
+            paramInfo.valueKind = sourceResultInfo.valueKind;
+          } else if (!sourceResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo)) {
               error = ir_lowerer::unsupportedPackedResultValueKindError("Result.and_then");
               return false;
@@ -834,7 +900,8 @@
             paramInfo.valueKind = sourceResultInfo.valueKind;
             paramInfo.isFileHandle = sourceResultInfo.valueIsFileHandle;
           }
-          if (sourceResultInfo.valueStructType.empty() &&
+          if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::Value &&
+              sourceResultInfo.valueStructType.empty() &&
               sourceResultInfo.valueKind == LocalInfo::ValueKind::String) {
             paramInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
           }
@@ -980,7 +1047,11 @@
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo leftParamInfo;
-          if (!leftResultInfo.valueStructType.empty()) {
+          if (ir_lowerer::isSupportedPackedResultCollectionKind(leftResultInfo.valueCollectionKind)) {
+            leftParamInfo.index = leftPayloadLocal;
+            leftParamInfo.kind = leftResultInfo.valueCollectionKind;
+            leftParamInfo.valueKind = leftResultInfo.valueKind;
+          } else if (!leftResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(leftPayloadLocal, leftResultInfo.valueStructType, leftParamInfo)) {
               error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
               return false;
@@ -991,14 +1062,19 @@
             leftParamInfo.valueKind = leftResultInfo.valueKind;
             leftParamInfo.isFileHandle = leftResultInfo.valueIsFileHandle;
           }
-          if (leftResultInfo.valueStructType.empty() &&
+          if (leftResultInfo.valueCollectionKind == LocalInfo::Kind::Value &&
+              leftResultInfo.valueStructType.empty() &&
               leftResultInfo.valueKind == LocalInfo::ValueKind::String) {
             leftParamInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
           }
           lambdaLocals[lambdaExpr.args[0].name] = leftParamInfo;
 
           LocalInfo rightParamInfo;
-          if (!rightResultInfo.valueStructType.empty()) {
+          if (ir_lowerer::isSupportedPackedResultCollectionKind(rightResultInfo.valueCollectionKind)) {
+            rightParamInfo.index = rightPayloadLocal;
+            rightParamInfo.kind = rightResultInfo.valueCollectionKind;
+            rightParamInfo.valueKind = rightResultInfo.valueKind;
+          } else if (!rightResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(rightPayloadLocal, rightResultInfo.valueStructType, rightParamInfo)) {
               error = ir_lowerer::unsupportedPackedResultValueKindError("Result.map2");
               return false;
@@ -1009,7 +1085,8 @@
             rightParamInfo.valueKind = rightResultInfo.valueKind;
             rightParamInfo.isFileHandle = rightResultInfo.valueIsFileHandle;
           }
-          if (rightResultInfo.valueStructType.empty() &&
+          if (rightResultInfo.valueCollectionKind == LocalInfo::Kind::Value &&
+              rightResultInfo.valueStructType.empty() &&
               rightResultInfo.valueKind == LocalInfo::ValueKind::String) {
             rightParamInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
           }
@@ -1062,6 +1139,7 @@
             [&](const Expr &valueExpr, const LocalMap &valueLocals) {
               return inferStructExprPath(valueExpr, valueLocals);
             },
+            [&](const Expr &valueExpr) { return resolveDefinitionCall(valueExpr); },
             [&](const Expr &valueExpr, const LocalMap &valueLocals) {
               return isFileHandleExpr(valueExpr, valueLocals);
             },
