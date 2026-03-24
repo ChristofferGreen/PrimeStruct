@@ -487,7 +487,54 @@
           return false;
         };
 
-        auto resolveExprBinding = [&](const Expr &candidate, BindingInfo &bindingOut) -> bool {
+        auto resolveStructTypePath =
+            [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
+          if (typeName.empty()) {
+            return "";
+          }
+          if (!typeName.empty() && typeName[0] == '/') {
+            return structTypeMap.count(typeName) > 0 ? typeName : "";
+          }
+          std::string current = namespacePrefix;
+          while (true) {
+            if (!current.empty()) {
+              std::string scoped = current + "/" + typeName;
+              if (structTypeMap.count(scoped) > 0) {
+                return scoped;
+              }
+              if (current.size() > typeName.size()) {
+                const size_t start = current.size() - typeName.size();
+                if (start > 0 && current[start - 1] == '/' &&
+                    current.compare(start, typeName.size(), typeName) == 0 &&
+                    structTypeMap.count(current) > 0) {
+                  return current;
+                }
+              }
+            } else {
+              std::string root = "/" + typeName;
+              if (structTypeMap.count(root) > 0) {
+                return root;
+              }
+            }
+            if (current.empty()) {
+              break;
+            }
+            const size_t slash = current.find_last_of('/');
+            if (slash == std::string::npos || slash == 0) {
+              current.clear();
+            } else {
+              current.erase(slash);
+            }
+          }
+          auto importIt = importAliases.find(typeName);
+          if (importIt != importAliases.end() && structTypeMap.count(importIt->second) > 0) {
+            return importIt->second;
+          }
+          return "";
+        };
+
+        std::function<bool(const Expr &, BindingInfo &)> resolveExprBinding;
+        resolveExprBinding = [&](const Expr &candidate, BindingInfo &bindingOut) -> bool {
           if (candidate.kind == Expr::Kind::Name) {
             auto localIt = localTypes.find(candidate.name);
             if (localIt != localTypes.end()) {
@@ -542,6 +589,64 @@
             }
             return !accessBindingOut.typeName.empty();
           };
+
+          auto resolveFieldAccessBinding = [&](const Expr &fieldExpr, BindingInfo &fieldBindingOut) -> bool {
+            if (fieldExpr.kind != Expr::Kind::Call || !fieldExpr.isFieldAccess ||
+                fieldExpr.args.size() != 1) {
+              return false;
+            }
+
+            BindingInfo receiverBinding;
+            if (!resolveExprBinding(fieldExpr.args.front(), receiverBinding)) {
+              return false;
+            }
+
+            std::string receiverTypeName = receiverBinding.typeName;
+            if ((normalizeBindingTypeName(receiverBinding.typeName) == "Reference" ||
+                 normalizeBindingTypeName(receiverBinding.typeName) == "Pointer") &&
+                !receiverBinding.typeTemplateArg.empty()) {
+              receiverTypeName = receiverBinding.typeTemplateArg;
+            }
+
+            std::string base;
+            std::string arg;
+            if (splitTemplateTypeName(receiverTypeName, base, arg) &&
+                normalizeBindingTypeName(base) == "uninitialized") {
+              receiverTypeName = arg;
+            }
+
+            const std::string receiverStructPath =
+                resolveStructTypePath(receiverTypeName, fieldExpr.args.front().namespacePrefix);
+            if (receiverStructPath.empty()) {
+              return false;
+            }
+
+            auto defIt = defMap.find(receiverStructPath);
+            if (defIt == defMap.end() || defIt->second == nullptr) {
+              return false;
+            }
+
+            for (const auto &fieldStmt : defIt->second->statements) {
+              bool isStaticField = false;
+              for (const auto &transform : fieldStmt.transforms) {
+                if (transform.name == "static") {
+                  isStaticField = true;
+                  break;
+                }
+              }
+              if (!fieldStmt.isBinding || isStaticField || fieldStmt.name != fieldExpr.name) {
+                continue;
+              }
+              fieldBindingOut = getBindingInfo(fieldStmt);
+              return true;
+            }
+
+            return false;
+          };
+
+          if (resolveFieldAccessBinding(candidate, bindingOut)) {
+            return true;
+          }
 
           if (resolveAccessBinding(candidate, bindingOut)) {
             return true;
@@ -599,7 +704,8 @@
                 locationTarget.args.size() == 1) {
               const Expr &receiver = locationTarget.args.front();
               std::string receiverText;
-              if (receiver.kind == Expr::Kind::Call && receiver.isFieldAccess && receiver.args.size() == 1) {
+              if (receiver.kind == Expr::Kind::Call && receiver.isFieldAccess &&
+                  receiver.args.size() == 1) {
                 receiverText = emitPackedLocationLValue(receiver);
               } else {
                 receiverText =
@@ -614,13 +720,13 @@
                              resultInfos,
                              returnStructs,
                              allowMathBare);
-                BindingInfo receiverBinding;
-                if (resolveExprBinding(receiver, receiverBinding)) {
-                  const std::string normalizedReceiverType =
-                      normalizeBindingTypeName(receiverBinding.typeName);
-                  if (normalizedReceiverType == "Reference" || normalizedReceiverType == "Pointer") {
-                    receiverText = "ps_deref(" + receiverText + ")";
-                  }
+              }
+              BindingInfo receiverBinding;
+              if (resolveExprBinding(receiver, receiverBinding)) {
+                const std::string normalizedReceiverType =
+                    normalizeBindingTypeName(receiverBinding.typeName);
+                if (normalizedReceiverType == "Reference" || normalizedReceiverType == "Pointer") {
+                  receiverText = "ps_deref(" + receiverText + ")";
                 }
               }
               return receiverText + "." + locationTarget.name;
@@ -651,6 +757,11 @@
             }
             if (normalizedPackBase == "Pointer" && locationTarget.kind == Expr::Kind::Call &&
                 locationTarget.isFieldAccess && locationTarget.args.size() == 1) {
+              BindingInfo locationBinding;
+              if (resolveExprBinding(locationTarget, locationBinding) &&
+                  normalizeBindingTypeName(locationBinding.typeName) == "Reference") {
+                return "(&ps_deref(" + targetExpr + "))";
+              }
               return "(&(" + targetExpr + "))";
             }
             if (normalizedPackBase == "Pointer") {

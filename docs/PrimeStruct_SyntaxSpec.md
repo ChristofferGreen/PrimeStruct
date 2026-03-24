@@ -439,7 +439,8 @@ Bottom-level form therefore has:
   `Reference<T>`, including same-file helper-returned and imported-helper-alias `Reference<T>` expressions that feed
   `location(...)`, borrowed pack access forms like `at(values, i)`, `values.at(i)`, and
   `values.at_unsafe(i)`, plus borrowed struct-field lvalues derived from those pack accesses such as
-  `location(values.at(i).field)`; other unsupported non-string element support remains a separate follow-up slice.
+  `location(values.at(i).field)` and `location(values.at(i).ref_field)`; other unsupported non-string
+  element support remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 
