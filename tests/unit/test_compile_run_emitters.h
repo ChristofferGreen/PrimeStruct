@@ -30,6 +30,613 @@ static bool buildEmittedCppExecutableAtO0(const std::string &srcPath,
   return runCommand(compileCmd) == 0;
 }
 
+static std::string sharedCppEmitterFixtureArgs(int selector) {
+  std::string args;
+  for (int index = 1; index < selector; ++index) {
+    args += " ";
+    args += quoteShellArg("case" + std::to_string(index));
+  }
+  return args;
+}
+
+static std::string requireSharedCppEmitterFixtureExecutable(const std::string &fixtureName,
+                                                            const std::string &source) {
+  std::string exePath;
+  REQUIRE(buildCachedEmittedCppExecutableAtO0(fixtureName, source, exePath));
+  return exePath;
+}
+
+static int runSharedCppEmitterFixture(const std::string &fixtureName,
+                                      const std::string &source,
+                                      int selector) {
+  const std::string exePath = requireSharedCppEmitterFixtureExecutable(fixtureName, source);
+  return runCommand(quoteShellArg(exePath) + sharedCppEmitterFixtureArgs(selector));
+}
+
+static int runSharedCppEmitterFixtureToFile(const std::string &fixtureName,
+                                            const std::string &source,
+                                            int selector,
+                                            const std::string &outPath) {
+  const std::string exePath = requireSharedCppEmitterFixtureExecutable(fixtureName, source);
+  return runCommand(quoteShellArg(exePath) + sharedCppEmitterFixtureArgs(selector) + " > " + quoteShellArg(outPath));
+}
+
+static const std::string &sharedCppEmitterResultFixtureSource() {
+  static const std::string source = R"(
+[return<Result<i32, FileError>>]
+lift([i32] value) {
+  return(Result.ok(value))
+}
+
+[return<int>]
+run_result_combinators() {
+  [Result<i32, FileError>] first{ Result.ok(2i32) }
+  [Result<i32, FileError>] second{ Result.ok(3i32) }
+  return(
+    Result.and_then(
+      Result.map2(
+        Result.map(first, []([i32] value) { return(multiply(value, 4i32)) }),
+        second,
+        []([i32] left, [i32] right) { return(plus(left, right)) }
+      ),
+      []([i32] total) { return(lift(plus(total, 5i32))) }
+    )
+  )
+}
+
+[return<int>]
+run_result_ok_lambda() {
+  [Result<i32, FileError>] first{ Result.ok(2i32) }
+  [Result<i32, FileError>] second{ Result.ok(3i32) }
+  return(
+    Result.and_then(
+      Result.map2(first, second, []([i32] left, [i32] right) { return(plus(left, right)) }),
+      []([i32] total) { return(Result.ok(multiply(total, 4i32))) }
+    )
+  )
+}
+
+[return<int>]
+main([array<string>] args) {
+  [i32] selector{count(args)}
+  if(equal(selector, 2i32)) {
+    return(run_result_combinators())
+  }
+  if(equal(selector, 3i32)) {
+    return(run_result_ok_lambda())
+  }
+  return(91i32)
+}
+)";
+  return source;
+}
+
+static const std::string &sharedCppEmitterImageFixtureSource() {
+  static const std::string source = R"(
+import /std/image/*
+
+[effects(heap_alloc, io_out, file_write), return<int>]
+main([array<string>] args) {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  print_line(Result.why(/std/image/ppm/read(width, height, pixels, "input.ppm"utf8)))
+  print_line(Result.why(/std/image/ppm/write("output.ppm"utf8, width, height, pixels)))
+  print_line(Result.why(/std/image/png/read(width, height, pixels, "input.png"utf8)))
+  print_line(Result.why(/std/image/png/write("output.png"utf8, width, height, pixels)))
+  return(plus(width, height))
+}
+)";
+  return source;
+}
+
+static const std::string &sharedCppEmitterUiCommandFixtureSource() {
+  static const std::string source = R"(
+import /std/collections/*
+import /std/math/*
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{vectorCount<i32>(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(vectorAt<i32>(words, index))
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_command_serialization() {
+  [CommandList mut] commands{CommandList()}
+  commands.draw_rounded_rect(
+    2i32,
+    4i32,
+    30i32,
+    40i32,
+    6i32,
+    Rgba8([r] 12i32, [g] 34i32, [b] 56i32, [a] 255i32)
+  )
+  commands.draw_text(
+    7i32,
+    9i32,
+    14i32,
+    Rgba8([r] 255i32, [g] 240i32, [b] 0i32, [a] 255i32),
+    "Hi!"utf8
+  )
+  dump_words(commands.serialize())
+  return(commands.command_count())
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_clip_command_serialization() {
+  [CommandList mut] commands{CommandList()}
+  commands.push_clip(1i32, 2i32, 20i32, 10i32)
+  commands.draw_text(
+    7i32,
+    9i32,
+    14i32,
+    Rgba8([r] 255i32, [g] 240i32, [b] 0i32, [a] 255i32),
+    "Hi!"utf8
+  )
+  commands.push_clip(3i32, 4i32, 5i32, 6i32)
+  commands.draw_rounded_rect(
+    8i32,
+    9i32,
+    10i32,
+    11i32,
+    2i32,
+    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 4i32)
+  )
+  commands.pop_clip()
+  commands.pop_clip()
+  commands.pop_clip()
+  dump_words(commands.serialize())
+  return(plus(commands.command_count(), commands.clip_depth()))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main([array<string>] args) {
+  [i32] selector{count(args)}
+  if(equal(selector, 2i32)) {
+    return(run_ui_command_serialization())
+  }
+  if(equal(selector, 3i32)) {
+    return(run_ui_clip_command_serialization())
+  }
+  return(91i32)
+}
+)";
+  return source;
+}
+
+static const std::string &sharedCppEmitterUiLayoutFixtureSource() {
+  static const std::string source = R"(
+import /std/collections/*
+import /std/math/*
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{vectorCount<i32>(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(vectorAt<i32>(words, index))
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_layout_tree_serialization() {
+  [LayoutTree mut] tree{LayoutTree()}
+  [i32] root{tree.append_root_column(2i32, 3i32, 10i32, 4i32)}
+  [i32] header{tree.append_leaf(root, 20i32, 5i32)}
+  [i32] body{tree.append_column(root, 1i32, 2i32, 12i32, 8i32)}
+  [i32] badge{tree.append_leaf(body, 8i32, 4i32)}
+  [i32] details{tree.append_leaf(body, 10i32, 6i32)}
+  [i32] footer{tree.append_leaf(root, 6i32, 7i32)}
+  tree.measure()
+  tree.arrange(10i32, 20i32, 50i32, 40i32)
+  dump_words(tree.serialize())
+  return(tree.node_count())
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_layout_tree_empty_root() {
+  [LayoutTree mut] tree{LayoutTree()}
+  [i32] root{tree.append_root_column(4i32, 9i32, 11i32, 13i32)}
+  tree.measure()
+  tree.arrange(3i32, 5i32, 11i32, 13i32)
+  dump_words(tree.serialize())
+  return(tree.node_count())
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main([array<string>] args) {
+  [i32] selector{count(args)}
+  if(equal(selector, 2i32)) {
+    return(run_ui_layout_tree_serialization())
+  }
+  if(equal(selector, 3i32)) {
+    return(run_ui_layout_tree_empty_root())
+  }
+  return(91i32)
+}
+)";
+  return source;
+}
+
+static const std::string &sharedCppEmitterUiWidgetFixtureSource() {
+  static const std::string source = R"(
+import /std/collections/*
+import /std/math/*
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{vectorCount<i32>(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(vectorAt<i32>(words, index))
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_basic_widget_controls() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
+  [i32] title{layout.append_label(root, 10i32, "Hi"utf8)}
+  [i32] action{layout.append_button(root, 10i32, 3i32, "Go"utf8)}
+  [i32] field{layout.append_input(root, 10i32, 2i32, 18i32, "abc"utf8)}
+  layout.measure()
+  layout.arrange(5i32, 6i32, 30i32, 46i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.draw_label(layout, title, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "Hi"utf8)
+  commands.draw_button(
+    layout,
+    action,
+    10i32,
+    3i32,
+    4i32,
+    Rgba8([r] 10i32, [g] 20i32, [b] 30i32, [a] 255i32),
+    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    "Go"utf8
+  )
+  commands.draw_input(
+    layout,
+    field,
+    10i32,
+    2i32,
+    3i32,
+    Rgba8([r] 40i32, [g] 50i32, [b] 60i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 210i32, [b] 220i32, [a] 255i32),
+    "abc"utf8
+  )
+  dump_words(commands.serialize())
+  return(plus(layout.node_count(), commands.command_count()))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_panel_widget() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
+  [i32] title{layout.append_label(root, 10i32, "Top"utf8)}
+  [i32] panel{layout.append_panel(root, 2i32, 1i32, 20i32, 12i32)}
+  [i32] action{layout.append_button(panel, 10i32, 2i32, "Go"utf8)}
+  [i32] field{layout.append_input(panel, 10i32, 1i32, 16i32, "abc"utf8)}
+  [i32] footer{layout.append_label(root, 10i32, "!"utf8)}
+  layout.measure()
+  layout.arrange(4i32, 5i32, 28i32, 60i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.draw_label(layout, title, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "Top"utf8)
+  commands.begin_panel(layout, panel, 4i32, Rgba8([r] 8i32, [g] 9i32, [b] 10i32, [a] 255i32))
+  commands.draw_button(
+    layout,
+    action,
+    10i32,
+    2i32,
+    3i32,
+    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
+    "Go"utf8
+  )
+  commands.draw_input(
+    layout,
+    field,
+    10i32,
+    1i32,
+    2i32,
+    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
+    Rgba8([r] 210i32, [g] 211i32, [b] 212i32, [a] 255i32),
+    "abc"utf8
+  )
+  commands.end_panel()
+  commands.draw_label(layout, footer, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "!"utf8)
+  dump_words(commands.serialize())
+  return(plus(layout.node_count(), plus(commands.command_count(), commands.clip_depth())))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_empty_panel_widget() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(0i32, 0i32, 0i32, 0i32)}
+  [i32] panel{layout.append_panel(root, 3i32, 1i32, 12i32, 10i32)}
+  layout.measure()
+  layout.arrange(2i32, 3i32, 20i32, 18i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.begin_panel(layout, panel, 5i32, Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32))
+  commands.end_panel()
+  dump_words(commands.serialize())
+  return(plus(layout.node_count(), plus(commands.command_count(), commands.clip_depth())))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main([array<string>] args) {
+  [i32] selector{count(args)}
+  if(equal(selector, 2i32)) {
+    return(run_ui_basic_widget_controls())
+  }
+  if(equal(selector, 3i32)) {
+    return(run_ui_panel_widget())
+  }
+  if(equal(selector, 4i32)) {
+    return(run_ui_empty_panel_widget())
+  }
+  return(91i32)
+}
+)";
+  return source;
+}
+
+static const std::string &sharedCppEmitterUiLoginFixtureSource() {
+  static const std::string source = R"(
+import /std/collections/*
+import /std/math/*
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{vectorCount<i32>(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(vectorAt<i32>(words, index))
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_composite_login_form() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+  layout.measure()
+  layout.arrange(6i32, 7i32, 40i32, 57i32)
+
+  [CommandList mut] commands{CommandList()}
+  commands.draw_login_form(
+    layout,
+    login,
+    10i32,
+    1i32,
+    2i32,
+    4i32,
+    3i32,
+    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
+    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
+    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
+    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
+    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )
+  dump_words(commands.serialize())
+  return(plus(layout.node_count(), plus(commands.command_count(), commands.clip_depth())))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_html_login_form() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+  layout.measure()
+  layout.arrange(6i32, 7i32, 40i32, 57i32)
+
+  [HtmlCommandList mut] html{HtmlCommandList()}
+  html.emit_login_form(
+    layout,
+    login,
+    10i32,
+    1i32,
+    2i32,
+    4i32,
+    3i32,
+    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
+    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
+    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
+    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
+    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
+    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8,
+    "user_input"utf8,
+    "pass_input"utf8,
+    "submit_click"utf8
+  )
+  dump_words(html.serialize())
+  return(plus(layout.node_count(), html.commandCount))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main([array<string>] args) {
+  [i32] selector{count(args)}
+  if(equal(selector, 2i32)) {
+    return(run_ui_composite_login_form())
+  }
+  if(equal(selector, 3i32)) {
+    return(run_ui_html_login_form())
+  }
+  return(91i32)
+}
+)";
+  return source;
+}
+
+static const std::string &sharedCppEmitterUiEventFixtureSource() {
+  static const std::string source = R"(
+import /std/collections/*
+import /std/math/*
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{vectorCount<i32>(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(vectorAt<i32>(words, index))
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_event_stream() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_pointer_move(login.usernameInput, 7i32, 20i32, 30i32)
+  events.push_pointer_down(login.submitButton, 7i32, 1i32, 20i32, 30i32)
+  events.push_pointer_up(login.submitButton, 7i32, 1i32, 21i32, 31i32)
+  events.push_key_down(login.usernameInput, 13i32, 3i32, 1i32)
+  events.push_key_up(login.usernameInput, 13i32, 1i32)
+  dump_words(events.serialize())
+  return(plus(login.submitButton, events.event_count()))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_ime_event_stream() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_ime_preedit(login.usernameInput, 1i32, 4i32, "al|"utf8)
+  events.push_ime_commit(login.usernameInput, "alice"utf8)
+  dump_words(events.serialize())
+  return(plus(login.usernameInput, events.event_count()))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_resize_focus_event_stream() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_resize(login.panel, 40i32, 57i32)
+  events.push_focus_gained(login.usernameInput)
+  events.push_focus_lost(login.usernameInput)
+  dump_words(events.serialize())
+  return(plus(login.usernameInput, events.event_count()))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main([array<string>] args) {
+  [i32] selector{count(args)}
+  if(equal(selector, 2i32)) {
+    return(run_ui_event_stream())
+  }
+  if(equal(selector, 3i32)) {
+    return(run_ui_ime_event_stream())
+  }
+  if(equal(selector, 4i32)) {
+    return(run_ui_resize_focus_event_stream())
+  }
+  return(91i32)
+}
+)";
+  return source;
+}
+
 TEST_CASE("compiles and runs chained method calls in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
@@ -348,86 +955,23 @@ main() {
 }
 
 TEST_CASE("C++ emitter compiles nested Result combinators") {
-  const std::string source = R"(
-[return<Result<i32, FileError>>]
-lift([i32] value) {
-  return(Result.ok(value))
-}
-
-[return<Result<i32, FileError>>]
-main() {
-  [Result<i32, FileError>] first{ Result.ok(2i32) }
-  [Result<i32, FileError>] second{ Result.ok(3i32) }
-  return(
-    Result.and_then(
-      Result.map2(
-        Result.map(first, []([i32] value) { return(multiply(value, 4i32)) }),
-        second,
-        []([i32] left, [i32] right) { return(plus(left, right)) }
-      ),
-      []([i32] total) { return(lift(plus(total, 5i32))) }
-    )
-  )
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_result_combinators.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_result_combinators_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 16);
+  CHECK(runSharedCppEmitterFixture("primec_cpp_emitter_result_fixture", sharedCppEmitterResultFixtureSource(), 2) ==
+        16);
 }
 
 TEST_CASE("C++ emitter compiles Result.and_then direct Result.ok lambda") {
-  const std::string source = R"(
-[return<Result<i32, FileError>>]
-main() {
-  [Result<i32, FileError>] first{ Result.ok(2i32) }
-  [Result<i32, FileError>] second{ Result.ok(3i32) }
-  return(
-    Result.and_then(
-      Result.map2(first, second, []([i32] left, [i32] right) { return(plus(left, right)) }),
-      []([i32] total) { return(Result.ok(multiply(total, 4i32))) }
-    )
-  )
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_result_and_then_ok_lambda.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_result_and_then_ok_lambda_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 20);
+  CHECK(runSharedCppEmitterFixture("primec_cpp_emitter_result_fixture", sharedCppEmitterResultFixtureSource(), 3) ==
+        20);
 }
 
 TEST_CASE("C++ emitter supports image api contract deterministically") {
-  const std::string source = R"(
-import /std/image/*
-import /std/collections/*
-
-[effects(heap_alloc, io_out, file_write), return<int>]
-main() {
-  [i32 mut] width{0i32}
-  [i32 mut] height{0i32}
-  [vector<i32> mut] pixels{vector<i32>()}
-  print_line(Result.why(/std/image/ppm/read(width, height, pixels, "input.ppm"utf8)))
-  print_line(Result.why(/std/image/ppm/write("output.ppm"utf8, width, height, pixels)))
-  print_line(Result.why(/std/image/png/read(width, height, pixels, "input.png"utf8)))
-  print_line(Result.why(/std/image/png/write("output.png"utf8, width, height, pixels)))
-  return(plus(width, height))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_image_api_unsupported.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_image_api_unsupported").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_image_api_unsupported.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_image_fixture",
+                                         sharedCppEmitterImageFixtureSource(),
+                                         2,
+                                         outPath) == 0);
   CHECK(readFile(outPath) ==
         "image_invalid_operation\n"
         "image_invalid_operation\n"
@@ -436,706 +980,142 @@ main() {
 }
 
 TEST_CASE("C++ emitter runs software renderer command serialization deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [CommandList mut] commands{CommandList()}
-  commands.draw_rounded_rect(
-    2i32,
-    4i32,
-    30i32,
-    40i32,
-    6i32,
-    Rgba8([r] 12i32, [g] 34i32, [b] 56i32, [a] 255i32)
-  )
-  commands.draw_text(
-    7i32,
-    9i32,
-    14i32,
-    Rgba8([r] 255i32, [g] 240i32, [b] 0i32, [a] 255i32),
-    "Hi!"utf8
-  )
-  dump_words(commands.serialize())
-  return(commands.command_count())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_command_serialization.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_command_serialization_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_command_serialization.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 2);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_commands_fixture",
+                                         sharedCppEmitterUiCommandFixtureSource(),
+                                         2,
+                                         outPath) == 2);
   CHECK(readFile(outPath) == "1,2,2,9,2,4,30,40,6,12,34,56,255,1,11,7,9,14,255,240,0,255,3,72,105,33\n");
 }
 
 TEST_CASE("C++ emitter runs software renderer clip stack serialization deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [CommandList mut] commands{CommandList()}
-  commands.push_clip(1i32, 2i32, 20i32, 10i32)
-  commands.draw_text(
-    7i32,
-    9i32,
-    14i32,
-    Rgba8([r] 255i32, [g] 240i32, [b] 0i32, [a] 255i32),
-    "Hi!"utf8
-  )
-  commands.push_clip(3i32, 4i32, 5i32, 6i32)
-  commands.draw_rounded_rect(
-    8i32,
-    9i32,
-    10i32,
-    11i32,
-    2i32,
-    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 4i32)
-  )
-  commands.pop_clip()
-  commands.pop_clip()
-  commands.pop_clip()
-  dump_words(commands.serialize())
-  return(plus(commands.command_count(), commands.clip_depth()))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_clip_command_serialization.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_clip_command_serialization_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_clip_command_serialization.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 6);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_commands_fixture",
+                                         sharedCppEmitterUiCommandFixtureSource(),
+                                         3,
+                                         outPath) == 6);
   CHECK(readFile(outPath) ==
         "1,6,3,4,1,2,20,10,1,11,7,9,14,255,240,0,255,3,72,105,33,3,4,3,4,5,6,2,9,8,9,10,11,2,1,2,3,4,4,0,4,0\n");
 }
 
 TEST_CASE("C++ emitter runs two-pass layout tree serialization deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] tree{LayoutTree()}
-  [i32] root{tree.append_root_column(2i32, 3i32, 10i32, 4i32)}
-  [i32] header{tree.append_leaf(root, 20i32, 5i32)}
-  [i32] body{tree.append_column(root, 1i32, 2i32, 12i32, 8i32)}
-  [i32] badge{tree.append_leaf(body, 8i32, 4i32)}
-  [i32] details{tree.append_leaf(body, 10i32, 6i32)}
-  [i32] footer{tree.append_leaf(root, 6i32, 7i32)}
-  tree.measure()
-  tree.arrange(10i32, 20i32, 50i32, 40i32)
-  dump_words(tree.serialize())
-  return(tree.node_count())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_layout_tree_serialization.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_serialization_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_serialization.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 6);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_layout_fixture",
+                                         sharedCppEmitterUiLayoutFixtureSource(),
+                                         2,
+                                         outPath) == 6);
   CHECK(readFile(outPath) ==
         "1,6,2,-1,24,36,10,20,50,40,1,0,20,5,12,22,46,5,2,0,12,14,12,30,46,14,1,2,8,4,13,31,44,4,1,2,10,6,13,37,44,6,1,0,6,7,12,47,46,7\n");
 }
 
 TEST_CASE("C++ emitter runs two-pass layout empty root deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] tree{LayoutTree()}
-  [i32] root{tree.append_root_column(4i32, 9i32, 11i32, 13i32)}
-  tree.measure()
-  tree.arrange(3i32, 5i32, 11i32, 13i32)
-  dump_words(tree.serialize())
-  return(tree.node_count())
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_layout_tree_empty_root.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_empty_root_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_empty_root.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 1);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_layout_fixture",
+                                         sharedCppEmitterUiLayoutFixtureSource(),
+                                         3,
+                                         outPath) == 1);
   CHECK(readFile(outPath) == "1,1,2,-1,11,13,3,5,11,13\n");
 }
 
 TEST_CASE("C++ emitter runs basic widget controls through layout deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] layout{LayoutTree()}
-  [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
-  [i32] title{layout.append_label(root, 10i32, "Hi"utf8)}
-  [i32] action{layout.append_button(root, 10i32, 3i32, "Go"utf8)}
-  [i32] field{layout.append_input(root, 10i32, 2i32, 18i32, "abc"utf8)}
-  layout.measure()
-  layout.arrange(5i32, 6i32, 30i32, 46i32)
-
-  [CommandList mut] commands{CommandList()}
-  commands.draw_label(layout, title, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "Hi"utf8)
-  commands.draw_button(
-    layout,
-    action,
-    10i32,
-    3i32,
-    4i32,
-    Rgba8([r] 10i32, [g] 20i32, [b] 30i32, [a] 255i32),
-    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
-    "Go"utf8
-  )
-  commands.draw_input(
-    layout,
-    field,
-    10i32,
-    2i32,
-    3i32,
-    Rgba8([r] 40i32, [g] 50i32, [b] 60i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 210i32, [b] 220i32, [a] 255i32),
-    "abc"utf8
-  )
-  dump_words(commands.serialize())
-  return(plus(layout.node_count(), commands.command_count()))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_basic_widget_controls.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_basic_widget_controls_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_basic_widget_controls.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 9);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_widgets_fixture",
+                                         sharedCppEmitterUiWidgetFixtureSource(),
+                                         2,
+                                         outPath) == 9);
   CHECK(readFile(outPath) ==
         "1,5,1,10,6,7,10,1,2,3,255,2,72,105,2,9,6,19,28,16,4,10,20,30,255,1,10,9,22,10,250,251,252,255,2,71,111,2,9,6,37,28,14,3,40,50,60,255,1,11,8,39,10,200,210,220,255,3,97,98,99\n");
 }
 
 TEST_CASE("C++ emitter runs panel container widget deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] layout{LayoutTree()}
-  [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
-  [i32] title{layout.append_label(root, 10i32, "Top"utf8)}
-  [i32] panel{layout.append_panel(root, 2i32, 1i32, 20i32, 12i32)}
-  [i32] action{layout.append_button(panel, 10i32, 2i32, "Go"utf8)}
-  [i32] field{layout.append_input(panel, 10i32, 1i32, 16i32, "abc"utf8)}
-  [i32] footer{layout.append_label(root, 10i32, "!"utf8)}
-  layout.measure()
-  layout.arrange(4i32, 5i32, 28i32, 60i32)
-
-  [CommandList mut] commands{CommandList()}
-  commands.draw_label(layout, title, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "Top"utf8)
-  commands.begin_panel(layout, panel, 4i32, Rgba8([r] 8i32, [g] 9i32, [b] 10i32, [a] 255i32))
-  commands.draw_button(
-    layout,
-    action,
-    10i32,
-    2i32,
-    3i32,
-    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
-    "Go"utf8
-  )
-  commands.draw_input(
-    layout,
-    field,
-    10i32,
-    1i32,
-    2i32,
-    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
-    Rgba8([r] 210i32, [g] 211i32, [b] 212i32, [a] 255i32),
-    "abc"utf8
-  )
-  commands.end_panel()
-  commands.draw_label(layout, footer, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "!"utf8)
-  dump_words(commands.serialize())
-  return(plus(layout.node_count(), plus(commands.command_count(), commands.clip_depth())))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_panel_widget.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_panel_widget_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_panel_widget.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 15);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_widgets_fixture",
+                                         sharedCppEmitterUiWidgetFixtureSource(),
+                                         3,
+                                         outPath) == 15);
   CHECK(readFile(outPath) ==
         "1,9,1,11,5,6,10,1,2,3,255,3,84,111,112,2,9,5,18,26,31,4,8,9,10,255,3,4,7,20,22,27,2,9,7,20,22,14,3,20,30,40,255,1,10,9,22,10,200,201,202,255,2,71,111,2,9,7,35,22,12,2,50,60,70,255,1,11,8,36,10,210,211,212,255,3,97,98,99,4,0,1,9,5,51,10,1,2,3,255,1,33\n");
 }
 
 TEST_CASE("C++ emitter runs empty panel container stays balanced deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] layout{LayoutTree()}
-  [i32] root{layout.append_root_column(0i32, 0i32, 0i32, 0i32)}
-  [i32] panel{layout.append_panel(root, 3i32, 1i32, 12i32, 10i32)}
-  layout.measure()
-  layout.arrange(2i32, 3i32, 20i32, 18i32)
-
-  [CommandList mut] commands{CommandList()}
-  commands.begin_panel(layout, panel, 5i32, Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32))
-  commands.end_panel()
-  dump_words(commands.serialize())
-  return(plus(layout.node_count(), plus(commands.command_count(), commands.clip_depth())))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_empty_panel_widget.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_empty_panel_widget_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_empty_panel_widget.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 5);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_widgets_fixture",
+                                         sharedCppEmitterUiWidgetFixtureSource(),
+                                         4,
+                                         outPath) == 5);
   CHECK(readFile(outPath) == "1,3,2,9,2,3,20,10,5,9,8,7,255,3,4,5,6,14,4,4,0\n");
 }
 
 TEST_CASE("C++ emitter runs composite login form deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] layout{LayoutTree()}
-  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
-  [LoginFormNodes] login{layout.append_login_form(
-    root,
-    2i32,
-    1i32,
-    10i32,
-    1i32,
-    2i32,
-    16i32,
-    "Login"utf8,
-    "alice"utf8,
-    "secret"utf8,
-    "Go"utf8
-  )}
-  layout.measure()
-  layout.arrange(6i32, 7i32, 40i32, 57i32)
-
-  [CommandList mut] commands{CommandList()}
-  commands.draw_login_form(
-    layout,
-    login,
-    10i32,
-    1i32,
-    2i32,
-    4i32,
-    3i32,
-    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
-    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
-    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
-    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
-    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
-    "Login"utf8,
-    "alice"utf8,
-    "secret"utf8,
-    "Go"utf8
-  )
-  dump_words(commands.serialize())
-  return(plus(layout.node_count(), plus(commands.command_count(), commands.clip_depth())))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_composite_login_form.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_composite_login_form_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_composite_login_form.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 16);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_login_fixture",
+                                         sharedCppEmitterUiLoginFixtureSource(),
+                                         2,
+                                         outPath) == 16);
   CHECK(readFile(outPath) ==
         "1,10,2,9,7,8,38,55,4,9,8,7,255,3,4,9,10,34,51,1,13,9,10,10,1,2,3,255,5,76,111,103,105,110,2,9,9,21,34,12,3,20,30,40,255,1,13,10,22,10,200,201,202,255,5,97,108,105,99,101,2,9,9,34,34,12,3,20,30,40,255,1,14,10,35,10,200,201,202,255,6,115,101,99,114,101,116,2,9,9,47,34,14,3,50,60,70,255,1,10,11,49,10,250,251,252,255,2,71,111,4,0\n");
 }
 
 TEST_CASE("C++ emitter runs html adapter login form deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] layout{LayoutTree()}
-  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
-  [LoginFormNodes] login{layout.append_login_form(
-    root,
-    2i32,
-    1i32,
-    10i32,
-    1i32,
-    2i32,
-    16i32,
-    "Login"utf8,
-    "alice"utf8,
-    "secret"utf8,
-    "Go"utf8
-  )}
-  layout.measure()
-  layout.arrange(6i32, 7i32, 40i32, 57i32)
-
-  [HtmlCommandList mut] html{HtmlCommandList()}
-  html.emit_login_form(
-    layout,
-    login,
-    10i32,
-    1i32,
-    2i32,
-    4i32,
-    3i32,
-    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
-    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
-    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
-    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
-    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
-    "Login"utf8,
-    "alice"utf8,
-    "secret"utf8,
-    "Go"utf8,
-    "user_input"utf8,
-    "pass_input"utf8,
-    "submit_click"utf8
-  )
-  dump_words(html.serialize())
-  return(plus(layout.node_count(), html.commandCount))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_html_login_form.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_html_login_form_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_html_login_form.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 14);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_login_fixture",
+                                         sharedCppEmitterUiLoginFixtureSource(),
+                                         3,
+                                         outPath) == 14);
   CHECK(readFile(outPath) ==
         "1,8,1,12,1,0,7,8,38,55,2,4,9,8,7,255,2,17,2,1,9,10,34,10,10,1,2,3,255,5,76,111,103,105,110,4,23,3,1,9,21,34,12,10,1,3,20,30,40,255,200,201,202,255,5,97,108,105,99,101,5,13,3,2,10,117,115,101,114,95,105,110,112,117,116,4,24,4,1,9,34,34,12,10,1,3,20,30,40,255,200,201,202,255,6,115,101,99,114,101,116,5,13,4,2,10,112,97,115,115,95,105,110,112,117,116,3,20,5,1,9,47,34,14,10,2,3,50,60,70,255,250,251,252,255,2,71,111,5,15,5,1,12,115,117,98,109,105,116,95,99,108,105,99,107\n");
 }
 
 TEST_CASE("C++ emitter runs ui event stream deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] layout{LayoutTree()}
-  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
-  [LoginFormNodes] login{layout.append_login_form(
-    root,
-    2i32,
-    1i32,
-    10i32,
-    1i32,
-    2i32,
-    16i32,
-    "Login"utf8,
-    "alice"utf8,
-    "secret"utf8,
-    "Go"utf8
-  )}
-
-  [UiEventStream mut] events{UiEventStream()}
-  events.push_pointer_move(login.usernameInput, 7i32, 20i32, 30i32)
-  events.push_pointer_down(login.submitButton, 7i32, 1i32, 20i32, 30i32)
-  events.push_pointer_up(login.submitButton, 7i32, 1i32, 21i32, 31i32)
-  events.push_key_down(login.usernameInput, 13i32, 3i32, 1i32)
-  events.push_key_up(login.usernameInput, 13i32, 1i32)
-  dump_words(events.serialize())
-  return(plus(login.submitButton, events.event_count()))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_event_stream.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_event_stream_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_event_stream.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 10);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_events_fixture",
+                                         sharedCppEmitterUiEventFixtureSource(),
+                                         2,
+                                         outPath) == 10);
   CHECK(readFile(outPath) ==
         "1,5,1,5,3,7,-1,20,30,2,5,5,7,1,20,30,3,5,5,7,1,21,31,4,4,3,13,3,1,5,4,3,13,1,0\n");
 }
 
 TEST_CASE("C++ emitter runs ui ime event stream deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] layout{LayoutTree()}
-  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
-  [LoginFormNodes] login{layout.append_login_form(
-    root,
-    2i32,
-    1i32,
-    10i32,
-    1i32,
-    2i32,
-    16i32,
-    "Login"utf8,
-    "alice"utf8,
-    "secret"utf8,
-    "Go"utf8
-  )}
-
-  [UiEventStream mut] events{UiEventStream()}
-  events.push_ime_preedit(login.usernameInput, 1i32, 4i32, "al|"utf8)
-  events.push_ime_commit(login.usernameInput, "alice"utf8)
-  dump_words(events.serialize())
-  return(plus(login.usernameInput, events.event_count()))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_ime_event_stream.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_ime_event_stream_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_ime_event_stream.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 5);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_events_fixture",
+                                         sharedCppEmitterUiEventFixtureSource(),
+                                         3,
+                                         outPath) == 5);
   CHECK(readFile(outPath) ==
         "1,2,6,7,3,1,4,3,97,108,124,7,9,3,-1,-1,5,97,108,105,99,101\n");
 }
 
 TEST_CASE("C++ emitter runs ui resize and focus event stream deterministically") {
-  const std::string source = R"(
-import /std/ui/*
-import /std/math/*
-import /std/collections/*
-
-[effects(io_out), return<void>]
-dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
-  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
-    if(greater_than(index, 0i32)) {
-      print(","utf8)
-    }
-    print(vectorAt<i32>(words, index))
-  }
-  print_line(""utf8)
-}
-
-[effects(heap_alloc, io_out), return<int>]
-main() {
-  [LayoutTree mut] layout{LayoutTree()}
-  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
-  [LoginFormNodes] login{layout.append_login_form(
-    root,
-    2i32,
-    1i32,
-    10i32,
-    1i32,
-    2i32,
-    16i32,
-    "Login"utf8,
-    "alice"utf8,
-    "secret"utf8,
-    "Go"utf8
-  )}
-
-  [UiEventStream mut] events{UiEventStream()}
-  events.push_resize(login.panel, 40i32, 57i32)
-  events.push_focus_gained(login.usernameInput)
-  events.push_focus_lost(login.usernameInput)
-  dump_words(events.serialize())
-  return(plus(login.usernameInput, events.event_count()))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_ui_resize_focus_event_stream.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_resize_focus_event_stream_exe").string();
-  const std::string cppPath = exePath + ".cpp";
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_cpp_ui_resize_focus_event_stream.txt").string();
 
-  CHECK(buildEmittedCppExecutableAtO0(srcPath, cppPath, exePath));
-  CHECK(runCommand(exePath + " > " + outPath) == 6);
+  CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_events_fixture",
+                                         sharedCppEmitterUiEventFixtureSource(),
+                                         4,
+                                         outPath) == 6);
   CHECK(readFile(outPath) == "1,3,8,3,1,40,57,9,3,3,0,0,10,3,3,0,0\n");
 }
 

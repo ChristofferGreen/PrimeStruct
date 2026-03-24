@@ -677,6 +677,43 @@ if(PRIMESTRUCT_BUILD_TESTS)
   include("${CMAKE_SOURCE_DIR}/cmake/PrimeStructManagedParserTextMiscSuites.cmake" OPTIONAL)
   include("${CMAKE_SOURCE_DIR}/cmake/PrimeStructManagedCompileRunSuites.cmake" OPTIONAL)
 
+  # These emitter shards reuse small cached C++ fixtures. Keep siblings that
+  # share one fixture from starting at the same time so only the first case pays
+  # the cold compile; follow-on cases then see the warm artifact instead of
+  # spending their whole runtime blocked on the same build lock.
+  foreach(testName IN ITEMS
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_12_12
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_13_13)
+    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_result_fixture")
+  endforeach()
+  foreach(testName IN ITEMS
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_15_15
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_16_16)
+    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_commands_fixture")
+  endforeach()
+  foreach(testName IN ITEMS
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_17_17
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_18_18)
+    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_layout_fixture")
+  endforeach()
+  foreach(testName IN ITEMS
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_19_19
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_21_21)
+    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_widgets_fixture")
+  endforeach()
+  foreach(testName IN ITEMS
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_22_22
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_23_23)
+    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_login_fixture")
+  endforeach()
+  foreach(testName IN ITEMS
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_24_24
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_25_25
+          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_26_26)
+    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_events_fixture")
+  endforeach()
+
   foreach(suite IN LISTS PrimeStructMiscTestSuites)
     if (suite IN_LIST PrimeStructManagedMiscSuites)
       continue()
