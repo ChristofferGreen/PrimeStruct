@@ -12,6 +12,9 @@ struct MethodResolutionMetadataView {
   const std::unordered_map<std::string, std::string> &returnStructs;
 };
 
+std::string typeNameFromResolvedCandidates(const MethodResolutionMetadataView &view,
+                                           const std::vector<std::string> &resolvedCandidates);
+bool extractCollectionElementTypeFromReturnType(const std::string &typeName, std::string &typeOut);
 std::string normalizeCollectionReceiverType(const std::string &typePath);
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
 void pruneMapAccessStructReturnCompatibilityCandidates(
