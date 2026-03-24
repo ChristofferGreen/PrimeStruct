@@ -12874,6 +12874,43 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer flow buffer helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path flowHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowHelpers.cpp";
+  const std::filesystem::path flowBufferHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowBufferHelpers.cpp";
+  REQUIRE(std::filesystem::exists(flowHelpersPath));
+  REQUIRE(std::filesystem::exists(flowBufferHelpersPath));
+
+  const std::string flowHelpersSource = readText(flowHelpersPath);
+  const std::string flowBufferHelpersSource = readText(flowBufferHelpersPath);
+
+  CHECK(flowHelpersSource.find("bool resolveBufferInitInfo(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool resolveBufferLoadInfo(") == std::string::npos);
+  CHECK(flowHelpersSource.find("bool emitBufferLoadCall(") == std::string::npos);
+  CHECK(flowHelpersSource.find("BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(") ==
+        std::string::npos);
+
+  CHECK(flowBufferHelpersSource.find("bool resolveBufferInitInfo(") != std::string::npos);
+  CHECK(flowBufferHelpersSource.find("bool resolveBufferLoadInfo(") != std::string::npos);
+  CHECK(flowBufferHelpersSource.find("bool emitBufferLoadCall(") != std::string::npos);
+  CHECK(flowBufferHelpersSource.find("BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(") !=
+        std::string::npos);
+}
+
 TEST_CASE("vm heap helpers source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -53024,6 +53061,117 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Error);
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer flow helpers emit inline buffer load builtin calls") {
+  using Result = primec::ir_lowerer::BufferBuiltinCallEmitResult;
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr inlineBufferExpr;
+  inlineBufferExpr.kind = primec::Expr::Kind::Call;
+  inlineBufferExpr.name = "buffer";
+  inlineBufferExpr.templateArgs = {"f32"};
+
+  primec::Expr countExpr;
+  countExpr.kind = primec::Expr::Kind::Literal;
+  countExpr.intWidth = 32;
+  countExpr.literalValue = 4;
+  inlineBufferExpr.args = {countExpr};
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.isUnsigned = true;
+  indexExpr.intWidth = 64;
+  indexExpr.literalValue = 1;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "buffer_load";
+  expr.args = {inlineBufferExpr, indexExpr};
+
+  std::vector<primec::IrInstruction> instructions;
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  int emitStep = 0;
+  bool allocRangeCalled = false;
+  int32_t nextTemp = 12;
+  CHECK(primec::ir_lowerer::tryEmitBufferBuiltinCall(
+            expr,
+            locals,
+            [](const std::string &typeName) {
+              if (typeName == "f32") {
+                return Kind::Float32;
+              }
+              if (typeName == "string") {
+                return Kind::String;
+              }
+              return Kind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return Kind::UInt64;
+            },
+            [&](int32_t) {
+              allocRangeCalled = true;
+              return 0;
+            },
+            [&]() { return nextTemp++; },
+            [&](const primec::Expr &argExpr, const primec::ir_lowerer::LocalMap &) {
+              if (argExpr.kind == primec::Expr::Kind::Call) {
+                instructions.push_back({primec::IrOpcode::PushI64, 444});
+              } else {
+                instructions.push_back({primec::IrOpcode::PushI64, 2});
+              }
+              ++emitStep;
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(allocRangeCalled);
+  CHECK(emitStep == 2);
+  REQUIRE(instructions.size() == 12);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 12);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 13);
+  CHECK(instructions[6].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[7].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[8].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[9].op == primec::IrOpcode::MulI64);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  error.clear();
+  emitStep = 0;
+  allocRangeCalled = false;
+  expr.args.front().templateArgs = {"string"};
+  CHECK(primec::ir_lowerer::tryEmitBufferBuiltinCall(
+            expr,
+            locals,
+            [](const std::string &typeName) {
+              if (typeName == "string") {
+                return Kind::String;
+              }
+              return Kind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return Kind::UInt64;
+            },
+            [&](int32_t) {
+              allocRangeCalled = true;
+              return 0;
+            },
+            [&]() { return nextTemp++; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitStep;
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Error);
+  CHECK(error == "buffer_load requires numeric/bool buffer");
+  CHECK_FALSE(allocRangeCalled);
+  CHECK(emitStep == 0);
   CHECK(instructions.empty());
 }
 
