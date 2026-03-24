@@ -145,7 +145,11 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Split `IrLowererLowerInferenceSetup.cpp` base literal/name/call kind helpers plus map/file/result base setup utilities into `src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.{h,cpp}`.
 - ✓ Split `IrLowererLowerInferenceSetup.cpp` return-info solve, graph-cache precompute, and get-return-info callback setup into `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp`.
 - ✓ Split `IrLowererLowerInferenceSetup.cpp` array-kind, direct call-return, and expr-kind fallback setup orchestration into `src/ir_lowerer/IrLowererLowerInferenceArrayKindSetup.cpp`, `src/ir_lowerer/IrLowererLowerInferenceCallReturnSetup.cpp`, `src/ir_lowerer/IrLowererLowerInferenceFallbackSetup.cpp`, and `src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp`.
-- ○ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`1973` lines) below the `700`-line target.
+- ◐ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`1678` lines) below the `700`-line target. Progress: extracted binding/type parsing, template-arg splitting, map/args-pack utilities, and struct-type-path helpers into `src/semantics/SemanticsBindingTypeHelpers.cpp`.
+- ✓ Split `SemanticsHelpersCore.cpp` binding/type parsing, template-arg splitting, map/args-pack utilities, and struct-type-path helpers into `src/semantics/SemanticsBindingTypeHelpers.cpp`.
+- ○ Split `SemanticsHelpersCore.cpp` return-kind resolution out of the root file into dedicated helper unit(s).
+- ○ Split `SemanticsHelpersCore.cpp` builtin path/name parsing plus collection helper alias handling out of the root file.
+- ○ Split `SemanticsHelpersCore.cpp` call classification, match lowering, print/path-space builtins, and type-path resolution out of the root file.
 - ○ Refactor `src/emitter/EmitterHelpersBuiltins.cpp` (`1695` lines) below the `700`-line target.
 - ○ Refactor `src/native_emitter/NativeEmitterInternals.h` (`1619` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`1568` lines) below the `700`-line target.

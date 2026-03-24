@@ -230,6 +230,23 @@ TEST_CASE("shared simple-call helpers reject removed array count alias") {
   CHECK_FALSE(primec::emitter::isSimpleCallName(removedAliasCall, "count"));
 }
 
+TEST_CASE("semantics binding type helpers validate nested templates and map keys") {
+  std::vector<std::string> parts;
+  CHECK(primec::semantics::splitTopLevelTemplateArgs("map<i32, vector<f32>>, Pointer<string>", parts));
+  REQUIRE(parts.size() == 2);
+  CHECK(parts[0] == "map<i32, vector<f32>>");
+  CHECK(parts[1] == "Pointer<string>");
+
+  CHECK_FALSE(primec::semantics::splitTopLevelTemplateArgs("i32, , f32", parts));
+
+  std::string error;
+  CHECK(primec::semantics::validateBuiltinMapKeyType("string", nullptr, error));
+  CHECK(error.empty());
+
+  CHECK_FALSE(primec::semantics::validateBuiltinMapKeyType("Particle", nullptr, error));
+  CHECK(error == "map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Particle");
+}
+
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*
@@ -11705,6 +11722,42 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferDefinitionSource.find("bool SemanticsValidator::inferDefinitionStatementReturns") !=
         std::string::npos);
   CHECK(semanticsInferDefinitionSource.find("if (isForCall(stmt) && stmt.args.size() == 4)") != std::string::npos);
+}
+
+TEST_CASE("semantics binding type helper source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path semanticsHelpersCorePath =
+      repoRoot / "src" / "semantics" / "SemanticsHelpersCore.cpp";
+  const std::filesystem::path semanticsBindingTypeHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsBindingTypeHelpers.cpp";
+  REQUIRE(std::filesystem::exists(semanticsHelpersCorePath));
+  REQUIRE(std::filesystem::exists(semanticsBindingTypeHelpersPath));
+
+  const std::string semanticsHelpersCoreSource = readText(semanticsHelpersCorePath);
+  const std::string semanticsBindingTypeHelpersSource = readText(semanticsBindingTypeHelpersPath);
+
+  CHECK(semanticsHelpersCoreSource.find("bool isBindingQualifierName(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("bool splitTopLevelTemplateArgs(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("ReturnKind returnKindForTypeName(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("std::string resolveStructTypePath(") == std::string::npos);
+  CHECK(semanticsHelpersCoreSource.find("bool isSoaVectorStructElementType(") == std::string::npos);
+
+  CHECK(semanticsBindingTypeHelpersSource.find("bool isBindingQualifierName(") != std::string::npos);
+  CHECK(semanticsBindingTypeHelpersSource.find("bool splitTopLevelTemplateArgs(") != std::string::npos);
+  CHECK(semanticsBindingTypeHelpersSource.find("ReturnKind returnKindForTypeName(") != std::string::npos);
+  CHECK(semanticsBindingTypeHelpersSource.find("std::string resolveStructTypePath(") != std::string::npos);
+  CHECK(semanticsBindingTypeHelpersSource.find("bool isSoaVectorStructElementType(") != std::string::npos);
 }
 
 TEST_CASE("semantics validator passes source delegation stays stable") {
