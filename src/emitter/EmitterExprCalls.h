@@ -496,6 +496,57 @@
             }
           }
 
+          auto resolveAccessBinding = [&](const Expr &accessExpr, BindingInfo &accessBindingOut) -> bool {
+            if (accessExpr.kind != Expr::Kind::Call || accessExpr.args.size() != 2 || accessExpr.name.empty()) {
+              return false;
+            }
+
+            std::string normalizedName = accessExpr.name;
+            if (!normalizedName.empty() && normalizedName.front() == '/') {
+              normalizedName.erase(normalizedName.begin());
+            }
+            if (normalizedName != "at" && normalizedName != "at_unsafe" &&
+                normalizedName != "vector/at" && normalizedName != "vector/at_unsafe" &&
+                normalizedName != "std/collections/vector/at" &&
+                normalizedName != "std/collections/vector/at_unsafe" &&
+                normalizedName != "map/at" && normalizedName != "map/at_unsafe" &&
+                normalizedName != "std/collections/map/at" &&
+                normalizedName != "std/collections/map/at_unsafe") {
+              return false;
+            }
+
+            size_t receiverIndex = 0;
+            if (hasNamedArguments(accessExpr.argNames)) {
+              for (size_t i = 0; i < accessExpr.argNames.size() && i < accessExpr.args.size(); ++i) {
+                if (accessExpr.argNames[i].has_value() && *accessExpr.argNames[i] == "values") {
+                  receiverIndex = i;
+                  break;
+                }
+              }
+            }
+
+            const Expr &receiver = accessExpr.args[receiverIndex];
+            std::string elementType;
+            if (!inferCollectionElementTypeNameFromExpr(receiver, localTypes, {}, elementType)) {
+              return false;
+            }
+
+            accessBindingOut = BindingInfo{};
+            std::string base;
+            std::string arg;
+            if (splitTemplateTypeName(elementType, base, arg)) {
+              accessBindingOut.typeName = normalizeBindingTypeName(base);
+              accessBindingOut.typeTemplateArg = arg;
+            } else {
+              accessBindingOut.typeName = normalizeBindingTypeName(elementType);
+            }
+            return !accessBindingOut.typeName.empty();
+          };
+
+          if (resolveAccessBinding(candidate, bindingOut)) {
+            return true;
+          }
+
           std::string resolvedPath;
           if (candidate.kind == Expr::Kind::Call) {
             if (candidate.isMethodCall) {
