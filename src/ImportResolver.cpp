@@ -1,5 +1,6 @@
 #include "primec/ImportResolver.h"
 #include "primec/ProcessRunner.h"
+#include "primec/TempPaths.h"
 
 #include <algorithm>
 #include <cctype>
@@ -334,7 +335,7 @@ bool extractArchive(const std::filesystem::path &archive,
                     std::string &error) {
   std::string absPath = std::filesystem::absolute(archive).string();
   std::size_t hash = std::hash<std::string>{}(absPath);
-  outDir = std::filesystem::temp_directory_path() / "primec_archives" / std::to_string(hash);
+  outDir = primecCacheDir("archives", std::to_string(hash));
   std::error_code ec;
   std::filesystem::create_directories(outDir, ec);
   if (ec) {

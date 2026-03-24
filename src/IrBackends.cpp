@@ -7,11 +7,11 @@
 #include "primec/IrToGlslEmitter.h"
 #include "primec/NativeEmitter.h"
 #include "primec/ProcessRunner.h"
+#include "primec/TempPaths.h"
 #include "primec/Vm.h"
 #include "primec/WasmEmitter.h"
 
 #include <array>
-#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -319,9 +319,7 @@ public:
       return false;
     }
 
-    const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
-    const std::filesystem::path tempPath =
-        std::filesystem::temp_directory_path() / ("primec_spirv_ir_" + std::to_string(timestamp) + ".comp");
+    const std::filesystem::path tempPath = primecUniqueTempFile("spirv_ir", ".comp");
     if (!writeTextFile(tempPath.string(), spirvSource)) {
       error = tempPath.string();
       return false;
