@@ -1,5 +1,11 @@
 TEST_SUITE_BEGIN("primestruct.vm.debug.session");
 
+namespace {
+std::filesystem::path vmDebugSessionPath(const std::string &relativePath) {
+  return primec::testing::testScratchPath("vm_debug_session/" + relativePath);
+}
+} // namespace
+
 TEST_CASE("vm debug stop reasons are stable and fully covered") {
   const auto reasons = primec::vmDebugStopReasons();
   CHECK(reasons.size() == 5);
@@ -1315,8 +1321,7 @@ TEST_CASE("vm debug opcode matrix matches vm execute for expanded families") {
     cases.push_back(std::move(c));
   }
 
-  const std::filesystem::path filePath =
-      std::filesystem::temp_directory_path() / "primestruct_vm_debug_opcode_matrix_file.txt";
+  const std::filesystem::path filePath = vmDebugSessionPath("primestruct_vm_debug_opcode_matrix_file.txt");
   std::filesystem::remove(filePath);
   {
     OpcodeMatrixCase c;

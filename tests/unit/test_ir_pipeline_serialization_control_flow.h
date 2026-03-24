@@ -1,5 +1,11 @@
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.serialization");
 
+namespace {
+std::filesystem::path irSerializationControlFlowPath(const std::string &relativePath) {
+  return primec::testing::testScratchPath("ir_pipeline_serialization/" + relativePath);
+}
+} // namespace
+
 TEST_CASE("ir lowers if/else to jumps") {
   const std::string source = R"(
 [return<int>]
@@ -1961,8 +1967,7 @@ TEST_CASE("native backend executes call and callvoid opcodes") {
 
   primec::NativeEmitter emitter;
   std::string error;
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_call_exec").string();
+  const std::string exePath = irSerializationControlFlowPath("primec_native_ir_call_exec").string();
   REQUIRE(emitter.emitExecutable(module, exePath, error));
   CHECK(error.empty());
   CHECK(runIrPipelineNativeBinary(exePath) == 7);
@@ -1999,8 +2004,7 @@ TEST_CASE("native backend executes recursive call opcodes") {
 
   primec::NativeEmitter emitter;
   std::string error;
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_recursive_call_exec").string();
+  const std::string exePath = irSerializationControlFlowPath("primec_native_ir_recursive_call_exec").string();
   REQUIRE(emitter.emitExecutable(module, exePath, error));
   CHECK(error.empty());
   CHECK(runIrPipelineNativeBinary(exePath) == 24);
@@ -2018,8 +2022,7 @@ TEST_CASE("native backend rejects invalid callable IR target") {
 
   primec::NativeEmitter emitter;
   std::string error;
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_invalid_call_exec").string();
+  const std::string exePath = irSerializationControlFlowPath("primec_native_ir_invalid_call_exec").string();
   CHECK_FALSE(emitter.emitExecutable(module, exePath, error));
   CHECK(error.find("invalid call target") != std::string::npos);
 }
@@ -2067,10 +2070,8 @@ TEST_CASE("virtual-register lowering preserves native baseline parity") {
   CHECK(error.empty());
 
   primec::NativeEmitter emitter;
-  const std::string baselinePath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_virtual_baseline_exec").string();
-  const std::string loweredPath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_virtual_lowered_exec").string();
+  const std::string baselinePath = irSerializationControlFlowPath("primec_native_ir_virtual_baseline_exec").string();
+  const std::string loweredPath = irSerializationControlFlowPath("primec_native_ir_virtual_lowered_exec").string();
   REQUIRE(emitter.emitExecutable(module, baselinePath, error));
   CHECK(error.empty());
   REQUIRE(emitter.emitExecutable(loweredBackModule, loweredPath, error));
@@ -2105,8 +2106,7 @@ TEST_CASE("native backend reports instrumentation counters per function") {
   primec::NativeEmitter emitter;
   primec::NativeEmitterInstrumentation instrumentation;
   std::string error;
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_instrumentation_exec").string();
+  const std::string exePath = irSerializationControlFlowPath("primec_native_ir_instrumentation_exec").string();
   REQUIRE(emitter.emitExecutable(module, exePath, error, &instrumentation));
   CHECK(error.empty());
   REQUIRE(instrumentation.perFunction.size() == 2);
@@ -2147,8 +2147,7 @@ TEST_CASE("native backend instrumentation counts local load and store ops") {
   primec::NativeEmitter emitter;
   primec::NativeEmitterInstrumentation instrumentation;
   std::string error;
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_instrumentation_locals_exec").string();
+  const std::string exePath = irSerializationControlFlowPath("primec_native_ir_instrumentation_locals_exec").string();
   REQUIRE(emitter.emitExecutable(module, exePath, error, &instrumentation));
   CHECK(error.empty());
   REQUIRE(instrumentation.perFunction.size() == 1);
@@ -2184,8 +2183,7 @@ TEST_CASE("native backend integer stack cache preserves parity and reduces spill
   primec::NativeEmitter emitter;
   primec::NativeEmitterInstrumentation instrumentation;
   std::string error;
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_stack_cache_exec").string();
+  const std::string exePath = irSerializationControlFlowPath("primec_native_ir_stack_cache_exec").string();
   REQUIRE(emitter.emitExecutable(module, exePath, error, &instrumentation));
   CHECK(error.empty());
   CHECK(runIrPipelineNativeBinary(exePath) == 13);
@@ -2227,8 +2225,7 @@ TEST_CASE("native backend float stack cache preserves parity and reduces spills"
 
   primec::NativeEmitter emitter;
   primec::NativeEmitterInstrumentation instrumentation;
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_float_stack_cache_exec").string();
+  const std::string exePath = irSerializationControlFlowPath("primec_native_ir_float_stack_cache_exec").string();
   REQUIRE(emitter.emitExecutable(module, exePath, error, &instrumentation));
   CHECK(error.empty());
   const int nativeExit = runIrPipelineNativeBinary(exePath);
@@ -2284,10 +2281,8 @@ TEST_CASE("native backend cache toggle preserves dual-mode parity") {
   cacheOffOptions.enableRegisterCache = false;
   primec::NativeEmitterInstrumentation cacheOnInstrumentation;
   primec::NativeEmitterInstrumentation cacheOffInstrumentation;
-  const std::string exeOnPath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_cache_toggle_on_exec").string();
-  const std::string exeOffPath =
-      (std::filesystem::temp_directory_path() / "primec_native_ir_cache_toggle_off_exec").string();
+  const std::string exeOnPath = irSerializationControlFlowPath("primec_native_ir_cache_toggle_on_exec").string();
+  const std::string exeOffPath = irSerializationControlFlowPath("primec_native_ir_cache_toggle_off_exec").string();
   REQUIRE(emitter.emitExecutable(module, exeOnPath, error, &cacheOnInstrumentation, cacheOnOptions));
   CHECK(error.empty());
   REQUIRE(emitter.emitExecutable(module, exeOffPath, error, &cacheOffInstrumentation, cacheOffOptions));
@@ -2417,12 +2412,10 @@ TEST_CASE("native backend cache mode regression matrix covers branches and call 
 
     primec::NativeEmitterInstrumentation cacheOnInstrumentation;
     primec::NativeEmitterInstrumentation cacheOffInstrumentation;
-    const std::string exeOnPath = (std::filesystem::temp_directory_path() /
-                                   ("primec_native_ir_cache_matrix_on_" + testCase.name))
-                                      .string();
-    const std::string exeOffPath = (std::filesystem::temp_directory_path() /
-                                    ("primec_native_ir_cache_matrix_off_" + testCase.name))
-                                       .string();
+    const std::string exeOnPath =
+        irSerializationControlFlowPath("primec_native_ir_cache_matrix_on_" + testCase.name).string();
+    const std::string exeOffPath =
+        irSerializationControlFlowPath("primec_native_ir_cache_matrix_off_" + testCase.name).string();
 
     REQUIRE(emitter.emitExecutable(testCase.module, exeOnPath, error, &cacheOnInstrumentation, cacheOnOptions));
     CHECK(error.empty());
@@ -2522,13 +2515,13 @@ TEST_CASE("native backend optimization conformance perf gates enforce parity and
     primec::NativeEmitterInstrumentation cacheOnStatsB;
 
     const std::string exeOffPathA =
-        (std::filesystem::temp_directory_path() / ("primec_native_ir_perf_gate_off_a_" + testCase.name)).string();
+        irSerializationControlFlowPath("primec_native_ir_perf_gate_off_a_" + testCase.name).string();
     const std::string exeOnPathA =
-        (std::filesystem::temp_directory_path() / ("primec_native_ir_perf_gate_on_a_" + testCase.name)).string();
+        irSerializationControlFlowPath("primec_native_ir_perf_gate_on_a_" + testCase.name).string();
     const std::string exeOffPathB =
-        (std::filesystem::temp_directory_path() / ("primec_native_ir_perf_gate_off_b_" + testCase.name)).string();
+        irSerializationControlFlowPath("primec_native_ir_perf_gate_off_b_" + testCase.name).string();
     const std::string exeOnPathB =
-        (std::filesystem::temp_directory_path() / ("primec_native_ir_perf_gate_on_b_" + testCase.name)).string();
+        irSerializationControlFlowPath("primec_native_ir_perf_gate_on_b_" + testCase.name).string();
 
     REQUIRE(emitter.emitExecutable(testCase.module, exeOffPathA, error, &cacheOffStatsA, cacheOffOptions));
     CHECK(error.empty());

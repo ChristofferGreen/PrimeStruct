@@ -16,6 +16,9 @@
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 namespace {
+std::filesystem::path irPipelineWasmPath(const std::string &relativePath) {
+  return primec::testing::testScratchPath("ir_pipeline_wasm/" + relativePath);
+}
 
 bool hasMinimalWasmHeader(const std::vector<uint8_t> &bytes) {
   static constexpr uint8_t Expected[] = {0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
@@ -605,7 +608,7 @@ TEST_CASE("wasm emitter maps wasi file open write flush close and error paths") 
   CHECK(containsByteSequence(bytes, {0x10, 0x03}));
 
   if (hasWasmtime()) {
-    const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_file_ops_runtime";
+    const std::filesystem::path tempRoot = irPipelineWasmPath("primec_wasm_file_ops_runtime");
     std::error_code ec;
     std::filesystem::remove_all(tempRoot, ec);
     std::filesystem::create_directories(tempRoot, ec);
@@ -668,7 +671,7 @@ TEST_CASE("wasm emitter maps wasi file read byte and eof paths") {
   CHECK(containsByteSequence(bytes, textBytes("fd_read")));
 
   if (hasWasmtime()) {
-    const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_file_read_runtime";
+    const std::filesystem::path tempRoot = irPipelineWasmPath("primec_wasm_file_read_runtime");
     std::error_code ec;
     std::filesystem::remove_all(tempRoot, ec);
     std::filesystem::create_directories(tempRoot, ec);
@@ -756,7 +759,7 @@ TEST_CASE("wasm emitter formats decimal file writes for i32 i64 and u64") {
   CHECK(containsByteSequence(bytes, {0xa7})); // i32.wrap_i64
 
   if (hasWasmtime()) {
-    const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_file_numeric_runtime";
+    const std::filesystem::path tempRoot = irPipelineWasmPath("primec_wasm_file_numeric_runtime");
     std::error_code ec;
     std::filesystem::remove_all(tempRoot, ec);
     std::filesystem::create_directories(tempRoot, ec);
