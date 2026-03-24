@@ -73,27 +73,27 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   SHARD_PREFIX "spinning_cube_pipeline_and_scripts"
                                   SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
                                   RANGE_FIRST 1
-                                  RANGE_LAST 23
+                                  RANGE_LAST 24
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 900
                                   SHARD_PREFIX "spinning_cube_argument_validation"
                                   SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
-                                  RANGE_FIRST 24
-                                  RANGE_LAST 47)
+                                  RANGE_FIRST 25
+                                  RANGE_LAST 48)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 900
                                   SHARD_PREFIX "native_window_launcher_and_preflight"
                                   SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
-                                  RANGE_FIRST 48
-                                  RANGE_LAST 62
+                                  RANGE_FIRST 49
+                                  RANGE_LAST 63
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 900
                                   SHARD_PREFIX "metal_pipeline_and_borrow_checker"
                                   SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
-                                  RANGE_FIRST 63
-                                  RANGE_LAST 68
+                                  RANGE_FIRST 64
+                                  RANGE_LAST 69
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"

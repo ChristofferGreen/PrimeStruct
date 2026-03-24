@@ -235,8 +235,8 @@ static bool spinningCubeBackendsSupportArrayReturns() {
     return true;
   }
 
-  const std::filesystem::path cachePath =
-      std::filesystem::current_path() / ".primec_test_cache" / "spinning_cube_backend_probe.txt";
+  const std::filesystem::path cachePath = std::filesystem::current_path() / ".primec_test_cache" /
+                                          "spinning_cube_backend_probe.txt";
   const std::string cacheSignature = spinningCubeBackendProbeCacheSignature(cubePath);
   if (readSpinningCubeBackendProbeCache(cachePath, cacheSignature, cached)) {
     return cached == 1;
@@ -540,39 +540,63 @@ TEST_CASE("spinning cube native flat frame entrypoints compile and run determini
   std::filesystem::create_directories(outDir, ec);
   REQUIRE(!ec);
 
-  struct NativeEntryExpectation {
-    std::string entry;
-    int exitCode;
-  };
+  const std::string cubeSource = readFile(cubePath.string());
+  const std::string aggregateSource = cubeSource + R"(
 
-  const std::vector<NativeEntryExpectation> expected = {
-      {"/cubeNativeMeshVertexCount", 8},
-      {"/cubeNativeMeshIndexCount", 36},
-      {"/cubeNativeFrameInitTick", 0},
-      {"/cubeNativeFrameInitAngleMilli", 0},
-      {"/cubeNativeFrameInitAxisXCenti", 100},
-      {"/cubeNativeFrameInitAxisYCenti", 0},
-      {"/cubeNativeFrameStepSnapshotCode", 117},
-  };
-
-  int index = 0;
-  for (const auto &entry : expected) {
-    const std::filesystem::path nativePath = outDir / ("native_entry_" + std::to_string(index));
-    const std::string compileCmd =
-        "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativePath.string()) +
-        " --entry " + entry.entry;
-    CHECK(runCommand(compileCmd) == 0);
-    CHECK(std::filesystem::exists(nativePath));
-    CHECK(runCommand(quoteShellArg(nativePath.string())) == entry.exitCode);
-    index = index + 1;
+[return<int>]
+cubeNativeFlatFrameDeterminismSmoke() {
+  if(not_equal(cubeNativeMeshVertexCount(), 8i32)) {
+    return(11i32)
+  } else {
   }
+  if(not_equal(cubeNativeMeshIndexCount(), 36i32)) {
+    return(12i32)
+  } else {
+  }
+  if(not_equal(cubeNativeFrameInitTick(), 0i32)) {
+    return(13i32)
+  } else {
+  }
+  if(not_equal(cubeNativeFrameInitAngleMilli(), 0i32)) {
+    return(14i32)
+  } else {
+  }
+  if(not_equal(cubeNativeFrameInitAxisXCenti(), 100i32)) {
+    return(15i32)
+  } else {
+  }
+  if(not_equal(cubeNativeFrameInitAxisYCenti(), 0i32)) {
+    return(16i32)
+  } else {
+  }
+  if(not_equal(cubeNativeFrameAngularVelocityMilli(), 1047i32)) {
+    return(17i32)
+  } else {
+  }
+  if(not_equal(cubeNativeFrameStepSnapshotCode(), 117i32)) {
+    return(18i32)
+  } else {
+  }
+  return(0i32)
+}
+)";
 
-  const std::filesystem::path angularVelocityPath = outDir / "native_entry_angular_velocity";
-  const std::string compileAngularVelocityCmd =
-      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(angularVelocityPath.string()) +
-      " --entry /cubeNativeFrameAngularVelocityMilli";
-  CHECK(runCommand(compileAngularVelocityCmd) == 0);
-  CHECK(std::filesystem::exists(angularVelocityPath));
+  const std::string aggregateSrcPath = writeTemp("spinning_cube_native_flat_frame_entrypoints.prime", aggregateSource);
+  const std::filesystem::path aggregatePath = outDir / "native_flat_frame_aggregate";
+  const std::string compileAggregateCmd =
+      "./primec --emit=native " + quoteShellArg(aggregateSrcPath) + " -o " + quoteShellArg(aggregatePath.string()) +
+      " --entry /cubeNativeFlatFrameDeterminismSmoke";
+  CHECK(runCommand(compileAggregateCmd) == 0);
+  CHECK(std::filesystem::exists(aggregatePath));
+  CHECK(runCommand(quoteShellArg(aggregatePath.string())) == 0);
+
+  const std::filesystem::path snapshotPath = outDir / "native_frame_snapshot";
+  const std::string compileSnapshotCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(snapshotPath.string()) +
+      " --entry /cubeNativeFrameStepSnapshotCode";
+  CHECK(runCommand(compileSnapshotCmd) == 0);
+  CHECK(std::filesystem::exists(snapshotPath));
+  CHECK(runCommand(quoteShellArg(snapshotPath.string())) == 117);
 }
 
 TEST_CASE("spinning cube stdlib gfx frame stream entry stays source locked") {
@@ -642,11 +666,80 @@ TEST_CASE("spinning cube stdlib gfx frame stream entry stays deterministic") {
 }
 
 TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
+  std::filesystem::path sampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  std::filesystem::path sharedDir =
+      std::filesystem::path("..") / "examples" / "web" / "shared";
+  if (!std::filesystem::exists(sampleDir)) {
+    sampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  if (!std::filesystem::exists(sharedDir)) {
+    sharedDir = std::filesystem::current_path() / "examples" / "web" / "shared";
+  }
+  REQUIRE(std::filesystem::exists(sampleDir));
+  REQUIRE(std::filesystem::exists(sharedDir));
+
+  const std::filesystem::path cubePath = sampleDir / "cube.prime";
+  const std::filesystem::path indexPath = sampleDir / "index.html";
+  const std::filesystem::path mainJsPath = sampleDir / "main.js";
+  const std::filesystem::path shaderPath = sampleDir / "cube.wgsl";
+  const std::filesystem::path sharedRuntimePath = sharedDir / "browser_runtime_shared.js";
+  REQUIRE(std::filesystem::exists(cubePath));
+  REQUIRE(std::filesystem::exists(indexPath));
+  REQUIRE(std::filesystem::exists(mainJsPath));
+  REQUIRE(std::filesystem::exists(shaderPath));
+  REQUIRE(std::filesystem::exists(sharedRuntimePath));
+
+  const std::filesystem::path pipelineDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_assets";
+  const std::filesystem::path stagedSampleDir = pipelineDir / "spinning_cube";
+  const std::filesystem::path stagedSharedDir = pipelineDir / "shared";
+  std::error_code ec;
+  std::filesystem::remove_all(pipelineDir, ec);
+  std::filesystem::create_directories(stagedSampleDir, ec);
+  REQUIRE(!ec);
+  ec.clear();
+  std::filesystem::create_directories(stagedSharedDir, ec);
+  REQUIRE(!ec);
+
   if (!spinningCubeBackendsSupportArrayReturns()) {
-    INFO("Skipping spinning cube browser asset checks until array-return lowering support lands");
+    INFO("Skipping spinning cube browser asset compile checks until array-return lowering support lands");
     CHECK(true);
     return;
   }
+
+  const std::filesystem::path wasmPath = stagedSampleDir / "cube.wasm";
+  const std::string wasmBrowserCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmPath.string()) + " --entry /main";
+  CHECK(runCommand(wasmBrowserCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  std::filesystem::copy_file(indexPath, stagedSampleDir / "index.html",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(mainJsPath, stagedSampleDir / "main.js",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(shaderPath, stagedSampleDir / "cube.wgsl",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(sharedRuntimePath, stagedSharedDir / "browser_runtime_shared.js",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+
+  CHECK(std::filesystem::exists(stagedSampleDir / "index.html"));
+  CHECK(std::filesystem::exists(stagedSampleDir / "main.js"));
+  CHECK(std::filesystem::exists(stagedSampleDir / "cube.wgsl"));
+  CHECK(std::filesystem::exists(stagedSampleDir / "cube.wasm"));
+  CHECK(std::filesystem::exists(stagedSharedDir / "browser_runtime_shared.js"));
+}
+
+TEST_CASE("spinning cube browser host assets stay source locked") {
   std::filesystem::path sampleDir =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
   std::filesystem::path sharedDir =
@@ -696,61 +789,12 @@ TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   CHECK(shaderText.find("@location(1) color : vec4<f32>") != std::string::npos);
   CHECK(shaderText.find("out.clipPosition = in.position;") != std::string::npos);
 
-  const std::filesystem::path pipelineDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_assets";
-  const std::filesystem::path stagedSampleDir = pipelineDir / "spinning_cube";
-  const std::filesystem::path stagedSharedDir = pipelineDir / "shared";
-  std::error_code ec;
-  std::filesystem::remove_all(pipelineDir, ec);
-  std::filesystem::create_directories(stagedSampleDir, ec);
-  REQUIRE(!ec);
-  ec.clear();
-  std::filesystem::create_directories(stagedSharedDir, ec);
-  REQUIRE(!ec);
-
-  const std::filesystem::path wasmPath = stagedSampleDir / "cube.wasm";
-  const std::string wasmBrowserCmd =
-      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
-      quoteShellArg(wasmPath.string()) + " --entry /main";
-  CHECK(runCommand(wasmBrowserCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
-  CHECK(std::filesystem::file_size(wasmPath) > 8);
-
-  std::filesystem::copy_file(indexPath, stagedSampleDir / "index.html",
-                             std::filesystem::copy_options::overwrite_existing, ec);
-  CHECK(!ec);
-  ec.clear();
-  std::filesystem::copy_file(mainJsPath, stagedSampleDir / "main.js",
-                             std::filesystem::copy_options::overwrite_existing, ec);
-  CHECK(!ec);
-  ec.clear();
-  std::filesystem::copy_file(shaderPath, stagedSampleDir / "cube.wgsl",
-                             std::filesystem::copy_options::overwrite_existing, ec);
-  CHECK(!ec);
-  ec.clear();
-  std::filesystem::copy_file(sharedRuntimePath, stagedSharedDir / "browser_runtime_shared.js",
-                             std::filesystem::copy_options::overwrite_existing, ec);
-  CHECK(!ec);
-
-  CHECK(std::filesystem::exists(stagedSampleDir / "index.html"));
-  CHECK(std::filesystem::exists(stagedSampleDir / "main.js"));
-  CHECK(std::filesystem::exists(stagedSampleDir / "cube.wgsl"));
-  CHECK(std::filesystem::exists(stagedSampleDir / "cube.wasm"));
-  CHECK(std::filesystem::exists(stagedSharedDir / "browser_runtime_shared.js"));
-
   if (runCommand("node --version > /dev/null 2>&1") == 0) {
     const std::string nodeCheckSource = "node --check " + quoteShellArg(mainJsPath.string()) + " > /dev/null 2>&1";
     CHECK(runCommand(nodeCheckSource) == 0);
     const std::string nodeCheckHelperSource =
         "node --check " + quoteShellArg(sharedRuntimePath.string()) + " > /dev/null 2>&1";
     CHECK(runCommand(nodeCheckHelperSource) == 0);
-    const std::string nodeCheckStaged =
-        "node --check " + quoteShellArg((stagedSampleDir / "main.js").string()) + " > /dev/null 2>&1";
-    CHECK(runCommand(nodeCheckStaged) == 0);
-    const std::string nodeCheckHelperStaged =
-        "node --check " + quoteShellArg((stagedSharedDir / "browser_runtime_shared.js").string()) +
-        " > /dev/null 2>&1";
-    CHECK(runCommand(nodeCheckHelperStaged) == 0);
   }
 }
 
