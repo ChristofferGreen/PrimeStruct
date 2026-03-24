@@ -14,7 +14,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_collections_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_collections_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -32,7 +32,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_collections_string_map.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_collections_string_map_exe").string();
+      (testScratchPath("") / "primec_collections_string_map_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -50,7 +50,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_collections_string_map_brackets.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_collections_string_map_brackets_exe").string();
+      (testScratchPath("") / "primec_collections_string_map_brackets_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -263,7 +263,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_bare_vector_count_capacity_imported.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_exe_bare_vector_count_capacity_imported_exe").string();
+      (testScratchPath("") / "primec_exe_bare_vector_count_capacity_imported_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -284,7 +284,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_bare_vector_access_imported.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_exe_bare_vector_access_imported_exe").string();
+      (testScratchPath("") / "primec_exe_bare_vector_access_imported_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -301,7 +301,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_bare_vector_count_import_requirement.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_exe_bare_vector_count_import_requirement_err.txt").string();
+      (testScratchPath("") / "primec_exe_bare_vector_count_import_requirement_err.txt").string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
@@ -318,7 +318,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_bare_vector_capacity_import_requirement.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_exe_bare_vector_capacity_import_requirement_err.txt")
+      (testScratchPath("") / "primec_exe_bare_vector_capacity_import_requirement_err.txt")
           .string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -395,7 +395,7 @@ execute_task([i32] items, [i32] pairs) {
 execute_task([items] array<i32>(1i32, 2i32), [pairs] map<i32, i32>(1i32, 2i32))
 )";
   const std::string srcPath = writeTemp("compile_exec_collections.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exec_collections_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_exec_collections_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -419,7 +419,7 @@ execute_repeat(2i32) {
 }
 )";
   const std::string srcPath = writeTemp("compile_exec_body.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exec_body_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_exec_body_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -434,7 +434,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_pointer_plus_u64.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_pointer_plus_u64_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_pointer_plus_u64_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -449,7 +449,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_i64_literal.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_i64_literal_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_i64_literal_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -464,7 +464,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_u64_literal.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_u64_literal_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_u64_literal_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -481,7 +481,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_assign_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_assign_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_assign_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -496,7 +496,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_gt_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_gt_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_gt_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -511,7 +511,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_lt_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_lt_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_lt_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -526,7 +526,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_ge_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_ge_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_ge_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -541,7 +541,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_le_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_le_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_le_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -556,7 +556,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_and_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_and_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_and_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -571,7 +571,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_or_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_or_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_or_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -586,7 +586,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_not_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_not_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_not_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -601,7 +601,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_not_paren.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_not_paren_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_not_paren_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -617,7 +617,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_unary_minus.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_unary_minus_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_unary_minus_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -632,7 +632,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_eq_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_eq_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_eq_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -647,7 +647,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_neq_op.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_neq_op_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_neq_op_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

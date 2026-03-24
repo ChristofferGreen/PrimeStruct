@@ -9,7 +9,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_array_bounds.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_array_bounds_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_array_bounds_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
@@ -37,7 +37,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_array_negative.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_array_negative_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_array_negative_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
@@ -54,7 +54,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_bounds.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_bounds_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_vector_bounds_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
@@ -71,7 +71,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_negative.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_negative_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_vector_negative_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
@@ -86,7 +86,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_pointer_misaligned.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_pointer_misaligned_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_pointer_misaligned_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "VM error: unaligned indirect address in IR: 8\n");
@@ -102,7 +102,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_array_unsafe.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_array_unsafe_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_array_unsafe_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "7\n");
@@ -118,7 +118,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_array_unsafe_u64.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_array_unsafe_u64_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_array_unsafe_u64_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "7\n");
@@ -133,7 +133,7 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("vm_argv_bounds.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_bounds_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_argv_bounds_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
@@ -148,7 +148,7 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("vm_argv_negative.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_negative_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_argv_negative_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
@@ -163,8 +163,8 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("vm_argv_unsafe_bounds.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_unsafe_out.txt").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_unsafe_err.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_argv_unsafe_out.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_argv_unsafe_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath).empty());
@@ -180,7 +180,7 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("vm_argv_unsafe_u64.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_unsafe_u64_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_argv_unsafe_u64_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\n");
@@ -195,8 +195,8 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("vm_argv_unsafe_negative.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_unsafe_negative_out.txt").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_unsafe_negative_err.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_argv_unsafe_negative_out.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_argv_unsafe_negative_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath).empty());
@@ -214,7 +214,7 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("vm_argv_binding_bounds.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_argv_binding_bounds_err.txt").string();
+      (testScratchPath("") / "primec_vm_argv_binding_bounds_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
@@ -230,8 +230,8 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("vm_argv_binding_unsafe.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_binding_unsafe_out.txt").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_binding_unsafe_err.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_argv_binding_unsafe_out.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_argv_binding_unsafe_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath).empty());
@@ -250,9 +250,9 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("vm_argv_binding_unsafe_copy.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_argv_binding_unsafe_copy_out.txt").string();
+      (testScratchPath("") / "primec_vm_argv_binding_unsafe_copy_out.txt").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_argv_binding_unsafe_copy_err.txt").string();
+      (testScratchPath("") / "primec_vm_argv_binding_unsafe_copy_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath).empty());
@@ -269,7 +269,7 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("vm_argv_binding_count.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_argv_binding_count_err.txt").string();
+      (testScratchPath("") / "primec_vm_argv_binding_count_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
@@ -286,7 +286,7 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("vm_argv_binding_index.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_argv_binding_index_err.txt").string();
+      (testScratchPath("") / "primec_vm_argv_binding_index_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
@@ -307,7 +307,7 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("vm_argv_call_bounds.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_call_bounds_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_argv_call_bounds_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
@@ -328,7 +328,7 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("vm_argv_call_unsafe.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_call_unsafe_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_argv_call_unsafe_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=

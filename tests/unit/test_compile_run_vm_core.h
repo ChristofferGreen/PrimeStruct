@@ -64,7 +64,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_raw_string_literal.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_raw_string_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_raw_string_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "line\\\\nnext\n");
@@ -80,7 +80,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_raw_string_literal_single.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_raw_string_single_out.txt").string();
+      (testScratchPath("") / "primec_vm_raw_string_single_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "line\\\\nnext\n");
@@ -139,7 +139,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_command_serialization.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_command_serialization.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_command_serialization.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath) == "1,2,2,9,2,4,30,40,6,12,34,56,255,1,11,7,9,14,255,240,0,255,3,72,105,33\n");
@@ -191,7 +191,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_clip_command_serialization.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_clip_command_serialization.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_clip_command_serialization.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 6);
   CHECK(readFile(outPath) ==
@@ -233,7 +233,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_clip_underflow_serialization.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_clip_underflow_serialization.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_clip_underflow_serialization.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 1);
   CHECK(readFile(outPath) == "1,1,1,8,1,2,12,9,8,7,6,0\n");
@@ -272,7 +272,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_empty_text_serialization.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_empty_text_serialization.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_empty_text_serialization.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 1);
   CHECK(readFile(outPath) == "1,1,1,8,1,2,12,9,8,7,6,0\n");
@@ -312,7 +312,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_layout_tree_serialization.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_layout_tree_serialization.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_layout_tree_serialization.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 6);
   CHECK(readFile(outPath) ==
@@ -348,7 +348,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_layout_tree_empty_root.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_layout_tree_empty_root.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_layout_tree_empty_root.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 1);
   CHECK(readFile(outPath) == "1,1,2,-1,11,13,3,5,11,13\n");
@@ -409,7 +409,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_basic_widget_controls.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_basic_widget_controls.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_basic_widget_controls.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 9);
   CHECK(readFile(outPath) ==
@@ -476,7 +476,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_panel_widget.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_panel_widget.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_panel_widget.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 15);
   CHECK(readFile(outPath) ==
@@ -517,7 +517,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_empty_panel_widget.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_empty_panel_widget.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_empty_panel_widget.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 5);
   CHECK(readFile(outPath) == "1,3,2,9,2,3,20,10,5,9,8,7,255,3,4,5,6,14,4,4,0\n");
@@ -586,7 +586,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_composite_login_form.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_composite_login_form.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_composite_login_form.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 16);
   CHECK(readFile(outPath) ==
@@ -659,7 +659,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_html_login_form.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_html_login_form.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_html_login_form.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 14);
   CHECK(readFile(outPath) ==
@@ -713,7 +713,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_event_stream.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_event_stream.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_event_stream.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 10);
   CHECK(readFile(outPath) ==
@@ -764,7 +764,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_ui_ime_event_stream.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_ui_ime_event_stream.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_ui_ime_event_stream.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 5);
   CHECK(readFile(outPath) ==
@@ -817,7 +817,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_ui_resize_focus_event_stream.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_ui_resize_focus_event_stream.txt").string();
+      (testScratchPath("") / "primec_vm_ui_resize_focus_event_stream.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 6);
   CHECK(readFile(outPath) == "1,3,8,3,1,40,57,9,3,3,0,0,10,3,3,0,0\n");
@@ -935,7 +935,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_heap_at_out_of_bounds.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_heap_at_out_of_bounds.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_heap_at_out_of_bounds.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) != 0);
   CHECK(readFile(errPath) == "pointer index out of bounds\n");
@@ -951,7 +951,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_heap_free_invalid_deref.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_heap_free_invalid_deref.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_heap_free_invalid_deref.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) != 0);
   CHECK(readFile(errPath).find("invalid indirect address in IR") != std::string::npos);
@@ -1065,7 +1065,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_capabilities_default_effects.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_capabilities_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_capabilities_out.txt").string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --default-effects=default > " + outPath;
   CHECK(runCommand(runCmd) == 0);
@@ -1081,7 +1081,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_print_no_effects.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_print_no_effects_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_print_no_effects_err.txt").string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --default-effects=none 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
@@ -1098,7 +1098,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_default_effects_no_io_err.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_default_effects_no_io_err_err.txt").string();
+      (testScratchPath("") / "primec_vm_default_effects_no_io_err_err.txt").string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --default-effects=default 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
@@ -1114,7 +1114,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_implicit_utf8.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_implicit_utf8_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_implicit_utf8_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "implicit\n");
@@ -1130,7 +1130,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_implicit_utf8_single.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_implicit_utf8_single_out.txt").string();
+      (testScratchPath("") / "primec_vm_implicit_utf8_single_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "implicit\n");
@@ -1145,7 +1145,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_utf8_escaped.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_utf8_escaped_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_utf8_escaped_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "line\nnext\n");
@@ -1161,7 +1161,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_utf8_escaped_single.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_utf8_escaped_single_out.txt").string();
+      (testScratchPath("") / "primec_vm_utf8_escaped_single_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "line\\nnext\n");
@@ -1181,7 +1181,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_string_return.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_string_return_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_string_return_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "hi\n");
@@ -1213,7 +1213,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_result_why_custom.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_result_why_custom_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_result_why_custom_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "custom error\n");
@@ -1275,7 +1275,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_file_error_result_helpers.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_error_result_helpers_out.txt").string();
+      (testScratchPath("") / "primec_vm_stdlib_file_error_result_helpers_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "EOF\nEOF\nEOF\nEOF\nEOF\nEOF\nEOF\nEOF\n");
@@ -1312,7 +1312,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_result_map_ir_backed.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_map_ir_backed_out.txt").string();
+      (testScratchPath("") / "primec_vm_result_map_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 8);
   CHECK(readFile(outPath) == "EOF\n");
@@ -1356,7 +1356,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_result_and_then_ir_backed.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_and_then_ir_backed_out.txt").string();
+      (testScratchPath("") / "primec_vm_result_and_then_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 8);
   CHECK(readFile(outPath) == "EOF\nEOF\n");
@@ -1399,7 +1399,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_result_map2_ir_backed.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_map2_ir_backed_out.txt").string();
+      (testScratchPath("") / "primec_vm_result_map2_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 5);
   CHECK(readFile(outPath) == "container missing key\ncontainer empty\n");
@@ -1433,7 +1433,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_result_f32_ir_backed.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_f32_ir_backed_out.txt").string();
+      (testScratchPath("") / "primec_vm_result_f32_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 55);
   CHECK(readFile(outPath) == "55\n");
@@ -1466,7 +1466,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_result_direct_ok_ir_backed.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_direct_ok_ir_backed_out.txt").string();
+      (testScratchPath("") / "primec_vm_result_direct_ok_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 5);
   CHECK(readFile(outPath) == "8\n5\n");
@@ -1495,7 +1495,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_result_auto_bound_combinators.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_auto_bound_combinators_err.txt").string();
+      (testScratchPath("") / "primec_vm_result_auto_bound_combinators_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("try requires Result argument") != std::string::npos);
@@ -1503,7 +1503,7 @@ main() {
 
 TEST_CASE("vm uses stdlib File helper wrappers") {
   const std::string filePath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_helpers.txt").string();
+      (testScratchPath("") / "primec_vm_stdlib_file_helpers.txt").string();
   auto escape = [](const std::string &text) {
     std::string out;
     out.reserve(text.size());
@@ -1549,7 +1549,7 @@ log_file_error([FileError] err) {
 
 TEST_CASE("vm stdlib File close helper disarms the original handle") {
   const std::string filePath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_close_helper.txt").string();
+      (testScratchPath("") / "primec_vm_stdlib_file_close_helper.txt").string();
   const auto escape = [](const std::string &text) {
     std::string out;
     out.reserve(text.size());
@@ -1591,7 +1591,7 @@ log_file_error([FileError] err) {
 
 TEST_CASE("vm uses stdlib File string helper wrappers") {
   const std::string filePath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_string_helpers.txt").string();
+      (testScratchPath("") / "primec_vm_stdlib_file_string_helpers.txt").string();
   const auto escape = [](const std::string &text) {
     std::string out;
     out.reserve(text.size());
@@ -1634,7 +1634,7 @@ log_file_error([FileError] err) {
 
 TEST_CASE("vm uses stdlib File multi-value helper wrappers") {
   const std::string filePath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_multi_helpers.txt").string();
+      (testScratchPath("") / "primec_vm_stdlib_file_multi_helpers.txt").string();
   const auto escape = [](const std::string &text) {
     std::string out;
     out.reserve(text.size());
@@ -1713,7 +1713,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_helper_overload_families.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_helper_overload_families_out.txt").string();
+      (testScratchPath("") / "primec_vm_helper_overload_families_out.txt").string();
 
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
@@ -1774,7 +1774,7 @@ main_fail() {
 )";
   const std::string srcPath = writeTemp("vm_graphics_int_on_error.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_graphics_int_on_error_err.txt").string();
+      (testScratchPath("") / "primec_vm_graphics_int_on_error_err.txt").string();
   const std::string okCmd = "./primec --emit=vm " + srcPath + " --entry /main_ok";
   const std::string failCmd = "./primec --emit=vm " + srcPath + " --entry /main_fail 2> " + errPath;
   CHECK(runCommand(okCmd) == 9);
@@ -1814,7 +1814,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_result_ok_string.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_result_ok_string_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_result_ok_string_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 5);
   CHECK(readFile(outPath) == "alpha\n");
@@ -1848,7 +1848,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_result_combinators_string.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_combinators_string_out.txt").string();
+      (testScratchPath("") / "primec_vm_result_combinators_string_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\nbeta\ngamma\n");
@@ -1896,7 +1896,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_result_combinators_string_definition_sources.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_combinators_string_definition_sources_out.txt")
+      (testScratchPath("") / "primec_vm_result_combinators_string_definition_sources_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
@@ -1917,7 +1917,7 @@ TEST_CASE("vm maps FileError.why codes") {
       "  return(0i32)\n"
       "}\n";
   const std::string srcPath = writeTemp("vm_file_error_why.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_file_error_why_out.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_file_error_why_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "EACCES\n");
@@ -1938,7 +1938,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_image_error_result_helpers.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_image_error_result_helpers.txt").string();
+      (testScratchPath("") / "primec_vm_image_error_result_helpers.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
@@ -1969,7 +1969,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_image_error_why_wrapper.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_image_error_why_wrapper.txt").string();
+      (testScratchPath("") / "primec_vm_image_error_why_wrapper.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
@@ -1997,7 +1997,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_image_error_constructor_wrappers.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_image_error_constructor_wrappers.txt").string();
+      (testScratchPath("") / "primec_vm_image_error_constructor_wrappers.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
@@ -2023,7 +2023,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_gfx_error_result_helpers.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_gfx_error_result_helpers.txt").string();
+      (testScratchPath("") / "primec_vm_gfx_error_result_helpers.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
@@ -2050,7 +2050,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_canonical_gfx_error_result_helpers.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_canonical_gfx_error_result_helpers.txt").string();
+      (testScratchPath("") / "primec_vm_canonical_gfx_error_result_helpers.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
@@ -2082,7 +2082,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_canonical_gfx_error_why_wrapper.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_canonical_gfx_error_why_wrapper.txt").string();
+      (testScratchPath("") / "primec_vm_canonical_gfx_error_why_wrapper.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
@@ -2110,7 +2110,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_canonical_gfx_error_constructor_wrappers.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_canonical_gfx_error_constructor_wrappers.txt").string();
+      (testScratchPath("") / "primec_vm_canonical_gfx_error_constructor_wrappers.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) ==
@@ -2326,7 +2326,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_file_error_why.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_error_why_out.txt").string();
+      (testScratchPath("") / "primec_vm_stdlib_file_error_why_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "EOF\nEOF\nEOF\nEOF\n");
@@ -2386,7 +2386,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_file_error_eof_wrapper.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_error_eof_wrapper_out.txt").string();
+      (testScratchPath("") / "primec_vm_stdlib_file_error_eof_wrapper_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "EOF\nEOF\n");
@@ -2400,7 +2400,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_recursive_call.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_recursive_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_recursive_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath) == "VM lowering error: vm backend does not support recursive calls: /main\n");
@@ -2415,7 +2415,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_string_pointer.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_string_pointer_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_string_pointer_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath).empty());

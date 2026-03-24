@@ -60,7 +60,7 @@ inline void expectUncheckedPointerProgramRuns(const std::string &source,
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_exe")).string();
+      (testScratchPath("") / (nameStem + "_exe")).string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -74,7 +74,7 @@ inline void expectUncheckedPointerProgramRunsWithOutput(const std::string &sourc
                                                         const std::string &expectedOutput) {
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
   if (emitMode == "vm") {
     const std::string runCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
@@ -84,7 +84,7 @@ inline void expectUncheckedPointerProgramRunsWithOutput(const std::string &sourc
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_exe")).string();
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_exe")).string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

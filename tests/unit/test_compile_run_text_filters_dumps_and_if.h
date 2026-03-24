@@ -10,7 +10,7 @@ TEST_CASE("dump pre_ast shows imports and text filters") {
       "}\n";
   const std::string srcPath = writeTemp("compile_dump_pre_ast.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_dump_pre_ast.txt").string();
+      (testScratchPath("") / "primec_dump_pre_ast.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage pre_ast > " + quoteShellArg(outPath);
@@ -33,7 +33,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_dump_ir.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_dump_ir.txt").string();
+      (testScratchPath("") / "primec_dump_ir.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ir > " + quoteShellArg(outPath);
@@ -53,7 +53,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_dump_ast_nope.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_dump_ast_nope.txt").string();
+      (testScratchPath("") / "primec_dump_ast_nope.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast > " + quoteShellArg(outPath);
@@ -78,7 +78,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_dump_ast_semantic.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_dump_ast_semantic.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
@@ -99,9 +99,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_dump_ast_semantic_alias.prime", source);
   const std::string hyphenOut =
-      (std::filesystem::temp_directory_path() / "primec_dump_ast_semantic_hyphen.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_hyphen.txt").string();
   const std::string underscoreOut =
-      (std::filesystem::temp_directory_path() / "primec_dump_ast_semantic_underscore.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_underscore.txt").string();
 
   const std::string hyphenCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(hyphenOut);
@@ -126,9 +126,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_dump_type_graph_alias.prime", source);
   const std::string hyphenOut =
-      (std::filesystem::temp_directory_path() / "primec_dump_type_graph_hyphen.txt").string();
+      (testScratchPath("") / "primec_dump_type_graph_hyphen.txt").string();
   const std::string underscoreOut =
-      (std::filesystem::temp_directory_path() / "primec_dump_type_graph_underscore.txt").string();
+      (testScratchPath("") / "primec_dump_type_graph_underscore.txt").string();
 
   const std::string hyphenCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage type-graph > " + quoteShellArg(hyphenOut);
@@ -154,7 +154,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_dump_ast_semantic_nope.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_dump_ast_semantic_nope_err.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_nope_err.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic 2> " + quoteShellArg(errPath);
@@ -171,7 +171,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_dump_stage_unknown.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_dump_stage_unknown_err.txt").string();
+      (testScratchPath("") / "primec_dump_stage_unknown_err.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage bananas 2> " + quoteShellArg(errPath);
@@ -190,9 +190,9 @@ TEST_CASE("primec and primevm dump pre_ast match") {
       "}\n";
   const std::string srcPath = writeTemp("compile_dump_shared.prime", source);
   const std::string primecOut =
-      (std::filesystem::temp_directory_path() / "primec_dump_shared_pre_ast.txt").string();
+      (testScratchPath("") / "primec_dump_shared_pre_ast.txt").string();
   const std::string primevmOut =
-      (std::filesystem::temp_directory_path() / "primevm_dump_shared_pre_ast.txt").string();
+      (testScratchPath("") / "primevm_dump_shared_pre_ast.txt").string();
 
   const std::string primecCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage pre_ast > " + quoteShellArg(primecOut);
@@ -218,9 +218,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_dump_shared_ast_semantic.prime", source);
   const std::string primecOut =
-      (std::filesystem::temp_directory_path() / "primec_dump_shared_ast_semantic.txt").string();
+      (testScratchPath("") / "primec_dump_shared_ast_semantic.txt").string();
   const std::string primevmOut =
-      (std::filesystem::temp_directory_path() / "primevm_dump_shared_ast_semantic.txt").string();
+      (testScratchPath("") / "primevm_dump_shared_ast_semantic.txt").string();
 
   const std::string primecCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(primecOut);
@@ -245,9 +245,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_dump_shared_type_graph.prime", source);
   const std::string primecOut =
-      (std::filesystem::temp_directory_path() / "primec_dump_shared_type_graph.txt").string();
+      (testScratchPath("") / "primec_dump_shared_type_graph.txt").string();
   const std::string primevmOut =
-      (std::filesystem::temp_directory_path() / "primevm_dump_shared_type_graph.txt").string();
+      (testScratchPath("") / "primevm_dump_shared_type_graph.txt").string();
 
   const std::string primecCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage type-graph > " + quoteShellArg(primecOut);
@@ -267,7 +267,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primevm_dump_stage_unknown.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_dump_stage_unknown_err.txt").string();
+      (testScratchPath("") / "primevm_dump_stage_unknown_err.txt").string();
 
   const std::string dumpCmd =
       "./primevm " + quoteShellArg(srcPath) + " --dump-stage bananas 2> " + quoteShellArg(errPath);
@@ -284,7 +284,7 @@ main( {
 )";
   const std::string srcPath = writeTemp("primec_plain_parse_diagnostic.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_plain_parse_diagnostic_err.txt").string();
+      (testScratchPath("") / "primec_plain_parse_diagnostic_err.txt").string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) + " 2> " + quoteShellArg(errPath);
   CHECK(runCommand(cmd) == 2);
@@ -303,7 +303,7 @@ TEST_CASE("primevm plain semantic diagnostics include file line and note") {
       "}\n";
   const std::string srcPath = writeTemp("primevm_plain_semantic_diagnostic.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_plain_semantic_diagnostic_err.txt").string();
+      (testScratchPath("") / "primevm_plain_semantic_diagnostic_err.txt").string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(cmd) == 2);
@@ -324,7 +324,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_emit_diagnostics_parse.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_parse_err.json").string();
+      (testScratchPath("") / "primec_emit_diagnostics_parse_err.json").string();
 
   const std::string cmd =
       "./primec " + quoteShellArg(srcPath) + " --emit-diagnostics 2> " + quoteShellArg(errPath);
@@ -351,7 +351,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_parse.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_parse_err.json").string();
+      (testScratchPath("") / "primec_collect_diagnostics_parse_err.json").string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -391,7 +391,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primevm_collect_diagnostics_parse.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_parse_err.json").string();
+      (testScratchPath("") / "primevm_collect_diagnostics_parse_err.json").string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -445,7 +445,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_dupes.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_dupes_err.json").string();
+      (testScratchPath("") / "primec_collect_diagnostics_semantic_dupes_err.json").string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -494,7 +494,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_dupes.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_dupes_err.json").string();
+      (testScratchPath("") / "primevm_collect_diagnostics_semantic_dupes_err.json").string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -529,7 +529,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_imports.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_imports_err.json").string();
+      (testScratchPath("") / "primec_collect_diagnostics_semantic_imports_err.json").string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -567,7 +567,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_imports.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_imports_err.json").string();
+      (testScratchPath("") / "primevm_collect_diagnostics_semantic_imports_err.json").string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -611,7 +611,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_invalid_transforms.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_invalid_transforms_err.json")
+      (testScratchPath("") / "primec_collect_diagnostics_semantic_invalid_transforms_err.json")
           .string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
@@ -660,7 +660,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_invalid_transforms.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_invalid_transforms_err.json")
+      (testScratchPath("") / "primevm_collect_diagnostics_semantic_invalid_transforms_err.json")
           .string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
@@ -713,7 +713,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_return_kind.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_return_kind_err.json").string();
+      (testScratchPath("") / "primec_collect_diagnostics_semantic_return_kind_err.json").string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -770,7 +770,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_return_kind.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_return_kind_err.json").string();
+      (testScratchPath("") / "primevm_collect_diagnostics_semantic_return_kind_err.json").string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -823,7 +823,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_definitions.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_definitions_err.json").string();
+      (testScratchPath("") / "primec_collect_diagnostics_semantic_definitions_err.json").string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -861,7 +861,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_definitions.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_definitions_err.json").string();
+      (testScratchPath("") / "primevm_collect_diagnostics_semantic_definitions_err.json").string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -897,7 +897,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_definition.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_intra_definition_err.json")
+      (testScratchPath("") / "primec_collect_diagnostics_semantic_intra_definition_err.json")
           .string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
@@ -940,7 +940,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_intra_definition.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_intra_definition_err.json")
+      (testScratchPath("") / "primevm_collect_diagnostics_semantic_intra_definition_err.json")
           .string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
@@ -987,7 +987,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_definition_argshape.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_argshape_err.json")
           .string();
 
@@ -1021,7 +1021,7 @@ main() {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_argshape.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_argshape_err.json")
           .string();
 
@@ -1055,7 +1055,7 @@ main() {
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_vector_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_vector_shadow_err.json")
           .string();
 
@@ -1089,7 +1089,7 @@ main() {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_vector_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_vector_shadow_err.json")
           .string();
 
@@ -1123,7 +1123,7 @@ main() {
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_array_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_array_shadow_err.json")
           .string();
 
@@ -1157,7 +1157,7 @@ main() {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_array_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_array_shadow_err.json")
           .string();
 
@@ -1191,7 +1191,7 @@ main() {
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_map_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_map_shadow_err.json")
           .string();
 
@@ -1225,7 +1225,7 @@ main() {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_map_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_map_shadow_err.json")
           .string();
 
@@ -1276,7 +1276,7 @@ main() {
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_shadow_err.json")
           .string();
 
@@ -1327,7 +1327,7 @@ main() {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_shadow_err.json")
           .string();
 
@@ -1378,7 +1378,7 @@ main() {
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_type_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_type_shadow_err.json")
           .string();
 
@@ -1431,7 +1431,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_unsafe_type_shadow_err.json")
           .string();
 
@@ -1483,7 +1483,7 @@ main() {
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_at_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_at_shadow_err.json")
           .string();
 
@@ -1534,7 +1534,7 @@ main() {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_at_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_at_shadow_err.json")
           .string();
 
@@ -1585,7 +1585,7 @@ main() {
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_index_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_index_shadow_err.json")
           .string();
 
@@ -1636,7 +1636,7 @@ main() {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_index_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_index_shadow_err.json")
           .string();
 
@@ -1687,7 +1687,7 @@ main() {
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_shadow_err.json")
           .string();
 
@@ -1738,7 +1738,7 @@ main() {
   const std::string srcPath = writeTemp(
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_shadow_err.json")
           .string();
 
@@ -1790,7 +1790,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_reverse_shadow_err.json")
           .string();
 
@@ -1842,7 +1842,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_reverse_shadow_err.json")
           .string();
 
@@ -1894,7 +1894,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -1946,7 +1946,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -1998,7 +1998,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_missing_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_missing_arg_shape_shadow_err.json")
           .string();
 
@@ -2050,7 +2050,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_missing_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_missing_arg_shape_shadow_err.json")
           .string();
 
@@ -2104,7 +2104,7 @@ main() {
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -2159,7 +2159,7 @@ main() {
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -2212,7 +2212,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_missing_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_missing_arg_shape_shadow_err.json")
           .string();
 
@@ -2264,7 +2264,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_missing_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_missing_arg_shape_shadow_err.json")
           .string();
 
@@ -2318,7 +2318,7 @@ main() {
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -2373,7 +2373,7 @@ main() {
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -2426,7 +2426,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -2478,7 +2478,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -2532,7 +2532,7 @@ main() {
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_extra_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -2587,7 +2587,7 @@ main() {
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_extra_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -2640,7 +2640,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_shape_shadow_err.json")
           .string();
 
@@ -2692,7 +2692,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_shape_shadow_err.json")
           .string();
 
@@ -2745,7 +2745,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_shape_reverse_"
        "shadow_err.json")
           .string();
@@ -2799,7 +2799,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_shape_reverse_"
        "shadow_err.json")
           .string();
@@ -2852,7 +2852,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -2904,7 +2904,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -2958,7 +2958,7 @@ main() {
                 "extra_arg_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_"
        "extra_arg_shape_reverse_shadow_err.json")
           .string();
@@ -3013,7 +3013,7 @@ main() {
                 "extra_arg_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_"
        "extra_arg_shape_reverse_shadow_err.json")
           .string();
@@ -3066,7 +3066,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_type_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_type_shadow_err.json")
           .string();
 
@@ -3118,7 +3118,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_type_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_type_shadow_err.json")
           .string();
 
@@ -3171,7 +3171,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -3224,7 +3224,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -3276,7 +3276,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_mixed_shape_shadow_"
        "err.json")
           .string();
@@ -3329,7 +3329,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_mixed_shape_shadow_"
        "err.json")
           .string();
@@ -3384,7 +3384,7 @@ main() {
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -3439,7 +3439,7 @@ main() {
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_call_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -3491,7 +3491,7 @@ main() {
   const std::string srcPath = writeTemp(
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_shadow_err.json")
           .string();
 
@@ -3542,7 +3542,7 @@ main() {
   const std::string srcPath = writeTemp(
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_shadow_err.json")
           .string();
 
@@ -3594,7 +3594,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_reverse_shadow_err.json")
           .string();
 
@@ -3647,7 +3647,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_capacity_type_reverse_shadow_err.json")
           .string();
 
@@ -3700,7 +3700,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_type_shadow_err.json")
           .string();
 
@@ -3752,7 +3752,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_type_shadow_err.json")
           .string();
 
@@ -3806,7 +3806,7 @@ main() {
                 "reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_type_"
        "reverse_shadow_err.json")
           .string();
@@ -3862,7 +3862,7 @@ main() {
                 "reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_type_"
        "reverse_shadow_err.json")
           .string();
@@ -3916,7 +3916,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -3968,7 +3968,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -4022,7 +4022,7 @@ main() {
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -4077,7 +4077,7 @@ main() {
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_capacity_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -4130,7 +4130,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_type_shadow_err.json")
           .string();
 
@@ -4182,7 +4182,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_type_shadow_err.json")
           .string();
 
@@ -4234,7 +4234,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_type_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -4286,7 +4286,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_type_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -4338,7 +4338,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_type_shadow_err.json")
           .string();
 
@@ -4390,7 +4390,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_type_shadow_err.json")
           .string();
 
@@ -4442,7 +4442,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_type_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_type_shadow_err.json")
           .string();
 
@@ -4494,7 +4494,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_type_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_type_shadow_err.json")
           .string();
 
@@ -4546,7 +4546,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -4606,7 +4606,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -4666,7 +4666,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -4718,7 +4718,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -4772,7 +4772,7 @@ main() {
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -4827,7 +4827,7 @@ main() {
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -4880,7 +4880,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_shape_shadow_err.json")
           .string();
 
@@ -4932,7 +4932,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_shape_shadow_err.json")
           .string();
 
@@ -4985,7 +4985,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_shape_reverse_shadow_"
        "err.json")
           .string();
@@ -5039,7 +5039,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_shape_reverse_shadow_"
        "err.json")
           .string();
@@ -5092,7 +5092,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -5144,7 +5144,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -5198,7 +5198,7 @@ main() {
                 "extra_arg_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_"
        "extra_arg_shape_reverse_shadow_err.json")
           .string();
@@ -5261,7 +5261,7 @@ main() {
                 "extra_arg_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_call_pair_"
        "extra_arg_shape_reverse_shadow_err.json")
           .string();
@@ -5322,7 +5322,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_shape_shadow_err.json")
           .string();
 
@@ -5374,7 +5374,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_shape_shadow_err.json")
           .string();
 
@@ -5427,7 +5427,7 @@ main() {
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -5489,7 +5489,7 @@ main() {
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -5550,7 +5550,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_shape_shadow_err.json")
           .string();
 
@@ -5602,7 +5602,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_shape_shadow_err.json")
           .string();
 
@@ -5656,7 +5656,7 @@ main() {
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_missing_arg_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -5719,7 +5719,7 @@ main() {
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_missing_arg_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -5781,7 +5781,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -5834,7 +5834,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -5886,7 +5886,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_mixed_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -5938,7 +5938,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_mixed_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -5992,7 +5992,7 @@ main() {
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_mixed_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -6055,7 +6055,7 @@ main() {
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_mixed_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -6116,7 +6116,7 @@ main() {
       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -6168,7 +6168,7 @@ main() {
       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -6222,7 +6222,7 @@ main() {
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_extra_arg_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -6277,7 +6277,7 @@ main() {
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_method_count_pair_extra_arg_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -6330,7 +6330,7 @@ main() {
       writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -6382,7 +6382,7 @@ main() {
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -6435,7 +6435,7 @@ main() {
                 "reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_"
        "reverse_shadow_err.json")
           .string();
@@ -6489,7 +6489,7 @@ main() {
                 "reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_"
        "reverse_shadow_err.json")
           .string();
@@ -6527,7 +6527,7 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_builtin_map_named_args_scopes.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_builtin_map_named_args_scopes_err.json")
+      (testScratchPath("") / "primec_collect_diagnostics_builtin_map_named_args_scopes_err.json")
           .string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
@@ -6563,7 +6563,7 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_builtin_map_named_args_scopes.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_builtin_map_named_args_scopes_err.json")
+      (testScratchPath("") / "primevm_collect_diagnostics_builtin_map_named_args_scopes_err.json")
           .string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
@@ -6599,7 +6599,7 @@ execute_repeat(vector(value=3i32), 0i32)
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_builtin_vector_named_args_scopes.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_builtin_vector_named_args_scopes_err.json")
           .string();
 
@@ -6635,7 +6635,7 @@ execute_repeat(vector(value=3i32), 0i32)
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_builtin_vector_named_args_scopes.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_builtin_vector_named_args_scopes_err.json")
           .string();
 
@@ -6671,7 +6671,7 @@ execute_repeat(array(value=3i32), 0i32)
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_builtin_array_named_args_scopes.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_builtin_array_named_args_scopes_err.json")
           .string();
 
@@ -6708,7 +6708,7 @@ execute_repeat(array(value=3i32), 0i32)
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_builtin_array_named_args_scopes.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_builtin_array_named_args_scopes_err.json")
           .string();
 
@@ -6741,7 +6741,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_definition_argtype.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_argtype_err.json")
           .string();
 
@@ -6794,7 +6794,7 @@ main() {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_argtype.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_argtype_err.json")
           .string();
 
@@ -6846,7 +6846,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_definition_flow_effect.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_definition_flow_effect_err.json")
           .string();
 
@@ -6899,7 +6899,7 @@ main() {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_definition_flow_effect.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_definition_flow_effect_err.json")
           .string();
 
@@ -6944,7 +6944,7 @@ run_missing_two()
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_executions.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_executions_err.json").string();
+      (testScratchPath("") / "primec_collect_diagnostics_semantic_executions_err.json").string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -6989,7 +6989,7 @@ execute_repeat(nope(1i32), missing(2i32))
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_execution.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_intra_execution_err.json")
+      (testScratchPath("") / "primec_collect_diagnostics_semantic_intra_execution_err.json")
           .string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
@@ -7029,7 +7029,7 @@ run_missing_two()
 )";
   const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_executions.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_executions_err.json").string();
+      (testScratchPath("") / "primevm_collect_diagnostics_semantic_executions_err.json").string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
                           " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
@@ -7074,7 +7074,7 @@ execute_repeat(nope(1i32), missing(2i32))
 )";
   const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_intra_execution.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_intra_execution_err.json")
+      (testScratchPath("") / "primevm_collect_diagnostics_semantic_intra_execution_err.json")
           .string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
@@ -7123,7 +7123,7 @@ execute_repeat(take_two(a=1i32, a=2i32), take_two(1i32))
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_execution_argshape.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_argshape_err.json")
           .string();
 
@@ -7167,7 +7167,7 @@ execute_repeat(take_two(a=1i32, a=2i32), take_two(1i32))
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_argshape.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_argshape_err.json")
           .string();
 
@@ -7211,7 +7211,7 @@ execute_repeat(map(key=1i32, key=2i32), map())
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_map_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_map_shadow_err.json")
           .string();
 
@@ -7255,7 +7255,7 @@ execute_repeat(map(key=1i32, key=2i32), map())
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_map_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_map_shadow_err.json")
           .string();
 
@@ -7299,7 +7299,7 @@ execute_repeat(vector(value=1i32, value=2i32), vector())
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_vector_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_vector_shadow_err.json")
           .string();
 
@@ -7343,7 +7343,7 @@ execute_repeat(vector(value=1i32, value=2i32), vector())
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_vector_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_vector_shadow_err.json")
           .string();
 
@@ -7387,7 +7387,7 @@ execute_repeat(array(value=1i32, value=2i32), array())
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_array_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_array_shadow_err.json")
           .string();
 
@@ -7431,7 +7431,7 @@ execute_repeat(array(value=1i32, value=2i32), array())
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_array_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_array_shadow_err.json")
           .string();
 
@@ -7490,7 +7490,7 @@ execute_repeat(wrapMap().at_unsafe(1i32, 2i32), at_unsafe(wrapVector()))
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_unsafe_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_unsafe_shadow_err.json")
           .string();
 
@@ -7549,7 +7549,7 @@ execute_repeat(wrapMap().at_unsafe(1i32, 2i32), at_unsafe(wrapVector()))
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_unsafe_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_unsafe_shadow_err.json")
           .string();
 
@@ -7608,7 +7608,7 @@ execute_repeat(at_unsafe(wrapMap(), true), wrapVector().at_unsafe(true))
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_unsafe_type_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_unsafe_type_shadow_err.json")
           .string();
 
@@ -7669,7 +7669,7 @@ execute_repeat(at_unsafe(wrapMap(), true), wrapVector().at_unsafe(true))
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_unsafe_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_unsafe_type_shadow_err.json")
           .string();
 
@@ -7729,7 +7729,7 @@ execute_repeat(wrapMap().at(1i32, 2i32), at(wrapVector()))
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_at_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_at_shadow_err.json")
           .string();
 
@@ -7788,7 +7788,7 @@ execute_repeat(wrapMap().at(1i32, 2i32), at(wrapVector()))
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_at_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_at_shadow_err.json")
           .string();
 
@@ -7847,7 +7847,7 @@ execute_repeat(wrapMap()[true], wrapVector()[true])
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_index_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_index_shadow_err.json")
           .string();
 
@@ -7906,7 +7906,7 @@ execute_repeat(wrapMap()[true], wrapVector()[true])
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_index_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_index_shadow_err.json")
           .string();
 
@@ -7965,7 +7965,7 @@ execute_repeat(count(wrapMap(), 1i32), wrapVector().capacity(1i32))
   const std::string srcPath =
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_shadow_err.json")
           .string();
 
@@ -8016,7 +8016,7 @@ execute_repeat(count(wrapMap(), 1i32), wrapVector().capacity(1i32))
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_shadow_err.json")
           .string();
 
@@ -8068,7 +8068,7 @@ execute_repeat(wrapVector().capacity(1i32), count(wrapMap(), 1i32))
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_reverse_shadow_err.json")
           .string();
 
@@ -8120,7 +8120,7 @@ execute_repeat(wrapVector().capacity(1i32), count(wrapMap(), 1i32))
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_reverse_shadow_err.json")
           .string();
 
@@ -8172,7 +8172,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().capacity(1i32, 2i32))
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -8224,7 +8224,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().capacity(1i32, 2i32))
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -8276,7 +8276,7 @@ execute_repeat(count(wrapMap()), wrapVector().capacity())
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_missing_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_missing_arg_shape_shadow_err.json")
           .string();
 
@@ -8328,7 +8328,7 @@ execute_repeat(count(wrapMap()), wrapVector().capacity())
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_missing_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_missing_arg_shape_shadow_err.json")
           .string();
 
@@ -8381,7 +8381,7 @@ execute_repeat(wrapVector().capacity(), count(wrapMap()))
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -8435,7 +8435,7 @@ execute_repeat(wrapVector().capacity(), count(wrapMap()))
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -8488,7 +8488,7 @@ execute_repeat(wrapMap().count(), wrapVector().capacity())
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_missing_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_missing_arg_shape_shadow_err.json")
           .string();
 
@@ -8540,7 +8540,7 @@ execute_repeat(wrapMap().count(), wrapVector().capacity())
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_missing_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_missing_arg_shape_shadow_err.json")
           .string();
 
@@ -8593,7 +8593,7 @@ execute_repeat(wrapVector().capacity(), wrapMap().count())
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -8647,7 +8647,7 @@ execute_repeat(wrapVector().capacity(), wrapMap().count())
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -8700,7 +8700,7 @@ execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().capacity(1i32, 2i32))
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -8752,7 +8752,7 @@ execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().capacity(1i32, 2i32))
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -8805,7 +8805,7 @@ execute_repeat(wrapVector().capacity(1i32, 2i32), wrapMap().count(1i32, 2i32))
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_extra_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -8859,7 +8859,7 @@ execute_repeat(wrapVector().capacity(1i32, 2i32), wrapMap().count(1i32, 2i32))
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_extra_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -8912,7 +8912,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector()))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_shape_shadow_err.json")
           .string();
 
@@ -8964,7 +8964,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector()))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_shape_shadow_err.json")
           .string();
 
@@ -9016,7 +9016,7 @@ execute_repeat(capacity(wrapVector()), count(wrapMap()))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_shape_reverse_"
        "shadow_err.json")
           .string();
@@ -9069,7 +9069,7 @@ execute_repeat(capacity(wrapVector()), count(wrapMap()))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_shape_reverse_"
        "shadow_err.json")
           .string();
@@ -9122,7 +9122,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), capacity(wrapVector(), 1i32, 2i32))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -9174,7 +9174,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), capacity(wrapVector(), 1i32, 2i32))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -9227,7 +9227,7 @@ execute_repeat(capacity(wrapVector(), 1i32, 2i32), count(wrapMap(), 1i32, 2i32))
                 "extra_arg_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_"
        "extra_arg_shape_reverse_shadow_err.json")
           .string();
@@ -9281,7 +9281,7 @@ execute_repeat(capacity(wrapVector(), 1i32, 2i32), count(wrapMap(), 1i32, 2i32))
                 "extra_arg_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_"
        "extra_arg_shape_reverse_shadow_err.json")
           .string();
@@ -9334,7 +9334,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector(), true))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_type_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_type_shadow_err.json")
           .string();
 
@@ -9386,7 +9386,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector(), true))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_type_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_type_shadow_err.json")
           .string();
 
@@ -9438,7 +9438,7 @@ execute_repeat(capacity(wrapVector(), true), count(wrapMap(), true))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -9490,7 +9490,7 @@ execute_repeat(capacity(wrapVector(), true), count(wrapMap(), true))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -9542,7 +9542,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector()))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_mixed_shape_shadow_"
        "err.json")
           .string();
@@ -9595,7 +9595,7 @@ execute_repeat(count(wrapMap(), true), capacity(wrapVector()))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_mixed_shape_shadow_"
        "err.json")
           .string();
@@ -9649,7 +9649,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector(), true))
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -9703,7 +9703,7 @@ execute_repeat(count(wrapMap()), capacity(wrapVector(), true))
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_call_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -9755,7 +9755,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().capacity(true))
   const std::string srcPath = writeTemp(
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_shadow_err.json")
           .string();
 
@@ -9806,7 +9806,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().capacity(true))
   const std::string srcPath = writeTemp(
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_shadow_err.json")
           .string();
 
@@ -9858,7 +9858,7 @@ execute_repeat(wrapVector().capacity(true), count(wrapMap(), true))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_reverse_shadow_err.json")
           .string();
 
@@ -9911,7 +9911,7 @@ execute_repeat(wrapVector().capacity(true), count(wrapMap(), true))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_capacity_type_reverse_shadow_err.json")
           .string();
 
@@ -9964,7 +9964,7 @@ execute_repeat(wrapMap().count(true), wrapVector().capacity(true))
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_type_shadow_err.json")
           .string();
 
@@ -10016,7 +10016,7 @@ execute_repeat(wrapMap().count(true), wrapVector().capacity(true))
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_type_shadow_err.json")
           .string();
 
@@ -10069,7 +10069,7 @@ execute_repeat(wrapVector().capacity(true), wrapMap().count(true))
                 "reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_type_"
        "reverse_shadow_err.json")
           .string();
@@ -10124,7 +10124,7 @@ execute_repeat(wrapVector().capacity(true), wrapMap().count(true))
                 "reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_type_"
        "reverse_shadow_err.json")
           .string();
@@ -10178,7 +10178,7 @@ execute_repeat(wrapMap().count(true), wrapVector().capacity())
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -10230,7 +10230,7 @@ execute_repeat(wrapMap().count(true), wrapVector().capacity())
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -10283,7 +10283,7 @@ execute_repeat(wrapMap().count(), wrapVector().capacity(true))
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -10337,7 +10337,7 @@ execute_repeat(wrapMap().count(), wrapVector().capacity(true))
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_capacity_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -10390,7 +10390,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().count(true))
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_type_shadow_err.json")
           .string();
 
@@ -10442,7 +10442,7 @@ execute_repeat(count(wrapMap(), true), wrapVector().count(true))
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_type_shadow_err.json")
           .string();
 
@@ -10494,7 +10494,7 @@ execute_repeat(wrapVector().count(true), count(wrapMap(), true))
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_type_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -10546,7 +10546,7 @@ execute_repeat(wrapVector().count(true), count(wrapMap(), true))
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_type_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -10598,7 +10598,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count(true))
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_type_shadow_err.json")
           .string();
 
@@ -10650,7 +10650,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count(true))
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_type_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_type_shadow_err.json")
           .string();
 
@@ -10702,7 +10702,7 @@ execute_repeat(count(wrapMap(), true), count(wrapVector(), true))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_type_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_type_shadow_err.json")
           .string();
 
@@ -10754,7 +10754,7 @@ execute_repeat(count(wrapMap(), true), count(wrapVector(), true))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_type_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_type_shadow_err.json")
           .string();
 
@@ -10806,7 +10806,7 @@ execute_repeat(count(wrapVector(), true), count(wrapMap(), true))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -10858,7 +10858,7 @@ execute_repeat(count(wrapVector(), true), count(wrapMap(), true))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -10910,7 +10910,7 @@ execute_repeat(count(wrapMap(), true), count(wrapVector()))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -10962,7 +10962,7 @@ execute_repeat(count(wrapMap(), true), count(wrapVector()))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_mixed_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -11015,7 +11015,7 @@ execute_repeat(count(wrapMap()), count(wrapVector(), true))
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -11069,7 +11069,7 @@ execute_repeat(count(wrapMap()), count(wrapVector(), true))
                 "mixed_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_"
        "mixed_shape_reverse_shadow_err.json")
           .string();
@@ -11122,7 +11122,7 @@ execute_repeat(count(wrapMap()), count(wrapVector()))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_shape_shadow_err.json")
           .string();
 
@@ -11174,7 +11174,7 @@ execute_repeat(count(wrapMap()), count(wrapVector()))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_shape_shadow_err.json")
           .string();
 
@@ -11226,7 +11226,7 @@ execute_repeat(count(wrapVector()), count(wrapMap()))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_shape_reverse_shadow_"
        "err.json")
           .string();
@@ -11279,7 +11279,7 @@ execute_repeat(count(wrapVector()), count(wrapMap()))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_shape_reverse_shadow_"
        "err.json")
           .string();
@@ -11332,7 +11332,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), count(wrapVector(), 1i32, 2i32))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -11384,7 +11384,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), count(wrapVector(), 1i32, 2i32))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -11437,7 +11437,7 @@ execute_repeat(count(wrapVector(), 1i32, 2i32), count(wrapMap(), 1i32, 2i32))
                 "extra_arg_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_"
        "extra_arg_shape_reverse_shadow_err.json")
           .string();
@@ -11491,7 +11491,7 @@ execute_repeat(count(wrapVector(), 1i32, 2i32), count(wrapMap(), 1i32, 2i32))
                 "extra_arg_shape_reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_call_pair_"
        "extra_arg_shape_reverse_shadow_err.json")
           .string();
@@ -11544,7 +11544,7 @@ execute_repeat(count(wrapMap()), wrapVector().count())
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_shape_shadow_err.json")
           .string();
 
@@ -11596,7 +11596,7 @@ execute_repeat(count(wrapMap()), wrapVector().count())
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_shape_shadow_err.json")
           .string();
 
@@ -11649,7 +11649,7 @@ execute_repeat(wrapVector().count(), count(wrapMap()))
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -11703,7 +11703,7 @@ execute_repeat(wrapVector().count(), count(wrapMap()))
       "shape_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_missing_arg_"
        "shape_reverse_shadow_err.json")
           .string();
@@ -11756,7 +11756,7 @@ execute_repeat(wrapMap().count(), wrapVector().count())
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_shape_shadow_err.json")
           .string();
 
@@ -11808,7 +11808,7 @@ execute_repeat(wrapMap().count(), wrapVector().count())
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_shape_shadow_err.json")
           .string();
 
@@ -11861,7 +11861,7 @@ execute_repeat(wrapVector().count(), wrapMap().count())
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_missing_arg_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -11915,7 +11915,7 @@ execute_repeat(wrapVector().count(), wrapMap().count())
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_missing_arg_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -11968,7 +11968,7 @@ execute_repeat(wrapVector().count(true), wrapMap().count(true))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -12020,7 +12020,7 @@ execute_repeat(wrapVector().count(true), wrapMap().count(true))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_type_reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_type_reverse_shadow_err.json")
           .string();
 
@@ -12072,7 +12072,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count())
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_mixed_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -12124,7 +12124,7 @@ execute_repeat(wrapMap().count(true), wrapVector().count())
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_mixed_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_mixed_shape_shadow_err.json")
           .string();
 
@@ -12177,7 +12177,7 @@ execute_repeat(wrapVector().count(), wrapMap().count(true))
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_mixed_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -12231,7 +12231,7 @@ execute_repeat(wrapVector().count(), wrapMap().count(true))
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_mixed_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -12284,7 +12284,7 @@ execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().count(1i32, 2i32))
       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -12336,7 +12336,7 @@ execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().count(1i32, 2i32))
       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -12389,7 +12389,7 @@ execute_repeat(wrapVector().count(1i32, 2i32), wrapMap().count(1i32, 2i32))
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -12443,7 +12443,7 @@ execute_repeat(wrapVector().count(1i32, 2i32), wrapMap().count(1i32, 2i32))
       "reverse_shadow.prime",
       source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_"
        "reverse_shadow_err.json")
           .string();
@@ -12496,7 +12496,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().count(1i32, 2i32))
       writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -12548,7 +12548,7 @@ execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().count(1i32, 2i32))
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_shape_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
@@ -12601,7 +12601,7 @@ execute_repeat(wrapVector().count(1i32, 2i32), count(wrapMap(), 1i32, 2i32))
                 "reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_"
        "reverse_shadow_err.json")
           .string();
@@ -12655,7 +12655,7 @@ execute_repeat(wrapVector().count(1i32, 2i32), count(wrapMap(), 1i32, 2i32))
                 "reverse_shadow.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_"
        "reverse_shadow_err.json")
           .string();
@@ -12691,7 +12691,7 @@ execute_repeat(expects_bool(1i32, 7i32), expects_bool(true, false))
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_execution_argtype.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_argtype_err.json")
           .string();
 
@@ -12746,7 +12746,7 @@ execute_repeat(expects_bool(1i32, 7i32), expects_bool(true, false))
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_argtype.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_argtype_err.json")
           .string();
 
@@ -12800,7 +12800,7 @@ execute_repeat([i32] a, [i32] b) {
 )";
   const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_execution_flow_effect.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_collect_diagnostics_semantic_intra_execution_flow_effect_err.json")
           .string();
 
@@ -12853,7 +12853,7 @@ execute_repeat([i32] a, [i32] b) {
   const std::string srcPath =
       writeTemp("primevm_collect_diagnostics_semantic_intra_execution_flow_effect.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primevm_collect_diagnostics_semantic_intra_execution_flow_effect_err.json")
           .string();
 
@@ -12893,7 +12893,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primevm_emit_diagnostics_semantic.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_semantic_err.json").string();
+      (testScratchPath("") / "primevm_emit_diagnostics_semantic_err.json").string();
 
   const std::string cmd =
       "./primevm " + quoteShellArg(srcPath) + " --emit-diagnostics 2> " + quoteShellArg(errPath);
@@ -12918,7 +12918,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("primec_emit_diagnostics_lowering.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_lowering_err.json").string();
+      (testScratchPath("") / "primec_emit_diagnostics_lowering_err.json").string();
 
   const std::string cmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
@@ -12940,14 +12940,14 @@ main() {
 )";
   const std::string srcPath = writeTemp("emit_diagnostics_text_filters_removed.prime", source);
   const std::string primecErrPath =
-      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_text_filters_removed_err.json").string();
+      (testScratchPath("") / "primec_emit_diagnostics_text_filters_removed_err.json").string();
   const std::string primecBareErrPath =
-      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_text_filters_removed_bare_err.json")
+      (testScratchPath("") / "primec_emit_diagnostics_text_filters_removed_bare_err.json")
           .string();
   const std::string primevmErrPath =
-      (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_text_filters_removed_err.json").string();
+      (testScratchPath("") / "primevm_emit_diagnostics_text_filters_removed_err.json").string();
   const std::string primevmBareErrPath =
-      (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_text_filters_removed_bare_err.json")
+      (testScratchPath("") / "primevm_emit_diagnostics_text_filters_removed_bare_err.json")
           .string();
 
   const std::string primecCmd = "./primec " + quoteShellArg(srcPath) +
@@ -12989,7 +12989,7 @@ main() {
 
 TEST_CASE("primec list transforms prints metadata") {
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_list_transforms.txt").string();
+      (testScratchPath("") / "primec_list_transforms.txt").string();
   const std::string listCmd = "./primec --list-transforms > " + quoteShellArg(outPath);
 
   CHECK(runCommand(listCmd) == 0);
@@ -13002,9 +13002,9 @@ TEST_CASE("primec list transforms prints metadata") {
 
 TEST_CASE("primec and primevm list transforms match") {
   const std::string primecOut =
-      (std::filesystem::temp_directory_path() / "primec_list_transforms_parity.txt").string();
+      (testScratchPath("") / "primec_list_transforms_parity.txt").string();
   const std::string primevmOut =
-      (std::filesystem::temp_directory_path() / "primevm_list_transforms_parity.txt").string();
+      (testScratchPath("") / "primevm_list_transforms_parity.txt").string();
 
   const std::string primecCmd = "./primec --list-transforms > " + quoteShellArg(primecOut);
   const std::string primevmCmd = "./primevm --list-transforms > " + quoteShellArg(primevmOut);
@@ -13022,8 +13022,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_implicit_utf8.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_implicit_utf8_exe").string();
-  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_implicit_utf8_native").string();
+  const std::string exePath = (testScratchPath("") / "primec_implicit_utf8_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_implicit_utf8_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCppCmd) == 0);
@@ -13045,7 +13045,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_hex.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_hex_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_hex_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default,implicit-i32";
@@ -13063,7 +13063,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_float_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_float_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -13078,7 +13078,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float_suffix_f.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_float_suffix_f_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_float_suffix_f_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -13093,7 +13093,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float_compare.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_float_compare_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_float_compare_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -13108,13 +13108,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_filters_string_compare.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_filters_string_compare_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_text_filters_string_compare_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_text_filters_string_compare_native").string();
+      (testScratchPath("") / "primec_text_filters_string_compare_native").string();
   const std::string vmErrPath =
-      (std::filesystem::temp_directory_path() / "primec_text_filters_string_compare_vm_err.txt").string();
+      (testScratchPath("") / "primec_text_filters_string_compare_vm_err.txt").string();
   const std::string nativeErrPath =
-      (std::filesystem::temp_directory_path() / "primec_text_filters_string_compare_native_err.txt").string();
+      (testScratchPath("") / "primec_text_filters_string_compare_native_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -13140,7 +13140,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_mixed_int_float.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_mixed_int_float_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_mixed_int_float_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -13155,7 +13155,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_array.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_array_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_method_array_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -13171,7 +13171,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_pointer.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_pointer_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_method_pointer_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -13187,7 +13187,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_reference.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_reference_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_method_reference_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -13203,7 +13203,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_pointer_sugar.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_pointer_sugar_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_pointer_sugar_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -13219,7 +13219,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_map.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_map_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_method_map_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -13233,7 +13233,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_suffix_off.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_suffix_off_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_suffix_off_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -13254,7 +13254,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_if_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -13269,7 +13269,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if_expr.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_expr_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_if_expr_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -13296,8 +13296,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if_expr_sugar.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_expr_sugar_exe").string();
-  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_if_expr_sugar_native").string();
+  const std::string exePath = (testScratchPath("") / "primec_if_expr_sugar_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_if_expr_sugar_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCppCmd) == 0);
@@ -13319,9 +13319,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if_expr_block_stmts.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_expr_block_stmts_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_if_expr_block_stmts_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_if_expr_block_stmts_native").string();
+      (testScratchPath("") / "primec_if_expr_block_stmts_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCppCmd) == 0);
@@ -13345,9 +13345,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if_lazy_then.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_lazy_then_exe").string();
-  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_if_lazy_then_native").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_if_lazy_then_err.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_if_lazy_then_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_if_lazy_then_native").string();
+  const std::string errPath = (testScratchPath("") / "primec_if_lazy_then_err.txt").string();
 
   const std::string compileCppCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
@@ -13379,9 +13379,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_if_lazy_else.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_lazy_else_exe").string();
-  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_if_lazy_else_native").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_if_lazy_else_err.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_if_lazy_else_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_if_lazy_else_native").string();
+  const std::string errPath = (testScratchPath("") / "primec_if_lazy_else_err.txt").string();
 
   const std::string compileCppCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";

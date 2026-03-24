@@ -1472,7 +1472,7 @@ inline void expectMapConformanceProgramRuns(const std::string &source,
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_exe")).string();
+      (testScratchPath("") / (nameStem + "_exe")).string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1490,7 +1490,7 @@ inline void expectMapConformanceProgramRunsWithOutput(const std::string &source,
   CAPTURE(expectedOutput);
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
   if (emitMode == "vm") {
     const std::string runCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
@@ -1500,7 +1500,7 @@ inline void expectMapConformanceProgramRunsWithOutput(const std::string &source,
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_exe")).string();
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_exe")).string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1515,7 +1515,7 @@ inline void expectMapVmProgramRunsWithOutput(const std::string &source,
                                              const std::string &expectedOutput) {
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_vm_out.txt")).string();
+      (testScratchPath("") / (nameStem + "_vm_out.txt")).string();
   const std::string runCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == expectedExitCode);
@@ -1528,7 +1528,7 @@ inline void expectMapConformanceCompileReject(const std::string &source,
                                               const std::string &expectedError) {
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
 
   if (emitMode == "vm") {
     const std::string runCmd =
@@ -1539,7 +1539,7 @@ inline void expectMapConformanceCompileReject(const std::string &source,
   }
 
   const std::string artifactPath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_artifact")).string();
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_artifact")).string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(artifactPath) + " --entry /main > " + quoteShellArg(outPath) +
                                  " 2>&1";
@@ -1555,7 +1555,7 @@ inline void expectMapConformanceFailure(const std::string &source,
                                         bool duringCompile) {
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
 
   if (emitMode == "vm") {
     const std::string runCmd =
@@ -1568,7 +1568,7 @@ inline void expectMapConformanceFailure(const std::string &source,
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_exe")).string();
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_exe")).string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   if (duringCompile) {
@@ -1620,7 +1620,7 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
   const std::string source = makeMapTryAtConformanceImportSource(importPath, boolValues);
   const std::string srcPath = writeTemp("map_try_at_" + slug + "_" + valueSlug + "_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / ("primec_map_try_at_" + slug + "_" + valueSlug + "_" + emitMode +
+      (testScratchPath("") / ("primec_map_try_at_" + slug + "_" + valueSlug + "_" + emitMode +
                                                  "_out.txt"))
           .string();
 
@@ -1633,7 +1633,7 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / ("primec_map_try_at_" + slug + "_" + valueSlug + "_" + emitMode +
+      (testScratchPath("") / ("primec_map_try_at_" + slug + "_" + valueSlug + "_" + emitMode +
                                                  "_exe"))
           .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
@@ -1659,7 +1659,7 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
   const std::string source = makeExperimentalMapReferenceHelperConformanceSource();
   const std::string srcPath = writeTemp("experimental_map_reference_helpers_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_experimental_map_reference_helpers_" + emitMode + "_out.txt"))
           .string();
 
@@ -1672,7 +1672,7 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_experimental_map_reference_helpers_" + emitMode + "_exe"))
           .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
@@ -1748,7 +1748,7 @@ inline void expectCanonicalMapNamespaceExperimentalReferenceConformance(const st
   const std::string srcPath =
       writeTemp("map_namespace_canonical_experimental_reference_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_map_namespace_canonical_experimental_reference_" + emitMode + "_out.txt"))
           .string();
 
@@ -1958,7 +1958,7 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
   const std::string srcPath =
       writeTemp("map_namespace_canonical_experimental_borrowed_ref_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_map_namespace_canonical_experimental_borrowed_ref_" + emitMode + "_out.txt"))
           .string();
 
@@ -1971,7 +1971,7 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_map_namespace_canonical_experimental_borrowed_ref_" + emitMode + "_exe"))
           .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
@@ -1993,7 +1993,7 @@ inline void expectCanonicalMapNamespaceTypeMismatchReject(const std::string &emi
   const std::string source = makeCanonicalMapNamespaceTypeMismatchRejectSource();
   const std::string srcPath = writeTemp("map_namespace_canonical_type_mismatch_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_map_namespace_canonical_type_mismatch_" + emitMode + "_out.txt"))
           .string();
 
@@ -2044,7 +2044,7 @@ inline void expectCanonicalMapAccessVmBuiltinConformance(const std::string &help
   const std::string srcPath =
       writeTemp("map_" + helperName + "_canonical_vm_builtin.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_map_" + helperName + "_canonical_vm_builtin_out.txt"))
           .string();
   const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
@@ -2095,7 +2095,7 @@ inline void expectExperimentalMapTryAtStringConformance(const std::string &emitM
   const std::string source = makeExperimentalMapTryAtStringConformanceSource();
   const std::string srcPath = writeTemp("map_try_at_experimental_string_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / ("primec_map_try_at_experimental_string_" + emitMode + "_out.txt"))
+      (testScratchPath("") / ("primec_map_try_at_experimental_string_" + emitMode + "_out.txt"))
           .string();
 
   if (emitMode == "vm") {
@@ -2107,7 +2107,7 @@ inline void expectExperimentalMapTryAtStringConformance(const std::string &emitM
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / ("primec_map_try_at_experimental_string_" + emitMode + "_exe"))
+      (testScratchPath("") / ("primec_map_try_at_experimental_string_" + emitMode + "_exe"))
           .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
@@ -2132,7 +2132,7 @@ inline void expectExperimentalMapAtMissingConformance(const std::string &emitMod
   const std::string source = makeExperimentalMapAtMissingConformanceSource();
   const std::string srcPath = writeTemp("map_at_missing_experimental_" + emitMode + ".prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / ("primec_map_at_missing_experimental_" + emitMode + "_err.txt"))
+      (testScratchPath("") / ("primec_map_at_missing_experimental_" + emitMode + "_err.txt"))
           .string();
 
   if (emitMode == "vm") {
@@ -2144,7 +2144,7 @@ inline void expectExperimentalMapAtMissingConformance(const std::string &emitMod
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / ("primec_map_at_missing_experimental_" + emitMode + "_exe"))
+      (testScratchPath("") / ("primec_map_at_missing_experimental_" + emitMode + "_exe"))
           .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
@@ -2177,7 +2177,7 @@ inline void expectExperimentalMapStringKeyReject(const std::string &emitMode,
   const std::string srcPath =
       writeTemp("map_string_key_" + mode + "_experimental_" + emitMode + ".prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_map_string_key_" + mode + "_experimental_" + emitMode + "_err.txt"))
           .string();
   const std::string expectedError =

@@ -130,7 +130,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_map_at_missing.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_map_at_missing_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_map_at_missing_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "map key not found\n");
@@ -242,7 +242,7 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("vm_map_indexing_argv_key.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_map_indexing_argv_key_err.txt").string();
+      (testScratchPath("") / "primec_vm_map_indexing_argv_key_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
@@ -274,7 +274,7 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("vm_map_lookup_argv_key.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_map_lookup_argv_key_err.txt").string();
+      (testScratchPath("") / "primec_vm_map_lookup_argv_key_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
@@ -292,7 +292,7 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("vm_map_literal_string_argv_key.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_map_literal_string_argv_key_err.txt").string();
+      (testScratchPath("") / "primec_vm_map_literal_string_argv_key_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=

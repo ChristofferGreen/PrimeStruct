@@ -13,7 +13,7 @@
 namespace {
 std::string runMathConformance(const std::string &source, const std::string &name, const std::string &emitKind) {
   const std::string srcPath = writeTemp(name + ".prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / (name + "_" + emitKind + ".out")).string();
+  const std::string outPath = (testScratchPath("") / (name + "_" + emitKind + ".out")).string();
 
   if (emitKind == "vm") {
     const std::string runCmd =
@@ -22,7 +22,7 @@ std::string runMathConformance(const std::string &source, const std::string &nam
     return readFile(outPath);
   }
 
-  const std::string exePath = (std::filesystem::temp_directory_path() / (name + "_" + emitKind + "_exe")).string();
+  const std::string exePath = (testScratchPath("") / (name + "_" + emitKind + "_exe")).string();
   const std::string compileCmd = "./primec --emit=" + emitKind + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -300,7 +300,7 @@ TEST_CASE("math conformance reference printer script") {
     scriptPath = std::filesystem::current_path().parent_path() / "tools" / "print_math_refs.py";
   }
   CHECK(std::filesystem::exists(scriptPath));
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_math_refs.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_math_refs.txt").string();
   const std::string command = "python3 " + quoteShellArg(scriptPath.string()) +
                               " --values sin=0.5 > " + quoteShellArg(outPath);
   CHECK(runCommand(command) == 0);
@@ -2344,11 +2344,11 @@ main() {
 )";
     const std::string srcPath = writeTemp("math_conformance_convert_nonfinite_" + name + ".prime", source);
     const std::string exePath =
-        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_exe")).string();
+        (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_exe")).string();
     const std::string exeErrPath =
-        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_exe.err")).string();
+        (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_exe.err")).string();
     const std::string vmErrPath =
-        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_vm.err")).string();
+        (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_vm.err")).string();
 
     const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
                                    quoteShellArg(exePath) + " --entry /main";
@@ -2363,9 +2363,9 @@ main() {
 
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
     const std::string nativePath =
-        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_native")).string();
+        (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_native")).string();
     const std::string nativeErrPath =
-        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_native.err")).string();
+        (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_native.err")).string();
     const std::string nativeCompileCmd = "./primec --emit=native " + quoteShellArg(srcPath) + " -o " +
                                          quoteShellArg(nativePath) + " --entry /main";
     CHECK(runCommand(nativeCompileCmd) == 0);
@@ -2431,11 +2431,11 @@ main() {
 )";
   const std::string srcPath = writeTemp("math_conformance_pow_negative.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_exe").string();
+      (testScratchPath("") / "math_conformance_pow_negative_exe").string();
   const std::string exeErrPath =
-      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_exe.err").string();
+      (testScratchPath("") / "math_conformance_pow_negative_exe.err").string();
   const std::string vmErrPath =
-      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_vm.err").string();
+      (testScratchPath("") / "math_conformance_pow_negative_vm.err").string();
 
   const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
@@ -2450,9 +2450,9 @@ main() {
 
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_native").string();
+      (testScratchPath("") / "math_conformance_pow_negative_native").string();
   const std::string nativeErrPath =
-      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_native.err").string();
+      (testScratchPath("") / "math_conformance_pow_negative_native.err").string();
   const std::string nativeCompileCmd = "./primec --emit=native " + quoteShellArg(srcPath) + " -o " +
                                        quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);

@@ -7,7 +7,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_void.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_void_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_void_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -23,7 +23,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_binding.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_binding_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_binding_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -43,7 +43,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_struct.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_struct_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_struct_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -60,7 +60,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_assign.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_assign_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_assign_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -78,7 +78,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_assign_ref.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_assign_ref_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_assign_ref_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -96,7 +96,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_ref_location.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_ref_location_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_ref_location_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -114,7 +114,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_ref_arith.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_ref_arith_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_ref_arith_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -131,7 +131,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_ref_helpers.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_ref_helpers_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_array_ref_helpers_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -249,7 +249,7 @@ static bool spinningCubeBackendsSupportArrayReturns() {
   };
 
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_spinning_cube_backend_probe.err.txt").string();
+      (testScratchPath("") / "primec_spinning_cube_backend_probe.err.txt").string();
   const std::string cmd =
       "./primec --emit=ir " + quoteShellArg(cubePath.string()) + " --entry /main > " + quoteShellArg(errPath) +
       " 2>&1";
@@ -260,9 +260,9 @@ static bool spinningCubeBackendsSupportArrayReturns() {
   }
 
   const std::string wasmProbePath =
-      (std::filesystem::temp_directory_path() / "primec_spinning_cube_backend_probe.wasm").string();
+      (testScratchPath("") / "primec_spinning_cube_backend_probe.wasm").string();
   const std::string wasmErrPath =
-      (std::filesystem::temp_directory_path() / "primec_spinning_cube_backend_probe.wasm.err.txt").string();
+      (testScratchPath("") / "primec_spinning_cube_backend_probe.wasm.err.txt").string();
   const std::string wasmCmd =
       "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
       quoteShellArg(wasmProbePath) + " --entry /main > " + quoteShellArg(wasmErrPath) + " 2>&1";
@@ -308,7 +308,7 @@ static void compileExampleIrBatch(const std::filesystem::path &examplesDir,
                                   const std::string &outDirName,
                                   const std::vector<std::string> &prefixes,
                                   bool supportsSpinningCube) {
-  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / outDirName;
+  const std::filesystem::path outDir = testScratchPath("") / outDirName;
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -498,7 +498,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("docs_collections_statement_only_negative.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_docs_collections_statement_only_negative.err.txt").string();
+      (testScratchPath("") / "primec_docs_collections_statement_only_negative.err.txt").string();
   const std::string compileCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
@@ -519,13 +519,13 @@ TEST_CASE("spinning cube shared source compiles across profile targets") {
   REQUIRE(std::filesystem::exists(cubePath));
 
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_spinning_cube_native_smoke").string();
+      (testScratchPath("") / "primec_spinning_cube_native_smoke").string();
   const std::string nativeMainErrPath =
-      (std::filesystem::temp_directory_path() / "primec_spinning_cube_native_main_reject.err.txt").string();
+      (testScratchPath("") / "primec_spinning_cube_native_main_reject.err.txt").string();
   const std::string wasmPath =
-      (std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_smoke.wasm").string();
+      (testScratchPath("") / "primec_spinning_cube_browser_smoke.wasm").string();
   const std::string metalErrPath =
-      (std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_smoke.err.txt").string();
+      (testScratchPath("") / "primec_spinning_cube_metal_smoke.err.txt").string();
 
   const std::string nativeMainCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
                                     quoteShellArg(nativePath) + " --entry /main 2> " +
@@ -565,9 +565,9 @@ TEST_CASE("spinning cube rotation parity entry compiles across targets") {
   REQUIRE(std::filesystem::exists(cubePath));
 
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_entry_native_smoke").string();
+      (testScratchPath("") / "primec_spinning_cube_rotation_entry_native_smoke").string();
   const std::string wasmPath =
-      (std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_entry_browser_smoke.wasm").string();
+      (testScratchPath("") / "primec_spinning_cube_rotation_entry_browser_smoke.wasm").string();
 
   const std::string nativeCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
                                 quoteShellArg(nativePath) + " --entry /cubeRotationParity120";
@@ -590,7 +590,7 @@ TEST_CASE("spinning cube native flat frame entrypoints compile and run determini
   REQUIRE(std::filesystem::exists(cubePath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_flat_frame_entrypoints";
+      testScratchPath("") / "primec_spinning_cube_native_flat_frame_entrypoints";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -698,7 +698,7 @@ TEST_CASE("spinning cube stdlib gfx frame stream entry stays deterministic") {
   REQUIRE(std::filesystem::exists(cubePath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_stdlib_gfx_frame_stream";
+      testScratchPath("") / "primec_spinning_cube_stdlib_gfx_frame_stream";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -747,7 +747,7 @@ TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   REQUIRE(std::filesystem::exists(sharedRuntimePath));
 
   const std::filesystem::path pipelineDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_assets";
+      testScratchPath("") / "primec_spinning_cube_browser_assets";
   const std::filesystem::path stagedSampleDir = pipelineDir / "spinning_cube";
   const std::filesystem::path stagedSharedDir = pipelineDir / "shared";
   std::error_code ec;
@@ -872,7 +872,7 @@ TEST_CASE("spinning cube browser profile rules gate unsupported code") {
 
   {
     const std::filesystem::path wasmPath =
-        std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_profile_ok.wasm";
+        testScratchPath("") / "primec_spinning_cube_browser_profile_ok.wasm";
     const std::string cmd = "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) +
                             " -o " + quoteShellArg(wasmPath.string()) + " --entry /main";
     CHECK(runCommand(cmd) == 0);
@@ -889,7 +889,7 @@ main() {
 )";
     const std::string srcPath = writeTemp("spinning_cube_browser_profile_reject_io.prime", source);
     const std::string errPath =
-        (std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_profile_reject_io.json").string();
+        (testScratchPath("") / "primec_spinning_cube_browser_profile_reject_io.json").string();
     const std::string cmd = "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(srcPath) +
                             " -o /dev/null --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
     CHECK(runCommand(cmd) == 2);
@@ -905,7 +905,7 @@ main([array<string>] args) {
 )";
     const std::string srcPath = writeTemp("spinning_cube_browser_profile_reject_argv.prime", source);
     const std::string errPath =
-        (std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_profile_reject_argv.json").string();
+        (testScratchPath("") / "primec_spinning_cube_browser_profile_reject_argv.json").string();
     const std::string cmd = "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(srcPath) +
                             " -o /dev/null --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
     CHECK(runCommand(cmd) == 2);
@@ -935,7 +935,7 @@ TEST_CASE("spinning cube native host runtime smoke emits success marker") {
   REQUIRE(std::filesystem::exists(hostReadmePath));
 
   const std::filesystem::path cubeNativePath =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_target_sample";
+      testScratchPath("") / "primec_spinning_cube_native_target_sample";
   const std::string compileCubeCmd =
       "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(cubeNativePath.string()) +
       " --entry /mainNative";
@@ -956,14 +956,14 @@ TEST_CASE("spinning cube native host runtime smoke emits success marker") {
   }
 
   const std::filesystem::path hostBinaryPath =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_host";
+      testScratchPath("") / "primec_spinning_cube_native_host";
   const std::string compileHostCmd = cxx + " -std=c++17 " + quoteShellArg(hostSourcePath.string()) + " -o " +
                                      quoteShellArg(hostBinaryPath.string());
   CHECK(runCommand(compileHostCmd) == 0);
   CHECK(std::filesystem::exists(hostBinaryPath));
 
   const std::filesystem::path hostOutPath =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_host_runtime.out.txt";
+      testScratchPath("") / "primec_spinning_cube_native_host_runtime.out.txt";
   const std::string runHostCmd =
       quoteShellArg(hostBinaryPath.string()) + " " + quoteShellArg(cubeNativePath.string()) + " > " +
       quoteShellArg(hostOutPath.string());
@@ -1201,7 +1201,7 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_window_host_compile";
+      testScratchPath("") / "primec_spinning_cube_native_window_host_compile";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -1345,7 +1345,7 @@ TEST_CASE("spinning cube native window host software surface bridge visual smoke
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_window_software_surface";
+      testScratchPath("") / "primec_spinning_cube_native_window_software_surface";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -1402,7 +1402,7 @@ TEST_CASE("spinning cube fixed-step snapshots stay deterministic") {
   CHECK(runCommand(vmSnapshotChunkedCmd) == GoldenSnapshot);
 
   const std::filesystem::path nativeSnapshotPath =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_fixed_step_snapshot_native";
+      testScratchPath("") / "primec_spinning_cube_fixed_step_snapshot_native";
   const std::string compileNativeSnapshotCmd =
       "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
       quoteShellArg(nativeSnapshotPath.string()) + " --entry /cubeFixedStepSnapshot120";
@@ -1411,7 +1411,7 @@ TEST_CASE("spinning cube fixed-step snapshots stay deterministic") {
   CHECK(runCommand(quoteShellArg(nativeSnapshotPath.string())) == GoldenSnapshot);
 
   const std::filesystem::path nativeSnapshotChunkedPath =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_fixed_step_snapshot_chunked_native";
+      testScratchPath("") / "primec_spinning_cube_fixed_step_snapshot_chunked_native";
   const std::string compileNativeSnapshotChunkedCmd =
       "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
       quoteShellArg(nativeSnapshotChunkedPath.string()) + " --entry /cubeFixedStepSnapshot120Chunked";
@@ -1420,7 +1420,7 @@ TEST_CASE("spinning cube fixed-step snapshots stay deterministic") {
   CHECK(runCommand(quoteShellArg(nativeSnapshotChunkedPath.string())) == GoldenSnapshot);
 
   const std::filesystem::path wasmSnapshotPath =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_fixed_step_snapshot.wasm";
+      testScratchPath("") / "primec_spinning_cube_fixed_step_snapshot.wasm";
   const std::string compileWasmSnapshotCmd =
       "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
       quoteShellArg(wasmSnapshotPath.string()) + " --entry /cubeFixedStepSnapshot120";
@@ -1460,7 +1460,7 @@ TEST_CASE("spinning cube transform rotation parity stays aligned across backends
   CHECK(runCommand(vmParityCmd) == ExpectedParityPass);
 
   const std::filesystem::path nativeParityPath =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_parity_native";
+      testScratchPath("") / "primec_spinning_cube_rotation_parity_native";
   const std::string compileNativeParityCmd =
       "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativeParityPath.string()) +
       " --entry /cubeRotationParity120";
@@ -1469,7 +1469,7 @@ TEST_CASE("spinning cube transform rotation parity stays aligned across backends
   CHECK(runCommand(quoteShellArg(nativeParityPath.string())) == ExpectedParityPass);
 
   const std::filesystem::path wasmParityPath =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_parity.wasm";
+      testScratchPath("") / "primec_spinning_cube_rotation_parity.wasm";
   const std::string compileWasmParityCmd =
       "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
       quoteShellArg(wasmParityPath.string()) + " --entry /cubeRotationParity120";
@@ -1478,7 +1478,7 @@ TEST_CASE("spinning cube transform rotation parity stays aligned across backends
 
   if (hasWasmtime()) {
     const std::filesystem::path wasmOutPath =
-        std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_parity_wasm.out.txt";
+        testScratchPath("") / "primec_spinning_cube_rotation_parity_wasm.out.txt";
     const std::string runWasmParityCmd =
         "wasmtime --invoke main " + quoteShellArg(wasmParityPath.string()) + " > " + quoteShellArg(wasmOutPath.string());
     CHECK(runCommand(runWasmParityCmd) == 0);
@@ -1492,7 +1492,7 @@ TEST_CASE("spinning cube transform rotation parity stays aligned across backends
   }
 
   const std::filesystem::path hostBuildDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_parity_metal_host";
+      testScratchPath("") / "primec_spinning_cube_rotation_parity_metal_host";
   std::error_code ec;
   std::filesystem::remove_all(hostBuildDir, ec);
   std::filesystem::create_directories(hostBuildDir, ec);
@@ -1559,7 +1559,7 @@ TEST_CASE("spinning cube integration artifact matrix stays valid") {
   REQUIRE(std::filesystem::exists(metalPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_artifact_matrix";
+      testScratchPath("") / "primec_spinning_cube_artifact_matrix";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -1763,7 +1763,7 @@ TEST_CASE("spinning cube optional startup visual smoke checks") {
   // Native visual startup proxy: host bootstrap prints a stable ready marker.
   {
     const std::filesystem::path nativeExePath =
-        std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_native";
+        testScratchPath("") / "primec_spinning_cube_visual_native";
     const std::string compileNativeCmd =
         "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativeExePath.string()) +
         " --entry /mainNative";
@@ -1783,12 +1783,12 @@ TEST_CASE("spinning cube optional startup visual smoke checks") {
     }
     if (!cxx.empty()) {
       const std::filesystem::path hostPath =
-          std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_native_host";
+          testScratchPath("") / "primec_spinning_cube_visual_native_host";
       const std::string compileHostCmd = cxx + " -std=c++17 " + quoteShellArg(nativeHostPath.string()) + " -o " +
                                          quoteShellArg(hostPath.string());
       CHECK(runCommand(compileHostCmd) == 0);
       const std::filesystem::path hostOutPath =
-          std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_native_host.out.txt";
+          testScratchPath("") / "primec_spinning_cube_visual_native_host.out.txt";
       const std::string runHostCmd = quoteShellArg(hostPath.string()) + " " + quoteShellArg(nativeExePath.string()) +
                                      " > " + quoteShellArg(hostOutPath.string());
       CHECK(runCommand(runHostCmd) == 0);
@@ -1799,7 +1799,7 @@ TEST_CASE("spinning cube optional startup visual smoke checks") {
   // Metal visual startup smoke (headless GPU where available).
   if (runCommand("xcrun --version > /dev/null 2>&1") == 0) {
     const std::filesystem::path outDir =
-        std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_metal";
+        testScratchPath("") / "primec_spinning_cube_visual_metal";
     std::error_code ec;
     std::filesystem::remove_all(outDir, ec);
     std::filesystem::create_directories(outDir, ec);
@@ -1854,7 +1854,7 @@ TEST_CASE("spinning cube optional startup visual smoke checks") {
   }
 
   const std::filesystem::path browserOutDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_browser";
+      testScratchPath("") / "primec_spinning_cube_visual_browser";
   const std::filesystem::path stagedSampleDir = browserOutDir / "spinning_cube";
   const std::filesystem::path stagedSharedDir = browserOutDir / "shared";
   std::error_code ec;
@@ -1962,7 +1962,7 @@ TEST_CASE("spinning cube browser startup smoke proves wasm bootstrap") {
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_startup_smoke";
+      testScratchPath("") / "primec_spinning_cube_browser_startup_smoke";
   const std::filesystem::path stagedSampleDir = outDir / "spinning_cube";
   const std::filesystem::path stagedSharedDir = outDir / "shared";
   std::error_code ec;
@@ -2155,7 +2155,7 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
   REQUIRE(std::filesystem::exists(metalHostPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_doc_command_smoke";
+      testScratchPath("") / "primec_spinning_cube_doc_command_smoke";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2309,7 +2309,7 @@ TEST_CASE("spinning cube demo script emits deterministic summary") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path workDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script";
+      testScratchPath("") / "primec_spinning_cube_demo_script";
   std::error_code ec;
   std::filesystem::remove_all(workDir, ec);
   std::filesystem::create_directories(workDir, ec);
@@ -2353,7 +2353,7 @@ TEST_CASE("spinning cube demo script skips known native backend limitation") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_native_skip";
+      testScratchPath("") / "primec_spinning_cube_demo_script_native_skip";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2440,7 +2440,7 @@ TEST_CASE("spinning cube demo script accepts primec path with spaces") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_primec_path_spaces";
+      testScratchPath("") / "primec_spinning_cube_demo_script_primec_path_spaces";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2527,7 +2527,7 @@ TEST_CASE("spinning cube demo script accepts work-dir path with spaces") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_work_dir_spaces";
+      testScratchPath("") / "primec_spinning_cube_demo_script_work_dir_spaces";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2616,7 +2616,7 @@ TEST_CASE("spinning cube demo script skips when browser command is unavailable")
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_browser_unavailable";
+      testScratchPath("") / "primec_spinning_cube_demo_script_browser_unavailable";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2716,7 +2716,7 @@ TEST_CASE("spinning cube demo script reports fail when native compile fails") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_native_fail";
+      testScratchPath("") / "primec_spinning_cube_demo_script_native_fail";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2797,7 +2797,7 @@ TEST_CASE("spinning cube demo script rejects non-integer port base") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_invalid_port";
+      testScratchPath("") / "primec_spinning_cube_demo_script_invalid_port";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2823,7 +2823,7 @@ TEST_CASE("spinning cube demo script rejects out-of-range port base") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_invalid_port_range";
+      testScratchPath("") / "primec_spinning_cube_demo_script_invalid_port_range";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2849,7 +2849,7 @@ TEST_CASE("spinning cube demo script rejects zero port base") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_zero_port";
+      testScratchPath("") / "primec_spinning_cube_demo_script_zero_port";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2875,7 +2875,7 @@ TEST_CASE("spinning cube demo script rejects missing port base value") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_missing_port_value";
+      testScratchPath("") / "primec_spinning_cube_demo_script_missing_port_value";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2901,7 +2901,7 @@ TEST_CASE("spinning cube demo script rejects missing primec value") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_missing_primec_value";
+      testScratchPath("") / "primec_spinning_cube_demo_script_missing_primec_value";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2927,7 +2927,7 @@ TEST_CASE("spinning cube demo script rejects primec followed by flag") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_primec_followed_by_flag";
+      testScratchPath("") / "primec_spinning_cube_demo_script_primec_followed_by_flag";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2953,7 +2953,7 @@ TEST_CASE("spinning cube demo script rejects primec followed by bare dashdash") 
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_primec_followed_by_dashdash";
+      testScratchPath("") / "primec_spinning_cube_demo_script_primec_followed_by_dashdash";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -2979,7 +2979,7 @@ TEST_CASE("spinning cube demo script rejects missing primec binary path") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_missing_primec_binary";
+      testScratchPath("") / "primec_spinning_cube_demo_script_missing_primec_binary";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3005,7 +3005,7 @@ TEST_CASE("spinning cube demo script rejects missing default primec path") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path tempRoot =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_default_primec_root";
+      testScratchPath("") / "primec_spinning_cube_demo_script_default_primec_root";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
   std::filesystem::create_directories(tempRoot / "scripts", ec);
@@ -3019,7 +3019,7 @@ TEST_CASE("spinning cube demo script rejects missing default primec path") {
   REQUIRE(runCommand("chmod +x " + quoteShellArg(isolatedScriptPath.string())) == 0);
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_default_primec_missing";
+      testScratchPath("") / "primec_spinning_cube_demo_script_default_primec_missing";
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
   REQUIRE(!ec);
@@ -3046,7 +3046,7 @@ TEST_CASE("spinning cube demo script rejects unexecutable default primec path") 
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path tempRoot =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_default_primec_unexecutable_root";
+      testScratchPath("") / "primec_spinning_cube_demo_script_default_primec_unexecutable_root";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
   std::filesystem::create_directories(tempRoot / "scripts", ec);
@@ -3070,7 +3070,7 @@ TEST_CASE("spinning cube demo script rejects unexecutable default primec path") 
   REQUIRE(runCommand("chmod 644 " + quoteShellArg(defaultPrimecPath.string())) == 0);
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_default_primec_unexecutable";
+      testScratchPath("") / "primec_spinning_cube_demo_script_default_primec_unexecutable";
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
   REQUIRE(!ec);
@@ -3097,7 +3097,7 @@ TEST_CASE("spinning cube demo script rejects default primec directory path") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path tempRoot =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_default_primec_dir_root";
+      testScratchPath("") / "primec_spinning_cube_demo_script_default_primec_dir_root";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
   std::filesystem::create_directories(tempRoot / "scripts", ec);
@@ -3115,7 +3115,7 @@ TEST_CASE("spinning cube demo script rejects default primec directory path") {
   REQUIRE(!ec);
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_default_primec_dir";
+      testScratchPath("") / "primec_spinning_cube_demo_script_default_primec_dir";
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
   REQUIRE(!ec);
@@ -3142,7 +3142,7 @@ TEST_CASE("spinning cube demo script rejects unexecutable primec path") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_unexecutable_primec";
+      testScratchPath("") / "primec_spinning_cube_demo_script_unexecutable_primec";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3176,7 +3176,7 @@ TEST_CASE("spinning cube demo script rejects primec directory path") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_primec_dir";
+      testScratchPath("") / "primec_spinning_cube_demo_script_primec_dir";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3206,7 +3206,7 @@ TEST_CASE("spinning cube demo script rejects missing work-dir value") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_missing_workdir_value";
+      testScratchPath("") / "primec_spinning_cube_demo_script_missing_workdir_value";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3232,7 +3232,7 @@ TEST_CASE("spinning cube demo script rejects work-dir followed by bare dashdash"
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_workdir_followed_by_dashdash";
+      testScratchPath("") / "primec_spinning_cube_demo_script_workdir_followed_by_dashdash";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3257,7 +3257,7 @@ TEST_CASE("spinning cube demo script rejects work-dir followed by flag") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_workdir_followed_by_flag";
+      testScratchPath("") / "primec_spinning_cube_demo_script_workdir_followed_by_flag";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3283,7 +3283,7 @@ TEST_CASE("spinning cube demo script rejects port-base followed by flag") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_port_base_followed_by_flag";
+      testScratchPath("") / "primec_spinning_cube_demo_script_port_base_followed_by_flag";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3309,7 +3309,7 @@ TEST_CASE("spinning cube demo script rejects port-base followed by bare dashdash
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_port_base_followed_by_dashdash";
+      testScratchPath("") / "primec_spinning_cube_demo_script_port_base_followed_by_dashdash";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3334,7 +3334,7 @@ TEST_CASE("spinning cube demo script rejects unknown arg") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_unknown_arg";
+      testScratchPath("") / "primec_spinning_cube_demo_script_unknown_arg";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3359,7 +3359,7 @@ TEST_CASE("spinning cube demo script rejects unknown arg as first token") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_unknown_arg_first";
+      testScratchPath("") / "primec_spinning_cube_demo_script_unknown_arg_first";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3384,7 +3384,7 @@ TEST_CASE("spinning cube demo script rejects unknown positional token") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_unknown_positional";
+      testScratchPath("") / "primec_spinning_cube_demo_script_unknown_positional";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3409,7 +3409,7 @@ TEST_CASE("spinning cube demo script rejects bare dashdash token") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_unknown_dashdash";
+      testScratchPath("") / "primec_spinning_cube_demo_script_unknown_dashdash";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3475,7 +3475,7 @@ TEST_CASE("native window launcher script builds and launches with preflight") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path tempRoot =
-      std::filesystem::temp_directory_path() / "primec_native_window_launcher_success";
+      testScratchPath("") / "primec_native_window_launcher_success";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
   std::filesystem::create_directories(tempRoot, ec);
@@ -3608,7 +3608,7 @@ TEST_CASE("native window launcher script rejects missing primec binary path") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_launcher_missing_primec";
+      testScratchPath("") / "primec_native_window_launcher_missing_primec";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3635,7 +3635,7 @@ TEST_CASE("native window launcher script rejects unknown args") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_launcher_unknown_arg";
+      testScratchPath("") / "primec_native_window_launcher_unknown_arg";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3660,7 +3660,7 @@ TEST_CASE("native window launcher script rejects incompatible smoke flags") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_launcher_incompatible_smoke_flags";
+      testScratchPath("") / "primec_native_window_launcher_incompatible_smoke_flags";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3687,7 +3687,7 @@ TEST_CASE("native window launcher defaults to ten-second bounded run") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path tempRoot =
-      std::filesystem::temp_directory_path() / "primec_native_window_launcher_default_ten_second_run";
+      testScratchPath("") / "primec_native_window_launcher_default_ten_second_run";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
   std::filesystem::create_directories(tempRoot, ec);
@@ -3797,7 +3797,7 @@ TEST_CASE("native window launcher visual smoke skips on non-macOS runners") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_visual_smoke_skip_non_macos";
+      testScratchPath("") / "primec_native_window_visual_smoke_skip_non_macos";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3835,7 +3835,7 @@ TEST_CASE("native window launcher visual smoke skips without GUI session") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_visual_smoke_skip_no_gui";
+      testScratchPath("") / "primec_native_window_visual_smoke_skip_no_gui";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -3886,7 +3886,7 @@ TEST_CASE("native window launcher visual smoke validates criteria") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path tempRoot =
-      std::filesystem::temp_directory_path() / "primec_native_window_visual_smoke_success";
+      testScratchPath("") / "primec_native_window_visual_smoke_success";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
   std::filesystem::create_directories(tempRoot, ec);
@@ -4011,7 +4011,7 @@ TEST_CASE("native window launcher visual smoke fails when rotation does not chan
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path tempRoot =
-      std::filesystem::temp_directory_path() / "primec_native_window_visual_smoke_rotation_fail";
+      testScratchPath("") / "primec_native_window_visual_smoke_rotation_fail";
   std::error_code ec;
   std::filesystem::remove_all(tempRoot, ec);
   std::filesystem::create_directories(tempRoot, ec);
@@ -4161,7 +4161,7 @@ TEST_CASE("native window launcher compile run coverage validates host build and 
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_launcher_compile_run_coverage";
+      testScratchPath("") / "primec_native_window_launcher_compile_run_coverage";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -4203,7 +4203,7 @@ TEST_CASE("native window preflight script validates required tools and GUI sessi
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_preflight_success";
+      testScratchPath("") / "primec_native_window_preflight_success";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -4269,7 +4269,7 @@ TEST_CASE("native window preflight script fails when xcrun metal is unavailable"
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_preflight_missing_metal";
+      testScratchPath("") / "primec_native_window_preflight_missing_metal";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -4317,7 +4317,7 @@ TEST_CASE("native window preflight script fails when xcrun metallib is unavailab
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_preflight_missing_metallib";
+      testScratchPath("") / "primec_native_window_preflight_missing_metallib";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -4365,7 +4365,7 @@ TEST_CASE("native window preflight script fails when GUI session is unavailable"
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_preflight_missing_gui";
+      testScratchPath("") / "primec_native_window_preflight_missing_gui";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -4427,7 +4427,7 @@ TEST_CASE("native window preflight script rejects unknown args") {
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_native_window_preflight_unknown_arg";
+      testScratchPath("") / "primec_native_window_preflight_unknown_arg";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -4472,7 +4472,7 @@ main() {
 )";
     const std::string srcPath = writeTemp("spinning_cube_metal_profile_reject.prime", source);
     const std::string errPath =
-        (std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_profile_reject.err.txt").string();
+        (testScratchPath("") / "primec_spinning_cube_metal_profile_reject.err.txt").string();
     const std::string cmd = "./primec --emit=wasm --wasm-profile metal-osx " + quoteShellArg(srcPath) +
                             " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
     CHECK(runCommand(cmd) == 2);
@@ -4489,7 +4489,7 @@ main() {
 )";
     const std::string srcPath = writeTemp("spinning_cube_metal_emit_reject.prime", source);
     const std::string errPath =
-        (std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_emit_reject.err.txt").string();
+        (testScratchPath("") / "primec_spinning_cube_metal_emit_reject.err.txt").string();
     const std::string cmd = "./primec --emit=metal " + quoteShellArg(srcPath) +
                             " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
     CHECK(runCommand(cmd) == 2);
@@ -4502,7 +4502,7 @@ main() {
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_shader_path";
+      testScratchPath("") / "primec_spinning_cube_metal_shader_path";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -4705,7 +4705,7 @@ TEST_CASE("browser launcher compile run coverage validates shared helper path") 
   REQUIRE(std::filesystem::exists(scriptPath));
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_launcher_compile_run_coverage";
+      testScratchPath("") / "primec_spinning_cube_browser_launcher_compile_run_coverage";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -4807,7 +4807,7 @@ TEST_CASE("metal launcher compile run coverage validates shared helper path") {
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_launcher_compile_run_coverage";
+      testScratchPath("") / "primec_spinning_cube_metal_launcher_compile_run_coverage";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -5338,7 +5338,7 @@ TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_missing_metallib";
+      testScratchPath("") / "primec_spinning_cube_metal_missing_metallib";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -5395,7 +5395,7 @@ TEST_CASE("spinning cube metal host pipeline creation regression stays fixed") {
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_pipeline_regression";
+      testScratchPath("") / "primec_spinning_cube_metal_pipeline_regression";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -5463,7 +5463,7 @@ TEST_CASE("spinning cube metal full-path smoke renders frame") {
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_host_runtime";
+      testScratchPath("") / "primec_spinning_cube_metal_host_runtime";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -5517,7 +5517,7 @@ TEST_CASE("spinning cube metal software surface bridge smoke") {
   }
 
   const std::filesystem::path outDir =
-      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_software_surface";
+      testScratchPath("") / "primec_spinning_cube_metal_software_surface";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -5582,9 +5582,9 @@ TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
     REQUIRE(!expectedFragments.empty());
 
     const std::string primecErrPath =
-        (std::filesystem::temp_directory_path() / ("primec_borrow_checker_negative_" + path.stem().string() + ".json"))
+        (testScratchPath("") / ("primec_borrow_checker_negative_" + path.stem().string() + ".json"))
             .string();
-    const std::string primevmErrPath = (std::filesystem::temp_directory_path() /
+    const std::string primevmErrPath = (testScratchPath("") /
                                         ("primevm_borrow_checker_negative_" + path.stem().string() + ".json"))
                                            .string();
 

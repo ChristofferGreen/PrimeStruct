@@ -8,8 +8,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_suffix.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_suffix_exe").string();
-  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_suffix_native").string();
+  const std::string exePath = (testScratchPath("") / "primec_suffix_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_suffix_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default,implicit-i32";
@@ -38,8 +38,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_inc_dec_sugar.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_inc_dec_sugar_exe").string();
-  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_inc_dec_sugar_native").string();
+  const std::string exePath = (testScratchPath("") / "primec_inc_dec_sugar_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_inc_dec_sugar_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default";
@@ -64,7 +64,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_override.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_override_exe").string();
+      (testScratchPath("") / "primec_no_transforms_override_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath +
@@ -81,9 +81,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_canonical.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_canonical_exe").string();
+      (testScratchPath("") / "primec_no_transforms_canonical_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_canonical_native").string();
+      (testScratchPath("") / "primec_no_transforms_canonical_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-transforms";
@@ -108,9 +108,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_brace_ctor.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_brace_ctor_exe").string();
+      (testScratchPath("") / "primec_no_transforms_brace_ctor_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_brace_ctor_native").string();
+      (testScratchPath("") / "primec_no_transforms_brace_ctor_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-transforms";
@@ -135,7 +135,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_infix.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_infix_err.txt").string();
+      (testScratchPath("") / "primec_no_transforms_infix_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
@@ -152,7 +152,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_float_suffix.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_float_suffix_err.txt").string();
+      (testScratchPath("") / "primec_no_transforms_float_suffix_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
@@ -169,7 +169,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_float_f_suffix.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_float_f_suffix_err.txt").string();
+      (testScratchPath("") / "primec_no_transforms_float_f_suffix_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
@@ -187,7 +187,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_inc_sugar.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_inc_sugar_err.txt").string();
+      (testScratchPath("") / "primec_no_transforms_inc_sugar_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
@@ -204,7 +204,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_if_sugar.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_if_sugar_err.txt").string();
+      (testScratchPath("") / "primec_no_transforms_if_sugar_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
@@ -223,7 +223,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_loop_sugar.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_loop_sugar_err.txt").string();
+      (testScratchPath("") / "primec_no_transforms_loop_sugar_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
@@ -242,7 +242,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_while_sugar.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_while_sugar_err.txt").string();
+      (testScratchPath("") / "primec_no_transforms_while_sugar_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
@@ -261,7 +261,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_for_sugar.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_for_sugar_err.txt").string();
+      (testScratchPath("") / "primec_no_transforms_for_sugar_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
@@ -279,7 +279,7 @@ main([array<i32>] values) {
 )";
   const std::string srcPath = writeTemp("compile_no_transforms_index_sugar.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_no_transforms_index_sugar_err.txt").string();
+      (testScratchPath("") / "primec_no_transforms_index_sugar_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
@@ -298,7 +298,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_filters_none_utf8.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_filters_none_utf8_err.txt").string();
+      (testScratchPath("") / "primec_text_filters_none_utf8_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-transforms=none 2> " + errPath;
@@ -317,7 +317,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_transform_list_none_utf8.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_none_utf8_err.txt").string();
+      (testScratchPath("") / "primec_transform_list_none_utf8_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --transform-list=none 2> " + errPath;
@@ -335,7 +335,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_transform_list_default_no_i32.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_default_i32_exe").string();
+      (testScratchPath("") / "primec_transform_list_default_i32_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --transform-list=default";
@@ -353,9 +353,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_transform_list_none_clears_defaults.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_none_clears_defaults_exe").string();
+      (testScratchPath("") / "primec_transform_list_none_clears_defaults_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_none_clears_defaults_err.txt").string();
+      (testScratchPath("") / "primec_transform_list_none_clears_defaults_err.txt").string();
 
   const std::string clearedCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -381,9 +381,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_transform_list_semicolon_split.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_semicolon_split_exe").string();
+      (testScratchPath("") / "primec_transform_list_semicolon_split_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_semicolon_split_err.txt").string();
+      (testScratchPath("") / "primec_transform_list_semicolon_split_err.txt").string();
 
   const std::string clearedCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -409,9 +409,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_transform_list_whitespace_split.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_whitespace_split_exe").string();
+      (testScratchPath("") / "primec_transform_list_whitespace_split_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_whitespace_split_err.txt").string();
+      (testScratchPath("") / "primec_transform_list_whitespace_split_err.txt").string();
 
   const std::string clearedCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -437,7 +437,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_transform_list_unknown_name.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_unknown_name_err.txt").string();
+      (testScratchPath("") / "primec_transform_list_unknown_name_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -455,7 +455,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_transform_list_none_infix.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_none_infix_err.txt").string();
+      (testScratchPath("") / "primec_transform_list_none_infix_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --transform-list=none 2> " + errPath;
@@ -472,7 +472,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_filters_none_infix.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_filters_none_infix_err.txt").string();
+      (testScratchPath("") / "primec_text_filters_none_infix_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-transforms=none 2> " + errPath;
@@ -489,9 +489,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_filters_none_canonical.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_text_filters_none_canonical_exe").string();
+      (testScratchPath("") / "primec_text_filters_none_canonical_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_text_filters_none_canonical_native").string();
+      (testScratchPath("") / "primec_text_filters_none_canonical_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=none";
@@ -516,9 +516,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_filters_legacy_alias.prime", source);
   const std::string primecErrPath =
-      (std::filesystem::temp_directory_path() / "primec_text_filters_legacy_alias_err.txt").string();
+      (testScratchPath("") / "primec_text_filters_legacy_alias_err.txt").string();
   const std::string primevmErrPath =
-      (std::filesystem::temp_directory_path() / "primevm_text_filters_legacy_alias_err.txt").string();
+      (testScratchPath("") / "primevm_text_filters_legacy_alias_err.txt").string();
 
   const std::string primecEqCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters=none 2> " + primecErrPath;
@@ -548,7 +548,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_transform_list_i32.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_transform_list_i32_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_transform_list_i32_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --transform-list=default,implicit-i32";
@@ -578,7 +578,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_transforms_whitespace.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_text_transforms_whitespace_exe").string();
+      (testScratchPath("") / "primec_text_transforms_whitespace_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -595,7 +595,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_single_type_to_return_missing_return.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_err.txt").string();
+      (testScratchPath("") / "primec_single_type_to_return_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main --transform-list=default,single_type_to_return 2> " +
@@ -612,7 +612,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_single_type_to_return_marker.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_marker_err.txt").string();
+      (testScratchPath("") / "primec_single_type_to_return_marker_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
@@ -628,7 +628,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_single_type_to_return.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_single_type_to_return_err.txt").string();
+      (testScratchPath("") / "primec_semantic_single_type_to_return_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main --semantic-transforms=single_type_to_return 2> " +
@@ -646,9 +646,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_rules.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rules_exe").string();
+      (testScratchPath("") / "primec_semantic_transform_rules_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rules_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_rules_err.txt").string();
 
   const std::string okCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -672,9 +672,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_rule_order.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rule_order_exe").string();
+      (testScratchPath("") / "primec_semantic_transform_rule_order_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rule_order_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_rule_order_err.txt").string();
 
   const std::string disableLastCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -700,9 +700,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_rules_none_token.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rules_none_token_exe").string();
+      (testScratchPath("") / "primec_semantic_transform_rules_none_token_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rules_none_token_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_rules_none_token_err.txt").string();
 
   const std::string clearedCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -729,7 +729,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_empty_tokens.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_empty_tokens_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_empty_tokens_err.txt").string();
 
   const std::string ruleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -748,9 +748,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_rule_wildcard_order.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rule_wildcard_order_exe").string();
+      (testScratchPath("") / "primec_semantic_transform_rule_wildcard_order_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rule_wildcard_order_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_rule_wildcard_order_err.txt").string();
 
   const std::string wildcardLastCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -776,7 +776,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_root_wildcard_top_level.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_root_wildcard_top_level_err.txt")
+      (testScratchPath("") / "primec_semantic_transform_root_wildcard_top_level_err.txt")
           .string();
 
   const std::string ruleCmd =
@@ -798,7 +798,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_bad_recurse_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_bad_recurse_rule_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_bad_recurse_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -818,7 +818,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_empty_list_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_empty_list_rule_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_empty_list_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -838,7 +838,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_bad_wildcard_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_bad_wildcard_rule_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_bad_wildcard_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -859,7 +859,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_missing_slash_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_missing_slash_rule_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_missing_slash_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -879,7 +879,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_missing_equals_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_missing_equals_rule_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_missing_equals_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -899,7 +899,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_empty_path_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_empty_path_rule_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_empty_path_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -919,7 +919,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_text_only_name.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_text_only_name_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_text_only_name_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -939,7 +939,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_unknown_name.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_unknown_name_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_unknown_name_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -966,9 +966,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_recursive_alias.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_recursive_alias_exe").string();
+      (testScratchPath("") / "primec_semantic_transform_recursive_alias_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_recursive_alias_err.txt").string();
+      (testScratchPath("") / "primec_semantic_transform_recursive_alias_err.txt").string();
 
   const std::string nonRecursiveCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -994,7 +994,7 @@ mainly() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_wildcard_prefix.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_wildcard_prefix_exe").string();
+      (testScratchPath("") / "primec_semantic_transform_wildcard_prefix_exe").string();
 
   const std::string ruleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1013,7 +1013,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_wildcard_base.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_wildcard_base_exe").string();
+      (testScratchPath("") / "primec_semantic_transform_wildcard_base_exe").string();
 
   const std::string ruleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1032,7 +1032,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_unrelated_exact_path.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_unrelated_exact_path_exe").string();
+      (testScratchPath("") / "primec_semantic_transform_unrelated_exact_path_exe").string();
 
   const std::string ruleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1051,7 +1051,7 @@ mainly() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_unrelated_wildcard_path.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_transform_unrelated_wildcard_path_exe").string();
+      (testScratchPath("") / "primec_semantic_transform_unrelated_wildcard_path_exe").string();
 
   const std::string ruleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1077,9 +1077,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_root_wildcard_recurse.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_root_wildcard_recurse_exe").string();
+      (testScratchPath("") / "primec_semantic_root_wildcard_recurse_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_root_wildcard_recurse_err.txt").string();
+      (testScratchPath("") / "primec_semantic_root_wildcard_recurse_err.txt").string();
 
   const std::string noRecurseCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1105,7 +1105,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_semantic_single_type_to_return_text.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_semantic_single_type_to_return_text_err.txt").string();
+      (testScratchPath("") / "primec_semantic_single_type_to_return_text_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main --semantic-transforms=single_type_to_return 2> " +
@@ -1122,7 +1122,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_single_type_to_return_disabled.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_disabled_err.txt").string();
+      (testScratchPath("") / "primec_single_type_to_return_disabled_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null" +
                                  " --entry /main --no-transforms --transform-list=default,single_type_to_return 2> " +
@@ -1140,7 +1140,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_per_env_collections.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_per_env_collections_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_per_env_collections_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main --text-transforms=operators";
@@ -1157,7 +1157,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_per_env_override.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_per_env_override_err.txt").string();
+      (testScratchPath("") / "primec_per_env_override_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
@@ -1174,7 +1174,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_per_env_binding_ops.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_per_env_binding_ops_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_per_env_binding_ops_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main --text-transforms=none";
@@ -1195,7 +1195,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_per_env_exec_args.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_per_env_exec_args_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_per_env_exec_args_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main --text-transforms=none";
@@ -1212,7 +1212,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_append_operators.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_append_operators_exe").string();
+      (testScratchPath("") / "primec_append_operators_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1230,7 +1230,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_append_operators_auto.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_append_operators_auto_exe").string();
+      (testScratchPath("") / "primec_append_operators_auto_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1256,7 +1256,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_namespace.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_rule_namespace_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_text_rule_namespace_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1274,7 +1274,7 @@ mainly() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_unrelated_wildcard_path.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_unrelated_wildcard_path_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_unrelated_wildcard_path_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1293,7 +1293,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_unrelated_exact_path.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_unrelated_exact_path_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_unrelated_exact_path_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1312,7 +1312,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_wildcard_base_path.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_wildcard_base_path_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_wildcard_base_path_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1331,7 +1331,7 @@ mainly() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_wildcard_sibling_prefix.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_wildcard_sibling_prefix_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_wildcard_sibling_prefix_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1349,7 +1349,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_no_list.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_no_list_exe").string();
+      (testScratchPath("") / "primec_text_rule_no_list_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1366,7 +1366,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_empty_tokens.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_rule_empty_tokens_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_text_rule_empty_tokens_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1385,7 +1385,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_none_only.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_none_only_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_none_only_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1403,8 +1403,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_order.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_rule_order_exe").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_text_rule_order_err.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_text_rule_order_exe").string();
+  const std::string errPath = (testScratchPath("") / "primec_text_rule_order_err.txt").string();
 
   const std::string disableLastCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1431,9 +1431,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_wildcard_order.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_wildcard_order_exe").string();
+      (testScratchPath("") / "primec_text_rule_wildcard_order_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_wildcard_order_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_wildcard_order_err.txt").string();
 
   const std::string wildcardLastCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1460,7 +1460,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_root_wildcard_top_level.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_root_wildcard_top_level_exe").string();
+      (testScratchPath("") / "primec_text_rule_root_wildcard_top_level_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1478,9 +1478,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_none_token.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_none_token_exe").string();
+      (testScratchPath("") / "primec_text_rule_none_token_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_none_token_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_none_token_err.txt").string();
 
   const std::string clearedCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1506,7 +1506,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_missing_equals.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_missing_equals_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_missing_equals_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1526,7 +1526,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_empty_list_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_empty_list_rule_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_empty_list_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1546,7 +1546,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_empty_path_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_empty_path_rule_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_empty_path_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1566,7 +1566,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_missing_slash_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_missing_slash_rule_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_missing_slash_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1586,7 +1586,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_bad_wildcard_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_bad_wildcard_rule_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_bad_wildcard_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1607,7 +1607,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_bad_recurse_rule.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_bad_recurse_rule_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_bad_recurse_rule_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1627,7 +1627,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_semantic_only_name.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_semantic_only_name_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_semantic_only_name_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1647,7 +1647,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_unknown_name.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_unknown_name_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_unknown_name_err.txt").string();
 
   const std::string badRuleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
@@ -1670,7 +1670,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_nested_def.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_nested_def_exe").string();
+      (testScratchPath("") / "primec_text_rule_nested_def_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1689,7 +1689,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_nested_list.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_nested_list_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_nested_list_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none " +
@@ -1717,9 +1717,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_recurse.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_rule_recurse_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_text_rule_recurse_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_recurse_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_recurse_err.txt").string();
 
   const std::string noRecurseCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none "
@@ -1755,7 +1755,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_recursive_alias.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_recursive_alias_exe").string();
+      (testScratchPath("") / "primec_text_rule_recursive_alias_exe").string();
 
   const std::string recursiveAliasCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
@@ -1776,9 +1776,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_text_rule_root_wildcard_recurse.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_root_wildcard_recurse_exe").string();
+      (testScratchPath("") / "primec_text_rule_root_wildcard_recurse_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_text_rule_root_wildcard_recurse_err.txt").string();
+      (testScratchPath("") / "primec_text_rule_root_wildcard_recurse_err.txt").string();
 
   const std::string noRecurseCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none "

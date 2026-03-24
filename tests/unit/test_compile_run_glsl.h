@@ -23,7 +23,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_minimal.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_minimal.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_minimal.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -43,7 +43,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_i32_subset.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_ir_i32_subset.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_ir_i32_subset.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -62,7 +62,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_f32_literal_subset.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_ir_f32_literal_subset.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_ir_f32_literal_subset.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -80,7 +80,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_f32_literal_ir_first.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_f32_literal_ir_first.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_f32_literal_ir_first.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -100,7 +100,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_f32_arithmetic_subset.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_f32_arithmetic_subset.glsl").string();
+      (testScratchPath("") / "primec_glsl_ir_f32_arithmetic_subset.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -120,7 +120,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_f32_arithmetic_ir_first.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_f32_arithmetic_ir_first.glsl").string();
+      (testScratchPath("") / "primec_glsl_f32_arithmetic_ir_first.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -140,7 +140,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_f32_to_i32_subset.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_f32_to_i32_subset.glsl").string();
+      (testScratchPath("") / "primec_glsl_ir_f32_to_i32_subset.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -162,7 +162,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_f32_to_i32_ir_first.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_f32_to_i32_ir_first.glsl").string();
+      (testScratchPath("") / "primec_glsl_f32_to_i32_ir_first.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -184,7 +184,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_i32_to_f32_subset.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_i32_to_f32_subset.glsl").string();
+      (testScratchPath("") / "primec_glsl_ir_i32_to_f32_subset.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -204,7 +204,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_i32_to_f32_ir_first.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_i32_to_f32_ir_first.glsl").string();
+      (testScratchPath("") / "primec_glsl_i32_to_f32_ir_first.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -222,7 +222,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_f32_return_subset.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_f32_return_subset.glsl").string();
+      (testScratchPath("") / "primec_glsl_ir_f32_return_subset.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -240,7 +240,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_f32_return_ir_first.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_f32_return_ir_first.glsl").string();
+      (testScratchPath("") / "primec_glsl_f32_return_ir_first.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -264,7 +264,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_helper_call_subset.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_helper_call_subset.glsl").string();
+      (testScratchPath("") / "primec_glsl_ir_helper_call_subset.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -289,7 +289,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_helper_call_ir_first.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_helper_call_ir_first.glsl").string();
+      (testScratchPath("") / "primec_glsl_helper_call_ir_first.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -309,7 +309,7 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_entry_args_count_subset.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_entry_args_count_subset.glsl").string();
+      (testScratchPath("") / "primec_glsl_ir_entry_args_count_subset.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -328,7 +328,7 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("compile_glsl_entry_args_count_ir_first.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_entry_args_count_ir_first.glsl").string();
+      (testScratchPath("") / "primec_glsl_entry_args_count_ir_first.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -453,10 +453,10 @@ main([array<string>] args) {
     const std::string srcPath =
         writeTemp(std::string("compile_glsl_differential_") + testCase.name + ".prime", testCase.source);
     const std::string glslPath =
-        (std::filesystem::temp_directory_path() / (std::string("primec_glsl_differential_") + testCase.name + ".glsl"))
+        (testScratchPath("") / (std::string("primec_glsl_differential_") + testCase.name + ".glsl"))
             .string();
     const std::string glslIrPath =
-        (std::filesystem::temp_directory_path() /
+        (testScratchPath("") /
          (std::string("primec_glsl_ir_differential_") + testCase.name + ".glsl"))
             .string();
 
@@ -480,7 +480,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_unsupported_opcode.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_unsupported_opcode_err.txt").string();
+      (testScratchPath("") / "primec_glsl_ir_unsupported_opcode_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=glsl-ir " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
@@ -500,9 +500,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_ir_backend_emit_failure.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_backend_emit_failure.glsl").string();
+      (testScratchPath("") / "primec_glsl_ir_backend_emit_failure.glsl").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_ir_backend_emit_failure_err.txt").string();
+      (testScratchPath("") / "primec_glsl_ir_backend_emit_failure_err.txt").string();
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
 
@@ -522,7 +522,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_default_glsl.prime", source);
-  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_glsl_default_out";
+  const std::filesystem::path outDir = testScratchPath("") / "primec_glsl_default_out";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -546,7 +546,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_default_spirv.prime", source);
-  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_spirv_default_out";
+  const std::filesystem::path outDir = testScratchPath("") / "primec_spirv_default_out";
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
   std::filesystem::create_directories(outDir, ec);
@@ -569,7 +569,7 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_entry_args.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_entry_args.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_entry_args.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -587,7 +587,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_spirv_minimal.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_spirv_minimal.spv").string();
+  const std::string outPath = (testScratchPath("") / "primec_spirv_minimal.spv").string();
 
   const std::string compileCmd = "./primec --emit=spirv " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -608,7 +608,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_spirv_ir_minimal.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_spirv_ir_minimal.spv").string();
+  const std::string outPath = (testScratchPath("") / "primec_spirv_ir_minimal.spv").string();
 
   const std::string compileCmd = "./primec --emit=spirv-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -623,9 +623,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_spirv_missing_tool.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_spirv_missing_tool.spv").string();
+  const std::string outPath = (testScratchPath("") / "primec_spirv_missing_tool.spv").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_spirv_missing_tool_err.txt").string();
+      (testScratchPath("") / "primec_spirv_missing_tool_err.txt").string();
 
   const std::string compileCmd =
       "PATH= ./primec --emit=spirv " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
@@ -646,7 +646,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_locals.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_locals.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_locals.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -667,9 +667,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_spirv_ir_backend_emit_failure.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_spirv_ir_backend_emit_failure.spv").string();
+      (testScratchPath("") / "primec_spirv_ir_backend_emit_failure.spv").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_spirv_ir_backend_emit_failure_err.txt").string();
+      (testScratchPath("") / "primec_spirv_ir_backend_emit_failure_err.txt").string();
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
 
@@ -692,7 +692,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_assign_expr.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_assign_expr.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_assign_expr.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -712,7 +712,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_inc_dec_expr.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_inc_dec_expr.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_inc_dec_expr.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -733,7 +733,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_if.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_if.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_if.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -756,7 +756,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_loops.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_loops.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_loops.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -780,7 +780,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_shared_scope.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_shared_scope.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_shared_scope.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -806,7 +806,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_shared_scope_while.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_shared_scope_while.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_shared_scope_while.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -828,7 +828,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_block_init.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_block_init.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_block_init.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -849,7 +849,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_brace_ctor.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_brace_ctor.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_brace_ctor.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -872,7 +872,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_print_noop.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_print_noop.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_print_noop.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -890,7 +890,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_caps.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_caps.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_caps.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -909,7 +909,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_matrix_effects.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_effects.glsl").string();
+      (testScratchPath("") / "primec_glsl_support_matrix_effects.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -933,7 +933,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_matrix_scalars.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_scalars.glsl").string();
+      (testScratchPath("") / "primec_glsl_support_matrix_scalars.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -966,9 +966,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_quaternion_nominal_values.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_quaternion_nominal_values.glsl").string();
+      (testScratchPath("") / "primec_glsl_support_quaternion_nominal_values.glsl").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_quaternion_nominal_values.err").string();
+      (testScratchPath("") / "primec_glsl_support_quaternion_nominal_values.err").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
                                  " --entry /main";
@@ -1014,9 +1014,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_quaternion_helpers.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_quaternion_helpers.glsl").string();
+      (testScratchPath("") / "primec_glsl_support_quaternion_helpers.glsl").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_quaternion_helpers.err").string();
+      (testScratchPath("") / "primec_glsl_support_quaternion_helpers.err").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
                                  " --entry /main";
@@ -1052,7 +1052,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_quaternion_shape_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_quaternion_shape_reject.err").string();
+      (testScratchPath("") / "primec_glsl_support_quaternion_shape_reject.err").string();
 
   const std::string compileCmd =
       "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
@@ -1094,9 +1094,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_matrix_nominal_values.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_nominal_values.glsl").string();
+      (testScratchPath("") / "primec_glsl_support_matrix_nominal_values.glsl").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_nominal_values.err").string();
+      (testScratchPath("") / "primec_glsl_support_matrix_nominal_values.err").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   if (!compileGlslOrExpectNominalMathUnsupported(compileCmd, errPath)) {
@@ -1149,9 +1149,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_matrix_vector_values.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_vector_values.glsl").string();
+      (testScratchPath("") / "primec_glsl_support_matrix_vector_values.glsl").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_vector_values.err").string();
+      (testScratchPath("") / "primec_glsl_support_matrix_vector_values.err").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   if (!compileGlslOrExpectNominalMathUnsupported(compileCmd, errPath)) {
@@ -1204,9 +1204,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_vector_arithmetic.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_vector_arithmetic.glsl").string();
+      (testScratchPath("") / "primec_glsl_support_vector_arithmetic.glsl").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_support_vector_arithmetic.err").string();
+      (testScratchPath("") / "primec_glsl_support_vector_arithmetic.err").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   if (!compileGlslOrExpectNominalMathUnsupported(compileCmd, errPath)) {
@@ -1243,7 +1243,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_math_constants.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_math_constants.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_math_constants.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1264,7 +1264,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_int_pow.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_int_pow.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_int_pow.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1283,7 +1283,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_block_expr.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_block_expr.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_block_expr.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1304,7 +1304,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_block_return.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_block_return.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_block_return.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1325,7 +1325,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_block_early_return.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_block_early_return.glsl").string();
+      (testScratchPath("") / "primec_glsl_block_early_return.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1347,7 +1347,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_pathspace.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_pathspace.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_pathspace.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1370,7 +1370,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_math.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_math.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_math.glsl").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1388,9 +1388,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_effects.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_effects_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_glsl_effects_err.txt").string();
 
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_effects.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_effects.glsl").string();
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(outPath).find("void main()") != std::string::npos);
@@ -1405,9 +1405,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_static_binding.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_static_binding_err.txt").string();
+      (testScratchPath("") / "primec_glsl_static_binding_err.txt").string();
 
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_static_binding.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_static_binding.glsl").string();
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(outPath).find("stack[sp++] = 1;") != std::string::npos);
@@ -1422,9 +1422,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_array_binding.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_array_binding_err.txt").string();
+      (testScratchPath("") / "primec_glsl_array_binding_err.txt").string();
 
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_array_binding.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_array_binding.glsl").string();
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(outPath).find("slot-byte offsets") != std::string::npos);
@@ -1441,7 +1441,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_mixed_signed.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_mixed_signed_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_glsl_mixed_signed_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -1458,9 +1458,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_mixed_bool.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_mixed_bool_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_glsl_mixed_bool_err.txt").string();
 
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_mixed_bool.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_mixed_bool.glsl").string();
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(outPath).find("stack[sp++] = (left > right) ? 1 : 0;") != std::string::npos);
@@ -1475,9 +1475,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_glsl_string_literal.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_glsl_string_literal_err.txt").string();
+      (testScratchPath("") / "primec_glsl_string_literal_err.txt").string();
 
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_string_literal.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_string_literal.glsl").string();
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(outPath).find("stack[sp++] = 0;") != std::string::npos);
@@ -1490,7 +1490,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_capability.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_capability_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_glsl_capability_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -1507,7 +1507,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_exec_effects.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_exec_effects_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_glsl_exec_effects_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -1523,9 +1523,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_reject_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_glsl_reject_err.txt").string();
 
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_reject.glsl").string();
+  const std::string outPath = (testScratchPath("") / "primec_glsl_reject.glsl").string();
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(outPath).find("return stack[--sp];") != std::string::npos);

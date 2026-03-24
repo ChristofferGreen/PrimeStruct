@@ -101,7 +101,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_math_pow_negative.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_math_pow_negative_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_math_pow_negative_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "pow exponent must be non-negative\n");
@@ -517,7 +517,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_math_matrix_arithmetic_helpers.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_math_matrix_arithmetic_helpers.err").string();
+      (testScratchPath("") / "primec_vm_math_matrix_arithmetic_helpers.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   if (!runVmCommandOrExpectUnsupported(runCmd, errPath, 1)) {
     return;
@@ -565,7 +565,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_math_quaternion_arithmetic_helpers.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_math_quaternion_arithmetic_helpers.err").string();
+      (testScratchPath("") / "primec_vm_math_quaternion_arithmetic_helpers.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   if (!runVmCommandOrExpectUnsupported(runCmd, errPath, 1)) {
     return;
@@ -590,7 +590,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_math_support_matrix_plus_mismatch.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_math_support_matrix_plus_mismatch.err").string();
+      (testScratchPath("") / "primec_vm_math_support_matrix_plus_mismatch.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("plus requires matching matrix/quaternion operand types") != std::string::npos);
@@ -613,7 +613,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_math_support_matrix_implicit_conversion.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_math_support_matrix_implicit_conversion.err").string();
+      (testScratchPath("") / "primec_vm_math_support_matrix_implicit_conversion.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find(

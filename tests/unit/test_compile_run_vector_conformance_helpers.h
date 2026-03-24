@@ -897,7 +897,7 @@ inline void expectVectorConformanceProgramRuns(const std::string &source,
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_exe")).string();
+      (testScratchPath("") / (nameStem + "_exe")).string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -917,7 +917,7 @@ inline void expectVectorVmProgramRunsWithOutput(const std::string &source,
                                                 const std::string &expectedOutput) {
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_vm_out.txt")).string();
+      (testScratchPath("") / (nameStem + "_vm_out.txt")).string();
   const std::string runCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == expectedExitCode);
@@ -935,7 +935,7 @@ inline void expectVectorConformanceCompileReject(const std::string &source,
   CAPTURE(requiredFragment);
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / (nameStem + "_" + emitMode + "_out.txt")).string();
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
   const std::string command = emitMode == "vm"
                                   ? "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                         quoteShellArg(outPath) + " 2>&1"
@@ -1148,7 +1148,7 @@ inline void expectCanonicalVectorNamespaceTypeMismatchReject(const std::string &
   const std::string source = makeCanonicalVectorNamespaceTypeMismatchRejectSource();
   const std::string srcPath = writeTemp("vector_namespace_canonical_type_mismatch_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_vector_namespace_canonical_type_mismatch_" + emitMode + "_out.txt"))
           .string();
 
@@ -1177,7 +1177,7 @@ inline void expectCanonicalVectorNamespaceExplicitBindingReject(const std::strin
   const std::string source = makeCanonicalVectorNamespaceExplicitBindingRejectSource();
   const std::string srcPath = writeTemp("vector_namespace_canonical_binding_reject_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_vector_namespace_canonical_binding_reject_" + emitMode + "_out.txt"))
           .string();
 
@@ -1200,7 +1200,7 @@ inline void expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject(const s
   const std::string srcPath =
       writeTemp("vector_namespace_canonical_named_args_binding_reject_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_vector_namespace_canonical_named_args_binding_reject_" + emitMode + "_out.txt"))
           .string();
 
@@ -1315,7 +1315,7 @@ inline void expectCanonicalVectorMutatorImportRequirement(const std::string &emi
   const std::string srcPath =
       writeTemp("vector_" + helperName + "_canonical_import_requirement_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_vector_" + helperName + "_canonical_import_requirement_" + emitMode + "_out.txt"))
           .string();
   const std::string expected = "unknown call target: /std/collections/vector/" + helperName;
@@ -1341,7 +1341,7 @@ inline void expectBareVectorMutatorImportRequirement(const std::string &emitMode
   const std::string srcPath =
       writeTemp("vector_bare_" + helperName + "_import_requirement_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_vector_bare_" + helperName + "_import_requirement_" + emitMode + "_out.txt"))
           .string();
   const std::string expected = "unknown call target: /std/collections/vector/" + helperName;
@@ -1356,7 +1356,7 @@ inline void expectBareVectorMutatorImportRequirement(const std::string &emitMode
 
   if (emitMode == "native" || emitMode == "exe") {
     const std::string exePath =
-        (std::filesystem::temp_directory_path() /
+        (testScratchPath("") /
          ("primec_vector_bare_" + helperName + "_import_requirement_" + emitMode + "_exe"))
             .string();
     const std::string compileCmd =
@@ -1379,7 +1379,7 @@ inline void expectBareVectorMutatorMethodImportRequirement(const std::string &em
   const std::string srcPath =
       writeTemp("vector_bare_" + helperName + "_method_import_requirement_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_vector_bare_" + helperName + "_method_import_requirement_" + emitMode + "_out.txt"))
           .string();
   const std::string expected = emitMode == "native"
@@ -1396,7 +1396,7 @@ inline void expectBareVectorMutatorMethodImportRequirement(const std::string &em
 
   if (emitMode == "native" || emitMode == "exe") {
     const std::string exePath =
-        (std::filesystem::temp_directory_path() /
+        (testScratchPath("") /
          ("primec_vector_bare_" + helperName + "_method_import_requirement_" + emitMode + "_exe"))
             .string();
     const std::string compileCmd =
@@ -1463,7 +1463,7 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
   const std::string source = makeVectorHelperRuntimeContractSource(importPath, mode);
   const std::string srcPath = writeTemp("vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + ".prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + "_err.txt"))
           .string();
   const std::string expectedError = mode == "pop_empty" ? "container empty\n" : "array index out of bounds\n";
@@ -1477,7 +1477,7 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + "_exe"))
           .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
@@ -1589,7 +1589,7 @@ inline void expectVectorIndexedRemovalOwnershipReject(const std::string &emitMod
   const std::string srcPath = writeTemp("vector_indexed_removal_ownership_" + mode + "_" + emitMode + ".prime",
                                         source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        ("primec_vector_indexed_removal_ownership_" + mode + "_" + emitMode + "_out.txt"))
           .string();
 
@@ -1620,7 +1620,7 @@ inline void expectVectorPopEmptyRuntimeContract(const std::string &emitMode,
   const std::string source = makeVectorPopEmptyRuntimeContractSource(methodForm);
   const std::string srcPath = writeTemp("vector_pop_empty_runtime_" + formSlug + "_" + emitMode + ".prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / ("primec_vector_pop_empty_runtime_" + formSlug + "_" + emitMode +
+      (testScratchPath("") / ("primec_vector_pop_empty_runtime_" + formSlug + "_" + emitMode +
                                                  "_err.txt"))
           .string();
 
@@ -1633,7 +1633,7 @@ inline void expectVectorPopEmptyRuntimeContract(const std::string &emitMode,
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / ("primec_vector_pop_empty_runtime_" + formSlug + "_" + emitMode +
+      (testScratchPath("") / ("primec_vector_pop_empty_runtime_" + formSlug + "_" + emitMode +
                                                  "_exe"))
           .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
@@ -1681,7 +1681,7 @@ inline void expectVectorIndexRuntimeContract(const std::string &emitMode,
   const std::string source = makeVectorIndexRuntimeContractSource(mode);
   const std::string srcPath = writeTemp("vector_index_runtime_" + mode + "_" + emitMode + ".prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / ("primec_vector_index_runtime_" + mode + "_" + emitMode +
+      (testScratchPath("") / ("primec_vector_index_runtime_" + mode + "_" + emitMode +
                                                  "_err.txt"))
           .string();
   const bool accessMode =
@@ -1698,7 +1698,7 @@ inline void expectVectorIndexRuntimeContract(const std::string &emitMode,
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / ("primec_vector_index_runtime_" + mode + "_" + emitMode + "_exe"))
+      (testScratchPath("") / ("primec_vector_index_runtime_" + mode + "_" + emitMode + "_exe"))
           .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";

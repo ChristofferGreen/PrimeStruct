@@ -12,8 +12,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("native_maybe_some_take.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_maybe_some_take_exe").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_some_take_err.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_native_maybe_some_take_exe").string();
+  const std::string errPath = (testScratchPath("") / "primec_native_maybe_some_take_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
@@ -33,8 +33,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("native_maybe_set.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_maybe_set_exe").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_set_err.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_native_maybe_set_exe").string();
+  const std::string errPath = (testScratchPath("") / "primec_native_maybe_set_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
@@ -54,9 +54,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("native_maybe_string.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_maybe_string_exe").string();
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_string_out.txt").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_string_err.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_native_maybe_string_exe").string();
+  const std::string outPath = (testScratchPath("") / "primec_native_maybe_string_out.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_native_maybe_string_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2> " + errPath;
@@ -82,8 +82,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("native_maybe_struct.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_maybe_struct_exe").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_struct_err.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_native_maybe_struct_exe").string();
+  const std::string errPath = (testScratchPath("") / "primec_native_maybe_struct_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);

@@ -661,7 +661,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_method_chain.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_chain_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_method_chain_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -703,7 +703,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_experimental_map_custom_comparable_key.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_experimental_map_custom_comparable_key.err").string();
+      (testScratchPath("") / "primec_cpp_experimental_map_custom_comparable_key.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -729,8 +729,8 @@ log([i32] value) {
 log(1i32)
 )";
   const std::string srcPath = writeTemp("compile_exec_ignored.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exec_ignored_exe").string();
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_exec_ignored_out.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_exec_ignored_exe").string();
+  const std::string outPath = (testScratchPath("") / "primec_exec_ignored_out.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -763,8 +763,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_struct_lifecycle.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_struct_lifecycle_exe").string();
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_struct_lifecycle_out.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_struct_lifecycle_exe").string();
+  const std::string outPath = (testScratchPath("") / "primec_struct_lifecycle_out.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -797,7 +797,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_struct_return.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_struct_return_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_struct_return_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -819,7 +819,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_struct_defaults.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_struct_defaults_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_struct_defaults_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -827,7 +827,7 @@ main() {
 }
 
 TEST_CASE("C++ emitter supports file io") {
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_file_io_exe.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_file_io_exe.txt").string();
   auto escape = [](const std::string &text) {
     std::string out;
     out.reserve(text.size());
@@ -858,7 +858,7 @@ TEST_CASE("C++ emitter supports file io") {
       "  print_line_error(\"file error\"utf8)\n"
       "}\n";
   const std::string srcPath = writeTemp("compile_file_io_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_file_io_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_file_io_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -867,7 +867,7 @@ TEST_CASE("C++ emitter supports file io") {
 }
 
 TEST_CASE("C++ emitter supports file read_byte with deterministic eof") {
-  const std::string inPath = (std::filesystem::temp_directory_path() / "primec_file_read_byte_exe.txt").string();
+  const std::string inPath = (testScratchPath("") / "primec_file_read_byte_exe.txt").string();
   {
     std::ofstream file(inPath, std::ios::binary);
     REQUIRE(file.good());
@@ -907,8 +907,8 @@ TEST_CASE("C++ emitter supports file read_byte with deterministic eof") {
       "  print_line_error(\"file error\"utf8)\n"
       "}\n";
   const std::string srcPath = writeTemp("compile_file_read_byte_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_file_read_byte_exe").string();
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_file_read_byte_out.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_file_read_byte_exe").string();
+  const std::string outPath = (testScratchPath("") / "primec_file_read_byte_out.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -942,9 +942,9 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_result_why_custom.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_result_why_custom_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_result_why_custom_exe").string();
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_result_why_custom_out.txt").string();
+      (testScratchPath("") / "primec_result_why_custom_out.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1154,11 +1154,11 @@ main_fail() {
 )";
   const std::string srcPath = writeTemp("compile_graphics_int_on_error_exe.prime", source);
   const std::string okExePath =
-      (std::filesystem::temp_directory_path() / "primec_graphics_int_on_error_exe_ok").string();
+      (testScratchPath("") / "primec_graphics_int_on_error_exe_ok").string();
   const std::string failExePath =
-      (std::filesystem::temp_directory_path() / "primec_graphics_int_on_error_exe_fail").string();
+      (testScratchPath("") / "primec_graphics_int_on_error_exe_fail").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_graphics_int_on_error_exe_err.txt").string();
+      (testScratchPath("") / "primec_graphics_int_on_error_exe_err.txt").string();
 
   const std::string compileOkCmd =
       "./primec --emit=exe " + srcPath + " -o " + okExePath + " --entry /main_ok";
@@ -1185,7 +1185,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_struct_static.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_struct_static.cpp").string();
+  const std::string outPath = (testScratchPath("") / "primec_struct_static.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1207,7 +1207,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_copy_params.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_copy_params.cpp").string();
+  const std::string outPath = (testScratchPath("") / "primec_copy_params.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1227,7 +1227,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_lambda.cpp").string();
+  const std::string outPath = (testScratchPath("") / "primec_lambda.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -1244,7 +1244,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_explicit.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_lambda_explicit.cpp").string();
+  const std::string outPath = (testScratchPath("") / "primec_lambda_explicit.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -1281,7 +1281,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_shadow_precedence.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_shadow_precedence.cpp").string();
+      (testScratchPath("") / "primec_lambda_vector_mutator_shadow_precedence.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -1303,7 +1303,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_positional_shadow.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_positional_shadow.cpp").string();
+      (testScratchPath("") / "primec_lambda_vector_mutator_positional_shadow.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -1326,7 +1326,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_lambda_std_namespaced_reordered_mutator_compat_helper.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_lambda_std_namespaced_reordered_mutator_compat_helper_err.txt")
           .string();
 
@@ -1352,7 +1352,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_bool_positional_shadow.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_bool_positional_shadow.cpp").string();
+      (testScratchPath("") / "primec_lambda_vector_mutator_bool_positional_shadow.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -1378,7 +1378,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_named_values_receiver.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_named_values_receiver_exe").string();
+      (testScratchPath("") / "primec_lambda_vector_mutator_named_values_receiver_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -1401,7 +1401,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_known_receiver_no_reorder.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_known_receiver_no_reorder.cpp")
+      (testScratchPath("") / "primec_lambda_vector_mutator_known_receiver_no_reorder.cpp")
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
@@ -1423,7 +1423,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_lambda_explicit_vector_mutator_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_lambda_explicit_vector_mutator_deleted_stub.cpp")
+      (testScratchPath("") / "primec_cpp_lambda_explicit_vector_mutator_deleted_stub.cpp")
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
@@ -1450,7 +1450,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_lambda_cross_path_vector_mutator_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_lambda_cross_path_vector_mutator_deleted_stub.cpp")
           .string();
 
@@ -1478,7 +1478,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_lambda_reordered_cross_path_vector_mutator_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_lambda_reordered_cross_path_vector_mutator_deleted_stub.cpp")
           .string();
 
@@ -1501,7 +1501,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_lambda_explicit_vector_mutator_method_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_lambda_explicit_vector_mutator_method_deleted_stub.cpp")
           .string();
 
@@ -1529,7 +1529,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_lambda_cross_path_vector_mutator_method_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_lambda_cross_path_vector_mutator_method_deleted_stub.cpp")
           .string();
 
@@ -1554,7 +1554,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_shadow_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_shadow_mismatch_exe").string();
+      (testScratchPath("") / "primec_lambda_vector_mutator_shadow_mismatch_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -1576,7 +1576,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_call_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_lambda_vector_mutator_call_mismatch_exe").string();
+      (testScratchPath("") / "primec_lambda_vector_mutator_call_mismatch_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -1597,7 +1597,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_import_alias_helper_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_helper_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_import_alias_helper_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1618,7 +1618,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_method.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_method_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_array_method_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1634,7 +1634,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_index.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_index_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_array_index_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1650,8 +1650,8 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_emit_argv.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_emit_argv_exe").string();
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_emit_argv_out.txt").string();
+  const std::string exePath = (testScratchPath("") / "primec_emit_argv_exe").string();
+  const std::string outPath = (testScratchPath("") / "primec_emit_argv_out.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1670,7 +1670,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_index_u64.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_index_u64_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_array_index_u64_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1695,7 +1695,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_vector_helpers_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_vector_helpers_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_vector_helpers_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1743,7 +1743,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_user_vector_mutator_shadow_precedence.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_user_vector_mutator_shadow_precedence_exe").string();
+      (testScratchPath("") / "primec_cpp_user_vector_mutator_shadow_precedence_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1763,7 +1763,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_call_shadow_precedence.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vector_mutator_call_shadow_precedence.cpp").string();
+      (testScratchPath("") / "primec_vector_mutator_call_shadow_precedence.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1786,7 +1786,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_reordered_mutator_compat_helper.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_reordered_mutator_compat_helper_err.txt")
           .string();
 
@@ -1813,7 +1813,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_call_shadow.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_named_call_shadow_exe").string();
+      (testScratchPath("") / "primec_cpp_vector_mutator_named_call_shadow_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1834,7 +1834,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_values_receiver.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_named_values_receiver_exe").string();
+      (testScratchPath("") / "primec_cpp_vector_mutator_named_values_receiver_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1857,7 +1857,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_positional_call_shadow.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_positional_call_shadow_exe").string();
+      (testScratchPath("") / "primec_cpp_vector_mutator_positional_call_shadow_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1879,7 +1879,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_reordered_namespaced_vector_push_call_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_reordered_namespaced_vector_push_call_shadow_err.txt")
+      (testScratchPath("") / "primec_cpp_reordered_namespaced_vector_push_call_shadow_err.txt")
           .string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -1904,7 +1904,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_reordered_namespaced_vector_push_call_expr_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_reordered_namespaced_vector_push_call_expr_shadow_err.txt")
           .string();
   const std::string compileCmd =
@@ -1936,10 +1936,10 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto_exe")
           .string();
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_std_namespaced_vector_push_expr_named_receiver_precedence_auto_err.txt")
                                   .string();
   const std::string compileCmd =
@@ -1967,7 +1967,7 @@ main() {
       writeTemp("compile_cpp_std_namespaced_vector_push_expr_named_receiver_canonical_definition_auto.prime",
                 source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_push_expr_named_receiver_canonical_definition_auto_exe")
           .string();
 
@@ -1998,7 +1998,7 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_receiver_precedence_auto.prime",
                                         source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_count_receiver_precedence_auto_exe")
           .string();
   const std::string compileCmd =
@@ -2024,10 +2024,10 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_canonical_fallback_auto.prime",
                                         source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_count_canonical_fallback_auto_exe")
           .string();
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_std_namespaced_vector_count_canonical_fallback_auto_err.txt")
                                   .string();
 
@@ -2058,7 +2058,7 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_expr_receiver_precedence.prime",
                                         source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_count_expr_receiver_precedence_exe")
           .string();
   const std::string compileCmd =
@@ -2083,10 +2083,10 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_expr_canonical_fallback.prime",
                                         source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_count_expr_canonical_fallback_exe")
           .string();
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_std_namespaced_vector_count_expr_canonical_fallback_err.txt")
                                   .string();
 
@@ -2111,10 +2111,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_std_namespaced_count_non_builtin_compat_fallback.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_exe")
+      (testScratchPath("") / "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_err.txt")
+      (testScratchPath("") / "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_err.txt")
           .string();
 
   const std::string compileCmd =
@@ -2138,10 +2138,10 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() /
+  const std::string exePath = (testScratchPath("") /
                                "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch_exe")
                                   .string();
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_std_namespaced_count_non_builtin_compat_fallback_mismatch_err.txt")
                                   .string();
 
@@ -2167,7 +2167,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_namespaced_count_non_builtin_array_fallback_rejected.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_non_builtin_array_fallback_exe")
+      (testScratchPath("") / "primec_cpp_vector_namespaced_count_non_builtin_array_fallback_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -2195,7 +2195,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_capacity_expr_receiver_precedence.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_capacity_expr_receiver_precedence_exe")
           .string();
   const std::string compileCmd =
@@ -2220,7 +2220,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_capacity_expr_canonical_fallback.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_capacity_expr_canonical_fallback_exe")
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -2242,7 +2242,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_bool_positional_call_shadow.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_bool_positional_call_shadow_exe").string();
+      (testScratchPath("") / "primec_cpp_vector_mutator_bool_positional_call_shadow_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2266,7 +2266,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_mutator_known_receiver_no_reorder.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_mutator_known_receiver_no_reorder_exe").string();
+      (testScratchPath("") / "primec_cpp_mutator_known_receiver_no_reorder_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2288,9 +2288,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_access_named_call_shadow.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_named_call_shadow_exe").string();
+      (testScratchPath("") / "primec_cpp_vector_access_named_call_shadow_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_named_call_shadow_err.txt").string();
+      (testScratchPath("") / "primec_cpp_vector_access_named_call_shadow_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
@@ -2320,10 +2320,10 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto_exe")
           .string();
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto_err.txt")
                                   .string();
   const std::string compileCmd =
@@ -2350,7 +2350,7 @@ main() {
       writeTemp("compile_cpp_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto.prime",
                 source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_access_expr_named_receiver_canonical_fallback_auto_exe")
           .string();
 
@@ -2379,7 +2379,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_std_namespaced_vector_access_named_receiver.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_std_namespaced_vector_access_named_receiver_exe")
           .string();
 
@@ -2403,7 +2403,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_std_namespaced_vector_access_named_receiver_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_std_namespaced_vector_access_named_receiver_reject_err.txt")
           .string();
 
@@ -2424,9 +2424,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_removed_vector_access_alias_named_args.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_removed_vector_access_alias_named_args_exe").string();
+      (testScratchPath("") / "primec_cpp_removed_vector_access_alias_named_args_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_removed_vector_access_alias_named_args_err.txt").string();
+      (testScratchPath("") / "primec_cpp_removed_vector_access_alias_named_args_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
@@ -2445,11 +2445,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_removed_vector_access_alias_at_unsafe_named_args.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_removed_vector_access_alias_at_unsafe_named_args_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_removed_vector_access_alias_at_unsafe_named_args_err.txt")
           .string();
 
@@ -2474,9 +2474,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_access_positional_call_shadow.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_positional_call_shadow_exe").string();
+      (testScratchPath("") / "primec_cpp_vector_access_positional_call_shadow_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_access_positional_call_shadow_err.txt")
+      (testScratchPath("") / "primec_cpp_vector_access_positional_call_shadow_err.txt")
           .string();
 
   const std::string compileCmd =
@@ -2500,7 +2500,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_map_access_string_positional_call_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_access_string_positional_call_shadow_err.txt")
+      (testScratchPath("") / "primec_cpp_map_access_string_positional_call_shadow_err.txt")
           .string();
 
   const std::string compileCmd =
@@ -2529,7 +2529,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_map_access_later_receiver_precedence.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_access_later_receiver_precedence_err.txt")
+      (testScratchPath("") / "primec_cpp_map_access_later_receiver_precedence_err.txt")
           .string();
 
   const std::string compileCmd =
@@ -2553,7 +2553,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_map_access_unsafe_string_positional_call_shadow.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_access_unsafe_string_positional_call_shadow_err.txt")
           .string();
 
@@ -2578,7 +2578,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_canonical_map_access_positional_reorder.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_map_access_positional_reorder_err.txt")
+      (testScratchPath("") / "primec_cpp_canonical_map_access_positional_reorder_err.txt")
           .string();
 
   const std::string compileCmd =
@@ -2603,10 +2603,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_canonical_map_access_positional_reorder_diag.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_map_access_positional_reorder_diag_exe")
+      (testScratchPath("") / "primec_cpp_canonical_map_access_positional_reorder_diag_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_map_access_positional_reorder_diag_err.txt")
+      (testScratchPath("") / "primec_cpp_canonical_map_access_positional_reorder_diag_err.txt")
           .string();
 
   const std::string compileCmd =
@@ -2634,7 +2634,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_access_known_receiver_no_reorder.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_access_known_receiver_no_reorder_exe").string();
+      (testScratchPath("") / "primec_cpp_access_known_receiver_no_reorder_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2656,7 +2656,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_user_vector_mutator_shadow_arg_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_user_vector_mutator_shadow_arg_mismatch_exe").string();
+      (testScratchPath("") / "primec_cpp_user_vector_mutator_shadow_arg_mismatch_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -2676,7 +2676,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_call_shadow_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_mutator_call_shadow_mismatch_exe").string();
+      (testScratchPath("") / "primec_cpp_vector_mutator_call_shadow_mismatch_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -2698,7 +2698,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_aliases.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_namespaced_vector_aliases_exe").string();
+      (testScratchPath("") / "primec_cpp_stdlib_namespaced_vector_aliases_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2715,10 +2715,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_namespaced_vector_constructor_alias.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_constructor_alias_out.txt")
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_constructor_alias_out.txt")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_constructor_alias_exe").string();
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_constructor_alias_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
@@ -2739,9 +2739,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_namespaced_vector_at_alias.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_at_alias_out.txt").string();
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_at_alias_out.txt").string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_at_alias_exe").string();
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_at_alias_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
@@ -2762,10 +2762,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_namespaced_vector_at_unsafe_alias.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_at_unsafe_alias_out.txt")
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_at_unsafe_alias_out.txt")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_at_unsafe_alias_exe").string();
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_at_unsafe_alias_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
@@ -2785,10 +2785,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_namespaced_vector_count_builtin_alias.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_count_builtin_alias_out.txt")
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_count_builtin_alias_out.txt")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_count_builtin_alias_exe").string();
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_count_builtin_alias_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
@@ -2808,10 +2808,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_namespaced_vector_capacity_alias.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_capacity_alias_out.txt")
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_capacity_alias_out.txt")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_capacity_alias_exe").string();
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_capacity_alias_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
@@ -2832,9 +2832,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_namespaced_vector_mutator_alias.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_mutator_alias_out.txt").string();
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_mutator_alias_out.txt").string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_vector_mutator_alias_exe").string();
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_mutator_alias_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
@@ -4928,7 +4928,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_vector_method_helper_precedence_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_vector_method_helper_precedence_reject_err.txt")
+      (testScratchPath("") / "primec_cpp_stdlib_vector_method_helper_precedence_reject_err.txt")
           .string();
 
   const std::string compileCmd =
@@ -4957,10 +4957,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_vector_template_method_helper_precedence.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_vector_template_method_helper_precedence_exe")
+      (testScratchPath("") / "primec_cpp_stdlib_vector_template_method_helper_precedence_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_vector_template_method_helper_precedence_err.txt")
+      (testScratchPath("") / "primec_cpp_stdlib_vector_template_method_helper_precedence_err.txt")
           .string();
 
   const std::string compileCmd =
@@ -5000,7 +5000,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_namespaced_count_capacity_alias_same_path.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_capacity_alias_same_path_exe")
+      (testScratchPath("") / "primec_cpp_vector_namespaced_count_capacity_alias_same_path_exe")
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null";
   CHECK(runCommand(compileCmd) == 0);
@@ -5027,7 +5027,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_namespaced_count_capacity_alias_canonical_only_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_vector_namespaced_count_capacity_alias_canonical_only_reject.err")
                                   .string();
 
@@ -5053,10 +5053,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_templated_canonical_alias_call.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_templated_canonical_alias_call_exe")
+      (testScratchPath("") / "primec_cpp_vector_namespaced_templated_canonical_alias_call_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_templated_canonical_alias_call_err.txt")
+      (testScratchPath("") / "primec_cpp_vector_namespaced_templated_canonical_alias_call_err.txt")
           .string();
 
   const std::string compileCmd =
@@ -5086,7 +5086,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_arity_mismatch_compatibility_template_forwarding_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_arity_mismatch_compatibility_template_forwarding_reject_err.txt")
           .string();
 
@@ -5117,7 +5117,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_implicit_canonical_forwarding_bool_type_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_implicit_canonical_forwarding_bool_type_mismatch_exe")
           .string();
 
@@ -5146,7 +5146,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_implicit_canonical_forwarding_non_bool_type_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_implicit_canonical_forwarding_non_bool_type_mismatch_exe")
           .string();
 
@@ -5179,7 +5179,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_implicit_canonical_forwarding_struct_type_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_implicit_canonical_forwarding_struct_type_mismatch_exe")
           .string();
 
@@ -5211,7 +5211,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_constructor_struct_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_constructor_struct_mismatch_exe")
           .string();
 
@@ -5250,7 +5250,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_method_struct_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_method_struct_mismatch_exe")
           .string();
 
@@ -5296,7 +5296,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_chained_method_struct_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_chained_method_struct_mismatch_exe")
           .string();
 
@@ -5326,7 +5326,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_array_envelope_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_array_envelope_mismatch_exe")
           .string();
 
@@ -5356,7 +5356,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_map_envelope_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_map_envelope_mismatch_exe")
           .string();
 
@@ -5390,7 +5390,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_map_call_return_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_map_call_return_mismatch_exe")
           .string();
 
@@ -5424,7 +5424,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_primitive_call_return_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_primitive_call_return_mismatch_exe")
           .string();
 
@@ -5460,7 +5460,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_call_return.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_call_return_exe")
           .string();
 
@@ -5492,7 +5492,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_binding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_unknown_expected_primitive_binding_exe")
           .string();
 
@@ -5525,7 +5525,7 @@ main() {
       writeTemp("compile_cpp_vector_alias_canonical_forwarding_unknown_expected_vector_envelope_binding.prime",
                 source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_canonical_forwarding_unknown_expected_vector_envelope_binding_exe")
           .string();
 
@@ -5549,11 +5549,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_helper_method_expression_canonical_stdlib_forwarding.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_helper_method_expression_canonical_stdlib_forwarding_err.txt")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_helper_method_expression_canonical_stdlib_forwarding_exe")
           .string();
 
@@ -5585,7 +5585,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_named_argument_compatibility_template_forwarding_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_named_argument_compatibility_template_forwarding_reject_err.txt")
           .string();
 
@@ -5620,7 +5620,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_temp_templated_vector_method_canonical_forwarding.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_temp_templated_vector_method_canonical_forwarding_err.txt")
           .string();
 
@@ -5651,7 +5651,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_alias_templated_vector_forwarding_rejected.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_alias_templated_vector_forwarding_exe").string();
+      (testScratchPath("") / "primec_cpp_array_alias_templated_vector_forwarding_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -5678,7 +5678,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_templated_vector_call_array_fallback_rejected.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_templated_vector_call_array_fallback_exe")
+      (testScratchPath("") / "primec_cpp_stdlib_templated_vector_call_array_fallback_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -5706,7 +5706,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_templated_alias_forwarding_non_template_compat.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_templated_alias_forwarding_non_template_compat_err.txt")
           .string();
 
@@ -5731,7 +5731,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_count_access_aliases.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_count_access_aliases.err").string();
+      (testScratchPath("") / "primec_cpp_vector_namespaced_count_access_aliases.err").string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
@@ -5751,7 +5751,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_mutator_stmt.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_stdlib_namespaced_vector_mutator_stmt.cpp")
                                   .string();
 
@@ -5772,7 +5772,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_mutator_stmt.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_namespaced_mutator_stmt.cpp").string();
+      (testScratchPath("") / "primec_cpp_vector_namespaced_mutator_stmt.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -5792,7 +5792,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_access_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_stdlib_namespaced_vector_access_fallback.cpp")
                                   .string();
 
@@ -5812,7 +5812,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_at_map_helper.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_stdlib_namespaced_vector_at_map_helper.out")
                                   .string();
 
@@ -5837,7 +5837,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_map_access_count.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_namespaced_map_access_count_exe").string();
+      (testScratchPath("") / "primec_cpp_stdlib_namespaced_map_access_count_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -5860,7 +5860,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_map_reference_helpers.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_map_reference_helpers_exe").string();
+      (testScratchPath("") / "primec_cpp_stdlib_map_reference_helpers_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -5887,11 +5887,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_map_reference_method_sugar.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_map_reference_method_sugar_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_map_reference_method_sugar_err.txt")
           .string();
 
@@ -5918,7 +5918,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_map_reference_method_sugar_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_map_reference_method_sugar_diag.err")
           .string();
 
@@ -5940,7 +5940,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_canonical_map_reference_string_receiver.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_map_reference_string_receiver_exe")
           .string();
 
@@ -5960,7 +5960,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_canonical_map_reference_string_receiver_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_map_reference_string_receiver_diag.err")
           .string();
 
@@ -5985,9 +5985,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_map_namespaced_count_compatibility_alias_reject.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_count_compatibility_alias_exe").string();
+      (testScratchPath("") / "primec_cpp_map_namespaced_count_compatibility_alias_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_count_compatibility_alias_err.txt")
+      (testScratchPath("") / "primec_cpp_map_namespaced_count_compatibility_alias_err.txt")
           .string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
@@ -6012,10 +6012,10 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_namespaced_contains_compatibility_alias_reject.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_contains_compatibility_alias_exe")
+      (testScratchPath("") / "primec_cpp_map_namespaced_contains_compatibility_alias_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_contains_compatibility_alias_err.txt")
+      (testScratchPath("") / "primec_cpp_map_namespaced_contains_compatibility_alias_err.txt")
           .string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
@@ -6039,10 +6039,10 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_namespaced_try_at_compatibility_alias_reject.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_try_at_compatibility_alias_exe")
+      (testScratchPath("") / "primec_cpp_map_namespaced_try_at_compatibility_alias_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_try_at_compatibility_alias_err.txt")
+      (testScratchPath("") / "primec_cpp_map_namespaced_try_at_compatibility_alias_err.txt")
           .string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
@@ -6066,7 +6066,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_count_alias_fallback_without_import.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_count_alias_fallback_without_import.err")
           .string();
 
@@ -6091,7 +6091,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_map_namespaced_at_compatibility_alias_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_at_compatibility_alias.err").string();
+      (testScratchPath("") / "primec_cpp_map_namespaced_at_compatibility_alias.err").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
@@ -6114,7 +6114,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_namespaced_at_unsafe_compatibility_alias_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_namespaced_at_unsafe_compatibility_alias.err")
+      (testScratchPath("") / "primec_cpp_map_namespaced_at_unsafe_compatibility_alias.err")
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
@@ -6133,7 +6133,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_map_access_deleted_stub.cpp")
           .string();
 
@@ -6156,7 +6156,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_deleted_stub_exe.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_map_access_deleted_stub_exe")
           .string();
 
@@ -6178,7 +6178,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_count_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_map_access_count_deleted_stub.cpp")
           .string();
 
@@ -6203,11 +6203,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_contains_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_map_access_contains_deleted_stub.cpp")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_map_access_contains_deleted_stub.err")
           .string();
 
@@ -6230,7 +6230,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_contains_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_map_access_contains_deleted_stub.err")
           .string();
 
@@ -6257,11 +6257,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_slash_method_map_access_contains_deleted_stub.cpp")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_slash_method_map_access_contains_deleted_stub.err")
           .string();
 
@@ -6288,7 +6288,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_slash_method_map_access_contains_deleted_stub.err")
           .string();
 
@@ -6310,11 +6310,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_method_map_access_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_method_map_access_deleted_stub.cpp")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_method_map_access_deleted_stub.err")
           .string();
 
@@ -6336,7 +6336,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_method_map_access_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_method_map_access_deleted_stub.err")
           .string();
 
@@ -6363,7 +6363,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_count_builtin_fallback_reject.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_count_builtin_fallback_exe").string();
+      (testScratchPath("") / "primec_cpp_map_unnamespaced_count_builtin_fallback_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 17);
@@ -6380,7 +6380,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_count_builtin_fallback_no_canonical_reject.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_count_builtin_fallback_no_canonical_exe")
+      (testScratchPath("") / "primec_cpp_map_unnamespaced_count_builtin_fallback_no_canonical_exe")
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -6403,7 +6403,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_at_with_canonical_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_with_canonical_helper_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_map_at_with_canonical_helper_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 17);
@@ -6425,7 +6425,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_at_unsafe_with_canonical_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_unsafe_with_canonical_helper_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_map_at_unsafe_with_canonical_helper_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 17);
@@ -6442,7 +6442,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_at_without_helper_reject.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_without_helper_reject_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_map_at_without_helper_reject_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(quoteShellArg(exePath)) == 4);
@@ -6459,7 +6459,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_at_unsafe_without_helper_reject.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_at_unsafe_without_helper_reject_exe")
+      (testScratchPath("") / "primec_cpp_bare_map_at_unsafe_without_helper_reject_exe")
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -6478,7 +6478,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_at_imported.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_at_imported_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_at_imported_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 4);
@@ -6494,7 +6494,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_at_import_requirement.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_at_import_requirement_err.txt").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_at_import_requirement_err.txt").string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
@@ -6513,7 +6513,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_at_unsafe_imported.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_at_unsafe_imported_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_at_unsafe_imported_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 4);
@@ -6529,7 +6529,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_at_unsafe_import_requirement.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_at_unsafe_import_requirement_err.txt")
+      (testScratchPath("") / "primec_cpp_bare_vector_at_unsafe_import_requirement_err.txt")
           .string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -6553,7 +6553,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_contains_prefers_canonical_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_contains_prefers_canonical_helper_exe")
+      (testScratchPath("") / "primec_cpp_map_unnamespaced_contains_prefers_canonical_helper_exe")
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -6576,7 +6576,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_contains_prefers_compatibility_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_unnamespaced_contains_prefers_compatibility_helper_exe")
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -6605,7 +6605,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_contains_prefers_canonical_over_alias.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_unnamespaced_contains_prefers_canonical_over_alias_exe")
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -6624,7 +6624,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_contains_without_helper_reject.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_unnamespaced_contains_without_helper_reject_exe")
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -6648,7 +6648,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_try_at_prefers_canonical_helper.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_map_unnamespaced_try_at_prefers_canonical_helper.err")
+      (testScratchPath("") / "primec_cpp_map_unnamespaced_try_at_prefers_canonical_helper.err")
           .string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -6672,7 +6672,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_try_at_prefers_compatibility_helper.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_unnamespaced_try_at_prefers_compatibility_helper.err")
           .string();
   const std::string compileCmd =
@@ -6702,7 +6702,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_try_at_prefers_canonical_over_alias.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_unnamespaced_try_at_prefers_canonical_over_alias.err")
           .string();
   const std::string compileCmd =
@@ -6721,7 +6721,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_map_try_at_call_without_import.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_try_at_call_without_import.err").string();
+      (testScratchPath("") / "primec_cpp_bare_map_try_at_call_without_import.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -6753,7 +6753,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_try_at_alias_struct_method_chain_canonical_forwarding_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_map_try_at_alias_struct_method_chain_canonical_forwarding_reject.err")
                                   .string();
 
@@ -6803,11 +6803,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_direct_map_try_at_struct_method_chain_same_path_precedence.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_direct_map_try_at_struct_method_chain_same_path_precedence_exe")
           .string();
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_direct_map_try_at_struct_method_chain_same_path_precedence.out")
           .string();
 
@@ -6832,7 +6832,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_namespaced_count_method_compatibility_alias_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_map_namespaced_count_method_compatibility_alias_reject.err")
                                   .string();
 
@@ -6852,7 +6852,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_map_count_method_without_import.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_count_method_without_import_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_map_count_method_without_import_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -6869,7 +6869,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_map_contains_method_without_import.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_contains_method_without_import_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_map_contains_method_without_import_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -6886,7 +6886,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_map_tryat_method_without_import.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_tryat_method_without_import.err").string();
+      (testScratchPath("") / "primec_cpp_bare_map_tryat_method_without_import.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -6904,7 +6904,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_map_access_methods_without_import.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_access_methods_without_import_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_map_access_methods_without_import_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -6926,7 +6926,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_map_namespaced_at_method_compatibility_alias_reject.prime",
                                         source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_map_namespaced_at_method_compatibility_alias_reject.err")
                                   .string();
 
@@ -6951,7 +6951,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_canonical_map_count_method_sugar.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_canonical_map_count_method_sugar_exe").string();
+      (testScratchPath("") / "primec_cpp_stdlib_canonical_map_count_method_sugar_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -6978,7 +6978,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar_exe")
           .string();
 
@@ -7007,7 +7007,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_canonical_map_count_wrapper_slash_return_method_sugar_diag.err")
           .string();
 
@@ -7038,7 +7038,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar.err")
           .string();
 
@@ -7068,7 +7068,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_templated_map_count_wrapper_slash_return_method_sugar_diag.err")
           .string();
 
@@ -7108,7 +7108,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_map_count_reference_wrapper_direct_call.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_map_count_reference_wrapper_direct_call_exe")
           .string();
 
@@ -7146,7 +7146,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_map_count_reference_wrapper_direct_call_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_map_count_reference_wrapper_direct_call_diag.err")
           .string();
 
@@ -7172,7 +7172,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_canonical_map_return_arity_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_canonical_map_return_arity_diag.err")
           .string();
 
@@ -7194,7 +7194,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_canonical_map_typed_binding_builtin_helpers.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_canonical_map_typed_binding_builtin_helpers_exe")
           .string();
 
@@ -7244,7 +7244,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_canonical_map_sugar_before_aliases.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_map_sugar_before_aliases_exe").string();
+      (testScratchPath("") / "primec_cpp_canonical_map_sugar_before_aliases_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -7272,11 +7272,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_count_explicit_template_method_non_templated_alias_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_count_explicit_template_method_non_templated_alias_reject.err")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_count_explicit_template_method_non_templated_alias_reject_exe")
           .string();
 
@@ -7308,11 +7308,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_count_explicit_template_method_alias_precedence.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_count_explicit_template_method_alias_precedence.err")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_count_explicit_template_method_alias_precedence_exe")
           .string();
 
@@ -7334,7 +7334,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_canonical_map_typed_binding_builtin_helpers_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_canonical_map_typed_binding_builtin_helpers_diag.err")
           .string();
 
@@ -7380,7 +7380,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_access_canonical_precedence.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_access_canonical_precedence.err")
           .string();
 
@@ -7417,7 +7417,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_at_canonical_precedence_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_at_canonical_precedence_diag.err")
           .string();
 
@@ -7454,7 +7454,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_count_canonical_precedence.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_count_canonical_precedence.err")
           .string();
 
@@ -7491,7 +7491,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_count_canonical_precedence_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_count_canonical_precedence_diag.err")
           .string();
 
@@ -7513,7 +7513,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_unknown_map_helper.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_unknown_map_helper.err")
           .string();
 
@@ -7557,11 +7557,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_access_direct_call_string_receiver.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_access_direct_call_string_receiver_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_access_direct_call_string_receiver.err")
           .string();
 
@@ -7592,7 +7592,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_access_direct_call_string_receiver_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_access_direct_call_string_receiver_diag.err")
           .string();
 
@@ -7623,11 +7623,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_count_direct_call_string_receiver.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_count_direct_call_string_receiver_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_count_direct_call_string_receiver.err")
           .string();
 
@@ -7658,7 +7658,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_map_count_direct_call_string_receiver_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_count_direct_call_string_receiver_diag.err")
           .string();
 
@@ -7678,7 +7678,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_capacity_map_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_namespaced_vector_capacity_map_reject.err")
+      (testScratchPath("") / "primec_cpp_stdlib_namespaced_vector_capacity_map_reject.err")
           .string();
 
   const std::string compileCmd =
@@ -7724,7 +7724,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_count_capacity_shadow_precedence.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_user_wrapper_temp_count_capacity_shadow_precedence_err.txt")
           .string();
 
@@ -7775,7 +7775,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch_exe")
+      (testScratchPath("") / "primec_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -7802,7 +7802,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_count_capacity_builtin_fallback.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_count_capacity_builtin_fallback.cpp").string();
+      (testScratchPath("") / "primec_cpp_wrapper_count_capacity_builtin_fallback.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -7822,7 +7822,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_namespaced_wrapper_vector_count_map_target_reject.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_namespaced_wrapper_vector_count_map_target_reject_out.txt")
                                   .string();
 
@@ -7846,7 +7846,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_namespaced_wrapper_vector_count_vector_target_reject.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_namespaced_wrapper_vector_count_vector_target_reject_out.txt")
                                   .string();
 
@@ -7876,7 +7876,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_array_namespaced_wrapper_count_capacity_builtin_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_array_namespaced_wrapper_count_capacity_builtin_fallback.cpp")
                                   .string();
 
@@ -7904,7 +7904,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_count_map_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_count_map_same_path_helper_exe")
           .string();
 
@@ -7933,7 +7933,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_vector_count_map_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_vector_count_map_same_path_helper_exe")
           .string();
 
@@ -7956,7 +7956,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_alias_vector_count_map_unknown_target.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_alias_vector_count_map_unknown_target_out.txt")
                                   .string();
 
@@ -7980,10 +7980,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_array_namespaced_wrapper_capacity_reject.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_wrapper_capacity_reject_out.txt")
+      (testScratchPath("") / "primec_cpp_array_namespaced_wrapper_capacity_reject_out.txt")
           .string();
   const std::string cppOutPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_array_namespaced_wrapper_capacity_reject.cpp").string();
+      (testScratchPath("") / "primec_cpp_array_namespaced_wrapper_capacity_reject.cpp").string();
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o " + cppOutPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
@@ -8009,7 +8009,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_namespaced_count_capacity_method_chain_compatibility_fallback_reject.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_namespaced_count_capacity_method_chain_compatibility_fallback_reject_out.txt")
                                   .string();
 
@@ -8039,7 +8039,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_string_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_vector_count_string_same_path_helper_exe")
           .string();
 
@@ -8063,7 +8063,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_string_no_helper.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_vector_count_string_no_helper.err")
           .string();
 
@@ -8093,7 +8093,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_map_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_vector_count_map_same_path_helper_exe")
           .string();
 
@@ -8117,7 +8117,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_map_no_helper.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_vector_count_map_no_helper.err")
           .string();
 
@@ -8147,7 +8147,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_array_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_vector_count_array_same_path_helper_exe")
           .string();
 
@@ -8171,7 +8171,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_array_no_helper.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_vector_count_array_no_helper.err")
           .string();
 
@@ -8211,7 +8211,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_same_path.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_local_canonical_slash_vector_count_same_path_err.txt")
           .string();
 
@@ -8232,7 +8232,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_map_no_helper.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_local_canonical_slash_vector_count_map_no_helper.txt")
           .string();
 
@@ -8254,7 +8254,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_string_no_helper.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_local_canonical_slash_vector_count_string_no_helper.err")
           .string();
 
@@ -8285,7 +8285,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_string_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_string_same_path_helper_exe")
           .string();
 
@@ -8309,7 +8309,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_string_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_string_deleted_stub.cpp")
           .string();
 
@@ -8334,7 +8334,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_string_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_string_deleted_stub.err")
           .string();
 
@@ -8364,7 +8364,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_map_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_map_same_path_helper_exe")
           .string();
 
@@ -8388,7 +8388,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_map_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_map_deleted_stub.txt")
           .string();
 
@@ -8413,7 +8413,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_map_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_map_deleted_stub.err")
           .string();
 
@@ -8443,7 +8443,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_array_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_array_same_path_helper_exe")
           .string();
 
@@ -8467,7 +8467,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_array_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_array_deleted_stub.cpp")
           .string();
 
@@ -8492,7 +8492,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_array_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_array_deleted_stub.err")
           .string();
 
@@ -8522,7 +8522,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_count_string_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_vector_count_string_same_path_helper_exe")
           .string();
 
@@ -8546,7 +8546,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_count_string_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_vector_count_string_deleted_stub.txt")
           .string();
 
@@ -8572,7 +8572,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_count_string_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_vector_count_string_deleted_stub.err")
           .string();
 
@@ -8603,7 +8603,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_count_string_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_count_string_same_path_helper_exe")
           .string();
 
@@ -8627,7 +8627,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_count_string_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_count_string_deleted_stub.cpp")
           .string();
 
@@ -8652,7 +8652,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_count_string_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_count_string_deleted_stub.err")
           .string();
 
@@ -8682,7 +8682,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_count_array_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_count_array_same_path_helper_exe")
           .string();
 
@@ -8706,7 +8706,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_count_array_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_count_array_deleted_stub.cpp")
           .string();
 
@@ -8731,7 +8731,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_count_array_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_count_array_deleted_stub.err")
           .string();
 
@@ -8761,7 +8761,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_count_array_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_vector_count_array_same_path_helper_exe")
           .string();
 
@@ -8785,7 +8785,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_count_array_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_vector_count_array_deleted_stub.txt")
           .string();
 
@@ -8811,7 +8811,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_count_array_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_vector_count_array_deleted_stub.err")
           .string();
 
@@ -8841,7 +8841,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_namespaced_access_method_chain_compatibility_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_namespaced_access_method_chain_compatibility_fallback_err.txt")
           .string();
 
@@ -8875,7 +8875,7 @@ main() {
       writeTemp("compile_cpp_namespaced_wrapper_string_access_method_chain_compatibility_fallback.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_namespaced_wrapper_string_access_method_chain_compatibility_fallback_err.txt")
           .string();
 
@@ -8901,7 +8901,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_direct_string_vector_access_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_direct_string_vector_access_deleted_stub.cpp")
           .string();
 
@@ -8932,7 +8932,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_direct_string_vector_access_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_direct_string_vector_access_deleted_stub.err")
           .string();
 
@@ -8968,7 +8968,7 @@ main() {
       writeTemp("compile_cpp_slash_method_wrapper_string_access_method_chain_compatibility_fallback.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_slash_method_wrapper_string_access_method_chain_compatibility_fallback_err.txt")
           .string();
 
@@ -8993,7 +8993,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_slash_method_wrapper_string_access_method_chain_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_slash_method_wrapper_string_access_method_chain_diag.err")
           .string();
 
@@ -9019,7 +9019,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_slash_method_string_vector_access_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_slash_method_string_vector_access_deleted_stub.cpp")
           .string();
 
@@ -9050,7 +9050,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_slash_method_string_vector_access_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_slash_method_string_vector_access_deleted_stub.err")
           .string();
 
@@ -9088,7 +9088,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_access_struct_method_chain_canonical_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_access_struct_method_chain_canonical_forwarding_exe")
           .string();
 
@@ -9121,7 +9121,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_access_struct_method_chain_canonical_diagnostic.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_vector_alias_access_struct_method_chain_canonical_diagnostic.err")
                                   .string();
 
@@ -9151,7 +9151,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_access_field_expression_struct_receiver_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_access_field_expression_struct_receiver_forwarding_exe")
           .string();
 
@@ -9185,7 +9185,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_access_struct_method_chain_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_access_struct_method_chain_forwarding_exe")
           .string();
 
@@ -9219,7 +9219,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_access_unsafe_field_expression_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_access_unsafe_field_expression_forwarding_exe")
           .string();
 
@@ -9253,7 +9253,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_struct_method_chain_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_map_access_struct_method_chain_forwarding_exe")
           .string();
 
@@ -9288,7 +9288,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_unsafe_struct_method_chain_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_map_unsafe_struct_method_chain_forwarding_exe")
           .string();
 
@@ -9328,7 +9328,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_struct_method_chain_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_map_access_struct_method_chain_diag.err")
           .string();
 
@@ -9372,10 +9372,10 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_method_struct_chain_canonical_precedence.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_method_struct_chain_canonical_precedence.out")
+      (testScratchPath("") / "primec_cpp_bare_map_method_struct_chain_canonical_precedence.out")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_method_struct_chain_canonical_precedence_exe")
+      (testScratchPath("") / "primec_cpp_bare_map_method_struct_chain_canonical_precedence_exe")
           .string();
 
   const std::string compileCmd =
@@ -9418,11 +9418,11 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence.out")
                                   .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_bare_map_unsafe_method_struct_chain_canonical_precedence_exe")
           .string();
 
@@ -9463,7 +9463,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_method_struct_chain_canonical_diagnostic.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_map_method_struct_chain_canonical_diagnostic.err")
+      (testScratchPath("") / "primec_cpp_bare_map_method_struct_chain_canonical_diagnostic.err")
           .string();
 
   const std::string compileCmd =
@@ -9496,7 +9496,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_access_alias_struct_method_chain_canonical_forwarding_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_map_access_alias_struct_method_chain_canonical_forwarding_reject.err")
                                   .string();
 
@@ -9530,7 +9530,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_access_alias_struct_method_chain_canonical_diagnostic.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_map_access_alias_struct_method_chain_canonical_diagnostic.err")
                                   .string();
 
@@ -9565,7 +9565,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_access_alias_unsafe_struct_method_chain_canonical_forwarding_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_access_alias_unsafe_struct_method_chain_canonical_forwarding_reject.err")
           .string();
 
@@ -9600,7 +9600,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_access_alias_unsafe_struct_method_chain_canonical_diagnostic.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_access_alias_unsafe_struct_method_chain_canonical_diagnostic.err")
           .string();
 
@@ -9644,7 +9644,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_access_auto_wrapper_canonical_struct_return_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_vector_alias_access_auto_wrapper_canonical_struct_return_reject.err")
                                   .string();
 
@@ -9689,7 +9689,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_access_auto_wrapper_canonical_diagnostic.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_alias_access_auto_wrapper_canonical_diagnostic.err")
+      (testScratchPath("") / "primec_cpp_vector_alias_access_auto_wrapper_canonical_diagnostic.err")
           .string();
 
   const std::string compileCmd =
@@ -9729,7 +9729,7 @@ main() {
       writeTemp("compile_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding.prime",
                 source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding_exe")
           .string();
 
@@ -9768,7 +9768,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_alias_access_canonical_only_helper_routing_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_canonical_only_helper_routing_reject.err")
           .string();
 
@@ -9808,7 +9808,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_alias_access_struct_method_chain_same_path_diagnostic.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_struct_method_chain_canonical_diagnostic.err")
           .string();
 
@@ -9844,7 +9844,7 @@ main() {
       writeTemp("compile_cpp_vector_method_alias_access_field_expression_same_path_struct_receiver_diag.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_field_expression_struct_receiver_diag.err")
           .string();
 
@@ -9885,7 +9885,7 @@ main() {
       writeTemp("compile_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding.prime",
                 source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding_exe")
           .string();
 
@@ -9912,7 +9912,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_alias_access_receiver_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_receiver_fallback_reject.err")
           .string();
 
@@ -9948,7 +9948,7 @@ main() {
       writeTemp("compile_cpp_vector_method_alias_access_unsafe_field_expression_same_path_struct_receiver_diag.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_unsafe_field_expression_struct_receiver_diag.err")
           .string();
 
@@ -9976,7 +9976,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_alias_access_unsafe_receiver_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_unsafe_receiver_fallback_reject.err")
           .string();
 
@@ -10015,7 +10015,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_struct_field_alias_precedence.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_vector_method_struct_field_alias_precedence_exe")
+      (testScratchPath("") / "primec_cpp_vector_method_struct_field_alias_precedence_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -10048,7 +10048,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_method_struct_chain_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_vector_method_struct_chain_forwarding_exe")
+      (testScratchPath("") / "primec_cpp_canonical_vector_method_struct_chain_forwarding_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -10076,7 +10076,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_unsafe_method_field_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_vector_unsafe_method_field_forwarding_exe")
+      (testScratchPath("") / "primec_cpp_canonical_vector_unsafe_method_field_forwarding_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -10115,11 +10115,11 @@ main() {
       writeTemp("compile_cpp_map_method_alias_access_struct_method_chain_canonical_forwarding_reject.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_method_alias_access_struct_method_chain_canonical_forwarding_reject.err")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_method_alias_access_struct_method_chain_canonical_forwarding_exe")
           .string();
 
@@ -10155,7 +10155,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_map_method_field_access_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_canonical_map_method_field_access_forwarding_exe")
+      (testScratchPath("") / "primec_cpp_canonical_map_method_field_access_forwarding_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -10194,11 +10194,11 @@ main() {
       writeTemp("compile_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding.err")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding_exe")
           .string();
 
@@ -10239,7 +10239,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_map_method_alias_access_struct_method_chain_canonical_diagnostic.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_map_method_alias_access_struct_method_chain_canonical_diagnostic.err")
           .string();
 
@@ -10269,7 +10269,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_map_method_alias_primitive_receiver_fallback.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_map_method_alias_primitive_receiver_fallback_exe")
           .string();
 
@@ -10307,11 +10307,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_map_method_alias_struct_receiver_forwarding.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding.err")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding_exe")
           .string();
 
@@ -10356,7 +10356,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_map_method_alias_primitive_argument_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_map_method_alias_primitive_argument_diag.err")
           .string();
 
@@ -10397,7 +10397,7 @@ main() {
       writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_forwarding.prime",
                 source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_forwarding_exe")
           .string();
 
@@ -10425,7 +10425,7 @@ main() {
       writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_receiver_fallback_reject.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_method_alias_access_receiver_fallback_reject.err")
           .string();
 
@@ -10465,7 +10465,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_diag.err")
           .string();
 
@@ -10494,7 +10494,7 @@ main() {
       writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_unsafe_receiver_fallback_reject.prime",
                 source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_method_alias_access_unsafe_receiver_fallback_reject.err")
           .string();
 
@@ -10534,10 +10534,10 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_count_explicit_template_wrapper_canonical_return.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() /
+  const std::string exePath = (testScratchPath("") /
                                "primec_cpp_vector_alias_count_explicit_template_wrapper_canonical_return_exe")
                                   .string();
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_vector_alias_count_explicit_template_wrapper_canonical_return.err")
                                   .string();
 
@@ -10578,7 +10578,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_count_explicit_template_wrapper_canonical_diagnostic.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_vector_alias_count_explicit_template_wrapper_canonical_diagnostic.err")
                                   .string();
 
@@ -10605,7 +10605,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_namespaced_access_method_chain_non_collection_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_namespaced_access_method_chain_non_collection_reject.err")
                                   .string();
 
@@ -10636,7 +10636,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_namespaced_wrapper_access_method_chain_non_collection_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_namespaced_wrapper_access_method_chain_non_collection_reject.err")
                                   .string();
 
@@ -10662,7 +10662,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_namespaced_map_capacity_method_chain_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_namespaced_map_capacity_method_chain_reject.err")
                                   .string();
 
@@ -10688,7 +10688,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_map_capacity_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_map_capacity_reject.err").string();
+      (testScratchPath("") / "primec_cpp_wrapper_map_capacity_reject.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -10716,7 +10716,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_capacity_map_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_vector_capacity_map_same_path_helper_exe")
           .string();
 
@@ -10745,7 +10745,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_capacity_map_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_capacity_map_same_path_helper_exe")
           .string();
 
@@ -10774,7 +10774,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_capacity_array_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_capacity_array_same_path_helper_exe")
           .string();
 
@@ -10798,7 +10798,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_capacity_map_unknown_target.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_vector_capacity_map_unknown_target.err")
           .string();
 
@@ -10823,7 +10823,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_capacity_map_unknown_target.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_capacity_map_unknown_target.err")
           .string();
 
@@ -10848,7 +10848,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_direct_vector_capacity_array_unknown_target.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_direct_vector_capacity_array_unknown_target.err")
           .string();
 
@@ -10873,7 +10873,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_vector_capacity_map_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_direct_vector_capacity_map_deleted_stub.err")
           .string();
 
@@ -10903,7 +10903,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_capacity_map_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_vector_capacity_map_same_path_helper_exe")
           .string();
 
@@ -10927,7 +10927,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_capacity_map_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_vector_capacity_map_deleted_stub.txt")
           .string();
 
@@ -10953,7 +10953,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_capacity_map_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_slash_vector_capacity_map_deleted_stub.err")
           .string();
 
@@ -10984,7 +10984,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_capacity_map_same_path_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_capacity_map_same_path_helper_exe")
           .string();
 
@@ -11008,7 +11008,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_capacity_map_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_capacity_map_deleted_stub.txt")
           .string();
 
@@ -11033,7 +11033,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_capacity_map_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_slash_vector_capacity_map_deleted_stub.err")
           .string();
 
@@ -11064,7 +11064,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_count_capacity_builtin_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_inferred_wrapper_count_capacity_builtin_fallback.cpp")
                                   .string();
 
@@ -11087,7 +11087,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_count_method_same_path.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_count_method_same_path_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_count_method_same_path_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -11109,7 +11109,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_same_path.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_capacity_method_same_path_exe").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_same_path_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -11126,7 +11126,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_count_method_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_count_method_deleted_stub.txt").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_count_method_deleted_stub.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
@@ -11144,7 +11144,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_count_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_count_method_deleted_stub.err").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_count_method_deleted_stub.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -11166,7 +11166,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_count_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_vector_count_method_deleted_stub.err").string();
+      (testScratchPath("") / "primec_cpp_wrapper_vector_count_method_deleted_stub.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -11188,7 +11188,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_count_method_deleted_stub_cpp.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_vector_count_method_deleted_stub.txt").string();
+      (testScratchPath("") / "primec_cpp_wrapper_vector_count_method_deleted_stub.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
@@ -11212,7 +11212,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_count_imported.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_count_imported_exe").string();
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_count_imported_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -11233,7 +11233,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_count_call_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_count_call_deleted_stub.txt")
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_count_call_deleted_stub.txt")
           .string();
 
   const std::string compileCmd =
@@ -11257,7 +11257,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_namespaced_vector_count_wrapper_map_target_reject.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_namespaced_vector_count_wrapper_map_target_reject.txt")
           .string();
 
@@ -11283,7 +11283,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_explicit_vector_count_call_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_explicit_vector_count_call_deleted_stub.err")
           .string();
 
@@ -11309,7 +11309,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_explicit_vector_count_capacity_call_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_explicit_vector_count_capacity_call_deleted_stub.txt")
           .string();
 
@@ -11346,7 +11346,7 @@ main() {
       writeTemp("compile_cpp_wrapper_explicit_vector_count_capacity_alias_canonical_only_deleted_stub.prime",
                 source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_explicit_vector_count_capacity_alias_canonical_only_deleted_stub.txt")
           .string();
 
@@ -11371,7 +11371,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_bare_vector_count_call_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_count_call_deleted_stub.err")
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_count_call_deleted_stub.err")
           .string();
 
   const std::string compileCmd =
@@ -11395,7 +11395,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_explicit_vector_capacity_call_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_explicit_vector_capacity_call_deleted_stub.err")
           .string();
 
@@ -11431,7 +11431,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_explicit_vector_count_capacity_alias_same_path.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_explicit_vector_count_capacity_alias_same_path_exe")
           .string();
 
@@ -11454,7 +11454,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_namespaced_wrapper_vector_capacity_vector_target_reject.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_namespaced_wrapper_vector_capacity_vector_target_reject_out.txt")
                                   .string();
 
@@ -11486,7 +11486,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_capacity_imported.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_capacity_imported_exe").string();
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_capacity_imported_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -11507,7 +11507,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_capacity_call_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_capacity_call_deleted_stub.txt")
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_capacity_call_deleted_stub.txt")
           .string();
 
   const std::string compileCmd =
@@ -11532,7 +11532,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_bare_vector_capacity_call_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_capacity_call_deleted_stub.err")
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_capacity_call_deleted_stub.err")
           .string();
 
   const std::string compileCmd =
@@ -11552,7 +11552,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_capacity_method_deleted_stub.cpp").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_deleted_stub.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -11571,7 +11571,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_capacity_method_deleted_stub.err").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_deleted_stub.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -11593,7 +11593,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_vector_capacity_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_vector_capacity_method_deleted_stub.err").string();
+      (testScratchPath("") / "primec_cpp_wrapper_vector_capacity_method_deleted_stub.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -11616,7 +11616,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_capacity_method_deleted_stub_cpp.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_vector_capacity_method_deleted_stub.txt")
+      (testScratchPath("") / "primec_cpp_wrapper_vector_capacity_method_deleted_stub.txt")
           .string();
 
   const std::string compileCmd =
@@ -11655,7 +11655,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_capacity_same_path.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_local_canonical_slash_vector_capacity_same_path_err.txt")
           .string();
 
@@ -11676,7 +11676,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_capacity_map_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_local_canonical_slash_vector_capacity_map_deleted_stub.txt")
           .string();
 
@@ -11698,7 +11698,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_capacity_string_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_local_canonical_slash_vector_capacity_string_deleted_stub.err")
           .string();
 
@@ -11741,7 +11741,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_count_capacity_slash_methods_alias_same_path.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_count_capacity_slash_methods_alias_same_path_exe")
           .string();
 
@@ -11772,7 +11772,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_vector_count_capacity_slash_methods.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_vector_count_capacity_slash_methods_exe")
+      (testScratchPath("") / "primec_cpp_stdlib_vector_count_capacity_slash_methods_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -11792,7 +11792,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_count_capacity_slash_methods_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_count_capacity_slash_methods_deleted_stub.cpp")
           .string();
 
@@ -11817,7 +11817,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_vector_count_capacity_slash_methods_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_vector_count_capacity_slash_methods_deleted_stub.cpp")
           .string();
 
@@ -11842,7 +11842,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_count_capacity_slash_methods_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_count_capacity_slash_methods_deleted_stub.err")
           .string();
 
@@ -11866,7 +11866,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_vector_count_capacity_slash_methods_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_vector_count_capacity_slash_methods_deleted_stub.err")
           .string();
 
@@ -11900,7 +11900,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_cross_path_count_capacity_slash_methods_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_cross_path_count_capacity_slash_methods_deleted_stub.cpp")
           .string();
 
@@ -11935,7 +11935,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_cross_path_count_capacity_slash_methods_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_cross_path_count_capacity_slash_methods_deleted_stub.err")
           .string();
 
@@ -11969,7 +11969,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_vector_access_slash_methods.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_stdlib_vector_access_slash_methods_exe")
+      (testScratchPath("") / "primec_cpp_stdlib_vector_access_slash_methods_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -11989,7 +11989,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_vector_access_slash_methods_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_vector_access_slash_methods_deleted_stub.cpp")
           .string();
 
@@ -12014,7 +12014,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_vector_access_slash_methods_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_stdlib_vector_access_slash_methods_deleted_stub.err")
           .string();
 
@@ -12058,7 +12058,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_access_slash_methods_alias_same_path.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_access_slash_methods_alias_same_path_exe")
           .string();
 
@@ -12079,7 +12079,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_access_slash_methods_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_access_slash_methods_deleted_stub.cpp")
           .string();
 
@@ -12104,7 +12104,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_access_slash_methods_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_access_slash_methods_deleted_stub.err")
           .string();
 
@@ -12126,7 +12126,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_at_method_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_at_method_deleted_stub.cpp").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_at_method_deleted_stub.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -12145,7 +12145,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_at_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_at_method_deleted_stub.err").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_at_method_deleted_stub.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -12163,7 +12163,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_at_unsafe_method_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_at_unsafe_method_deleted_stub.cpp")
+      (testScratchPath("") / "primec_cpp_bare_vector_at_unsafe_method_deleted_stub.cpp")
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
@@ -12188,7 +12188,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_at_unsafe_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_vector_at_unsafe_method_deleted_stub.err")
+      (testScratchPath("") / "primec_cpp_wrapper_vector_at_unsafe_method_deleted_stub.err")
           .string();
 
   const std::string compileCmd =
@@ -12211,7 +12211,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_at_call_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_at_call_deleted_stub.cpp")
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_call_deleted_stub.cpp")
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
@@ -12235,7 +12235,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_at_call_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_at_call_deleted_stub.err")
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_call_deleted_stub.err")
           .string();
 
   const std::string compileCmd =
@@ -12259,7 +12259,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub.cpp")
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub.cpp")
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
@@ -12285,7 +12285,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub.cpp")
+      (testScratchPath("") / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub.cpp")
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
@@ -12312,7 +12312,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub.err")
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub.err")
           .string();
 
   const std::string compileCmd =
@@ -12336,7 +12336,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub.err")
+      (testScratchPath("") / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub.err")
           .string();
 
   const std::string compileCmd =
@@ -12367,7 +12367,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_mutator_deleted_stubs.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_mutator_deleted_stubs.cpp").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_mutator_deleted_stubs.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -12399,7 +12399,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_vector_mutator_method_deleted_stubs.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_explicit_vector_mutator_method_deleted_stubs.cpp")
+      (testScratchPath("") / "primec_cpp_explicit_vector_mutator_method_deleted_stubs.cpp")
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
@@ -12420,7 +12420,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_mutator_call_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_mutator_call_deleted_stub.err").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_mutator_call_deleted_stub.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -12439,7 +12439,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_mutator_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_bare_vector_mutator_method_deleted_stub.err").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_mutator_method_deleted_stub.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -12459,7 +12459,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_vector_mutator_alias_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_vector_mutator_alias_method_deleted_stub.err")
           .string();
 
@@ -12481,7 +12481,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_vector_mutator_canonical_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_vector_mutator_canonical_method_deleted_stub.err")
           .string();
 
@@ -12503,7 +12503,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_vector_push_canonical_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_vector_push_canonical_method_deleted_stub.err")
           .string();
 
@@ -12525,7 +12525,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_vector_pop_canonical_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_vector_pop_canonical_method_deleted_stub.err")
           .string();
 
@@ -12547,7 +12547,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_vector_reserve_canonical_method_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_vector_reserve_canonical_method_deleted_stub.err")
           .string();
 
@@ -12574,7 +12574,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_canonical_vector_mutator_method_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_canonical_vector_mutator_method_helper_exe")
           .string();
 
@@ -12600,7 +12600,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_vector_mutator_method_canonical_only_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_vector_mutator_method_canonical_only_deleted_stub.cpp")
           .string();
 
@@ -12627,7 +12627,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_vector_mutator_method_canonical_only_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_vector_mutator_method_canonical_only_deleted_stub.err")
           .string();
 
@@ -12654,7 +12654,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_mutator_method_alias_only_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_mutator_method_alias_only_deleted_stub.cpp")
           .string();
 
@@ -12681,7 +12681,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_mutator_method_alias_only_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_mutator_method_alias_only_deleted_stub.err")
           .string();
 
@@ -12708,7 +12708,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_canonical_vector_mutator_statement_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_canonical_vector_mutator_statement_helper_exe")
           .string();
 
@@ -12734,7 +12734,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_canonical_reordered_vector_mutator_statement_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_explicit_canonical_reordered_vector_mutator_statement_helper_exe")
           .string();
 
@@ -12760,7 +12760,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_vector_mutator_canonical_only_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_vector_mutator_canonical_only_deleted_stub.cpp")
           .string();
 
@@ -12787,7 +12787,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_reordered_vector_mutator_canonical_only_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_reordered_vector_mutator_canonical_only_deleted_stub.cpp")
           .string();
 
@@ -12814,7 +12814,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_alias_vector_mutator_canonical_only_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_alias_vector_mutator_canonical_only_deleted_stub.err")
           .string();
 
@@ -12841,7 +12841,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_mutator_alias_only_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_mutator_alias_only_deleted_stub.cpp")
           .string();
 
@@ -12868,7 +12868,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_reordered_vector_mutator_alias_only_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_reordered_vector_mutator_alias_only_deleted_stub.cpp")
           .string();
 
@@ -12895,7 +12895,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_mutator_alias_only_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_mutator_alias_only_deleted_stub.err")
           .string();
 
@@ -12918,7 +12918,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_remove_methods_no_import.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_remove_methods_no_import.err")
           .string();
 
@@ -12945,7 +12945,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_map_capacity_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_inferred_wrapper_map_capacity_reject.err").string();
+      (testScratchPath("") / "primec_cpp_inferred_wrapper_map_capacity_reject.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -12976,7 +12976,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_access_builtin_fallback.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_inferred_wrapper_access_builtin_fallback.cpp").string();
+      (testScratchPath("") / "primec_cpp_inferred_wrapper_access_builtin_fallback.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -13001,7 +13001,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_access_key_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_inferred_wrapper_access_key_mismatch_exe").string();
+      (testScratchPath("") / "primec_cpp_inferred_wrapper_access_key_mismatch_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -13021,7 +13021,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_access_builtin_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_inferred_wrapper_string_access_builtin_fallback.cpp")
                                   .string();
 
@@ -13043,7 +13043,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_count_builtin_fallback.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_inferred_wrapper_string_count_builtin_fallback_exe")
           .string();
 
@@ -13064,7 +13064,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_builtin_count_canonical_map_reference_string_access.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_builtin_count_canonical_map_reference_string_access.err")
           .string();
 
@@ -13089,11 +13089,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_builtin_count_wrapper_canonical_map_string_access.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_builtin_count_wrapper_canonical_map_string_access_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_builtin_count_wrapper_canonical_map_string_access.err")
           .string();
 
@@ -13119,11 +13119,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_map_string_receiver.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_canonical_map_string_receiver_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_canonical_map_string_receiver.err")
           .string();
 
@@ -13155,11 +13155,11 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_direct_wrapper_map_reference_string_receiver.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_direct_wrapper_map_reference_string_receiver_exe")
           .string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_direct_wrapper_map_reference_string_receiver.err")
           .string();
 
@@ -13184,7 +13184,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_map_string_receiver_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_canonical_map_string_receiver_diag.err")
           .string();
 
@@ -13219,7 +13219,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_direct_wrapper_canonical_map_access_count_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_direct_wrapper_canonical_map_access_count_diag.err")
           .string();
 
@@ -13260,7 +13260,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_map_method_access_count_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_canonical_map_method_access_count_diag.err")
           .string();
 
@@ -13291,7 +13291,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_direct_wrapper_map_reference_string_receiver_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_direct_wrapper_map_reference_string_receiver_diag.err")
           .string();
 
@@ -13331,7 +13331,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_slash_method_map_access_count_diag.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_slash_method_map_access_count_diag.err")
           .string();
 
@@ -13357,7 +13357,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_slash_method_map_access_count_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_slash_method_map_access_count_deleted_stub.cpp")
           .string();
 
@@ -13383,7 +13383,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_vector_string_access_count_fallback.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() /
+  const std::string outPath = (testScratchPath("") /
                                "primec_cpp_stdlib_namespaced_vector_string_access_count_fallback.cpp")
                                   .string();
 
@@ -13412,7 +13412,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_access_direct_count_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_access_direct_count_fallback_reject.err")
           .string();
 
@@ -13438,7 +13438,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_access_count_receiver_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_wrapper_vector_access_count_receiver_deleted_stub.cpp")
+      (testScratchPath("") / "primec_cpp_wrapper_vector_access_count_receiver_deleted_stub.cpp")
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
@@ -13483,7 +13483,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_slash_method_vector_access_count_receiver_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_slash_method_vector_access_count_receiver_forwarding_exe")
           .string();
 
@@ -13508,7 +13508,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_slash_method_vector_access_count_receiver_deleted_stub.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_slash_method_vector_access_count_receiver_deleted_stub.cpp")
           .string();
 
@@ -13539,7 +13539,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_slash_method_vector_access_count_receiver_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_slash_method_vector_access_count_receiver_deleted_stub.err")
           .string();
 
@@ -13566,7 +13566,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_access_count_receiver_deleted_stub_exe.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_vector_access_count_receiver_deleted_stub.err")
           .string();
 
@@ -13588,7 +13588,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_stdlib_namespaced_vector_access_count_non_string_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_stdlib_namespaced_vector_access_count_non_string_reject.err")
                                   .string();
 
@@ -13619,7 +13619,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_access_unsafe_direct_count_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_access_unsafe_direct_count_forwarding_exe")
           .string();
 
@@ -13649,7 +13649,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_method_access_count_shadow_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_method_access_count_shadow_reject.err")
           .string();
 
@@ -13680,7 +13680,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_unsafe_method_access_count_shadow_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_canonical_vector_unsafe_method_access_count_shadow_forwarding_exe")
           .string();
 
@@ -13716,7 +13716,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_slash_method_vector_access_element_type_count_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_slash_method_vector_access_element_type_count_fallback_reject.err")
           .string();
 
@@ -13753,7 +13753,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_slash_method_vector_access_helper_return_kind_count_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_slash_method_vector_access_helper_return_kind_count_forwarding_exe")
           .string();
 
@@ -13793,7 +13793,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_access_direct_count_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_vector_access_direct_count_fallback_reject.err")
           .string();
 
@@ -13821,7 +13821,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_bare_vector_method_access_receiver_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_bare_vector_method_access_receiver_fallback_reject.err")
           .string();
 
@@ -13853,7 +13853,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_unsafe_method_access_receiver_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_vector_unsafe_method_access_receiver_fallback_reject.err")
           .string();
 
@@ -13892,7 +13892,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_alias_direct_struct_method_chain_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_vector_alias_direct_struct_method_chain_forwarding_exe")
           .string();
 
@@ -13923,7 +13923,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_alias_direct_method_receiver_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_vector_alias_direct_method_receiver_fallback_reject.err")
           .string();
 
@@ -13962,7 +13962,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_canonical_direct_struct_method_chain_forwarding_exe")
           .string();
 
@@ -13993,7 +13993,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_direct_method_receiver_fallback_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_canonical_direct_method_receiver_fallback_reject.err")
           .string();
 
@@ -14035,7 +14035,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_access_direct_count_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_wrapper_vector_access_direct_count_forwarding_exe")
           .string();
 
@@ -14064,7 +14064,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding_exe")
           .string();
 
@@ -14092,7 +14092,7 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_access_count_canonical_wrapper_return_non_string_reject.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() /
+  const std::string errPath = (testScratchPath("") /
                                "primec_cpp_vector_alias_access_count_canonical_wrapper_return_non_string_reject.err")
                                   .string();
 
@@ -14118,7 +14118,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_count_arg_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_inferred_wrapper_string_count_arg_mismatch_exe")
+      (testScratchPath("") / "primec_cpp_inferred_wrapper_string_count_arg_mismatch_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -14143,7 +14143,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_string_access_index_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_inferred_wrapper_string_access_index_mismatch_exe")
+      (testScratchPath("") / "primec_cpp_inferred_wrapper_string_access_index_mismatch_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -14193,7 +14193,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_access_shadow_precedence.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_user_wrapper_temp_access_shadow_precedence_exe")
+      (testScratchPath("") / "primec_cpp_user_wrapper_temp_access_shadow_precedence_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -14252,7 +14252,7 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_access_shadow_value_mismatch.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_user_wrapper_temp_access_shadow_value_mismatch_exe")
+      (testScratchPath("") / "primec_cpp_user_wrapper_temp_access_shadow_value_mismatch_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -14269,7 +14269,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_capacity_call_non_vector_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_capacity_call_non_vector_reject.err").string();
+      (testScratchPath("") / "primec_cpp_capacity_call_non_vector_reject.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -14287,7 +14287,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_capacity_method_non_vector_reject.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_capacity_method_non_vector_reject.err").string();
+      (testScratchPath("") / "primec_cpp_capacity_method_non_vector_reject.err").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -14310,7 +14310,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_user_array_capacity_shadow.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_user_array_capacity_shadow_exe").string();
+      (testScratchPath("") / "primec_cpp_user_array_capacity_shadow_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14340,7 +14340,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_vec_color.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_vec_color_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_std_math_vec_color_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14371,7 +14371,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_matrix.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_matrix_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_std_math_matrix_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14392,7 +14392,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_quat.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_quat_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_std_math_quat_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14411,7 +14411,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_quat_to_mat3.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_quat_to_mat3_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_std_math_quat_to_mat3_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14430,7 +14430,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_quat_to_mat4.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_quat_to_mat4_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_std_math_quat_to_mat4_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14453,7 +14453,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_std_math_mat3_to_quat.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_mat3_to_quat_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_std_math_mat3_to_quat_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14482,7 +14482,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_support_matrix_math_nominal_helpers.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_support_matrix_math_nominal_helpers_exe").string();
+      (testScratchPath("") / "primec_cpp_support_matrix_math_nominal_helpers_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14506,7 +14506,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_quaternion_reference_multiply_rotation.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_quaternion_reference_multiply_rotation_exe").string();
+      (testScratchPath("") / "primec_cpp_quaternion_reference_multiply_rotation_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14545,7 +14545,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_matrix_composition_reference.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_matrix_composition_reference_exe").string();
+      (testScratchPath("") / "primec_cpp_matrix_composition_reference_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14616,7 +14616,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_matrix_arithmetic_helpers.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_matrix_arithmetic_helpers_exe").string();
+      (testScratchPath("") / "primec_cpp_matrix_arithmetic_helpers_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14664,7 +14664,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_quaternion_arithmetic_helpers.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_quaternion_arithmetic_helpers_exe").string();
+      (testScratchPath("") / "primec_cpp_quaternion_arithmetic_helpers_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14689,7 +14689,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_support_matrix_plus_mismatch.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_support_matrix_plus_mismatch_err.txt").string();
+      (testScratchPath("") / "primec_cpp_support_matrix_plus_mismatch_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -14714,7 +14714,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_support_matrix_implicit_conversion.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_support_matrix_implicit_conversion_err.txt").string();
+      (testScratchPath("") / "primec_cpp_support_matrix_implicit_conversion_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
@@ -14733,7 +14733,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_map_string_keys_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_string_keys_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_map_string_keys_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14749,7 +14749,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_lerp_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_lerp_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_lerp_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14764,7 +14764,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_math_clamp_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_math_clamp_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_math_clamp_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14779,7 +14779,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_math_trig_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_math_trig_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_math_trig_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14794,7 +14794,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_math_minmax_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_math_minmax_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_math_minmax_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14809,7 +14809,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_math_constants_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_math_constants_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_math_constants_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14825,7 +14825,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_imported_math_constants_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_imported_math_constants_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_imported_math_constants_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14844,7 +14844,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_rounding_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_rounding_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_rounding_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14859,7 +14859,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_convert_bool_float.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_convert_bool_float_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_convert_bool_float_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14877,7 +14877,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_string_compare.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_cpp_string_compare_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_cpp_string_compare_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -14895,7 +14895,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_string_map_values.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_map_values_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_string_map_values_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
@@ -14919,7 +14919,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_power_log_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_power_log_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_power_log_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14936,9 +14936,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_int_pow_negative_exe.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_int_pow_negative_exe").string();
+      (testScratchPath("") / "primec_int_pow_negative_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_int_pow_negative_err.txt").string();
+      (testScratchPath("") / "primec_int_pow_negative_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14970,7 +14970,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_trig_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_trig_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_trig_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -14993,7 +14993,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_hyperbolic_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_hyperbolic_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_hyperbolic_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15012,7 +15012,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float_utils_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_float_utils_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_float_utils_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15035,7 +15035,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_float_predicates_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_float_predicates_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_float_predicates_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15057,7 +15057,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_import_alias_inc_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_inc_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_import_alias_inc_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15076,7 +15076,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_constants_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_constants_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_constants_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15092,7 +15092,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_unsafe_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_unsafe_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_array_unsafe_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15108,7 +15108,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_array_unsafe_u64_exe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_unsafe_u64_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_array_unsafe_u64_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15136,9 +15136,9 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_vector_pop_non_drop_trivial_reject.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_exe_vector_pop_non_drop_trivial_reject_out.txt").string();
+      (testScratchPath("") / "primec_exe_vector_pop_non_drop_trivial_reject_out.txt").string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_exe_vector_pop_non_drop_trivial_reject_exe").string();
+      (testScratchPath("") / "primec_exe_vector_pop_non_drop_trivial_reject_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
@@ -15171,10 +15171,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_vector_reserve_non_relocation_trivial_reject.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_exe_vector_reserve_non_relocation_trivial_reject_out.txt")
+      (testScratchPath("") / "primec_exe_vector_reserve_non_relocation_trivial_reject_out.txt")
           .string();
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_exe_vector_reserve_non_relocation_trivial_reject_exe")
+      (testScratchPath("") / "primec_exe_vector_reserve_non_relocation_trivial_reject_exe")
           .string();
 
   const std::string compileCmd =
@@ -15201,7 +15201,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_repeat_loop.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_repeat_loop_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_repeat_loop_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15228,7 +15228,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_loop_while_for.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_loop_while_for_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_loop_while_for_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15247,7 +15247,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_for_condition_binding.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_for_condition_binding_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_for_condition_binding_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15275,7 +15275,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_shared_scope.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_shared_scope_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_shared_scope_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15297,7 +15297,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_shared_scope_for_cond.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_shared_scope_for_cond_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_shared_scope_for_cond_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15321,7 +15321,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_shared_scope_while.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_shared_scope_while_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_shared_scope_while_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15339,7 +15339,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_increment_decrement.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_increment_decrement_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_increment_decrement_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15360,7 +15360,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_brace_constructor_value.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_brace_constructor_value_exe").string();
+      (testScratchPath("") / "primec_brace_constructor_value_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15380,7 +15380,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_nested_definition_call.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_nested_definition_call_exe").string();
+      (testScratchPath("") / "primec_nested_definition_call_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15395,7 +15395,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_map_literal.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_literal_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_map_literal_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15417,7 +15417,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_body_api.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_body_api_exe").string();
+      (testScratchPath("") / "primec_cpp_variadic_args_body_api_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15443,7 +15443,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_forward.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_forward_exe").string();
+      (testScratchPath("") / "primec_cpp_variadic_args_forward_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -15502,7 +15502,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_pointer_uninitialized_scalar.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_pointer_uninitialized_scalar_exe")
+      (testScratchPath("") / "primec_cpp_variadic_args_pointer_uninitialized_scalar_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";

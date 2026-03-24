@@ -2,7 +2,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
 TEST_CASE("compiles and runs versioned import expansion with relative import entry") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_relative";
+      testScratchPath("") / "primec_tests" / "include_root_versioned_relative";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -26,9 +26,9 @@ TEST_CASE("compiles and runs versioned import expansion with relative import ent
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_relative.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_relative_exe").string();
+      (testScratchPath("") / "primec_versioned_inc_relative_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_relative_native").string();
+      (testScratchPath("") / "primec_versioned_inc_relative_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -47,7 +47,7 @@ TEST_CASE("compiles and runs versioned import expansion with relative import ent
 
 TEST_CASE("compiles and runs exact versioned import expansion") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_exact";
+      testScratchPath("") / "primec_tests" / "include_root_versioned_exact";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -71,9 +71,9 @@ TEST_CASE("compiles and runs exact versioned import expansion") {
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_exact.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_exact_exe").string();
+      (testScratchPath("") / "primec_versioned_inc_exact_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_exact_native").string();
+      (testScratchPath("") / "primec_versioned_inc_exact_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -97,7 +97,7 @@ TEST_CASE("rejects versioned legacy include alias expansion") {
       "main(){ return(0i32) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_legacy_alias.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_legacy_alias_err.txt").string();
+      (testScratchPath("") / "primec_versioned_inc_legacy_alias_err.txt").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCppCmd) == 2);
@@ -111,7 +111,7 @@ TEST_CASE("rejects version-first legacy include alias expansion") {
       "main(){ return(0i32) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_legacy_alias_first.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_legacy_alias_first_err.txt").string();
+      (testScratchPath("") / "primec_versioned_inc_legacy_alias_first_err.txt").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCppCmd) == 2);
@@ -120,7 +120,7 @@ TEST_CASE("rejects version-first legacy include alias expansion") {
 
 TEST_CASE("compiles and runs versioned import expansion with quoted import entries") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_quoted";
+      testScratchPath("") / "primec_tests" / "include_root_versioned_quoted";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -144,9 +144,9 @@ TEST_CASE("compiles and runs versioned import expansion with quoted import entri
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_quoted.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_quoted_exe").string();
+      (testScratchPath("") / "primec_versioned_inc_quoted_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_quoted_native").string();
+      (testScratchPath("") / "primec_versioned_inc_quoted_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -165,7 +165,7 @@ TEST_CASE("compiles and runs versioned import expansion with quoted import entri
 
 TEST_CASE("compiles and runs import expansion with comments") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_comments";
+      testScratchPath("") / "primec_tests" / "include_root_versioned_comments";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -189,9 +189,9 @@ TEST_CASE("compiles and runs import expansion with comments") {
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_comments.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_comments_exe").string();
+      (testScratchPath("") / "primec_versioned_inc_comments_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_comments_native").string();
+      (testScratchPath("") / "primec_versioned_inc_comments_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -210,7 +210,7 @@ TEST_CASE("compiles and runs import expansion with comments") {
 
 TEST_CASE("compiles and runs duplicate imports once") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_duplicate";
+      testScratchPath("") / "primec_tests" / "include_root_duplicate";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -227,9 +227,9 @@ TEST_CASE("compiles and runs duplicate imports once") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_duplicate_include.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_duplicate_inc_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_duplicate_inc_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_duplicate_inc_native").string();
+      (testScratchPath("") / "primec_duplicate_inc_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -248,7 +248,7 @@ TEST_CASE("compiles and runs duplicate imports once") {
 
 TEST_CASE("compiles and runs versioned import with single quotes") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_single_quotes";
+      testScratchPath("") / "primec_tests" / "include_root_versioned_single_quotes";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -272,9 +272,9 @@ TEST_CASE("compiles and runs versioned import with single quotes") {
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_single_quotes.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_single_quotes_exe").string();
+      (testScratchPath("") / "primec_versioned_inc_single_quotes_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_single_quotes_native").string();
+      (testScratchPath("") / "primec_versioned_inc_single_quotes_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -293,7 +293,7 @@ TEST_CASE("compiles and runs versioned import with single quotes") {
 
 TEST_CASE("compiles and runs versioned import with major-only selector") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_major_only";
+      testScratchPath("") / "primec_tests" / "include_root_versioned_major_only";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -324,9 +324,9 @@ TEST_CASE("compiles and runs versioned import with major-only selector") {
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_major_only.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_major_only_exe").string();
+      (testScratchPath("") / "primec_versioned_inc_major_only_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_major_only_native").string();
+      (testScratchPath("") / "primec_versioned_inc_major_only_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -345,7 +345,7 @@ TEST_CASE("compiles and runs versioned import with major-only selector") {
 
 TEST_CASE("compiles and runs versioned import with minor selector") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_minor_only";
+      testScratchPath("") / "primec_tests" / "include_root_versioned_minor_only";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -376,9 +376,9 @@ TEST_CASE("compiles and runs versioned import with minor selector") {
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_minor_only.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_minor_only_exe").string();
+      (testScratchPath("") / "primec_versioned_inc_minor_only_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_minor_only_native").string();
+      (testScratchPath("") / "primec_versioned_inc_minor_only_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -397,7 +397,7 @@ TEST_CASE("compiles and runs versioned import with minor selector") {
 
 TEST_CASE("compiles and runs versioned import expansion with multiple import entries") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_multi";
+      testScratchPath("") / "primec_tests" / "include_root_versioned_multi";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -433,9 +433,9 @@ TEST_CASE("compiles and runs versioned import expansion with multiple import ent
       "main(){ return(plus(io_helper(), math_helper())) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_multi.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_multi_exe").string();
+      (testScratchPath("") / "primec_versioned_inc_multi_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_multi_native").string();
+      (testScratchPath("") / "primec_versioned_inc_multi_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -454,9 +454,9 @@ TEST_CASE("compiles and runs versioned import expansion with multiple import ent
 
 TEST_CASE("rejects versioned import mismatch across roots") {
   const std::filesystem::path includeRootA =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_version_mismatch_a";
+      testScratchPath("") / "primec_tests" / "include_root_version_mismatch_a";
   const std::filesystem::path includeRootB =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_version_mismatch_b";
+      testScratchPath("") / "primec_tests" / "include_root_version_mismatch_b";
   std::filesystem::remove_all(includeRootA);
   std::filesystem::remove_all(includeRootB);
   std::filesystem::create_directories(includeRootA);
@@ -482,7 +482,7 @@ TEST_CASE("rejects versioned import mismatch across roots") {
       "main(){ return(0i32) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_mismatch.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_include_mismatch_err.txt").string();
+      (testScratchPath("") / "primec_versioned_include_mismatch_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath +
                                  " -o /dev/null --entry /main --import-path " + includeRootA.string() +
@@ -493,7 +493,7 @@ TEST_CASE("rejects versioned import mismatch across roots") {
 
 TEST_CASE("rejects missing versioned import in compile") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_version_missing_compile";
+      testScratchPath("") / "primec_tests" / "include_root_version_missing_compile";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -510,7 +510,7 @@ TEST_CASE("rejects missing versioned import in compile") {
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_missing.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_include_missing_err.txt").string();
+      (testScratchPath("") / "primec_versioned_include_missing_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --import-path " +
                                  includeRoot.string() + " 2> " + errPath;
@@ -520,7 +520,7 @@ TEST_CASE("rejects missing versioned import in compile") {
 
 TEST_CASE("compiles and runs versioned import expansion with mixed quoted and relative entries") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_mixed";
+      testScratchPath("") / "primec_tests" / "include_root_versioned_mixed";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -556,9 +556,9 @@ TEST_CASE("compiles and runs versioned import expansion with mixed quoted and re
       "main(){ return(plus(io_helper(), local_helper())) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_mixed.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_mixed_exe").string();
+      (testScratchPath("") / "primec_versioned_inc_mixed_exe").string();
   const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_mixed_native").string();
+      (testScratchPath("") / "primec_versioned_inc_mixed_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                     " --entry /main --import-path " + includeRoot.string();
@@ -580,7 +580,7 @@ TEST_CASE("compiles and runs archive import expansion") {
     return;
   }
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_archive_compile_run";
+      testScratchPath("") / "primec_tests" / "include_root_archive_compile_run";
   const std::filesystem::path archiveSource = includeRoot / "archive_src";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(archiveSource);
@@ -600,7 +600,7 @@ TEST_CASE("compiles and runs archive import expansion") {
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_archive_include.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_archive_inc_exe").string();
+  const std::string exePath = (testScratchPath("") / "primec_archive_inc_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                  " --entry /main --import-path " + includeRoot.string();
@@ -613,7 +613,7 @@ TEST_CASE("compiles and runs exact versioned archive import expansion") {
     return;
   }
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_archive_compile_exact";
+      testScratchPath("") / "primec_tests" / "include_root_archive_compile_exact";
   const std::filesystem::path archiveSource = includeRoot / "archive_src";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(archiveSource);
@@ -642,7 +642,7 @@ TEST_CASE("compiles and runs exact versioned archive import expansion") {
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_archive_include_exact.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_archive_inc_exact_exe").string();
+      (testScratchPath("") / "primec_archive_inc_exact_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                  " --entry /main --import-path " + includeRoot.string();
@@ -655,7 +655,7 @@ TEST_CASE("compiles and runs newest archive import expansion") {
     return;
   }
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_archive_compile_latest";
+      testScratchPath("") / "primec_tests" / "include_root_archive_compile_latest";
   const std::filesystem::path archiveSource = includeRoot / "archive_src";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(archiveSource);
@@ -684,7 +684,7 @@ TEST_CASE("compiles and runs newest archive import expansion") {
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_archive_include_latest.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_archive_inc_latest_exe").string();
+      (testScratchPath("") / "primec_archive_inc_latest_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                  " --entry /main --import-path " + includeRoot.string();
@@ -694,7 +694,7 @@ TEST_CASE("compiles and runs newest archive import expansion") {
 
 TEST_CASE("conformance: versioned import selects latest for wildcard import exposure") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_conformance_versioned_wildcard";
+      testScratchPath("") / "primec_tests" / "include_conformance_versioned_wildcard";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -725,7 +725,7 @@ TEST_CASE("conformance: versioned import selects latest for wildcard import expo
       "main(){ return(value()) }\n";
   const std::string srcPath = writeTemp("compile_conformance_versioned_wildcard.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_conformance_versioned_wildcard_exe").string();
+      (testScratchPath("") / "primec_conformance_versioned_wildcard_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                  " --entry /main --import-path " + includeRoot.string();
@@ -735,7 +735,7 @@ TEST_CASE("conformance: versioned import selects latest for wildcard import expo
 
 TEST_CASE("conformance: duplicate versioned imports are deduplicated before import aliasing") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_conformance_dedup";
+      testScratchPath("") / "primec_tests" / "include_conformance_dedup";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -757,7 +757,7 @@ TEST_CASE("conformance: duplicate versioned imports are deduplicated before impo
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_conformance_duplicate_versioned_include.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_conformance_duplicate_versioned_include_exe").string();
+      (testScratchPath("") / "primec_conformance_duplicate_versioned_include_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
                                  " --entry /main --import-path " + includeRoot.string();
@@ -767,7 +767,7 @@ TEST_CASE("conformance: duplicate versioned imports are deduplicated before impo
 
 TEST_CASE("conformance: versioned import rejects underscore-private paths") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_conformance_private_underscore";
+      testScratchPath("") / "primec_tests" / "include_conformance_private_underscore";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -784,7 +784,7 @@ TEST_CASE("conformance: versioned import rejects underscore-private paths") {
       "main(){ return(0i32) }\n";
   const std::string srcPath = writeTemp("compile_conformance_private_underscore.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_conformance_private_underscore_err.txt").string();
+      (testScratchPath("") / "primec_conformance_private_underscore_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --import-path " +
                                  includeRoot.string() + " 2> " + errPath;
@@ -794,7 +794,7 @@ TEST_CASE("conformance: versioned import rejects underscore-private paths") {
 
 TEST_CASE("conformance: wildcard import does not expose private members from imported source") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_conformance_wildcard_visibility";
+      testScratchPath("") / "primec_tests" / "include_conformance_wildcard_visibility";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -817,7 +817,7 @@ TEST_CASE("conformance: wildcard import does not expose private members from imp
       "main(){ return(hidden()) }\n";
   const std::string srcPath = writeTemp("compile_conformance_wildcard_visibility.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_conformance_wildcard_visibility_err.txt").string();
+      (testScratchPath("") / "primec_conformance_wildcard_visibility_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --import-path " +
                                  includeRoot.string() + " 2> " + errPath;
@@ -827,7 +827,7 @@ TEST_CASE("conformance: wildcard import does not expose private members from imp
 
 TEST_CASE("conformance: versioned import directory expansion order is deterministic") {
   const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_conformance_ordering";
+      testScratchPath("") / "primec_tests" / "include_conformance_ordering";
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
@@ -848,7 +848,7 @@ TEST_CASE("conformance: versioned import directory expansion order is determinis
       "main(){ return(0i32) }\n";
   const std::string srcPath = writeTemp("compile_conformance_ordering.prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_conformance_ordering_pre_ast.txt").string();
+      (testScratchPath("") / "primec_conformance_ordering_pre_ast.txt").string();
 
   const std::string dumpCmd = "./primec --dump-stage=pre_ast " + srcPath + " --entry /main --import-path " +
                               includeRoot.string() + " > " + outPath;

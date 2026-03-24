@@ -39,7 +39,7 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
   const std::string source = makeContainerErrorConformanceSource();
   const std::string srcPath = writeTemp("container_error_contract_" + emitMode + ".prime", source);
   const std::string outPath =
-      (std::filesystem::temp_directory_path() / ("primec_container_error_contract_" + emitMode + "_out.txt")).string();
+      (testScratchPath("") / ("primec_container_error_contract_" + emitMode + "_out.txt")).string();
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
     CHECK(runCommand(runCmd) == 10);
@@ -57,7 +57,7 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
   }
 
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / ("primec_container_error_contract_" + emitMode + "_exe")).string();
+      (testScratchPath("") / ("primec_container_error_contract_" + emitMode + "_exe")).string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

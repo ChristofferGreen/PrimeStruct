@@ -27,8 +27,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_uninitialized_string.prime", source);
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_uninitialized_string_out.txt").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_uninitialized_string_err.txt").string();
+  const std::string outPath = (testScratchPath("") / "primec_vm_uninitialized_string_out.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_uninitialized_string_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string errorText = readFile(errPath);
@@ -99,7 +99,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_uninitialized_borrow.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_uninitialized_borrow_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_uninitialized_borrow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("Reference bindings require location(...)") != std::string::npos);
@@ -126,7 +126,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_uninitialized_struct.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_uninitialized_struct_err.txt").string();
+  const std::string errPath = (testScratchPath("") / "primec_vm_uninitialized_struct_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
