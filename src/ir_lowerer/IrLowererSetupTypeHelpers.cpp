@@ -46,7 +46,8 @@ LocalInfo::ValueKind valueKindFromTypeName(const std::string &name) {
   if (name == "string") {
     return LocalInfo::ValueKind::String;
   }
-  if (name == "FileError") {
+  if (name == "FileError" || name == "ImageError" || name == "ContainerError" ||
+      name == "GfxError") {
     return LocalInfo::ValueKind::Int32;
   }
 

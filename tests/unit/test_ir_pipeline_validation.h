@@ -22670,8 +22670,12 @@ TEST_CASE("ir lowerer setup type helper maps primitive aliases") {
   CHECK(primec::ir_lowerer::valueKindFromTypeName("string") == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
-TEST_CASE("ir lowerer setup type helper maps file and fileerror types") {
+TEST_CASE("ir lowerer setup type helper maps file and packed error types") {
   CHECK(primec::ir_lowerer::valueKindFromTypeName("FileError") == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("ImageError") == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("ContainerError") ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("GfxError") == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(primec::ir_lowerer::valueKindFromTypeName("File<Read>") == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(primec::ir_lowerer::valueKindFromTypeName("File<Write>") == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }

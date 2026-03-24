@@ -1472,6 +1472,51 @@ main() {
   CHECK(readFile(outPath) == "8\n5\n");
 }
 
+TEST_CASE("vm supports packed error struct Result payloads on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+import /std/collections/*
+import /std/image/*
+import /std/gfx/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<ContainerError, FileError>] mappedContainer{
+    Result.map(Result.ok(/ContainerError/missing_key()),
+      []([ContainerError] value) { return(/ContainerError/capacity_exceeded()) })
+  }
+  [Result<ImageError, FileError>] chainedImage{
+    Result.and_then(Result.ok(/ImageError/read_unsupported()),
+      []([ImageError] value) { return(Result.ok(/ImageError/invalid_operation())) })
+  }
+  [Result<GfxError, FileError>] summedGfx{
+    Result.map2(Result.ok(/GfxError/frame_acquire_failed()),
+      Result.ok(/GfxError/queue_submit_failed()),
+      []([GfxError] left, [GfxError] right) { return(right) })
+  }
+  [ContainerError] container{try(mappedContainer)}
+  [ImageError] image{try(chainedImage)}
+  [GfxError] gfx{try(summedGfx)}
+  print_line(container.why())
+  print_line(image.why())
+  print_line(gfx.why())
+  return(plus(container.code, plus(image.code, gfx.code)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_result_packed_error_payloads_ir_backed.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_packed_error_payloads_ir_backed_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 15);
+  CHECK(readFile(outPath) ==
+        "container capacity exceeded\nimage_invalid_operation\nqueue_submit_failed\n");
+}
+
 TEST_CASE("vm supports block-bodied Result.and_then lambdas on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

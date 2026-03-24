@@ -234,6 +234,86 @@ main() {
   CHECK(result == 8);
 }
 
+TEST_CASE("ir lowerer supports packed error struct Result payloads") {
+  const std::string source = R"(
+import /std/file/*
+import /std/collections/*
+import /std/image/*
+import /std/gfx/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<ContainerError, FileError>] mappedContainer{
+    Result.map(Result.ok(/ContainerError/missing_key()),
+      []([ContainerError] value) { return(/ContainerError/capacity_exceeded()) })
+  }
+  [Result<ImageError, FileError>] chainedImage{
+    Result.and_then(Result.ok(/ImageError/read_unsupported()),
+      []([ImageError] value) { return(Result.ok(/ImageError/invalid_operation())) })
+  }
+  [Result<GfxError, FileError>] summedGfx{
+    Result.map2(Result.ok(/GfxError/frame_acquire_failed()),
+      Result.ok(/GfxError/queue_submit_failed()),
+      []([GfxError] left, [GfxError] right) { return(right) })
+  }
+  [ContainerError] container{try(mappedContainer)}
+  [ImageError] image{try(chainedImage)}
+  [GfxError] gfx{try(summedGfx)}
+  print_line(container.why())
+  print_line(image.why())
+  print_line(gfx.why())
+  return(plus(container.code, plus(image.code, gfx.code)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 15);
+}
+
+TEST_CASE("ir lowerer rejects Result.ok composite struct payloads") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<int>]
+main() {
+  [Result<Pair, ContainerError>] ok{Result.ok(Pair([left] 1i32, [right] 2i32))}
+  if(Result.error(ok), then(){ return(1i32) }, else(){ return(0i32) })
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("IR backends only support Result.ok with 32-bit or string values") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer supports Result.and_then builtin lambdas") {
   const std::string source = R"(
 import /std/file/*
