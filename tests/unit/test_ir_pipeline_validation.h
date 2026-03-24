@@ -335,6 +335,49 @@ TEST_CASE("emitter method resolution prefers canonical map metadata fallback") {
   CHECK(resolved.empty());
 }
 
+TEST_CASE("emitter method resolution infers nested direct map access receiver type") {
+  primec::Emitter::BindingInfo mapBinding;
+  mapBinding.typeName = "map";
+  mapBinding.typeTemplateArg = "i32, Widget";
+
+  std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {
+      {"values", mapBinding},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::Expr directMapAccess;
+  directMapAccess.kind = primec::Expr::Kind::Call;
+  directMapAccess.name = "/std/collections/map/at";
+  directMapAccess.args = {receiverExpr, keyExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "render";
+  methodCall.args = {directMapAccess};
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::Emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/std/collections/map/at", "/pkg/Widget"},
+  };
+
+  std::string resolved;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/pkg/Widget/render");
+}
+
 TEST_CASE("semantics binding type helpers validate nested templates and map keys") {
   std::vector<std::string> parts;
   CHECK(primec::semantics::splitTopLevelTemplateArgs("map<i32, vector<f32>>, Pointer<string>", parts));
@@ -9643,20 +9686,33 @@ TEST_CASE("emitter builtin method resolution helper source delegation stays stab
       repoRoot / "src" / "emitter" / "EmitterHelpersBuiltins.cpp";
   const std::filesystem::path emitterBuiltinMethodResolutionHelpersPath =
       repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionHelpers.cpp";
+  const std::filesystem::path emitterBuiltinMethodResolutionTypeInferenceHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp";
   REQUIRE(std::filesystem::exists(emitterHelpersBuiltinsPath));
   REQUIRE(std::filesystem::exists(emitterBuiltinMethodResolutionHelpersPath));
+  REQUIRE(std::filesystem::exists(emitterBuiltinMethodResolutionTypeInferenceHelpersPath));
 
   const std::string emitterHelpersBuiltinsSource = readText(emitterHelpersBuiltinsPath);
   const std::string emitterBuiltinMethodResolutionHelpersSource =
       readText(emitterBuiltinMethodResolutionHelpersPath);
+  const std::string emitterBuiltinMethodResolutionTypeInferenceHelpersSource =
+      readText(emitterBuiltinMethodResolutionTypeInferenceHelpersPath);
 
   CHECK(emitterHelpersBuiltinsSource.find("bool resolveMethodCallPath(") == std::string::npos);
 
   CHECK(emitterBuiltinMethodResolutionHelpersSource.find("bool resolveMethodCallPath(") != std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("std::string preferredFileErrorHelperTarget") !=
+  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("auto preferredFileErrorHelperTarget =") !=
         std::string::npos);
   CHECK(emitterBuiltinMethodResolutionHelpersSource.find("std::string normalizedMethodName = call.name;") !=
         std::string::npos);
+  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("std::string inferMethodResolutionPrimitiveTypeName(") ==
+        std::string::npos);
+  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("std::vector<std::string> collectionHelperPathCandidates(") ==
+        std::string::npos);
+  CHECK(emitterBuiltinMethodResolutionTypeInferenceHelpersSource.find(
+            "std::string inferMethodResolutionPrimitiveTypeName(") != std::string::npos);
+  CHECK(emitterBuiltinMethodResolutionTypeInferenceHelpersSource.find(
+            "std::vector<std::string> collectionHelperPathCandidates(") != std::string::npos);
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable") {

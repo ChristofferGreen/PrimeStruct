@@ -154,7 +154,9 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Split `EmitterHelpersBuiltins.cpp` builtin call/path parsing, string/math helper resolution, pointer/convert/collection builtin classification, and vector/map compatibility alias utilities into `src/emitter/EmitterBuiltinCallPathHelpers.cpp`.
 - ✓ Split `EmitterHelpersBuiltins.cpp` collection value/access inference and element-type deduction helpers into `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp`.
 - ✓ Split `EmitterHelpersBuiltins.cpp` method-call target/path resolution and metadata compatibility fallbacks into `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp`.
-- ○ Refactor `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp` (`1174` lines) below the `700`-line target.
+- ✓ Refactor `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp` (`414` lines) below the `700`-line target by extracting method-resolution metadata/path utilities plus primitive/collection type inference into `src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp`.
+- ✓ Split `EmitterBuiltinMethodResolutionHelpers.cpp` method-resolution metadata/path utilities plus primitive/collection type inference into `src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp`.
+- ○ Refactor `src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp` (`758` lines) below the `700`-line target.
 - ○ Refactor `src/native_emitter/NativeEmitterInternals.h` (`1619` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`1568` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterExprCalls.h` (`1512` lines) below the `700`-line target.
