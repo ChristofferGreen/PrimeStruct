@@ -562,7 +562,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                               "--last=${PrimeStructSuite_LAST}")
     endif()
 
-    if (PrimeStructSuite_NO_UNIQUE_TMPDIR)
+    if (PrimeStructSuite_NO_UNIQUE_TMPDIR OR PrimeStructSuite_TARGET STREQUAL "PrimeStruct_backend_tests")
       add_test(NAME "${testName}"
                COMMAND $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
     else()

@@ -1,9 +1,8 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
 static void expectCppVectorCountCompatibilityTypeMismatchReject(const std::string &compileCmd) {
-  const std::string errPath = (std::filesystem::temp_directory_path() /
-                               "primec_cpp_vector_count_compatibility_type_mismatch_reject_err.txt")
-                                  .string();
+  const std::string errPath =
+      testScratchPath("primec_cpp_vector_count_compatibility_type_mismatch_reject_err.txt").string();
   const std::string captureCmd = compileCmd + " > /dev/null 2> " + errPath;
   CHECK(runCommand(captureCmd) != 0);
   CHECK_FALSE(readFile(errPath).empty());
@@ -965,8 +964,7 @@ TEST_CASE("C++ emitter compiles Result.and_then direct Result.ok lambda") {
 }
 
 TEST_CASE("C++ emitter supports image api contract deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_image_api_unsupported.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_image_api_unsupported.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_image_fixture",
                                          sharedCppEmitterImageFixtureSource(),
@@ -980,8 +978,7 @@ TEST_CASE("C++ emitter supports image api contract deterministically") {
 }
 
 TEST_CASE("C++ emitter runs software renderer command serialization deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_command_serialization.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_command_serialization.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_commands_fixture",
                                          sharedCppEmitterUiCommandFixtureSource(),
@@ -991,8 +988,7 @@ TEST_CASE("C++ emitter runs software renderer command serialization deterministi
 }
 
 TEST_CASE("C++ emitter runs software renderer clip stack serialization deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_clip_command_serialization.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_clip_command_serialization.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_commands_fixture",
                                          sharedCppEmitterUiCommandFixtureSource(),
@@ -1003,8 +999,7 @@ TEST_CASE("C++ emitter runs software renderer clip stack serialization determini
 }
 
 TEST_CASE("C++ emitter runs two-pass layout tree serialization deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_serialization.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_layout_tree_serialization.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_layout_fixture",
                                          sharedCppEmitterUiLayoutFixtureSource(),
@@ -1015,8 +1010,7 @@ TEST_CASE("C++ emitter runs two-pass layout tree serialization deterministically
 }
 
 TEST_CASE("C++ emitter runs two-pass layout empty root deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_layout_tree_empty_root.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_layout_tree_empty_root.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_layout_fixture",
                                          sharedCppEmitterUiLayoutFixtureSource(),
@@ -1026,8 +1020,7 @@ TEST_CASE("C++ emitter runs two-pass layout empty root deterministically") {
 }
 
 TEST_CASE("C++ emitter runs basic widget controls through layout deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_basic_widget_controls.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_basic_widget_controls.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_widgets_fixture",
                                          sharedCppEmitterUiWidgetFixtureSource(),
@@ -1038,8 +1031,7 @@ TEST_CASE("C++ emitter runs basic widget controls through layout deterministical
 }
 
 TEST_CASE("C++ emitter runs panel container widget deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_panel_widget.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_panel_widget.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_widgets_fixture",
                                          sharedCppEmitterUiWidgetFixtureSource(),
@@ -1050,8 +1042,7 @@ TEST_CASE("C++ emitter runs panel container widget deterministically") {
 }
 
 TEST_CASE("C++ emitter runs empty panel container stays balanced deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_empty_panel_widget.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_empty_panel_widget.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_widgets_fixture",
                                          sharedCppEmitterUiWidgetFixtureSource(),
@@ -1061,8 +1052,7 @@ TEST_CASE("C++ emitter runs empty panel container stays balanced deterministical
 }
 
 TEST_CASE("C++ emitter runs composite login form deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_composite_login_form.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_composite_login_form.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_login_fixture",
                                          sharedCppEmitterUiLoginFixtureSource(),
@@ -1073,8 +1063,7 @@ TEST_CASE("C++ emitter runs composite login form deterministically") {
 }
 
 TEST_CASE("C++ emitter runs html adapter login form deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_html_login_form.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_html_login_form.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_login_fixture",
                                          sharedCppEmitterUiLoginFixtureSource(),
@@ -1085,8 +1074,7 @@ TEST_CASE("C++ emitter runs html adapter login form deterministically") {
 }
 
 TEST_CASE("C++ emitter runs ui event stream deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_event_stream.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_event_stream.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_events_fixture",
                                          sharedCppEmitterUiEventFixtureSource(),
@@ -1097,8 +1085,7 @@ TEST_CASE("C++ emitter runs ui event stream deterministically") {
 }
 
 TEST_CASE("C++ emitter runs ui ime event stream deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_ime_event_stream.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_ime_event_stream.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_events_fixture",
                                          sharedCppEmitterUiEventFixtureSource(),
@@ -1109,8 +1096,7 @@ TEST_CASE("C++ emitter runs ui ime event stream deterministically") {
 }
 
 TEST_CASE("C++ emitter runs ui resize and focus event stream deterministically") {
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_cpp_ui_resize_focus_event_stream.txt").string();
+  const std::string outPath = testScratchPath("primec_cpp_ui_resize_focus_event_stream.txt").string();
 
   CHECK(runSharedCppEmitterFixtureToFile("primec_cpp_emitter_ui_events_fixture",
                                          sharedCppEmitterUiEventFixtureSource(),
