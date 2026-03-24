@@ -22896,6 +22896,61 @@ TEST_CASE("ir lowerer setup type helper resolves method call definitions from ex
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper resolves method calls from declared vector-return receivers") {
+  primec::Definition makeValuesDef;
+  makeValuesDef.fullPath = "/pkg/makeValues";
+
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"vector<i32>"};
+  makeValuesDef.transforms.push_back(returnTransform);
+
+  primec::Definition stdCountDef;
+  stdCountDef.fullPath = "/std/collections/vector/count";
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/makeValues", &makeValuesDef},
+      {"/std/collections/vector/count", &stdCountDef},
+  };
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "makeValues";
+  receiverCall.namespacePrefix = "/pkg";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "count";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "makeValues") {
+      return std::string("/pkg/makeValues");
+    }
+    return std::string();
+  };
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      resolveExprPath,
+      [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+      defMap,
+      error);
+  CHECK(resolved == &stdCountDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper rejects explicit vector slash-path methods from expressions") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";

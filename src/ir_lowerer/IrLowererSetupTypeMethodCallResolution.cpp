@@ -1,0 +1,438 @@
+#include "IrLowererSetupTypeHelpers.h"
+
+#include <functional>
+#include <utility>
+
+#include "IrLowererCallHelpers.h"
+#include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "IrLowererSetupTypeReceiverTargetHelpers.h"
+#include "IrLowererStructTypeHelpers.h"
+
+namespace primec::ir_lowerer {
+
+const Definition *resolveMethodCallDefinitionFromExpr(
+    const Expr &callExpr,
+    const LocalMap &localsIn,
+    const IsMethodCallClassifierFn &isArrayCountCall,
+    const IsMethodCallClassifierFn &isVectorCapacityCall,
+    const IsMethodCallClassifierFn &isEntryArgsName,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const InferReceiverExprKindFn &inferExprKind,
+    const ResolveReceiverExprPathFn &resolveExprPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut) {
+  return resolveMethodCallDefinitionFromExpr(callExpr,
+                                             localsIn,
+                                             isArrayCountCall,
+                                             isVectorCapacityCall,
+                                             isEntryArgsName,
+                                             importAliases,
+                                             structNames,
+                                             inferExprKind,
+                                             resolveExprPath,
+                                             {},
+                                             defMap,
+                                             errorOut);
+}
+
+const Definition *resolveMethodCallDefinitionFromExpr(
+    const Expr &callExpr,
+    const LocalMap &localsIn,
+    const IsMethodCallClassifierFn &isArrayCountCall,
+    const IsMethodCallClassifierFn &isVectorCapacityCall,
+    const IsMethodCallClassifierFn &isEntryArgsName,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const InferReceiverExprKindFn &inferExprKind,
+    const ResolveReceiverExprPathFn &resolveExprPath,
+    const GetReturnInfoForPathFn &getReturnInfo,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut) {
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding) {
+    return nullptr;
+  }
+  if (!callExpr.isMethodCall) {
+    const std::string resolvedPath = resolveExprPath(callExpr);
+    auto defIt = defMap.find(resolvedPath);
+    if (defIt != defMap.end()) {
+      return defIt->second;
+    }
+    return nullptr;
+  }
+
+  std::string accessName;
+  const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
+  const bool isBuiltinCountOrCapacityCall =
+      isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count") ||
+      isVectorBuiltinName(callExpr, "capacity");
+  const bool isBuiltinBareVectorCapacityMethod =
+      isSimpleCallName(callExpr, "capacity") &&
+      isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn);
+  const bool isBuiltinBareVectorAccessMethod =
+      callExpr.isMethodCall && callExpr.args.size() == 2 &&
+      (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
+      resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn).isVectorTarget;
+  const bool isBuiltinBareVectorMutatorMethod =
+      callExpr.isMethodCall &&
+      (isSimpleCallName(callExpr, "push") || isSimpleCallName(callExpr, "pop") ||
+       isSimpleCallName(callExpr, "reserve") || isSimpleCallName(callExpr, "clear") ||
+       isSimpleCallName(callExpr, "remove_at") || isSimpleCallName(callExpr, "remove_swap")) &&
+      !callExpr.args.empty() && resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn).isVectorTarget;
+  const bool isBuiltinVectorMutatorCall =
+      isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
+      isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
+      isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
+  const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(callExpr.name);
+  const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
+  const bool isBuiltinMapContainsOrTryAtCall =
+      isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt");
+  const bool allowBuiltinFallback =
+      !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
+      !isBuiltinBareVectorCapacityMethod && !isBuiltinBareVectorAccessMethod &&
+      !isBuiltinBareVectorMutatorMethod &&
+      (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
+       isBuiltinMapContainsOrTryAtCall ||
+       (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
+       (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall);
+
+  const std::string priorError = errorOut;
+  const Expr *receiver = nullptr;
+  if (!resolveMethodCallReceiverExpr(callExpr,
+                                     localsIn,
+                                     isArrayCountCall,
+                                     isVectorCapacityCall,
+                                     isEntryArgsName,
+                                     receiver,
+                                     errorOut)) {
+    if (allowBuiltinFallback) {
+      errorOut = priorError;
+    }
+    return nullptr;
+  }
+  if (receiver == nullptr) {
+    return nullptr;
+  }
+
+  if (receiver->kind == Expr::Kind::Name && localsIn.find(receiver->name) == localsIn.end()) {
+    std::string normalizedMethodName = callExpr.name;
+    if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+      normalizedMethodName.erase(normalizedMethodName.begin());
+    }
+    if (normalizedMethodName.rfind("vector/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+    } else if (normalizedMethodName.rfind("array/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
+    } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+    } else if (normalizedMethodName.rfind("map/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
+    } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
+    }
+    std::string helperPath;
+    if (receiver->name == "FileError" &&
+        (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+         normalizedMethodName == "eof" || normalizedMethodName == "status" ||
+         normalizedMethodName == "result")) {
+      helperPath = preferredFileErrorHelperTarget(normalizedMethodName, defMap);
+    } else if (receiver->name == "ImageError" &&
+               (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+                normalizedMethodName == "result")) {
+      helperPath = preferredImageErrorHelperTarget(normalizedMethodName, defMap);
+    } else if (receiver->name == "ContainerError" &&
+               (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+                normalizedMethodName == "result")) {
+      helperPath = preferredContainerErrorHelperTarget(normalizedMethodName, defMap);
+    } else if (receiver->name == "GfxError" &&
+               (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+                normalizedMethodName == "result")) {
+      helperPath = preferredGfxErrorHelperTarget(normalizedMethodName, defMap);
+    }
+    if (!helperPath.empty()) {
+      auto defIt = defMap.find(helperPath);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
+  }
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  if (!resolveMethodReceiverTarget(*receiver,
+                                   localsIn,
+                                   callExpr.name,
+                                   importAliases,
+                                   structNames,
+                                   inferExprKind,
+                                   resolveExprPath,
+                                   typeName,
+                                   resolvedTypePath,
+                                   errorOut)) {
+    if (allowBuiltinFallback) {
+      errorOut = priorError;
+    }
+    return nullptr;
+  }
+  std::string lookupError;
+  const Definition *resolvedDef = resolveMethodDefinitionFromReceiverTarget(
+      callExpr.name, typeName, resolvedTypePath, defMap, lookupError);
+  auto resolveMethodDefinitionFromTypeNameWithAliasFallback = [&](const std::string &receiverTypeName,
+                                                                  std::string &errorOutRef) -> const Definition * {
+    if (receiverTypeName.empty()) {
+      return nullptr;
+    }
+    const Definition *resolved = resolveMethodDefinitionFromReceiverTarget(
+        callExpr.name, receiverTypeName, "", defMap, errorOutRef);
+    if (resolved != nullptr) {
+      return resolved;
+    }
+    if (receiverTypeName == "vector") {
+      resolved = resolveMethodDefinitionFromReceiverTarget(
+          callExpr.name, "", "/std/collections/vector", defMap, errorOutRef);
+      if (resolved != nullptr) {
+        return resolved;
+      }
+    }
+    auto aliasIt = importAliases.find(receiverTypeName);
+    if (aliasIt == importAliases.end()) {
+      return nullptr;
+    }
+    const std::string aliasTypeName = normalizeMapImportAliasPath(aliasIt->second);
+    if (aliasTypeName.empty()) {
+      return nullptr;
+    }
+    return resolveMethodDefinitionFromReceiverTarget(callExpr.name, aliasTypeName, "", defMap, errorOutRef);
+  };
+  auto resolveStructTypePathFromScope = [&](const std::string &receiverTypeName,
+                                            const std::string &namespacePrefix) -> std::string {
+    if (receiverTypeName.empty()) {
+      return "";
+    }
+    if (receiverTypeName.front() == '/') {
+      return structNames.count(receiverTypeName) > 0 ? receiverTypeName : "";
+    }
+    std::string current = namespacePrefix;
+    while (true) {
+      if (!current.empty()) {
+        const std::string scoped = current + "/" + receiverTypeName;
+        if (structNames.count(scoped) > 0) {
+          return scoped;
+        }
+      } else {
+        const std::string root = "/" + receiverTypeName;
+        if (structNames.count(root) > 0) {
+          return root;
+        }
+      }
+      if (current.empty()) {
+        break;
+      }
+      const size_t slash = current.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        current.clear();
+      } else {
+        current.erase(slash);
+      }
+    }
+    auto importIt = importAliases.find(receiverTypeName);
+    if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return "";
+  };
+  auto inferStructReturnPathFromReceiverDef = [&](const Definition &definition) -> std::string {
+    std::function<std::string(const Expr &, std::unordered_set<std::string> &)> inferStructExprPathForCall;
+    inferStructExprPathForCall = [&](const Expr &expr, std::unordered_set<std::string> &visitedDefs) -> std::string {
+      if (expr.kind == Expr::Kind::Name) {
+        return resolveStructTypePathFromScope(expr.name, expr.namespacePrefix);
+      }
+      if (expr.kind != Expr::Kind::Call) {
+        return "";
+      }
+      const std::string resolvedPath = resolveExprPath(expr);
+      if (structNames.count(resolvedPath) > 0) {
+        return resolvedPath;
+      }
+      auto defIt = defMap.find(resolvedPath);
+      if (defIt != defMap.end() && defIt->second != nullptr && visitedDefs.insert(resolvedPath).second) {
+        const Definition &nestedDef = *defIt->second;
+        std::string inferred = inferStructReturnPathFromDefinition(
+            nestedDef,
+            [&](const std::string &nestedTypeName, const std::string &namespacePrefix, std::string &resolvedOut) {
+              resolvedOut = resolveStructTypePathFromScope(nestedTypeName, namespacePrefix);
+              return !resolvedOut.empty();
+            },
+            [&](const Expr &nestedExpr) { return inferStructExprPathForCall(nestedExpr, visitedDefs); });
+        visitedDefs.erase(resolvedPath);
+        if (!inferred.empty()) {
+          return inferred;
+        }
+      }
+      return resolveMethodReceiverStructTypePathFromCallExpr(expr, resolvedPath, importAliases, structNames);
+    };
+    std::unordered_set<std::string> visitedDefs = {definition.fullPath};
+    return inferStructReturnPathFromDefinition(
+        definition,
+        [&](const std::string &nestedTypeName, const std::string &namespacePrefix, std::string &resolvedOut) {
+          resolvedOut = resolveStructTypePathFromScope(nestedTypeName, namespacePrefix);
+          return !resolvedOut.empty();
+        },
+        [&](const Expr &expr) { return inferStructExprPathForCall(expr, visitedDefs); });
+  };
+  if (resolvedDef == nullptr && resolvedTypePath.empty() && receiver->kind == Expr::Kind::Call) {
+    std::string nestedError = lookupError;
+    const Definition *receiverDef = nullptr;
+    std::string receiverPath = resolveExprPath(*receiver);
+    if (receiverPath.empty() && !receiver->name.empty()) {
+      receiverPath = receiver->name;
+      if (!receiverPath.empty() && receiverPath.front() != '/') {
+        receiverPath.insert(receiverPath.begin(), '/');
+      }
+    }
+    if (!receiverPath.empty()) {
+      auto receiverDefIt = defMap.find(receiverPath);
+      if (receiverDefIt != defMap.end()) {
+        receiverDef = receiverDefIt->second;
+      }
+    }
+    if (receiverDef == nullptr && receiver->isMethodCall) {
+      receiverDef = resolveMethodCallDefinitionFromExpr(*receiver,
+                                                        localsIn,
+                                                        isArrayCountCall,
+                                                        isVectorCapacityCall,
+                                                        isEntryArgsName,
+                                                        importAliases,
+                                                        structNames,
+                                                        inferExprKind,
+                                                        resolveExprPath,
+                                                        getReturnInfo,
+                                                        defMap,
+                                                        nestedError);
+    }
+    if (receiverDef != nullptr) {
+      resolvedTypePath = inferStructReturnPathFromReceiverDef(*receiverDef);
+      if (!resolvedTypePath.empty()) {
+        lookupError.clear();
+        resolvedDef =
+            resolveMethodDefinitionFromReceiverTarget(callExpr.name, "", resolvedTypePath, defMap, lookupError);
+      }
+    }
+    if (resolvedDef == nullptr && receiverDef != nullptr && inferReceiverTypeFromDeclaredReturn(*receiverDef, typeName)) {
+      lookupError.clear();
+      resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(typeName, lookupError);
+    } else if (resolvedDef == nullptr && receiverDef != nullptr) {
+      LocalInfo::ValueKind receiverKind = LocalInfo::ValueKind::Unknown;
+      if (resolveReturnInfoKindForPath(receiverDef->fullPath, getReturnInfo, false, receiverKind)) {
+        typeName = typeNameForValueKind(receiverKind);
+        if (!typeName.empty()) {
+          lookupError.clear();
+          resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(typeName, lookupError);
+        }
+      }
+    } else {
+      LocalInfo::ValueKind inferredReceiverKind = LocalInfo::ValueKind::Unknown;
+      const bool blocksExplicitVectorAccessKindFallback = isExplicitVectorAccessHelperExpr(*receiver);
+      if (!inferBuiltinAccessReceiverResultKind(
+              *receiver, localsIn, inferExprKind, resolveExprPath, getReturnInfo, defMap, inferredReceiverKind) &&
+          inferExprKind && !blocksExplicitVectorAccessKindFallback) {
+        inferredReceiverKind = inferExprKind(*receiver, localsIn);
+      }
+      const std::string inferredReceiverTypeName = typeNameForValueKind(inferredReceiverKind);
+      if (!inferredReceiverTypeName.empty()) {
+        lookupError.clear();
+        resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(inferredReceiverTypeName, lookupError);
+      }
+      if (resolvedDef != nullptr) {
+        return resolvedDef;
+      }
+      std::vector<std::string> receiverPaths = collectionHelperPathCandidates(resolveExprPath(*receiver));
+      auto pruneRemovedMapCompatibilityReceiverPaths = [&](const std::string &path) {
+        std::string normalizedPath = path;
+        if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+          if (normalizedPath.rfind("map/", 0) == 0 || normalizedPath.rfind("std/collections/map/", 0) == 0) {
+            normalizedPath.insert(normalizedPath.begin(), '/');
+          }
+        }
+        auto isRemovedMapCompatibilityHelper = [](const std::string &suffix) {
+          return suffix == "count" || suffix == "contains" || suffix == "tryAt" ||
+                 suffix == "at" || suffix == "at_unsafe";
+        };
+        auto eraseCandidate = [&](const std::string &candidate) {
+          for (auto it = receiverPaths.begin(); it != receiverPaths.end();) {
+            if (*it == candidate) {
+              it = receiverPaths.erase(it);
+            } else {
+              ++it;
+            }
+          }
+        };
+        if (normalizedPath.rfind("/map/", 0) == 0) {
+          const std::string suffix = normalizedPath.substr(std::string("/map/").size());
+          if (isRemovedMapCompatibilityHelper(suffix)) {
+            eraseCandidate("/std/collections/map/" + suffix);
+          }
+        } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
+          const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
+          if (isRemovedMapCompatibilityHelper(suffix)) {
+            eraseCandidate("/map/" + suffix);
+          }
+        }
+      };
+      pruneRemovedMapCompatibilityReceiverPaths(resolveExprPath(*receiver));
+      auto appendUniqueReceiverPath = [&](const std::string &candidate) {
+        if (candidate.empty()) {
+          return;
+        }
+        for (const auto &existing : receiverPaths) {
+          if (existing == candidate) {
+            return;
+          }
+        }
+        receiverPaths.push_back(candidate);
+      };
+      if (receiverDef != nullptr) {
+        const auto resolvedReceiverPaths = collectionHelperPathCandidates(receiverDef->fullPath);
+        for (const auto &resolvedReceiverPath : resolvedReceiverPaths) {
+          appendUniqueReceiverPath(resolvedReceiverPath);
+        }
+        pruneRemovedMapCompatibilityReceiverPaths(receiverDef->fullPath);
+      }
+      for (const auto &receiverPath : receiverPaths) {
+        auto receiverDefIt = defMap.find(receiverPath);
+        if (receiverDefIt == defMap.end() || receiverDefIt->second == nullptr) {
+          continue;
+        }
+        if (!inferReceiverTypeFromDeclaredReturn(*receiverDefIt->second, typeName)) {
+          continue;
+        }
+        lookupError.clear();
+        resolvedDef = resolveMethodDefinitionFromTypeNameWithAliasFallback(typeName, lookupError);
+        break;
+      }
+    }
+  }
+  if (resolvedDef == nullptr) {
+    const bool blocksBuiltinBareVectorCountMethod =
+        isSimpleCallName(callExpr, "count") && typeName == "vector";
+    const bool blocksBuiltinBareVectorAccessMethod =
+        (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
+        typeName == "vector";
+    const bool blocksBuiltinBareVectorMutatorMethod =
+        (isSimpleCallName(callExpr, "push") || isSimpleCallName(callExpr, "pop") ||
+         isSimpleCallName(callExpr, "reserve") || isSimpleCallName(callExpr, "clear") ||
+         isSimpleCallName(callExpr, "remove_at") || isSimpleCallName(callExpr, "remove_swap")) &&
+        typeName == "vector";
+    if (allowBuiltinFallback && !blocksBuiltinBareVectorCountMethod &&
+        !blocksBuiltinBareVectorAccessMethod && !blocksBuiltinBareVectorMutatorMethod) {
+      errorOut = priorError;
+      return nullptr;
+    }
+    errorOut = std::move(lookupError);
+    return nullptr;
+  }
+  return resolvedDef;
+}
+
+} // namespace primec::ir_lowerer
