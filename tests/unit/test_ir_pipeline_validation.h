@@ -35429,6 +35429,7 @@ TEST_CASE("ir lowerer statement binding helper infers borrowed scalar args-pack 
         }
         return std::string{};
       },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](const std::string &structPath,
          const std::string &fieldName,
          primec::ir_lowerer::StructSlotFieldInfo &fieldInfoOut) {
@@ -35493,6 +35494,7 @@ TEST_CASE("ir lowerer statement binding helper infers borrowed struct args-pack 
         }
         return std::string{};
       },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](const std::string &structPath,
          const std::string &fieldName,
          primec::ir_lowerer::StructSlotFieldInfo &fieldInfoOut) {
@@ -35505,6 +35507,139 @@ TEST_CASE("ir lowerer statement binding helper infers borrowed struct args-pack 
       }));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(info.structTypeName == "/pkg/Pair");
+  CHECK_FALSE(info.isArgsPack);
+}
+
+TEST_CASE("ir lowerer statement binding helper infers borrowed scalar args-pack reference-field local info") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  valuesInfo.structTypeName = "/pkg/Holder";
+  locals.emplace("values", valuesInfo);
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 1;
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.args = {receiverExpr, indexExpr};
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Call;
+  fieldExpr.isFieldAccess = true;
+  fieldExpr.name = "value_ref";
+  fieldExpr.args = {accessExpr};
+
+  primec::ir_lowerer::LocalInfo info;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
+      fieldExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+      },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      info,
+      error,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * { return nullptr; },
+      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "at") {
+          return std::string("/pkg/Holder");
+        }
+        return std::string{};
+      },
+      [](const std::string &structPath,
+         const std::string &fieldName,
+         primec::ir_lowerer::LayoutFieldBinding &bindingOut) {
+        if (structPath != "/pkg/Holder" || fieldName != "value_ref") {
+          return false;
+        }
+        bindingOut.typeName = "Reference";
+        bindingOut.typeTemplateArg = "i32";
+        return true;
+      }));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.structTypeName.empty());
+  CHECK_FALSE(info.isArgsPack);
+}
+
+TEST_CASE("ir lowerer statement binding helper infers borrowed struct args-pack reference-field local info") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  valuesInfo.structTypeName = "/pkg/Holder";
+  locals.emplace("values", valuesInfo);
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 2;
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.isMethodCall = true;
+  accessExpr.name = "at_unsafe";
+  accessExpr.args = {receiverExpr, indexExpr};
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Call;
+  fieldExpr.isFieldAccess = true;
+  fieldExpr.name = "pair_ref";
+  fieldExpr.args = {accessExpr};
+
+  primec::ir_lowerer::LocalInfo info;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
+      fieldExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+      },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo &infoOut) {
+        if (expr.transforms.size() == 1 && expr.transforms.front().name == "Reference" &&
+            expr.transforms.front().templateArgs.size() == 1 &&
+            expr.transforms.front().templateArgs.front() == "/pkg/Pair") {
+          infoOut.structTypeName = "/pkg/Pair";
+        }
+      },
+      info,
+      error,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * { return nullptr; },
+      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "at_unsafe") {
+          return std::string("/pkg/Holder");
+        }
+        return std::string{};
+      },
+      [](const std::string &structPath,
+         const std::string &fieldName,
+         primec::ir_lowerer::LayoutFieldBinding &bindingOut) {
+        if (structPath != "/pkg/Holder" || fieldName != "pair_ref") {
+          return false;
+        }
+        bindingOut.typeName = "Reference";
+        bindingOut.typeTemplateArg = "/pkg/Pair";
+        return true;
+      }));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(info.structTypeName == "/pkg/Pair");
   CHECK_FALSE(info.isArgsPack);
@@ -49613,6 +49748,7 @@ TEST_CASE("ir lowerer conversions helper emits float conversion opcode") {
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -49683,6 +49819,7 @@ TEST_CASE("ir lowerer conversions helper lowers alloc intrinsic to heap alloc") 
         return false;
       },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -49750,6 +49887,7 @@ TEST_CASE("ir lowerer conversions helper lowers free intrinsic to heap free") {
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -49838,6 +49976,7 @@ TEST_CASE("ir lowerer conversions helper lowers realloc intrinsic to heap reallo
         return false;
       },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -49936,6 +50075,7 @@ TEST_CASE("ir lowerer conversions helper lowers checked memory at intrinsic to b
         return false;
       },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50035,6 +50175,7 @@ TEST_CASE("ir lowerer conversions helper lowers unchecked memory at intrinsic to
         return false;
       },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50111,6 +50252,7 @@ TEST_CASE("ir lowerer conversions helper emits vector record header with data po
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50200,6 +50342,7 @@ TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50239,6 +50382,7 @@ TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,

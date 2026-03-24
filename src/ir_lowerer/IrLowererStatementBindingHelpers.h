@@ -13,6 +13,7 @@
 
 namespace primec::ir_lowerer {
 
+struct LayoutFieldBinding;
 struct StructSlotLayoutInfo;
 struct StructSlotFieldInfo;
 struct UninitializedStorageAccessInfo;
@@ -125,6 +126,8 @@ bool inferInlineParameterExprLocalInfo(
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition = {},
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath = {},
+    const std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>
+        &resolveStructFieldBinding = {},
     const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
         &resolveStructFieldSlot = {});
 bool emitStringStatementBindingInitializer(const Expr &stmt,

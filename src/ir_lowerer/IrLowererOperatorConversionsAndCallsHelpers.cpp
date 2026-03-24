@@ -4,6 +4,7 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererStructFieldBindingHelpers.h"
 
 #include <algorithm>
 #include <cstring>
@@ -135,6 +136,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
     const ResolveConversionsAndCallsStructSlotCountFn &resolveStructSlotCount,
     const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
+    const ResolveConversionsAndCallsStructFieldBindingFn &resolveStructFieldBinding,
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
     std::vector<IrInstruction> &instructions,
     bool &handled,
@@ -605,6 +607,12 @@ bool emitConversionsAndCallsOperatorExpr(
 	              if (receiverStruct.empty()) {
 	                error = "field access requires struct receiver";
 	                return false;
+	              }
+	              LayoutFieldBinding fieldBinding;
+	              if (resolveStructFieldBinding &&
+	                  resolveStructFieldBinding(receiverStruct, target.name, fieldBinding) &&
+	                  normalizeBindingTypeName(fieldBinding.typeName) == "Reference") {
+	                return emitExpr(target, localsIn);
 	              }
 	              StructSlotFieldInfo fieldInfo;
 	              if (!resolveStructFieldSlot(receiverStruct, target.name, fieldInfo)) {

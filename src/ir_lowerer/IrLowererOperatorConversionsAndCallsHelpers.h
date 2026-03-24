@@ -14,6 +14,8 @@
 
 namespace primec::ir_lowerer {
 
+struct LayoutFieldBinding;
+
 using EmitConversionsAndCallsExprWithLocalsFn = std::function<bool(const Expr &, const LocalMap &)>;
 using EmitConversionsAndCallsStatementWithLocalsFn = std::function<bool(const Expr &, LocalMap &)>;
 using InferConversionsAndCallsExprKindWithLocalsFn =
@@ -35,6 +37,8 @@ using ResolveConversionsAndCallsStructTypeNameFn =
 using ResolveConversionsAndCallsStructSlotCountFn = std::function<bool(const std::string &, int32_t &)>;
 using ResolveConversionsAndCallsStructFieldInfoFn =
     std::function<bool(const std::string &, const std::string &, int32_t &, int32_t &, std::string &)>;
+using ResolveConversionsAndCallsStructFieldBindingFn =
+    std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>;
 using EmitConversionsAndCallsStructCopyFromPtrsFn = std::function<bool(int32_t, int32_t, int32_t)>;
 using HasConversionsAndCallsNamedArgumentsFn =
     std::function<bool(const std::vector<std::optional<std::string>> &)>;
@@ -72,6 +76,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
     const ResolveConversionsAndCallsStructSlotCountFn &resolveStructSlotCount,
     const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
+    const ResolveConversionsAndCallsStructFieldBindingFn &resolveStructFieldBinding,
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
     std::vector<IrInstruction> &instructions,
     bool &handled,

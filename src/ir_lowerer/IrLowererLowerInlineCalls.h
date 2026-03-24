@@ -145,6 +145,11 @@
                   },
                   [&](const std::string &structPath,
                       const std::string &fieldName,
+                      LayoutFieldBinding &fieldBindingOut) {
+                    return resolveStructLayoutFieldBinding(structPath, fieldName, structFieldInfoByName, defMap, fieldBindingOut);
+                  },
+                  [&](const std::string &structPath,
+                      const std::string &fieldName,
                       StructSlotFieldInfo &fieldInfoOut) {
                     return resolveStructFieldSlot(structPath, fieldName, fieldInfoOut);
                   });

@@ -46,6 +46,12 @@ bool collectStructLayoutFieldBindingsFromProgramContext(
     const std::unordered_map<std::string, std::string> &importAliases,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
     std::string &errorOut);
+bool resolveStructLayoutFieldBinding(
+    const std::string &structPath,
+    const std::string &fieldName,
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStruct,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    LayoutFieldBinding &bindingOut);
 std::string formatLayoutFieldEnvelope(const LayoutFieldBinding &binding);
 
 } // namespace primec::ir_lowerer

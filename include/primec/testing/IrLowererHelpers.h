@@ -3560,6 +3560,8 @@ using ResolveConversionsAndCallsStructTypeNameFn =
 using ResolveConversionsAndCallsStructSlotCountFn = std::function<bool(const std::string &, int32_t &)>;
 using ResolveConversionsAndCallsStructFieldInfoFn =
     std::function<bool(const std::string &, const std::string &, int32_t &, int32_t &, std::string &)>;
+using ResolveConversionsAndCallsStructFieldBindingFn =
+    std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>;
 using EmitConversionsAndCallsStructCopyFromPtrsFn = std::function<bool(int32_t, int32_t, int32_t)>;
 using HasConversionsAndCallsNamedArgumentsFn =
     std::function<bool(const std::vector<std::optional<std::string>> &)>;
@@ -3597,6 +3599,7 @@ bool emitConversionsAndCallsOperatorExpr(
     const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
     const ResolveConversionsAndCallsStructSlotCountFn &resolveStructSlotCount,
     const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
+    const ResolveConversionsAndCallsStructFieldBindingFn &resolveStructFieldBinding,
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
     std::vector<IrInstruction> &instructions,
     bool &handled,
@@ -4022,6 +4025,8 @@ bool inferInlineParameterExprLocalInfo(
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition = {},
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath = {},
+    const std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>
+        &resolveStructFieldBinding = {},
     const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
         &resolveStructFieldSlot = {});
 bool emitStringStatementBindingInitializer(const Expr &stmt,

@@ -6,6 +6,7 @@
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererStringCallHelpers.h"
 #include "IrLowererStringLiteralHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
@@ -116,15 +117,38 @@ bool inferIndexedArgsPackElementLocalInfo(const Expr &expr,
 bool inferFieldAccessLocalInfo(const Expr &expr,
                                const LocalMap &localsForKindInference,
                                const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+                               const std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>
+                                   &resolveStructFieldBinding,
                                const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
                                    &resolveStructFieldSlot,
+                               const ApplyStructBindingInfoFn &applyStructArrayInfo,
+                               const ApplyStructBindingInfoFn &applyStructValueInfo,
                                LocalInfo &infoOut) {
-  if (!expr.isFieldAccess || expr.args.size() != 1 || !inferStructExprPath || !resolveStructFieldSlot) {
+  if (!expr.isFieldAccess || expr.args.size() != 1 || !inferStructExprPath) {
     return false;
   }
 
   const std::string receiverStruct = inferStructExprPath(expr.args.front(), localsForKindInference);
   if (receiverStruct.empty()) {
+    return false;
+  }
+
+  LayoutFieldBinding fieldBinding;
+  if (resolveStructFieldBinding && resolveStructFieldBinding(receiverStruct, expr.name, fieldBinding)) {
+    const std::string fieldTypeText = formatLayoutFieldEnvelope(fieldBinding);
+    infoOut = LocalInfo{};
+    applyArgsPackElementMetadata(fieldTypeText, infoOut);
+    applyArgsPackElementStructMetadata(expr, fieldTypeText, applyStructArrayInfo, applyStructValueInfo, infoOut);
+    infoOut.kind = (infoOut.argsPackElementKind == LocalInfo::Kind::Value) ? LocalInfo::Kind::Value
+                                                                            : infoOut.argsPackElementKind;
+    infoOut.isArgsPack = false;
+    infoOut.argsPackElementKind = LocalInfo::Kind::Value;
+    return infoOut.kind != LocalInfo::Kind::Value || infoOut.valueKind != LocalInfo::ValueKind::Unknown ||
+           !infoOut.structTypeName.empty() || infoOut.isFileHandle || infoOut.isFileError ||
+           infoOut.isResult;
+  }
+
+  if (!resolveStructFieldSlot) {
     return false;
   }
 
@@ -820,6 +844,8 @@ bool inferInlineParameterExprLocalInfo(
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>
+        &resolveStructFieldBinding,
     const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
         &resolveStructFieldSlot) {
   infoOut = LocalInfo{};
@@ -843,7 +869,14 @@ bool inferInlineParameterExprLocalInfo(
   }
 
   if (inferFieldAccessLocalInfo(
-          expr, localsForKindInference, inferStructExprPath, resolveStructFieldSlot, infoOut)) {
+          expr,
+          localsForKindInference,
+          inferStructExprPath,
+          resolveStructFieldBinding,
+          resolveStructFieldSlot,
+          applyStructArrayInfo,
+          applyStructValueInfo,
+          infoOut)) {
     return true;
   }
 

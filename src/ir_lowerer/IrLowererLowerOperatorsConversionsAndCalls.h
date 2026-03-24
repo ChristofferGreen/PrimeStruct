@@ -25,10 +25,10 @@
                   slotCount = layout.totalSlots;
                   return true;
                 },
-	                [&](const std::string &structTypeName,
-	                    const std::string &fieldName,
-	                    int32_t &slotOffset,
-	                    int32_t &slotCount,
+                [&](const std::string &structTypeName,
+                    const std::string &fieldName,
+                    int32_t &slotOffset,
+                    int32_t &slotCount,
                     std::string &fieldStructPath) {
                   StructSlotFieldInfo fieldInfo;
                   if (!resolveStructFieldSlot(structTypeName, fieldName, fieldInfo)) {
@@ -39,6 +39,10 @@
 	                  fieldStructPath = fieldInfo.structPath;
 	                  return true;
 	                },
+                [&](const std::string &structTypeName, const std::string &fieldName, LayoutFieldBinding &fieldBindingOut) {
+                  return resolveStructLayoutFieldBinding(
+                      structTypeName, fieldName, structFieldInfoByName, defMap, fieldBindingOut);
+                },
 	                emitStructCopyFromPtrs,
 	                function.instructions,
 	                handledConversionsAndCalls,

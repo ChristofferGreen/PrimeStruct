@@ -223,6 +223,40 @@ bool collectStructLayoutFieldBindingsFromProgramContext(
                                           errorOut);
 }
 
+bool resolveStructLayoutFieldBinding(
+    const std::string &structPath,
+    const std::string &fieldName,
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStruct,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    LayoutFieldBinding &bindingOut) {
+  bindingOut = LayoutFieldBinding{};
+
+  auto fieldInfoIt = fieldsByStruct.find(structPath);
+  auto defIt = defMap.find(structPath);
+  if (fieldInfoIt == fieldsByStruct.end() || defIt == defMap.end() || defIt->second == nullptr) {
+    return false;
+  }
+
+  const Definition &def = *defIt->second;
+  const auto &fieldBindings = fieldInfoIt->second;
+  size_t fieldIndex = 0;
+  for (const auto &stmt : def.statements) {
+    if (!stmt.isBinding) {
+      continue;
+    }
+    if (fieldIndex >= fieldBindings.size()) {
+      return false;
+    }
+    if (stmt.name == fieldName) {
+      bindingOut = fieldBindings[fieldIndex];
+      return true;
+    }
+    ++fieldIndex;
+  }
+
+  return false;
+}
+
 std::string formatLayoutFieldEnvelope(const LayoutFieldBinding &binding) {
   if (binding.typeTemplateArg.empty()) {
     return binding.typeName;
