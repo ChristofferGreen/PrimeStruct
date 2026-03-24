@@ -516,14 +516,29 @@
             resolvedPath = resolveExprPath(candidate);
           }
 
-          if (resolvedPath.empty()) {
-            return false;
+          auto tryResolveDefinitionBinding = [&](const std::string &candidatePath) -> bool {
+            if (candidatePath.empty()) {
+              return false;
+            }
+            auto defIt = defMap.find(candidatePath);
+            if (defIt == defMap.end() || defIt->second == nullptr) {
+              return false;
+            }
+            return resolveDefinitionReturnBinding(*defIt->second, bindingOut);
+          };
+
+          if (tryResolveDefinitionBinding(resolvedPath)) {
+            return true;
           }
-          auto defIt = defMap.find(resolvedPath);
-          if (defIt == defMap.end() || defIt->second == nullptr) {
-            return false;
+
+          if (!candidate.name.empty()) {
+            auto importIt = importAliases.find(candidate.name);
+            if (importIt != importAliases.end() && importIt->second != resolvedPath) {
+              return tryResolveDefinitionBinding(importIt->second);
+            }
           }
-          return resolveDefinitionReturnBinding(*defIt->second, bindingOut);
+
+          return false;
         };
 
         auto emitPackedArgExpr = [&](const Expr &packedArgExpr) -> std::string {

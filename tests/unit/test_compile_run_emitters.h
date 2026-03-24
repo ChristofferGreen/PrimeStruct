@@ -15580,6 +15580,146 @@ main() {
   CHECK(runCommand(exePath) == 65);
 }
 
+TEST_CASE("C++ emitter materializes variadic scalar pointer packs from imported helper references") {
+  const std::string source = R"(
+import /util/*
+
+namespace util {
+  [public return<Reference<i32>>]
+  borrow_ref([Reference<i32>] value) {
+    return(value)
+  }
+}
+
+[return<int>]
+score_ptrs([args<Pointer<i32>>] values) {
+  return(plus(dereference(values[0i32]), dereference(values[2i32])))
+}
+
+[return<int>]
+forward([args<Pointer<i32>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<i32>>] values) {
+  [i32] extra{1i32}
+  [Reference<i32>] extra_ref{location(extra)}
+  return(score_ptrs(location(borrow_ref(extra_ref)), [spread] values))
+}
+
+[return<int>]
+main() {
+  [i32] a0{1i32}
+  [i32] a1{2i32}
+  [i32] a2{3i32}
+  [Reference<i32>] r0{location(a0)}
+  [Reference<i32>] r1{location(a1)}
+  [Reference<i32>] r2{location(a2)}
+
+  [i32] b0{4i32}
+  [i32] b1{5i32}
+  [i32] b2{6i32}
+  [Reference<i32>] s0{location(b0)}
+  [Reference<i32>] s1{location(b1)}
+  [Reference<i32>] s2{location(b2)}
+
+  [i32] c0{7i32}
+  [i32] c1{8i32}
+  [Reference<i32>] t0{location(c0)}
+  [Reference<i32>] t1{location(c1)}
+
+  return(plus(score_ptrs(location(borrow_ref(r0)), location(borrow_ref(r1)), location(borrow_ref(r2))),
+              plus(forward(location(borrow_ref(s0)), location(borrow_ref(s1)), location(borrow_ref(s2))),
+                   forward_mixed(location(borrow_ref(t0)), location(borrow_ref(t1))))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_variadic_args_scalar_pointer_imported_helper_ref.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_scalar_pointer_imported_helper_ref_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 23);
+}
+
+TEST_CASE("C++ emitter materializes variadic struct pointer packs from imported helper references") {
+  const std::string source = R"(
+import /util/*
+
+[struct]
+Pair() {
+  [i32] value{0i32}
+
+  [return<int>]
+  score() {
+    return(plus(self.value, 1i32))
+  }
+}
+
+namespace util {
+  [public return<Reference<Pair>>]
+  borrow_ref([Reference<Pair>] value) {
+    return(value)
+  }
+}
+
+[return<int>]
+score_ptrs([args<Pointer<Pair>>] values) {
+  return(plus(values[0i32].value, values[2i32].score()))
+}
+
+[return<int>]
+forward([args<Pointer<Pair>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<Pair>>] values) {
+  [Pair] extra{Pair(5i32)}
+  [Reference<Pair>] extra_ref{location(extra)}
+  return(score_ptrs(location(borrow_ref(extra_ref)), [spread] values))
+}
+
+[return<int>]
+main() {
+  [Pair] a0{Pair(7i32)}
+  [Pair] a1{Pair(8i32)}
+  [Pair] a2{Pair(9i32)}
+  [Reference<Pair>] r0{location(a0)}
+  [Reference<Pair>] r1{location(a1)}
+  [Reference<Pair>] r2{location(a2)}
+
+  [Pair] b0{Pair(11i32)}
+  [Pair] b1{Pair(12i32)}
+  [Pair] b2{Pair(13i32)}
+  [Reference<Pair>] s0{location(b0)}
+  [Reference<Pair>] s1{location(b1)}
+  [Reference<Pair>] s2{location(b2)}
+
+  [Pair] c0{Pair(15i32)}
+  [Pair] c1{Pair(17i32)}
+  [Reference<Pair>] t0{location(c0)}
+  [Reference<Pair>] t1{location(c1)}
+
+  return(plus(score_ptrs(location(borrow_ref(r0)), location(borrow_ref(r1)), location(borrow_ref(r2))),
+              plus(forward(location(borrow_ref(s0)), location(borrow_ref(s1)), location(borrow_ref(s2))),
+                   forward_mixed(location(borrow_ref(t0)), location(borrow_ref(t1))))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_variadic_args_struct_pointer_imported_helper_ref.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_cpp_variadic_args_struct_pointer_imported_helper_ref_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 65);
+}
+
 TEST_CASE("C++ emitter materializes variadic pointer uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<Reference<uninitialized<i32>>>]
