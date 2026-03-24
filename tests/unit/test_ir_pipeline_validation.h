@@ -9763,6 +9763,43 @@ TEST_CASE("emitter builtin method resolution helper source delegation stays stab
             "bool extractCollectionElementTypeFromReturnType(") != std::string::npos);
 }
 
+TEST_CASE("native emitter internals io source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path nativeEmitterInternalsPath =
+      repoRoot / "src" / "native_emitter" / "NativeEmitterInternals.h";
+  const std::filesystem::path nativeEmitterInternalsArm64IoPath =
+      repoRoot / "src" / "native_emitter" / "NativeEmitterInternalsArm64Io.h";
+  REQUIRE(std::filesystem::exists(nativeEmitterInternalsPath));
+  REQUIRE(std::filesystem::exists(nativeEmitterInternalsArm64IoPath));
+
+  const std::string nativeEmitterInternalsSource = readText(nativeEmitterInternalsPath);
+  const std::string nativeEmitterInternalsArm64IoSource = readText(nativeEmitterInternalsArm64IoPath);
+
+  CHECK(nativeEmitterInternalsSource.find("#include \"NativeEmitterInternalsArm64Io.h\"") != std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("void emitPrintSigned(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint64_t fd);") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitPrintSigned(") == std::string::npos);
+  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitPrintUnsignedInternal(") == std::string::npos);
+
+  CHECK(nativeEmitterInternalsArm64IoSource.find("inline void Arm64Emitter::emitPrintSigned(") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsArm64IoSource.find("inline size_t Arm64Emitter::emitFileOpenDynamicPlaceholder(") !=
+        std::string::npos);
+  CHECK(nativeEmitterInternalsArm64IoSource.find("inline void Arm64Emitter::emitPrintUnsignedInternal(") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantics validator expr source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
