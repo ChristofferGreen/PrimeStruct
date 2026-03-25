@@ -43,7 +43,8 @@ build and layout solidify.
   outside the struct should use an explicit `self` parameter if they want method-call sugar.
 
 ## Build/test workflow
-- Prefer compiling the project and running tests in release mode via `./scripts/compile.sh --release`; use debug builds when deeper debugging is needed.
+- Prefer compiling the project and running tests in release mode via `./scripts/compile.sh --release`; use debug builds only when deeper debugging is needed.
+- Default validation gate: run `./scripts/compile.sh --release` first and keep routine test verification in `build-release/`. Do not switch to `build-debug/` just to rerun ordinary failures faster; only do that when you specifically need debugger-oriented investigation or debug-only instrumentation.
 - **Primary entry:** `./scripts/compile.sh --release` (Release build in `build-release`, runs tests).
 - **Debug entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).
 - **Clean debug build:** `./scripts/compile.sh --clean` (deletes `build-debug` before configuring).
@@ -58,6 +59,7 @@ build and layout solidify.
 - **Lines-of-code helper:** `./scripts/lines_of_code.sh` reports line totals for `src/` and `include/`.
 - **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`; use `build-debug/` when investigating failures in more detail.
 - **Direct test binary runs:** prefer executing `build-release/PrimeStruct_backend_tests` from `build-release/` so compile-run suites can resolve `./primec`; use the matching `PrimeStruct_misc_tests`, `PrimeStruct_semantics_tests`, `PrimeStruct_text_filter_tests`, or `PrimeStruct_parser_tests` binaries there for narrower doctest runs. Switch to the `build-debug/` binaries when deeper debugging is needed.
+- **Failure triage rule:** if the full release gate fails, diagnose with the smallest relevant release-mode rerun (single `ctest` case or one release test binary slice), fix the issue, then return to the full `./scripts/compile.sh --release` gate instead of camping on long serial debug sweeps.
 
 ## Generated artifacts
 - Debug builds go in `build-debug/`; release builds go in `build-release/`.
@@ -81,6 +83,7 @@ build and layout solidify.
 
 ## TODO slicing workflow
 - If any repository tests are failing at the start of a TODO implementation run, treat fixing those failures as the top priority before adding new behavior.
+- Treat `./scripts/compile.sh --release` as the health gate for TODO work. Only fall back to debug-mode test runs when release-mode evidence is insufficient and a debugger-level investigation is actually required.
 - If the highest-priority TODO is too large, split it into explicit sub-items in `docs/todo.md` before continuing implementation.
 - Each implementation run should complete one vertical slice that changes behavior/code, not only tests.
 - Do not ship repeated test-only slices on the same parent TODO; if tests reveal more work, add follow-up TODO sub-items and move to the next code-affecting slice.
@@ -139,7 +142,8 @@ build and layout solidify.
 
 ## Bug-fix workflow
 - Before fixing a bug, find a concrete way to reproduce it.
-- If the current `./scripts/compile.sh` or focused `ctest` run has failing targets, prioritize reducing those failures before starting new TODO implementation slices.
+- Reproduce and validate bugs in release mode first (`./scripts/compile.sh --release`, `build-release/ctest`, or the matching `build-release` test binary). Use debug-mode reruns only when the release path does not provide enough information to finish the fix.
+- If the current `./scripts/compile.sh --release` or focused release `ctest` run has failing targets, prioritize reducing those failures before starting new TODO implementation slices.
 - Do not claim a bug is fixed unless you can no longer reproduce it after the change.
 
 ## Git commit guidelines
