@@ -1098,6 +1098,9 @@ private:
   bool isArrayNamespacedVectorCountCompatibilityCall(
       const Expr &candidate,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  bool isArrayNamespacedVectorAccessCompatibilityCall(
+      const Expr &candidate,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
   bool isIndexedArgsPackMapReceiverTarget(
       const Expr &receiverExpr,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;

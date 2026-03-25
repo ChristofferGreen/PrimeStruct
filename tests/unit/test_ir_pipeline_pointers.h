@@ -569,6 +569,97 @@ main() {
   CHECK(result == 9);
 }
 
+TEST_CASE("ir returns reference handles without implicit dereference") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+borrow_ref([Reference<i32>] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [i32 mut] value{7i32}
+  return(dereference(borrow_ref(location(value))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  bool sawLoadIndirect = false;
+  bool sawReturnI64 = false;
+  for (const auto &function : module.functions) {
+    if (function.name != "/borrow_ref") {
+      continue;
+    }
+    for (const auto &inst : function.instructions) {
+      if (inst.op == primec::IrOpcode::LoadIndirect) {
+        sawLoadIndirect = true;
+      }
+      if (inst.op == primec::IrOpcode::ReturnI64) {
+        sawReturnI64 = true;
+      }
+    }
+  }
+  CHECK_FALSE(sawLoadIndirect);
+  CHECK(sawReturnI64);
+}
+
+TEST_CASE("ir materializes direct location arguments for scalar reference helpers") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+borrow_ref([Reference<i32>] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [i32 mut] value{11i32}
+  return(dereference(borrow_ref(location(value))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  bool sawLoadIndirect = false;
+  bool sawBorrowRefReturn = false;
+  for (const auto &function : module.functions) {
+    for (const auto &inst : function.instructions) {
+      if (inst.op == primec::IrOpcode::LoadIndirect) {
+        sawLoadIndirect = true;
+      }
+    }
+    if (function.name == "/borrow_ref") {
+      for (const auto &inst : function.instructions) {
+        if (inst.op == primec::IrOpcode::ReturnI64) {
+          sawBorrowRefReturn = true;
+        }
+      }
+    }
+  }
+  CHECK(sawLoadIndirect);
+  CHECK(sawBorrowRefReturn);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
+}
+
 TEST_CASE("ir lowers clamp") {
   const std::string source = R"(
 import /std/math/*

@@ -339,8 +339,17 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
         receiver.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(receiver.args.front().name);
       if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&
-          it->second.argsPackElementKind == LocalInfo::Kind::Value) {
-        if (!emitExpr(receiver, localsIn)) {
+          (it->second.argsPackElementKind == LocalInfo::Kind::Value ||
+           it->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+           it->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
+        Expr valueExpr = receiver;
+        if (it->second.argsPackElementKind != LocalInfo::Kind::Value) {
+          valueExpr.kind = Expr::Kind::Call;
+          valueExpr.name = "dereference";
+          valueExpr.args = {receiver};
+          valueExpr.argNames = {std::nullopt};
+        }
+        if (!emitExpr(valueExpr, localsIn)) {
           return FileErrorWhyCallEmitResult::Error;
         }
         const int32_t errorLocal = allocTempLocal();
