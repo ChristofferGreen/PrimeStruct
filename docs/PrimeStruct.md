@@ -687,8 +687,8 @@ for(
     an unrelated outer context. Unsupported wider payload kinds now reject through the same explicit IR-backed
     contract across `Result.ok(...)`, `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)`, and
     VM/native now also resolve simple value-carrying `Result.and_then(...)` lambda returns that end in an explicit
-    block-bodied `return(...)` instead of forcing those lambdas down to a single direct expression. The same IR
-    inference now
+    block-bodied `return(...)` or in a final `if(...)` expression whose `then(){...}` / `else(){...}` branches each
+    produce a `Result`, instead of forcing those lambdas down to a single direct expression. The same IR inference now
     recognizes direct string `try(Result.map(...))`, `try(Result.and_then(...))`, and `try(Result.map2(...))`
     expressions for downstream string consumers such as `count(...)` and `print_line(...)` without an intermediate
     binding, and the lowerer’s call-base inference helper now resolves those same direct combinators for `try(...)`

@@ -7565,6 +7565,41 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("native backend supports final-if Result.and_then lambdas on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] ok{Result.ok(2i32)}
+  [Result<i32, FileError>] chained{
+    Result.and_then(ok, []([i32] value) {
+      if(equal(value, 2i32),
+        then(){ return(Result.ok(multiply(value, 5i32))) },
+        else(){ return(Result.ok(0i32)) })
+    })
+  }
+  return(try(chained))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_result_and_then_final_if_ir_backed.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_and_then_final_if_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_and_then_final_if_ir_backed_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 10);
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("native backend compiles direct map Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

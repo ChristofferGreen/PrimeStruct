@@ -871,7 +871,9 @@ Draft constraints:
     downstream `try(...)` also preserve `File<Mode>` handles, the current single-slot int-backed stdlib error
     structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), `array<T>` / `vector<T>` handles whose
     element kinds already fit the current collection contract, and `map<K, V>` handles whose key/value kinds
-    already fit that same map contract. Current `File<Mode>` combinator payloads, stdlib error-struct combinator
+    already fit that same map contract. On IR-backed backends, value-carrying `Result.and_then(...)` lambdas may end
+    in an explicit `return(Result...)` or in a final `if(...)` expression whose `then(){...}` / `else(){...}`
+    branches each produce a `Result`. Current `File<Mode>` combinator payloads, stdlib error-struct combinator
     payloads, `Buffer<T>` payloads, and collection-handle combinator payload flows remain unsupported on IR-backed
     paths. Downstream `try(...)` preserves those direct handle/error-struct payloads, rebuilds single-slot struct
     payloads, and keeps multi-slot struct payloads on that same pointer-backed path on VM/native; other remaining

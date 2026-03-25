@@ -212,6 +212,19 @@ bool isInlineBodyBlockEnvelope(const Expr &candidate, const ResolveCallDefinitio
   return !resolveDefinitionCall || resolveDefinitionCall(candidate) == nullptr;
 }
 
+bool isInlineBodyValueEnvelope(const Expr &candidate, const ResolveCallDefinitionFn &resolveDefinitionCall) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+    return false;
+  }
+  if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+    return false;
+  }
+  if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+    return false;
+  }
+  return !resolveDefinitionCall || resolveDefinitionCall(candidate) == nullptr;
+}
+
 bool mergeControlFlowResultInfos(const ResultExprInfo &first,
                                  const ResultExprInfo &second,
                                  ResultExprInfo &out) {
@@ -795,7 +808,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   }
   if (isIfCall(expr) && expr.args.size() == 3) {
     auto resolveBranchResultInfo = [&](const Expr &branchExpr, ResultExprInfo &branchOut) {
-      if (isInlineBodyBlockEnvelope(branchExpr, resolveDefinitionCall)) {
+      if (isInlineBodyValueEnvelope(branchExpr, resolveDefinitionCall)) {
         return resolveBodyResultExprInfo(
             branchExpr.bodyArguments,
             localsIn,

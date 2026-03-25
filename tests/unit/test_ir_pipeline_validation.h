@@ -52352,6 +52352,117 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
+TEST_CASE("ir lowerer result helpers resolve final-if Result.and_then metadata") {
+  primec::ir_lowerer::LocalMap locals;
+
+  primec::ir_lowerer::LocalInfo sourceResult;
+  sourceResult.isResult = true;
+  sourceResult.resultHasValue = true;
+  sourceResult.resultValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  sourceResult.resultValueCollectionKind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  sourceResult.resultErrorType = "FileError";
+  locals.emplace("sourceResult", sourceResult);
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr sourceResultExpr;
+  sourceResultExpr.kind = primec::Expr::Kind::Name;
+  sourceResultExpr.name = "sourceResult";
+
+  primec::Expr valueParamExpr;
+  valueParamExpr.kind = primec::Expr::Kind::Name;
+  valueParamExpr.name = "value";
+
+  primec::Expr okThenExpr;
+  okThenExpr.kind = primec::Expr::Kind::Call;
+  okThenExpr.isMethodCall = true;
+  okThenExpr.name = "ok";
+  okThenExpr.args = {resultName, valueParamExpr};
+
+  primec::Expr thenReturnExpr;
+  thenReturnExpr.kind = primec::Expr::Kind::Call;
+  thenReturnExpr.name = "return";
+  thenReturnExpr.args = {okThenExpr};
+
+  primec::Expr elseLiteralExpr;
+  elseLiteralExpr.kind = primec::Expr::Kind::Literal;
+  elseLiteralExpr.literalValue = 0;
+
+  primec::Expr okElseExpr;
+  okElseExpr.kind = primec::Expr::Kind::Call;
+  okElseExpr.isMethodCall = true;
+  okElseExpr.name = "ok";
+  okElseExpr.args = {resultName, elseLiteralExpr};
+
+  primec::Expr elseReturnExpr;
+  elseReturnExpr.kind = primec::Expr::Kind::Call;
+  elseReturnExpr.name = "return";
+  elseReturnExpr.args = {okElseExpr};
+
+  primec::Expr thenBlockExpr;
+  thenBlockExpr.kind = primec::Expr::Kind::Call;
+  thenBlockExpr.name = "then";
+  thenBlockExpr.hasBodyArguments = true;
+  thenBlockExpr.bodyArguments.push_back(thenReturnExpr);
+
+  primec::Expr elseBlockExpr;
+  elseBlockExpr.kind = primec::Expr::Kind::Call;
+  elseBlockExpr.name = "else";
+  elseBlockExpr.hasBodyArguments = true;
+  elseBlockExpr.bodyArguments.push_back(elseReturnExpr);
+
+  primec::Expr condExpr;
+  condExpr.kind = primec::Expr::Kind::Literal;
+  condExpr.literalValue = 1;
+
+  primec::Expr ifExpr;
+  ifExpr.kind = primec::Expr::Kind::Call;
+  ifExpr.name = "if";
+  ifExpr.args = {condExpr, thenBlockExpr, elseBlockExpr};
+
+  primec::Expr andThenLambdaExpr;
+  andThenLambdaExpr.isLambda = true;
+  andThenLambdaExpr.args.push_back(valueParamExpr);
+  andThenLambdaExpr.bodyArguments.push_back(ifExpr);
+
+  primec::Expr andThenExpr;
+  andThenExpr.kind = primec::Expr::Kind::Call;
+  andThenExpr.isMethodCall = true;
+  andThenExpr.name = "and_then";
+  andThenExpr.args = {resultName, sourceResultExpr, andThenLambdaExpr};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+    if (expr.kind == primec::Expr::Kind::Name) {
+      auto localIt = localsIn.find(expr.name);
+      if (localIt != localsIn.end()) {
+        return localIt->second.valueKind;
+      }
+    }
+    if (expr.kind == primec::Expr::Kind::Literal) {
+      return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      andThenExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.errorType == "FileError");
+}
+
 TEST_CASE("ir lowerer result helpers resolve function-returned array Result payload metadata") {
   primec::Definition makeNumbersDef;
   makeNumbersDef.fullPath = "/make_numbers";
