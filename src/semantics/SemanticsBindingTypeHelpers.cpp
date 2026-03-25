@@ -79,6 +79,18 @@ std::string normalizeBindingTypeName(const std::string &name) {
       name == "std/gfx/experimental/Buffer" || name == "/std/gfx/experimental/Buffer") {
     return "Buffer";
   }
+  if (name.rfind("std/gfx/Buffer<", 0) == 0) {
+    return "Buffer" + name.substr(std::string("std/gfx/Buffer").size());
+  }
+  if (name.rfind("/std/gfx/Buffer<", 0) == 0) {
+    return "Buffer" + name.substr(std::string("/std/gfx/Buffer").size());
+  }
+  if (name.rfind("std/gfx/experimental/Buffer<", 0) == 0) {
+    return "Buffer" + name.substr(std::string("std/gfx/experimental/Buffer").size());
+  }
+  if (name.rfind("/std/gfx/experimental/Buffer<", 0) == 0) {
+    return "Buffer" + name.substr(std::string("/std/gfx/experimental/Buffer").size());
+  }
   if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
     return "map";
   }
