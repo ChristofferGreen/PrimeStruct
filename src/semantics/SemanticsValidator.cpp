@@ -698,7 +698,9 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
         })) {
       return false;
     }
-    if (!hasExplicitBindingTypeTransform(bindingExpr) && bindingExpr.args.size() == 1) {
+    const bool hasExplicitType = hasExplicitBindingTypeTransform(bindingExpr);
+    const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(bindingOut.typeName) == "auto";
+    if (bindingExpr.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
       BindingInfo inferred = bindingOut;
       if (withPreservedError([&]() {
             return inferBindingTypeFromInitializer(
@@ -1191,6 +1193,19 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       return binding.typeName;
     }
     return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto resolveDefinitionResultType = [&](const Definition &definition, ResultTypeInfo &resultOut) -> bool {
+    for (const auto &transform : definition.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      if (resolveResultTypeFromTypeName(transform.templateArgs.front(), resultOut)) {
+        return true;
+      }
+    }
+    BindingInfo inferredReturn;
+    return inferDefinitionReturnBinding(definition, inferredReturn) &&
+           resolveResultTypeFromTypeName(bindingTypeText(inferredReturn), resultOut);
   };
   auto resolveDirectResultOkType = [&](const Expr &candidate,
                                        const std::vector<ParameterInfo> &currentParams,
@@ -1723,13 +1738,8 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     const std::string resolvedMethodPath = resolveMethodResultPath();
     if (!resolvedMethodPath.empty()) {
       auto it = defMap_.find(resolvedMethodPath);
-      if (it != defMap_.end()) {
-        for (const auto &transform : it->second->transforms) {
-          if (transform.name != "return" || transform.templateArgs.size() != 1) {
-            continue;
-          }
-          return resolveResultTypeFromTypeName(transform.templateArgs.front(), out);
-        }
+      if (it != defMap_.end() && it->second != nullptr) {
+        return resolveDefinitionResultType(*it->second, out);
       }
     }
     if (expr.name == "tryAt" && !expr.args.empty()) {
@@ -1743,13 +1753,8 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
   if (!expr.isMethodCall) {
     const std::string resolved = resolveCalleePath(expr);
     auto it = defMap_.find(resolved);
-    if (it != defMap_.end()) {
-      for (const auto &transform : it->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        return resolveResultTypeFromTypeName(transform.templateArgs.front(), out);
-      }
+    if (it != defMap_.end() && it->second != nullptr) {
+      return resolveDefinitionResultType(*it->second, out);
     }
     if ((resolved == "/std/collections/map/tryAt" || resolved == "/map/tryAt" || isSimpleCallName(expr, "tryAt")) &&
         !expr.args.empty()) {

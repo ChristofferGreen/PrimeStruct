@@ -9,6 +9,12 @@ namespace primec::semantics {
 ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
                                                    const std::vector<ParameterInfo> &params,
                                                    const std::unordered_map<std::string, BindingInfo> &locals) {
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
   if (expr.isLambda) {
     return ReturnKind::Unknown;
   }
@@ -51,7 +57,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (isInferStructTypeName(paramBinding->typeName, expr.namespacePrefix)) {
         return ReturnKind::Array;
       }
-      return returnKindForTypeName(paramBinding->typeName);
+      return returnKindForTypeName(bindingTypeText(*paramBinding));
     }
     auto it = locals.find(expr.name);
     if (it == locals.end()) {
@@ -72,7 +78,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (isInferStructTypeName(it->second.typeName, expr.namespacePrefix)) {
       return ReturnKind::Array;
     }
-    return returnKindForTypeName(it->second.typeName);
+    return returnKindForTypeName(bindingTypeText(it->second));
   }
   if (expr.kind == Expr::Kind::Call) {
     if (expr.isFieldAccess) {

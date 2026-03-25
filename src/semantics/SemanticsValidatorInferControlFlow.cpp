@@ -56,29 +56,23 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
 
   if (isIfCall(expr) && expr.args.size() == 3) {
     handled = true;
-    auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
-      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-        return false;
-      }
-      if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
-        return false;
-      }
-      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-        return false;
-      }
-      return true;
-    };
     auto inferBlockEnvelopeValue = [&](const Expr &candidate,
                                        const std::unordered_map<std::string, BindingInfo> &localsIn,
                                        const Expr *&valueExprOut,
                                        std::unordered_map<std::string, BindingInfo> &localsOut) -> bool {
       valueExprOut = nullptr;
       localsOut = localsIn;
-      if (!isIfBlockEnvelope(candidate)) {
+      if (!isEnvelopeValueExpr(candidate, true)) {
         return false;
       }
       bool sawReturn = false;
       for (const auto &bodyExpr : candidate.bodyArguments) {
+        if (isSyntheticBlockValueBinding(bodyExpr)) {
+          if (!sawReturn) {
+            valueExprOut = &bodyExpr.args.front();
+          }
+          continue;
+        }
         if (bodyExpr.isBinding) {
           BindingInfo binding;
           std::optional<std::string> restrictType;
@@ -86,7 +80,9 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
                                 error_)) {
             return false;
           }
-          if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+          const bool hasExplicitType = hasExplicitBindingTypeTransform(bodyExpr);
+          const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(binding.typeName) == "auto";
+          if (bodyExpr.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
             (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding, &bodyExpr);
           }
           localsOut.emplace(bodyExpr.name, std::move(binding));

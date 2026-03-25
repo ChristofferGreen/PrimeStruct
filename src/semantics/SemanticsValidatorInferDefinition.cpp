@@ -8,6 +8,12 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     const std::vector<ParameterInfo> &defParams,
     const std::unordered_map<std::string, BindingInfo> &activeLocals,
     DefinitionReturnInferenceState &state) {
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
   auto normalizedBindingTypeText = [&](const BindingInfo &binding) {
     const std::string normalizedCollectionType = normalizeCollectionTypePath(binding.typeName);
     const std::string normalizedBase =
@@ -58,6 +64,22 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     hasExprBinding = inferBindingTypeFromInitializer(*valueExpr, defParams, activeLocals, exprBinding);
     error_.clear();
     error_ = previousError;
+    if (exprKind == ReturnKind::Unknown && hasExprBinding) {
+      const std::string normalizedTypeName = normalizeBindingTypeName(exprBinding.typeName);
+      if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
+           normalizedTypeName == "soa_vector" || isMapCollectionTypeName(normalizedTypeName)) &&
+          !exprBinding.typeTemplateArg.empty()) {
+        exprKind = ReturnKind::Array;
+      } else {
+        exprKind = returnKindForTypeName(bindingTypeText(exprBinding));
+      }
+      if (exprKind == ReturnKind::Array) {
+        exprStructPath = resolveStructTypePath(exprBinding.typeName, def.namespacePrefix, structNames_);
+      }
+      if (exprKind != ReturnKind::Unknown) {
+        error_.clear();
+      }
+    }
   }
   if (exprKind == ReturnKind::Unknown) {
     if (deferUnknownReturnInferenceErrors_) {
@@ -136,7 +158,9 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
       return false;
     }
-    if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+    const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
+    const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(info.typeName) == "auto";
+    if (stmt.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
       (void)inferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info, &stmt);
     }
     if (restrictType.has_value()) {

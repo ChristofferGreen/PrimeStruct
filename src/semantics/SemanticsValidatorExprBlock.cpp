@@ -21,6 +21,19 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
   for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
     const Expr &bodyExpr = expr.bodyArguments[i];
     const bool isLast = (i + 1 == expr.bodyArguments.size());
+    if (isSyntheticBlockValueBinding(bodyExpr)) {
+      if (!validateExpr(params, blockLocals, bodyExpr.args.front())) {
+        return false;
+      }
+      if (isLast && !sawReturn) {
+        ReturnKind kind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
+        if (kind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr.args.front())) {
+          error_ = "block expression requires a value";
+          return false;
+        }
+      }
+      continue;
+    }
     if (bodyExpr.isBinding) {
       if (isLast && !sawReturn) {
         error_ = "block expression must end with an expression";

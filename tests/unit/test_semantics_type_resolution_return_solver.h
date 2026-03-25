@@ -359,6 +359,8 @@ main() {
 
 TEST_CASE("graph type resolver answers result queries through shared return-binding inference") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<Result<array<i32>, ContainerError>>]
 valuesOkA() {
   return(Result.ok(array<i32>(1i32, 2i32)))
@@ -379,10 +381,14 @@ wrapStatus() {
   return(status)
 }
 
-[return<i32>]
+unexpectedWrapStatusError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+}
+
+[return<Result<int, ContainerError>> on_error<ContainerError, /unexpectedWrapStatusError>]
 main() {
   [auto] values{try(wrapStatus())}
-  return(count(values))
+  return(Result.ok(count(values)))
 }
 )";
   std::string error;
@@ -392,6 +398,9 @@ main() {
 
 TEST_CASE("graph type resolver answers map receiver queries through shared type-text helper") {
   const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
 [return<auto> effects(heap_alloc)]
 selectValues() {
   if(true,
@@ -399,10 +408,9 @@ selectValues() {
     else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
 }
 
-[return<Result<int, ContainerError>> effects(heap_alloc)]
+[return<i32> effects(heap_alloc)]
 main() {
-  [i32] total{plus(selectValues().count(), try(selectValues().tryAt("left"raw_utf8)))}
-  return(Result.ok(total))
+  return(plus(selectValues().count(), selectValues().at("left"raw_utf8)))
 }
 )";
   std::string error;
@@ -412,6 +420,9 @@ main() {
 
 TEST_CASE("graph type resolver infers map value return kinds through shared infer helper") {
   const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
 [return<auto> effects(heap_alloc)]
 selectValues() {
   if(true,
@@ -496,6 +507,8 @@ main() {
 
 TEST_CASE("graph type resolver shares borrowed indexed collection plumbing for soa_vector auto returns") {
   const std::string source = R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }

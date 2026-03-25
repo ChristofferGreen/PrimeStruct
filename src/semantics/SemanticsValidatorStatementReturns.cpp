@@ -269,42 +269,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
 }
 
 bool SemanticsValidator::statementAlwaysReturns(const Expr &stmt) {
-  auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
-    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-      return false;
-    }
-    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
-      return false;
-    }
-    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-      return false;
-    }
-    return true;
-  };
-  auto getEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> const Expr * {
-    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-      return nullptr;
-    }
-    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-      return nullptr;
-    }
-    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
-      return nullptr;
-    }
-    if (!allowAnyName && !isBuiltinBlockCall(candidate)) {
-      return nullptr;
-    }
-    const Expr *valueExpr = nullptr;
-    for (const auto &bodyExpr : candidate.bodyArguments) {
-      if (bodyExpr.isBinding) {
-        continue;
-      }
-      valueExpr = &bodyExpr;
-    }
-    return valueExpr;
-  };
   auto branchAlwaysReturns = [&](const Expr &branch) -> bool {
-    if (isIfBlockEnvelope(branch)) {
+    if (isEnvelopeValueExpr(branch, true)) {
       return blockAlwaysReturns(branch.bodyArguments) || getEnvelopeValueExpr(branch, true) != nullptr;
     }
     return statementAlwaysReturns(branch);

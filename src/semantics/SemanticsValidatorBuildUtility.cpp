@@ -9,6 +9,54 @@ bool SemanticsValidator::isBuiltinBlockCall(const Expr &expr) const {
   return defMap_.count(resolveCalleePath(expr)) == 0;
 }
 
+bool SemanticsValidator::isEnvelopeValueExpr(const Expr &expr, bool allowAnyName) const {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isMethodCall) {
+    return false;
+  }
+  if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
+    return false;
+  }
+  if (!expr.hasBodyArguments && expr.bodyArguments.empty()) {
+    return false;
+  }
+  return allowAnyName || isBuiltinBlockCall(expr);
+}
+
+bool SemanticsValidator::isSyntheticBlockValueBinding(const Expr &expr) const {
+  if (expr.kind != Expr::Kind::Call || !expr.isBinding || expr.isMethodCall || expr.name != "block") {
+    return false;
+  }
+  if (expr.args.size() != 1 || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
+    return false;
+  }
+  if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    return false;
+  }
+  return expr.transforms.empty();
+}
+
+const Expr *SemanticsValidator::getEnvelopeValueExpr(const Expr &expr, bool allowAnyName) const {
+  if (!isEnvelopeValueExpr(expr, allowAnyName)) {
+    return nullptr;
+  }
+
+  const Expr *valueExpr = nullptr;
+  for (const auto &bodyExpr : expr.bodyArguments) {
+    if (bodyExpr.isBinding) {
+      if (isSyntheticBlockValueBinding(bodyExpr)) {
+        valueExpr = &bodyExpr.args.front();
+      }
+      continue;
+    }
+    if (isReturnCall(bodyExpr) && bodyExpr.args.size() == 1) {
+      valueExpr = &bodyExpr.args.front();
+      break;
+    }
+    valueExpr = &bodyExpr;
+  }
+  return valueExpr;
+}
+
 bool SemanticsValidator::isParam(const std::vector<ParameterInfo> &params, const std::string &name) const {
   for (const auto &param : params) {
     if (param.name == name) {

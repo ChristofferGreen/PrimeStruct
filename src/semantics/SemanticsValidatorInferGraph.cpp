@@ -254,7 +254,9 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         })) {
       return false;
     }
-    if (!hasExplicitBindingTypeTransform(bindingExpr) && bindingExpr.args.size() == 1) {
+    const bool hasExplicitType = hasExplicitBindingTypeTransform(bindingExpr);
+    const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(bindingOut.typeName) == "auto";
+    if (bindingExpr.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
       BindingInfo inferred = bindingOut;
       if (withPreservedError([&]() {
             return inferBindingTypeFromInitializer(

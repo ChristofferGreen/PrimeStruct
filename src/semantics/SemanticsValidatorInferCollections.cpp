@@ -1102,6 +1102,11 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
       std::optional<std::string> restrictType;
       std::string parseError;
       if (parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, parseError)) {
+        const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
+        const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(binding.typeName) == "auto";
+        if (stmt.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
+          (void)inferBindingTypeFromInitializer(stmt.args.front(), defParams, defLocals, binding, &stmt);
+        }
         defLocals[stmt.name] = binding;
       } else if (stmt.args.size() == 1 &&
                  inferBindingTypeFromInitializer(stmt.args.front(), defParams, defLocals, binding, &stmt)) {
@@ -1158,31 +1163,6 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     resolvedTypeTextOut = bindingTypeText(localIt->second);
     return !resolvedTypeTextOut.empty();
   };
-  auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {
-    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-      return false;
-    }
-    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
-      return false;
-    }
-    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-      return false;
-    }
-    return allowAnyName || isBuiltinBlockCall(candidate);
-  };
-  auto getEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> const Expr * {
-    if (!isEnvelopeValueExpr(candidate, allowAnyName)) {
-      return nullptr;
-    }
-    const Expr *valueExpr = nullptr;
-    for (const auto &bodyExpr : candidate.bodyArguments) {
-      if (bodyExpr.isBinding) {
-        continue;
-      }
-      valueExpr = &bodyExpr;
-    }
-    return valueExpr;
-  };
   BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters;
   const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
       makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters);
@@ -1223,8 +1203,8 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     if (isIfCall(candidate) && candidate.args.size() == 3) {
       const Expr &thenArg = candidate.args[1];
       const Expr &elseArg = candidate.args[2];
-      const Expr *thenValue = getEnvelopeValueExpr(thenArg, true);
-      const Expr *elseValue = getEnvelopeValueExpr(elseArg, true);
+      const Expr *thenValue = this->getEnvelopeValueExpr(thenArg, true);
+      const Expr *elseValue = this->getEnvelopeValueExpr(elseArg, true);
       std::string thenTypeText;
       std::string elseTypeText;
       if (!inferExprTypeText(thenValue ? *thenValue : thenArg, thenTypeText) ||
@@ -1237,10 +1217,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       currentTypeTextOut = thenTypeText;
       return true;
     }
-    if (const Expr *valueExpr = getEnvelopeValueExpr(candidate, false)) {
-      if (isReturnCall(*valueExpr) && !valueExpr->args.empty()) {
-        return inferExprTypeText(valueExpr->args.front(), currentTypeTextOut);
-      }
+    if (const Expr *valueExpr = this->getEnvelopeValueExpr(candidate, false)) {
       return inferExprTypeText(*valueExpr, currentTypeTextOut);
     }
     if (candidate.kind != Expr::Kind::Call) {

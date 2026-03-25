@@ -350,6 +350,9 @@ private:
   bool isEntryArgsAccess(const Expr &expr) const;
   bool isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr) const;
   bool isBuiltinBlockCall(const Expr &expr) const;
+  bool isEnvelopeValueExpr(const Expr &expr, bool allowAnyName) const;
+  bool isSyntheticBlockValueBinding(const Expr &expr) const;
+  const Expr *getEnvelopeValueExpr(const Expr &expr, bool allowAnyName) const;
   struct ValidationContext;
   bool makeDefinitionValidationContext(const Definition &def, ValidationContext &out);
   ValidationContext makeExecutionValidationContext(const Execution &exec) const;

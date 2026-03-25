@@ -5,30 +5,11 @@
 namespace primec::semantics {
 
 bool SemanticsValidator::isIfBlockEnvelope(const Expr &expr) const {
-  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isMethodCall) {
-    return false;
-  }
-  if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
-    return false;
-  }
-  if (!expr.hasBodyArguments && expr.bodyArguments.empty()) {
-    return false;
-  }
-  return true;
+  return isEnvelopeValueExpr(expr, true);
 }
 
 const Expr *SemanticsValidator::getIfBlockEnvelopeValueExpr(const Expr &expr) const {
-  if (!isIfBlockEnvelope(expr)) {
-    return nullptr;
-  }
-  const Expr *valueExpr = nullptr;
-  for (const auto &bodyExpr : expr.bodyArguments) {
-    if (bodyExpr.isBinding) {
-      continue;
-    }
-    valueExpr = &bodyExpr;
-  }
-  return valueExpr;
+  return getEnvelopeValueExpr(expr, true);
 }
 
 bool SemanticsValidator::isStructConstructorValueExpr(const Expr &expr) {
@@ -105,6 +86,15 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
     const Expr *valueExpr = nullptr;
     bool sawReturn = false;
     for (const auto &bodyExpr : branch.bodyArguments) {
+      if (isSyntheticBlockValueBinding(bodyExpr)) {
+        if (!validateExpr(params, branchLocals, bodyExpr.args.front())) {
+          return false;
+        }
+        if (!sawReturn) {
+          valueExpr = &bodyExpr.args.front();
+        }
+        continue;
+      }
       if (bodyExpr.isBinding) {
         if (isParam(params, bodyExpr.name) || branchLocals.count(bodyExpr.name) > 0) {
           error_ = "duplicate binding name: " + bodyExpr.name;

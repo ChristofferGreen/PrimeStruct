@@ -307,31 +307,6 @@ std::string SemanticsValidator::inferStructReturnPath(
   const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;
   const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;
   const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;
-  auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {
-    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-      return false;
-    }
-    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
-      return false;
-    }
-    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-      return false;
-    }
-    return allowAnyName || isBuiltinBlockCall(candidate);
-  };
-  auto getEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> const Expr * {
-    if (!isEnvelopeValueExpr(candidate, allowAnyName)) {
-      return nullptr;
-    }
-    const Expr *valueExpr = nullptr;
-    for (const auto &bodyExpr : candidate.bodyArguments) {
-      if (bodyExpr.isBinding) {
-        continue;
-      }
-      valueExpr = &bodyExpr;
-    }
-    return valueExpr;
-  };
   auto collectionHelperPathCandidates = [&](const std::string &path) {
     std::vector<std::string> candidates;
     auto appendUnique = [&](const std::string &candidate) {
@@ -743,8 +718,8 @@ std::string SemanticsValidator::inferStructReturnPath(
     if (isIfCall(expr) && expr.args.size() == 3) {
       const Expr &thenArg = expr.args[1];
       const Expr &elseArg = expr.args[2];
-      const Expr *thenValue = getEnvelopeValueExpr(thenArg, true);
-      const Expr *elseValue = getEnvelopeValueExpr(elseArg, true);
+      const Expr *thenValue = this->getEnvelopeValueExpr(thenArg, true);
+      const Expr *elseValue = this->getEnvelopeValueExpr(elseArg, true);
       const Expr &thenExpr = thenValue ? *thenValue : thenArg;
       const Expr &elseExpr = elseValue ? *elseValue : elseArg;
       std::string thenPath = inferStructReturnPath(thenExpr, params, locals);
@@ -755,10 +730,7 @@ std::string SemanticsValidator::inferStructReturnPath(
       return (thenPath == elsePath) ? thenPath : "";
     }
 
-    if (const Expr *valueExpr = getEnvelopeValueExpr(expr, false)) {
-      if (isReturnCall(*valueExpr) && !valueExpr->args.empty()) {
-        return inferStructReturnPath(valueExpr->args.front(), params, locals);
-      }
+    if (const Expr *valueExpr = this->getEnvelopeValueExpr(expr, false)) {
       return inferStructReturnPath(*valueExpr, params, locals);
     }
 

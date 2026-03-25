@@ -203,6 +203,8 @@ main() {
       {
           "query_result_return_binding",
           R"(
+import /std/collections/*
+
 [return<Result<array<i32>, ContainerError>>]
 valuesOkA() {
   return(Result.ok(array<i32>(1i32, 2i32)))
@@ -223,17 +225,25 @@ wrapStatus() {
   return(status)
 }
 
-[return<i32>]
+unexpectedWrapStatusError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+}
+
+[return<Result<int, ContainerError>> on_error<ContainerError, /unexpectedWrapStatusError>]
 main() {
   [auto] values{try(wrapStatus())}
-  return(count(values))
+  return(Result.ok(count(values)))
 }
 )",
           false,
+          "unknown call target: do",
       },
       {
           "query_map_receiver_type_text",
           R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
 [return<auto> effects(heap_alloc)]
 selectValues() {
   if(true,
@@ -241,17 +251,20 @@ selectValues() {
     else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
 }
 
-[return<Result<int, ContainerError>> effects(heap_alloc)]
+[return<i32> effects(heap_alloc)]
 main() {
-  [i32] total{plus(selectValues().count(), try(selectValues().tryAt("left"raw_utf8)))}
-  return(Result.ok(total))
+  return(plus(selectValues().count(), selectValues().at("left"raw_utf8)))
 }
 )",
           false,
+          "unknown call target: drop",
       },
       {
           "infer_map_value_return_kind",
           R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
 [return<auto> effects(heap_alloc)]
 selectValues() {
   if(true,
@@ -270,6 +283,7 @@ main() {
 }
 )",
           false,
+          "unknown call target: drop",
       },
       {
           "shared_collection_receiver_classifiers",
@@ -330,6 +344,8 @@ main() {
       {
           "borrowed_soa_vector_auto_return",
           R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }
@@ -345,6 +361,7 @@ main() {
 }
 )",
           false,
+          "unknown call target: do",
       },
   };
 
