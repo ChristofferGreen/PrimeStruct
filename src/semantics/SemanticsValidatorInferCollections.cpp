@@ -1239,14 +1239,32 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     }
     std::string builtinAccessName;
     if (getBuiltinArrayAccessName(candidate, builtinAccessName) && candidate.args.size() == 2) {
+      std::string normalizedAccessName = candidate.name;
+      if (!normalizedAccessName.empty() && normalizedAccessName.front() == '/') {
+        normalizedAccessName.erase(normalizedAccessName.begin());
+      }
+      const size_t accessTemplateSuffix = normalizedAccessName.find("__t");
+      if (accessTemplateSuffix != std::string::npos) {
+        normalizedAccessName.erase(accessTemplateSuffix);
+      }
+      const bool isExplicitAccessAlias =
+          normalizedAccessName.find('/') != std::string::npos;
       const Expr &receiver =
           candidate.isMethodCall ? candidate.args.front()
                                  : (candidate.args.empty() ? candidate : candidate.args.front());
       std::string elemType;
+      std::string keyType;
+      std::string valueType;
       if (builtinCollectionDispatchResolvers.resolveVectorTarget(receiver, elemType) ||
           builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget(receiver, elemType) ||
           builtinCollectionDispatchResolvers.resolveArrayTarget(receiver, elemType)) {
         currentTypeTextOut = normalizeBindingTypeName(elemType);
+        return !currentTypeTextOut.empty();
+      }
+      if (!isExplicitAccessAlias &&
+          (builtinCollectionDispatchResolvers.resolveMapTarget(receiver, keyType, valueType) ||
+           builtinCollectionDispatchResolvers.resolveExperimentalMapTarget(receiver, keyType, valueType))) {
+        currentTypeTextOut = normalizeBindingTypeName(valueType);
         return !currentTypeTextOut.empty();
       }
       if (builtinCollectionDispatchResolvers.resolveStringTarget(receiver)) {

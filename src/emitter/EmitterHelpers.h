@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -68,6 +69,11 @@ bool isBuiltinMathConstantName(const std::string &name, bool allowBare);
 bool getBuiltinPointerOperator(const Expr &expr, char &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
+bool inferCollectionElementTypeNameFromExpr(
+    const Expr &expr,
+    const std::unordered_map<std::string, BindingInfo> &localTypes,
+    const std::function<bool(const Expr &, std::string &)> &resolveCallElementTypeName,
+    std::string &typeOut);
 std::string resolveExprPath(const Expr &expr);
 std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, std::string> &nameMap);

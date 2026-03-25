@@ -45,6 +45,13 @@ bool hasSoaVectorTypeTransform(const Expr &expr) {
   return false;
 }
 
+void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut);
+void applyArgsPackElementStructMetadata(const Expr &param,
+                                        const std::string &typeText,
+                                        const ApplyStructBindingInfoFn &applyStructArrayInfo,
+                                        const ApplyStructBindingInfoFn &applyStructValueInfo,
+                                        LocalInfo &infoOut);
+
 bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut) {
   typeTextOut.clear();
   for (const auto &transform : expr.transforms) {
@@ -143,9 +150,11 @@ bool inferFieldAccessLocalInfo(const Expr &expr,
                                                                             : infoOut.argsPackElementKind;
     infoOut.isArgsPack = false;
     infoOut.argsPackElementKind = LocalInfo::Kind::Value;
-    return infoOut.kind != LocalInfo::Kind::Value || infoOut.valueKind != LocalInfo::ValueKind::Unknown ||
-           !infoOut.structTypeName.empty() || infoOut.isFileHandle || infoOut.isFileError ||
-           infoOut.isResult;
+    if (infoOut.kind != LocalInfo::Kind::Value || infoOut.valueKind != LocalInfo::ValueKind::Unknown ||
+        !infoOut.structTypeName.empty() || infoOut.isFileHandle || infoOut.isFileError ||
+        infoOut.isResult) {
+      return true;
+    }
   }
 
   if (!resolveStructFieldSlot) {
@@ -1264,6 +1273,7 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const std::optional<ReturnStatementInlineContext> &inlineContext,
+    bool declaredReturnIsReferenceHandle,
     bool definitionReturnsVoid,
     bool &sawReturn,
     const EmitExprForBindingFn &emitExpr,
@@ -1310,7 +1320,31 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     }
 
     const Expr &valueExpr = stmt.args.front();
-    if (!emitExpr(valueExpr, localsIn)) {
+    auto emitOpaqueReturnHandle = [&](const Expr &exprIn) -> bool {
+      if (context.returnsArray || exprIn.kind != Expr::Kind::Name) {
+        return false;
+      }
+      auto it = localsIn.find(exprIn.name);
+      if (it == localsIn.end()) {
+        return false;
+      }
+      const LocalInfo &info = it->second;
+      const bool isOpaqueHandle =
+          info.kind == LocalInfo::Kind::Pointer ||
+          (declaredReturnIsReferenceHandle && info.kind == LocalInfo::Kind::Reference) ||
+          info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
+          info.kind == LocalInfo::Kind::Map || info.kind == LocalInfo::Kind::Buffer ||
+          !info.structTypeName.empty() || info.referenceToArray || info.pointerToArray ||
+          info.referenceToVector || info.pointerToVector || info.referenceToBuffer || info.pointerToBuffer ||
+          info.referenceToMap || info.pointerToMap || info.isFileHandle || info.isResult;
+      if (!isOpaqueHandle) {
+        return false;
+      }
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(info.index)});
+      return true;
+    };
+
+    if (!emitOpaqueReturnHandle(valueExpr) && !emitExpr(valueExpr, localsIn)) {
       return ReturnStatementEmitResult::Error;
     }
 
@@ -1383,7 +1417,31 @@ ReturnStatementEmitResult tryEmitReturnStatement(
   }
 
   const Expr &valueExpr = stmt.args.front();
-  if (!emitExpr(valueExpr, localsIn)) {
+  auto emitOpaqueReturnHandle = [&](const Expr &exprIn) -> bool {
+    if (exprIn.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(exprIn.name);
+    if (it == localsIn.end()) {
+      return false;
+    }
+    const LocalInfo &info = it->second;
+    const bool isOpaqueHandle =
+        info.kind == LocalInfo::Kind::Pointer ||
+        (declaredReturnIsReferenceHandle && info.kind == LocalInfo::Kind::Reference) ||
+        info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
+        info.kind == LocalInfo::Kind::Map || info.kind == LocalInfo::Kind::Buffer || !info.structTypeName.empty() ||
+        info.referenceToArray || info.pointerToArray || info.referenceToVector || info.pointerToVector ||
+        info.referenceToBuffer || info.pointerToBuffer || info.referenceToMap || info.pointerToMap ||
+        info.isFileHandle || info.isResult;
+    if (!isOpaqueHandle) {
+      return false;
+    }
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(info.index)});
+    return true;
+  };
+
+  if (!emitOpaqueReturnHandle(valueExpr) && !emitExpr(valueExpr, localsIn)) {
     return ReturnStatementEmitResult::Error;
   }
   if (emitFileScopeCleanupAll) {
