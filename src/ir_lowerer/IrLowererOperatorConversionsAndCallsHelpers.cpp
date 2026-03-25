@@ -2,9 +2,11 @@
 
 #include "IrLowererCallHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <algorithm>
 #include <cstring>
@@ -625,35 +627,83 @@ bool emitConversionsAndCallsOperatorExpr(
 	            if (target.kind == Expr::Kind::Call && isBorrowedArgsPackAccessTarget(target)) {
 	              return emitExpr(target, localsIn);
 	            }
-	            if (target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1) {
-	              const Expr &receiver = target.args.front();
-	              const std::string receiverStruct = inferStructExprPath(receiver, localsIn);
-	              if (receiverStruct.empty()) {
-	                error = "field access requires struct receiver";
+		            if (target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1) {
+		              const Expr &receiver = target.args.front();
+		              auto inferArgsPackReceiverStruct = [&](const Expr &candidate) {
+		                std::string accessName;
+		                const Expr *accessReceiver = nullptr;
+		                if (getBuiltinArrayAccessName(candidate, accessName) &&
+		                    candidate.args.size() == 2 &&
+		                    (accessName == "at" || accessName == "at_unsafe")) {
+		                  accessReceiver = &candidate.args.front();
+		                } else if (candidate.kind == Expr::Kind::Call &&
+		                           candidate.isMethodCall &&
+		                           candidate.args.size() == 2 &&
+		                           (candidate.name == "at" || candidate.name == "at_unsafe")) {
+		                  accessReceiver = &candidate.args.front();
+		                }
+		                if (accessReceiver == nullptr || accessReceiver->kind != Expr::Kind::Name) {
+		                  return std::string{};
+		                }
+		                auto it = localsIn.find(accessReceiver->name);
+		                if (it == localsIn.end() || !it->second.isArgsPack) {
+		                  return std::string{};
+		                }
+		                return it->second.structTypeName;
+		              };
+		              std::string receiverStruct = inferStructExprPath(receiver, localsIn);
+		              if (receiverStruct.empty()) {
+		                receiverStruct = inferArgsPackReceiverStruct(receiver);
+		              }
+		              if (receiverStruct.empty()) {
+		                error = "field access requires struct receiver";
 	                return false;
-	              }
-	              LayoutFieldBinding fieldBinding;
-	              if (resolveStructFieldBinding &&
-	                  resolveStructFieldBinding(receiverStruct, target.name, fieldBinding) &&
-	                  normalizeBindingTypeName(fieldBinding.typeName) == "Reference") {
-	                return emitExpr(target, localsIn);
-	              }
-	              StructSlotFieldInfo fieldInfo;
-	              if (!resolveStructFieldSlot(receiverStruct, target.name, fieldInfo)) {
-	                error = "unknown struct field: " + target.name;
-	                return false;
-	              }
-	              if (!emitExpr(receiver, localsIn)) {
-	                return false;
-	              }
-	              const int32_t ptrLocal = allocTempLocal();
-	              instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-	              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-	              const uint64_t offsetBytes = static_cast<uint64_t>(fieldInfo.slotOffset) * IrSlotBytes;
-	              if (offsetBytes != 0) {
-	                instructions.push_back({IrOpcode::PushI64, offsetBytes});
-	                instructions.push_back({IrOpcode::AddI64, 0});
-	              }
+		              }
+		              LayoutFieldBinding fieldBinding;
+		              if (resolveStructFieldBinding &&
+		                  resolveStructFieldBinding(receiverStruct, target.name, fieldBinding) &&
+		                  normalizeCollectionBindingTypeName(fieldBinding.typeName) == "Reference") {
+		                int32_t slotOffset = 0;
+		                int32_t slotCount = 0;
+		                std::string fieldStructPath;
+		                if (!resolveStructFieldInfo ||
+		                    !resolveStructFieldInfo(receiverStruct, target.name, slotOffset, slotCount, fieldStructPath)) {
+		                  error = "unknown struct field: " + target.name;
+		                  return false;
+		                }
+		                if (!emitExpr(receiver, localsIn)) {
+		                  return false;
+		                }
+		                const int32_t ptrLocal = allocTempLocal();
+		                instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+		                instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+		                const uint64_t offsetBytes = static_cast<uint64_t>(slotOffset) * IrSlotBytes;
+		                if (offsetBytes != 0) {
+		                  instructions.push_back({IrOpcode::PushI64, offsetBytes});
+		                  instructions.push_back({IrOpcode::AddI64, 0});
+		                }
+		                instructions.push_back({IrOpcode::LoadIndirect, 0});
+		                return true;
+		              }
+		              int32_t slotOffset = 0;
+		              int32_t slotCount = 0;
+		              std::string fieldStructPath;
+		              if (!resolveStructFieldInfo ||
+		                  !resolveStructFieldInfo(receiverStruct, target.name, slotOffset, slotCount, fieldStructPath)) {
+		                error = "unknown struct field: " + target.name;
+		                return false;
+		              }
+		              if (!emitExpr(receiver, localsIn)) {
+		                return false;
+		              }
+		              const int32_t ptrLocal = allocTempLocal();
+		              instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+		              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+		              const uint64_t offsetBytes = static_cast<uint64_t>(slotOffset) * IrSlotBytes;
+		              if (offsetBytes != 0) {
+		                instructions.push_back({IrOpcode::PushI64, offsetBytes});
+		                instructions.push_back({IrOpcode::AddI64, 0});
+		              }
 	              return true;
 	            }
 	            if (target.kind == Expr::Kind::Call && !target.isMethodCall && resolveDefinitionCall != nullptr) {

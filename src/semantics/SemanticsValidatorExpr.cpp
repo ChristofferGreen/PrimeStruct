@@ -214,14 +214,43 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "return not allowed in expression context";
       return false;
     }
-    ExprDispatchBootstrap dispatchBootstrap;
-    prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
-    const bool shouldBuiltinValidateBareMapCountCall = true;
-    const bool shouldBuiltinValidateBareMapContainsCall = true;
-    const bool shouldBuiltinValidateBareMapTryAtCall = true;
-    const bool shouldBuiltinValidateBareMapAccessCall = true;
-    std::string earlyPointerBuiltin;
-    if (getBuiltinPointerName(expr, earlyPointerBuiltin)) {
+	    ExprDispatchBootstrap dispatchBootstrap;
+	    prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
+	    const bool shouldBuiltinValidateBareMapCountCall = true;
+	    const bool shouldBuiltinValidateBareMapContainsCall = true;
+	    const bool shouldBuiltinValidateBareMapTryAtCall = true;
+	    const bool shouldBuiltinValidateBareMapAccessCall = true;
+	    auto isAcceptedLocationTarget = [&](const Expr &target, const auto &self) -> bool {
+	      if (target.kind == Expr::Kind::Name) {
+	        return !isEntryArgsName(target.name) &&
+	               (locals.count(target.name) != 0 || isParam(params, target.name));
+	      }
+	      if (target.kind != Expr::Kind::Call) {
+	        return false;
+	      }
+	      if (dispatchBootstrap.isDeclaredPointerLikeCall != nullptr &&
+	          dispatchBootstrap.isDeclaredPointerLikeCall(target)) {
+	        return true;
+	      }
+	      if (target.isFieldAccess && target.args.size() == 1) {
+	        return self(target.args.front(), self);
+	      }
+	      std::string indexedElemType;
+	      const auto &dispatchResolvers = dispatchBootstrap.dispatchResolvers;
+	      const bool resolvesWrappedIndexedArgsPackElement =
+	          ((dispatchResolvers.resolveIndexedArgsPackElementType != nullptr &&
+	            dispatchResolvers.resolveIndexedArgsPackElementType(target, indexedElemType)) ||
+	           (dispatchResolvers.resolveWrappedIndexedArgsPackElementType != nullptr &&
+	            dispatchResolvers.resolveWrappedIndexedArgsPackElementType(target, indexedElemType)) ||
+	           (dispatchResolvers.resolveDereferencedIndexedArgsPackElementType != nullptr &&
+	            dispatchResolvers.resolveDereferencedIndexedArgsPackElementType(target, indexedElemType)));
+	      if (!resolvesWrappedIndexedArgsPackElement) {
+	        return false;
+	      }
+	      return unwrapReferencePointerTypeText(indexedElemType) != indexedElemType;
+	    };
+	    std::string earlyPointerBuiltin;
+	    if (getBuiltinPointerName(expr, earlyPointerBuiltin)) {
       if (hasNamedArguments(expr.argNames)) {
         error_ = "named arguments not supported for builtin calls";
         return false;
@@ -238,14 +267,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "argument count mismatch for builtin " + earlyPointerBuiltin;
         return false;
       }
-      if (earlyPointerBuiltin == "location") {
-        const Expr &target = expr.args.front();
-        if (target.kind != Expr::Kind::Name || isEntryArgsName(target.name) ||
-            (locals.count(target.name) == 0 && !isParam(params, target.name))) {
-          error_ = "location requires a local binding";
-          return false;
-        }
-      }
+	      if (earlyPointerBuiltin == "location") {
+	        const Expr &target = expr.args.front();
+	        if (!isAcceptedLocationTarget(target, isAcceptedLocationTarget)) {
+	          error_ = "location requires a local binding";
+	          return false;
+	        }
+	      }
       if (earlyPointerBuiltin == "dereference" &&
           !isPointerLikeExpr(expr.args.front(), params, locals) &&
           !dispatchBootstrap.isDeclaredPointerLikeCall(expr.args.front())) {

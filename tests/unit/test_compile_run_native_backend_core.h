@@ -1810,11 +1810,11 @@ TEST_CASE("native materializes variadic struct pointer packs from borrowed pack 
 [struct]
 Pair() {
   [i32] value{0i32}
+}
 
-  [return<int>]
-  score() {
-    return(plus(self.value, 1i32))
-  }
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
 }
 
 [return<int>]
@@ -1947,11 +1947,11 @@ TEST_CASE("native materializes variadic struct reference packs from borrowed pac
 [struct]
 Pair() {
   [i32] value{0i32}
+}
 
-  [return<int>]
-  score() {
-    return(plus(self.value, 1i32))
-  }
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
 }
 
 [return<int>]
@@ -2089,11 +2089,11 @@ TEST_CASE("native materializes variadic struct pointer packs from borrowed pack 
 [struct]
 Pair() {
   [i32] value{0i32}
+}
 
-  [return<int>]
-  score() {
-    return(plus(self.value, 1i32))
-  }
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
 }
 
 [struct]
@@ -2166,7 +2166,8 @@ TEST_CASE("native materializes variadic scalar pointer packs from borrowed pack 
   const std::string source = R"(
 [struct]
 Holder() {
-  [Reference<i32>] value_ref
+  [mut i32] value_storage{0i32}
+  [Reference<i32>] value_ref{location(value_storage)}
 }
 
 [return<int>]
@@ -2189,7 +2190,8 @@ forward([args<Reference<Holder>>] values) {
 [return<int>]
 forward_mixed([args<Reference<Holder>>] values) {
   [i32] extra_value{1i32}
-  [Holder] extra{Holder(location(extra_value))}
+  [Holder] extra
+  assign(extra.value_storage, extra_value)
   return(score_ptrs(location(values.at(0i32).value_ref),
                     location(extra.value_ref),
                     location(at(values, 1i32).value_ref)))
@@ -2200,9 +2202,12 @@ main() {
   [i32] a0{1i32}
   [i32] a1{2i32}
   [i32] a2{3i32}
-  [Holder] h0{Holder(location(a0))}
-  [Holder] h1{Holder(location(a1))}
-  [Holder] h2{Holder(location(a2))}
+  [Holder] h0
+  [Holder] h1
+  [Holder] h2
+  assign(h0.value_storage, a0)
+  assign(h1.value_storage, a1)
+  assign(h2.value_storage, a2)
   [Reference<Holder>] r0{location(h0)}
   [Reference<Holder>] r1{location(h1)}
   [Reference<Holder>] r2{location(h2)}
@@ -2210,17 +2215,22 @@ main() {
   [i32] b0{4i32}
   [i32] b1{5i32}
   [i32] b2{6i32}
-  [Holder] i0{Holder(location(b0))}
-  [Holder] i1{Holder(location(b1))}
-  [Holder] i2{Holder(location(b2))}
+  [Holder] i0
+  [Holder] i1
+  [Holder] i2
+  assign(i0.value_storage, b0)
+  assign(i1.value_storage, b1)
+  assign(i2.value_storage, b2)
   [Reference<Holder>] s0{location(i0)}
   [Reference<Holder>] s1{location(i1)}
   [Reference<Holder>] s2{location(i2)}
 
   [i32] c0{7i32}
   [i32] c1{8i32}
-  [Holder] j0{Holder(location(c0))}
-  [Holder] j1{Holder(location(c1))}
+  [Holder] j0
+  [Holder] j1
+  assign(j0.value_storage, c0)
+  assign(j1.value_storage, c1)
   [Reference<Holder>] t0{location(j0)}
   [Reference<Holder>] t1{location(j1)}
 
@@ -2246,16 +2256,17 @@ TEST_CASE("native materializes variadic struct pointer packs from borrowed pack 
 [struct]
 Pair() {
   [i32] value{0i32}
+}
 
-  [return<int>]
-  score() {
-    return(plus(self.value, 1i32))
-  }
+[return<int>]
+/Pair/score([Pair] self) {
+  return(plus(self.value, 1i32))
 }
 
 [struct]
 Holder() {
-  [Reference<Pair>] pair_ref
+  [mut Pair] pair_storage{Pair()}
+  [Reference<Pair>] pair_ref{location(pair_storage)}
 }
 
 [return<int>]
@@ -2278,7 +2289,8 @@ forward([args<Reference<Holder>>] values) {
 [return<int>]
 forward_mixed([args<Reference<Holder>>] values) {
   [Pair] extra_value{Pair(5i32)}
-  [Holder] extra{Holder(location(extra_value))}
+  [Holder] extra
+  assign(extra.pair_storage, extra_value)
   return(score_ptrs(location(values.at(0i32).pair_ref),
                     location(extra.pair_ref),
                     location(at(values, 1i32).pair_ref)))
@@ -2289,9 +2301,12 @@ main() {
   [Pair] a0{Pair(7i32)}
   [Pair] a1{Pair(8i32)}
   [Pair] a2{Pair(9i32)}
-  [Holder] h0{Holder(location(a0))}
-  [Holder] h1{Holder(location(a1))}
-  [Holder] h2{Holder(location(a2))}
+  [Holder] h0
+  [Holder] h1
+  [Holder] h2
+  assign(h0.pair_storage, a0)
+  assign(h1.pair_storage, a1)
+  assign(h2.pair_storage, a2)
   [Reference<Holder>] r0{location(h0)}
   [Reference<Holder>] r1{location(h1)}
   [Reference<Holder>] r2{location(h2)}
@@ -2299,17 +2314,22 @@ main() {
   [Pair] b0{Pair(11i32)}
   [Pair] b1{Pair(12i32)}
   [Pair] b2{Pair(13i32)}
-  [Holder] i0{Holder(location(b0))}
-  [Holder] i1{Holder(location(b1))}
-  [Holder] i2{Holder(location(b2))}
+  [Holder] i0
+  [Holder] i1
+  [Holder] i2
+  assign(i0.pair_storage, b0)
+  assign(i1.pair_storage, b1)
+  assign(i2.pair_storage, b2)
   [Reference<Holder>] s0{location(i0)}
   [Reference<Holder>] s1{location(i1)}
   [Reference<Holder>] s2{location(i2)}
 
   [Pair] c0{Pair(15i32)}
   [Pair] c1{Pair(17i32)}
-  [Holder] j0{Holder(location(c0))}
-  [Holder] j1{Holder(location(c1))}
+  [Holder] j0
+  [Holder] j1
+  assign(j0.pair_storage, c0)
+  assign(j1.pair_storage, c1)
   [Reference<Holder>] t0{location(j0)}
   [Reference<Holder>] t1{location(j1)}
 
