@@ -66,19 +66,6 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
     error_ = "unknown call target: /array/count";
     return false;
   }
-  if (!expr.isMethodCall &&
-      isArrayNamespacedVectorAccessCompatibilityCall(
-          expr, dispatchBootstrap.dispatchResolvers)) {
-    std::string compatibilityPath = resolveCalleePath(expr);
-    if (compatibilityPath.empty()) {
-      compatibilityPath = expr.name;
-      if (!compatibilityPath.empty() && compatibilityPath.front() != '/') {
-        compatibilityPath.insert(compatibilityPath.begin(), '/');
-      }
-    }
-    error_ = "unknown call target: " + compatibilityPath;
-    return false;
-  }
   if (!expr.isMethodCall) {
     const std::string removedVectorCompatibilityPath =
         getDirectVectorHelperCompatibilityPath(expr);

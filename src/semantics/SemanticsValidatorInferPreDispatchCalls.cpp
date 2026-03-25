@@ -462,21 +462,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
   }
   if (expr.isMethodCall) {
     std::string methodResolved;
-    bool resolvedMethodTarget = false;
-    bool isBuiltinMethod = false;
-    if (!expr.args.empty() &&
-        resolveMethodTarget(params,
-                            locals,
-                            expr.namespacePrefix,
-                            expr.args.front(),
-                            expr.name,
-                            methodResolved,
-                            isBuiltinMethod)) {
-      resolvedMethodTarget = true;
-    } else if (resolveMethodCallPath(expr.name, methodResolved)) {
-      resolvedMethodTarget = true;
-    }
-    if (resolvedMethodTarget) {
+    if (resolveMethodCallPath(expr.name, methodResolved)) {
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       std::string logicalMethodResolved = methodResolved;
       std::string canonicalMethodResolved;

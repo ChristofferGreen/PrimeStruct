@@ -517,20 +517,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
             resolvedOut = resolvedReceiverType + "/" + normalizedMethodName;
             return true;
           }
-          const std::string normalizedReceiverType =
-              normalizeBindingTypeName(receiverTypeText);
-          if (isPrimitiveBindingTypeName(normalizedReceiverType)) {
-            resolvedOut = "/" + normalizedReceiverType + "/" + normalizedMethodName;
-            return true;
-          }
         }
       }
-    }
-    std::string bufferElemType;
-    if (resolveBufferTarget != nullptr && resolveBufferTarget(receiver, bufferElemType) &&
-        !bufferElemType.empty()) {
-      resolvedOut = preferredBufferMethodTargetForCall(normalizedMethodName);
-      return true;
     }
   }
   if (receiver.kind == Expr::Kind::Call) {

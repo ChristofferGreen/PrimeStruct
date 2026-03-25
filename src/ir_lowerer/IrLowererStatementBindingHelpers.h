@@ -172,7 +172,6 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const std::optional<ReturnStatementInlineContext> &inlineContext,
-    bool declaredReturnIsReferenceHandle,
     bool definitionReturnsVoid,
     bool &sawReturn,
     const EmitExprForBindingFn &emitExpr,

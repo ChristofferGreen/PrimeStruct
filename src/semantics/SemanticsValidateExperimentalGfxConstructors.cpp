@@ -184,56 +184,6 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     }
     return "";
   };
-  auto isBufferTypeText = [&](const std::string &typeText) {
-    std::string base;
-    std::string nestedArg;
-    return splitTemplateTypeName(normalizeBindingTypeName(typeText), base, nestedArg) &&
-           normalizeBindingTypeName(base) == "Buffer" &&
-           !nestedArg.empty();
-  };
-  auto isWrappedBufferTypeText = [&](const std::string &typeText) {
-    std::string base;
-    std::string nestedArg;
-    if (!splitTemplateTypeName(normalizeBindingTypeName(typeText), base, nestedArg) ||
-        (normalizeBindingTypeName(base) != "Reference" &&
-         normalizeBindingTypeName(base) != "Pointer") ||
-        nestedArg.empty()) {
-      return false;
-    }
-    return isBufferTypeText(nestedArg);
-  };
-  auto bindingTypeText = [&](const BindingInfo &binding) {
-    return binding.typeTemplateArg.empty()
-               ? binding.typeName
-               : binding.typeName + "<" + binding.typeTemplateArg + ">";
-  };
-  auto resolveIndexedArgsPackElementTypeText =
-      [&](const Expr &expr, const LocalBindings &localsIn, std::string &elemTypeOut) -> bool {
-    std::string accessName;
-    auto isExplicitArrayAccessAlias = [&](const Expr &candidate) {
-      if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
-        return false;
-      }
-      std::string name = candidate.name;
-      if (!name.empty() && name.front() == '/') {
-        name.erase(0, 1);
-      }
-      return name == "array/at" || name == "array/at_unsafe";
-    };
-    if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.args.size() != 2 ||
-        (!getBuiltinArrayAccessName(expr, accessName) && !isExplicitArrayAccessAlias(expr))) {
-      return false;
-    }
-    const Expr *accessReceiver = expr.isMethodCall
-                                     ? &expr.args.front()
-                                     : &expr.args.front();
-    if (accessReceiver == nullptr || accessReceiver->kind != Expr::Kind::Name) {
-      return false;
-    }
-    auto it = localsIn.find(accessReceiver->name);
-    return it != localsIn.end() &&
-           getArgsPackElementType(it->second.binding, elemTypeOut);
-  };
   auto isKnownBufferReceiver = [&](const Expr &expr, const LocalBindings &locals) -> bool {
     if (expr.kind == Expr::Kind::Name) {
       auto it = locals.find(expr.name);
@@ -244,27 +194,6 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
     if (expr.kind == Expr::Kind::Call && !expr.isMethodCall && !expr.isBinding &&
         (isSimpleCallName(expr, "buffer") || isSimpleCallName(expr, "upload"))) {
       return true;
-    }
-    if (expr.kind == Expr::Kind::Call && !expr.isBinding) {
-      std::string indexedElemType;
-      if (resolveIndexedArgsPackElementTypeText(expr, locals, indexedElemType) &&
-          isBufferTypeText(indexedElemType)) {
-        return true;
-      }
-      if (isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
-        const Expr &target = expr.args.front();
-        if (target.kind == Expr::Kind::Name) {
-          auto it = locals.find(target.name);
-          if (it != locals.end() &&
-              isWrappedBufferTypeText(bindingTypeText(it->second.binding))) {
-            return true;
-          }
-        }
-        if (resolveIndexedArgsPackElementTypeText(target, locals, indexedElemType) &&
-            isWrappedBufferTypeText(indexedElemType)) {
-          return true;
-        }
-      }
     }
     return false;
   };

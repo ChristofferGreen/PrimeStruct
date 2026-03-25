@@ -193,36 +193,6 @@ bool SemanticsValidator::isArrayNamespacedVectorCountCompatibilityCall(
   return false;
 }
 
-bool SemanticsValidator::isArrayNamespacedVectorAccessCompatibilityCall(
-    const Expr &candidate,
-    const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
-  if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
-    return false;
-  }
-  std::string normalized = candidate.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  const bool spellsArrayAccess =
-      normalized == "array/at" || normalized == "array/at_unsafe";
-  const std::string resolvedPath = resolveCalleePath(candidate);
-  const bool resolvesArrayAccess =
-      resolvedPath == "/array/at" || resolvedPath == "/array/at_unsafe";
-  if (!spellsArrayAccess && !resolvesArrayAccess) {
-    return false;
-  }
-  if (dispatchResolvers.resolveVectorTarget == nullptr) {
-    return false;
-  }
-  for (const Expr &arg : candidate.args) {
-    std::string elemType;
-    if (dispatchResolvers.resolveVectorTarget(arg, elemType)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 bool SemanticsValidator::isIndexedArgsPackMapReceiverTarget(
     const Expr &receiverExpr,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {

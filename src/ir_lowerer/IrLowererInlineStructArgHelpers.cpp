@@ -11,28 +11,9 @@ bool isVectorStructPath(const std::string &structPath) {
          structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
-void materializeInlineStructFieldLocal(const StructSlotFieldInfo &field,
-                                       int32_t baseLocal,
-                                       int32_t &nextLocal,
-                                       LocalInfo &fieldInfo,
-                                       const EmitInlineStructInstructionFn &emitInstruction) {
-  if (!field.structPath.empty()) {
-    if (fieldInfo.structTypeName.empty()) {
-      fieldInfo.structTypeName = field.structPath;
-    }
-    const int32_t fieldPtrLocal = nextLocal++;
-    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal + field.slotOffset));
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fieldPtrLocal));
-    fieldInfo.index = fieldPtrLocal;
-    return;
-  }
-  fieldInfo.index = baseLocal + field.slotOffset;
-}
-
 } // namespace
 
 bool emitInlineStructDefinitionArguments(const std::string &calleePath,
-                                         const std::vector<Expr> &params,
                                          const std::vector<const Expr *> &orderedArgs,
                                          const LocalMap &callerLocals,
                                          bool requireValue,
@@ -41,12 +22,10 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          const InferInlineStructExprKindFn &inferExprKind,
                                          const InferInlineStructExprPathFn &inferStructExprPath,
                                          const EmitInlineStructExprFn &emitExpr,
-                                         const InferInlineStructFieldLocalInfoFn &inferFieldLocalInfo,
                                          const EmitInlineStructCopySlotsFn &emitStructCopySlots,
                                          const AllocInlineStructTempLocalFn &allocTempLocal,
                                          const EmitInlineStructInstructionFn &emitInstruction,
-                                         std::string &error,
-                                         std::optional<int32_t> destBaseLocal) {
+                                         std::string &error) {
   StructSlotLayoutInfo layout;
   if (!resolveStructSlotLayout(calleePath, layout)) {
     return false;
@@ -55,33 +34,23 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     error = "argument count mismatch";
     return false;
   }
-  if (params.size() != layout.fields.size()) {
-    error = "internal error: struct field parameter mismatch";
-    return false;
-  }
-  const int32_t baseLocal = destBaseLocal.value_or(nextLocal);
-  if (!destBaseLocal.has_value()) {
-    nextLocal += layout.totalSlots;
-  }
+  const int32_t baseLocal = nextLocal;
   if (requireValue) {
+    nextLocal += layout.totalSlots;
     emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1)));
     emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal));
   }
 
-  LocalMap structLocals = callerLocals;
   for (size_t i = 0; i < layout.fields.size(); ++i) {
     const StructSlotFieldInfo &field = layout.fields[i];
     const Expr *arg = orderedArgs[i];
-    const Expr &param = params[i];
     if (!arg) {
       error = "argument count mismatch";
       return false;
     }
-    const bool usesDefaultInitializer = !param.args.empty() && arg == &param.args.front();
-    const LocalMap &argLocals = usesDefaultInitializer ? structLocals : callerLocals;
 
     if (field.structPath.empty()) {
-      LocalInfo::ValueKind argKind = inferExprKind(*arg, argLocals);
+      LocalInfo::ValueKind argKind = inferExprKind(*arg, callerLocals);
       if (argKind == LocalInfo::ValueKind::Unknown && field.valueKind != LocalInfo::ValueKind::Unknown) {
         argKind = field.valueKind;
       }
@@ -93,42 +62,38 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
         error = "struct field type mismatch";
         return false;
       }
-      if (!emitExpr(*arg, argLocals)) {
+      if (!emitExpr(*arg, callerLocals)) {
         return false;
       }
-      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + field.slotOffset));
-      LocalInfo fieldInfo;
-      if (!inferFieldLocalInfo(param, structLocals, fieldInfo, error)) {
-        return false;
+      if (requireValue) {
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + field.slotOffset));
+      } else {
+        emitInstruction(IrOpcode::Pop, 0);
       }
-      materializeInlineStructFieldLocal(field, baseLocal, nextLocal, fieldInfo, emitInstruction);
-      structLocals[param.name] = std::move(fieldInfo);
       continue;
     }
 
-    std::string argStruct = inferStructExprPath(*arg, argLocals);
+    std::string argStruct = inferStructExprPath(*arg, callerLocals);
     if (argStruct.empty() ||
         (argStruct != field.structPath && !(isVectorStructPath(argStruct) && isVectorStructPath(field.structPath)))) {
       error = "struct field type mismatch";
       return false;
     }
-    if (!emitExpr(*arg, argLocals)) {
+    if (!emitExpr(*arg, callerLocals)) {
       return false;
     }
-    const int32_t srcPtrLocal = allocTempLocal();
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
-    if (!emitStructCopySlots(baseLocal + field.slotOffset, srcPtrLocal, field.slotCount)) {
-      return false;
+    if (requireValue) {
+      const int32_t srcPtrLocal = allocTempLocal();
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
+      if (!emitStructCopySlots(baseLocal + field.slotOffset, srcPtrLocal, field.slotCount)) {
+        return false;
+      }
+      if (arg->kind == Expr::Kind::Call) {
+        emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, field.structPath);
+      }
+    } else {
+      emitInstruction(IrOpcode::Pop, 0);
     }
-    if (arg->kind == Expr::Kind::Call) {
-      emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, field.structPath);
-    }
-    LocalInfo fieldInfo;
-    if (!inferFieldLocalInfo(param, structLocals, fieldInfo, error)) {
-      return false;
-    }
-    materializeInlineStructFieldLocal(field, baseLocal, nextLocal, fieldInfo, emitInstruction);
-    structLocals[param.name] = std::move(fieldInfo);
   }
 
   if (requireValue) {

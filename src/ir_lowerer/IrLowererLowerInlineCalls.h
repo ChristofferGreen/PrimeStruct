@@ -41,7 +41,6 @@
     if (structDef) {
       if (!ir_lowerer::emitInlineStructDefinitionArguments(
               callee.fullPath,
-              callParams,
               orderedArgs,
               callerLocals,
               requireValue,
@@ -57,36 +56,6 @@
               },
               [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
                 return emitExpr(candidateExpr, candidateLocals);
-              },
-              [&](const Expr &fieldParam,
-                  const LocalMap &fieldLocals,
-                  LocalInfo &infoOut,
-                  std::string &errorOut) {
-                return ir_lowerer::inferCallParameterLocalInfo(fieldParam,
-                                                               fieldLocals,
-                                                               isBindingMutable,
-                                                               hasExplicitBindingTypeTransform,
-                                                               bindingKind,
-                                                               bindingValueKind,
-                                                               inferExprKind,
-                                                               isFileErrorBinding,
-                                                               setReferenceArrayInfo,
-                                                               applyStructArrayInfo,
-                                                               applyStructValueInfo,
-                                                               isStringBinding,
-                                                               infoOut,
-                                                               errorOut,
-                                                               [&](const Expr &callExpr,
-                                                                   const LocalMap &callLocals) {
-                                                                 return resolveMethodCallDefinition(callExpr, callLocals);
-                                                               },
-                                                               [&](const Expr &callExpr) {
-                                                                 return resolveDefinitionCall(callExpr);
-                                                               },
-                                                               [&](const std::string &definitionPath,
-                                                                   ReturnInfo &returnInfo) {
-                                                                 return getReturnInfo(definitionPath, returnInfo);
-                                                               });
               },
               [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
                 return emitStructCopySlots(destBaseLocal, srcPtrLocal, slotCount);
