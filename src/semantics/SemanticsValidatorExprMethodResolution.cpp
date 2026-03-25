@@ -1689,12 +1689,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             if (elemBase == "vector" || elemBase == "array" || elemBase == "soa_vector") {
               return setCollectionMethodTarget("/" + elemBase + "/" + normalizedMethodName);
             }
-            if (elemBase == "Buffer" &&
-                (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
-                 normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
-                 normalizedMethodName == "load" || normalizedMethodName == "store")) {
-              return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
-            }
             if (isMapCollectionTypeName(elemBase)) {
               if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
                 return true;
@@ -1731,79 +1725,24 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           resolvedOut = "/i32/" + normalizedMethodName;
           return true;
         }
-        if (resolveMapValueType(accessReceiver, accessValueType)) {
-          std::string normalizedAccessName = receiver.name;
-          if (!normalizedAccessName.empty() &&
-              normalizedAccessName.front() == '/') {
-            normalizedAccessName.erase(normalizedAccessName.begin());
+        if (resolveMapValueType(accessReceiver, accessValueType) &&
+            resolveCalleePath(receiver).rfind("/map/", 0) == 0) {
+          const std::string normalizedValueType = normalizeBindingTypeName(accessValueType);
+          std::string normalizedValueBaseType = normalizedValueType;
+          if (!normalizedValueBaseType.empty() && normalizedValueBaseType.front() == '/') {
+            normalizedValueBaseType.erase(normalizedValueBaseType.begin());
           }
-          const size_t accessTemplateSuffix = normalizedAccessName.find("__t");
-          if (accessTemplateSuffix != std::string::npos) {
-            normalizedAccessName.erase(accessTemplateSuffix);
+          if (isPrimitiveBindingTypeName(normalizedValueBaseType)) {
+            resolvedOut = "/" + normalizedValueBaseType + "/" + normalizedMethodName;
+            return true;
           }
-          const bool isExplicitAccessAlias =
-              normalizedAccessName.find('/') != std::string::npos;
-          const std::string preferredAccessPath =
-              preferredMapMethodTarget(receiver, accessHelperName);
-          auto defIt = defMap_.find(preferredAccessPath);
-          if (defIt != defMap_.end() && defIt->second != nullptr) {
-            BindingInfo inferredReturn;
-            if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-              const std::string inferredReturnTypeText =
-                  inferredReturn.typeTemplateArg.empty()
-                      ? inferredReturn.typeName
-                      : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
-              const std::string normalizedReturnType =
-                  normalizeBindingTypeName(inferredReturnTypeText);
-              std::string normalizedReturnBaseType = normalizedReturnType;
-              if (!normalizedReturnBaseType.empty() &&
-                  normalizedReturnBaseType.front() == '/') {
-                normalizedReturnBaseType.erase(normalizedReturnBaseType.begin());
-              }
-              if (isPrimitiveBindingTypeName(normalizedReturnBaseType)) {
-                resolvedOut = "/" + normalizedReturnBaseType + "/" +
-                              normalizedMethodName;
-                return true;
-              }
-              std::string resolvedReturnType = resolveStructTypePath(
-                  normalizedReturnType, defIt->second->namespacePrefix);
-              if (resolvedReturnType.empty()) {
-                resolvedReturnType =
-                    resolveTypePath(normalizedReturnType,
-                                    defIt->second->namespacePrefix);
-              }
-              if (!resolvedReturnType.empty()) {
-                resolvedOut = resolvedReturnType + "/" + normalizedMethodName;
-                return true;
-              }
-            }
+          std::string resolvedValueType = resolveStructTypePath(normalizedValueType, receiver.namespacePrefix);
+          if (resolvedValueType.empty()) {
+            resolvedValueType = resolveTypePath(normalizedValueType, receiver.namespacePrefix);
           }
-
-          if (!isExplicitAccessAlias ||
-              ((defIt != defMap_.end() && defIt->second != nullptr) ||
-               hasImportedDefinitionPath(preferredAccessPath))) {
-            const std::string normalizedValueType =
-                normalizeBindingTypeName(accessValueType);
-            std::string normalizedValueBaseType = normalizedValueType;
-            if (!normalizedValueBaseType.empty() &&
-                normalizedValueBaseType.front() == '/') {
-              normalizedValueBaseType.erase(normalizedValueBaseType.begin());
-            }
-            if (isPrimitiveBindingTypeName(normalizedValueBaseType)) {
-              resolvedOut = "/" + normalizedValueBaseType + "/" +
-                            normalizedMethodName;
-              return true;
-            }
-            std::string resolvedValueType =
-                resolveStructTypePath(normalizedValueType, receiver.namespacePrefix);
-            if (resolvedValueType.empty()) {
-              resolvedValueType =
-                  resolveTypePath(normalizedValueType, receiver.namespacePrefix);
-            }
-            if (!resolvedValueType.empty()) {
-              resolvedOut = resolvedValueType + "/" + normalizedMethodName;
-              return true;
-            }
+          if (!resolvedValueType.empty()) {
+            resolvedOut = resolvedValueType + "/" + normalizedMethodName;
+            return true;
           }
         }
       }
