@@ -51,6 +51,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                              std::string &resolvedOut,
                                              bool &isBuiltinOut) {
   isBuiltinOut = false;
+  auto hasDefinitionFamilyPath = [&](std::string_view path) {
+    if (defMap_.count(std::string(path)) > 0) {
+      return true;
+    }
+    const std::string templatedPrefix = std::string(path) + "<";
+    const std::string specializedPrefix = std::string(path) + "__t";
+    for (const auto &def : program_.definitions) {
+      if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
+          def.fullPath.rfind(specializedPrefix, 0) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
   auto explicitRemovedCollectionMethodPath = [&](const std::string &rawMethodName) -> std::string {
     std::string candidate = rawMethodName;
     if (!candidate.empty() && candidate.front() == '/') {
@@ -152,54 +166,129 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
+  auto exprKindName = [](Expr::Kind kind) -> const char * {
+    switch (kind) {
+    case Expr::Kind::Literal:
+      return "Literal";
+    case Expr::Kind::BoolLiteral:
+      return "BoolLiteral";
+    case Expr::Kind::FloatLiteral:
+      return "FloatLiteral";
+    case Expr::Kind::StringLiteral:
+      return "StringLiteral";
+    case Expr::Kind::Call:
+      return "Call";
+    case Expr::Kind::Name:
+      return "Name";
+    }
+    return "Unknown";
+  };
+  const bool traceFileErrorResult =
+      normalizedMethodName == "result" &&
+      (receiver.name == "FileError" ||
+       receiver.name.find("FileError") != std::string::npos ||
+       receiver.namespacePrefix.find("FileError") != std::string::npos ||
+       callNamespacePrefix.find("FileError") != std::string::npos);
+  auto stampFileErrorResultFailure = [&](std::string_view site,
+                                         std::string_view typeName = {},
+                                         std::string_view resolvedType = {}) {
+    if (!traceFileErrorResult || !error_.empty()) {
+      return;
+    }
+    error_ = "resolveMethodTarget " + std::string(site) +
+             " receiver.kind=" + exprKindName(receiver.kind) +
+             " receiver.name=" + receiver.name +
+             " receiver.namespace=" + receiver.namespacePrefix +
+             " call.namespace=" + callNamespacePrefix +
+             " typeName=" + std::string(typeName) +
+             " resolvedType=" + std::string(resolvedType);
+  };
   auto preferredFileErrorHelperTarget = [&](std::string_view helperName) -> std::string {
     if (helperName == "why") {
-      if (defMap_.count("/std/file/FileError/why") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/why")) {
         return "/std/file/FileError/why";
       }
-      if (defMap_.count("/FileError/why") > 0) {
+      if (hasDefinitionFamilyPath("/FileError/why")) {
         return "/FileError/why";
       }
       return "/file_error/why";
     }
     if (helperName == "is_eof") {
-      if (defMap_.count("/std/file/FileError/is_eof") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/is_eof")) {
         return "/std/file/FileError/is_eof";
       }
-      if (defMap_.count("/FileError/is_eof") > 0) {
+      if (hasDefinitionFamilyPath("/FileError/is_eof")) {
         return "/FileError/is_eof";
       }
-      if (defMap_.count("/std/file/fileErrorIsEof") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/fileErrorIsEof")) {
         return "/std/file/fileErrorIsEof";
       }
       return "";
     }
     if (helperName == "eof") {
-      if (defMap_.count("/std/file/FileError/eof") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/eof")) {
         return "/std/file/FileError/eof";
       }
-      if (defMap_.count("/FileError/eof") > 0) {
+      if (hasDefinitionFamilyPath("/FileError/eof")) {
         return "/FileError/eof";
       }
-      if (defMap_.count("/std/file/fileReadEof") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/fileReadEof")) {
         return "/std/file/fileReadEof";
       }
       return "";
     }
     if (helperName == "status") {
-      if (defMap_.count("/std/file/FileError/status") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/status")) {
         return "/std/file/FileError/status";
       }
       return "";
     }
     if (helperName == "result") {
-      if (defMap_.count("/std/file/FileError/result") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/result")) {
         return "/std/file/FileError/result";
       }
       return "";
     }
     return "";
   };
+  if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "eof" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
+    isBuiltinOut = resolvedOut == "/file_error/why";
+    if (resolvedOut.empty() && error_.empty()) {
+      const std::string overload1 = "/std/file/FileError/result__ov1";
+      std::string programMatch = "none";
+      for (const auto &def : program_.definitions) {
+        if (def.fullPath.find("FileError/result") != std::string::npos) {
+          programMatch = def.fullPath;
+          break;
+        }
+      }
+      std::string paramsMatch = "none";
+      for (const auto &[path, paramList] : paramsByDef_) {
+        (void)paramList;
+        if (path.find("FileError/result") != std::string::npos) {
+          paramsMatch = path;
+          break;
+        }
+      }
+      error_ = "preferredFileErrorHelperTarget empty for " + normalizedMethodName +
+               " receiver=" + receiver.name +
+               " has:/std/file/FileError/result=" +
+               (hasDefinitionFamilyPath("/std/file/FileError/result") ? "yes" : "no") +
+               " def:/std/file/FileError/result__ov1=" +
+               (defMap_.count(overload1) > 0 ? "yes" : "no") +
+               " params:/std/file/FileError/result__ov1=" +
+               (paramsByDef_.count(overload1) > 0 ? "yes" : "no") +
+               " programMatch=" + programMatch +
+               " paramsMatch=" + paramsMatch +
+               " has:/std/file/FileError/status=" +
+               (hasDefinitionFamilyPath("/std/file/FileError/status") ? "yes" : "no");
+    }
+    return !resolvedOut.empty();
+  }
 
   auto isStaticBinding = [&](const Expr &bindingExpr) -> bool {
     for (const auto &transform : bindingExpr.transforms) {
@@ -365,7 +454,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (currentValidationContext_.definitionPath.rfind(stdlibPath, 0) == 0) {
       return builtinPath;
     }
-    if (defMap_.count(stdlibPath) > 0) {
+    if (hasDefinitionFamilyPath(stdlibPath)) {
       return stdlibPath;
     }
     return builtinPath;
@@ -1999,6 +2088,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       (normalizedTypeName == "string" || normalizedTypeName == "array" ||
        isMapCollectionTypeName(normalizedTypeName))) {
     if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
+      stampFileErrorResultFailure("std-vector-helper-incompatible", typeName);
       error_ = "unknown method: " + explicitVectorHelperPath;
       return false;
     }
@@ -2011,6 +2101,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       (normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
       isMapCollectionTypeName(normalizedTypeName)) {
     if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
+      stampFileErrorResultFailure("vector-helper-incompatible", typeName);
       error_ = "unknown method: " + explicitVectorHelperPath;
       return false;
     }
@@ -2051,12 +2142,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (typeName.empty()) {
     if (receiver.kind == Expr::Kind::Call && !validateExpr(params, locals, receiver)) {
+      stampFileErrorResultFailure("validate-receiver-call", typeName);
       return false;
     }
+    stampFileErrorResultFailure("unknown-target-empty-type", typeName);
     error_ = "unknown method target for " + normalizedMethodName;
     return false;
   }
   if (typeName == "Pointer" || typeName == "Reference") {
+    stampFileErrorResultFailure("pointer-like-type", typeName);
     error_ = "unknown method target for " + normalizedMethodName;
     return false;
   }
@@ -2067,6 +2161,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   std::string resolvedType = resolveStructTypePath(typeName, receiver.namespacePrefix);
   if (resolvedType.empty()) {
     resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+  }
+  if (traceFileErrorResult && receiver.kind == Expr::Kind::Name &&
+      receiver.name == "FileError" && resolvedType.empty()) {
+    error_ = "resolveMethodTarget FileError-result-fallthrough receiver.kind=" +
+             std::string(exprKindName(receiver.kind)) +
+             " receiver.name=" + receiver.name +
+             " receiver.namespace=" + receiver.namespacePrefix +
+             " call.namespace=" + callNamespacePrefix +
+             " typeName=" + typeName;
+    return false;
   }
   if ((normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
        normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
@@ -2112,6 +2216,32 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     std::string inferredTypeText;
     return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
            returnsMapCollectionType(inferredTypeText);
+  };
+  auto isFileBinding = [&](const BindingInfo &binding) {
+    const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+    if (normalizedType == "File") {
+      return true;
+    }
+    if ((normalizedType == "Reference" || normalizedType == "Pointer") &&
+        !binding.typeTemplateArg.empty()) {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(binding.typeTemplateArg, base, argText)) {
+        return false;
+      }
+      return normalizeBindingTypeName(base) == "File";
+    }
+    return false;
+  };
+  auto isFileReceiverExpr = [&](const Expr &target) {
+    if (target.kind != Expr::Kind::Name) {
+      return false;
+    }
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      return isFileBinding(*paramBinding);
+    }
+    auto it = locals.find(target.name);
+    return it != locals.end() && isFileBinding(it->second);
   };
 
   auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {
@@ -2220,6 +2350,13 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   }
   if (expr.args.empty()) {
     error_ = "method call missing receiver";
+    return false;
+  }
+  if (expr.args.size() > 10 &&
+      (expr.name == "write" || expr.name == "write_line") &&
+      isFileReceiverExpr(expr.args.front())) {
+    error_ =
+        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support";
     return false;
   }
   usedMethodTarget = true;
@@ -2397,6 +2534,16 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       !hasDeclaredDefinitionPath(resolved) &&
       !keepBuiltinIndexedArgsPackMapMethod) {
     isBuiltinMethod = false;
+  }
+  auto isStdlibFileWriteFacadeResolvedPath = [&](const std::string &path) {
+    return path == "/File/write" || path == "/File/write_line" ||
+           path == "/std/file/File/write" || path == "/std/file/File/write_line";
+  };
+  if (!isBuiltinMethod && isStdlibFileWriteFacadeResolvedPath(resolved) &&
+      expr.args.size() > 10) {
+    error_ =
+        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support";
+    return false;
   }
   std::string builtinVectorReceiverCollection;
   if (isBuiltinMethod && resolved == "/vector/count" &&

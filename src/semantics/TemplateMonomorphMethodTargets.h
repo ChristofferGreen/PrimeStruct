@@ -41,6 +41,11 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return candidate;
   };
+  auto isFileMethodName = [](std::string_view methodName) {
+    return methodName == "write" || methodName == "write_line" || methodName == "write_byte" ||
+           methodName == "read_byte" || methodName == "write_bytes" || methodName == "flush" ||
+           methodName == "close";
+  };
   std::function<std::string(std::string)> qualifyImportedCollectionTypeText =
       [&](std::string typeText) -> std::string {
     typeText = normalizeBindingTypeName(typeText);
@@ -77,7 +82,56 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return unwrapCollectionReceiverEnvelope(qualifyImportedCollectionTypeText(typeText));
   };
+  auto selectStaticHelperOverloadPath = [&](const std::string &resolvedPath) -> std::string {
+    auto familyIt = ctx.helperOverloads.find(resolvedPath);
+    if (familyIt == ctx.helperOverloads.end()) {
+      return resolvedPath;
+    }
+    const size_t argumentCount = expr.args.empty() ? 0 : expr.args.size() - 1;
+    for (const auto &entry : familyIt->second) {
+      if (entry.parameterCount == argumentCount) {
+        return entry.internalPath;
+      }
+    }
+    return resolvedPath;
+  };
+  auto hasDefinitionFamilyPath = [&](std::string_view path) {
+    if (ctx.sourceDefs.count(std::string(path)) > 0 || ctx.helperOverloads.count(std::string(path)) > 0) {
+      return true;
+    }
+    const std::string templatedPrefix = std::string(path) + "<";
+    const std::string specializedPrefix = std::string(path) + "__t";
+    for (const auto &[defPath, _] : ctx.sourceDefs) {
+      if (defPath == path || defPath.rfind(templatedPrefix, 0) == 0 ||
+          defPath.rfind(specializedPrefix, 0) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
   const Expr &receiver = expr.args.front();
+  if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
+    if (methodName == "result") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/result");
+      return true;
+    }
+    if (methodName == "status") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/status");
+      return true;
+    }
+    if (methodName == "why") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/why");
+      return true;
+    }
+    if (methodName == "is_eof") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/is_eof");
+      return true;
+    }
+    if (methodName == "eof") {
+      pathOut = selectStaticHelperOverloadPath("/std/file/FileError/eof");
+      return true;
+    }
+  }
   std::string typeName;
   if (receiver.kind == Expr::Kind::Name) {
     auto it = locals.find(receiver.name);
@@ -147,10 +201,28 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return false;
   }
   typeName = normalizeCollectionReceiverTypeName(typeName);
+  auto preferredFileMethodTarget = [&](std::string_view helperName) {
+    const std::string builtinPath = "/file/" + std::string(helperName);
+    if (helperName != "write" && helperName != "write_line" && helperName != "close") {
+      return builtinPath;
+    }
+    if (receiver.kind == Expr::Kind::Name && receiver.name == "self") {
+      return builtinPath;
+    }
+    const std::string stdlibPath = "/File/" + std::string(helperName);
+    if (hasDefinitionFamilyPath(stdlibPath)) {
+      return stdlibPath;
+    }
+    return builtinPath;
+  };
+  const std::string normalizedMethodName = normalizeCollectionMethodName(typeName, methodName);
+  if (typeName == "File" && isFileMethodName(normalizedMethodName)) {
+    pathOut = preferredFileMethodTarget(normalizedMethodName);
+    return true;
+  }
   if (isExplicitRemovedCollectionMethodAlias(typeName, rawMethodName)) {
     return false;
   }
-  const std::string normalizedMethodName = normalizeCollectionMethodName(typeName, methodName);
   if (isPrimitiveBindingTypeName(typeName)) {
     pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
     return true;

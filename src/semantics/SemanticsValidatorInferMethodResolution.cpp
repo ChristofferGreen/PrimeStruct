@@ -133,48 +133,62 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
+  auto hasDefinitionFamilyPath = [&](std::string_view path) {
+    if (defMap_.count(std::string(path)) > 0) {
+      return true;
+    }
+    const std::string templatedPrefix = std::string(path) + "<";
+    const std::string specializedPrefix = std::string(path) + "__t";
+    for (const auto &def : program_.definitions) {
+      if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
+          def.fullPath.rfind(specializedPrefix, 0) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
   auto preferredFileErrorHelperTarget = [&](std::string_view helperName) -> std::string {
     if (helperName == "why") {
-      if (defMap_.count("/std/file/FileError/why") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/why")) {
         return "/std/file/FileError/why";
       }
-      if (defMap_.count("/FileError/why") > 0) {
+      if (hasDefinitionFamilyPath("/FileError/why")) {
         return "/FileError/why";
       }
       return "/file_error/why";
     }
     if (helperName == "is_eof") {
-      if (defMap_.count("/std/file/FileError/is_eof") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/is_eof")) {
         return "/std/file/FileError/is_eof";
       }
-      if (defMap_.count("/FileError/is_eof") > 0) {
+      if (hasDefinitionFamilyPath("/FileError/is_eof")) {
         return "/FileError/is_eof";
       }
-      if (defMap_.count("/std/file/fileErrorIsEof") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/fileErrorIsEof")) {
         return "/std/file/fileErrorIsEof";
       }
       return "";
     }
     if (helperName == "eof") {
-      if (defMap_.count("/std/file/FileError/eof") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/eof")) {
         return "/std/file/FileError/eof";
       }
-      if (defMap_.count("/FileError/eof") > 0) {
+      if (hasDefinitionFamilyPath("/FileError/eof")) {
         return "/FileError/eof";
       }
-      if (defMap_.count("/std/file/fileReadEof") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/fileReadEof")) {
         return "/std/file/fileReadEof";
       }
       return "";
     }
     if (helperName == "status") {
-      if (defMap_.count("/std/file/FileError/status") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/status")) {
         return "/std/file/FileError/status";
       }
       return "";
     }
     if (helperName == "result") {
-      if (defMap_.count("/std/file/FileError/result") > 0) {
+      if (hasDefinitionFamilyPath("/std/file/FileError/result")) {
         return "/std/file/FileError/result";
       }
       return "";

@@ -71,7 +71,7 @@ namespace std {
                      [DepthFormat] depth_format,
                      [PresentMode] present_mode) {
       if(or(less_than(this.token, 1i32), less_than(window.token, 1i32))) {
-        return(GfxError.result<Swapchain>(swapchainCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<Swapchain>(swapchainCreateFailed()))
       }
       [SubstrateSwapchainConfig] config{
         SubstrateSwapchainConfig(
@@ -98,7 +98,7 @@ namespace std {
       [i32] indexCount{count(indices)}
       if(or(less_than(this.token, 1i32),
             or(less_than(vertexCount, 1i32), less_than(indexCount, 1i32)))) {
-        return(GfxError.result<Mesh>(meshCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<Mesh>(meshCreateFailed()))
       }
       [SubstrateMeshConfig] config{
         SubstrateMeshConfig(
@@ -120,7 +120,7 @@ namespace std {
                                   [ColorFormat] color_format,
                                   [DepthFormat] depth_format) {
       if(less_than(this.token, 1i32)) {
-        return(GfxError.result<Pipeline>(pipelineCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<Pipeline>(pipelineCreateFailed()))
       }
       [SubstratePipelineConfig] config{
         SubstratePipelineConfig(
@@ -150,7 +150,7 @@ namespace std {
     [public return<Result<Frame, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
     frame() {
       if(less_than(this.token, 1i32)) {
-        return(GfxError.result<Frame>(frameAcquireFailed()))
+        return(/std/gfx/experimental/GfxError/result<Frame>(frameAcquireFailed()))
       }
       [SubstrateFrameConfig] config{
         SubstrateFrameConfig([swapchain] this, [frameToken] plus(this.token, 1i32))
@@ -294,7 +294,7 @@ namespace std {
     [public return<Result<Material, GfxError>>]
     material() {
       if(less_than(this.token, 1i32)) {
-        return(GfxError.result<Material>(materialCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<Material>(materialCreateFailed()))
       }
       return(Result.ok(Material([token] plus(this.token, 1i32))))
     }
@@ -430,7 +430,7 @@ namespace std {
     createWindow([SubstrateWindowConfig] config) {
       if(or(less_than(config.hostToken, 1i32),
             or(less_than(config.width, 1i32), less_than(config.height, 1i32)))) {
-        return(GfxError.result<i32>(windowCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<i32>(windowCreateFailed()))
       }
       return(Result.ok(config.hostToken))
     }
@@ -438,7 +438,7 @@ namespace std {
     [public return<Result<i32, GfxError>>]
     createDevice([SubstrateDeviceConfig] config) {
       if(or(less_than(config.window.token, 1i32), less_than(config.deviceToken, 1i32))) {
-        return(GfxError.result<i32>(deviceCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<i32>(deviceCreateFailed()))
       }
       return(Result.ok(config.deviceToken))
     }
@@ -446,7 +446,7 @@ namespace std {
     [public return<Result<i32, GfxError>>]
     createQueue([SubstrateDeviceConfig] config) {
       if(or(less_than(config.window.token, 1i32), less_than(config.queueToken, 1i32))) {
-        return(GfxError.result<i32>(deviceCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<i32>(deviceCreateFailed()))
       }
       return(Result.ok(config.queueToken))
     }
@@ -455,7 +455,7 @@ namespace std {
     createSwapchain([SubstrateSwapchainConfig] config) {
       if(or(less_than(config.window.token, 1i32),
             or(less_than(config.device.token, 1i32), less_than(config.swapchainToken, 1i32)))) {
-        return(GfxError.result<i32>(swapchainCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<i32>(swapchainCreateFailed()))
       }
       return(Result.ok(config.swapchainToken))
     }
@@ -464,7 +464,7 @@ namespace std {
     createMesh([SubstrateMeshConfig] config) {
       if(or(less_than(config.meshToken, 1i32),
             or(less_than(config.vertexCount, 1i32), less_than(config.indexCount, 1i32)))) {
-        return(GfxError.result<i32>(meshCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<i32>(meshCreateFailed()))
       }
       return(Result.ok(config.meshToken))
     }
@@ -472,7 +472,7 @@ namespace std {
     [public return<Result<i32, GfxError>>]
     createPipeline([SubstratePipelineConfig] config) {
       if(less_than(config.pipelineToken, 1i32)) {
-        return(GfxError.result<i32>(pipelineCreateFailed()))
+        return(/std/gfx/experimental/GfxError/result<i32>(pipelineCreateFailed()))
       }
       return(Result.ok(config.pipelineToken))
     }
@@ -480,7 +480,7 @@ namespace std {
     [public return<Result<i32, GfxError>>]
     acquireFrame([SubstrateFrameConfig] config) {
       if(or(less_than(config.swapchain.token, 1i32), less_than(config.frameToken, 1i32))) {
-        return(GfxError.result<i32>(frameAcquireFailed()))
+        return(/std/gfx/experimental/GfxError/result<i32>(frameAcquireFailed()))
       }
       return(Result.ok(config.frameToken))
     }
@@ -489,7 +489,7 @@ namespace std {
     beginRenderPass([SubstrateRenderPassConfig] config) {
       [i32] renderPassToken{openRenderPass(config)}
       if(less_than(renderPassToken, 1i32)) {
-        return(GfxError.result<i32>(frameAcquireFailed()))
+        return(/std/gfx/experimental/GfxError/result<i32>(frameAcquireFailed()))
       }
       return(Result.ok(renderPassToken))
     }
@@ -554,7 +554,7 @@ namespace std {
     [i32] deviceToken{GraphicsSubstrate.createDevice(config)?}
     [i32] queueToken{GraphicsSubstrate.createQueue(config)?}
     if(not_equal(queueToken, plus(deviceToken, 1i32))) {
-      return(GfxError.result<Device>(deviceCreateFailed()))
+      return(/std/gfx/experimental/GfxError/result<Device>(deviceCreateFailed()))
     }
     return(Result.ok(Device([token] deviceToken)))
   }

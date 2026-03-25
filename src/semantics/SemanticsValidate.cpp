@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <limits>
 #include <optional>
@@ -314,7 +315,12 @@ bool Semantics::validate(Program &program,
   if (!semantics::rewriteReflectionGeneratedHelpers(program, error)) {
     return false;
   }
-  if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
+  try {
+    if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
+      return false;
+    }
+  } catch (const std::exception &ex) {
+    error = std::string("template monomorphization exception: ") + ex.what();
     return false;
   }
   if (!semantics::rewriteReflectionMetadataQueries(program, error)) {
@@ -325,7 +331,12 @@ bool Semantics::validate(Program &program,
   }
   semantics::SemanticsValidator validator(
       program, entryPath, error, defaultEffects, entryDefaultEffects, diagnosticInfo, collectDiagnostics);
-  if (!validator.run()) {
+  try {
+    if (!validator.run()) {
+      return false;
+    }
+  } catch (const std::exception &ex) {
+    error = std::string("semantic validator exception: ") + ex.what();
     return false;
   }
   if (!rewriteOmittedStructInitializers(program, error)) {

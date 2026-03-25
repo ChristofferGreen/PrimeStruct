@@ -597,9 +597,10 @@
             }
             std::string collectionName;
             if (!valueExpr.isMethodCall && getBuiltinCollectionName(valueExpr, collectionName) &&
-                ((collectionName == "array" || collectionName == "vector") && valueExpr.templateArgs.size() == 1 ||
-                 (collectionName == "Buffer" && valueExpr.templateArgs.size() == 1) ||
-                 (collectionName == "map" && valueExpr.templateArgs.size() == 2))) {
+                ((((collectionName == "array" || collectionName == "vector") &&
+                   valueExpr.templateArgs.size() == 1) ||
+                  (collectionName == "Buffer" && valueExpr.templateArgs.size() == 1) ||
+                  (collectionName == "map" && valueExpr.templateArgs.size() == 2)))) {
               if (collectionName == "array") {
                 collectionKindOut = LocalInfo::Kind::Array;
               } else if (collectionName == "vector") {

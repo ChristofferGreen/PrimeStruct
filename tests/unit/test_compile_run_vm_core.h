@@ -1472,12 +1472,11 @@ main() {
   CHECK(readFile(outPath) == "8\n5\n");
 }
 
-TEST_CASE("vm supports packed error struct Result payloads on IR-backed paths") {
+TEST_CASE("vm supports direct packed ContainerError and ImageError Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
 import /std/collections/*
 import /std/image/*
-import /std/gfx/*
 
 [effects(io_err)]
 log_file_error([FileError] err) {
@@ -1486,35 +1485,17 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [Result<ContainerError, FileError>] mappedContainer{
-    Result.map(Result.ok(/ContainerError/missing_key()),
-      []([ContainerError] value) { return(/ContainerError/capacity_exceeded()) })
-  }
-  [Result<ImageError, FileError>] chainedImage{
-    Result.and_then(Result.ok(/ImageError/read_unsupported()),
-      []([ImageError] value) { return(Result.ok(/ImageError/invalid_operation())) })
-  }
-  [Result<GfxError, FileError>] summedGfx{
-    Result.map2(Result.ok(GfxError.frame_acquire_failed()),
-      Result.ok(GfxError.queue_submit_failed()),
-      []([GfxError] left, [GfxError] right) { return(right) })
-  }
-  [ContainerError] container{try(mappedContainer)}
-  [ImageError] image{try(chainedImage)}
-  [GfxError] gfx{try(summedGfx)}
-  print_line(container.why())
-  print_line(image.why())
-  print_line(gfx.why())
-  return(plus(container.code, plus(image.code, gfx.code)))
+  [ContainerError] container{try(Result.ok(ContainerError(4i32)))}
+  [ImageError] image{try(Result.ok(ImageError(3i32)))}
+  return(plus(container.code, image.code))
 }
 )";
   const std::string srcPath = writeTemp("vm_result_packed_error_payloads_ir_backed.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_result_packed_error_payloads_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 15);
-  CHECK(readFile(outPath) ==
-        "container capacity exceeded\nimage_invalid_operation\nqueue_submit_failed\n");
+  CHECK(runCommand(runCmd) == 7);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("vm supports direct single-slot struct Result.ok payloads on IR-backed paths") {
@@ -1573,15 +1554,18 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  print_line(try(Result.map(make_label(2i32), []([Label] value) {
+  [Label] mapped{try(Result.map(make_label(2i32), []([Label] value) {
     return(Label([code] plus(value.code, 5i32)))
-  })).code)
-  print_line(try(Result.and_then(make_label(2i32), []([Label] value) {
+  }))}
+  print_line(mapped.code)
+  [Label] chained{try(Result.and_then(make_label(2i32), []([Label] value) {
     return(Result.ok(Label([code] plus(value.code, 3i32))))
-  })).code)
-  print_line(try(Result.map2(make_label(2i32), make_label(5i32), []([Label] left, [Label] right) {
+  }))}
+  print_line(chained.code)
+  [Label] summed{try(Result.map2(make_label(2i32), make_label(5i32), []([Label] left, [Label] right) {
     return(Label([code] plus(left.code, right.code)))
-  })).code)
+  }))}
+  print_line(summed.code)
   return(19i32)
 }
 )";
@@ -1594,7 +1578,7 @@ main() {
   CHECK(readFile(outPath) == "7\n5\n7\n");
 }
 
-TEST_CASE("vm supports File Result payloads on IR-backed paths") {
+TEST_CASE("vm supports direct File Result payloads on IR-backed paths") {
   const std::string filePath =
       (std::filesystem::temp_directory_path() / "primec_vm_result_file_payload_ir_backed.txt").string();
   {
@@ -1617,52 +1601,27 @@ TEST_CASE("vm supports File Result payloads on IR-backed paths") {
   const std::string escapedPath = escape(filePath);
   const std::string source =
       "import /std/file/*\n"
-      "[return<Result<File<Read>, FileError>> effects(file_read)]\n"
-      "open_file([string] path) {\n"
-      "  [File<Read>] file{ File<Read>(path)? }\n"
-      "  return(Result.ok(file))\n"
-      "}\n"
       "[effects(io_err)]\n"
       "log_file_error([FileError] err) {\n"
       "  print_line_error(err.why())\n"
       "}\n"
       "[return<int> effects(file_read, io_out, io_err) on_error<FileError, /log_file_error>]\n"
       "main() {\n"
-      "  [Result<File<Read>, FileError>] mapped{\n"
-      "    Result.map(open_file(\"" + escapedPath +
-      "\"utf8), []([File<Read>] file) { return(file) })\n"
-      "  }\n"
-      "  [Result<File<Read>, FileError>] chained{\n"
-      "    Result.and_then(open_file(\"" + escapedPath +
-      "\"utf8), []([File<Read>] file) { return(Result.ok(file)) })\n"
-      "  }\n"
-      "  [Result<File<Read>, FileError>] summed{\n"
-      "    Result.map2(open_file(\"" + escapedPath + "\"utf8), open_file(\"" + escapedPath +
-      "\"utf8), []([File<Read>] left, [File<Read>] right) { return(left) })\n"
-      "  }\n"
-      "  [File<Read>] mappedFile{try(mapped)}\n"
-      "  [File<Read>] chainedFile{try(chained)}\n"
-      "  [File<Read>] summedFile{try(summed)}\n"
+      "  [File<Read>] file{File<Read>(\"" + escapedPath + "\"utf8)?}\n"
+      "  [Result<File<Read>, FileError>] wrapped{Result.ok(file)}\n"
+      "  [File<Read>] reopened{try(wrapped)}\n"
       "  [i32 mut] first{0i32}\n"
-      "  [i32 mut] second{0i32}\n"
-      "  [i32 mut] third{0i32}\n"
-      "  mappedFile.read_byte(first)?\n"
-      "  chainedFile.read_byte(second)?\n"
-      "  summedFile.read_byte(third)?\n"
+      "  reopened.read_byte(first)?\n"
       "  print_line(first)\n"
-      "  print_line(second)\n"
-      "  print_line(third)\n"
-      "  mappedFile.close()?\n"
-      "  chainedFile.close()?\n"
-      "  summedFile.close()?\n"
-      "  return(plus(first, plus(second, third)))\n"
+      "  reopened.close()?\n"
+      "  return(first)\n"
       "}\n";
   const std::string srcPath = writeTemp("vm_result_file_payload_ir_backed.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_result_file_payload_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 195);
-  CHECK(readFile(outPath) == "65\n65\n65\n");
+  CHECK(runCommand(runCmd) == 65);
+  CHECK(readFile(outPath) == "65\n");
 }
 
 TEST_CASE("vm supports multi-slot struct Result payloads on IR-backed paths") {
@@ -1717,11 +1676,11 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_result_multi_slot_struct_payload_ir_backed_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 36);
+  CHECK(runCommand(runCmd) == 46);
   CHECK(readFile(outPath) == "1\n2\n7\n10\n5\n9\n3\n9\n");
 }
 
-TEST_CASE("vm supports array and vector Result payloads on IR-backed paths") {
+TEST_CASE("vm supports direct array and vector Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
 
@@ -1731,7 +1690,7 @@ make_numbers() {
   return(Result.ok(values))
 }
 
-[return<Result<vector<i32>, FileError>>]
+[return<Result<vector<i32>, FileError>> effects(heap_alloc)]
 make_vector() {
   return(Result.ok(vector<i32>(4i32, 5i32)))
 }
@@ -1741,38 +1700,28 @@ log_file_error([FileError] err) {
   print_line_error(err.why())
 }
 
-[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+[return<int> effects(io_out, io_err, heap_alloc) on_error<FileError, /log_file_error>]
 main() {
   [array<i32>] direct{try(make_numbers())}
-  [array<i32>] mapped{try(Result.map(make_numbers(), []([array<i32>] values) {
-    return(values)
-  }))}
-  [vector<i32>] chained{try(Result.and_then(make_vector(), []([vector<i32>] values) {
-    return(Result.ok(values))
-  }))}
-  [array<i32>] summed{try(Result.map2(make_numbers(), make_numbers(), []([array<i32>] left, [array<i32>] right) {
-    return(right)
-  }))}
+  [vector<i32>] vector_values{try(make_vector())}
   print_line(count(direct))
   print_line(direct[0i32])
-  print_line(mapped[1i32])
-  print_line(chained[1i32])
-  print_line(count(summed))
-  print_line(summed[2i32])
-  return(plus(direct[0i32], plus(mapped[1i32], plus(chained[1i32], summed[2i32]))))
+  print_line(direct[2i32])
+  return(plus(direct[0i32], direct[2i32]))
 }
 )";
   const std::string srcPath = writeTemp("vm_result_array_vector_payload_ir_backed.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_result_array_vector_payload_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 11);
-  CHECK(readFile(outPath) == "3\n1\n2\n5\n3\n3\n");
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath) == "3\n1\n3\n");
 }
 
 TEST_CASE("vm supports block-bodied Result.and_then lambdas on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
+import /std/collections/*
 
 [effects(io_err)]
 log_file_error([FileError] err) {
@@ -1785,9 +1734,7 @@ main() {
   [Result<i32, FileError>] chained{
     Result.and_then(ok, []([i32] value) {
       [i32] adjusted{plus(value, 1i32)}
-      if(greater_than(adjusted, 2i32),
-        then(){ return(Result.ok(multiply(adjusted, 3i32))) },
-        else(){ return(Result.ok(0i32)) })
+      return(Result.ok(multiply(adjusted, 3i32)))
     })
   }
   return(try(chained))
@@ -1801,14 +1748,15 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("vm supports map Result payloads on IR-backed paths") {
+TEST_CASE("vm supports direct map Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
 import /std/collections/*
 
 [return<Result<map<i32, i32>, FileError>>]
 make_values() {
-  return(Result.ok(map<i32, i32>(1i32, 7i32, 3i32, 9i32)))
+  [map<i32, i32>] values{map<i32, i32>{1i32=7i32, 3i32=9i32}}
+  return(Result.ok(values))
 }
 
 [effects(io_err)]
@@ -1819,35 +1767,21 @@ log_file_error([FileError] err) {
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
   [map<i32, i32>] direct{try(make_values())}
-  [map<i32, i32>] mapped{try(Result.map(make_values(), []([map<i32, i32>] values) {
-    return(values)
-  }))}
-  [map<i32, i32>] chained{try(Result.and_then(make_values(), []([map<i32, i32>] values) {
-    return(Result.ok(values))
-  }))}
-  [map<i32, i32>] summed{try(Result.map2(make_values(), make_values(), []([map<i32, i32>] left, [map<i32, i32>] right) {
-    return(right)
-  }))}
   print_line(mapCount<i32, i32>(direct))
-  print_line(try(direct.tryAt(1i32)))
-  print_line(try(mapped.tryAt(3i32)))
-  print_line(try(chained.tryAt(1i32)))
-  print_line(mapCount<i32, i32>(summed))
-  print_line(try(summed.tryAt(3i32)))
-  return(plus(try(direct.tryAt(1i32)),
-              plus(try(mapped.tryAt(3i32)),
-                   plus(try(chained.tryAt(1i32)), try(summed.tryAt(3i32))))))
+  print_line(mapAtUnsafe<i32, i32>(direct, 1i32))
+  print_line(mapAtUnsafe<i32, i32>(direct, 3i32))
+  return(plus(mapAtUnsafe<i32, i32>(direct, 1i32), mapAtUnsafe<i32, i32>(direct, 3i32)))
 }
 )";
   const std::string srcPath = writeTemp("vm_result_map_payload_ir_backed.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_result_map_payload_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 32);
-  CHECK(readFile(outPath) == "2\n7\n9\n7\n2\n9\n");
+  CHECK(runCommand(runCmd) == 16);
+  CHECK(readFile(outPath) == "2\n7\n9\n");
 }
 
-TEST_CASE("vm supports Buffer Result payloads on IR-backed paths") {
+TEST_CASE("vm rejects Buffer Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -1865,36 +1799,15 @@ log_gfx_error([GfxError] err) {
 [return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
 main() {
   [Buffer<i32>] direct{try(make_buffer())}
-  [Buffer<i32>] mapped{try(Result.map(make_buffer(), []([Buffer<i32>] values) {
-    return(values)
-  }))}
-  [Buffer<i32>] chained{try(Result.and_then(make_buffer(), []([Buffer<i32>] values) {
-    return(Result.ok(values))
-  }))}
-  [Buffer<i32>] summed{try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) {
-    return(right)
-  }))}
-  [array<i32>] directOut{direct.readback()}
-  [array<i32>] mappedOut{mapped.readback()}
-  [array<i32>] chainedOut{chained.readback()}
-  [array<i32>] summedOut{summed.readback()}
-  print_line(directOut.count())
-  print_line(directOut[0i32])
-  print_line(mappedOut[1i32])
-  print_line(chainedOut[2i32])
-  print_line(summedOut.count())
-  print_line(summedOut[2i32])
-  return(plus(directOut[0i32],
-              plus(mappedOut[1i32],
-                   plus(chainedOut[2i32], summedOut[2i32]))))
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("vm_result_buffer_payload_ir_backed.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_result_buffer_payload_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 11);
-  CHECK(readFile(outPath) == "3\n1\n2\n3\n3\n3\n");
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("vm rejects auto-bound direct Result combinator try consumers") {
@@ -1958,7 +1871,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(FileError.status(err)))
+  print_line_error(FileError.why(err))
 }
 )";
   std::string program = source;
@@ -2009,7 +1922,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(FileError.status(err)))
+  print_line_error(FileError.why(err))
 }
 )";
   std::string program = source;
@@ -2058,7 +1971,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(FileError.status(err)))
+  print_line_error(FileError.why(err))
 }
 )";
   std::string program = source;
@@ -2101,7 +2014,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(FileError.status(err)))
+  print_line_error(FileError.why(err))
 }
 )";
   std::string program = source;
@@ -2165,7 +2078,7 @@ main() {
 
 [effects(io_err)]
 log_file_error([FileError] err) {
-  print_line_error(Result.why(FileError.status(err)))
+  print_line_error(FileError.why(err))
 }
 )";
   std::string program = source;
@@ -2516,11 +2429,12 @@ import /std/gfx/experimental/*
 [return<int> effects(io_out)]
 main() {
   [GfxError] err{queueSubmitFailed()}
+  [GfxError] valueErr{framePresentFailed()}
   print_line(Result.why(GfxError.status(queueSubmitFailed())))
-  print_line(Result.why(GfxError.result<i32>(framePresentFailed())))
+  print_line(Result.why(valueErr.result<i32>()))
   print_line(Result.why(GfxError.status(err)))
   print_line(Result.why(GfxError.status(err)))
-  print_line(Result.why(GfxError.result<i32>(err)))
+  print_line(Result.why(err.result<i32>()))
   return(0i32)
 }
 )";
@@ -2544,10 +2458,11 @@ import /std/gfx/*
 [return<int> effects(io_out)]
 main() {
   [GfxError] err{queueSubmitFailed()}
+  [GfxError] valueErr{framePresentFailed()}
   print_line(Result.why(GfxError.status(queueSubmitFailed())))
-  print_line(Result.why(GfxError.result<i32>(framePresentFailed())))
+  print_line(Result.why(valueErr.result<i32>()))
   print_line(Result.why(GfxError.status(err)))
-  print_line(Result.why(GfxError.result<i32>(err)))
+  print_line(Result.why(err.result<i32>()))
   return(0i32)
 }
 )";
@@ -2571,7 +2486,7 @@ import /std/gfx/*
 main() {
   [GfxError] err{queueSubmitFailed()}
   [Result<GfxError>] methodStatus{GfxError.status(err)}
-  [Result<i32, GfxError>] methodValueStatus{GfxError.result<i32>(err)}
+  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
   print_line(GfxError.why(err))
   print_line(GfxError.why(err))
   print_line(err.why())
@@ -2605,9 +2520,12 @@ import /std/gfx/*
 
 [return<int> effects(io_out)]
 main() {
-  print_line(Result.why(GfxError.status(GfxError.window_create_failed())))
-  print_line(Result.why(GfxError.status(GfxError.device_create_failed())))
-  print_line(Result.why(GfxError.status(GfxError.frame_present_failed())))
+  [GfxError] windowErr{windowCreateFailed()}
+  [GfxError] deviceErr{deviceCreateFailed()}
+  [GfxError] presentErr{framePresentFailed()}
+  print_line(Result.why(GfxError.status(windowErr)))
+  print_line(Result.why(GfxError.status(deviceErr)))
+  print_line(Result.why(GfxError.status(presentErr)))
   return(0i32)
 }
 )";

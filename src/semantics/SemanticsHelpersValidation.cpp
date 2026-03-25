@@ -342,6 +342,14 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
     return false;
   }
   if (initializer.kind == Expr::Kind::Call) {
+    if (!initializer.isMethodCall && !initializer.isBinding && !initializer.hasBodyArguments &&
+        initializer.bodyArguments.empty() && initializer.args.empty() &&
+        (initializer.name == "uninitialized" || initializer.name == "/uninitialized") &&
+        initializer.templateArgs.size() == 1) {
+      bindingOut.typeName = "uninitialized";
+      bindingOut.typeTemplateArg = initializer.templateArgs.front();
+      return true;
+    }
     std::string collection;
     if (getBuiltinCollectionName(initializer, collection)) {
       if ((collection == "array" || collection == "vector") && initializer.templateArgs.size() == 1) {

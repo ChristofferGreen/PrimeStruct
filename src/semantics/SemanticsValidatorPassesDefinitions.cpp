@@ -36,6 +36,9 @@ bool SemanticsValidator::validateDefinitions() {
       return false;
     };
     if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
+      if (error_.empty()) {
+        error_ = "validateCapabilitiesSubset failed on " + def.fullPath;
+      }
       return false;
     }
     std::unordered_map<std::string, BindingInfo> locals;
@@ -48,6 +51,9 @@ bool SemanticsValidator::validateDefinitions() {
         continue;
       }
       if (!validateExpr(defParams, locals, *param.defaultExpr)) {
+        if (error_.empty()) {
+          error_ = "default expression validation failed on " + def.fullPath;
+        }
         return false;
       }
     }
@@ -81,6 +87,9 @@ bool SemanticsValidator::validateDefinitions() {
       OnErrorScope onErrorScope(*this, std::nullopt);
       for (const auto &arg : currentValidationContext_.onError->boundArgs) {
         if (!validateExpr(defParams, locals, arg)) {
+          if (error_.empty()) {
+            error_ = "on_error bound-arg validation failed on " + def.fullPath;
+          }
           return false;
         }
       }
@@ -99,12 +108,18 @@ bool SemanticsValidator::validateDefinitions() {
                              def.namespacePrefix,
                              &def.statements,
                              stmtIndex)) {
+        if (error_.empty()) {
+          error_ = "statement validation failed on " + def.fullPath;
+        }
         return false;
       }
       expireReferenceBorrowsForRemainder(defParams, locals, def.statements, stmtIndex + 1);
     }
     if (def.returnExpr.has_value()) {
       if (!validateExpr(defParams, locals, *def.returnExpr)) {
+        if (error_.empty()) {
+          error_ = "return expression validation failed on " + def.fullPath;
+        }
         return false;
       }
       sawReturn = true;

@@ -2932,7 +2932,7 @@ main() {
   CHECK(runCommand(exePath) == 18);
 }
 
-TEST_CASE("compiles and runs native templated stdlib wrapper temporary count capacity parity in expressions") {
+TEST_CASE("compiles and runs native templated stdlib wrapper temporary count capacity parity") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2963,7 +2963,6 @@ main() {
   const std::string exePath = (testScratchPath("") /
                                "primec_native_stdlib_collection_shim_templated_return_temp_count_capacity_parity_exe")
                                   .string();
-
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 6);

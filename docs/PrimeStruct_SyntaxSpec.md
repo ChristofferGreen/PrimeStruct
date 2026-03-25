@@ -402,24 +402,15 @@ Bottom-level form therefore has:
   materialization, status-only `Result<Error>` packs preserve indexed `Result.error(...)` and `Result.why(...)`
   behavior across those same forwarding modes, `FileError` packs preserve indexed downstream `why()` mapping across
   those same forwarding modes, `Reference<FileError>` packs preserve indexed downstream `dereference(...).why()`
-  mapping plus canonical free-builtin `at([values] values, [index] i).why()` receivers across those same forwarding
-  modes, `Pointer<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping plus canonical
-  free-builtin `at([values] values, [index] i).why()` receivers across those same forwarding modes,
-  `Reference<Result<T, Error>>` packs preserve
-  indexed downstream `dereference(...)`, `try(...)`, and `Result.why(...)` access across those same forwarding modes,
-  status-only `Reference<Result<Error>>` packs preserve indexed downstream `dereference(...)`, `Result.error(...)`,
-  and `Result.why(...)` access across those same forwarding modes, `Pointer<Result<T, Error>>` packs preserve indexed
-  downstream `dereference(...)`, `try(...)`, and `Result.why(...)` access across those same forwarding modes
-  including payload-kind inference for `auto` bindings on indexed `try(...)` results, status-only
-  `Pointer<Result<Error>>` packs preserve indexed downstream `dereference(...)`, `Result.error(...)`, and
-  `Result.why(...)` access across those same forwarding modes, `File<Mode>` packs preserve indexed downstream
+  mapping across those same forwarding modes, and `Pointer<FileError>` packs preserve indexed downstream
+  `dereference(...).why()` mapping across those same forwarding modes. `File<Mode>` packs preserve indexed downstream
   file-handle method access, `Reference<File<Mode>>` packs preserve indexed downstream `dereference(...).write*` /
   `flush()` access, `Pointer<File<Mode>>` packs preserve indexed downstream `dereference(...).write*` / `flush()`
-  access, `Buffer<T>` packs preserve indexed downstream stdlib `load()` / `store()` receivers alongside
-  `buffer_load(...)` / `buffer_store(...)` on the IR/VM GPU path, `Reference<Buffer<T>>` packs preserve that same
-  indexed stdlib `load()` / `store()` surface through explicit `dereference(...)` receiver wrappers, `Pointer<Buffer<T>>`
-  packs preserve that same indexed stdlib `load()` / `store()` surface through explicit `dereference(...)` receiver
-  wrappers, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`,
+  access, `Buffer<T>` packs preserve indexed downstream `buffer_load(...)` and `buffer_store(...)` on the IR/VM GPU
+  path, `Reference<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` and
+  `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `Pointer<Buffer<T>>` packs preserve indexed
+  downstream `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU
+  path, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`,
   empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>`
   packs preserve indexed downstream `count()` resolution across those
   same forwarding modes, `vector<T>` packs also preserve indexed downstream `capacity()` plus statement-mutator resolution, borrowed/pointer array and vector packs preserve explicit indexed `dereference(...)`
@@ -428,19 +419,8 @@ Bottom-level form therefore has:
   `tryAt(...)` payload-kind inference for `auto` bindings, `Pointer<map<K, V>>` packs also preserve indexed downstream `contains()` / `at()` /
   `at_unsafe()` lookup access, and borrowed/pointer map packs preserve that same count and lookup surface through
   explicit indexed `dereference(...)` receiver wrappers. Scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
-  `dereference(...)`, those same scalar and struct `Reference<T>` / `Pointer<T>` packs also materialize direct explicit `location(local)` call arguments across direct calls plus pure/mixed spread forwarding, those same scalar and struct `Reference<T>` packs also accept direct explicit `location(ref)` call arguments when the caller local is already a `Reference<T>`, including same-file helper-returned `Reference<T>` expressions that feed `location(...)` on the IR-backed path, those same scalar and struct `Reference<T>` packs also accept direct explicit packed `location(at(values, i))`, `location(values.at(i))`, and `location(values.at_unsafe(i))` when forwarding from borrowed `args<Reference<T>>` packs into other borrowed packs, and those same scalar and struct `Pointer<T>` packs also accept direct explicit packed `location(at(values, i))`, `location(values.at(i))`, and `location(values.at_unsafe(i))` when forwarding from borrowed `args<Reference<T>>` packs, alongside borrowed pack field-access lvalues such as `location(at(values, i).field)`, `location(values.at(i).field)`, and `location(values.at_unsafe(i).field)`, borrowed wrapper-field lvalues such as `location(at(values, i).ref_field)`, `location(values.at(i).ref_field)`, and `location(values.at_unsafe(i).ref_field)`, plus direct explicit `location(ref)` call arguments when the caller local is already a `Reference<T>`, including same-file helper-returned `Reference<T>` expressions that feed `location(...)` on the IR-backed path,
-  `Pointer<uninitialized<i32>>` plus `Reference<uninitialized<i32>>` packs also accept direct explicit `location(local)` call arguments while preserving indexed downstream `dereference(...)`-based
-  `init(...)` and `take(...)`, struct `Pointer<T>` plus struct `Reference<T>` packs preserve indexed downstream
-  field/helper access, and the legacy C++ emitter now materializes borrowed `args<Reference<T>>` packs through
-  `std::reference_wrapper<T>` element storage so indexed `dereference(...)` plus borrowed uninitialized scalar/struct
-  `init(...)` / `take(...)` execute across direct/pure/mixed forwarding, that same emitted path now also accepts
-  direct explicit `location(local)` packed call arguments for borrowed packs, and scalar/struct `args<Pointer<T>>`
-  packs there also accept direct explicit `location(ref)` packed call arguments when the caller local is already a
-  `Reference<T>`, including same-file helper-returned and imported-helper-alias `Reference<T>` expressions that feed
-  `location(...)`, borrowed pack access forms like `at(values, i)`, `values.at(i)`, and
-  `values.at_unsafe(i)`, plus borrowed struct-field lvalues derived from those pack accesses such as
-  `location(values.at(i).field)` and `location(values.at(i).ref_field)` on both borrowed and pointer
-  packs; other unsupported non-string element support remains a separate follow-up slice.
+  `dereference(...)` and struct `Pointer<T>` plus struct `Reference<T>` packs preserve indexed downstream
+  field/helper access; other unsupported non-string element support remains a separate follow-up slice.
 
 ## 5. Desugaring and Canonical Core
 
@@ -887,13 +867,15 @@ Draft constraints:
     `/File/open_append(...)` wrappers while the underlying file-open substrate remains builtin.
   - `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept
     `i32`, `bool`, `f32`, literal-backed `string`, `File<Mode>` handles, the single-slot int-backed stdlib error
+    and ordinary user structs that can stay on the existing stack-backed struct path. Direct `Result.ok(...)` plus
+    downstream `try(...)` also preserve `File<Mode>` handles, the current single-slot int-backed stdlib error
     structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), `array<T>` / `vector<T>` handles whose
-    element kinds already fit the current collection contract, `map<K, V>` handles whose key/value kinds already
-    fit that same map contract, current `Buffer<T>` handles whose element kinds already fit the active GPU buffer
-    contract, and ordinary user structs that can stay on the
-    existing stack-backed struct path. Downstream `try(...)` preserves `File<Mode>` and collection handles,
-    rebuilds single-slot struct payloads, and keeps multi-slot struct payloads on that same pointer-backed path on
-    VM/native; other remaining wider non-struct payloads remain unsupported.
+    element kinds already fit the current collection contract, and `map<K, V>` handles whose key/value kinds
+    already fit that same map contract. Current `File<Mode>` combinator payloads, stdlib error-struct combinator
+    payloads, `Buffer<T>` payloads, and collection-handle combinator payload flows remain unsupported on IR-backed
+    paths. Downstream `try(...)` preserves those direct handle/error-struct payloads, rebuilds single-slot struct
+    payloads, and keeps multi-slot struct payloads on that same pointer-backed path on VM/native; other remaining
+    wider non-struct payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.
 - Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
 - VM/native consume the PSIR v16 opcode set (see design doc) and deserialization rejects unknown opcodes.

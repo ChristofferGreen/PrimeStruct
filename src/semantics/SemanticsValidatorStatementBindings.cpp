@@ -190,6 +190,9 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   }
 
   if (!validateExpr(params, locals, *initializerExprForValidation)) {
+    if (error_.empty()) {
+      error_ = "binding initializer validateExpr failed";
+    }
     return false;
   }
 
@@ -308,7 +311,9 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       const bool hasInitializerBindingInfo =
           inferBindingTypeFromInitializer(initializer, params, locals, initializerBindingInfo, &stmt);
       std::string initializerTypeText;
-      if (inferQueryExprTypeText(initializer, params, locals, initializerTypeText)) {
+      const bool hasInitializerTypeText =
+          inferQueryExprTypeText(initializer, params, locals, initializerTypeText);
+      if (hasInitializerTypeText) {
         std::string actualRepresentation =
             collectionRepresentation(initializerTypeText, {});
         const std::string initializerBindingRepresentation =

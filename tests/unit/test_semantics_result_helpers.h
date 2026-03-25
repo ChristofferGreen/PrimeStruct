@@ -533,7 +533,7 @@ main() {
   CHECK(error.find("unknown call target: /File/open_write") != std::string::npos);
 }
 
-TEST_CASE("stdlib File close slash-call helper requires explicit template args") {
+TEST_CASE("stdlib File close slash-call helper infers template args from File receiver") {
   const std::string source = R"(
 import /std/file/*
 
@@ -548,8 +548,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /File/close") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("templated helper overload families resolve by exact arity") {
@@ -895,10 +895,11 @@ import /std/gfx/experimental/*
 [return<void>]
 main() {
   [GfxError] err{queueSubmitFailed()}
+  [GfxError] valueErr{framePresentFailed()}
   [Result<GfxError>] status{GfxError.status(queueSubmitFailed())}
   [Result<GfxError>] wrappedStatus{GfxError.status(err)}
-  [Result<i32, GfxError>] valueStatus{GfxError.result<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] wrappedValue{GfxError.result<i32>(err)}
+  [Result<i32, GfxError>] valueStatus{valueErr.result<i32>()}
+  [Result<i32, GfxError>] wrappedValue{err.result<i32>()}
   [bool] statusError{Result.error(status)}
   [bool] wrappedStatusError{Result.error(wrappedStatus)}
   [bool] valueError{Result.error(valueStatus)}
@@ -974,12 +975,13 @@ import /std/gfx/*
 [return<void>]
 main() {
   [GfxError] err{queueSubmitFailed()}
+  [GfxError] valueErr{framePresentFailed()}
   [Result<GfxError>] status{GfxError.status(queueSubmitFailed())}
   [Result<GfxError>] directStatus{GfxError.status(queueSubmitFailed())}
   [Result<GfxError>] wrappedStatus{GfxError.status(err)}
-  [Result<i32, GfxError>] valueStatus{GfxError.result<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] directValueStatus{GfxError.result<i32>(framePresentFailed())}
-  [Result<i32, GfxError>] wrappedValue{GfxError.result<i32>(err)}
+  [Result<i32, GfxError>] valueStatus{valueErr.result<i32>()}
+  [Result<i32, GfxError>] directValueStatus{valueErr.result<i32>()}
+  [Result<i32, GfxError>] wrappedValue{err.result<i32>()}
   [bool] statusError{Result.error(status)}
   [bool] directStatusError{Result.error(directStatus)}
   [bool] wrappedStatusError{Result.error(wrappedStatus)}
@@ -1012,7 +1014,7 @@ import /std/gfx/*
 main() {
   [GfxError] err{queueSubmitFailed()}
   [Result<GfxError>] methodStatus{GfxError.status(err)}
-  [Result<i32, GfxError>] methodValueStatus{GfxError.result<i32>(err)}
+  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
   [string] direct{GfxError.why(err)}
   [string] method{GfxError.why(err)}
   [string] receiver{err.why()}
@@ -1043,15 +1045,15 @@ import /std/gfx/*
 
 [return<void>]
 main() {
-  [GfxError] windowErr{GfxError.window_create_failed()}
-  [GfxError] deviceErr{GfxError.device_create_failed()}
-  [GfxError] swapchainErr{GfxError.swapchain_create_failed()}
-  [GfxError] meshErr{GfxError.mesh_create_failed()}
-  [GfxError] pipelineErr{GfxError.pipeline_create_failed()}
-  [GfxError] materialErr{GfxError.material_create_failed()}
-  [GfxError] frameErr{GfxError.frame_acquire_failed()}
-  [GfxError] queueErr{GfxError.queue_submit_failed()}
-  [GfxError] presentErr{GfxError.frame_present_failed()}
+  [GfxError] windowErr{windowCreateFailed()}
+  [GfxError] deviceErr{deviceCreateFailed()}
+  [GfxError] swapchainErr{swapchainCreateFailed()}
+  [GfxError] meshErr{meshCreateFailed()}
+  [GfxError] pipelineErr{pipelineCreateFailed()}
+  [GfxError] materialErr{materialCreateFailed()}
+  [GfxError] frameErr{frameAcquireFailed()}
+  [GfxError] queueErr{queueSubmitFailed()}
+  [GfxError] presentErr{framePresentFailed()}
   [string] windowWhy{Result.why(GfxError.status(windowErr))}
   [string] presentWhy{Result.why(GfxError.status(presentErr))}
   return()
@@ -1114,13 +1116,13 @@ import /std/gfx/*
 
 [return<void>]
 main() {
-  [GfxError] err{GfxError.window_create_failed(true)}
+  [GfxError] err{windowCreateFailed(true)}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /std/gfx/GfxError/window_create_failed") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/gfx/windowCreateFailed") != std::string::npos);
 }
 
 TEST_CASE("canonical stdlib gfx error why helper rejects non gfx errors") {

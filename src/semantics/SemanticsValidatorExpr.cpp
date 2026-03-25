@@ -5,6 +5,7 @@
 #include <array>
 #include <cctype>
 #include <functional>
+#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <unordered_set>
@@ -354,8 +355,166 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             usedMethodTarget,
             hasMethodReceiverIndex,
             methodReceiverIndex)) {
+      if (error_.empty()) {
+        auto exprKindName = [](Expr::Kind kind) -> const char * {
+          switch (kind) {
+          case Expr::Kind::Literal:
+            return "Literal";
+          case Expr::Kind::BoolLiteral:
+            return "BoolLiteral";
+          case Expr::Kind::FloatLiteral:
+            return "FloatLiteral";
+          case Expr::Kind::StringLiteral:
+            return "StringLiteral";
+          case Expr::Kind::Call:
+            return "Call";
+          case Expr::Kind::Name:
+            return "Name";
+          }
+          return "Unknown";
+        };
+        std::string receiverSummary = "none";
+        if (!expr.args.empty()) {
+          const Expr &receiver = expr.args.front();
+          receiverSummary = std::string(exprKindName(receiver.kind)) +
+                            ":" + receiver.name +
+                            " ns=" + receiver.namespacePrefix;
+        }
+        error_ = "validateExprMethodCallTarget failed name=" + expr.name +
+                 " ns=" + expr.namespacePrefix +
+                 " resolved=" + resolved +
+                 " templateArgs=" + std::to_string(expr.templateArgs.size()) +
+                 " args=" + std::to_string(expr.args.size()) +
+                 " receiver=" + receiverSummary;
+      }
       return false;
     }
+    auto resolveConcreteCallPath = [&](std::string candidatePath) {
+      auto pathExists = [&](const std::string &path) {
+        return defMap_.count(path) > 0 || paramsByDef_.count(path) > 0;
+      };
+      auto hasOverloadFamily = [&](const std::string &path) {
+        const std::string overloadPrefix = path + "__ov";
+        for (const auto &[candidate, defPtr] : defMap_) {
+          (void)defPtr;
+          if (candidate.rfind(overloadPrefix, 0) == 0) {
+            return true;
+          }
+        }
+        for (const auto &[candidate, candidateParams] : paramsByDef_) {
+          (void)candidateParams;
+          if (candidate.rfind(overloadPrefix, 0) == 0) {
+            return true;
+          }
+        }
+        return false;
+      };
+      auto appendIfMissing = [](std::vector<std::string> &paths, const std::string &path) {
+        if (path.empty()) {
+          return;
+        }
+        if (std::find(paths.begin(), paths.end(), path) == paths.end()) {
+          paths.push_back(path);
+        }
+      };
+      auto fnv1a64 = [](const std::string &text) {
+        uint64_t hash = 1469598103934665603ULL;
+        for (unsigned char c : text) {
+          hash ^= static_cast<uint64_t>(c);
+          hash *= 1099511628211ULL;
+        }
+        return hash;
+      };
+      auto stripWhitespace = [](const std::string &text) {
+        std::string out;
+        out.reserve(text.size());
+        for (char c : text) {
+          if (!std::isspace(static_cast<unsigned char>(c))) {
+            out.push_back(c);
+          }
+        }
+        return out;
+      };
+      auto specializedPathForBase = [&](const std::string &basePath) {
+        if (expr.templateArgs.empty()) {
+          return std::string{};
+        }
+        std::ostringstream out;
+        out << basePath
+            << "__t"
+            << std::hex
+            << fnv1a64(stripWhitespace(joinTemplateArgs(expr.templateArgs)));
+        const std::string directCandidate = out.str();
+        if (pathExists(directCandidate)) {
+          return directCandidate;
+        }
+        const std::string specializationPrefix = basePath + "__t";
+        std::string singleCandidate;
+        auto considerCandidate = [&](const std::string &candidate) {
+          if (candidate.rfind(specializationPrefix, 0) != 0) {
+            return;
+          }
+          if (!singleCandidate.empty() && singleCandidate != candidate) {
+            singleCandidate.clear();
+            singleCandidate = "__ambiguous__";
+            return;
+          }
+          singleCandidate = candidate;
+        };
+        for (const auto &[candidate, defPtr] : defMap_) {
+          (void)defPtr;
+          considerCandidate(candidate);
+          if (singleCandidate == "__ambiguous__") {
+            return std::string{};
+          }
+        }
+        for (const auto &[candidate, candidateParams] : paramsByDef_) {
+          (void)candidateParams;
+          considerCandidate(candidate);
+          if (singleCandidate == "__ambiguous__") {
+            return std::string{};
+          }
+        }
+        return singleCandidate == "__ambiguous__" ? std::string{} : singleCandidate;
+      };
+
+      std::vector<std::string> baseCandidates;
+      const bool hasTemplateOverloads = hasOverloadFamily(candidatePath);
+      const bool isTypeNamespaceCall =
+          isTypeNamespaceMethodCall(params, locals, expr, candidatePath);
+      const bool hasExplicitReceiverBinding =
+          expr.isMethodCall && !expr.args.empty() &&
+          expr.args.front().kind == Expr::Kind::Name &&
+          (findParamBinding(params, expr.args.front().name) != nullptr ||
+           locals.count(expr.args.front().name) > 0);
+      if (hasTemplateOverloads) {
+        if (isTypeNamespaceCall && !expr.args.empty()) {
+          appendIfMissing(baseCandidates,
+                          candidatePath + "__ov" + std::to_string(expr.args.size() - 1));
+        } else if (expr.isMethodCall) {
+          const size_t parameterCount =
+              hasExplicitReceiverBinding ? expr.args.size() : expr.args.size() + 1;
+          appendIfMissing(baseCandidates,
+                          candidatePath + "__ov" + std::to_string(parameterCount));
+        } else {
+          appendIfMissing(baseCandidates,
+                          candidatePath + "__ov" + std::to_string(expr.args.size()));
+        }
+      }
+      appendIfMissing(baseCandidates, candidatePath);
+
+      for (const auto &basePath : baseCandidates) {
+        if (const std::string specializedPath = specializedPathForBase(basePath);
+            !specializedPath.empty()) {
+          return specializedPath;
+        }
+        if (pathExists(basePath)) {
+          return basePath;
+        }
+      }
+      return baseCandidates.empty() ? candidatePath : baseCandidates.front();
+    };
+    resolved = resolveConcreteCallPath(resolved);
     ExprCollectionCountCapacityDispatchContext collectionCountCapacityDispatchContext;
     collectionCountCapacityDispatchContext.isNamespacedVectorHelperCall =
         collectionDispatchSetup.isNamespacedVectorHelperCall;
@@ -492,6 +651,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (!validateExprNamedArguments(params, locals, expr, resolved,
                                     resolvedMethod,
                                     namedArgumentBuiltinContext)) {
+      if (error_.empty()) {
+        error_ = "validateExprNamedArguments failed";
+      }
       return false;
     }
     auto it = defMap_.find(resolved);
@@ -611,6 +773,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (!validateExprLateUnknownTargetFallbacks(
               params, locals, expr, lateUnknownTargetFallbackContext,
               handledLateUnknownTargetFallback)) {
+        if (error_.empty()) {
+          error_ = "validateExprLateUnknownTargetFallbacks failed";
+        }
         return false;
       }
       if (handledLateUnknownTargetFallback) {
@@ -645,6 +810,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             params, locals, expr, resolved,
             resolvedCallSetup.resolvedCallArgumentContext,
             handledResolvedCallArguments)) {
+      if (error_.empty()) {
+        error_ = "validateExprResolvedCallArguments failed";
+      }
       return false;
     }
     if (handledResolvedCallArguments) {

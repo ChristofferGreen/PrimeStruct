@@ -1976,7 +1976,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced count helper canonical precedence in C++ emitter") {
+TEST_CASE("compiles and runs auto-inferred std namespaced count helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -1988,8 +1988,8 @@ TEST_CASE("compiles and runs auto-inferred std namespaced count helper canonical
   return(false)
 }
 
-[effects(heap_alloc), return<bool>]
-main() {
+  [effects(heap_alloc), return<int>]
+  main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   [auto] inferred{/std/collections/vector/count(values)}
   return(inferred)

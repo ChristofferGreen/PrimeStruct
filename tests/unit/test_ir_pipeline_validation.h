@@ -22672,11 +22672,21 @@ TEST_CASE("ir lowerer setup type helper maps primitive aliases") {
 
 TEST_CASE("ir lowerer setup type helper maps file and packed error types") {
   CHECK(primec::ir_lowerer::valueKindFromTypeName("FileError") == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("/std/file/FileError") ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(primec::ir_lowerer::valueKindFromTypeName("ImageError") == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("/std/image/ImageError") ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(primec::ir_lowerer::valueKindFromTypeName("ContainerError") ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("/std/collections/ContainerError") ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(primec::ir_lowerer::valueKindFromTypeName("GfxError") == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("/std/gfx/GfxError") ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(primec::ir_lowerer::valueKindFromTypeName("File<Read>") == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("/std/file/File<Read>") ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(primec::ir_lowerer::valueKindFromTypeName("File<Write>") == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
@@ -51274,6 +51284,9 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
   const auto neverFileHandle = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
     return false;
   };
+  const auto resolveNoDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
   const auto allocTempLocal = []() { return 19; };
   const auto resolveNoStructLayout = [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
     return false;
@@ -51287,6 +51300,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Unknown;
             },
             inferNoStruct,
+            resolveNoDefinitionCall,
             neverFileHandle,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             allocTempLocal,
@@ -51308,6 +51322,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Unknown;
             },
             inferNoStruct,
+            resolveNoDefinitionCall,
             neverFileHandle,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             allocTempLocal,
@@ -51328,6 +51343,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Bool;
             },
             inferNoStruct,
+            resolveNoDefinitionCall,
             neverFileHandle,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               emitCalled = true;
@@ -51350,6 +51366,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Int32;
             },
             inferNoStruct,
+            resolveNoDefinitionCall,
             neverFileHandle,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             allocTempLocal,
@@ -51369,6 +51386,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::String;
             },
             inferNoStruct,
+            resolveNoDefinitionCall,
             neverFileHandle,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               emitCalled = true;
@@ -51391,6 +51409,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Int64;
             },
             inferNoStruct,
+            resolveNoDefinitionCall,
             neverFileHandle,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               emitCalled = true;
@@ -51423,6 +51442,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Int64;
             },
             inferNoStruct,
+            resolveNoDefinitionCall,
             [](const primec::Expr &value, const primec::ir_lowerer::LocalMap &valueLocals) {
               if (value.kind != primec::Expr::Kind::Name) {
                 return false;
@@ -51451,6 +51471,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
               return ValueKind::Int32;
             },
             inferNoStruct,
+            resolveNoDefinitionCall,
             neverFileHandle,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             allocTempLocal,
@@ -51547,6 +51568,7 @@ TEST_CASE("ir lowerer result helpers pack single-slot struct Result.ok values") 
             [](const primec::Expr &value, const primec::ir_lowerer::LocalMap &) {
               return value.kind == primec::Expr::Kind::Name && value.name == "label" ? "/pkg/Label" : std::string{};
             },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               instructions.push_back({primec::IrOpcode::LoadLocal, 7});
@@ -51615,6 +51637,7 @@ TEST_CASE("ir lowerer result helpers preserve multi-slot struct Result.ok values
             [](const primec::Expr &value, const primec::ir_lowerer::LocalMap &) {
               return value.kind == primec::Expr::Kind::Name && value.name == "pair" ? "/pkg/Pair" : std::string{};
             },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               instructions.push_back({primec::IrOpcode::LoadLocal, 9});
@@ -53449,8 +53472,8 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
             },
             error) ==
         EmitResult::Emitted);
-  CHECK(inlineCalled);
-  CHECK_FALSE(fileErrorCalled);
+  CHECK_FALSE(inlineCalled);
+  CHECK(fileErrorCalled);
 
   primec::Expr fileErrorWhyExpr;
   fileErrorWhyExpr.kind = primec::Expr::Kind::Call;

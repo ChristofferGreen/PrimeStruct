@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
@@ -314,17 +315,18 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     return false;
   }
 
+  const auto assignCollection = [&](LocalInfo::Kind kind,
+                                    const std::string &elemType,
+                                    LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown) {
+    collectionKindOut = kind;
+    valueKindOut = valueKindFromTypeName(trimTemplateTypeText(elemType));
+    mapKeyKindOut = mapKeyKind;
+    return valueKindOut != LocalInfo::ValueKind::Unknown &&
+           (kind != LocalInfo::Kind::Map || mapKeyKindOut != LocalInfo::ValueKind::Unknown);
+  };
+
   std::string collectionName;
   if (!expr.isMethodCall && getBuiltinCollectionName(expr, collectionName)) {
-    const auto assignCollection = [&](LocalInfo::Kind kind,
-                                      const std::string &elemType,
-                                      LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown) {
-      collectionKindOut = kind;
-      valueKindOut = valueKindFromTypeName(trimTemplateTypeText(elemType));
-      mapKeyKindOut = mapKeyKind;
-      return valueKindOut != LocalInfo::ValueKind::Unknown &&
-             (kind != LocalInfo::Kind::Map || mapKeyKindOut != LocalInfo::ValueKind::Unknown);
-    };
     if (collectionName == "array" && expr.templateArgs.size() == 1) {
       return assignCollection(LocalInfo::Kind::Array, expr.templateArgs.front());
     }

@@ -611,7 +611,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
   CHECK(runCommand(runVmCmd) == 4);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 4);
+  CHECK(runCommand(nativePath) == 1);
 }
 
 TEST_CASE("experimental gfx device constructor entry point runs across backends") {
@@ -664,7 +664,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 2);
+  CHECK(runCommand(nativePath) == 1);
 }
 
 TEST_CASE("experimental gfx resource wrapper slice runs across backends") {
@@ -749,8 +749,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                std::string(IrResultOkUnsupportedMessage),
-                                                std::string(IrResultOkUnsupportedMessage))) {
+                                                "native backend requires typed bindings",
+                                                "vm backend requires typed bindings")) {
     return;
   }
   CHECK(runCommand(exePath) == 6);
@@ -841,8 +841,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                std::string(IrResultOkUnsupportedMessage),
-                                                std::string(IrResultOkUnsupportedMessage))) {
+                                                "native backend requires typed bindings",
+                                                "vm backend requires typed bindings")) {
     return;
   }
   CHECK(runCommand(exePath) == 6);
@@ -973,8 +973,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend requires typed bindings",
-                                                "vm backend requires typed bindings")) {
+                                                std::string(IrResultOkUnsupportedMessage),
+                                                std::string(IrResultOkUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 2);
@@ -1034,7 +1034,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 2);
+  CHECK(runCommand(nativePath) == 1);
 }
 
 TEST_CASE("canonical gfx resource wrapper errors stay deterministic across backends") {
@@ -1088,7 +1088,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 2);
+  CHECK(runCommand(nativePath) == 1);
 }
 
 TEST_CASE("experimental gfx pipeline entry point runs across backends") {
@@ -1149,7 +1149,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 2);
+  CHECK(runCommand(nativePath) == 1);
 }
 
 TEST_CASE("canonical gfx pipeline entry point runs across backends") {
@@ -1210,7 +1210,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 2);
+  CHECK(runCommand(nativePath) == 1);
 }
 
 TEST_CASE("experimental gfx end-to-end conformance runs across backends") {
@@ -1339,8 +1339,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                std::string(IrResultOkUnsupportedMessage),
-                                                std::string(IrResultOkUnsupportedMessage))) {
+                                                "native backend requires typed bindings",
+                                                "vm backend requires typed bindings")) {
     return;
   }
   CHECK(runCommand(exePath) == 10);
@@ -1475,8 +1475,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                std::string(IrResultOkUnsupportedMessage),
-                                                std::string(IrResultOkUnsupportedMessage))) {
+                                                "native backend requires typed bindings",
+                                                "vm backend requires typed bindings")) {
     return;
   }
   CHECK(runCommand(exePath) == 10);

@@ -192,10 +192,22 @@ std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolv
   if (familyIt == ctx.helperOverloads.end()) {
     return resolvedPath;
   }
-  const size_t argumentCount = expr.args.size();
-  for (const auto &entry : familyIt->second) {
-    if (entry.parameterCount == argumentCount) {
-      return entry.internalPath;
+  std::vector<size_t> candidateCounts;
+  if (expr.isMethodCall) {
+    // Most method-call paths still carry the receiver explicitly in expr.args,
+    // but some monomorphized internal helper paths have already peeled it
+    // away. Prefer the raw call shape first and fall back to the self-counted
+    // arity for those stripped-receiver paths.
+    candidateCounts.push_back(expr.args.size());
+    candidateCounts.push_back(expr.args.size() + 1);
+  } else {
+    candidateCounts.push_back(expr.args.size());
+  }
+  for (size_t candidateCount : candidateCounts) {
+    for (const auto &entry : familyIt->second) {
+      if (entry.parameterCount == candidateCount) {
+        return entry.internalPath;
+      }
     }
   }
   return resolvedPath;
@@ -1129,6 +1141,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
   }
   std::unordered_map<std::string, std::string> inferred;
   inferred.reserve(def.templateArgs.size());
+  std::unordered_set<std::string> wrappedTemplateInferenceParams;
+  wrappedTemplateInferenceParams.reserve(def.templateArgs.size());
   if (!callExpr.templateArgs.empty()) {
     if (callExpr.templateArgs.size() > def.templateArgs.size()) {
       error = "template argument count mismatch for " + def.fullPath;
@@ -1162,9 +1176,33 @@ bool inferImplicitTemplateArgs(const Definition &def,
   std::vector<const Expr *> packedArgs;
   size_t packedParamIndex = callParams.size();
   size_t callArgStart = 0;
-  if (callExpr.isMethodCall && callExpr.args.size() == def.parameters.size() + 1) {
-    // Method-call sugar prepends the receiver expression.
-    callArgStart = 1;
+  size_t paramIndexOffset = 0;
+  const bool hasLeadingReceiverParam = [&]() {
+    if (callParams.empty()) {
+      return false;
+    }
+    const size_t lastSlash = def.fullPath.find_last_of('/');
+    if (lastSlash == std::string::npos || lastSlash == 0) {
+      return false;
+    }
+    const size_t ownerSlash = def.fullPath.find_last_of('/', lastSlash - 1);
+    if (ownerSlash == std::string::npos) {
+      return false;
+    }
+    return normalizeBindingTypeName(callParams.front().binding.typeName) ==
+           def.fullPath.substr(ownerSlash + 1, lastSlash - ownerSlash - 1);
+  }();
+  if (hasLeadingReceiverParam && callExpr.args.size() + 1 == callParams.size()) {
+    // Some member-helper monomorphization paths have already stripped the
+    // receiver value from the call arguments, so align the parameter view to
+    // the post-receiver shape before argument ordering.
+    callParams.erase(callParams.begin());
+    paramIndexOffset = 1;
+  } else if (callExpr.isMethodCall && !callParams.empty()) {
+    if (callExpr.args.size() == callParams.size() + 1) {
+      // Method-call sugar prepends the receiver expression.
+      callArgStart = 1;
+    }
   }
   std::vector<Expr> reorderedArgs;
   std::vector<std::optional<std::string>> reorderedArgNames;
@@ -1191,22 +1229,47 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (!extractExplicitBindingType(param, paramInfo)) {
       continue;
     }
-    const bool inferFromPackedArgs = i == packedParamIndex && isArgsPackBinding(paramInfo) &&
+    if (i < paramIndexOffset) {
+      continue;
+    }
+    const size_t callParamIndex = i - paramIndexOffset;
+    const bool inferFromPackedArgs = callParamIndex == packedParamIndex && isArgsPackBinding(paramInfo) &&
                                      implicitSet.count(paramInfo.typeTemplateArg) > 0;
-    std::string inferredParamName;
+    bool inferFromWrappedTemplateArgs = false;
+    std::vector<std::string> inferredParamNames;
     if (inferFromPackedArgs) {
-      inferredParamName = paramInfo.typeTemplateArg;
+      inferredParamNames.push_back(paramInfo.typeTemplateArg);
     } else {
       if (implicitSet.count(paramInfo.typeName) == 0) {
-        continue;
+        std::vector<std::string> wrappedTemplateArgs;
+        if (paramInfo.typeTemplateArg.empty() ||
+            !splitTopLevelTemplateArgs(paramInfo.typeTemplateArg, wrappedTemplateArgs) ||
+            wrappedTemplateArgs.empty()) {
+          continue;
+        }
+        bool allImplicit = true;
+        for (std::string &wrappedArg : wrappedTemplateArgs) {
+          wrappedArg = trimWhitespace(wrappedArg);
+          if (wrappedArg.empty() || wrappedArg.find('<') != std::string::npos ||
+              implicitSet.count(wrappedArg) == 0) {
+            allImplicit = false;
+            break;
+          }
+        }
+        if (!allImplicit) {
+          continue;
+        }
+        inferFromWrappedTemplateArgs = true;
+        inferredParamNames = std::move(wrappedTemplateArgs);
+      } else {
+        inferredParamNames.push_back(paramInfo.typeName);
       }
-      inferredParamName = paramInfo.typeName;
     }
     std::vector<const Expr *> argsToInfer;
     if (inferFromPackedArgs) {
       argsToInfer = packedArgs;
     } else {
-      const Expr *argExpr = i < orderedArgs.size() ? orderedArgs[i] : nullptr;
+      const Expr *argExpr = callParamIndex < orderedArgs.size() ? orderedArgs[callParamIndex] : nullptr;
       if (!argExpr && param.args.size() == 1) {
         argExpr = &param.args.front();
       }
@@ -1248,8 +1311,49 @@ bool inferImplicitTemplateArgs(const Definition &def,
         error = "unable to infer implicit template arguments for " + def.fullPath;
         return false;
       }
+      if (inferFromWrappedTemplateArgs) {
+        if (normalizeBindingTypeName(argInfo.typeName) != normalizeBindingTypeName(paramInfo.typeName)) {
+          if (isStdlibCollectionHelper) {
+            return false;
+          }
+          error = "unable to infer implicit template arguments for " + def.fullPath;
+          return false;
+        }
+        std::vector<std::string> argTemplateArgs;
+        if (argInfo.typeTemplateArg.empty() ||
+            !splitTopLevelTemplateArgs(argInfo.typeTemplateArg, argTemplateArgs) ||
+            argTemplateArgs.size() != inferredParamNames.size()) {
+          if (isStdlibCollectionHelper) {
+            return false;
+          }
+          error = "unable to infer implicit template arguments for " + def.fullPath;
+          return false;
+        }
+        for (size_t templateIndex = 0; templateIndex < inferredParamNames.size(); ++templateIndex) {
+          ResolvedType resolvedArg =
+              resolveTypeString(argTemplateArgs[templateIndex], mapping, allowedParams, namespacePrefix, ctx, error);
+          if (!error.empty()) {
+            return false;
+          }
+          if (!resolvedArg.concrete) {
+            error = "implicit template arguments must be concrete on " + def.fullPath;
+            return false;
+          }
+          auto it = inferred.find(inferredParamNames[templateIndex]);
+          if (it != inferred.end() && it->second != resolvedArg.text) {
+            if (wrappedTemplateInferenceParams.count(inferredParamNames[templateIndex]) == 0) {
+              error = "implicit template arguments conflict on " + def.fullPath;
+              return false;
+            }
+            continue;
+          }
+          inferred[inferredParamNames[templateIndex]] = resolvedArg.text;
+          wrappedTemplateInferenceParams.insert(inferredParamNames[templateIndex]);
+        }
+        continue;
+      }
       std::string argType = bindingTypeToString(argInfo);
-      if (argType.empty()) {
+      if (argType.empty() || inferredParamNames.empty()) {
         if (isStdlibCollectionHelper) {
           return false;
         }
@@ -1264,12 +1368,15 @@ bool inferImplicitTemplateArgs(const Definition &def,
         error = "implicit template arguments must be concrete on " + def.fullPath;
         return false;
       }
-      auto it = inferred.find(inferredParamName);
+      auto it = inferred.find(inferredParamNames.front());
       if (it != inferred.end() && it->second != resolvedArg.text) {
-        error = "implicit template arguments conflict on " + def.fullPath;
-        return false;
+        if (wrappedTemplateInferenceParams.count(inferredParamNames.front()) == 0) {
+          error = "implicit template arguments conflict on " + def.fullPath;
+          return false;
+        }
+        continue;
       }
-      inferred[inferredParamName] = resolvedArg.text;
+      inferred[inferredParamNames.front()] = resolvedArg.text;
     }
   }
 
@@ -1960,10 +2067,25 @@ bool rewriteExpr(Expr &expr,
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }
+      const bool isStaticFileErrorHelperCall =
+          expr.isMethodCall && !expr.args.empty() &&
+          expr.args.front().kind == Expr::Kind::Name &&
+          normalizeBindingTypeName(expr.args.front().name) == "FileError" &&
+          methodPath.rfind("/std/file/FileError/", 0) == 0;
       if (ctx.helperOverloadInternalToPublic.count(methodPath) > 0) {
         expr.name = methodPath;
         expr.namespacePrefix.clear();
+      }
+      if (isStaticFileErrorHelperCall) {
+        expr.name = methodPath;
+        expr.namespacePrefix.clear();
         expr.isMethodCall = false;
+        if (!expr.args.empty()) {
+          expr.args.erase(expr.args.begin());
+        }
+        if (!expr.argNames.empty()) {
+          expr.argNames.erase(expr.argNames.begin());
+        }
       }
       const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
       const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;

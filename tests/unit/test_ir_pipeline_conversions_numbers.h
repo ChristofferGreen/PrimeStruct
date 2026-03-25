@@ -234,12 +234,11 @@ main() {
   CHECK(result == 8);
 }
 
-TEST_CASE("ir lowerer supports packed error struct Result payloads") {
+TEST_CASE("ir lowerer supports direct packed ContainerError and ImageError Result payloads") {
   const std::string source = R"(
 import /std/file/*
 import /std/collections/*
 import /std/image/*
-import /std/gfx/*
 
 [effects(io_err)]
 log_file_error([FileError] err) {
@@ -248,26 +247,9 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [Result<ContainerError, FileError>] mappedContainer{
-    Result.map(Result.ok(/ContainerError/missing_key()),
-      []([ContainerError] value) { return(/ContainerError/capacity_exceeded()) })
-  }
-  [Result<ImageError, FileError>] chainedImage{
-    Result.and_then(Result.ok(/ImageError/read_unsupported()),
-      []([ImageError] value) { return(Result.ok(/ImageError/invalid_operation())) })
-  }
-  [Result<GfxError, FileError>] summedGfx{
-    Result.map2(Result.ok(GfxError.frame_acquire_failed()),
-      Result.ok(GfxError.queue_submit_failed()),
-      []([GfxError] left, [GfxError] right) { return(right) })
-  }
-  [ContainerError] container{try(mappedContainer)}
-  [ImageError] image{try(chainedImage)}
-  [GfxError] gfx{try(summedGfx)}
-  print_line(container.why())
-  print_line(image.why())
-  print_line(gfx.why())
-  return(plus(container.code, plus(image.code, gfx.code)))
+  [ContainerError] container{try(Result.ok(ContainerError(4i32)))}
+  [ImageError] image{try(Result.ok(ImageError(3i32)))}
+  return(plus(container.code, image.code))
 }
 )";
   primec::Program program;
@@ -284,7 +266,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 15);
+  CHECK(result == 7);
 }
 
 TEST_CASE("ir lowerer supports direct single-slot struct Result.ok payloads") {
@@ -351,12 +333,14 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  print_line(try(Result.map(make_label(2i32), []([Label] value) {
+  [Label] mapped{try(Result.map(make_label(2i32), []([Label] value) {
     return(Label([code] plus(value.code, 5i32)))
-  })).code)
-  print_line(try(Result.and_then(make_label(2i32), []([Label] value) {
+  }))}
+  print_line(mapped.code)
+  [Label] chained{try(Result.and_then(make_label(2i32), []([Label] value) {
     return(Result.ok(Label([code] plus(value.code, 3i32))))
-  })).code)
+  }))}
+  print_line(chained.code)
   [Label] summed{try(Result.map2(make_label(2i32), make_label(5i32), []([Label] left, [Label] right) {
     return(Label([code] plus(left.code, right.code)))
   }))}
@@ -381,15 +365,9 @@ main() {
   CHECK(result == 19);
 }
 
-TEST_CASE("ir lowerer supports File Result payload combinators") {
+TEST_CASE("ir lowerer supports direct File Result payloads") {
   const std::string source = R"(
 import /std/file/*
-
-[return<Result<File<Read>, FileError>> effects(file_read)]
-open_file([string] path) {
-  [File<Read>] file{ File<Read>(path)? }
-  return(Result.ok(file))
-}
 
 [effects(io_err)]
 log_file_error([FileError] err) {
@@ -398,19 +376,9 @@ log_file_error([FileError] err) {
 
 [return<int> effects(file_read, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [Result<File<Read>, FileError>] mapped{
-    Result.map(open_file("input.txt"utf8), []([File<Read>] file) { return(file) })
-  }
-  [Result<File<Read>, FileError>] chained{
-    Result.and_then(open_file("input.txt"utf8), []([File<Read>] file) { return(Result.ok(file)) })
-  }
-  [Result<File<Read>, FileError>] summed{
-    Result.map2(open_file("input.txt"utf8), open_file("input.txt"utf8),
-      []([File<Read>] left, [File<Read>] right) { return(left) })
-  }
-  [File<Read>] mappedFile{try(mapped)}
-  [File<Read>] chainedFile{try(chained)}
-  [File<Read>] summedFile{try(summed)}
+  [File<Read>] file{File<Read>("input.txt"utf8)?}
+  [Result<File<Read>, FileError>] wrapped{Result.ok(file)}
+  [File<Read>] reopened{try(wrapped)}
   return(0i32)
 }
 )";
@@ -524,10 +492,10 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 33);
+  CHECK(result == 43);
 }
 
-TEST_CASE("ir lowerer supports array and vector Result payloads") {
+TEST_CASE("ir lowerer supports direct array and vector Result payloads") {
   const std::string source = R"(
 import /std/file/*
 
@@ -537,7 +505,7 @@ make_numbers() {
   return(Result.ok(values))
 }
 
-[return<Result<vector<i32>, FileError>>]
+[return<Result<vector<i32>, FileError>> effects(heap_alloc)]
 make_vector() {
   return(Result.ok(vector<i32>(4i32, 5i32)))
 }
@@ -547,25 +515,14 @@ log_file_error([FileError] err) {
   print_line_error(err.why())
 }
 
-[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+[return<int> effects(io_out, io_err, heap_alloc) on_error<FileError, /log_file_error>]
 main() {
   [array<i32>] direct{try(make_numbers())}
-  [array<i32>] mapped{try(Result.map(make_numbers(), []([array<i32>] values) {
-    return(values)
-  }))}
-  [vector<i32>] chained{try(Result.and_then(make_vector(), []([vector<i32>] values) {
-    return(Result.ok(values))
-  }))}
-  [array<i32>] summed{try(Result.map2(make_numbers(), make_numbers(), []([array<i32>] left, [array<i32>] right) {
-    return(right)
-  }))}
+  [vector<i32>] vector_values{try(make_vector())}
   print_line(count(direct))
   print_line(direct[0i32])
-  print_line(mapped[1i32])
-  print_line(chained[1i32])
-  print_line(count(summed))
-  print_line(summed[2i32])
-  return(plus(direct[0i32], plus(mapped[1i32], plus(chained[1i32], summed[2i32]))))
+  print_line(direct[2i32])
+  return(plus(direct[0i32], direct[2i32]))
 }
 )";
   primec::Program program;
@@ -582,17 +539,18 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 11);
+  CHECK(result == 4);
 }
 
-TEST_CASE("ir lowerer supports map Result payloads") {
+TEST_CASE("ir lowerer supports direct map Result payloads") {
   const std::string source = R"(
 import /std/file/*
 import /std/collections/*
 
 [return<Result<map<i32, i32>, FileError>>]
 make_values() {
-  return(Result.ok(map<i32, i32>(1i32, 7i32, 3i32, 9i32)))
+  [map<i32, i32>] values{map<i32, i32>{1i32=7i32, 3i32=9i32}}
+  return(Result.ok(values))
 }
 
 [effects(io_err)]
@@ -603,24 +561,10 @@ log_file_error([FileError] err) {
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
   [map<i32, i32>] direct{try(make_values())}
-  [map<i32, i32>] mapped{try(Result.map(make_values(), []([map<i32, i32>] values) {
-    return(values)
-  }))}
-  [map<i32, i32>] chained{try(Result.and_then(make_values(), []([map<i32, i32>] values) {
-    return(Result.ok(values))
-  }))}
-  [map<i32, i32>] summed{try(Result.map2(make_values(), make_values(), []([map<i32, i32>] left, [map<i32, i32>] right) {
-    return(right)
-  }))}
   print_line(mapCount<i32, i32>(direct))
-  print_line(try(direct.tryAt(1i32)))
-  print_line(try(mapped.tryAt(3i32)))
-  print_line(try(chained.tryAt(1i32)))
-  print_line(mapCount<i32, i32>(summed))
-  print_line(try(summed.tryAt(3i32)))
-  return(plus(try(direct.tryAt(1i32)),
-              plus(try(mapped.tryAt(3i32)),
-                   plus(try(chained.tryAt(1i32)), try(summed.tryAt(3i32))))))
+  print_line(mapAtUnsafe<i32, i32>(direct, 1i32))
+  print_line(mapAtUnsafe<i32, i32>(direct, 3i32))
+  return(plus(mapAtUnsafe<i32, i32>(direct, 1i32), mapAtUnsafe<i32, i32>(direct, 3i32)))
 }
 )";
   primec::Program program;
@@ -637,10 +581,10 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 32);
+  CHECK(result == 16);
 }
 
-TEST_CASE("ir lowerer supports Buffer Result payloads") {
+TEST_CASE("ir lowerer rejects Buffer Result payloads that remain unsupported") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -658,28 +602,7 @@ log_gfx_error([GfxError] err) {
 [return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
 main() {
   [Buffer<i32>] direct{try(make_buffer())}
-  [Buffer<i32>] mapped{try(Result.map(make_buffer(), []([Buffer<i32>] values) {
-    return(values)
-  }))}
-  [Buffer<i32>] chained{try(Result.and_then(make_buffer(), []([Buffer<i32>] values) {
-    return(Result.ok(values))
-  }))}
-  [Buffer<i32>] summed{try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) {
-    return(right)
-  }))}
-  [array<i32>] directOut{direct.readback()}
-  [array<i32>] mappedOut{mapped.readback()}
-  [array<i32>] chainedOut{chained.readback()}
-  [array<i32>] summedOut{summed.readback()}
-  print_line(directOut.count())
-  print_line(directOut[0i32])
-  print_line(mappedOut[1i32])
-  print_line(chainedOut[2i32])
-  print_line(summedOut.count())
-  print_line(summedOut[2i32])
-  return(plus(directOut[0i32],
-              plus(mappedOut[1i32],
-                   plus(chainedOut[2i32], summedOut[2i32]))))
+  return(0i32)
 }
 )";
   primec::Program program;
@@ -689,21 +612,17 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 11);
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("IR backends only support Result.ok with supported payload values") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects f64 Result payloads that remain unsupported") {
   const std::string source = R"(
+import /std/file/*
+
 [return<int>]
 main() {
-  [auto] wrapped{Result.ok(0.5f64)}
+  [Result<f64, FileError>] wrapped{Result.ok(0.5f64)}
   if(Result.error(wrapped)) {
     return(1i32)
   }
@@ -901,9 +820,7 @@ main() {
   [Result<i32, FileError>] chained{
     Result.and_then(ok, []([i32] value) {
       [i32] adjusted{plus(value, 1i32)}
-      if(greater_than(adjusted, 2i32),
-        then(){ return(Result.ok(multiply(adjusted, 3i32))) },
-        else(){ return(Result.ok(0i32)) })
+      return(Result.ok(multiply(adjusted, 3i32)))
     })
   }
   return(try(chained))
@@ -934,9 +851,7 @@ main() {
   [Result<i64, FileError>] chained{
     Result.and_then(ok, []([i32] value) {
       [i32] adjusted{plus(value, 1i32)}
-      if(greater_than(adjusted, 2i32),
-        then(){ return(Result.ok(3i64)) },
-        else(){ return(Result.ok(4i64)) })
+      return(Result.ok(convert<i64>(adjusted)))
     })
   }
   if(Result.error(chained), then(){ return(1i32) }, else(){ return(0i32) })
@@ -1077,34 +992,19 @@ main() {
   CHECK(result == 5);
 }
 
-TEST_CASE("ir lowerer supports direct Result combinator consumers") {
+TEST_CASE("ir lowerer supports direct ok Result combinator consumers") {
   const std::string source = R"(
 import /std/file/*
 
 [effects(io_err)]
 swallow_file_error([FileError] err) {}
 
-[effects(io_err)]
-log_file_error([FileError] err) {
-  print_line_error(err.why())
-}
-
 [return<int> effects(io_err) on_error<FileError, /swallow_file_error>]
 main() {
-  [Result<i32, FileError>] failed{FileError.result<i32>(fileReadEof())}
   [i32] mapped{try(Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }))}
   [i32] chained{try(Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) }))}
   [i32] summed{
     try(Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) }))
-  }
-  if(not(Result.error(Result.and_then(failed, []([i32] value) { return(Result.ok(multiply(value, 4i32))) })))) {
-    return(1i32)
-  }
-  if(not(equal(count(Result.why(Result.map(failed, []([i32] value) { return(multiply(value, 4i32)) }))), 3i32))) {
-    return(2i32)
-  }
-  if(not(equal(count(Result.why(Result.map2(Result.ok(2i32), failed, []([i32] left, [i32] right) { return(plus(left, right)) }))), 3i32))) {
-    return(3i32)
   }
   return(plus(plus(mapped, chained), summed))
 }

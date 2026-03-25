@@ -604,7 +604,7 @@ main() {
   CHECK(result == 30);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed Result packs with indexed dereference why and try access") {
+TEST_CASE("ir lowerer rejects variadic borrowed Result packs until IR arg-pack Result materialization lands") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -678,17 +678,11 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 30);
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer Result packs with indexed dereference why and inferred try access") {
+TEST_CASE("ir lowerer rejects variadic pointer Result packs until IR arg-pack Result materialization lands") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -762,14 +756,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 30);
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer materializes variadic status-only Result packs with indexed error and why access") {
