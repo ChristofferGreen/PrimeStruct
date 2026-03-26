@@ -900,7 +900,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles native bare map at call without helper") {
+TEST_CASE("rejects native bare map at call without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -919,12 +919,11 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 4);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles native bare map at_unsafe call without helper") {
+TEST_CASE("rejects native bare map at_unsafe call without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -945,9 +944,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 4);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects native map namespaced count method compatibility alias") {
@@ -1094,7 +1092,7 @@ main() {
   CHECK(readFile(outPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
-TEST_CASE("compiles native bare map access methods without imported canonical helpers") {
+TEST_CASE("rejects native bare map access methods without imported canonical helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -1112,9 +1110,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 9);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects native map namespaced at method compatibility alias") {

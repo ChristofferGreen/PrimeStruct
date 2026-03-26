@@ -674,8 +674,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_at_without_helper_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm bare map at_unsafe call without helper") {
@@ -691,8 +691,8 @@ main() {
                                "primec_vm_bare_map_at_unsafe_without_helper_reject_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map namespaced count method compatibility alias") {
@@ -820,8 +820,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_access_methods_without_import_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 9);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map namespaced at method compatibility alias") {

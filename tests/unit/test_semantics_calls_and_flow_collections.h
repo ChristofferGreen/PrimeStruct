@@ -9650,7 +9650,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map at wrapper call validates builtin wrapper receiver without helpers") {
+TEST_CASE("bare map at wrapper call requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -9663,8 +9663,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("bare map at call resolves through compatibility helper when canonical helper is absent") {
@@ -10284,7 +10284,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("bare map at call validates without imported canonical helper") {
+TEST_CASE("bare map at call requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -10293,11 +10293,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("bare map at_unsafe auto inference stays stable") {
+TEST_CASE("bare map at_unsafe auto inference requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -10307,8 +10307,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("map namespaced count method keeps slash-path rejection diagnostics") {
@@ -10420,7 +10420,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("bare map access methods validate without imported canonical helpers") {
+TEST_CASE("bare map access methods require imported canonical helpers or explicit definitions") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -10429,11 +10429,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("bare map access method auto inference stays stable") {
+TEST_CASE("bare map access method auto inference keeps deterministic unknown call target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -10443,8 +10443,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("map namespaced at method keeps slash-path rejection diagnostics") {
