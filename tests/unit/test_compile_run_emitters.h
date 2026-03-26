@@ -6613,7 +6613,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs map unnamespaced contains without helper in C++ emitter") {
+TEST_CASE("rejects map unnamespaced contains without helper in C++ emitter with unknown-target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 main() {
@@ -6627,9 +6627,14 @@ main() {
       (testScratchPath("") /
        "primec_cpp_map_unnamespaced_contains_without_helper_reject_exe")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 1);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_map_unnamespaced_contains_without_helper_reject.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("rejects map unnamespaced tryAt through canonical helper in C++ emitter without on_error") {

@@ -218,7 +218,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
 	    ExprDispatchBootstrap dispatchBootstrap;
 	    prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
 	    const bool shouldBuiltinValidateBareMapCountCall = true;
-	    const bool shouldBuiltinValidateBareMapContainsCall = true;
+	    const bool shouldBuiltinValidateBareMapContainsCall = false;
 	    const bool shouldBuiltinValidateBareMapTryAtCall = false;
 	    const bool shouldBuiltinValidateBareMapAccessCall = true;
 	    auto isAcceptedLocationTarget = [&](const Expr &target, const auto &self) -> bool {

@@ -102,7 +102,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map contains call validates without imported canonical helper") {
+TEST_CASE("bare map contains call requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -111,9 +111,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("bare map contains call resolves through canonical helper definition") {
