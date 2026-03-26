@@ -9,7 +9,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   bounds-error path as high indices), and `vectorAtUnsafe` now routes through
   the same guard for both negative and positive out-of-range indices, so those
   accesses no longer fall through to invalid pointer arithmetic,
-  uninitialized-slot reads, or indirect-address traps.
+  uninitialized-slot reads, or indirect-address traps; the guard now triggers
+  bounds errors through zero-length `array` indexing instead of constructing a
+  canonical `/vector/*` value.
 - `experimental-vector-push-growth-overflow-contract`:
   `/std/collections/experimental_vector/vectorPush` now diverts capacity-
   doubling overflow into the shared runtime-contract path instead of letting
