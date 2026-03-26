@@ -870,7 +870,11 @@ bool inferCallParameterLocalInfo(const Expr &param,
     return true;
   }
   if (infoOut.kind != LocalInfo::Kind::Value && infoOut.kind != LocalInfo::Kind::Map) {
-    error = "native backend does not support string pointers or references";
+    if (infoOut.isArgsPack) {
+      error = "variadic args<T> does not support string pointers or references";
+    } else {
+      error = "native backend does not support string pointers or references";
+    }
     return false;
   }
   infoOut.valueKind = LocalInfo::ValueKind::String;

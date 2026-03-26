@@ -333,7 +333,11 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
   }
   if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value &&
       bindingInfo.kind != LocalInfo::Kind::Map) {
-    error = "native backend does not support string pointers or references";
+    if (bindingInfo.isArgsPack) {
+      error = "variadic args<T> does not support string pointers or references";
+    } else {
+      error = "native backend does not support string pointers or references";
+    }
     return false;
   }
   if (!bindingInfo.isArgsPack &&

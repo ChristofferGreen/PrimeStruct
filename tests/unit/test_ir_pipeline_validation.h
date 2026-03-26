@@ -43500,6 +43500,39 @@ TEST_CASE("ir lowerer statement binding helper rejects string reference paramete
   CHECK(error == "native backend does not support string pointers or references");
 }
 
+TEST_CASE("ir lowerer statement binding helper rejects variadic string reference parameters with arg-pack diagnostic") {
+  primec::Expr param;
+  param.name = "labels";
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  argsTransform.templateArgs.push_back("Reference<string>");
+  param.transforms.push_back(argsTransform);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 4;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Reference; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::String;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return true; },
+      info,
+      error));
+  CHECK(error == "variadic args<T> does not support string pointers or references");
+}
+
 TEST_CASE("ir lowerer statement binding helper selects uninitialized zero opcodes") {
   primec::IrOpcode mapZeroOp = primec::IrOpcode::PushI32;
   uint64_t mapZeroImm = 123;
@@ -47805,6 +47838,40 @@ TEST_CASE("ir lowerer return inference helpers reject string references") {
       [](const primec::Expr &) { return true; },
       error));
   CHECK(error == "native backend does not support string pointers or references");
+}
+
+TEST_CASE("ir lowerer return inference helpers reject variadic string references with arg-pack diagnostic") {
+  primec::Expr bindingExpr;
+  bindingExpr.name = "labels";
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  argsTransform.templateArgs.push_back("Reference<string>");
+  bindingExpr.transforms.push_back(argsTransform);
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::inferReturnInferenceBindingIntoLocals(
+      bindingExpr,
+      true,
+      "/pkg/fn",
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Reference; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::String;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &) { return true; },
+      error));
+  CHECK(error == "variadic args<T> does not support string pointers or references");
 }
 
 TEST_CASE("ir lowerer return inference helpers infer typed value returns") {

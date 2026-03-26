@@ -3007,6 +3007,27 @@ main() {
   CHECK(readFile(errPath).empty());
 }
 
+TEST_CASE("vm rejects variadic pointer string packs") {
+  const std::string source = R"(
+[return<int>]
+score([args<Pointer<string>>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  [string] first{"first"utf8}
+  [string] second{"second"utf8}
+  [Pointer<string>] p0{location(first)}
+  [Pointer<string>] p1{location(second)}
+  return(score(p0, p1))
+}
+)";
+  const std::string srcPath = writeTemp("vm_variadic_args_pointer_string_reject.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("vm ignores top-level executions") {
   const std::string source = R"(
 [return<bool>]
