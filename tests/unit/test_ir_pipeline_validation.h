@@ -51903,6 +51903,46 @@ TEST_CASE("ir lowerer result helpers resolve file handle Result payload metadata
   mapExpr.name = "map";
   mapExpr.args = {resultName, sourceExpr, lambdaExpr};
 
+  primec::Expr okParamExpr;
+  okParamExpr.kind = primec::Expr::Kind::Call;
+  okParamExpr.isMethodCall = true;
+  okParamExpr.name = "ok";
+  okParamExpr.args = {resultName, paramExpr};
+
+  primec::Expr andThenExpr;
+  andThenExpr.kind = primec::Expr::Kind::Call;
+  andThenExpr.isMethodCall = true;
+  andThenExpr.name = "and_then";
+  andThenExpr.args = {resultName, sourceExpr, lambdaExpr};
+  andThenExpr.args[2].bodyArguments.clear();
+  andThenExpr.args[2].bodyArguments.push_back(okParamExpr);
+
+  primec::ir_lowerer::LocalInfo otherResultLocal = resultLocal;
+  locals.emplace("other", otherResultLocal);
+
+  primec::Expr otherExpr;
+  otherExpr.kind = primec::Expr::Kind::Name;
+  otherExpr.name = "other";
+
+  primec::Expr leftParamExpr;
+  leftParamExpr.kind = primec::Expr::Kind::Name;
+  leftParamExpr.name = "left";
+
+  primec::Expr rightParamExpr;
+  rightParamExpr.kind = primec::Expr::Kind::Name;
+  rightParamExpr.name = "right";
+
+  primec::Expr map2LambdaExpr;
+  map2LambdaExpr.isLambda = true;
+  map2LambdaExpr.args = {leftParamExpr, rightParamExpr};
+  map2LambdaExpr.bodyArguments.push_back(leftParamExpr);
+
+  primec::Expr map2Expr;
+  map2Expr.kind = primec::Expr::Kind::Call;
+  map2Expr.isMethodCall = true;
+  map2Expr.name = "map2";
+  map2Expr.args = {resultName, sourceExpr, otherExpr, map2LambdaExpr};
+
   auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
     return nullptr;
   };
@@ -51932,6 +51972,24 @@ TEST_CASE("ir lowerer result helpers resolve file handle Result payload metadata
   out = {};
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       mapExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.valueStructType.empty());
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      andThenExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.valueStructType.empty());
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      map2Expr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);

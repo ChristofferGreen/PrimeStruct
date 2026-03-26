@@ -281,6 +281,47 @@
           info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
         }
       }
+      auto assignInferredFileHandleBinding = [&]() {
+        if (hasExplicitBindingTypeTransform(stmt) || info.kind != LocalInfo::Kind::Value || info.isResult ||
+            info.isFileHandle) {
+          return;
+        }
+        if (init.kind == Expr::Kind::Name) {
+          auto existing = localsIn.find(init.name);
+          if (existing != localsIn.end() && existing->second.isFileHandle) {
+            info.isFileHandle = true;
+            info.valueKind = LocalInfo::ValueKind::Int64;
+          }
+          return;
+        }
+        if (init.kind == Expr::Kind::Call && !init.isMethodCall && isSimpleCallName(init, "File") &&
+            init.templateArgs.size() == 1) {
+          info.isFileHandle = true;
+          info.valueKind = LocalInfo::ValueKind::Int64;
+          return;
+        }
+        if (!(init.kind == Expr::Kind::Call && !init.isMethodCall && isSimpleCallName(init, "try") &&
+              init.args.size() == 1)) {
+          return;
+        }
+        ResultExprInfo inferredTryResultInfo;
+        if (!resolveResultExprInfoFromLocals(
+                init.args.front(),
+                localsIn,
+                [&](const Expr &callExpr, const LocalMap &callLocals) {
+                  return resolveMethodCallDefinition(callExpr, callLocals);
+                },
+                [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+                inferredTryResultInfo) ||
+            !inferredTryResultInfo.isResult || !inferredTryResultInfo.hasValue || !inferredTryResultInfo.valueIsFileHandle) {
+          return;
+        }
+        info.isFileHandle = true;
+        info.valueKind = LocalInfo::ValueKind::Int64;
+      };
+      assignInferredFileHandleBinding();
       for (const auto &transform : stmt.transforms) {
         if (transform.name == "soa_vector") {
           info.isSoaVector = true;

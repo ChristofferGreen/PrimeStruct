@@ -1576,6 +1576,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("Result file combinators accept explicit try-bound file consumers") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(file_read, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [File<Read>] openedA{File<Read>("input.txt"utf8)?}
+  [File<Read>] mapped{try(Result.map(Result.ok(openedA), []([File<Read>] file) { return(file) }))}
+  mapped.close()?
+
+  [File<Read>] openedB{File<Read>("input.txt"utf8)?}
+  [File<Read>] chained{try(Result.and_then(Result.ok(openedB), []([File<Read>] file) { return(Result.ok(file)) }))}
+  chained.close()?
+
+  [File<Read>] openedC{File<Read>("input.txt"utf8)?}
+  [File<Read>] openedD{File<Read>("input.txt"utf8)?}
+  [File<Read>] combined{
+    try(Result.map2(Result.ok(openedC), Result.ok(openedD), []([File<Read>] left, [File<Read>] right) {
+      return(left)
+    }))
+  }
+  combined.close()?
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("Result.map requires lambda argument") {
   const std::string source = R"(
 [return<void>]

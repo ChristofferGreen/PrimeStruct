@@ -438,6 +438,53 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer supports packed File Result combinator payloads") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(file_read, io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [File<Read>] openedA{File<Read>("input.txt"utf8)?}
+  [File<Read>] mapped{try(Result.map(Result.ok(openedA), []([File<Read>] file) { return(file) }))}
+  [i32 mut] first{0i32}
+  mapped.read_byte(first)?
+  mapped.close()?
+
+  [File<Read>] openedB{File<Read>("input.txt"utf8)?}
+  [File<Read>] chained{try(Result.and_then(Result.ok(openedB), []([File<Read>] file) { return(Result.ok(file)) }))}
+  [i32 mut] second{0i32}
+  chained.read_byte(second)?
+  chained.close()?
+
+  [File<Read>] openedC{File<Read>("input.txt"utf8)?}
+  [File<Read>] openedD{File<Read>("input.txt"utf8)?}
+  [File<Read>] combined{
+    try(Result.map2(Result.ok(openedC), Result.ok(openedD), []([File<Read>] left, [File<Read>] right) {
+      return(left)
+    }))
+  }
+  [i32 mut] third{0i32}
+  combined.read_byte(third)?
+  combined.close()?
+  return(plus(first, plus(second, third)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer supports direct multi-slot struct Result.ok payloads") {
   const std::string source = R"(
 import /std/file/*

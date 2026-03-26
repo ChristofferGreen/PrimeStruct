@@ -189,6 +189,14 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
   }
 
   auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
+    if (expr.isLambda) {
+      for (auto &arg : expr.bodyArguments) {
+        if (!self(self, arg)) {
+          return false;
+        }
+      }
+      return true;
+    }
     for (auto &arg : expr.args) {
       if (!self(self, arg)) {
         return false;

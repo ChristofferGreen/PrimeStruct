@@ -327,7 +327,21 @@
             return false;
           }
           ResultExprInfo resultInfo;
-          if (!resolveResultExprInfo(expr.args.front(), localsIn, resultInfo) || !resultInfo.isResult) {
+          if (!ir_lowerer::resolveResultExprInfoFromLocals(
+                  expr.args.front(),
+                  localsIn,
+                  [&](const Expr &callExpr, const LocalMap &callLocals) {
+                    return resolveMethodCallDefinition(callExpr, callLocals);
+                  },
+                  [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                  [&](const std::string &definitionPath, ReturnInfo &returnInfoOut) {
+                    return getReturnInfo && getReturnInfo(definitionPath, returnInfoOut);
+                  },
+                  [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                    return inferExprKind(valueExpr, valueLocals);
+                  },
+                  resultInfo) ||
+              !resultInfo.isResult) {
             error = "try requires Result argument";
             return false;
           }

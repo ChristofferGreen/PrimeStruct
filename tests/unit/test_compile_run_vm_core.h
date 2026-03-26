@@ -1661,6 +1661,68 @@ TEST_CASE("vm supports direct File Result payloads on IR-backed paths") {
   CHECK(readFile(outPath) == "65\n");
 }
 
+TEST_CASE("vm supports packed File Result combinator payloads on IR-backed paths") {
+  const std::string filePath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_file_combinators_ir_backed.txt").string();
+  {
+    std::ofstream file(filePath, std::ios::binary);
+    REQUIRE(file.good());
+    file.write("ABC", 3);
+    REQUIRE(file.good());
+  }
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(filePath);
+  const std::string source =
+      "import /std/file/*\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(err.why())\n"
+      "}\n"
+      "[return<int> effects(file_read, io_out, io_err) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Read>] openedA{File<Read>(\"" + escapedPath + "\"utf8)?}\n"
+      "  [File<Read>] mapped{try(Result.map(Result.ok(openedA), []([File<Read>] file) { return(file) }))}\n"
+      "  [i32 mut] first{0i32}\n"
+      "  mapped.read_byte(first)?\n"
+      "  mapped.close()?\n"
+      "  print_line(first)\n"
+      "  [File<Read>] openedB{File<Read>(\"" + escapedPath + "\"utf8)?}\n"
+      "  [File<Read>] chained{try(Result.and_then(Result.ok(openedB), []([File<Read>] file) { return(Result.ok(file)) }))}\n"
+      "  [i32 mut] second{0i32}\n"
+      "  chained.read_byte(second)?\n"
+      "  chained.close()?\n"
+      "  print_line(second)\n"
+      "  [File<Read>] openedC{File<Read>(\"" + escapedPath + "\"utf8)?}\n"
+      "  [File<Read>] openedD{File<Read>(\"" + escapedPath + "\"utf8)?}\n"
+      "  [File<Read>] combined{\n"
+      "    try(Result.map2(Result.ok(openedC), Result.ok(openedD), []([File<Read>] left, [File<Read>] right) {\n"
+      "      return(left)\n"
+      "    }))\n"
+      "  }\n"
+      "  [i32 mut] third{0i32}\n"
+      "  combined.read_byte(third)?\n"
+      "  combined.close()?\n"
+      "  print_line(third)\n"
+      "  return(plus(first, plus(second, third)))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("vm_result_file_combinators_ir_backed.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_file_combinators_ir_backed_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 195);
+  CHECK(readFile(outPath) == "65\n65\n65\n");
+}
+
 TEST_CASE("vm supports multi-slot struct Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

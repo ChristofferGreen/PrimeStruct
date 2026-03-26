@@ -173,6 +173,43 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
 
   applyDeclaredResultBindingMetadata(bindingExpr, bindingInfo);
 
+  std::string bindingTypeName;
+  std::vector<std::string> bindingTemplateArgs;
+  if (extractFirstBindingTypeTransform(bindingExpr, bindingTypeName, bindingTemplateArgs) &&
+      normalizeCollectionBindingTypeName(bindingTypeName) == "File" && bindingTemplateArgs.size() == 1) {
+    bindingInfo.isFileHandle = true;
+    bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
+  }
+  if (!bindingInfo.isFileHandle && bindingExpr.args.front().kind == Expr::Kind::Name) {
+    auto existing = localsIn.find(bindingExpr.args.front().name);
+    if (existing != localsIn.end() && existing->second.isFileHandle) {
+      bindingInfo.isFileHandle = true;
+      bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
+    }
+  }
+  if (!bindingInfo.isFileHandle && bindingExpr.args.front().kind == Expr::Kind::Call &&
+      !bindingExpr.args.front().isMethodCall && isSimpleCallName(bindingExpr.args.front(), "File") &&
+      bindingExpr.args.front().templateArgs.size() == 1) {
+    bindingInfo.isFileHandle = true;
+    bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
+  }
+  if (!bindingInfo.isFileHandle && bindingExpr.args.front().kind == Expr::Kind::Call &&
+      !bindingExpr.args.front().isMethodCall && isSimpleCallName(bindingExpr.args.front(), "try") &&
+      bindingExpr.args.front().args.size() == 1) {
+    ResultExprInfo tryResultInfo;
+    if (resolveResultExprInfoFromLocals(bindingExpr.args.front().args.front(),
+                                        localsIn,
+                                        resolveMethodCall,
+                                        resolveDefinitionCall,
+                                        lookupReturnInfo,
+                                        inferExprKind,
+                                        tryResultInfo) &&
+        tryResultInfo.isResult && tryResultInfo.hasValue && tryResultInfo.valueIsFileHandle) {
+      bindingInfo.isFileHandle = true;
+      bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
+    }
+  }
+
   ResultExprInfo bindingResultInfo;
   if (resolveResultExprInfoFromLocals(bindingExpr.args.front(),
                                       localsIn,

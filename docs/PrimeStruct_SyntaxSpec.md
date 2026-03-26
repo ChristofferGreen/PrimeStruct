@@ -866,15 +866,15 @@ Draft constraints:
     constructor-shaped surface rewrites through stdlib `/File/open_read(...)`, `/File/open_write(...)`, or
     `/File/open_append(...)` wrappers while the underlying file-open substrate remains builtin.
   - `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept
-    `i32`, `bool`, `f32`, literal-backed `string`, the single-slot int-backed stdlib error structs, and ordinary
-    user structs that can stay on the existing stack-backed struct path. Direct `Result.ok(...)` plus downstream
-    `try(...)` also preserve `File<Mode>` handles, the current single-slot int-backed stdlib error structs
-    (`FileError`, `ImageError`, `ContainerError`, `GfxError`), `array<T>` / `vector<T>` handles whose element kinds
-    already fit the current collection contract, and `map<K, V>` handles whose key/value kinds already fit that same
-    map contract. On IR-backed backends, value-carrying `Result.and_then(...)` lambdas may end in an explicit
-    `return(Result...)` or in a final `if(...)` expression whose `then(){...}` / `else(){...}` branches each
-    produce a `Result`. Current packed `File<Mode>` combinator payloads and `Buffer<T>` payloads remain unsupported
-    on IR-backed paths. Downstream `try(...)` preserves those direct handle/error-struct payloads, rebuilds
+    `i32`, `bool`, `f32`, literal-backed `string`, the single-slot int-backed stdlib error structs, ordinary
+    user structs that can stay on the existing stack-backed struct path, and packed `File<Mode>` handles. Direct
+    `Result.ok(...)` plus downstream `try(...)` also preserve the current single-slot int-backed stdlib error
+    structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), `array<T>` / `vector<T>` handles whose
+    element kinds already fit the current collection contract, and `map<K, V>` handles whose key/value kinds already
+    fit that same map contract. On IR-backed backends, value-carrying `Result.and_then(...)` lambdas may end in an
+    explicit `return(Result...)` or in a final `if(...)` expression whose `then(){...}` / `else(){...}` branches
+    each produce a `Result`. Current `Buffer<T>` payloads remain unsupported on IR-backed paths. Downstream
+    `try(...)` preserves those handle/error-struct payloads, rebuilds
     single-slot struct payloads, and keeps multi-slot struct payloads on that same pointer-backed path on VM/native;
     other remaining wider non-struct payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.
