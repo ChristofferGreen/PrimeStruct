@@ -29,6 +29,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `TemplateMonomorph.cpp`, covering builtin type and collection
   classification plus overload path and import utility helpers.
 
+### template-monomorph-final-orchestration-header
+- Updated: 2026-03-26
+- Tags: semantics, template-monomorph, refactor
+- Fact: Final monomorphization orchestration now routes import-alias setup and definition/execution rewrite passes through `src/semantics/TemplateMonomorphFinalOrchestration.h`.
+- Evidence: Group 9 extracted `buildImportAliases(...)`, definition rewrite coordination, and execution rewrite coordination out of `monomorphizeTemplates(...)` into dedicated helper functions.
+
 ### template-monomorph-source-definition-setup-header
 - Updated: 2026-03-26
 - Tags: semantics, template-monomorph, refactor
