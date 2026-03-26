@@ -866,18 +866,17 @@ Draft constraints:
     constructor-shaped surface rewrites through stdlib `/File/open_read(...)`, `/File/open_write(...)`, or
     `/File/open_append(...)` wrappers while the underlying file-open substrate remains builtin.
   - `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept
-    `i32`, `bool`, `f32`, literal-backed `string`, `File<Mode>` handles, the single-slot int-backed stdlib error
-    and ordinary user structs that can stay on the existing stack-backed struct path. Direct `Result.ok(...)` plus
-    downstream `try(...)` also preserve `File<Mode>` handles, the current single-slot int-backed stdlib error
-    structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), `array<T>` / `vector<T>` handles whose
-    element kinds already fit the current collection contract, and `map<K, V>` handles whose key/value kinds
-    already fit that same map contract. On IR-backed backends, value-carrying `Result.and_then(...)` lambdas may end
-    in an explicit `return(Result...)` or in a final `if(...)` expression whose `then(){...}` / `else(){...}`
-    branches each produce a `Result`. Current `File<Mode>` combinator payloads, stdlib error-struct combinator
-    payloads, `Buffer<T>` payloads, and collection-handle combinator payload flows remain unsupported on IR-backed
-    paths. Downstream `try(...)` preserves those direct handle/error-struct payloads, rebuilds single-slot struct
-    payloads, and keeps multi-slot struct payloads on that same pointer-backed path on VM/native; other remaining
-    wider non-struct payloads remain unsupported.
+    `i32`, `bool`, `f32`, literal-backed `string`, the single-slot int-backed stdlib error structs, and ordinary
+    user structs that can stay on the existing stack-backed struct path. Direct `Result.ok(...)` plus downstream
+    `try(...)` also preserve `File<Mode>` handles, the current single-slot int-backed stdlib error structs
+    (`FileError`, `ImageError`, `ContainerError`, `GfxError`), `array<T>` / `vector<T>` handles whose element kinds
+    already fit the current collection contract, and `map<K, V>` handles whose key/value kinds already fit that same
+    map contract. On IR-backed backends, value-carrying `Result.and_then(...)` lambdas may end in an explicit
+    `return(Result...)` or in a final `if(...)` expression whose `then(){...}` / `else(){...}` branches each
+    produce a `Result`. Current packed `File<Mode>` combinator payloads and `Buffer<T>` payloads remain unsupported
+    on IR-backed paths. Downstream `try(...)` preserves those direct handle/error-struct payloads, rebuilds
+    single-slot struct payloads, and keeps multi-slot struct payloads on that same pointer-backed path on VM/native;
+    other remaining wider non-struct payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.
 - Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
 - VM/native consume the PSIR v16 opcode set (see design doc) and deserialization rejects unknown opcodes.

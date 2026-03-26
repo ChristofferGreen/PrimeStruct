@@ -458,27 +458,25 @@
             function.instructions.push_back({IrOpcode::MulI64, 0});
             function.instructions.push_back({IrOpcode::SubI64, 0});
             if (!resultInfo.valueStructType.empty()) {
-              bool isPackedSingleSlot = false;
-              LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
-              int32_t slotCount = 0;
-              if (!ir_lowerer::resolveSupportedResultStructPayloadInfo(
+              ir_lowerer::PackedResultStructPayloadInfo payloadInfo;
+              if (!ir_lowerer::resolvePackedResultStructPayloadInfo(
                       resultInfo.valueStructType,
                       [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
                         return resolveStructSlotLayout(structPath, layoutOut);
                       },
-                      isPackedSingleSlot,
-                      packedStructKind,
-                      slotCount)) {
+                      payloadInfo)) {
                 error = ir_lowerer::unsupportedPackedResultValueKindError("try");
                 return false;
               }
-              (void)packedStructKind;
-              (void)slotCount;
-              if (isPackedSingleSlot) {
+              if (payloadInfo.isPackedSingleSlot) {
                 const int32_t baseLocal = nextLocal;
-                ++nextLocal;
+                nextLocal += payloadInfo.slotCount;
                 const int32_t ptrLocal = nextLocal++;
+                function.instructions.push_back(
+                    {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(payloadInfo.slotCount - 1))});
                 function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+                function.instructions.push_back(
+                    {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + payloadInfo.fieldOffset)});
                 function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
                 function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
                 function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
@@ -567,7 +565,7 @@
                                                   const LocalMap &valueLocals,
                                                   LocalInfo::ValueKind &packedKindOut,
                                                   std::string &structTypeOut) -> bool {
-          packedKindOut = inferExprKind(valueExpr, valueLocals);
+          packedKindOut = LocalInfo::ValueKind::Unknown;
           structTypeOut.clear();
           auto isBufferHandleCall = [&](const Expr &candidate) {
             if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.isBinding) {
@@ -674,13 +672,20 @@
             packedKindOut = collectionValueKind;
             return true;
           }
-          if (isFileHandleExpr(valueExpr, valueLocals) && packedKindOut == LocalInfo::ValueKind::Int64) {
+          const LocalInfo::ValueKind inferredValueKind = inferExprKind(valueExpr, valueLocals);
+          if (isFileHandleExpr(valueExpr, valueLocals) && inferredValueKind == LocalInfo::ValueKind::Int64) {
+            packedKindOut = inferredValueKind;
             return true;
           }
-          if (ir_lowerer::isSupportedPackedResultValueKind(packedKindOut)) {
-            return true;
-          }
-          const std::string inferredStructType = inferStructExprPath(valueExpr, valueLocals);
+          std::string inferredStructType;
+          ir_lowerer::inferPackedResultStructType(
+              valueExpr,
+              valueLocals,
+              [&](const Expr &candidateExpr) { return resolveDefinitionCall(candidateExpr); },
+              [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                return inferStructExprPath(candidateExpr, candidateLocals);
+              },
+              inferredStructType);
           bool isPackedSingleSlot = false;
           LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
           int32_t slotCount = 0;
@@ -697,39 +702,35 @@
             packedKindOut = isPackedSingleSlot ? packedStructKind : LocalInfo::ValueKind::Unknown;
             return true;
           }
-          packedKindOut = LocalInfo::ValueKind::Unknown;
+          packedKindOut = inferredValueKind;
           structTypeOut.clear();
-          return false;
+          return ir_lowerer::isSupportedPackedResultValueKind(packedKindOut);
         };
         auto materializePackedResultStructLocal = [&](int32_t payloadLocal,
                                                       const std::string &structType,
                                                       LocalInfo &paramInfo) -> bool {
-          bool isPackedSingleSlot = false;
-          LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
-          int32_t slotCount = 0;
-          if (!ir_lowerer::resolveSupportedResultStructPayloadInfo(
+          ir_lowerer::PackedResultStructPayloadInfo payloadInfo;
+          if (!ir_lowerer::resolvePackedResultStructPayloadInfo(
                   structType,
                   [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
                     return resolveStructSlotLayout(structPath, layoutOut);
                   },
-                  isPackedSingleSlot,
-                  packedStructKind,
-                  slotCount)) {
+                  payloadInfo)) {
             return false;
           }
-          (void)packedStructKind;
           const int32_t baseLocal = nextLocal;
-          nextLocal += slotCount;
+          nextLocal += payloadInfo.slotCount;
           const int32_t ptrLocal = nextLocal++;
           function.instructions.push_back(
-              {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(slotCount - 1))});
+              {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(payloadInfo.slotCount - 1))});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
           function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-          if (isPackedSingleSlot) {
+          if (payloadInfo.isPackedSingleSlot) {
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-          } else if (!emitStructCopyFromPtrs(ptrLocal, payloadLocal, slotCount)) {
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + payloadInfo.fieldOffset)});
+          } else if (!emitStructCopyFromPtrs(ptrLocal, payloadLocal, payloadInfo.slotCount)) {
             return false;
           }
           paramInfo.index = ptrLocal;
@@ -747,19 +748,38 @@
             error = ir_lowerer::unsupportedPackedResultValueKindError(builtinName);
             return false;
           }
+          if (!structType.empty() && packedValueKind != LocalInfo::ValueKind::Unknown &&
+              valueExpr.kind == Expr::Kind::Call && !valueExpr.isMethodCall && valueExpr.args.size() == 1) {
+            return emitExpr(valueExpr.args.front(), valueLocals);
+          }
           if (!emitExpr(valueExpr, valueLocals)) {
             return false;
           }
           if (!structType.empty() && packedValueKind != LocalInfo::ValueKind::Unknown) {
+            ir_lowerer::PackedResultStructPayloadInfo payloadInfo;
+            if (!ir_lowerer::resolvePackedResultStructPayloadInfo(
+                    structType,
+                    [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                      return resolveStructSlotLayout(structPath, layoutOut);
+                    },
+                    payloadInfo)) {
+              error = ir_lowerer::unsupportedPackedResultValueKindError(builtinName);
+              return false;
+            }
             const int32_t ptrLocal = allocTempLocal();
             function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            const uint64_t fieldOffsetBytes = static_cast<uint64_t>(payloadInfo.fieldOffset) * IrSlotBytes;
+            if (fieldOffsetBytes != 0) {
+              function.instructions.push_back({IrOpcode::PushI64, fieldOffsetBytes});
+              function.instructions.push_back({IrOpcode::AddI64, 0});
+            }
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           }
           return true;
         };
         auto tryEmitResultMapCall = [&](const Expr &callExpr, const LocalMap &callLocals) -> std::optional<bool> {
-          if (!(callExpr.isMethodCall && callExpr.name == "map" && callExpr.args.size() == 3 &&
+          if (!(callExpr.kind == Expr::Kind::Call && callExpr.name == "map" && callExpr.args.size() == 3 &&
                 callExpr.args.front().kind == Expr::Kind::Name && callExpr.args.front().name == "Result")) {
             return std::nullopt;
           }
@@ -871,7 +891,7 @@
           return true;
         };
         auto tryEmitResultAndThenCall = [&](const Expr &callExpr, const LocalMap &callLocals) -> std::optional<bool> {
-          if (!(callExpr.isMethodCall && callExpr.name == "and_then" && callExpr.args.size() == 3 &&
+          if (!(callExpr.kind == Expr::Kind::Call && callExpr.name == "and_then" && callExpr.args.size() == 3 &&
                 callExpr.args.front().kind == Expr::Kind::Name && callExpr.args.front().name == "Result")) {
             return std::nullopt;
           }
@@ -999,7 +1019,7 @@
           return true;
         };
         auto tryEmitResultMap2Call = [&](const Expr &callExpr, const LocalMap &callLocals) -> std::optional<bool> {
-          if (!(callExpr.isMethodCall && callExpr.name == "map2" && callExpr.args.size() == 4 &&
+          if (!(callExpr.kind == Expr::Kind::Call && callExpr.name == "map2" && callExpr.args.size() == 4 &&
                 callExpr.args.front().kind == Expr::Kind::Name && callExpr.args.front().name == "Result")) {
             return std::nullopt;
           }

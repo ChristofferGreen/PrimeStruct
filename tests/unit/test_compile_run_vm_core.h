@@ -1498,6 +1498,43 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("vm supports packed error struct Result combinator payloads on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+import /std/collections/*
+import /std/image/*
+import /std/gfx/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [ContainerError] mapped{
+    try(Result.map(Result.ok(2i32), []([i32] value) { return(ContainerError(value)) }))
+  }
+  [ImageError] chained{
+    try(Result.and_then(Result.ok(3i32), []([i32] value) { return(Result.ok(ImageError(value))) }))
+  }
+  [GfxError] summed{
+    try(Result.map2(Result.ok(4i32), Result.ok(5i32), []([i32] left, [i32] right) {
+      return(GfxError(plus(left, right)))
+    }))
+  }
+  return(plus(mapped.code, plus(chained.code, summed.code)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_result_packed_error_combinators_ir_backed.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_packed_error_combinators_ir_backed_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 14);
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("vm supports direct single-slot struct Result.ok payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

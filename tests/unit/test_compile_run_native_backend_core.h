@@ -7306,12 +7306,60 @@ main() {
   const std::string srcPath = writeTemp("compile_native_result_packed_error_payloads_ir_backed.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_result_packed_error_payloads_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_packed_error_payloads_ir_backed_out.txt")
+          .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 7);
+  CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("native backend compiles direct single-slot struct Result.ok payloads on IR-backed paths") {
+TEST_CASE("native backend compiles packed error struct Result combinator payloads on IR-backed paths") {
+  const std::string source = R"(
+import /std/file/*
+import /std/collections/*
+import /std/image/*
+import /std/gfx/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [ContainerError] mapped{
+    try(Result.map(Result.ok(2i32), []([i32] value) { return(ContainerError(value)) }))
+  }
+  [ImageError] chained{
+    try(Result.and_then(Result.ok(3i32), []([i32] value) { return(Result.ok(ImageError(value))) }))
+  }
+  [GfxError] summed{
+    try(Result.map2(Result.ok(4i32), Result.ok(5i32), []([i32] left, [i32] right) {
+      return(GfxError(plus(left, right)))
+    }))
+  }
+  return(plus(mapped.code, plus(chained.code, summed.code)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_result_packed_error_combinators_ir_backed.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_packed_error_combinators_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_packed_error_combinators_ir_backed_out.txt")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 14);
+  CHECK(readFile(outPath).empty());
+}
+
+TEST_CASE("native backend supports direct single-slot struct Result.ok payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
 
@@ -7340,11 +7388,17 @@ main() {
   const std::string srcPath = writeTemp("compile_native_result_single_slot_struct_payload_ir_backed.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_result_single_slot_struct_payload_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_single_slot_struct_payload_ir_backed_out.txt")
+          .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 7);
+  CHECK(readFile(outPath) == "7\n");
 }
 
-TEST_CASE("native backend compiles single-slot struct Result combinator payloads on IR-backed paths") {
+TEST_CASE("native backend supports single-slot struct Result combinator payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
 
@@ -7385,9 +7439,16 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() /
                                "primec_native_result_single_slot_struct_combinators_ir_backed")
                                   .string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_native_result_single_slot_struct_combinators_ir_backed_out.txt")
+          .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 19);
+  CHECK(readFile(outPath) == "7\n5\n7\n");
 }
 
 TEST_CASE("native backend supports direct File Result payloads on IR-backed paths") {

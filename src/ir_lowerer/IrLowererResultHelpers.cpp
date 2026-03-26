@@ -36,7 +36,7 @@ bool isMapTryAtCallName(const Expr &expr) {
 }
 
 bool isResultBuiltinCall(const Expr &expr, const std::string &name, size_t argCount) {
-  return expr.kind == Expr::Kind::Call && expr.isMethodCall && expr.name == name && expr.args.size() == argCount &&
+  return expr.kind == Expr::Kind::Call && expr.name == name && expr.args.size() == argCount &&
          !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result";
 }
 
@@ -274,6 +274,47 @@ bool inferDirectResultValueStructType(const Expr &expr,
                                       const LocalMap &localsIn,
                                       const ResolveCallDefinitionFn &resolveDefinitionCall,
                                       std::string &structTypeOut) {
+  auto inferPackedErrorStructPath = [](const std::string &callName, std::string &pathOut) {
+    pathOut.clear();
+    if (callName.empty()) {
+      return false;
+    }
+    std::string normalized = trimTemplateTypeText(callName);
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    std::string baseName = normalized;
+    const size_t lastSlash = baseName.rfind('/');
+    if (lastSlash != std::string::npos) {
+      baseName.erase(0, lastSlash + 1);
+    }
+    const size_t generatedSuffix = baseName.find("__");
+    if (generatedSuffix != std::string::npos) {
+      baseName.erase(generatedSuffix);
+    }
+    if (normalized == "FileError" || normalized == "std/file/FileError" || baseName == "FileError") {
+      pathOut = "/std/file/FileError";
+      return true;
+    }
+    if (normalized == "ImageError" || normalized == "std/image/ImageError" || baseName == "ImageError") {
+      pathOut = "/std/image/ImageError";
+      return true;
+    }
+    if (normalized == "ContainerError" || normalized == "std/collections/ContainerError" ||
+        baseName == "ContainerError") {
+      pathOut = "/std/collections/ContainerError";
+      return true;
+    }
+    if (normalized == "GfxError" || normalized == "std/gfx/GfxError" ||
+        normalized == "std/gfx/experimental/GfxError" || baseName == "GfxError") {
+      pathOut = normalized.find("experimental/GfxError") != std::string::npos
+                    ? "/std/gfx/experimental/GfxError"
+                    : "/std/gfx/GfxError";
+      return true;
+    }
+    return false;
+  };
+
   structTypeOut.clear();
   if (expr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(expr.name);
@@ -298,7 +339,7 @@ bool inferDirectResultValueStructType(const Expr &expr,
     structTypeOut = callee->fullPath;
     return true;
   }
-  return false;
+  return inferPackedErrorStructPath(expr.name, structTypeOut);
 }
 
 bool inferDirectResultValueCollectionInfo(const Expr &expr,
@@ -833,7 +874,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     return resolveBodyResultExprInfo(
         expr.bodyArguments, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out);
   }
-  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
+  if (expr.kind == Expr::Kind::Call && !expr.args.empty() &&
       expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result" && expr.name == "ok") {
     out.isResult = true;
     out.hasValue = (expr.args.size() > 1);
@@ -1073,15 +1114,11 @@ bool resolveSupportedResultCollectionType(const std::string &typeText,
   return valueKindOut != LocalInfo::ValueKind::Unknown;
 }
 
-bool resolveSupportedResultStructPayloadInfo(
+bool resolvePackedResultStructPayloadInfo(
     const std::string &structType,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
-    bool &isPackedSingleSlotOut,
-    LocalInfo::ValueKind &packedKindOut,
-    int32_t &slotCountOut) {
-  isPackedSingleSlotOut = false;
-  packedKindOut = LocalInfo::ValueKind::Unknown;
-  slotCountOut = 0;
+    PackedResultStructPayloadInfo &out) {
+  out = PackedResultStructPayloadInfo{};
   if (structType.empty() || !resolveStructSlotLayout) {
     return false;
   }
@@ -1105,20 +1142,40 @@ bool resolveSupportedResultStructPayloadInfo(
   if (!resolveStructSlotLayout(structType, layout) || layout.totalSlots <= 0) {
     return false;
   }
-  slotCountOut = layout.totalSlots;
+  out.supported = true;
+  out.slotCount = layout.totalSlots;
 
-  if (layout.totalSlots != 1 || layout.fields.size() != 1) {
+  if (layout.fields.size() != 1) {
     return true;
   }
 
   const StructSlotFieldInfo &field = layout.fields.front();
-  if (field.slotOffset != 0 || field.slotCount != 1 || !field.structPath.empty() ||
-      !isSupportedPackedResultValueKind(field.valueKind)) {
+  if (field.slotCount != 1 || !field.structPath.empty() || !isSupportedPackedResultValueKind(field.valueKind)) {
     return true;
   }
 
-  isPackedSingleSlotOut = true;
-  packedKindOut = field.valueKind;
+  out.isPackedSingleSlot = true;
+  out.packedKind = field.valueKind;
+  out.fieldOffset = field.slotOffset;
+  return true;
+}
+
+bool resolveSupportedResultStructPayloadInfo(
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    bool &isPackedSingleSlotOut,
+    LocalInfo::ValueKind &packedKindOut,
+    int32_t &slotCountOut) {
+  PackedResultStructPayloadInfo payloadInfo;
+  if (!resolvePackedResultStructPayloadInfo(structType, resolveStructSlotLayout, payloadInfo)) {
+    isPackedSingleSlotOut = false;
+    packedKindOut = LocalInfo::ValueKind::Unknown;
+    slotCountOut = 0;
+    return false;
+  }
+  isPackedSingleSlotOut = payloadInfo.isPackedSingleSlot;
+  packedKindOut = payloadInfo.packedKind;
+  slotCountOut = payloadInfo.slotCount;
   return true;
 }
 
@@ -1171,7 +1228,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
-  if (!(expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+  if (!(expr.kind == Expr::Kind::Call && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
         expr.args.front().name == "Result" && expr.name == "ok")) {
     return ResultOkMethodCallEmitResult::NotHandled;
   }
@@ -1191,12 +1248,6 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     }
     return ResultOkMethodCallEmitResult::Emitted;
   }
-  if (isSupportedPackedResultValueKind(argKind)) {
-    if (!emitExpr(expr.args[1], localsIn)) {
-      return ResultOkMethodCallEmitResult::Error;
-    }
-    return ResultOkMethodCallEmitResult::Emitted;
-  }
   LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
   LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind collectionMapKeyKind = LocalInfo::ValueKind::Unknown;
@@ -1209,21 +1260,32 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     return ResultOkMethodCallEmitResult::Emitted;
   }
 
-  const std::string structType = inferStructExprPath ? inferStructExprPath(expr.args[1], localsIn) : std::string{};
-  bool isPackedSingleSlot = false;
-  LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
-  int32_t slotCount = 0;
-  if (!resolveSupportedResultStructPayloadInfo(
-          structType, resolveStructSlotLayout, isPackedSingleSlot, packedStructKind, slotCount)) {
-    error = unsupportedPackedResultValueKindError("Result.ok");
-    return ResultOkMethodCallEmitResult::Error;
+  std::string structType;
+  if (!inferPackedResultStructType(expr.args[1], localsIn, resolveDefinitionCall, inferStructExprPath, structType)) {
+    structType.clear();
   }
-  (void)packedStructKind;
-  (void)slotCount;
+  PackedResultStructPayloadInfo payloadInfo;
+  if (!resolvePackedResultStructPayloadInfo(structType, resolveStructSlotLayout, payloadInfo)) {
+    if (!isSupportedPackedResultValueKind(argKind)) {
+      error = unsupportedPackedResultValueKindError("Result.ok");
+      return ResultOkMethodCallEmitResult::Error;
+    }
+    if (!emitExpr(expr.args[1], localsIn)) {
+      return ResultOkMethodCallEmitResult::Error;
+    }
+    return ResultOkMethodCallEmitResult::Emitted;
+  }
+  if (payloadInfo.isPackedSingleSlot && expr.args[1].kind == Expr::Kind::Call && !expr.args[1].isMethodCall &&
+      expr.args[1].args.size() == 1) {
+    if (!emitExpr(expr.args[1].args.front(), localsIn)) {
+      return ResultOkMethodCallEmitResult::Error;
+    }
+    return ResultOkMethodCallEmitResult::Emitted;
+  }
   if (!emitExpr(expr.args[1], localsIn)) {
     return ResultOkMethodCallEmitResult::Error;
   }
-  if (!isPackedSingleSlot) {
+  if (!payloadInfo.isPackedSingleSlot) {
     return ResultOkMethodCallEmitResult::Emitted;
   }
   if (!allocTempLocal) {
@@ -1233,8 +1295,29 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
   const int32_t ptrLocal = allocTempLocal();
   emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal));
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  const uint64_t fieldOffsetBytes = static_cast<uint64_t>(payloadInfo.fieldOffset) * IrSlotBytes;
+  if (fieldOffsetBytes != 0) {
+    emitInstruction(IrOpcode::PushI64, fieldOffsetBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+  }
   emitInstruction(IrOpcode::LoadIndirect, 0);
   return ResultOkMethodCallEmitResult::Emitted;
+}
+
+bool inferPackedResultStructType(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    std::string &structTypeOut) {
+  structTypeOut.clear();
+  if (inferStructExprPath) {
+    structTypeOut = inferStructExprPath(expr, localsIn);
+    if (!structTypeOut.empty()) {
+      return true;
+    }
+  }
+  return inferDirectResultValueStructType(expr, localsIn, resolveDefinitionCall, structTypeOut);
 }
 
 bool resolveResultWhyCallInfo(const Expr &expr,

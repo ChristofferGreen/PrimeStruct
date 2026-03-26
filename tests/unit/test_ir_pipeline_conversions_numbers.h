@@ -269,6 +269,51 @@ main() {
   CHECK(result == 7);
 }
 
+TEST_CASE("ir lowerer supports packed error struct Result combinator payloads") {
+  const std::string source = R"(
+import /std/file/*
+import /std/collections/*
+import /std/image/*
+import /std/gfx/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [ContainerError] mapped{
+    try(Result.map(Result.ok(2i32), []([i32] value) { return(ContainerError(value)) }))
+  }
+  [ImageError] chained{
+    try(Result.and_then(Result.ok(3i32), []([i32] value) { return(Result.ok(ImageError(value))) }))
+  }
+  [GfxError] summed{
+    try(Result.map2(Result.ok(4i32), Result.ok(5i32), []([i32] left, [i32] right) {
+      return(GfxError(plus(left, right)))
+    }))
+  }
+  return(plus(mapped.code, plus(chained.code, summed.code)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 14);
+}
+
 TEST_CASE("ir lowerer supports direct single-slot struct Result.ok payloads") {
   const std::string source = R"(
 import /std/file/*

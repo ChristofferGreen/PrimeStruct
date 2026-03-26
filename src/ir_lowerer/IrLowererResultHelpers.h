@@ -100,6 +100,13 @@ enum class ResultOkMethodCallEmitResult {
   Emitted,
   Error,
 };
+struct PackedResultStructPayloadInfo {
+  bool supported = false;
+  bool isPackedSingleSlot = false;
+  LocalInfo::ValueKind packedKind = LocalInfo::ValueKind::Unknown;
+  int32_t slotCount = 0;
+  int32_t fieldOffset = 0;
+};
 ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -112,6 +119,12 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error);
+bool inferPackedResultStructType(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    std::string &structTypeOut);
 ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -206,6 +219,10 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind);
 bool isSupportedPackedResultValueInfo(const ResultExprInfo &info,
                                      const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
                                          &resolveStructSlotLayout);
+bool resolvePackedResultStructPayloadInfo(
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    PackedResultStructPayloadInfo &out);
 bool resolveSupportedResultStructPayloadInfo(
     const std::string &structType,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,

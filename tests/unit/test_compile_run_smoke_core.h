@@ -664,7 +664,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 1);
+  CHECK(runCommand(nativePath) == 2);
 }
 
 TEST_CASE("experimental gfx resource wrapper slice runs across backends") {
@@ -1034,7 +1034,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 1);
+  CHECK(runCommand(nativePath) == 2);
 }
 
 TEST_CASE("canonical gfx resource wrapper errors stay deterministic across backends") {
@@ -1088,7 +1088,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 1);
+  CHECK(runCommand(nativePath) == 2);
 }
 
 TEST_CASE("experimental gfx pipeline entry point runs across backends") {
@@ -1149,7 +1149,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 1);
+  CHECK(runCommand(nativePath) == 2);
 }
 
 TEST_CASE("canonical gfx pipeline entry point runs across backends") {
@@ -1210,7 +1210,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 1);
+  CHECK(runCommand(nativePath) == 2);
 }
 
 TEST_CASE("experimental gfx end-to-end conformance runs across backends") {
