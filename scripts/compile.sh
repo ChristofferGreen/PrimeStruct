@@ -9,7 +9,7 @@ FAST_TEST_THRESHOLD_SECONDS=10
 SKIP_TESTS=0
 
 usage() {
-  echo "Usage: ./scripts/compile.sh [--release] [--fast] [--skip-tests]" >&2
+  echo "Usage: ./scripts/compile.sh [--release] [--fast] [--fast-threshold <seconds>] [--skip-tests]" >&2
 }
 
 detect_jobs() {
@@ -82,17 +82,29 @@ build_fast_exclude_file() {
   return 0
 }
 
-for arg in "$@"; do
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --release)
       BUILD_DIR="$ROOT_DIR/build-release"
       BUILD_TYPE="Release"
+      shift
       ;;
     --fast)
       FAST_MODE=1
+      shift
+      ;;
+    --fast-threshold)
+      if [[ $# -lt 2 || ! "$2" =~ ^[1-9][0-9]*$ ]]; then
+        usage
+        exit 2
+      fi
+      FAST_MODE=1
+      FAST_TEST_THRESHOLD_SECONDS="$2"
+      shift 2
       ;;
     --skip-tests)
       SKIP_TESTS=1
+      shift
       ;;
     *)
       usage
