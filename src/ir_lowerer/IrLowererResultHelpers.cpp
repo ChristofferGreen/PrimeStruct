@@ -434,6 +434,50 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
   if (!expr.isMethodCall && isBufferHandleCall(expr) && expr.templateArgs.size() == 1) {
     return assignCollection(LocalInfo::Kind::Buffer, expr.templateArgs.front());
   }
+  if (!expr.isMethodCall) {
+    std::string normalized = expr.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    const bool isBufferAllocateCall =
+        normalized == "allocate" ||
+        normalized.rfind("allocate__t", 0) == 0 ||
+        normalized == "std/gfx/Buffer/allocate" ||
+        normalized == "std/gfx/experimental/Buffer/allocate" ||
+        normalized.rfind("std/gfx/Buffer/allocate__t", 0) == 0 ||
+        normalized.rfind("std/gfx/experimental/Buffer/allocate__t", 0) == 0;
+    if (isBufferAllocateCall && expr.templateArgs.size() == 1) {
+      return assignCollection(LocalInfo::Kind::Buffer, expr.templateArgs.front());
+    }
+    const bool isBufferUploadCall =
+        normalized == "upload" ||
+        normalized.rfind("upload__t", 0) == 0 ||
+        normalized == "std/gfx/Buffer/upload" ||
+        normalized == "std/gfx/experimental/Buffer/upload" ||
+        normalized.rfind("std/gfx/Buffer/upload__t", 0) == 0 ||
+        normalized.rfind("std/gfx/experimental/Buffer/upload__t", 0) == 0;
+    if (isBufferUploadCall) {
+      if (expr.templateArgs.size() == 1) {
+        return assignCollection(LocalInfo::Kind::Buffer, expr.templateArgs.front());
+      }
+      if (expr.args.size() == 1) {
+        LocalInfo::Kind sourceCollectionKind = LocalInfo::Kind::Value;
+        LocalInfo::ValueKind sourceValueKind = LocalInfo::ValueKind::Unknown;
+        LocalInfo::ValueKind sourceMapKeyKind = LocalInfo::ValueKind::Unknown;
+        if (inferDirectResultValueCollectionInfo(expr.args.front(),
+                                                 localsIn,
+                                                 resolveDefinitionCall,
+                                                 sourceCollectionKind,
+                                                 sourceValueKind,
+                                                 sourceMapKeyKind)) {
+          collectionKindOut = LocalInfo::Kind::Buffer;
+          valueKindOut = sourceValueKind;
+          mapKeyKindOut = LocalInfo::ValueKind::Unknown;
+          return valueKindOut != LocalInfo::ValueKind::Unknown;
+        }
+      }
+    }
+  }
 
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
   if (callee == nullptr) {
@@ -471,6 +515,23 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
   valueKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
   if (collectionKindOut == LocalInfo::Kind::Map) {
     valueKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.back()));
+  } else if (valueKindOut == LocalInfo::ValueKind::Unknown && expr.templateArgs.size() == 1) {
+    valueKindOut = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.front()));
+  }
+  if (collectionKindOut == LocalInfo::Kind::Buffer &&
+      valueKindOut == LocalInfo::ValueKind::Unknown &&
+      expr.args.size() == 1) {
+    LocalInfo::Kind sourceCollectionKind = LocalInfo::Kind::Value;
+    LocalInfo::ValueKind sourceValueKind = LocalInfo::ValueKind::Unknown;
+    LocalInfo::ValueKind sourceMapKeyKind = LocalInfo::ValueKind::Unknown;
+    if (inferDirectResultValueCollectionInfo(expr.args.front(),
+                                             localsIn,
+                                             resolveDefinitionCall,
+                                             sourceCollectionKind,
+                                             sourceValueKind,
+                                             sourceMapKeyKind)) {
+      valueKindOut = sourceValueKind;
+    }
   }
   return valueKindOut != LocalInfo::ValueKind::Unknown &&
          (collectionKindOut != LocalInfo::Kind::Map || mapKeyKindOut != LocalInfo::ValueKind::Unknown);

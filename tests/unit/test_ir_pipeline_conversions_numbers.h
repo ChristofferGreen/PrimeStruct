@@ -676,7 +676,7 @@ main() {
   CHECK(result == 16);
 }
 
-TEST_CASE("ir lowerer rejects Buffer Result payloads that remain unsupported") {
+TEST_CASE("ir lowerer supports Buffer Result payloads on IR-backed VM paths") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -694,7 +694,20 @@ log_gfx_error([GfxError] err) {
 [return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
 main() {
   [Buffer<i32>] direct{try(make_buffer())}
-  return(0i32)
+  [Buffer<i32>] mappedValue{
+    try(Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) }))
+  }
+  [Buffer<i32>] chainedValue{
+    try(Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) }))
+  }
+  [Buffer<i32>] combinedValue{
+    try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) }))
+  }
+  [array<i32>] directOut{direct.readback()}
+  [array<i32>] mappedOut{mappedValue.readback()}
+  [array<i32>] chainedOut{chainedValue.readback()}
+  [array<i32>] combinedOut{combinedValue.readback()}
+  return(plus(plus(direct.count(), mappedOut[0i32]), plus(chainedValue.count(), combinedOut[2i32])))
 }
 )";
   primec::Program program;
@@ -704,8 +717,14 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("IR backends only support Result.ok with supported payload values") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 10);
 }
 
 TEST_CASE("ir lowerer rejects f64 Result payloads that remain unsupported") {

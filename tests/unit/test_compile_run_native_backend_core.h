@@ -7763,7 +7763,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("native backend rejects Buffer Result payloads on IR-backed paths") {
+TEST_CASE("native backend compiles Buffer Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -7781,18 +7781,28 @@ log_gfx_error([GfxError] err) {
 [return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
 main() {
   [Buffer<i32>] direct{try(make_buffer())}
-  return(0i32)
+  [Buffer<i32>] mappedValue{
+    try(Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) }))
+  }
+  [Buffer<i32>] chainedValue{
+    try(Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) }))
+  }
+  [Buffer<i32>] combinedValue{
+    try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) }))
+  }
+  [array<i32>] directOut{direct.readback()}
+  [array<i32>] mappedOut{mappedValue.readback()}
+  [array<i32>] chainedOut{chainedValue.readback()}
+  [array<i32>] combinedOut{combinedValue.readback()}
+  return(plus(plus(direct.count(), mappedOut[0i32]), plus(chainedValue.count(), combinedOut[2i32])))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_result_buffer_payload_ir_backed.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_result_buffer_payload_ir_backed").string();
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_native_result_buffer_payload_ir_backed_out.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("native backend rejects auto-bound direct Result combinator try consumers") {

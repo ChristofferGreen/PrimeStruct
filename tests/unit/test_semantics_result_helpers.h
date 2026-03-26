@@ -1365,6 +1365,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical stdlib gfx Buffer Result try consumers validate with explicit typed bindings") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<Result<Buffer<i32>, GfxError>> effects(gpu_dispatch)]
+make_buffer() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(Result.ok(/std/gfx/Buffer/upload(values)))
+}
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
+main() {
+  [Buffer<i32>] direct{try(make_buffer())}
+  [Buffer<i32>] mappedValue{
+    try(Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) }))
+  }
+  [Buffer<i32>] chainedValue{
+    try(Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) }))
+  }
+  [Buffer<i32>] combinedValue{
+    try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) }))
+  }
+  [array<i32>] directOut{direct.readback()}
+  [array<i32>] mappedOut{mappedValue.readback()}
+  [array<i32>] chainedOut{chainedValue.readback()}
+  [array<i32>] combinedOut{combinedValue.readback()}
+  return(plus(plus(direct.count(), mappedOut[0i32]), plus(chainedValue.count(), combinedOut[2i32])))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical stdlib gfx Buffer slash-call helpers require stdlib import") {
   const std::string source = R"(
 [effects(gpu_dispatch) return<int>]

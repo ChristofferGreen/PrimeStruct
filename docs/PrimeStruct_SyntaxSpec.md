@@ -867,13 +867,15 @@ Draft constraints:
     `/File/open_append(...)` wrappers while the underlying file-open substrate remains builtin.
   - `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept
     `i32`, `bool`, `f32`, literal-backed `string`, the single-slot int-backed stdlib error structs, ordinary
-    user structs that can stay on the existing stack-backed struct path, and packed `File<Mode>` handles. Direct
+    user structs that can stay on the existing stack-backed struct path, packed `File<Mode>` handles, and
+    `Buffer<T>` handles on VM plus native codegen when downstream `try(...)` consumers stay explicitly typed. Direct
     `Result.ok(...)` plus downstream `try(...)` also preserve the current single-slot int-backed stdlib error
     structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), `array<T>` / `vector<T>` handles whose
     element kinds already fit the current collection contract, and `map<K, V>` handles whose key/value kinds already
     fit that same map contract. On IR-backed backends, value-carrying `Result.and_then(...)` lambdas may end in an
     explicit `return(Result...)` or in a final `if(...)` expression whose `then(){...}` / `else(){...}` branches
-    each produce a `Result`. Current `Buffer<T>` payloads remain unsupported on IR-backed paths. Downstream
+    each produce a `Result`. Full native executable `Result<Buffer<T>, GfxError>` unpacking remains follow-up work.
+    Downstream
     `try(...)` preserves those handle/error-struct payloads, rebuilds
     single-slot struct payloads, and keeps multi-slot struct payloads on that same pointer-backed path on VM/native;
     other remaining wider non-struct payloads remain unsupported.

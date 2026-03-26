@@ -295,32 +295,60 @@ bool resolveRemovedCollectionHelperReference(std::string_view rawMethodName,
 } // namespace
 
 std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &typePath) const {
-  if (typePath == "/array" || typePath == "array") {
+  std::string normalizedType = normalizeBindingTypeName(typePath);
+  std::string base;
+  std::string argText;
+  if (splitTemplateTypeName(normalizedType, base, argText)) {
+    base = normalizeBindingTypeName(base);
+    std::vector<std::string> args;
+    if ((base == "Reference" || base == "Pointer") &&
+        splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
+      return normalizeCollectionTypePath(args.front());
+    }
+    if ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer") &&
+        splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
+      return "/" + base;
+    }
+    if ((base == "Map" || isMapCollectionTypeName(base) || base == "/map" ||
+         base == "/std/collections/map") &&
+        splitTopLevelTemplateArgs(argText, args) && args.size() == 2) {
+      return "/map";
+    }
+    normalizedType = base;
+  }
+  if (normalizedType == "/array" || normalizedType == "array") {
     return "/array";
   }
-  if (typePath == "/vector" || typePath == "vector" || typePath == "/std/collections/vector" ||
-      typePath == "std/collections/vector") {
+  if (normalizedType == "/vector" || normalizedType == "vector" || normalizedType == "/std/collections/vector" ||
+      normalizedType == "std/collections/vector") {
     return "/vector";
   }
-  if (typePath == "Vector" ||
-      typePath == "/std/collections/experimental_vector/Vector" ||
-      typePath == "std/collections/experimental_vector/Vector" ||
-      typePath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
-      typePath.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+  if (normalizedType == "Vector" ||
+      normalizedType == "/std/collections/experimental_vector/Vector" ||
+      normalizedType == "std/collections/experimental_vector/Vector" ||
+      normalizedType.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+      normalizedType.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
     return "/vector";
   }
-  if (typePath == "/soa_vector" || typePath == "soa_vector") {
+  if (normalizedType == "Buffer" || normalizedType == "std/gfx/Buffer" || normalizedType == "/std/gfx/Buffer" ||
+      normalizedType == "std/gfx/experimental/Buffer" || normalizedType == "/std/gfx/experimental/Buffer" ||
+      normalizedType.rfind("/std/gfx/Buffer__", 0) == 0 || normalizedType.rfind("std/gfx/Buffer__", 0) == 0 ||
+      normalizedType.rfind("/std/gfx/experimental/Buffer__", 0) == 0 ||
+      normalizedType.rfind("std/gfx/experimental/Buffer__", 0) == 0) {
+    return "/Buffer";
+  }
+  if (normalizedType == "/soa_vector" || normalizedType == "soa_vector") {
     return "/soa_vector";
   }
-  if (typePath == "Map" || isMapCollectionTypeName(typePath) || typePath == "/map" ||
-      typePath == "/std/collections/map") {
+  if (normalizedType == "Map" || isMapCollectionTypeName(normalizedType) || normalizedType == "/map" ||
+      normalizedType == "/std/collections/map") {
     return "/map";
   }
-  if (typePath.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
-      typePath.rfind("std/collections/experimental_map/Map__", 0) == 0) {
+  if (normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+      normalizedType.rfind("std/collections/experimental_map/Map__", 0) == 0) {
     return "/map";
   }
-  if (typePath == "/string" || typePath == "string") {
+  if (normalizedType == "/string" || normalizedType == "string") {
     return "/string";
   }
   return "";

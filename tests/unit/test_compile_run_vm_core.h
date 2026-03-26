@@ -1910,7 +1910,7 @@ main() {
   CHECK(readFile(outPath) == "2\n7\n9\n");
 }
 
-TEST_CASE("vm rejects Buffer Result payloads on IR-backed paths") {
+TEST_CASE("vm supports Buffer Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -1928,15 +1928,36 @@ log_gfx_error([GfxError] err) {
 [return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
 main() {
   [Buffer<i32>] direct{try(make_buffer())}
-  return(0i32)
+  [Buffer<i32>] mappedValue{
+    try(Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) }))
+  }
+  [Buffer<i32>] chainedValue{
+    try(Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) }))
+  }
+  [Buffer<i32>] combinedValue{
+    try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) }))
+  }
+  [array<i32>] directOut{direct.readback()}
+  [array<i32>] mappedOut{mappedValue.readback()}
+  [array<i32>] chainedOut{chainedValue.readback()}
+  [array<i32>] combinedOut{combinedValue.readback()}
+  [i32] directCount{direct.count()}
+  [i32] mappedHead{mappedOut[0i32]}
+  [i32] chainedCount{chainedValue.count()}
+  [i32] combinedTail{combinedOut[2i32]}
+  print_line(directCount)
+  print_line(mappedHead)
+  print_line(chainedCount)
+  print_line(combinedTail)
+  return(plus(plus(directCount, mappedHead), plus(chainedCount, combinedTail)))
 }
 )";
   const std::string srcPath = writeTemp("vm_result_buffer_payload_ir_backed.prime", source);
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_result_buffer_payload_ir_backed_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 10);
+  CHECK(readFile(outPath) == "3\n1\n3\n3\n");
 }
 
 TEST_CASE("vm rejects auto-bound direct Result combinator try consumers") {

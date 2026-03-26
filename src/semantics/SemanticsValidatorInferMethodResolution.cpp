@@ -55,7 +55,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (!splitTopLevelTemplateArgs(argText, args)) {
       return {};
     }
-    if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+    if ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer") && args.size() == 1) {
       return "/" + base;
     }
     if (base == "Buffer" && args.size() == 1) {
@@ -109,7 +109,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (importIt != importAliases_.end()) {
       return importIt->second;
     }
-    return "";
+    return std::string{};
   };
 
   if (expr.args.empty()) {
@@ -193,7 +193,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
       return "";
     }
-    return "";
+    return std::string{};
   };
   auto preferredImageErrorHelperTarget = [&](std::string_view helperName) -> std::string {
     if (helperName == "why") {
@@ -321,16 +321,54 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return canonical;
   };
-  auto preferredBufferMethodTargetForCall = [&](const std::string &helperName) {
-    const std::string canonical = "/std/gfx/Buffer/" + helperName;
-    const std::string experimental = "/std/gfx/experimental/Buffer/" + helperName;
-    if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
-      return canonical;
+  auto preferredBufferMethodTargetForCall = [&](const Expr &receiverExpr, const std::string &helperName) {
+    auto helperForBasePath = [&](std::string_view basePath) -> std::string {
+      const std::string helperPath = std::string(basePath) + "/" + helperName;
+      if (defMap_.count(helperPath) > 0) {
+        return helperPath;
+      }
+      return "";
+    };
+    auto resolveBufferStructPath = [&](const Expr &candidate) -> std::string {
+      std::string candidateTypeText;
+      if (candidate.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+          candidateTypeText = paramBinding->typeName;
+        } else {
+          auto localIt = locals.find(candidate.name);
+          if (localIt != locals.end()) {
+            candidateTypeText = localIt->second.typeName;
+          }
+        }
+      }
+      if (candidateTypeText.empty() &&
+          inferQueryExprTypeText(candidate, params, locals, candidateTypeText) &&
+          !candidateTypeText.empty()) {
+        candidateTypeText = normalizeBindingTypeName(candidateTypeText);
+      }
+      if (candidateTypeText.empty()) {
+        return std::string{};
+      }
+      return resolveStructTypePathForMethod(normalizeBindingTypeName(candidateTypeText), candidate.namespacePrefix);
+    };
+    const std::string canonicalBase = "/std/gfx/Buffer";
+    const std::string experimentalBase = "/std/gfx/experimental/Buffer";
+    const std::string resolvedStructPath = resolveBufferStructPath(receiverExpr);
+    if (resolvedStructPath == canonicalBase) {
+      return helperForBasePath(canonicalBase);
     }
-    if (hasDefinitionPath(experimental) || hasImportedDefinitionPath(experimental)) {
-      return experimental;
+    if (resolvedStructPath == experimentalBase) {
+      return helperForBasePath(experimentalBase);
     }
-    return canonical;
+    const bool hasCanonical = defMap_.count(canonicalBase + "/" + helperName) > 0;
+    const bool hasExperimental = defMap_.count(experimentalBase + "/" + helperName) > 0;
+    if (hasCanonical && !hasExperimental) {
+      return helperForBasePath(canonicalBase);
+    }
+    if (!hasCanonical && hasExperimental) {
+      return helperForBasePath(experimentalBase);
+    }
+    return std::string{};
   };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (normalizedMethodName == "count") {
@@ -355,8 +393,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (collectionTypePath == "/Buffer") {
-        resolvedOut = preferredBufferMethodTargetForCall("count");
-        return true;
+        resolvedOut = preferredBufferMethodTargetForCall(receiver, "count");
+        return !resolvedOut.empty();
       }
     }
     if (normalizedMethodName == "capacity" && collectionTypePath == "/vector") {
@@ -367,8 +405,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
          normalizedMethodName == "readback" || normalizedMethodName == "load" ||
          normalizedMethodName == "store") &&
         collectionTypePath == "/Buffer") {
-      resolvedOut = preferredBufferMethodTargetForCall(normalizedMethodName);
-      return true;
+      resolvedOut = preferredBufferMethodTargetForCall(receiver, normalizedMethodName);
+      return !resolvedOut.empty();
     }
     if (normalizedMethodName == "contains" && collectionTypePath == "/map") {
       resolvedOut = preferredMapMethodTargetForCall(receiver, "contains");
@@ -395,6 +433,26 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = preferredMapMethodTargetForCall(receiver, normalizedMethodName);
         return true;
       }
+    }
+    if (normalizedMethodName == "empty" && collectionTypePath == "/Buffer") {
+      resolvedOut = preferredBufferMethodTargetForCall(receiver, "empty");
+      return !resolvedOut.empty();
+    }
+    if (normalizedMethodName == "is_valid" && collectionTypePath == "/Buffer") {
+      resolvedOut = preferredBufferMethodTargetForCall(receiver, "is_valid");
+      return !resolvedOut.empty();
+    }
+    if (normalizedMethodName == "readback" && collectionTypePath == "/Buffer") {
+      resolvedOut = preferredBufferMethodTargetForCall(receiver, "readback");
+      return !resolvedOut.empty();
+    }
+    if (normalizedMethodName == "load" && collectionTypePath == "/Buffer") {
+      resolvedOut = preferredBufferMethodTargetForCall(receiver, "load");
+      return !resolvedOut.empty();
+    }
+    if (normalizedMethodName == "store" && collectionTypePath == "/Buffer") {
+      resolvedOut = preferredBufferMethodTargetForCall(receiver, "store");
+      return !resolvedOut.empty();
     }
     if ((normalizedMethodName == "get" || normalizedMethodName == "ref") &&
         collectionTypePath == "/soa_vector") {
@@ -770,6 +828,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   }
   if (typeName.empty()) {
     return false;
+  }
+  {
+    const std::string receiverTypeText =
+        typeTemplateArg.empty() ? typeName : typeName + "<" + typeTemplateArg + ">";
+    const std::string receiverCollectionTypePath =
+        inferCollectionTypePathFromTypeText(normalizeBindingTypeName(receiverTypeText),
+                                            inferCollectionTypePathFromTypeText);
+    if (!receiverCollectionTypePath.empty() &&
+        resolveCollectionMethodFromTypePath(receiverCollectionTypePath)) {
+      return true;
+    }
   }
   if (typeName == "FileError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||

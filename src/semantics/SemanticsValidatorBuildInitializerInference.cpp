@@ -1102,6 +1102,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     return true;
   }
   if (inferTryInitializerBinding()) {
+    (void)canonicalizeInferredCollectionBinding(&initializer);
     return true;
   }
   if (inferDirectResultOkBinding()) {

@@ -638,6 +638,64 @@
               collectionValueKindOut = valueKindFromTypeName(trimTemplateTypeText(valueExpr.templateArgs.front()));
               return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
             }
+            if (!valueExpr.isMethodCall) {
+              std::string normalized = valueExpr.name;
+              if (!normalized.empty() && normalized.front() == '/') {
+                normalized.erase(normalized.begin());
+              }
+              const bool isBufferAllocateCall =
+                  normalized == "allocate" ||
+                  normalized.rfind("allocate__t", 0) == 0 ||
+                  normalized == "std/gfx/Buffer/allocate" ||
+                  normalized == "std/gfx/experimental/Buffer/allocate" ||
+                  normalized.rfind("std/gfx/Buffer/allocate__t", 0) == 0 ||
+                  normalized.rfind("std/gfx/experimental/Buffer/allocate__t", 0) == 0;
+              if (isBufferAllocateCall && valueExpr.templateArgs.size() == 1) {
+                collectionKindOut = LocalInfo::Kind::Buffer;
+                collectionValueKindOut = valueKindFromTypeName(trimTemplateTypeText(valueExpr.templateArgs.front()));
+                return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
+              }
+              const bool isBufferUploadCall =
+                  normalized == "upload" ||
+                  normalized.rfind("upload__t", 0) == 0 ||
+                  normalized == "std/gfx/Buffer/upload" ||
+                  normalized == "std/gfx/experimental/Buffer/upload" ||
+                  normalized.rfind("std/gfx/Buffer/upload__t", 0) == 0 ||
+                  normalized.rfind("std/gfx/experimental/Buffer/upload__t", 0) == 0;
+              if (isBufferUploadCall) {
+                if (valueExpr.templateArgs.size() == 1) {
+                  collectionKindOut = LocalInfo::Kind::Buffer;
+                  collectionValueKindOut = valueKindFromTypeName(trimTemplateTypeText(valueExpr.templateArgs.front()));
+                  return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
+                }
+                if (valueExpr.args.size() == 1) {
+                  const Expr &sourceExpr = valueExpr.args.front();
+                  if (sourceExpr.kind == Expr::Kind::Name) {
+                    auto localIt = valueLocals.find(sourceExpr.name);
+                    if (localIt != valueLocals.end() &&
+                        ir_lowerer::isSupportedPackedResultCollectionKind(localIt->second.kind)) {
+                      collectionKindOut = LocalInfo::Kind::Buffer;
+                      collectionValueKindOut = localIt->second.valueKind;
+                      return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
+                    }
+                  }
+                  if (sourceExpr.kind == Expr::Kind::Call) {
+                    std::string sourceCollectionName;
+                    if (!sourceExpr.isMethodCall && getBuiltinCollectionName(sourceExpr, sourceCollectionName) &&
+                        ((((sourceCollectionName == "array" || sourceCollectionName == "vector") &&
+                           sourceExpr.templateArgs.size() == 1) ||
+                          (sourceCollectionName == "Buffer" && sourceExpr.templateArgs.size() == 1) ||
+                          (sourceCollectionName == "map" && sourceExpr.templateArgs.size() == 2)))) {
+                      collectionKindOut = LocalInfo::Kind::Buffer;
+                      collectionValueKindOut = valueKindFromTypeName(
+                          trimTemplateTypeText(sourceCollectionName == "map" ? sourceExpr.templateArgs.back()
+                                                                             : sourceExpr.templateArgs.front()));
+                      return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
+                    }
+                  }
+                }
+              }
+            }
             const Definition *callee = resolveDefinitionCall(valueExpr);
             if (callee == nullptr) {
               return false;
