@@ -47,15 +47,10 @@ build and layout solidify.
 - Default validation gate: run `./scripts/compile.sh --release` first and keep routine test verification in `build-release/`. Do not switch to `build-debug/` just to rerun ordinary failures faster; only do that when you specifically need debugger-oriented investigation or debug-only instrumentation.
 - **Primary entry:** `./scripts/compile.sh --release` (Release build in `build-release`, runs tests).
 - **Debug entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).
-- **Clean debug build:** `./scripts/compile.sh --clean` (deletes `build-debug` before configuring).
-- **Release build:** `./scripts/compile.sh --release` (Release build in `build-release`).
-- **Clean release build:** `./scripts/compile.sh --clean --release` (deletes `build-release` before configuring).
-- **Configure only:** `./scripts/compile.sh --configure` (regenerates build dir only).
-- **Skip tests:** `./scripts/compile.sh --skip-tests` (build only).
-- **Benchmark regression:** `./scripts/compile.sh --benchmark-regression` runs benchmark suite, writes `build-*/benchmarks/benchmark_report.json`, and checks against `benchmarks/benchmark_baseline.json`.
-- **Optional Wasm runtime checks:** `./scripts/compile.sh --wasm-runtime-checks` runs `scripts/run_wasm_runtime_checks.sh`; it executes Wasm outputs with `wasmtime` when available and emits an explicit skip message otherwise.
-- **Coverage:** `./scripts/compile.sh --coverage` builds with clang coverage flags, runs tests, and writes reports to `build-debug/coverage/coverage.txt` plus `build-debug/coverage/html/`.
-- **Coverage helper:** `./scripts/code_coverage.sh` runs a clean debug coverage build, prints total function/line coverage, and prints artifact paths.
+- **`compile.sh` stability rule:** keep `scripts/compile.sh` limited to its current contract (default debug build+test, optional `--release` for release build+test) and do not expand or refactor it unless the user explicitly asks for that change.
+- **Benchmark helper:** `./scripts/benchmark.sh --build-dir build-release` runs the benchmark suite against an existing build. Add `--report-json build-release/benchmarks/benchmark_report.json --baseline-json benchmarks/benchmark_baseline.json` for regression checks.
+- **Optional Wasm runtime checks:** `./scripts/run_wasm_runtime_checks.sh` executes Wasm outputs with `wasmtime` when available and emits an explicit skip message otherwise.
+- **Coverage helper:** `./scripts/code_coverage.sh` runs a clean debug coverage build, prints total function/line coverage, and writes reports to `build-debug/coverage/coverage.txt` plus `build-debug/coverage/html/`.
 - **Lines-of-code helper:** `./scripts/lines_of_code.sh` reports line totals for `src/` and `include/`.
 - **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`; use `build-debug/` when investigating failures in more detail.
 - **Direct test binary runs:** prefer executing `build-release/PrimeStruct_backend_tests` from `build-release/` so compile-run suites can resolve `./primec`; use the matching `PrimeStruct_misc_tests`, `PrimeStruct_semantics_tests`, `PrimeStruct_text_filter_tests`, or `PrimeStruct_parser_tests` binaries there for narrower doctest runs. Switch to the `build-debug/` binaries when deeper debugging is needed.

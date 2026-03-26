@@ -15,9 +15,10 @@ Files:
 
 Default N is 5,000,000 in all implementations.
 
-Run via:
-- `./scripts/compile.sh --benchmark`
-- `./scripts/compile.sh --benchmark-regression` (writes a report and checks against stored baseline thresholds)
+Run after a release build via:
+- `./scripts/compile.sh --release`
+- `./scripts/benchmark.sh --build-dir ./build-release`
+- `./scripts/benchmark.sh --build-dir ./build-release --report-json ./build-release/benchmarks/benchmark_report.json --baseline-json ./benchmarks/benchmark_baseline.json`
 
 You can change the number of runs with `BENCH_RUNS` and control the output
 folder with `BENCH_DIR`.

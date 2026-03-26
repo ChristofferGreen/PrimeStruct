@@ -97,29 +97,21 @@ semantics and deterministic behavior across targets.
 
     ./scripts/compile.sh
 
-Clean debug build:
-
-    ./scripts/compile.sh --clean
-
-Release build:
+Release build and test:
 
     ./scripts/compile.sh --release
 
-Clean release build:
-
-    ./scripts/compile.sh --clean --release
-
-Configure only:
-
-    ./scripts/compile.sh --configure
-
 Optional Wasm runtime checks (auto-skip when `wasmtime` is unavailable):
 
-    ./scripts/compile.sh --wasm-runtime-checks
+    ./scripts/run_wasm_runtime_checks.sh
 
 Coverage helper:
 
     ./scripts/code_coverage.sh
+
+Benchmark helper (after a build, typically release):
+
+    ./scripts/benchmark.sh --build-dir ./build-release
 
 Lines-of-code helper:
 
