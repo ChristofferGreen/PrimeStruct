@@ -6431,7 +6431,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("compiles and runs bare map at call without helper in C++ emitter") {
+TEST_CASE("rejects bare map at call without helper in C++ emitter with unknown-target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -6441,14 +6441,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_at_without_helper_reject.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_bare_map_at_without_helper_reject_exe").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 4);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_bare_map_at_without_helper_reject.err").string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare map at_unsafe call without helper in C++ emitter") {
+TEST_CASE("rejects bare map at_unsafe call without helper in C++ emitter with unknown-target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -6458,12 +6459,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_bare_map_at_unsafe_without_helper_reject.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_bare_map_at_unsafe_without_helper_reject_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_bare_map_at_unsafe_without_helper_reject.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 4);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs bare vector at through imported stdlib helper in C++ emitter") {

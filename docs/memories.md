@@ -20,7 +20,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical helper is imported or explicitly defined, and bare
   `values.at(...)` / `values.at_unsafe(...)` method sugar now follows the
   same-path reject contract instead of falling back to compiler-owned
-  access behavior.
+  access behavior; the C++ emitter now matches that direct-call contract for
+  bare `at` / `at_unsafe` calls instead of compiling them through the old
+  builtin access fallback.
 
 ## Maintenance Notes
 
