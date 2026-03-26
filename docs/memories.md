@@ -6,9 +6,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 - `experimental-vector-negative-index-guard`: `/std/collections/experimental_vector/*`
   checked access now rejects negative indices via `vectorCheckIndex` (same
-  bounds-error path as high indices), and `vectorAtUnsafe` now also rejects
-  negative indices explicitly, so negative indices no longer fall through to
-  invalid pointer arithmetic/indirect-address traps.
+  bounds-error path as high indices), and `vectorAtUnsafe` now routes through
+  the same guard for both negative and positive out-of-range indices, so those
+  accesses no longer fall through to invalid pointer arithmetic,
+  uninitialized-slot reads, or indirect-address traps.
 - `experimental-vector-push-growth-overflow-contract`:
   `/std/collections/experimental_vector/vectorPush` now diverts capacity-
   doubling overflow into the shared runtime-contract path instead of letting

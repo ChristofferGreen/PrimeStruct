@@ -77,6 +77,42 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("vm experimental vector at_unsafe checks positive out-of-range index") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32>] values{vectorPair<i32>(4i32, 9i32)}
+  return(vectorAtUnsafe<i32>(values, 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_vector_at_unsafe_oob.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_at_unsafe_oob_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector method at_unsafe checks positive out-of-range index") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32>] values{vectorPair<i32>(4i32, 9i32)}
+  return(values.at_unsafe(2i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_vector_method_at_unsafe_oob.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_method_at_unsafe_oob_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
 TEST_CASE("vm rejects misaligned pointer dereference") {
   const std::string source = R"(
 [return<int>]
