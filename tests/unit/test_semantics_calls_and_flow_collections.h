@@ -180,6 +180,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("bare map tryAt call requires imported canonical helper or explicit definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(try(tryAt(values, 1i32)))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
+}
+
 TEST_CASE("map binding rejects unsupported builtin Comparable key contract") {
   const std::string source = R"(
 [return<int>]

@@ -48,6 +48,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     if (this->tryRewriteBareMapHelperCall(expr, "tryAt",
                                           *context.dispatchResolvers,
                                           rewrittenMapHelperCall)) {
+      if (rewrittenMapHelperCall.name == "/std/collections/map/tryAt" &&
+          !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
+          !hasDeclaredDefinitionPath("/map/tryAt") &&
+          !hasDeclaredDefinitionPath("/tryAt")) {
+        error_ = "unknown call target: /std/collections/map/tryAt";
+        return false;
+      }
       handledOut = true;
       return validateExpr(params, locals, rewrittenMapHelperCall);
     }

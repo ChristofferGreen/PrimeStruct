@@ -32,20 +32,37 @@ bool SemanticsValidator::validateExprTryBuiltin(
     return false;
   }
   if (expr.args.front().kind == Expr::Kind::Call) {
+    const Expr &tryTargetExpr = expr.args.front();
     const std::string removedMapCompatibilityPath =
         context.getDirectMapHelperCompatibilityPath != nullptr
-            ? context.getDirectMapHelperCompatibilityPath(expr.args.front())
+            ? context.getDirectMapHelperCompatibilityPath(tryTargetExpr)
             : std::string{};
     if (!removedMapCompatibilityPath.empty()) {
       error_ = "unknown call target: " + removedMapCompatibilityPath;
       return false;
     }
-    const std::string tryTargetPath = resolveCalleePath(expr.args.front());
-    if (tryTargetPath == "/std/collections/map/tryAt" &&
-        defMap_.find(tryTargetPath) == defMap_.end() &&
+    const std::string tryTargetPath = resolveCalleePath(tryTargetExpr);
+    bool isBareMapTryAtFallback = false;
+    if (isSimpleCallName(tryTargetExpr, "tryAt") &&
+        defMap_.find("/tryAt") == defMap_.end() &&
+        tryTargetExpr.args.size() == 2) {
+      for (const auto &tryArg : tryTargetExpr.args) {
+        std::string inferredTypeText;
+        if (inferQueryExprTypeText(tryArg, params, locals, inferredTypeText) &&
+            returnsMapCollectionType(inferredTypeText)) {
+          isBareMapTryAtFallback = true;
+          break;
+        }
+      }
+    }
+    if ((tryTargetPath == "/std/collections/map/tryAt" || isBareMapTryAtFallback) &&
+        !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
+        !hasDeclaredDefinitionPath("/std/collections/map/tryAt") &&
+        !hasDeclaredDefinitionPath("/map/tryAt") &&
+        !hasDeclaredDefinitionPath("/tryAt") &&
         !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
-          !expr.args.front().args.empty() &&
-          context.isIndexedArgsPackMapReceiverTarget(expr.args.front().args.front()))) {
+          !tryTargetExpr.args.empty() &&
+          context.isIndexedArgsPackMapReceiverTarget(tryTargetExpr.args.front()))) {
       error_ = "unknown call target: /std/collections/map/tryAt";
       return false;
     }

@@ -219,7 +219,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
 	    prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
 	    const bool shouldBuiltinValidateBareMapCountCall = true;
 	    const bool shouldBuiltinValidateBareMapContainsCall = true;
-	    const bool shouldBuiltinValidateBareMapTryAtCall = true;
+	    const bool shouldBuiltinValidateBareMapTryAtCall = false;
 	    const bool shouldBuiltinValidateBareMapAccessCall = true;
 	    auto isAcceptedLocationTarget = [&](const Expr &target, const auto &self) -> bool {
 	      if (target.kind == Expr::Kind::Name) {
