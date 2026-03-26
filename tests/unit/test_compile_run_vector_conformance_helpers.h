@@ -759,6 +759,9 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
   } else if (mode == "reserve_negative") {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
     source += "  vectorReserve<i32>(values, -1i32)\n";
+  } else if (mode == "reserve_growth_overflow") {
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
+    source += "  vectorReserve<i32>(values, 1073741824i32)\n";
   } else {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorSingle<i32>(4i32)}\n";
     source += "  vectorRemoveSwap<i32>(values, 1i32)\n";
@@ -1484,6 +1487,8 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
           .string();
   const std::string expectedError = mode == "pop_empty"         ? "container empty\n"
                                     : mode == "reserve_negative" ? "vector reserve expects non-negative capacity\n"
+                                    : mode == "reserve_growth_overflow"
+                                        ? "vector reserve allocation failed (out of memory)\n"
                                     : mode == "push_growth_overflow"
                                         ? "vector reserve expects non-negative capacity\n"
                                                                  : "array index out of bounds\n";
