@@ -48,7 +48,7 @@ Detailed finished arg-pack IR element-kind checkpoints were moved to `docs/todo_
 
 **Group 4 - Ownership and lifetime substrate**
 Ownership/drop status note: completed guard and container-error-contract checkpoints are archived in `docs/todo_finished.md`. Keep the live file on the remaining non-trivial destruction and lifetime substrate work.
-- ○ Ownership/drop reallocation slice: extend the same non-trivial move semantics to the remaining canonical wrapper-backed vector/map growth paths now that experimental `Vector<T>` and experimental `.prime` `Map<K, V>` storage no longer depend on builtin relocation gates.
+- ◐ Ownership/drop reallocation slice: extend the same non-trivial move semantics to the remaining canonical wrapper-backed vector/map growth paths now that experimental `Vector<T>` and experimental `.prime` `Map<K, V>` storage no longer depend on builtin relocation gates. Progress: canonical wrapper-backed builtin `map` constructor growth now rejects non-relocation-trivial key/value element types with deterministic diagnostics across semantics and C++/VM/native compile-run coverage, so unsupported ownership paths fail before lowering while experimental `.prime` map/vector ownership-sensitive growth remains available.
 - ○ Implement container element drop behavior in vector/map runtimes once the ownership contract is fixed.
 
 **Group 5 - Container bring-up and de-builtinization**

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace primec::semantics {
@@ -112,8 +113,43 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     if (!validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)) {
       return false;
     }
+    const Definition *currentDef = nullptr;
+    const std::vector<std::string> *definitionTemplateArgs = nullptr;
+    std::string definitionNamespacePrefix = expr.namespacePrefix;
+    if (!currentValidationContext_.definitionPath.empty()) {
+      auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
+      if (currentDefIt != defMap_.end()) {
+        currentDef = currentDefIt->second;
+      }
+    }
+    if (currentDef != nullptr) {
+      definitionTemplateArgs = &currentDef->templateArgs;
+      if (definitionNamespacePrefix.empty()) {
+        definitionNamespacePrefix = currentDef->namespacePrefix;
+      }
+    }
     const std::string &keyType = expr.templateArgs[0];
     const std::string &valueType = expr.templateArgs[1];
+    if (!expr.args.empty()) {
+      std::unordered_set<std::string> visitingStructs;
+      if (!isRelocationTrivialContainerElementType(
+              keyType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {
+        error_ =
+            "map literal requires relocation-trivial map key type until container move/reallocation semantics are "
+            "implemented: " +
+            keyType;
+        return false;
+      }
+      visitingStructs.clear();
+      if (!isRelocationTrivialContainerElementType(
+              valueType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {
+        error_ =
+            "map literal requires relocation-trivial map value type until container move/reallocation semantics are "
+            "implemented: " +
+            valueType;
+        return false;
+      }
+    }
     for (size_t i = 0; i + 1 < expr.args.size(); i += 2) {
       if (!this->validateCollectionElementType(
               expr.args[i], keyType, "map literal requires key type ", params,

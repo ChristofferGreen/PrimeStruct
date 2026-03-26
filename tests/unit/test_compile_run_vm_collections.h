@@ -2197,6 +2197,10 @@ TEST_CASE("runs vm experimental map ownership-sensitive values") {
   expectExperimentalMapOwnershipConformance("vm");
 }
 
+TEST_CASE("rejects vm canonical map constructor ownership growth") {
+  expectCanonicalMapNamespaceOwnershipReject("vm");
+}
+
 TEST_CASE("runs vm experimental map bracket access") {
   expectExperimentalMapIndexConformance("vm");
 }

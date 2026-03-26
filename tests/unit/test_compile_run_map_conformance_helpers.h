@@ -441,6 +441,28 @@ inline std::string makeCanonicalMapNamespaceConformanceSource() {
   return source;
 }
 
+inline std::string makeCanonicalMapNamespaceOwnershipRejectSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[struct]\n";
+  source += "Owned() {\n";
+  source += "  [i32 mut] value{0i32}\n\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this.value, other.value)\n";
+  source += "    assign(other.value, 0i32)\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source +=
+      "  [map<string, Owned>] values{/std/collections/map/map<string, Owned>(\"left\"raw_utf8, Owned(4i32), "
+      "\"right\"raw_utf8, Owned(7i32))}\n";
+  source += "  return(/std/collections/map/count<string, Owned>(values))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalMapNamespaceExperimentalReferenceConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1742,6 +1764,15 @@ inline void expectCanonicalMapNamespaceVmConformance() {
                                    "map_namespace_canonical_vm",
                                    20,
                                    "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
+}
+
+inline void expectCanonicalMapNamespaceOwnershipReject(const std::string &emitMode) {
+  expectMapConformanceCompileReject(
+      makeCanonicalMapNamespaceOwnershipRejectSource(),
+      "map_namespace_canonical_ownership_reject",
+      emitMode,
+      "map literal requires relocation-trivial map value type until container move/reallocation semantics are "
+      "implemented: Owned");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalReferenceConformance(const std::string &emitMode) {

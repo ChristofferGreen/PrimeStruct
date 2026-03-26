@@ -367,6 +367,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical map wrappers reject non-relocation-trivial value growth") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Owned() {
+  [i32 mut] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, other.value)
+    assign(other.value, 0i32)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, Owned>] values{mapPair<string, Owned>("left"raw_utf8, Owned(4i32), "right"raw_utf8, Owned(7i32))}
+  return(mapCount<string, Owned>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "map literal requires relocation-trivial map value type until container move/reallocation semantics "
+            "are implemented: Owned") != std::string::npos);
+}
+
 TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
