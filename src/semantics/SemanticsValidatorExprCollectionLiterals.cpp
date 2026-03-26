@@ -97,10 +97,45 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
       return false;
     }
   }
+  auto resolveOwnershipContext = [&](std::string &namespacePrefixOut,
+                                     const std::vector<std::string> *&definitionTemplateArgsOut) {
+    definitionTemplateArgsOut = nullptr;
+    namespacePrefixOut = expr.namespacePrefix;
+    const Definition *currentDef = nullptr;
+    if (!currentValidationContext_.definitionPath.empty()) {
+      auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
+      if (currentDefIt != defMap_.end()) {
+        currentDef = currentDefIt->second;
+      }
+    }
+    if (currentDef != nullptr) {
+      definitionTemplateArgsOut = &currentDef->templateArgs;
+      if (namespacePrefixOut.empty()) {
+        namespacePrefixOut = currentDef->namespacePrefix;
+      }
+    }
+  };
   if ((builtinName == "array" || builtinName == "vector" ||
        builtinName == "soa_vector") &&
       !expr.templateArgs.empty()) {
     const std::string &elemType = expr.templateArgs.front();
+    const bool isCanonicalVectorWrapperContext =
+        currentValidationContext_.definitionPath.rfind("/std/collections/", 0) == 0;
+    if (builtinName == "vector" && !expr.args.empty() &&
+        isCanonicalVectorWrapperContext) {
+      const std::vector<std::string> *definitionTemplateArgs = nullptr;
+      std::string definitionNamespacePrefix;
+      resolveOwnershipContext(definitionNamespacePrefix, definitionTemplateArgs);
+      std::unordered_set<std::string> visitingStructs;
+      if (!isRelocationTrivialContainerElementType(
+              elemType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {
+        error_ =
+            "vector literal requires relocation-trivial vector element type until container move/reallocation "
+            "semantics are implemented: " +
+            elemType;
+        return false;
+      }
+    }
     for (const auto &arg : expr.args) {
       if (!this->validateCollectionElementType(
               arg, elemType, builtinName + " literal requires element type ",
@@ -113,21 +148,9 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     if (!validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)) {
       return false;
     }
-    const Definition *currentDef = nullptr;
     const std::vector<std::string> *definitionTemplateArgs = nullptr;
-    std::string definitionNamespacePrefix = expr.namespacePrefix;
-    if (!currentValidationContext_.definitionPath.empty()) {
-      auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
-      if (currentDefIt != defMap_.end()) {
-        currentDef = currentDefIt->second;
-      }
-    }
-    if (currentDef != nullptr) {
-      definitionTemplateArgs = &currentDef->templateArgs;
-      if (definitionNamespacePrefix.empty()) {
-        definitionNamespacePrefix = currentDef->namespacePrefix;
-      }
-    }
+    std::string definitionNamespacePrefix;
+    resolveOwnershipContext(definitionNamespacePrefix, definitionTemplateArgs);
     const std::string &keyType = expr.templateArgs[0];
     const std::string &valueType = expr.templateArgs[1];
     if (!expr.args.empty()) {
