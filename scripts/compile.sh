@@ -34,21 +34,51 @@ detect_jobs() {
   printf '%s\n' "$jobs"
 }
 
+find_fast_cost_file() {
+  local build_dir="$1"
+  local local_cost_file="$build_dir/Testing/Temporary/CTestCostData.txt"
+
+  if [[ -f "$local_cost_file" ]]; then
+    printf '%s\n' "$local_cost_file"
+    return 0
+  fi
+
+  local build_dir_name
+  build_dir_name="$(basename "$build_dir")"
+
+  local main_worktree=""
+  if command -v git >/dev/null 2>&1; then
+    main_worktree="$(git -C "$ROOT_DIR" worktree list --porcelain 2>/dev/null |
+      awk '/^worktree / { print substr($0, 10); exit }')"
+  fi
+
+  if [[ -n "$main_worktree" ]]; then
+    local fallback_cost_file="$main_worktree/$build_dir_name/Testing/Temporary/CTestCostData.txt"
+    if [[ -f "$fallback_cost_file" ]]; then
+      printf '%s\n' "$fallback_cost_file"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 build_fast_exclude_file() {
   local build_dir="$1"
   local threshold_seconds="$2"
   local output_file="$3"
-  local cost_file="$build_dir/Testing/Temporary/CTestCostData.txt"
-
-  if [[ ! -f "$cost_file" ]]; then
+  local cost_file=""
+  cost_file="$(find_fast_cost_file "$build_dir")" || {
     return 1
-  fi
+  }
 
   awk -v threshold="$threshold_seconds" '
     NF >= 3 && ($3 + 0) > threshold {
       print $1
     }
   ' "$cost_file" > "$output_file"
+
+  FAST_COST_FILE="$cost_file"
   return 0
 }
 
@@ -96,6 +126,9 @@ if [[ "$FAST_MODE" -eq 1 ]]; then
 
   if build_fast_exclude_file "$BUILD_DIR" "$FAST_TEST_THRESHOLD_SECONDS" "$FAST_EXCLUDE_FILE"; then
     excluded_count="$(wc -l < "$FAST_EXCLUDE_FILE" | tr -d '[:space:]')"
+    if [[ "$FAST_COST_FILE" != "$BUILD_DIR/Testing/Temporary/CTestCostData.txt" ]]; then
+      echo "Fast mode: using fallback timing data from $FAST_COST_FILE."
+    fi
     if [[ "$excluded_count" -gt 0 ]]; then
       echo "Fast mode: excluding $excluded_count tests with historical runtime > ${FAST_TEST_THRESHOLD_SECONDS}s."
       ctest_args+=(--exclude-from-file "$FAST_EXCLUDE_FILE")
@@ -103,7 +136,7 @@ if [[ "$FAST_MODE" -eq 1 ]]; then
       echo "Fast mode: no historical tests exceed ${FAST_TEST_THRESHOLD_SECONDS}s."
     fi
   else
-    echo "Fast mode: no CTest timing data found in $BUILD_DIR/Testing/Temporary/CTestCostData.txt; running full suite." >&2
+    echo "Fast mode: no CTest timing data found locally or in the main worktree; running full suite." >&2
   fi
 fi
 
