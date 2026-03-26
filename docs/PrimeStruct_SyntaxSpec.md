@@ -874,10 +874,12 @@ Draft constraints:
     element kinds already fit the current collection contract, and `map<K, V>` handles whose key/value kinds already
     fit that same map contract. On IR-backed backends, value-carrying `Result.and_then(...)` lambdas may end in an
     explicit `return(Result...)` or in a final `if(...)` expression whose `then(){...}` / `else(){...}` branches
-    each produce a `Result`. Downstream `try(...)`, `Result.error(...)`, and success/error `Result.why(...)`
-    preserve those handle/error-struct payloads, rebuilds
-    single-slot struct payloads, and keeps multi-slot struct payloads on that same pointer-backed path on VM/native;
-    other remaining wider non-struct payloads remain unsupported.
+    each produce a `Result`. IR-backed `[args<Result<T, Error>>]`, `[args<Reference<Result<T, Error>>>]`, and
+    `[args<Pointer<Result<T, Error>>>]` packs preserve indexed `try(...)`, `Result.error(...)`, and `Result.why(...)`
+    access across direct, pure-spread, and mixed variadic forwarding when `T` already fits that same payload
+    contract. Downstream `try(...)`, `Result.error(...)`, and success/error `Result.why(...)` preserve those
+    handle/error-struct payloads, rebuild single-slot struct payloads, and keep multi-slot struct payloads on that
+    same pointer-backed path on VM/native; other remaining wider non-struct payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.
 - Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
 - VM/native consume the PSIR v16 opcode set (see design doc) and deserialization rejects unknown opcodes.

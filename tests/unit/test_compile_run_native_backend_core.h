@@ -755,7 +755,7 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
-TEST_CASE("native rejects variadic borrowed Result packs until IR arg-pack Result materialization lands") {
+TEST_CASE("native materializes variadic borrowed Result packs with indexed dereference try and why access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -827,10 +827,11 @@ main() {
       (testScratchPath("") / "primec_native_variadic_args_borrowed_result").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 24);
 }
 
-TEST_CASE("native rejects variadic pointer Result packs until IR arg-pack Result materialization lands") {
+TEST_CASE("native materializes variadic pointer Result packs with indexed dereference try and why access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -902,7 +903,8 @@ main() {
       (testScratchPath("") / "primec_native_variadic_args_pointer_result").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 24);
 }
 
 TEST_CASE("native materializes variadic status-only Result packs with indexed error and why access") {

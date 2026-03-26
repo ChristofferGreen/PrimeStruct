@@ -454,12 +454,15 @@
               std::string resultValueType;
               if (extractDeclaredResultValueType(targetType, resultValueType)) {
                 assignDeclaredResultCollection(resultValueType);
+                if (info.resultValueCollectionKind == LocalInfo::Kind::Value) {
+                  info.resultValueKind = valueKindFromTypeName(resultValueType);
+                }
+                assignDeclaredResultFileHandle(resultValueType);
+                if (info.resultValueIsFileHandle) {
+                  info.resultValueKind = LocalInfo::ValueKind::Int64;
+                }
+                assignDeclaredResultStructType(resultValueType);
               }
-              assignDeclaredResultFileHandle(targetType);
-              if (info.resultValueIsFileHandle) {
-                info.resultValueKind = LocalInfo::ValueKind::Int64;
-              }
-              assignDeclaredResultStructType(targetType);
             }
             info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
             info.resultErrorType = resultErrorType;
