@@ -29,6 +29,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `TemplateMonomorph.cpp`, covering builtin type and collection
   classification plus overload path and import utility helpers.
 
+### template-monomorph-source-definition-setup-header
+- Updated: 2026-03-26
+- Tags: semantics, template-monomorph, refactor
+- Fact: Source-definition collation, helper-overload family expansion, and template-root entry-path validation for monomorphization now run via `src/semantics/TemplateMonomorphSourceDefinitionSetup.h`.
+- Evidence: Group 9 extracted the monomorph setup block from `monomorphizeTemplates(...)` into `initializeTemplateMonomorphSourceDefinitions(...)`.
+
 ## Maintenance Notes
 
 - Keep entries sorted by slug within the section.
