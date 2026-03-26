@@ -85,6 +85,7 @@ inline void expectExperimentalVectorRuntimeContracts(const std::string &emitMode
   expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_at_oob");
   expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_swap_oob");
   expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "at_negative_index");
+  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "reserve_negative");
 }
 
 inline void expectExperimentalVectorOwnershipContracts(const std::string &emitMode) {
