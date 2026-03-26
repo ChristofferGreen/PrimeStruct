@@ -23,6 +23,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access behavior; the C++ emitter now matches that direct-call contract for
   bare `at` / `at_unsafe` calls instead of compiling them through the old
   builtin access fallback.
+- `template-monomorph-core-utilities-header`:
+  shared TemplateMonomorph core utility helpers now live in
+  `src/semantics/TemplateMonomorphCoreUtilities.h` and are included by
+  `TemplateMonomorph.cpp`, covering builtin type and collection
+  classification plus overload path and import utility helpers.
 
 ## Maintenance Notes
 
