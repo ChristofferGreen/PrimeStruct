@@ -15,10 +15,10 @@ bool SemanticsValidator::validateOmittedBindingInitializer(const Expr &binding,
     return false;
   }
   const std::string normalizedType = normalizeBindingTypeName(info.typeName);
-  if (normalizedType == "vector") {
+  if (normalizedType == "vector" || normalizedType == "soa_vector") {
     std::vector<std::string> args;
     if (!splitTopLevelTemplateArgs(info.typeTemplateArg, args) || args.size() != 1) {
-      error_ = "vector requires exactly one template argument";
+      error_ = normalizedType + " requires exactly one template argument";
       return false;
     }
     return true;

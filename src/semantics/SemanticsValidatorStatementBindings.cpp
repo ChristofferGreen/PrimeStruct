@@ -122,7 +122,9 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     return isBuiltinBlockCall(candidate);
   };
 
-  if (normalizeBindingTypeName(info.typeName) == "vector" && isEmptyBuiltinBlockInitializer(initializer)) {
+  const std::string normalizedBindingType = normalizeBindingTypeName(info.typeName);
+  if ((normalizedBindingType == "vector" || normalizedBindingType == "soa_vector") &&
+      isEmptyBuiltinBlockInitializer(initializer)) {
     if (!validateOmittedBindingInitializer(stmt, info, namespacePrefix)) {
       return false;
     }

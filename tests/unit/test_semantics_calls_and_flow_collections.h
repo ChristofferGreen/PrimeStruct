@@ -1127,6 +1127,28 @@ main() {
   CHECK(error.find("to_soa requires vector target") != std::string::npos);
 }
 
+TEST_CASE("to_soa helper call-form falls back to user helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/to_soa([soa_vector<Particle>] values) {
+  return(5i32)
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(to_soa(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("to_aos helper rejects non-soa target") {
   const std::string source = R"(
 Particle() {
@@ -1143,6 +1165,28 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("to_aos requires soa_vector target") != std::string::npos);
+}
+
+TEST_CASE("to_aos helper call-form falls back to user helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/to_aos([vector<Particle>] values) {
+  return(6i32)
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  return(to_aos(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("aos and soa containers do not implicitly convert") {
@@ -1272,6 +1316,126 @@ TEST_CASE("soa_vector get and ref reject named arguments for builtin calls") {
   checkNamedArgs("ref([index] 0i32, [values] values)");
 }
 
+TEST_CASE("soa_vector get and ref require integer indices for builtin calls") {
+  const auto checkIndexType = [](const std::string &callExpr) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [soa_vector<Particle>] values{soa_vector<Particle>()}\n"
+        "  " + callExpr + "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("requires integer index") != std::string::npos);
+  };
+
+  checkIndexType("get(values, true)");
+  checkIndexType("values.ref(1.0f32)");
+}
+
+TEST_CASE("soa_vector conversion and access builtins reject template arguments") {
+  const auto checkReject = [](const std::string &setup, const std::string &callExpr, const std::string &expected) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n" +
+        setup +
+        "  " + callExpr + "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find(expected) != std::string::npos);
+  };
+
+  checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa<i32>(values)",
+              "to_soa does not accept template arguments");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "to_aos<i32>(values)",
+              "to_aos does not accept template arguments");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get<i32>(values, 0i32)",
+              "get does not accept template arguments");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref<i32>(values, 0i32)",
+              "ref does not accept template arguments");
+}
+
+TEST_CASE("soa_vector conversion and access builtins reject block arguments") {
+  const auto checkReject = [](const std::string &setup, const std::string &callExpr, const std::string &expected) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n" +
+        setup +
+        "  " + callExpr + "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find(expected) != std::string::npos);
+  };
+
+  checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa(values) { return(values) }",
+              "block arguments require a definition target");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
+              "to_aos(values) { return(values) }", "block arguments require a definition target");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
+              "get(values, 0i32) { return(values) }", "block arguments require a definition target");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
+              "ref(values, 0i32) { return(values) }", "block arguments require a definition target");
+}
+
+TEST_CASE("soa_vector conversion and access builtins enforce argument counts") {
+  const auto checkReject = [](const std::string &setup, const std::string &callExpr, const std::string &expected) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n" +
+        setup +
+        "  " + callExpr + "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find(expected) != std::string::npos);
+  };
+
+  checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa()",
+              "argument count mismatch for builtin to_soa");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "to_aos(values, values)",
+              "argument count mismatch for builtin to_aos");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get(values)",
+              "argument count mismatch for builtin get");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref(values, 0i32, 1i32)",
+              "argument count mismatch for builtin ref");
+}
+
+TEST_CASE("soa_vector builtin construction allows empty constructor and empty braces") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] ctorValues{soa_vector<Particle>()}
+  [soa_vector<Particle>] braceValues{}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector get helper call-form accepts labeled named receiver") {
   const std::string source = R"(
 Particle() {
@@ -1288,6 +1452,29 @@ main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<i32>] index{vector<i32>(0i32)}
   return(get([index] index, [values] values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector get method-form prefers user helper over builtin") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/get([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<i32>] idx{vector<i32>(0i32)}
+  return(values.get(idx))
 }
 )";
   std::string error;
@@ -1316,6 +1503,29 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("soa_vector ref method-form prefers user helper over builtin") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/ref([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(9i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<i32>] idx{vector<i32>(0i32)}
+  return(values.ref(idx))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector field-view method reports unsupported diagnostic") {

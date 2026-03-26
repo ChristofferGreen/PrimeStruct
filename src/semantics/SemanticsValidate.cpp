@@ -220,7 +220,10 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     };
     const bool omittedInitializer = expr.args.empty() ||
                                     (expr.args.size() == 1 && isEmptyBuiltinBlockInitializer(expr.args.front()));
-    if (!expr.isBinding || !omittedInitializer) {
+    if (!omittedInitializer) {
+      return true;
+    }
+    if (!expr.isBinding && expr.transforms.empty()) {
       return true;
     }
     semantics::BindingInfo info;
@@ -232,13 +235,13 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     }
     const std::string normalizedType = semantics::normalizeBindingTypeName(info.typeName);
     if (!info.typeTemplateArg.empty()) {
-      if (normalizedType != "vector") {
-        error = "omitted initializer requires struct type: " + info.typeName;
+      if (normalizedType != "vector" && normalizedType != "soa_vector") {
+        error = "omitted initializer requires vector or soa_vector type: " + info.typeName;
         return false;
       }
       std::vector<std::string> templateArgs;
       if (!semantics::splitTopLevelTemplateArgs(info.typeTemplateArg, templateArgs) || templateArgs.size() != 1) {
-        error = "vector requires exactly one template argument";
+        error = normalizedType + " requires exactly one template argument";
         return false;
       }
       Expr call;
