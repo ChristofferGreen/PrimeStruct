@@ -1413,6 +1413,7 @@ inline std::string makeCanonicalMapTryAtImportRequirementSource() {
 
 inline std::string makeCanonicalMapAccessImportRequirementSource(const std::string &helperName) {
   std::string source;
+  source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<string, i32>] values{map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";

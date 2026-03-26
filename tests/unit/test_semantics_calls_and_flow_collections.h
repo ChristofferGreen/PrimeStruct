@@ -10393,7 +10393,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map contains method validates without imported canonical helper") {
+TEST_CASE("bare map contains method requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 main() {
@@ -10402,8 +10402,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("bare map tryAt method auto inference keeps deterministic unknown method diagnostics") {
@@ -17271,6 +17271,8 @@ main() {
 
 TEST_CASE("field-bound map access count keeps builtin string fallback") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 /string/count([string] values) {
   return(91i32)
@@ -18215,7 +18217,7 @@ main() {
   CHECK(validateProgram(source, "/main", error));
 }
 
-TEST_CASE("stdlib namespaced map at validates without imported stdlib helper") {
+TEST_CASE("stdlib namespaced map at requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -18224,10 +18226,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced map at_unsafe validates without imported stdlib helper") {
+TEST_CASE("stdlib namespaced map at_unsafe requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -18237,7 +18240,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("soa access helper call-form expression infers auto binding from labeled receiver helper") {
@@ -18948,7 +18952,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("builtin at validates on canonical map call target") {
+TEST_CASE("builtin at on canonical map call target requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -18956,11 +18960,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("builtin at rewrites positional reordered canonical map receiver") {
+TEST_CASE("builtin at reordered canonical map receiver requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -18968,8 +18972,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("user definition named vector call is not treated as builtin collection target") {

@@ -440,6 +440,8 @@ main() {
 
 TEST_CASE("rejects vm canonical map access helper key mismatch on wrapper slash return receiver") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapValues() {
   return(map<i32, i32>(1i32, 4i32))
@@ -464,6 +466,8 @@ main() {
 
 TEST_CASE("runs vm explicit canonical map typed bindings with builtin helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
@@ -483,6 +487,8 @@ main() {
 
 TEST_CASE("rejects vm explicit canonical map typed binding key mismatch") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
@@ -786,8 +792,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_contains_method_without_import_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 1);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("rejects vm bare map tryAt method without imported canonical helper") {
@@ -804,7 +810,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("missing on_error for ? usage") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("rejects vm bare map access methods without imported canonical helpers") {
@@ -1800,6 +1806,8 @@ main() {
 
 TEST_CASE("runs vm with map at helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
@@ -1813,6 +1821,8 @@ main() {
 
 TEST_CASE("runs vm with map at_unsafe helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}

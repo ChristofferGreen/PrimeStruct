@@ -215,43 +215,47 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "return not allowed in expression context";
       return false;
     }
-	    ExprDispatchBootstrap dispatchBootstrap;
-	    prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
-	    const bool shouldBuiltinValidateBareMapCountCall = true;
-	    const bool shouldBuiltinValidateBareMapContainsCall = false;
-	    const bool shouldBuiltinValidateBareMapTryAtCall = false;
-	    const bool shouldBuiltinValidateBareMapAccessCall = false;
-	    auto isAcceptedLocationTarget = [&](const Expr &target, const auto &self) -> bool {
-	      if (target.kind == Expr::Kind::Name) {
-	        return !isEntryArgsName(target.name) &&
-	               (locals.count(target.name) != 0 || isParam(params, target.name));
-	      }
-	      if (target.kind != Expr::Kind::Call) {
-	        return false;
-	      }
-	      if (dispatchBootstrap.isDeclaredPointerLikeCall != nullptr &&
-	          dispatchBootstrap.isDeclaredPointerLikeCall(target)) {
-	        return true;
-	      }
-	      if (target.isFieldAccess && target.args.size() == 1) {
-	        return self(target.args.front(), self);
-	      }
-	      std::string indexedElemType;
-	      const auto &dispatchResolvers = dispatchBootstrap.dispatchResolvers;
-	      const bool resolvesWrappedIndexedArgsPackElement =
-	          ((dispatchResolvers.resolveIndexedArgsPackElementType != nullptr &&
-	            dispatchResolvers.resolveIndexedArgsPackElementType(target, indexedElemType)) ||
-	           (dispatchResolvers.resolveWrappedIndexedArgsPackElementType != nullptr &&
-	            dispatchResolvers.resolveWrappedIndexedArgsPackElementType(target, indexedElemType)) ||
-	           (dispatchResolvers.resolveDereferencedIndexedArgsPackElementType != nullptr &&
-	            dispatchResolvers.resolveDereferencedIndexedArgsPackElementType(target, indexedElemType)));
-	      if (!resolvesWrappedIndexedArgsPackElement) {
-	        return false;
-	      }
-	      return unwrapReferencePointerTypeText(indexedElemType) != indexedElemType;
-	    };
-	    std::string earlyPointerBuiltin;
-	    if (getBuiltinPointerName(expr, earlyPointerBuiltin)) {
+    ExprDispatchBootstrap dispatchBootstrap;
+    prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
+    const bool shouldBuiltinValidateBareMapCountCall = true;
+    const bool shouldBuiltinValidateBareMapContainsCall =
+        shouldBuiltinValidateCurrentMapWrapperHelper("contains");
+    const bool shouldBuiltinValidateBareMapTryAtCall =
+        shouldBuiltinValidateCurrentMapWrapperHelper("tryAt");
+    const bool shouldBuiltinValidateBareMapAccessCall =
+        shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
+        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe");
+    auto isAcceptedLocationTarget = [&](const Expr &target, const auto &self) -> bool {
+      if (target.kind == Expr::Kind::Name) {
+        return !isEntryArgsName(target.name) &&
+               (locals.count(target.name) != 0 || isParam(params, target.name));
+      }
+      if (target.kind != Expr::Kind::Call) {
+        return false;
+      }
+      if (dispatchBootstrap.isDeclaredPointerLikeCall != nullptr &&
+          dispatchBootstrap.isDeclaredPointerLikeCall(target)) {
+        return true;
+      }
+      if (target.isFieldAccess && target.args.size() == 1) {
+        return self(target.args.front(), self);
+      }
+      std::string indexedElemType;
+      const auto &dispatchResolvers = dispatchBootstrap.dispatchResolvers;
+      const bool resolvesWrappedIndexedArgsPackElement =
+          ((dispatchResolvers.resolveIndexedArgsPackElementType != nullptr &&
+            dispatchResolvers.resolveIndexedArgsPackElementType(target, indexedElemType)) ||
+           (dispatchResolvers.resolveWrappedIndexedArgsPackElementType != nullptr &&
+            dispatchResolvers.resolveWrappedIndexedArgsPackElementType(target, indexedElemType)) ||
+           (dispatchResolvers.resolveDereferencedIndexedArgsPackElementType != nullptr &&
+            dispatchResolvers.resolveDereferencedIndexedArgsPackElementType(target, indexedElemType)));
+      if (!resolvesWrappedIndexedArgsPackElement) {
+        return false;
+      }
+      return unwrapReferencePointerTypeText(indexedElemType) != indexedElemType;
+    };
+    std::string earlyPointerBuiltin;
+    if (getBuiltinPointerName(expr, earlyPointerBuiltin)) {
       if (hasNamedArguments(expr.argNames)) {
         error_ = "named arguments not supported for builtin calls";
         return false;

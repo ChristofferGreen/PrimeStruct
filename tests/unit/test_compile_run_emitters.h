@@ -5869,6 +5869,8 @@ main() {
 
 TEST_CASE("C++ emitter rejects wrapper-returned canonical map references through reference binding validation") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
@@ -5903,6 +5905,8 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on wrapper-returned canonical map reference method sugar") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
@@ -5931,6 +5935,8 @@ main() {
 
 TEST_CASE("C++ emitter runs canonical map reference string access") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
@@ -6121,7 +6127,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers canonical direct map access without helper to deleted stubs") {
+TEST_CASE("C++ emitter rejects canonical direct map access without helper before C++ lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -6132,16 +6138,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_deleted_stub.prime", source);
-  const std::string outPath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_access_deleted_stub.cpp")
+       "primec_cpp_canonical_direct_map_access_deleted_stub.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_map_at(") == std::string::npos);
-  CHECK(output.find("ps_map_at_unsafe(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK_FALSE(readFile(errPath).empty());
 }
 
 TEST_CASE("rejects canonical direct map access without helper in C++ emitter") {
@@ -6155,18 +6160,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_deleted_stub_exe.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_access_deleted_stub_exe")
+       "primec_cpp_canonical_direct_map_access_deleted_stub_exe.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 8);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers direct builtin count on canonical map access without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects direct builtin count on canonical map access without helper before lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -6177,20 +6182,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_count_deleted_stub.prime", source);
-  const std::string outPath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_access_count_deleted_stub.cpp")
+       "primec_cpp_canonical_direct_map_access_count_deleted_stub.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_map_at(") == std::string::npos);
-  CHECK(output.find("ps_map_at_unsafe(") == std::string::npos);
-  CHECK(output.find("ps_map_count(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK_FALSE(readFile(errPath).empty());
 }
 
-TEST_CASE("C++ emitter lowers direct builtin contains on canonical map access without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects direct builtin contains on canonical map access without helper before lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -6202,19 +6205,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_contains_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_access_contains_deleted_stub.cpp")
-          .string();
   const std::string errPath =
       (testScratchPath("") /
        "primec_cpp_canonical_direct_map_access_contains_deleted_stub.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("contains requires map target") != std::string::npos);
+  CHECK_FALSE(readFile(errPath).empty());
 }
 
 TEST_CASE("rejects direct builtin contains on canonical map access without helper in C++ emitter") {
@@ -6237,10 +6236,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("contains requires map target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers wrapper-returned slash-method map access contains receivers to deleted stubs") {
+TEST_CASE("C++ emitter rejects wrapper-returned slash-method map access contains receivers without helper") {
   const std::string source = R"(
 [return</std/collections/map<i32, map<i32, i32>>>]
 wrapMap() {
@@ -6256,19 +6255,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_slash_method_map_access_contains_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_slash_method_map_access_contains_deleted_stub.cpp")
-          .string();
   const std::string errPath =
       (testScratchPath("") /
        "primec_cpp_wrapper_slash_method_map_access_contains_deleted_stub.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper-returned slash-method map access contains without helper in C++ emitter") {
@@ -6295,7 +6290,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers canonical slash-method map access without helper to deleted stubs") {

@@ -55,7 +55,12 @@ bool SemanticsValidator::validateExprTryBuiltin(
         }
       }
     }
+    const bool allowCurrentMapWrapperTryAt =
+        shouldBuiltinValidateCurrentMapWrapperHelper("tryAt") ||
+        shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
+        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe");
     if ((tryTargetPath == "/std/collections/map/tryAt" || isBareMapTryAtFallback) &&
+        !allowCurrentMapWrapperTryAt &&
         !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
         !hasDeclaredDefinitionPath("/std/collections/map/tryAt") &&
         !hasDeclaredDefinitionPath("/map/tryAt") &&

@@ -646,6 +646,8 @@ main() {
 
 TEST_CASE("rejects native canonical map access helper key mismatch on wrapper slash return receiver") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapValues() {
   return(map<i32, i32>(1i32, 4i32))
@@ -671,6 +673,8 @@ main() {
 
 TEST_CASE("compiles and runs native explicit canonical map typed bindings with builtin helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
@@ -695,6 +699,8 @@ main() {
 
 TEST_CASE("rejects native explicit canonical map typed binding key mismatch") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
@@ -1047,7 +1053,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
-TEST_CASE("compiles native bare map contains method without imported canonical helper") {
+TEST_CASE("rejects native bare map contains method without imported canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 main() {
@@ -1065,9 +1071,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("rejects native bare map tryAt method without imported canonical helper") {
@@ -1089,7 +1094,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("missing on_error for ? usage") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("rejects native bare map access methods without imported canonical helpers") {

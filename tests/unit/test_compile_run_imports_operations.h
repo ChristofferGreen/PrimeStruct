@@ -7,6 +7,8 @@ TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
 TEST_CASE("compiles and runs collection literals in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(plus(at_unsafe(array<i32>{1i32, 2i32, 3i32}, 1i32),

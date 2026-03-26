@@ -311,7 +311,8 @@ main() {
               plus(vectorScore(), mapScore())))
 }
 )",
-          true,
+          false,
+          "unknown call target: /std/collections/map/at",
       },
       {
           "auto_collection_receiver_classifiers",

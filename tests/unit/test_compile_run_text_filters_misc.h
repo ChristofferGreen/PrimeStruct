@@ -395,6 +395,8 @@ main() {
 
 TEST_CASE("compiles and runs flat map literal") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(at(map<i32, i32>{1i32, 2i32, 3i32, 4i32}, 3i32))
@@ -410,6 +412,8 @@ main() {
 
 TEST_CASE("compiles and runs map literal pairs") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(at(map<i32, i32>{1i32=2i32, 3i32=4i32}, 3i32))
@@ -425,6 +429,8 @@ main() {
 
 TEST_CASE("compiles and runs map literal whitespace pairs") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(at(map<i32, i32>{1i32 2i32 3i32 4i32}, 3i32))
@@ -536,6 +542,8 @@ main() {
 
 TEST_CASE("compiles and runs map literal with named-arg value") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 make_color([i32] hue, [i32] value) {
   return(plus(hue, value))
