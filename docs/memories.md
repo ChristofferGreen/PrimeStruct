@@ -9,6 +9,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   bounds-error path as high indices), and `vectorAtUnsafe` now also rejects
   negative indices explicitly, so negative indices no longer fall through to
   invalid pointer arithmetic/indirect-address traps.
+- `experimental-vector-push-growth-overflow-contract`:
+  `/std/collections/experimental_vector/vectorPush` now diverts capacity-
+  doubling overflow into the shared runtime-contract path instead of letting
+  the doubled capacity wrap or continue into unchecked growth.
 
 ## Maintenance Notes
 

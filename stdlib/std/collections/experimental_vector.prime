@@ -225,7 +225,15 @@ namespace std {
          [i32 mut] nextCapacity{values.field_capacity()}
          if(equal(nextCapacity, 0i32),
             then() { assign(nextCapacity, 1i32) },
-            else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
+            else() {
+              if(greater_than(nextCapacity, 1073741823i32),
+                 then() {
+                   [vector<i32> mut] empty{/vector/vector<i32>()}
+                   [i32] invalidCapacity{minus(0i32, nextCapacity)}
+                   /vector/reserve(empty, invalidCapacity)
+                 },
+                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
+            })
          vectorReserveInternal<T>(values, nextCapacity)
        },
        else() { })
