@@ -457,20 +457,26 @@
               return false;
             }
             const int32_t errorLocal = allocTempLocal();
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
-            function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-            function.instructions.push_back({IrOpcode::DivI64, 0});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+            ir_lowerer::emitResultWhyErrorLocalFromResult(
+                resultLocal,
+                resultInfo,
+                errorLocal,
+                allocTempLocal,
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
             function.instructions.push_back({IrOpcode::PushI64, 0});
             function.instructions.push_back({IrOpcode::CmpEqI64, 0});
             size_t jumpError = function.instructions.size();
             function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-            function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-            function.instructions.push_back({IrOpcode::MulI64, 0});
-            function.instructions.push_back({IrOpcode::SubI64, 0});
+            if (resultInfo.valueCollectionKind == LocalInfo::Kind::Buffer) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+            } else {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+              function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+              function.instructions.push_back({IrOpcode::MulI64, 0});
+              function.instructions.push_back({IrOpcode::SubI64, 0});
+            }
             if (!resultInfo.valueStructType.empty()) {
               ir_lowerer::PackedResultStructPayloadInfo payloadInfo;
               if (!ir_lowerer::resolvePackedResultStructPayloadInfo(
@@ -897,10 +903,12 @@
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
 
           const int32_t errorLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::DivI64, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+          ir_lowerer::emitResultWhyErrorLocalFromResult(
+              resultLocal,
+              sourceResultInfo,
+              errorLocal,
+              allocTempLocal,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
           function.instructions.push_back({IrOpcode::PushI64, 0});
           function.instructions.push_back({IrOpcode::CmpEqI64, 0});
@@ -908,12 +916,12 @@
           function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
           const int32_t payloadLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::MulI64, 0});
-          function.instructions.push_back({IrOpcode::SubI64, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadLocal)});
+          ir_lowerer::emitPackedResultPayloadLocalFromResult(
+              resultLocal,
+              sourceResultInfo,
+              errorLocal,
+              payloadLocal,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
@@ -1009,10 +1017,12 @@
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
 
           const int32_t errorLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::DivI64, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+          ir_lowerer::emitResultWhyErrorLocalFromResult(
+              resultLocal,
+              sourceResultInfo,
+              errorLocal,
+              allocTempLocal,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
           function.instructions.push_back({IrOpcode::PushI64, 0});
           function.instructions.push_back({IrOpcode::CmpEqI64, 0});
@@ -1020,12 +1030,12 @@
           function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
           const int32_t payloadLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::MulI64, 0});
-          function.instructions.push_back({IrOpcode::SubI64, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadLocal)});
+          ir_lowerer::emitPackedResultPayloadLocalFromResult(
+              resultLocal,
+              sourceResultInfo,
+              errorLocal,
+              payloadLocal,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
@@ -1150,10 +1160,12 @@
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(leftResultLocal)});
 
           const int32_t leftErrorLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftResultLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::DivI64, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(leftErrorLocal)});
+          ir_lowerer::emitResultWhyErrorLocalFromResult(
+              leftResultLocal,
+              leftResultInfo,
+              leftErrorLocal,
+              allocTempLocal,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftErrorLocal)});
           function.instructions.push_back({IrOpcode::PushI64, 0});
           function.instructions.push_back({IrOpcode::CmpEqI64, 0});
@@ -1167,10 +1179,12 @@
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(rightResultLocal)});
 
           const int32_t rightErrorLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightResultLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::DivI64, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(rightErrorLocal)});
+          ir_lowerer::emitResultWhyErrorLocalFromResult(
+              rightResultLocal,
+              rightResultInfo,
+              rightErrorLocal,
+              allocTempLocal,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightErrorLocal)});
           function.instructions.push_back({IrOpcode::PushI64, 0});
           function.instructions.push_back({IrOpcode::CmpEqI64, 0});
@@ -1178,20 +1192,20 @@
           function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
           const int32_t leftPayloadLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftResultLocal)});
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftErrorLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::MulI64, 0});
-          function.instructions.push_back({IrOpcode::SubI64, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(leftPayloadLocal)});
+          ir_lowerer::emitPackedResultPayloadLocalFromResult(
+              leftResultLocal,
+              leftResultInfo,
+              leftErrorLocal,
+              leftPayloadLocal,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
 
           const int32_t rightPayloadLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightResultLocal)});
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightErrorLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::MulI64, 0});
-          function.instructions.push_back({IrOpcode::SubI64, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(rightPayloadLocal)});
+          ir_lowerer::emitPackedResultPayloadLocalFromResult(
+              rightResultLocal,
+              rightResultInfo,
+              rightErrorLocal,
+              rightPayloadLocal,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo leftParamInfo;
@@ -1357,6 +1371,7 @@
               return emitInlineDefinitionCall(callExpr, callee, callLocals, true);
             },
             [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); },
+            &function.instructions,
             error);
         if (resultWhyDispatchResult == ir_lowerer::ResultWhyDispatchEmitResult::Emitted) {
           return true;

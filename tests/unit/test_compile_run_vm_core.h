@@ -1927,7 +1927,22 @@ log_gfx_error([GfxError] err) {
 
 [return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
 main() {
-  [Buffer<i32>] direct{try(make_buffer())}
+  [Result<Buffer<i32>, GfxError>] directStatus{make_buffer()}
+  [GfxError] err{queueSubmitFailed()}
+  [Result<Buffer<i32>, GfxError>] failedStatus{err.result<Buffer<i32>>()}
+  if(Result.error(directStatus)) {
+    return(1i32)
+  }
+  if(not(Result.error(failedStatus))) {
+    return(2i32)
+  }
+  if(not(equal(count(Result.why(directStatus)), 0i32))) {
+    return(3i32)
+  }
+  if(not(equal(count(Result.why(failedStatus)), 19i32))) {
+    return(4i32)
+  }
+  [Buffer<i32>] direct{try(directStatus)}
   [Buffer<i32>] mappedValue{
     try(Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) }))
   }
@@ -2345,7 +2360,7 @@ main_fail() {
   const std::string failCmd = "./primec --emit=vm " + srcPath + " --entry /main_fail 2> " + errPath;
   CHECK(runCommand(okCmd) == 9);
   CHECK(runCommand(failCmd) == 7);
-  CHECK(readFile(errPath).empty());
+  CHECK(readFile(errPath) == "frame_acquire_failed\n");
 }
 
 TEST_CASE("vm supports string Result.ok payloads through try") {

@@ -601,7 +601,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 30);
+  CHECK(result == 24);
 }
 
 TEST_CASE("ir lowerer rejects variadic borrowed Result packs until IR arg-pack Result materialization lands") {

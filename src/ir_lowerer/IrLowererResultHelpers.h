@@ -136,7 +136,7 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
 bool emitResultWhyLocalsFromValueExpr(
     const Expr &valueExpr,
     const LocalMap &localsIn,
-    bool resultHasValue,
+    const ResultExprInfo &resultInfo,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -158,6 +158,7 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::vector<IrInstruction> *instructionsOut,
     std::string &error);
 ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     const Expr &expr,
@@ -176,6 +177,7 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::vector<IrInstruction> *instructionsOut,
     std::string &error);
 ResultWhyExprOps makeResultWhyExprOps(
     int32_t errorLocal,
@@ -237,8 +239,15 @@ bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
 void emitResultWhyErrorLocalFromResult(
     int32_t resultLocal,
-    bool resultHasValue,
+    const ResultExprInfo &resultInfo,
     int32_t errorLocal,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+void emitPackedResultPayloadLocalFromResult(
+    int32_t resultLocal,
+    const ResultExprInfo &resultInfo,
+    int32_t errorLocal,
+    int32_t payloadLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 bool emitResultWhyEmptyString(
     const std::function<int32_t(const std::string &)> &internString,

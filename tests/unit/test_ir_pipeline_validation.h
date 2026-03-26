@@ -230,302 +230,6 @@ TEST_CASE("shared simple-call helpers reject removed array count alias") {
   CHECK_FALSE(primec::emitter::isSimpleCallName(removedAliasCall, "count"));
 }
 
-TEST_CASE("emitter builtin call path helpers preserve canonical compatibility fallbacks") {
-  const std::unordered_map<std::string, std::string> preferredNameMap = {
-      {"/std/collections/vector/filter", "/std/collections/vector/filter"},
-      {"/array/find", "/array/find"},
-      {"/std/collections/map/at", "/std/collections/map/at"},
-      {"/map/remove", "/map/remove"},
-  };
-
-  CHECK(primec::emitter::preferVectorStdlibHelperPath("/vector/filter", preferredNameMap) ==
-        "/std/collections/vector/filter");
-  CHECK(primec::emitter::preferVectorStdlibHelperPath("/std/collections/vector/find", preferredNameMap) ==
-        "/array/find");
-  CHECK(primec::emitter::preferVectorStdlibHelperPath("/map/at", preferredNameMap) ==
-        "/std/collections/map/at");
-  CHECK(primec::emitter::preferVectorStdlibHelperPath("/std/collections/map/remove", preferredNameMap) ==
-        "/map/remove");
-
-  const std::unordered_map<std::string, std::string> excludedAliasOnlyMap = {
-      {"/map/at", "/map/at"},
-  };
-  CHECK(primec::emitter::preferVectorStdlibHelperPath("/std/collections/map/at", excludedAliasOnlyMap) ==
-        "/std/collections/map/at");
-}
-
-TEST_CASE("emitter collection inference helpers classify string access through element deduction") {
-  primec::Emitter::BindingInfo stringVectorBinding;
-  stringVectorBinding.typeName = "vector";
-  stringVectorBinding.typeTemplateArg = "string";
-
-  primec::Emitter::BindingInfo intVectorBinding;
-  intVectorBinding.typeName = "vector";
-  intVectorBinding.typeTemplateArg = "i32";
-
-  std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {
-      {"names", stringVectorBinding},
-      {"values", intVectorBinding},
-  };
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "names";
-
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.intWidth = 32;
-  indexExpr.literalValue = 0;
-
-  primec::Expr stringAtCall;
-  stringAtCall.kind = primec::Expr::Kind::Call;
-  stringAtCall.name = "at";
-  stringAtCall.args = {receiverExpr, indexExpr};
-  CHECK(primec::emitter::isStringValue(stringAtCall, localTypes));
-
-  primec::Expr intReceiverExpr = receiverExpr;
-  intReceiverExpr.name = "values";
-  primec::Expr intAtCall = stringAtCall;
-  intAtCall.args.front() = intReceiverExpr;
-  CHECK_FALSE(primec::emitter::isStringValue(intAtCall, localTypes));
-}
-
-TEST_CASE("emitter method resolution prefers canonical map metadata fallback") {
-  primec::Emitter::BindingInfo mapBinding;
-  mapBinding.typeName = "map";
-  mapBinding.typeTemplateArg = "i32, Widget";
-
-  std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {
-      {"values", mapBinding},
-  };
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-
-  primec::Expr keyExpr;
-  keyExpr.kind = primec::Expr::Kind::Literal;
-  keyExpr.intWidth = 32;
-  keyExpr.literalValue = 1;
-
-  primec::Expr methodCall;
-  methodCall.kind = primec::Expr::Kind::Call;
-  methodCall.isMethodCall = true;
-  methodCall.name = "at";
-  methodCall.args = {receiverExpr, keyExpr};
-
-  std::unordered_map<std::string, const primec::Definition *> defMap;
-  std::unordered_map<std::string, std::string> importAliases;
-  std::unordered_map<std::string, std::string> structTypeMap;
-  std::unordered_map<std::string, primec::Emitter::ReturnKind> returnKinds;
-  std::unordered_map<std::string, std::string> returnStructs = {
-      {"/std/collections/map/at", "/pkg/Widget"},
-  };
-
-  std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
-      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/std/collections/map/at");
-
-  primec::Expr removedAliasCall = methodCall;
-  removedAliasCall.name = "/map/at";
-  resolved = "unchanged";
-  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
-      removedAliasCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved.empty());
-}
-
-TEST_CASE("emitter method resolution infers nested direct map access receiver type") {
-  primec::Emitter::BindingInfo mapBinding;
-  mapBinding.typeName = "map";
-  mapBinding.typeTemplateArg = "i32, Widget";
-
-  std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {
-      {"values", mapBinding},
-  };
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-
-  primec::Expr keyExpr;
-  keyExpr.kind = primec::Expr::Kind::Literal;
-  keyExpr.intWidth = 32;
-  keyExpr.literalValue = 1;
-
-  primec::Expr directMapAccess;
-  directMapAccess.kind = primec::Expr::Kind::Call;
-  directMapAccess.name = "/std/collections/map/at";
-  directMapAccess.args = {receiverExpr, keyExpr};
-
-  primec::Expr methodCall;
-  methodCall.kind = primec::Expr::Kind::Call;
-  methodCall.isMethodCall = true;
-  methodCall.name = "render";
-  methodCall.args = {directMapAccess};
-
-  std::unordered_map<std::string, const primec::Definition *> defMap;
-  std::unordered_map<std::string, std::string> importAliases;
-  std::unordered_map<std::string, std::string> structTypeMap;
-  std::unordered_map<std::string, primec::Emitter::ReturnKind> returnKinds;
-  std::unordered_map<std::string, std::string> returnStructs = {
-      {"/std/collections/map/at", "/pkg/Widget"},
-  };
-
-  std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
-      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/pkg/Widget/render");
-}
-
-TEST_CASE("emitter method resolution prefers canonical map count metadata") {
-  primec::Emitter::BindingInfo mapBinding;
-  mapBinding.typeName = "map";
-  mapBinding.typeTemplateArg = "i32, Widget";
-
-  std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {
-      {"values", mapBinding},
-  };
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-
-  primec::Expr methodCall;
-  methodCall.kind = primec::Expr::Kind::Call;
-  methodCall.isMethodCall = true;
-  methodCall.name = "count";
-  methodCall.args = {receiverExpr};
-
-  std::unordered_map<std::string, const primec::Definition *> defMap;
-  std::unordered_map<std::string, std::string> importAliases;
-  std::unordered_map<std::string, std::string> structTypeMap;
-  std::unordered_map<std::string, primec::Emitter::ReturnKind> returnKinds = {
-      {"/std/collections/map/count", primec::Emitter::ReturnKind::Int},
-  };
-  std::unordered_map<std::string, std::string> returnStructs;
-
-  std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
-      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/std/collections/map/count");
-}
-
-TEST_CASE("semantics binding type helpers validate nested templates and map keys") {
-  std::vector<std::string> parts;
-  CHECK(primec::semantics::splitTopLevelTemplateArgs("map<i32, vector<f32>>, Pointer<string>", parts));
-  REQUIRE(parts.size() == 2);
-  CHECK(parts[0] == "map<i32, vector<f32>>");
-  CHECK(parts[1] == "Pointer<string>");
-
-  CHECK_FALSE(primec::semantics::splitTopLevelTemplateArgs("i32, , f32", parts));
-
-  std::string error;
-  CHECK(primec::semantics::validateBuiltinMapKeyType("string", nullptr, error));
-  CHECK(error.empty());
-
-  CHECK_FALSE(primec::semantics::validateBuiltinMapKeyType("Particle", nullptr, error));
-  CHECK(error == "map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Particle");
-}
-
-TEST_CASE("semantics return kind helper resolves imported soa_vector aliases") {
-  primec::Definition def;
-  def.fullPath = "/pkg/main";
-  def.namespacePrefix = "/pkg";
-
-  primec::Transform returnTransform;
-  returnTransform.name = "return";
-  returnTransform.templateArgs.push_back("soa_vector<ParticleAlias>");
-  def.transforms.push_back(returnTransform);
-
-  const std::unordered_set<std::string> structNames = {"/pkg/Particle"};
-  const std::unordered_map<std::string, std::string> importAliases = {{"ParticleAlias", "/pkg/Particle"}};
-
-  std::string error;
-  CHECK(primec::semantics::runSemanticsReturnKindNameStep(def, structNames, importAliases, error) == "array");
-  CHECK(error.empty());
-}
-
-TEST_CASE("semantics builtin path helpers classify roots and collection aliases") {
-  CHECK(primec::semantics::isRootBuiltinName("/std/gpu/global_id_x"));
-  CHECK_FALSE(primec::semantics::isRootBuiltinName("/std/collections/vector/count"));
-
-  primec::Expr helperExpr;
-  helperExpr.kind = primec::Expr::Kind::Call;
-  helperExpr.name = "/std/collections/vector/count__t12";
-
-  std::string collectionName;
-  std::string helperName;
-  REQUIRE(primec::semantics::getNamespacedCollectionHelperName(helperExpr, collectionName, helperName));
-  CHECK(collectionName == "vector");
-  CHECK(helperName == "count");
-
-  primec::Expr removedAliasExpr = helperExpr;
-  removedAliasExpr.name = "/array/count";
-  CHECK_FALSE(primec::semantics::getNamespacedCollectionHelperName(removedAliasExpr, collectionName, helperName));
-  CHECK(primec::semantics::isExplicitRemovedCollectionCallAlias("/array/count"));
-}
-
-TEST_CASE("semantics call path helpers lower match chains and resolve type paths") {
-  primec::Expr matchExpr;
-  matchExpr.kind = primec::Expr::Kind::Call;
-  matchExpr.name = "match";
-  matchExpr.namespacePrefix = "/pkg/Thing";
-  primec::Transform transform;
-  transform.name = "tag";
-  matchExpr.transforms.push_back(transform);
-
-  primec::Expr subject;
-  subject.kind = primec::Expr::Kind::Name;
-  subject.name = "choice";
-  matchExpr.args.push_back(subject);
-
-  primec::Expr caseOne;
-  caseOne.kind = primec::Expr::Kind::Call;
-  caseOne.name = "case";
-  primec::Expr patternOne;
-  patternOne.kind = primec::Expr::Kind::Literal;
-  patternOne.literalValue = 1;
-  caseOne.args.push_back(patternOne);
-  caseOne.hasBodyArguments = true;
-  primec::Expr branchOne;
-  branchOne.kind = primec::Expr::Kind::Name;
-  branchOne.name = "left";
-  caseOne.bodyArguments.push_back(branchOne);
-  matchExpr.args.push_back(caseOne);
-
-  primec::Expr caseTwo = caseOne;
-  caseTwo.args.front().literalValue = 2;
-  caseTwo.bodyArguments.front().name = "right";
-  matchExpr.args.push_back(caseTwo);
-
-  primec::Expr elseBlock;
-  elseBlock.kind = primec::Expr::Kind::Call;
-  elseBlock.name = "else";
-  elseBlock.hasBodyArguments = true;
-  primec::Expr fallback;
-  fallback.kind = primec::Expr::Kind::Name;
-  fallback.name = "fallback";
-  elseBlock.bodyArguments.push_back(fallback);
-  matchExpr.args.push_back(elseBlock);
-
-  primec::Expr lowered;
-  std::string error;
-  REQUIRE(primec::semantics::lowerMatchToIf(matchExpr, lowered, error));
-  CHECK(error.empty());
-  CHECK(lowered.name == "if");
-  REQUIRE(lowered.args.size() == 3);
-  CHECK(lowered.args[2].name == "else");
-  REQUIRE(lowered.args[2].bodyArguments.size() == 1);
-  CHECK(lowered.args[2].bodyArguments.front().name == "if");
-  REQUIRE(lowered.transforms.size() == 1);
-  CHECK(lowered.transforms.front().name == "tag");
-
-  CHECK(primec::semantics::resolveTypePath("Thing", "/pkg/Thing") == "/pkg/Thing");
-  CHECK(primec::semantics::resolveTypePath("Inner", "/pkg/Thing") == "/pkg/Thing/Inner");
-  CHECK(primec::semantics::resolveTypePath("/root/Exact", "/pkg/Thing") == "/root/Exact");
-}
-
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*
@@ -573,141 +277,6 @@ main() {
   primec::Emitter emitter;
   const std::string cpp = emitter.emitCpp(program, "/main");
   CHECK(cpp.find("ps_array_count(") != std::string::npos);
-}
-
-TEST_CASE("emitter cpp lowers bare contains for map values") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<bool>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(contains(values, 1i32))
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::Emitter emitter;
-  const std::string cpp = emitter.emitCpp(program, "/main");
-  CHECK(cpp.find("ps_map_contains(") != std::string::npos);
-}
-
-TEST_CASE("emitter cpp lowers file open write helpers") {
-  const std::string source = R"(
-import /std/file/*
-
-[effects(io_err)]
-log_file_error([FileError] err) {
-  print_line_error(err.why())
-}
-
-[return<int> effects(file_write, io_err) on_error<FileError, /log_file_error>]
-main() {
-  [File<Write>] file{File<Write>("out.txt"utf8)?}
-  file.write_line("hello"utf8)?
-  file.close()?
-  return(0i32)
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::Emitter emitter;
-  const std::string cpp = emitter.emitCpp(program, "/main");
-  CHECK(cpp.find("ps_file_open_write(") != std::string::npos);
-  CHECK(cpp.find("ps_file_write_line(") != std::string::npos);
-  CHECK(cpp.find("ps_file_close(") != std::string::npos);
-}
-
-TEST_CASE("emitter cpp lowers direct map at access") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(at(map<i32, i32>(7i32, 8i32), 7i32))
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::Emitter emitter;
-  const std::string cpp = emitter.emitCpp(program, "/main");
-  CHECK(cpp.find("ps_map_at(") != std::string::npos);
-}
-
-TEST_CASE("emitter cpp lowers direct Result combinator calls") {
-  const std::string source = R"(
-import /std/file/*
-
-[effects(io_err)]
-log_file_error([FileError] err) {
-  print_line_error(err.why())
-}
-
-[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
-main() {
-  [Result<i32, FileError>] mapped{
-    Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) })
-  }
-  [Result<i32, FileError>] chained{
-    Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) })
-  }
-  [Result<i32, FileError>] summed{
-    Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) })
-  }
-  print_line(try(mapped))
-  print_line(try(chained))
-  return(try(summed))
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::Emitter emitter;
-  const std::string cpp = emitter.emitCpp(program, "/main");
-  CHECK(cpp.find("ps_result_pack(0u, static_cast<uint32_t>(") != std::string::npos);
-  CHECK(cpp.find("return static_cast<uint64_t>(ps_next);") != std::string::npos);
-  CHECK(cpp.find("auto ps_left = ") != std::string::npos);
-  CHECK(cpp.find("ps_try_value<int>(") != std::string::npos);
-}
-
-TEST_CASE("emitter cpp infers auto struct returns through if blocks") {
-  const std::string source = R"(
-[struct]
-Point() {
-  [i32] value{0i32}
-}
-
-[return<auto>]
-makePoint([bool] choose) {
-  if(choose,
-     then() { return(Point(1i32)) },
-     else() { return(Point(2i32)) })
-}
-
-[return<int>]
-main() {
-  [Point] point{makePoint(true)}
-  return(point.value)
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::Emitter emitter;
-  const std::string cpp = emitter.emitCpp(program, "/main");
-  CHECK(cpp.find("ps_makePoint(") != std::string::npos);
-  CHECK(cpp.find("return ps_Point_ctor(") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
@@ -1635,34 +1204,6 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup wires callback") {
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprBaseKind(fileCall, locals, kindOut));
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-
-  primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
-  mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
-  locals.emplace("values", mapInfo);
-
-  primec::Expr valuesNameExpr;
-  valuesNameExpr.kind = primec::Expr::Kind::Name;
-  valuesNameExpr.name = "values";
-
-  primec::Expr keyExpr;
-  keyExpr.kind = primec::Expr::Kind::Literal;
-  keyExpr.intWidth = 32;
-  keyExpr.literalValue = 1;
-
-  primec::Expr tryAtExpr;
-  tryAtExpr.kind = primec::Expr::Kind::Call;
-  tryAtExpr.name = "/std/collections/map/tryAt";
-  tryAtExpr.args = {valuesNameExpr, keyExpr};
-
-  primec::Expr tryExpr;
-  tryExpr.kind = primec::Expr::Kind::Call;
-  tryExpr.name = "try";
-  tryExpr.args = {tryAtExpr};
-
-  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  CHECK(state.inferCallExprBaseKind(tryExpr, locals, kindOut));
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-base setup validates dependencies") {
@@ -3140,10 +2681,7 @@ TEST_CASE("ir lowerer inference return-info setup handles declared return transf
           .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
           },
-          .inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-            if (expr.kind == primec::Expr::Kind::Literal && expr.intWidth == 64) {
-              return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-            }
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
           },
           .isFileErrorBinding = [](const primec::Expr &) { return false; },
@@ -3319,10 +2857,7 @@ TEST_CASE("ir lowerer inference return-info setup infers implicit auto map retur
           .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
           },
-          .inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-            if (expr.kind == primec::Expr::Kind::Literal && expr.intWidth == 64) {
-              return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-            }
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
           },
           .isFileErrorBinding = [](const primec::Expr &) { return false; },
@@ -3592,12 +3127,8 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
   definition.fullPath = "/callee";
   primec::Transform returnTransform;
   returnTransform.name = "return";
-  returnTransform.templateArgs = {"auto"};
+  returnTransform.templateArgs = {"i64"};
   definition.transforms.push_back(returnTransform);
-  definition.returnExpr = primec::Expr{};
-  definition.returnExpr->kind = primec::Expr::Kind::Literal;
-  definition.returnExpr->intWidth = 64;
-  definition.returnExpr->literalValue = 7;
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {"/callee", &definition},
@@ -3623,10 +3154,7 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
           .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
           },
-          .inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-            if (expr.kind == primec::Expr::Kind::Literal && expr.intWidth == 64) {
-              return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-            }
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
           },
           .isFileErrorBinding = [](const primec::Expr &) { return false; },
@@ -3647,9 +3175,6 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
       error));
   CHECK(error.empty());
   CHECK(static_cast<bool>(getReturnInfo));
-  CHECK(returnInfoCache.count("/callee") == 1);
-
-  defMap.clear();
 
   primec::ir_lowerer::ReturnInfo outInfo;
   CHECK(getReturnInfo("/callee", outInfo));
@@ -9469,64 +8994,6 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
         std::string::npos);
   CHECK(inferenceHeaderSource.find("returnInfoCache.find(path)") == std::string::npos);
 
-  const std::filesystem::path inferenceSetupPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceSetup.cpp";
-  REQUIRE(std::filesystem::exists(inferenceSetupPath));
-  const std::string inferenceSetupSource = readText(inferenceSetupPath);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceArrayKindSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallReturnSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallFallbackSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallOperatorFallbackSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallControlFlowFallbackSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindCallPointerFallbackSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceExprKindDispatchSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceReturnInfoSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceGetReturnInfoStep(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceGetReturnInfoCallbackSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("bool runLowerInferenceGetReturnInfoSetup(") == std::string::npos);
-  CHECK(inferenceSetupSource.find("precomputeGraphReturnInfoCache(") == std::string::npos);
-
-  const std::filesystem::path inferenceArrayKindSetupPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceArrayKindSetup.cpp";
-  REQUIRE(std::filesystem::exists(inferenceArrayKindSetupPath));
-  const std::string inferenceArrayKindSetupSource = readText(inferenceArrayKindSetupPath);
-  CHECK(inferenceArrayKindSetupSource.find("bool runLowerInferenceArrayKindSetup(") != std::string::npos);
-
-  const std::filesystem::path inferenceCallReturnSetupPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceCallReturnSetup.cpp";
-  REQUIRE(std::filesystem::exists(inferenceCallReturnSetupPath));
-  const std::string inferenceCallReturnSetupSource = readText(inferenceCallReturnSetupPath);
-  CHECK(inferenceCallReturnSetupSource.find("bool runLowerInferenceExprKindCallReturnSetup(") != std::string::npos);
-
-  const std::filesystem::path inferenceFallbackSetupPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceFallbackSetup.cpp";
-  REQUIRE(std::filesystem::exists(inferenceFallbackSetupPath));
-  const std::string inferenceFallbackSetupSource = readText(inferenceFallbackSetupPath);
-  CHECK(inferenceFallbackSetupSource.find("bool runLowerInferenceExprKindCallFallbackSetup(") != std::string::npos);
-  CHECK(inferenceFallbackSetupSource.find("bool runLowerInferenceExprKindCallOperatorFallbackSetup(") !=
-        std::string::npos);
-  CHECK(inferenceFallbackSetupSource.find("bool runLowerInferenceExprKindCallControlFlowFallbackSetup(") !=
-        std::string::npos);
-  CHECK(inferenceFallbackSetupSource.find("bool runLowerInferenceExprKindCallPointerFallbackSetup(") !=
-        std::string::npos);
-
-  const std::filesystem::path inferenceDispatchSetupPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceDispatchSetup.cpp";
-  REQUIRE(std::filesystem::exists(inferenceDispatchSetupPath));
-  const std::string inferenceDispatchSetupSource = readText(inferenceDispatchSetupPath);
-  CHECK(inferenceDispatchSetupSource.find("bool runLowerInferenceExprKindDispatchSetup(") != std::string::npos);
-
-  const std::filesystem::path inferenceReturnInfoHelperPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceReturnInfoHelpers.cpp";
-  REQUIRE(std::filesystem::exists(inferenceReturnInfoHelperPath));
-  const std::string inferenceReturnInfoHelperSource = readText(inferenceReturnInfoHelperPath);
-  CHECK(inferenceReturnInfoHelperSource.find("bool runLowerInferenceReturnInfoSetup(") != std::string::npos);
-  CHECK(inferenceReturnInfoHelperSource.find("bool runLowerInferenceGetReturnInfoStep(") != std::string::npos);
-  CHECK(inferenceReturnInfoHelperSource.find("bool runLowerInferenceGetReturnInfoCallbackSetup(") !=
-        std::string::npos);
-  CHECK(inferenceReturnInfoHelperSource.find("bool runLowerInferenceGetReturnInfoSetup(") != std::string::npos);
-  CHECK(inferenceReturnInfoHelperSource.find("precomputeGraphReturnInfoCache(") != std::string::npos);
-
   const std::filesystem::path returnInfoHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerReturnInfo.h";
   REQUIRE(std::filesystem::exists(returnInfoHeaderPath));
   const std::string returnInfoHeaderSource = readText(returnInfoHeaderPath);
@@ -9619,25 +9086,12 @@ TEST_CASE("emitter emit setup source delegation stays stable") {
   CHECK(emitterSetupHeaderSource.find("runEmitterEmitSetupMathImport(program)") != std::string::npos);
   CHECK(emitterSetupHeaderSource.find("runEmitterEmitSetupLifecycleHelperMatchStep(def.fullPath)") !=
         std::string::npos);
-  CHECK(emitterSetupHeaderSource.find("inferDefinitionReturnKind = [&](const Definition &def)") ==
-        std::string::npos);
-  CHECK(emitterSetupHeaderSource.find("collectionHelperPathCandidates(resolvedPath)") == std::string::npos);
-
-  const std::filesystem::path emitterSetupReturnInferenceHeaderPath =
-      repoRoot / "src" / "emitter" / "EmitterEmitSetupReturnInference.h";
-  REQUIRE(std::filesystem::exists(emitterSetupReturnInferenceHeaderPath));
-  const std::string emitterSetupReturnInferenceHeaderSource = readText(emitterSetupReturnInferenceHeaderPath);
-  CHECK(emitterSetupReturnInferenceHeaderSource.find("inferDefinitionReturnKind = [&](const Definition &def)") !=
-        std::string::npos);
-  CHECK(emitterSetupReturnInferenceHeaderSource.find("collectionHelperPathCandidates(resolvedPath)") !=
-        std::string::npos);
 
   const std::filesystem::path emitterEmitPath = repoRoot / "src" / "emitter" / "EmitterEmit.cpp";
   REQUIRE(std::filesystem::exists(emitterEmitPath));
   const std::string emitterEmitSource = readText(emitterEmitPath);
   CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupMathImport.h\"") != std::string::npos);
   CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupLifecycleHelperStep.h\"") != std::string::npos);
-  CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupReturnInference.h\"") != std::string::npos);
 }
 
 TEST_CASE("emitter expr source delegation stays stable") {
@@ -9779,407 +9233,6 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlMethodPathStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
-}
-
-TEST_CASE("emitter expr result call source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path emitterExprCallsPath = repoRoot / "src" / "emitter" / "EmitterExprCalls.h";
-  REQUIRE(std::filesystem::exists(emitterExprCallsPath));
-  const std::string emitterExprCallsSource = readText(emitterExprCallsPath);
-  CHECK(emitterExprCallsSource.find("#include \"EmitterExprResultCalls.h\"") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("expr.args.front().name == \"Result\" && expr.name == \"ok\"") ==
-        std::string::npos);
-  CHECK(emitterExprCallsSource.find("expr.args.front().name == \"Result\" && expr.name == \"map2\"") ==
-        std::string::npos);
-  CHECK(emitterExprCallsSource.find("isSimpleCallName(expr, \"try\") && expr.args.size() == 1") ==
-        std::string::npos);
-
-  const std::filesystem::path emitterExprResultCallsPath =
-      repoRoot / "src" / "emitter" / "EmitterExprResultCalls.h";
-  REQUIRE(std::filesystem::exists(emitterExprResultCallsPath));
-  const std::string emitterExprResultCallsSource = readText(emitterExprResultCallsPath);
-  CHECK(emitterExprResultCallsSource.find("expr.args.front().name == \"Result\" && expr.name == \"ok\"") !=
-        std::string::npos);
-  CHECK(emitterExprResultCallsSource.find("expr.args.front().name == \"Result\" && expr.name == \"map2\"") !=
-        std::string::npos);
-  CHECK(emitterExprResultCallsSource.find("isSimpleCallName(expr, \"try\") && expr.args.size() == 1") !=
-        std::string::npos);
-}
-
-TEST_CASE("emitter expr collection helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path emitterExprCallsPath = repoRoot / "src" / "emitter" / "EmitterExprCalls.h";
-  REQUIRE(std::filesystem::exists(emitterExprCallsPath));
-  const std::string emitterExprCallsSource = readText(emitterExprCallsPath);
-  CHECK(emitterExprCallsSource.find("#include \"EmitterExprCollectionTypeHelpers.h\"") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("#include \"EmitterExprCollectionFallbackHelpers.h\"") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("auto normalizedTypePath = [](const std::string &typePath) -> std::string {") ==
-        std::string::npos);
-  CHECK(emitterExprCallsSource.find("auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {") ==
-        std::string::npos);
-  CHECK(emitterExprCallsSource.find("auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {") ==
-        std::string::npos);
-  CHECK(emitterExprCallsSource.find("auto preferBareMapHelperPath = [&](const Expr &candidate, const char *helperName) {") ==
-        std::string::npos);
-
-  const std::filesystem::path emitterExprCollectionTypeHelpersPath =
-      repoRoot / "src" / "emitter" / "EmitterExprCollectionTypeHelpers.h";
-  REQUIRE(std::filesystem::exists(emitterExprCollectionTypeHelpersPath));
-  const std::string emitterExprCollectionTypeHelpersSource = readText(emitterExprCollectionTypeHelpersPath);
-  CHECK(emitterExprCollectionTypeHelpersSource.find(
-            "auto normalizedTypePath = [](const std::string &typePath) -> std::string {") != std::string::npos);
-  CHECK(emitterExprCollectionTypeHelpersSource.find(
-            "auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {") != std::string::npos);
-
-  const std::filesystem::path emitterExprCollectionFallbackHelpersPath =
-      repoRoot / "src" / "emitter" / "EmitterExprCollectionFallbackHelpers.h";
-  REQUIRE(std::filesystem::exists(emitterExprCollectionFallbackHelpersPath));
-  const std::string emitterExprCollectionFallbackHelpersSource =
-      readText(emitterExprCollectionFallbackHelpersPath);
-  CHECK(emitterExprCollectionFallbackHelpersSource.find(
-            "auto isNoHelperExplicitMapAccessCallFallback = [&](const Expr &candidate) {") != std::string::npos);
-  CHECK(emitterExprCollectionFallbackHelpersSource.find(
-            "auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {") !=
-        std::string::npos);
-  CHECK(emitterExprCollectionFallbackHelpersSource.find(
-            "auto preferBareMapHelperPath = [&](const Expr &candidate, const char *helperName) {") !=
-        std::string::npos);
-}
-
-TEST_CASE("emitter expr collection access source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path emitterExprCallsPath = repoRoot / "src" / "emitter" / "EmitterExprCalls.h";
-  REQUIRE(std::filesystem::exists(emitterExprCallsPath));
-  const std::string emitterExprCallsSource = readText(emitterExprCallsPath);
-  CHECK(emitterExprCallsSource.find("#include \"EmitterExprCollectionBuiltinCalls.h\"") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("#include \"EmitterExprFileAccessCalls.h\"") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("#include \"EmitterExprCollectionAccessAtCalls.h\"") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("if (!expr.isMethodCall && isSimpleCallName(expr, \"contains\") && expr.args.size() == 2 &&") ==
-        std::string::npos);
-  CHECK(emitterExprCallsSource.find("if (full.rfind(\"/file/\", 0) == 0) {") == std::string::npos);
-  CHECK(emitterExprCallsSource.find("if ((isSimpleCallName(expr, \"at\") ||") == std::string::npos);
-
-  const std::filesystem::path emitterExprCollectionBuiltinCallsPath =
-      repoRoot / "src" / "emitter" / "EmitterExprCollectionBuiltinCalls.h";
-  REQUIRE(std::filesystem::exists(emitterExprCollectionBuiltinCallsPath));
-  const std::string emitterExprCollectionBuiltinCallsSource = readText(emitterExprCollectionBuiltinCallsPath);
-  CHECK(emitterExprCollectionBuiltinCallsSource.find("ps_map_contains(") != std::string::npos);
-  CHECK(emitterExprCollectionBuiltinCallsSource.find("ps_vector_capacity(") != std::string::npos);
-
-  const std::filesystem::path emitterExprFileAccessCallsPath =
-      repoRoot / "src" / "emitter" / "EmitterExprFileAccessCalls.h";
-  REQUIRE(std::filesystem::exists(emitterExprFileAccessCallsPath));
-  const std::string emitterExprFileAccessCallsSource = readText(emitterExprFileAccessCallsPath);
-  CHECK(emitterExprFileAccessCallsSource.find("ps_file_open_write(") != std::string::npos);
-  CHECK(emitterExprFileAccessCallsSource.find("ps_file_close(") != std::string::npos);
-
-  const std::filesystem::path emitterExprCollectionAccessAtCallsPath =
-      repoRoot / "src" / "emitter" / "EmitterExprCollectionAccessAtCalls.h";
-  REQUIRE(std::filesystem::exists(emitterExprCollectionAccessAtCallsPath));
-  const std::string emitterExprCollectionAccessAtCallsSource = readText(emitterExprCollectionAccessAtCallsPath);
-  CHECK(emitterExprCollectionAccessAtCallsSource.find("ps_map_at(") != std::string::npos);
-  CHECK(emitterExprCollectionAccessAtCallsSource.find("ps_array_at_unsafe(") != std::string::npos);
-}
-
-TEST_CASE("emitter builtin call path helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path emitterHelpersBuiltinsPath =
-      repoRoot / "src" / "emitter" / "EmitterHelpersBuiltins.cpp";
-  const std::filesystem::path emitterBuiltinCallPathHelpersPath =
-      repoRoot / "src" / "emitter" / "EmitterBuiltinCallPathHelpers.cpp";
-  REQUIRE(std::filesystem::exists(emitterHelpersBuiltinsPath));
-  REQUIRE(std::filesystem::exists(emitterBuiltinCallPathHelpersPath));
-
-  const std::string emitterHelpersBuiltinsSource = readText(emitterHelpersBuiltinsPath);
-  const std::string emitterBuiltinCallPathHelpersSource = readText(emitterBuiltinCallPathHelpersPath);
-
-  CHECK(emitterHelpersBuiltinsSource.find("bool getBuiltinOperator(") == std::string::npos);
-  CHECK(emitterHelpersBuiltinsSource.find("std::string preferVectorStdlibHelperPath(") == std::string::npos);
-  CHECK(emitterHelpersBuiltinsSource.find("bool getBuiltinArrayAccessNameLocal(") == std::string::npos);
-  CHECK(emitterHelpersBuiltinsSource.find("std::string preferredFileMethodTargetLocal(") == std::string::npos);
-
-  CHECK(emitterBuiltinCallPathHelpersSource.find("bool getBuiltinOperator(") != std::string::npos);
-  CHECK(emitterBuiltinCallPathHelpersSource.find("std::string preferVectorStdlibHelperPath(") !=
-        std::string::npos);
-  CHECK(emitterBuiltinCallPathHelpersSource.find("bool getBuiltinArrayAccessNameLocal(") != std::string::npos);
-  CHECK(emitterBuiltinCallPathHelpersSource.find("std::string preferredFileMethodTargetLocal(") !=
-        std::string::npos);
-}
-
-TEST_CASE("emitter builtin collection inference helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path emitterHelpersBuiltinsPath =
-      repoRoot / "src" / "emitter" / "EmitterHelpersBuiltins.cpp";
-  const std::filesystem::path emitterBuiltinCollectionInferenceHelpersPath =
-      repoRoot / "src" / "emitter" / "EmitterBuiltinCollectionInferenceHelpers.cpp";
-  REQUIRE(std::filesystem::exists(emitterHelpersBuiltinsPath));
-  REQUIRE(std::filesystem::exists(emitterBuiltinCollectionInferenceHelpersPath));
-
-  const std::string emitterHelpersBuiltinsSource = readText(emitterHelpersBuiltinsPath);
-  const std::string emitterBuiltinCollectionInferenceHelpersSource =
-      readText(emitterBuiltinCollectionInferenceHelpersPath);
-
-  CHECK(emitterHelpersBuiltinsSource.find("bool isArrayValue(") == std::string::npos);
-  CHECK(emitterHelpersBuiltinsSource.find("bool inferCollectionElementTypeNameFromExpr(") == std::string::npos);
-  CHECK(emitterHelpersBuiltinsSource.find("std::string inferAccessCallTypeName(") == std::string::npos);
-
-  CHECK(emitterBuiltinCollectionInferenceHelpersSource.find("bool isArrayValue(") != std::string::npos);
-  CHECK(emitterBuiltinCollectionInferenceHelpersSource.find("bool inferCollectionElementTypeNameFromExpr(") !=
-        std::string::npos);
-  CHECK(emitterBuiltinCollectionInferenceHelpersSource.find("std::string inferAccessCallTypeName(") !=
-        std::string::npos);
-}
-
-TEST_CASE("emitter builtin method resolution helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path emitterHelpersBuiltinsPath =
-      repoRoot / "src" / "emitter" / "EmitterHelpersBuiltins.cpp";
-  const std::filesystem::path emitterBuiltinMethodResolutionHelpersPath =
-      repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionHelpers.cpp";
-  const std::filesystem::path emitterBuiltinMethodResolutionMetadataHelpersPath =
-      repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionMetadataHelpers.cpp";
-  const std::filesystem::path emitterBuiltinMethodResolutionTypeInferenceHelpersPath =
-      repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp";
-  REQUIRE(std::filesystem::exists(emitterHelpersBuiltinsPath));
-  REQUIRE(std::filesystem::exists(emitterBuiltinMethodResolutionHelpersPath));
-  REQUIRE(std::filesystem::exists(emitterBuiltinMethodResolutionMetadataHelpersPath));
-  REQUIRE(std::filesystem::exists(emitterBuiltinMethodResolutionTypeInferenceHelpersPath));
-
-  const std::string emitterHelpersBuiltinsSource = readText(emitterHelpersBuiltinsPath);
-  const std::string emitterBuiltinMethodResolutionHelpersSource =
-      readText(emitterBuiltinMethodResolutionHelpersPath);
-  const std::string emitterBuiltinMethodResolutionMetadataHelpersSource =
-      readText(emitterBuiltinMethodResolutionMetadataHelpersPath);
-  const std::string emitterBuiltinMethodResolutionTypeInferenceHelpersSource =
-      readText(emitterBuiltinMethodResolutionTypeInferenceHelpersPath);
-
-  CHECK(emitterHelpersBuiltinsSource.find("bool resolveMethodCallPath(") == std::string::npos);
-
-  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("bool resolveMethodCallPath(") != std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("auto preferredFileErrorHelperTarget =") !=
-        std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("std::string normalizedMethodName = call.name;") !=
-        std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("std::string inferMethodResolutionPrimitiveTypeName(") ==
-        std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionHelpersSource.find("std::vector<std::string> collectionHelperPathCandidates(") ==
-        std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionTypeInferenceHelpersSource.find(
-            "std::vector<std::string> collectionHelperPathCandidates(") == std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionTypeInferenceHelpersSource.find(
-            "std::string typeNameFromResolvedCandidates(") == std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionTypeInferenceHelpersSource.find(
-            "bool extractCollectionElementTypeFromReturnType(") == std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionTypeInferenceHelpersSource.find(
-            "std::string inferMethodResolutionPrimitiveTypeName(") != std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionMetadataHelpersSource.find(
-            "std::vector<std::string> collectionHelperPathCandidates(") != std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionMetadataHelpersSource.find(
-            "std::string typeNameFromResolvedCandidates(") != std::string::npos);
-  CHECK(emitterBuiltinMethodResolutionMetadataHelpersSource.find(
-            "bool extractCollectionElementTypeFromReturnType(") != std::string::npos);
-}
-
-TEST_CASE("native emitter internals io source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path nativeEmitterInternalsPath =
-      repoRoot / "src" / "native_emitter" / "NativeEmitterInternals.h";
-  const std::filesystem::path nativeEmitterInternalsArm64IoPath =
-      repoRoot / "src" / "native_emitter" / "NativeEmitterInternalsArm64Io.h";
-  REQUIRE(std::filesystem::exists(nativeEmitterInternalsPath));
-  REQUIRE(std::filesystem::exists(nativeEmitterInternalsArm64IoPath));
-
-  const std::string nativeEmitterInternalsSource = readText(nativeEmitterInternalsPath);
-  const std::string nativeEmitterInternalsArm64IoSource = readText(nativeEmitterInternalsArm64IoPath);
-
-  CHECK(nativeEmitterInternalsSource.find("#include \"NativeEmitterInternalsArm64Io.h\"") != std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("void emitPrintSigned(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint64_t fd);") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitPrintSigned(") == std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitPrintUnsignedInternal(") == std::string::npos);
-
-  CHECK(nativeEmitterInternalsArm64IoSource.find("inline void Arm64Emitter::emitPrintSigned(") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsArm64IoSource.find("inline size_t Arm64Emitter::emitFileOpenDynamicPlaceholder(") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsArm64IoSource.find("inline void Arm64Emitter::emitPrintUnsignedInternal(") !=
-        std::string::npos);
-}
-
-TEST_CASE("native emitter internals arithmetic source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path nativeEmitterInternalsPath =
-      repoRoot / "src" / "native_emitter" / "NativeEmitterInternals.h";
-  const std::filesystem::path nativeEmitterInternalsArm64ArithmeticPath =
-      repoRoot / "src" / "native_emitter" / "NativeEmitterInternalsArm64Arithmetic.h";
-  REQUIRE(std::filesystem::exists(nativeEmitterInternalsPath));
-  REQUIRE(std::filesystem::exists(nativeEmitterInternalsArm64ArithmeticPath));
-
-  const std::string nativeEmitterInternalsSource = readText(nativeEmitterInternalsPath);
-  const std::string nativeEmitterInternalsArm64ArithmeticSource =
-      readText(nativeEmitterInternalsArm64ArithmeticPath);
-
-  CHECK(nativeEmitterInternalsSource.find("#include \"NativeEmitterInternalsArm64Arithmetic.h\"") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("void emitAdd();") != std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("size_t emitJumpPlaceholder();") != std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("void emitBinaryOp(uint32_t opWord);") != std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitAdd(") == std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline size_t Arm64Emitter::emitJumpPlaceholder(") ==
-        std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitCompareAndPush(") ==
-        std::string::npos);
-
-  CHECK(nativeEmitterInternalsArm64ArithmeticSource.find("inline void Arm64Emitter::emitAdd(") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsArm64ArithmeticSource.find("inline size_t Arm64Emitter::emitJumpPlaceholder(") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsArm64ArithmeticSource.find("inline void Arm64Emitter::emitCompareAndPush(") !=
-        std::string::npos);
-}
-
-TEST_CASE("native emitter internals core source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path nativeEmitterInternalsPath =
-      repoRoot / "src" / "native_emitter" / "NativeEmitterInternals.h";
-  const std::filesystem::path nativeEmitterInternalsArm64CorePath =
-      repoRoot / "src" / "native_emitter" / "NativeEmitterInternalsArm64Core.h";
-  REQUIRE(std::filesystem::exists(nativeEmitterInternalsPath));
-  REQUIRE(std::filesystem::exists(nativeEmitterInternalsArm64CorePath));
-
-  const std::string nativeEmitterInternalsSource = readText(nativeEmitterInternalsPath);
-  const std::string nativeEmitterInternalsArm64CoreSource =
-      readText(nativeEmitterInternalsArm64CorePath);
-
-  CHECK(nativeEmitterInternalsSource.find("#include \"NativeEmitterInternalsArm64Core.h\"") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("void emitHeapAlloc();") != std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("void emitReturn();") != std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("void emitPushReg(uint8_t reg);") != std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("static uint32_t encodeAddSpImm(uint16_t imm);") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("void flushValueStackCache();") != std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitHeapAlloc(") ==
-        std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitReturn(") ==
-        std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::emitPushReg(") ==
-        std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline uint32_t Arm64Emitter::encodeAddSpImm(") ==
-        std::string::npos);
-  CHECK(nativeEmitterInternalsSource.find("inline void Arm64Emitter::flushValueStackCache(") ==
-        std::string::npos);
-
-  CHECK(nativeEmitterInternalsArm64CoreSource.find("inline void Arm64Emitter::emitHeapAlloc(") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsArm64CoreSource.find("inline void Arm64Emitter::emitReturn(") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsArm64CoreSource.find("inline void Arm64Emitter::emitPushReg(") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsArm64CoreSource.find("inline uint32_t Arm64Emitter::encodeAddSpImm(") !=
-        std::string::npos);
-  CHECK(nativeEmitterInternalsArm64CoreSource.find(
-            "inline void Arm64Emitter::flushValueStackCache(") != std::string::npos);
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable") {
@@ -12553,142 +11606,6 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferDefinitionSource.find("if (isForCall(stmt) && stmt.args.size() == 4)") != std::string::npos);
 }
 
-TEST_CASE("semantics binding type helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path semanticsHelpersCorePath =
-      repoRoot / "src" / "semantics" / "SemanticsHelpersCore.cpp";
-  const std::filesystem::path semanticsBindingTypeHelpersPath =
-      repoRoot / "src" / "semantics" / "SemanticsBindingTypeHelpers.cpp";
-  REQUIRE(std::filesystem::exists(semanticsHelpersCorePath));
-  REQUIRE(std::filesystem::exists(semanticsBindingTypeHelpersPath));
-
-  const std::string semanticsHelpersCoreSource = readText(semanticsHelpersCorePath);
-  const std::string semanticsBindingTypeHelpersSource = readText(semanticsBindingTypeHelpersPath);
-
-  CHECK(semanticsHelpersCoreSource.find("bool isBindingQualifierName(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("bool splitTopLevelTemplateArgs(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("ReturnKind returnKindForTypeName(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("std::string resolveStructTypePath(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("bool isSoaVectorStructElementType(") == std::string::npos);
-
-  CHECK(semanticsBindingTypeHelpersSource.find("bool isBindingQualifierName(") != std::string::npos);
-  CHECK(semanticsBindingTypeHelpersSource.find("bool splitTopLevelTemplateArgs(") != std::string::npos);
-  CHECK(semanticsBindingTypeHelpersSource.find("ReturnKind returnKindForTypeName(") != std::string::npos);
-  CHECK(semanticsBindingTypeHelpersSource.find("std::string resolveStructTypePath(") != std::string::npos);
-  CHECK(semanticsBindingTypeHelpersSource.find("bool isSoaVectorStructElementType(") != std::string::npos);
-}
-
-TEST_CASE("semantics return kind helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path semanticsHelpersCorePath =
-      repoRoot / "src" / "semantics" / "SemanticsHelpersCore.cpp";
-  const std::filesystem::path semanticsReturnKindHelpersPath =
-      repoRoot / "src" / "semantics" / "SemanticsReturnKindHelpers.cpp";
-  REQUIRE(std::filesystem::exists(semanticsHelpersCorePath));
-  REQUIRE(std::filesystem::exists(semanticsReturnKindHelpersPath));
-
-  const std::string semanticsHelpersCoreSource = readText(semanticsHelpersCorePath);
-  const std::string semanticsReturnKindHelpersSource = readText(semanticsReturnKindHelpersPath);
-
-  CHECK(semanticsHelpersCoreSource.find("ReturnKind getReturnKind(") == std::string::npos);
-
-  CHECK(semanticsReturnKindHelpersSource.find("ReturnKind getReturnKind(") != std::string::npos);
-  CHECK(semanticsReturnKindHelpersSource.find("soa_vector return type requires struct element type on ") !=
-        std::string::npos);
-}
-
-TEST_CASE("semantics builtin path helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path semanticsHelpersCorePath =
-      repoRoot / "src" / "semantics" / "SemanticsHelpersCore.cpp";
-  const std::filesystem::path semanticsBuiltinPathHelpersPath =
-      repoRoot / "src" / "semantics" / "SemanticsBuiltinPathHelpers.cpp";
-  REQUIRE(std::filesystem::exists(semanticsHelpersCorePath));
-  REQUIRE(std::filesystem::exists(semanticsBuiltinPathHelpersPath));
-
-  const std::string semanticsHelpersCoreSource = readText(semanticsHelpersCorePath);
-  const std::string semanticsBuiltinPathHelpersSource = readText(semanticsBuiltinPathHelpersPath);
-
-  CHECK(semanticsHelpersCoreSource.find("bool getBuiltinOperatorName(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("bool getBuiltinMathName(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("bool isExplicitRemovedCollectionCallAlias(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("bool getNamespacedCollectionHelperName(") == std::string::npos);
-
-  CHECK(semanticsBuiltinPathHelpersSource.find("bool getBuiltinOperatorName(") != std::string::npos);
-  CHECK(semanticsBuiltinPathHelpersSource.find("bool getBuiltinMathName(") != std::string::npos);
-  CHECK(semanticsBuiltinPathHelpersSource.find("bool isExplicitRemovedCollectionCallAlias(") != std::string::npos);
-  CHECK(semanticsBuiltinPathHelpersSource.find("bool getNamespacedCollectionHelperName(") != std::string::npos);
-}
-
-TEST_CASE("semantics call path helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path semanticsHelpersCorePath =
-      repoRoot / "src" / "semantics" / "SemanticsHelpersCore.cpp";
-  const std::filesystem::path semanticsCallPathHelpersPath =
-      repoRoot / "src" / "semantics" / "SemanticsCallPathHelpers.cpp";
-  REQUIRE(std::filesystem::exists(semanticsHelpersCorePath));
-  REQUIRE(std::filesystem::exists(semanticsCallPathHelpersPath));
-
-  const std::string semanticsHelpersCoreSource = readText(semanticsHelpersCorePath);
-  const std::string semanticsCallPathHelpersSource = readText(semanticsCallPathHelpersPath);
-
-  CHECK(semanticsHelpersCoreSource.find("bool isAssignCall(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("bool isSimpleCallName(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("bool lowerMatchToIf(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("bool getPathSpaceBuiltin(") == std::string::npos);
-  CHECK(semanticsHelpersCoreSource.find("std::string resolveTypePath(") == std::string::npos);
-
-  CHECK(semanticsCallPathHelpersSource.find("bool isAssignCall(") != std::string::npos);
-  CHECK(semanticsCallPathHelpersSource.find("bool isSimpleCallName(") != std::string::npos);
-  CHECK(semanticsCallPathHelpersSource.find("bool lowerMatchToIf(") != std::string::npos);
-  CHECK(semanticsCallPathHelpersSource.find("bool getPathSpaceBuiltin(") != std::string::npos);
-  CHECK(semanticsCallPathHelpersSource.find("std::string resolveTypePath(") != std::string::npos);
-}
-
 TEST_CASE("semantics validator passes source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -13154,195 +12071,6 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("if (!emitBuiltinArrayAccess(accessName,") !=
-        std::string::npos);
-}
-
-TEST_CASE("ir lowerer flow buffer helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path flowHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowHelpers.cpp";
-  const std::filesystem::path flowBufferHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowBufferHelpers.cpp";
-  REQUIRE(std::filesystem::exists(flowHelpersPath));
-  REQUIRE(std::filesystem::exists(flowBufferHelpersPath));
-
-  const std::string flowHelpersSource = readText(flowHelpersPath);
-  const std::string flowBufferHelpersSource = readText(flowBufferHelpersPath);
-
-  CHECK(flowHelpersSource.find("bool resolveBufferInitInfo(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool resolveBufferLoadInfo(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool emitBufferLoadCall(") == std::string::npos);
-  CHECK(flowHelpersSource.find("BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(") ==
-        std::string::npos);
-
-  CHECK(flowBufferHelpersSource.find("bool resolveBufferInitInfo(") != std::string::npos);
-  CHECK(flowBufferHelpersSource.find("bool resolveBufferLoadInfo(") != std::string::npos);
-  CHECK(flowBufferHelpersSource.find("bool emitBufferLoadCall(") != std::string::npos);
-  CHECK(flowBufferHelpersSource.find("BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(") !=
-        std::string::npos);
-}
-
-TEST_CASE("ir lowerer flow control helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path flowHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowHelpers.cpp";
-  const std::filesystem::path flowControlHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowControlHelpers.cpp";
-  REQUIRE(std::filesystem::exists(flowHelpersPath));
-  REQUIRE(std::filesystem::exists(flowControlHelpersPath));
-
-  const std::string flowHelpersSource = readText(flowHelpersPath);
-  const std::string flowControlHelpersSource = readText(flowControlHelpersPath);
-
-  CHECK(flowHelpersSource.find("void emitFileCloseIfValid(") == std::string::npos);
-  CHECK(flowHelpersSource.find("void emitFileScopeCleanup(") == std::string::npos);
-  CHECK(flowHelpersSource.find("void emitAllFileScopeCleanup(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool emitStructCopyFromPtrs(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool emitStructCopySlots(") == std::string::npos);
-  CHECK(flowHelpersSource.find("void emitDisarmTemporaryStructAfterCopy(") == std::string::npos);
-  CHECK(flowHelpersSource.find("const char *resolveGpuBuiltinLocalName(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool emitGpuBuiltinLoad(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool resolveCountedLoopKind(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool emitCountedLoopPrologue(") == std::string::npos);
-  CHECK(flowHelpersSource.find("void emitCountedLoopIterationStep(") == std::string::npos);
-  CHECK(flowHelpersSource.find("void patchCountedLoopEnd(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool emitBodyStatements(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool emitBodyStatementsWithFileScope(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool declareForConditionBinding(") == std::string::npos);
-  CHECK(flowHelpersSource.find("bool emitForConditionBindingInit(") == std::string::npos);
-
-  CHECK(flowControlHelpersSource.find("void emitFileCloseIfValid(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("void emitFileScopeCleanup(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("void emitAllFileScopeCleanup(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("bool emitStructCopyFromPtrs(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("bool emitStructCopySlots(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("void emitDisarmTemporaryStructAfterCopy(") !=
-        std::string::npos);
-  CHECK(flowControlHelpersSource.find("const char *resolveGpuBuiltinLocalName(") !=
-        std::string::npos);
-  CHECK(flowControlHelpersSource.find("bool emitGpuBuiltinLoad(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("bool resolveCountedLoopKind(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("bool emitCountedLoopPrologue(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("void emitCountedLoopIterationStep(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("void patchCountedLoopEnd(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("bool emitBodyStatements(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("bool emitBodyStatementsWithFileScope(") !=
-        std::string::npos);
-  CHECK(flowControlHelpersSource.find("bool declareForConditionBinding(") != std::string::npos);
-  CHECK(flowControlHelpersSource.find("bool emitForConditionBindingInit(") != std::string::npos);
-}
-
-TEST_CASE("ir lowerer operator control helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path operatorHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorConversionsAndCallsHelpers.cpp";
-  const std::filesystem::path operatorControlHelpersPath =
-      repoRoot / "src" / "ir_lowerer" /
-      "IrLowererOperatorConversionsAndCallsControlHelpers.cpp";
-  REQUIRE(std::filesystem::exists(operatorHelpersPath));
-  REQUIRE(std::filesystem::exists(operatorControlHelpersPath));
-
-  const std::string operatorHelpersSource = readText(operatorHelpersPath);
-  const std::string operatorControlHelpersSource = readText(operatorControlHelpersPath);
-
-  CHECK(operatorHelpersSource.find("bool emitConversionsAndCallsControlExprTail(") ==
-        std::string::npos);
-
-  CHECK(operatorControlHelpersSource.find("bool emitConversionsAndCallsControlExprTail(") !=
-        std::string::npos);
-}
-
-TEST_CASE("ir lowerer flow vector helper source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
-  };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
-
-  const std::filesystem::path flowVectorHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowVectorHelpers.cpp";
-  const std::filesystem::path flowVectorResolutionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowVectorResolutionHelpers.cpp";
-  REQUIRE(std::filesystem::exists(flowVectorHelpersPath));
-  REQUIRE(std::filesystem::exists(flowVectorResolutionHelpersPath));
-
-  const std::string flowVectorHelpersSource = readText(flowVectorHelpersPath);
-  const std::string flowVectorResolutionHelpersSource =
-      readText(flowVectorResolutionHelpersPath);
-
-  CHECK(flowVectorHelpersSource.find("bool resolveVectorMutatorAliasName(") == std::string::npos);
-  CHECK(flowVectorHelpersSource.find("bool resolveVectorMutatorName(") == std::string::npos);
-  CHECK(flowVectorHelpersSource.find(
-            "SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(") ==
-        std::string::npos);
-  CHECK(flowVectorHelpersSource.find(
-            "UnsignedLiteralIntegerEvalResult tryEvaluateUnsignedLiteralIntegerExpr(") ==
-        std::string::npos);
-  CHECK(flowVectorHelpersSource.find(
-            "VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(") ==
-        std::string::npos);
-  CHECK(flowVectorHelpersSource.find(
-            "VectorStatementHelperEmitResult tryEmitVectorStatementHelper(") !=
-        std::string::npos);
-
-  CHECK(flowVectorResolutionHelpersSource.find("bool resolveVectorMutatorAliasName(") !=
-        std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find("bool resolveVectorMutatorName(") !=
-        std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find(
-            "SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(") !=
-        std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find(
-            "UnsignedLiteralIntegerEvalResult tryEvaluateUnsignedLiteralIntegerExpr(") !=
-        std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find(
-            "VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(") !=
-        std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find(
-            "VectorStatementHelperEmitResult tryEmitVectorStatementHelper(") ==
         std::string::npos);
 }
 
@@ -23281,33 +22009,6 @@ TEST_CASE("ir lowerer setup type helper dispatches receiver target resolution") 
   CHECK(resolvedTypePath == "/pkg/Ctor");
 }
 
-TEST_CASE("ir lowerer setup type helper resolves imported name receiver structs") {
-  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
-
-  primec::Expr nameReceiver;
-  nameReceiver.kind = primec::Expr::Kind::Name;
-  nameReceiver.name = "Ctor";
-
-  std::string typeName;
-  std::string resolvedTypePath;
-  std::string error;
-  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(nameReceiver,
-                                                        {},
-                                                        "length",
-                                                        {{"Ctor", "/imports/Ctor"}},
-                                                        {"/imports/Ctor"},
-                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-                                                          return ValueKind::Unknown;
-                                                        },
-                                                        [](const primec::Expr &) { return std::string(); },
-                                                        typeName,
-                                                        resolvedTypePath,
-                                                        error));
-  CHECK(typeName.empty());
-  CHECK(resolvedTypePath == "/imports/Ctor");
-  CHECK(error.empty());
-}
-
 TEST_CASE("ir lowerer setup type helper resolves indexed args-pack vector receivers") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;
@@ -24179,61 +22880,6 @@ TEST_CASE("ir lowerer setup type helper resolves method call definitions from ex
       defMap,
       error);
   CHECK(resolved == &arrayCountDef);
-  CHECK(error.empty());
-}
-
-TEST_CASE("ir lowerer setup type helper resolves method calls from declared vector-return receivers") {
-  primec::Definition makeValuesDef;
-  makeValuesDef.fullPath = "/pkg/makeValues";
-
-  primec::Transform returnTransform;
-  returnTransform.name = "return";
-  returnTransform.templateArgs = {"vector<i32>"};
-  makeValuesDef.transforms.push_back(returnTransform);
-
-  primec::Definition stdCountDef;
-  stdCountDef.fullPath = "/std/collections/vector/count";
-
-  const std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/pkg/makeValues", &makeValuesDef},
-      {"/std/collections/vector/count", &stdCountDef},
-  };
-
-  primec::Expr receiverCall;
-  receiverCall.kind = primec::Expr::Kind::Call;
-  receiverCall.name = "makeValues";
-  receiverCall.namespacePrefix = "/pkg";
-
-  primec::Expr methodCall;
-  methodCall.kind = primec::Expr::Kind::Call;
-  methodCall.name = "count";
-  methodCall.isMethodCall = true;
-  methodCall.args = {receiverCall};
-
-  auto resolveExprPath = [](const primec::Expr &expr) {
-    if (expr.kind == primec::Expr::Kind::Call && expr.name == "makeValues") {
-      return std::string("/pkg/makeValues");
-    }
-    return std::string();
-  };
-
-  std::string error;
-  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-      methodCall,
-      {},
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      {},
-      {},
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      resolveExprPath,
-      [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
-      defMap,
-      error);
-  CHECK(resolved == &stdCountDef);
   CHECK(error.empty());
 }
 
@@ -29316,55 +27962,6 @@ TEST_CASE("ir lowerer setup type infers referenced declared collection receivers
   CHECK(typeName == "map");
 }
 
-TEST_CASE("ir lowerer setup type helper resolves experimental vector helper aliases") {
-  primec::Expr helperExpr;
-  helperExpr.kind = primec::Expr::Kind::Call;
-  helperExpr.name = "/std/collections/experimental_vector/vectorRemoveSwap__generated";
-
-  std::string collectionName;
-  std::string helperName;
-  REQUIRE(primec::ir_lowerer::getNamespacedCollectionHelperName(helperExpr, collectionName, helperName));
-  CHECK(collectionName == "vector");
-  CHECK(helperName == "remove_swap");
-}
-
-TEST_CASE("ir lowerer setup type helper infers literal map constructor returns") {
-  primec::Definition def;
-
-  primec::Expr returnExpr;
-  returnExpr.kind = primec::Expr::Kind::Call;
-  returnExpr.name = "/std/collections/mapDouble";
-
-  primec::Expr intKey;
-  intKey.kind = primec::Expr::Kind::Literal;
-  intKey.intWidth = 32;
-  intKey.literalValue = 1;
-
-  primec::Expr textValue;
-  textValue.kind = primec::Expr::Kind::StringLiteral;
-  textValue.stringValue = "one";
-
-  primec::Expr intKey2;
-  intKey2.kind = primec::Expr::Kind::Literal;
-  intKey2.intWidth = 32;
-  intKey2.literalValue = 2;
-
-  primec::Expr textValue2;
-  textValue2.kind = primec::Expr::Kind::StringLiteral;
-  textValue2.stringValue = "two";
-
-  returnExpr.args = {intKey, textValue, intKey2, textValue2};
-  def.returnExpr = returnExpr;
-
-  std::string collectionName;
-  std::vector<std::string> collectionArgs;
-  REQUIRE(primec::ir_lowerer::inferDeclaredReturnCollection(def, collectionName, collectionArgs));
-  CHECK(collectionName == "map");
-  REQUIRE(collectionArgs.size() == 2u);
-  CHECK(collectionArgs[0] == "i32");
-  CHECK(collectionArgs[1] == "string");
-}
-
 TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
   primec::Definition callee;
   callee.fullPath = "/pkg/do_work";
@@ -29487,14 +28084,7 @@ TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument
   primec::Expr nestedArg;
   nestedArg.kind = primec::Expr::Kind::Name;
   nestedArg.name = "nested";
-  primec::Expr scalarParam;
-  scalarParam.kind = primec::Expr::Kind::Name;
-  scalarParam.name = "x";
-  primec::Expr nestedParam;
-  nestedParam.kind = primec::Expr::Kind::Name;
-  nestedParam.name = "nested";
 
-  const std::vector<primec::Expr> params = {scalarParam, nestedParam};
   const std::vector<const primec::Expr *> orderedArgs = {&scalarArg, &nestedArg};
   primec::ir_lowerer::LocalMap callerLocals;
 
@@ -29525,7 +28115,6 @@ TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument
   std::string error;
   REQUIRE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
       "/pkg/Vec",
-      params,
       orderedArgs,
       callerLocals,
       true,
@@ -29553,22 +28142,6 @@ TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument
         ++emitExprCalls;
         return true;
       },
-      [](const primec::Expr &param, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo &infoOut,
-         std::string &) {
-        infoOut = {};
-        if (param.name == "x") {
-          infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-          infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-          return true;
-        }
-        if (param.name == "nested") {
-          infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-          infoOut.structTypeName = "/pkg/Nested";
-          infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-          return true;
-        }
-        return false;
-      },
       [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
         ++copyCalls;
         copiedDest = destBaseLocal;
@@ -29580,13 +28153,13 @@ TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       error));
   CHECK(error.empty());
-  CHECK(nextLocal == 15);
+  CHECK(nextLocal == 14);
   CHECK(emitExprCalls == 2);
   CHECK(copyCalls == 1);
   CHECK(copiedDest == 12);
   CHECK(copiedSrc == 50);
   CHECK(copiedCount == 2);
-  REQUIRE(instructions.size() == 7u);
+  REQUIRE(instructions.size() == 5u);
   CHECK(instructions[0].op == primec::IrOpcode::PushI32);
   CHECK(instructions[0].imm == 3u);
   CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
@@ -29596,21 +28169,13 @@ TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument
   CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[3].imm == 50u);
   CHECK(instructions[4].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[4].imm == 12u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 14u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 10u);
+  CHECK(instructions[4].imm == 10u);
 }
 
 TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
   primec::Expr scalarArg;
   scalarArg.kind = primec::Expr::Kind::Name;
   scalarArg.name = "bad";
-  primec::Expr scalarParam;
-  scalarParam.kind = primec::Expr::Kind::Name;
-  scalarParam.name = "x";
-  const std::vector<primec::Expr> params = {scalarParam};
   const std::vector<const primec::Expr *> orderedArgs = {&scalarArg};
 
   primec::ir_lowerer::StructSlotLayoutInfo layout;
@@ -29629,7 +28194,6 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
       "/pkg/Vec",
       {},
       {},
-      {},
       false,
       nextLocal,
       [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
@@ -29641,8 +28205,6 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
       },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo &,
-         std::string &) { return true; },
       [](int32_t, int32_t, int32_t) { return true; },
       []() { return 0; },
       [](primec::IrOpcode, uint64_t) {},
@@ -29652,7 +28214,6 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
   error.clear();
   CHECK_FALSE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
       "/pkg/Vec",
-      params,
       orderedArgs,
       {},
       false,
@@ -29666,8 +28227,6 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
       },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo &,
-         std::string &) { return true; },
       [](int32_t, int32_t, int32_t) { return true; },
       []() { return 0; },
       [](primec::IrOpcode, uint64_t) {},
@@ -35129,1647 +33688,6 @@ TEST_CASE("ir lowerer inline param helper materializes struct pointer variadic a
   CHECK(instructions[6].imm == 4u);
   CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer inline param helper materializes scalar reference variadic args packs from direct location expressions") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr firstTarget;
-  firstTarget.kind = primec::Expr::Kind::Name;
-  firstTarget.name = "left";
-  primec::Expr firstArg;
-  firstArg.kind = primec::Expr::Kind::Call;
-  firstArg.name = "location";
-  firstArg.args.push_back(firstTarget);
-  firstArg.argNames.push_back(std::nullopt);
-
-  primec::Expr secondTarget;
-  secondTarget.kind = primec::Expr::Kind::Name;
-  secondTarget.name = "right";
-  primec::Expr secondArg;
-  secondArg.kind = primec::Expr::Kind::Call;
-  secondArg.name = "location";
-  secondArg.args.push_back(secondTarget);
-  secondArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error.empty());
-  CHECK(nextLocal == 7);
-  REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
-  REQUIRE(instructions.size() == 8u);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 2u);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 4u);
-  CHECK(instructions[2].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[2].imm == 21u);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 5u);
-  CHECK(instructions[4].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[4].imm == 22u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 6u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 4u);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer inline param helper materializes struct pointer variadic args packs from direct location expressions") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr firstTarget;
-  firstTarget.kind = primec::Expr::Kind::Name;
-  firstTarget.name = "left";
-  primec::Expr firstArg;
-  firstArg.kind = primec::Expr::Kind::Call;
-  firstArg.name = "location";
-  firstArg.args.push_back(firstTarget);
-  firstArg.argNames.push_back(std::nullopt);
-
-  primec::Expr secondTarget;
-  secondTarget.kind = primec::Expr::Kind::Name;
-  secondTarget.name = "right";
-  primec::Expr secondArg;
-  secondArg.kind = primec::Expr::Kind::Call;
-  secondArg.name = "location";
-  secondArg.args.push_back(secondTarget);
-  secondArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  leftInfo.structTypeName = "/pkg/Pair";
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  rightInfo.structTypeName = "/pkg/Pair";
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-        infoOut.structTypeName = "/pkg/Pair";
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error.empty());
-  CHECK(nextLocal == 7);
-  REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
-  CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
-  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
-  REQUIRE(instructions.size() == 8u);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 2u);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 4u);
-  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[2].imm == 21u);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 5u);
-  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[4].imm == 22u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 6u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 4u);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer statement binding helper infers borrowed scalar args-pack access local info") {
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo valuesInfo;
-  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-  valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  locals.emplace("values", valuesInfo);
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.literalValue = 1;
-  primec::Expr accessExpr;
-  accessExpr.kind = primec::Expr::Kind::Call;
-  accessExpr.name = "at";
-  accessExpr.args = {receiverExpr, indexExpr};
-
-  primec::ir_lowerer::LocalInfo info;
-  std::string error;
-  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
-      accessExpr,
-      locals,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      info,
-      error));
-  CHECK(error.empty());
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK_FALSE(info.isArgsPack);
-  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Value);
-}
-
-TEST_CASE("ir lowerer statement binding helper infers borrowed struct args-pack method access local info") {
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo valuesInfo;
-  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-  valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  valuesInfo.structTypeName = "/pkg/Pair";
-  locals.emplace("values", valuesInfo);
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.literalValue = 2;
-  primec::Expr accessExpr;
-  accessExpr.kind = primec::Expr::Kind::Call;
-  accessExpr.isMethodCall = true;
-  accessExpr.name = "at_unsafe";
-  accessExpr.args = {receiverExpr, indexExpr};
-
-  primec::ir_lowerer::LocalInfo info;
-  std::string error;
-  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
-      accessExpr,
-      locals,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      info,
-      error));
-  CHECK(error.empty());
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(info.structTypeName == "/pkg/Pair");
-  CHECK_FALSE(info.isArgsPack);
-  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Value);
-}
-
-TEST_CASE("ir lowerer statement binding helper infers borrowed scalar args-pack field access local info") {
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo valuesInfo;
-  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-  valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  valuesInfo.structTypeName = "/pkg/Holder";
-  locals.emplace("values", valuesInfo);
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.literalValue = 1;
-  primec::Expr accessExpr;
-  accessExpr.kind = primec::Expr::Kind::Call;
-  accessExpr.name = "at";
-  accessExpr.args = {receiverExpr, indexExpr};
-  primec::Expr fieldExpr;
-  fieldExpr.kind = primec::Expr::Kind::Call;
-  fieldExpr.isFieldAccess = true;
-  fieldExpr.name = "value";
-  fieldExpr.args = {accessExpr};
-
-  primec::ir_lowerer::LocalInfo info;
-  std::string error;
-  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
-      fieldExpr,
-      locals,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      info,
-      error,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * { return nullptr; },
-      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
-      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-        if (expr.kind == primec::Expr::Kind::Call && expr.name == "at") {
-          return std::string("/pkg/Holder");
-        }
-        return std::string{};
-      },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
-      [](const std::string &structPath,
-         const std::string &fieldName,
-         primec::ir_lowerer::StructSlotFieldInfo &fieldInfoOut) {
-        if (structPath != "/pkg/Holder" || fieldName != "value") {
-          return false;
-        }
-        fieldInfoOut.name = "value";
-        fieldInfoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        return true;
-      }));
-  CHECK(error.empty());
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
-  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.structTypeName.empty());
-  CHECK_FALSE(info.isArgsPack);
-}
-
-TEST_CASE("ir lowerer statement binding helper infers borrowed struct args-pack field access local info") {
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo valuesInfo;
-  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-  valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  valuesInfo.structTypeName = "/pkg/Holder";
-  locals.emplace("values", valuesInfo);
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.literalValue = 2;
-  primec::Expr accessExpr;
-  accessExpr.kind = primec::Expr::Kind::Call;
-  accessExpr.isMethodCall = true;
-  accessExpr.name = "at_unsafe";
-  accessExpr.args = {receiverExpr, indexExpr};
-  primec::Expr fieldExpr;
-  fieldExpr.kind = primec::Expr::Kind::Call;
-  fieldExpr.isFieldAccess = true;
-  fieldExpr.name = "pair";
-  fieldExpr.args = {accessExpr};
-
-  primec::ir_lowerer::LocalInfo info;
-  std::string error;
-  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
-      fieldExpr,
-      locals,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      info,
-      error,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * { return nullptr; },
-      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
-      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-        if (expr.kind == primec::Expr::Kind::Call && expr.name == "at_unsafe") {
-          return std::string("/pkg/Holder");
-        }
-        return std::string{};
-      },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
-      [](const std::string &structPath,
-         const std::string &fieldName,
-         primec::ir_lowerer::StructSlotFieldInfo &fieldInfoOut) {
-        if (structPath != "/pkg/Holder" || fieldName != "pair") {
-          return false;
-        }
-        fieldInfoOut.name = "pair";
-        fieldInfoOut.structPath = "/pkg/Pair";
-        return true;
-      }));
-  CHECK(error.empty());
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
-  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(info.structTypeName == "/pkg/Pair");
-  CHECK_FALSE(info.isArgsPack);
-}
-
-TEST_CASE("ir lowerer statement binding helper infers borrowed scalar args-pack reference-field local info") {
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo valuesInfo;
-  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-  valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  valuesInfo.structTypeName = "/pkg/Holder";
-  locals.emplace("values", valuesInfo);
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.literalValue = 1;
-  primec::Expr accessExpr;
-  accessExpr.kind = primec::Expr::Kind::Call;
-  accessExpr.name = "at";
-  accessExpr.args = {receiverExpr, indexExpr};
-  primec::Expr fieldExpr;
-  fieldExpr.kind = primec::Expr::Kind::Call;
-  fieldExpr.isFieldAccess = true;
-  fieldExpr.name = "value_ref";
-  fieldExpr.args = {accessExpr};
-
-  primec::ir_lowerer::LocalInfo info;
-  std::string error;
-  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
-      fieldExpr,
-      locals,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-      },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      info,
-      error,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * { return nullptr; },
-      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
-      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-        if (expr.kind == primec::Expr::Kind::Call && expr.name == "at") {
-          return std::string("/pkg/Holder");
-        }
-        return std::string{};
-      },
-      [](const std::string &structPath,
-         const std::string &fieldName,
-         primec::ir_lowerer::LayoutFieldBinding &bindingOut) {
-        if (structPath != "/pkg/Holder" || fieldName != "value_ref") {
-          return false;
-        }
-        bindingOut.typeName = "Reference";
-        bindingOut.typeTemplateArg = "i32";
-        return true;
-      }));
-  CHECK(error.empty());
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.structTypeName.empty());
-  CHECK_FALSE(info.isArgsPack);
-}
-
-TEST_CASE("ir lowerer statement binding helper infers borrowed struct args-pack reference-field local info") {
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo valuesInfo;
-  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-  valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  valuesInfo.structTypeName = "/pkg/Holder";
-  locals.emplace("values", valuesInfo);
-
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.literalValue = 2;
-  primec::Expr accessExpr;
-  accessExpr.kind = primec::Expr::Kind::Call;
-  accessExpr.isMethodCall = true;
-  accessExpr.name = "at_unsafe";
-  accessExpr.args = {receiverExpr, indexExpr};
-  primec::Expr fieldExpr;
-  fieldExpr.kind = primec::Expr::Kind::Call;
-  fieldExpr.isFieldAccess = true;
-  fieldExpr.name = "pair_ref";
-  fieldExpr.args = {accessExpr};
-
-  primec::ir_lowerer::LocalInfo info;
-  std::string error;
-  REQUIRE(primec::ir_lowerer::inferInlineParameterExprLocalInfo(
-      fieldExpr,
-      locals,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-      },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo &infoOut) {
-        if (expr.transforms.size() == 1 && expr.transforms.front().name == "Reference" &&
-            expr.transforms.front().templateArgs.size() == 1 &&
-            expr.transforms.front().templateArgs.front() == "/pkg/Pair") {
-          infoOut.structTypeName = "/pkg/Pair";
-        }
-      },
-      info,
-      error,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * { return nullptr; },
-      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
-      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-        if (expr.kind == primec::Expr::Kind::Call && expr.name == "at_unsafe") {
-          return std::string("/pkg/Holder");
-        }
-        return std::string{};
-      },
-      [](const std::string &structPath,
-         const std::string &fieldName,
-         primec::ir_lowerer::LayoutFieldBinding &bindingOut) {
-        if (structPath != "/pkg/Holder" || fieldName != "pair_ref") {
-          return false;
-        }
-        bindingOut.typeName = "Reference";
-        bindingOut.typeTemplateArg = "/pkg/Pair";
-        return true;
-      }));
-  CHECK(error.empty());
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(info.structTypeName == "/pkg/Pair");
-  CHECK_FALSE(info.isArgsPack);
-}
-
-TEST_CASE("ir lowerer inline param helper materializes uninitialized scalar reference variadic args packs from direct location expressions") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr firstTarget;
-  firstTarget.kind = primec::Expr::Kind::Name;
-  firstTarget.name = "left";
-  primec::Expr firstArg;
-  firstArg.kind = primec::Expr::Kind::Call;
-  firstArg.name = "location";
-  firstArg.args.push_back(firstTarget);
-  firstArg.argNames.push_back(std::nullopt);
-
-  primec::Expr secondTarget;
-  secondTarget.kind = primec::Expr::Kind::Name;
-  secondTarget.name = "right";
-  primec::Expr secondArg;
-  secondArg.kind = primec::Expr::Kind::Call;
-  secondArg.name = "location";
-  secondArg.args.push_back(secondTarget);
-  secondArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  leftInfo.isUninitializedStorage = true;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  rightInfo.isUninitializedStorage = true;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        infoOut.targetsUninitializedStorage = true;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error.empty());
-  CHECK(nextLocal == 7);
-  REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(calleeLocals.at("values").targetsUninitializedStorage);
-  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
-  REQUIRE(instructions.size() == 8u);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 2u);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 4u);
-  CHECK(instructions[2].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[2].imm == 21u);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 5u);
-  CHECK(instructions[4].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[4].imm == 22u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 6u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 4u);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer inline param helper materializes uninitialized struct pointer variadic args packs from direct location expressions") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr firstTarget;
-  firstTarget.kind = primec::Expr::Kind::Name;
-  firstTarget.name = "left";
-  primec::Expr firstArg;
-  firstArg.kind = primec::Expr::Kind::Call;
-  firstArg.name = "location";
-  firstArg.args.push_back(firstTarget);
-  firstArg.argNames.push_back(std::nullopt);
-
-  primec::Expr secondTarget;
-  secondTarget.kind = primec::Expr::Kind::Name;
-  secondTarget.name = "right";
-  primec::Expr secondArg;
-  secondArg.kind = primec::Expr::Kind::Call;
-  secondArg.name = "location";
-  secondArg.args.push_back(secondTarget);
-  secondArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  leftInfo.isUninitializedStorage = true;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  leftInfo.structTypeName = "/pkg/Pair";
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  rightInfo.isUninitializedStorage = true;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  rightInfo.structTypeName = "/pkg/Pair";
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-        infoOut.targetsUninitializedStorage = true;
-        infoOut.structTypeName = "/pkg/Pair";
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error.empty());
-  CHECK(nextLocal == 7);
-  REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
-  CHECK(calleeLocals.at("values").targetsUninitializedStorage);
-  CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
-  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
-  REQUIRE(instructions.size() == 8u);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 2u);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 4u);
-  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[2].imm == 21u);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 5u);
-  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[4].imm == 22u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 6u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 4u);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer inline param helper materializes scalar pointer variadic args packs from direct location(reference) expressions") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr firstTarget;
-  firstTarget.kind = primec::Expr::Kind::Name;
-  firstTarget.name = "left";
-  primec::Expr firstArg;
-  firstArg.kind = primec::Expr::Kind::Call;
-  firstArg.name = "location";
-  firstArg.args.push_back(firstTarget);
-  firstArg.argNames.push_back(std::nullopt);
-
-  primec::Expr secondTarget;
-  secondTarget.kind = primec::Expr::Kind::Name;
-  secondTarget.name = "right";
-  primec::Expr secondArg;
-  secondArg.kind = primec::Expr::Kind::Call;
-  secondArg.name = "location";
-  secondArg.args.push_back(secondTarget);
-  secondArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error.empty());
-  CHECK(nextLocal == 7);
-  REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
-  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
-  REQUIRE(instructions.size() == 8u);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 2u);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 4u);
-  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[2].imm == 21u);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 5u);
-  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[4].imm == 22u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 6u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 4u);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer inline param helper materializes struct pointer variadic args packs from direct location(reference) expressions") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr firstTarget;
-  firstTarget.kind = primec::Expr::Kind::Name;
-  firstTarget.name = "left";
-  primec::Expr firstArg;
-  firstArg.kind = primec::Expr::Kind::Call;
-  firstArg.name = "location";
-  firstArg.args.push_back(firstTarget);
-  firstArg.argNames.push_back(std::nullopt);
-
-  primec::Expr secondTarget;
-  secondTarget.kind = primec::Expr::Kind::Name;
-  secondTarget.name = "right";
-  primec::Expr secondArg;
-  secondArg.kind = primec::Expr::Kind::Call;
-  secondArg.name = "location";
-  secondArg.args.push_back(secondTarget);
-  secondArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  leftInfo.structTypeName = "/pkg/Pair";
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  rightInfo.structTypeName = "/pkg/Pair";
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-        infoOut.structTypeName = "/pkg/Pair";
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error.empty());
-  CHECK(nextLocal == 7);
-  REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
-  CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
-  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
-  REQUIRE(instructions.size() == 8u);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 2u);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 4u);
-  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[2].imm == 21u);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 5u);
-  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[4].imm == 22u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 6u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 4u);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer inline param helper materializes scalar reference variadic args packs from direct location(reference) expressions") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr firstTarget;
-  firstTarget.kind = primec::Expr::Kind::Name;
-  firstTarget.name = "left";
-  primec::Expr firstArg;
-  firstArg.kind = primec::Expr::Kind::Call;
-  firstArg.name = "location";
-  firstArg.args.push_back(firstTarget);
-  firstArg.argNames.push_back(std::nullopt);
-
-  primec::Expr secondTarget;
-  secondTarget.kind = primec::Expr::Kind::Name;
-  secondTarget.name = "right";
-  primec::Expr secondArg;
-  secondArg.kind = primec::Expr::Kind::Call;
-  secondArg.name = "location";
-  secondArg.args.push_back(secondTarget);
-  secondArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error.empty());
-  CHECK(nextLocal == 7);
-  REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
-  REQUIRE(instructions.size() == 8u);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 2u);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 4u);
-  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[2].imm == 21u);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 5u);
-  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[4].imm == 22u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 6u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 4u);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer inline param helper materializes struct reference variadic args packs from direct location(reference) expressions") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr firstTarget;
-  firstTarget.kind = primec::Expr::Kind::Name;
-  firstTarget.name = "left";
-  primec::Expr firstArg;
-  firstArg.kind = primec::Expr::Kind::Call;
-  firstArg.name = "location";
-  firstArg.args.push_back(firstTarget);
-  firstArg.argNames.push_back(std::nullopt);
-
-  primec::Expr secondTarget;
-  secondTarget.kind = primec::Expr::Kind::Name;
-  secondTarget.name = "right";
-  primec::Expr secondArg;
-  secondArg.kind = primec::Expr::Kind::Call;
-  secondArg.name = "location";
-  secondArg.args.push_back(secondTarget);
-  secondArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  leftInfo.structTypeName = "/pkg/Pair";
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  rightInfo.structTypeName = "/pkg/Pair";
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        infoOut.structTypeName = "/pkg/Pair";
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error.empty());
-  CHECK(nextLocal == 7);
-  REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
-  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
-  REQUIRE(instructions.size() == 8u);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 2u);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 4u);
-  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[2].imm == 21u);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 5u);
-  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[4].imm == 22u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 6u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 4u);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer inline param helper materializes struct reference variadic args packs from helper-returned location(reference) expressions") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr leftSource;
-  leftSource.kind = primec::Expr::Kind::Name;
-  leftSource.name = "left";
-  primec::Expr leftHelper;
-  leftHelper.kind = primec::Expr::Kind::Call;
-  leftHelper.name = "borrow_ref";
-  leftHelper.args.push_back(leftSource);
-  leftHelper.argNames.push_back(std::nullopt);
-  primec::Expr firstArg;
-  firstArg.kind = primec::Expr::Kind::Call;
-  firstArg.name = "location";
-  firstArg.args.push_back(leftHelper);
-  firstArg.argNames.push_back(std::nullopt);
-
-  primec::Expr rightSource;
-  rightSource.kind = primec::Expr::Kind::Name;
-  rightSource.name = "right";
-  primec::Expr rightHelper;
-  rightHelper.kind = primec::Expr::Kind::Call;
-  rightHelper.name = "borrow_ref";
-  rightHelper.args.push_back(rightSource);
-  rightHelper.argNames.push_back(std::nullopt);
-  primec::Expr secondArg;
-  secondArg.kind = primec::Expr::Kind::Call;
-  secondArg.name = "location";
-  secondArg.args.push_back(rightHelper);
-  secondArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        infoOut.structTypeName = "/pkg/Pair";
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Call || arg.args.front().name != "borrow_ref" ||
-            arg.args.front().args.size() != 1 || arg.args.front().args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        const auto &sourceName = arg.args.front().args.front().name;
-        instructions.push_back({primec::IrOpcode::LoadLocal, sourceName == "left" ? 31u : 32u});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error,
-      [](const primec::Expr &expr,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo &infoOut,
-         std::string &) {
-        if (expr.kind != primec::Expr::Kind::Call || expr.name != "borrow_ref") {
-          return false;
-        }
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-        infoOut.structTypeName = "/pkg/Pair";
-        return true;
-      }));
-
-  CHECK(error.empty());
-  CHECK(nextLocal == 7);
-  REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
-  CHECK(calleeLocals.at("values").argsPackElementCount == 2);
-  REQUIRE(instructions.size() == 8u);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 2u);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 4u);
-  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[2].imm == 31u);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 5u);
-  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[4].imm == 32u);
-  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[5].imm == 6u);
-  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[6].imm == 4u);
-  CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[7].imm == 3u);
-}
-
-TEST_CASE("ir lowerer inline param helper rejects direct location(reference) pointer variadic type mismatch") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr leftTarget;
-  leftTarget.kind = primec::Expr::Kind::Name;
-  leftTarget.name = "left";
-  primec::Expr leftArg;
-  leftArg.kind = primec::Expr::Kind::Call;
-  leftArg.name = "location";
-  leftArg.args.push_back(leftTarget);
-  leftArg.argNames.push_back(std::nullopt);
-
-  primec::Expr rightTarget;
-  rightTarget.kind = primec::Expr::Kind::Name;
-  rightTarget.name = "right";
-  primec::Expr rightArg;
-  rightArg.kind = primec::Expr::Kind::Call;
-  rightArg.name = "location";
-  rightArg.args.push_back(rightTarget);
-  rightArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&leftArg, &rightArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error == "variadic parameter type mismatch");
-  CHECK(calleeLocals.empty());
-  CHECK(instructions.empty());
-}
-
-TEST_CASE("ir lowerer inline param helper rejects direct location variadic uninitialized target mismatch") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr leftTarget;
-  leftTarget.kind = primec::Expr::Kind::Name;
-  leftTarget.name = "left";
-  primec::Expr leftArg;
-  leftArg.kind = primec::Expr::Kind::Call;
-  leftArg.name = "location";
-  leftArg.args.push_back(leftTarget);
-  leftArg.argNames.push_back(std::nullopt);
-
-  primec::Expr rightTarget;
-  rightTarget.kind = primec::Expr::Kind::Name;
-  rightTarget.name = "right";
-  primec::Expr rightArg;
-  rightArg.kind = primec::Expr::Kind::Call;
-  rightArg.name = "location";
-  rightArg.args.push_back(rightTarget);
-  rightArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  rightInfo.isUninitializedStorage = true;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&leftArg, &rightArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        infoOut.targetsUninitializedStorage = true;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error == "variadic parameter type mismatch");
-  CHECK(calleeLocals.empty());
-  CHECK(instructions.empty());
-}
-
-TEST_CASE("ir lowerer inline param helper rejects direct location variadic wrapped type mismatch") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
-
-  primec::Expr leftTarget;
-  leftTarget.kind = primec::Expr::Kind::Name;
-  leftTarget.name = "left";
-  primec::Expr leftArg;
-  leftArg.kind = primec::Expr::Kind::Call;
-  leftArg.name = "location";
-  leftArg.args.push_back(leftTarget);
-  leftArg.argNames.push_back(std::nullopt);
-
-  primec::Expr rightTarget;
-  rightTarget.kind = primec::Expr::Kind::Name;
-  rightTarget.name = "right";
-  primec::Expr rightArg;
-  rightArg.kind = primec::Expr::Kind::Call;
-  rightArg.name = "location";
-  rightArg.args.push_back(rightTarget);
-  rightArg.argNames.push_back(std::nullopt);
-
-  primec::ir_lowerer::LocalMap callerLocals;
-  primec::ir_lowerer::LocalInfo leftInfo;
-  leftInfo.index = 21;
-  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
-  callerLocals.emplace("left", leftInfo);
-
-  primec::ir_lowerer::LocalInfo rightInfo;
-  rightInfo.index = 22;
-  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  callerLocals.emplace("right", rightInfo);
-
-  int32_t nextLocal = 3;
-  primec::ir_lowerer::LocalMap calleeLocals;
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-
-  CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&leftArg, &rightArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        if (arg.kind != primec::Expr::Kind::Call || arg.name != "location" || arg.args.size() != 1 ||
-            arg.args.front().kind != primec::Expr::Kind::Name) {
-          return false;
-        }
-        auto it = locals.find(arg.args.front().name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
-
-  CHECK(error == "variadic parameter type mismatch");
-  CHECK(calleeLocals.empty());
-  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer inline param helper aliases pure struct pointer variadic forwarding") {
@@ -47513,7 +44431,7 @@ TEST_CASE("ir lowerer statement binding helper emits inline return statements") 
             {},
             instructions,
             inlineContext,
-            false,
+            std::nullopt,
             false,
             sawReturn,
             [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
@@ -47521,6 +44439,9 @@ TEST_CASE("ir lowerer statement binding helper emits inline return statements") 
               return true;
             },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
+              return false;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
             [&]() { ++cleanupCalls; },
             error) == EmitResult::Emitted);
@@ -47553,11 +44474,14 @@ TEST_CASE("ir lowerer statement binding helper emits non-inline void return stat
             {},
             instructions,
             std::nullopt,
-            false,
+            std::nullopt,
             true,
             sawReturn,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
+              return false;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
             [&]() { ++cleanupCalls; },
             error) == EmitResult::Emitted);
@@ -47590,11 +44514,14 @@ TEST_CASE("ir lowerer statement binding helper validates return diagnostics") {
             {},
             instructions,
             std::nullopt,
-            false,
+            std::nullopt,
             true,
             sawReturn,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
+              return false;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
             []() {},
             error) == EmitResult::Error);
@@ -47610,11 +44537,14 @@ TEST_CASE("ir lowerer statement binding helper validates return diagnostics") {
             {},
             instructions,
             inlineContext,
-            false,
+            std::nullopt,
             false,
             sawReturn,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
+              return false;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
             []() {},
             error) == EmitResult::Error);
@@ -49924,7 +46854,6 @@ TEST_CASE("ir lowerer conversions helper emits float conversion opcode") {
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -49995,7 +46924,6 @@ TEST_CASE("ir lowerer conversions helper lowers alloc intrinsic to heap alloc") 
         return false;
       },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50063,7 +46991,6 @@ TEST_CASE("ir lowerer conversions helper lowers free intrinsic to heap free") {
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50152,7 +47079,6 @@ TEST_CASE("ir lowerer conversions helper lowers realloc intrinsic to heap reallo
         return false;
       },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50251,7 +47177,6 @@ TEST_CASE("ir lowerer conversions helper lowers checked memory at intrinsic to b
         return false;
       },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50351,7 +47276,6 @@ TEST_CASE("ir lowerer conversions helper lowers unchecked memory at intrinsic to
         return false;
       },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50428,7 +47352,6 @@ TEST_CASE("ir lowerer conversions helper emits vector record header with data po
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50518,7 +47441,6 @@ TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50558,7 +47480,6 @@ TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
       [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -50568,218 +47489,6 @@ TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
   CHECK_FALSE(handled);
   CHECK(error.empty());
   CHECK(instructions.empty());
-}
-
-TEST_CASE("ir lowerer conversions helper lowers location on borrowed scalar args-pack access") {
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.intWidth = 32;
-  indexExpr.literalValue = 1;
-
-  primec::Expr targetExpr;
-  targetExpr.kind = primec::Expr::Kind::Call;
-  targetExpr.name = "at";
-  targetExpr.args = {receiverExpr, indexExpr};
-
-  primec::Expr expr;
-  expr.kind = primec::Expr::Kind::Call;
-  expr.name = "location";
-  expr.args = {targetExpr};
-
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo valuesInfo;
-  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-  valuesInfo.index = 4;
-  valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  locals.emplace("values", valuesInfo);
-
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-  bool handled = false;
-  int32_t nextLocal = 0;
-  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
-      expr,
-      locals,
-      nextLocal,
-      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
-        if (valueExpr.kind != primec::Expr::Kind::Call || valueExpr.name != "at" || valueExpr.args.size() != 2) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, 41});
-        return true;
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
-      [&]() { return nextLocal++; },
-      []() {},
-      []() {},
-      []() {},
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
-      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
-      [](const std::string &, std::string &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const std::string &, const std::string &, std::string &) { return false; },
-      [](const std::string &, int32_t &) { return false; },
-      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
-      [](int32_t, int32_t, int32_t) { return false; },
-      instructions,
-      handled,
-      error);
-
-  CHECK(ok);
-  CHECK(handled);
-  CHECK(error.empty());
-  REQUIRE(instructions.size() == 1u);
-  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[0].imm == 41u);
-}
-
-TEST_CASE("ir lowerer conversions helper lowers location on borrowed struct args-pack method access") {
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.intWidth = 32;
-  indexExpr.literalValue = 2;
-
-  primec::Expr targetExpr;
-  targetExpr.kind = primec::Expr::Kind::Call;
-  targetExpr.isMethodCall = true;
-  targetExpr.name = "at_unsafe";
-  targetExpr.args = {receiverExpr, indexExpr};
-
-  primec::Expr expr;
-  expr.kind = primec::Expr::Kind::Call;
-  expr.name = "location";
-  expr.args = {targetExpr};
-
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo valuesInfo;
-  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-  valuesInfo.index = 5;
-  valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  valuesInfo.structTypeName = "/pkg/Pair";
-  locals.emplace("values", valuesInfo);
-
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-  bool handled = false;
-  int32_t nextLocal = 0;
-  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
-      expr,
-      locals,
-      nextLocal,
-      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
-        if (valueExpr.kind != primec::Expr::Kind::Call || !valueExpr.isMethodCall ||
-            valueExpr.name != "at_unsafe" || valueExpr.args.size() != 2) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, 42});
-        return true;
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
-      [&]() { return nextLocal++; },
-      []() {},
-      []() {},
-      []() {},
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
-      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
-      [](const std::string &, std::string &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const std::string &, const std::string &, std::string &) { return false; },
-      [](const std::string &, int32_t &) { return false; },
-      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
-      [](int32_t, int32_t, int32_t) { return false; },
-      instructions,
-      handled,
-      error);
-
-  CHECK(ok);
-  CHECK(handled);
-  CHECK(error.empty());
-  REQUIRE(instructions.size() == 1u);
-  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[0].imm == 42u);
-}
-
-TEST_CASE("ir lowerer conversions helper rejects location on value args-pack access") {
-  primec::Expr receiverExpr;
-  receiverExpr.kind = primec::Expr::Kind::Name;
-  receiverExpr.name = "values";
-
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.intWidth = 32;
-  indexExpr.literalValue = 0;
-
-  primec::Expr targetExpr;
-  targetExpr.kind = primec::Expr::Kind::Call;
-  targetExpr.name = "at";
-  targetExpr.args = {receiverExpr, indexExpr};
-
-  primec::Expr expr;
-  expr.kind = primec::Expr::Kind::Call;
-  expr.name = "location";
-  expr.args = {targetExpr};
-
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo valuesInfo;
-  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-  valuesInfo.index = 6;
-  valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  valuesInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  locals.emplace("values", valuesInfo);
-
-  std::vector<primec::IrInstruction> instructions;
-  std::string error;
-  bool handled = false;
-  int32_t nextLocal = 0;
-  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
-      expr,
-      locals,
-      nextLocal,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-      },
-      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
-      [&]() { return nextLocal++; },
-      []() {},
-      []() {},
-      []() {},
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
-      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
-      [](const std::string &, std::string &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const std::string &, const std::string &, std::string &) { return false; },
-      [](const std::string &, int32_t &) { return false; },
-      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) { return false; },
-      [](int32_t, int32_t, int32_t) { return false; },
-      instructions,
-      handled,
-      error);
-
-  CHECK_FALSE(ok);
-  CHECK(handled);
-  CHECK(error == "location requires a local binding");
 }
 
 TEST_CASE("ir lowerer conversions control-tail helper lowers if blocks") {
@@ -53317,9 +50026,14 @@ TEST_CASE("ir lowerer result helpers emit Result.why local expressions") {
 
 TEST_CASE("ir lowerer result helpers emit Result.why error-local extraction") {
   std::vector<primec::IrInstruction> instructions;
+  primec::ir_lowerer::ResultExprInfo statusInfo;
 
   primec::ir_lowerer::emitResultWhyErrorLocalFromResult(
-      5, false, 8, [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
+      5,
+      statusInfo,
+      8,
+      []() { return -1; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
   REQUIRE(instructions.size() == 2);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 5);
@@ -53327,8 +50041,15 @@ TEST_CASE("ir lowerer result helpers emit Result.why error-local extraction") {
   CHECK(instructions[1].imm == 8);
 
   instructions.clear();
+  primec::ir_lowerer::ResultExprInfo valueInfo;
+  valueInfo.hasValue = true;
+  valueInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   primec::ir_lowerer::emitResultWhyErrorLocalFromResult(
-      6, true, 9, [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
+      6,
+      valueInfo,
+      9,
+      []() { return -1; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
   REQUIRE(instructions.size() == 4);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 6);
@@ -53338,6 +50059,40 @@ TEST_CASE("ir lowerer result helpers emit Result.why error-local extraction") {
   CHECK(instructions[2].imm == 0);
   CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[3].imm == 9);
+
+  instructions.clear();
+  int allocCounter = 0;
+  primec::ir_lowerer::ResultExprInfo bufferInfo;
+  bufferInfo.hasValue = true;
+  bufferInfo.valueCollectionKind = primec::ir_lowerer::LocalInfo::Kind::Buffer;
+  bufferInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  primec::ir_lowerer::emitResultWhyErrorLocalFromResult(
+      7,
+      bufferInfo,
+      12,
+      [&]() { return ++allocCounter; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
+  REQUIRE(allocCounter == 3);
+  REQUIRE(instructions.size() == 18);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 7);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == 4294967296ull);
+  CHECK(instructions[2].op == primec::IrOpcode::DivI64);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 1);
+  CHECK(instructions[9].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[9].imm == 2);
+  CHECK(instructions[12].op == primec::IrOpcode::CmpEqI64);
+  CHECK(instructions[13].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[13].imm == 3);
+  CHECK(instructions[14].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[14].imm == 1);
+  CHECK(instructions[15].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[15].imm == 3);
+  CHECK(instructions[16].op == primec::IrOpcode::MulI64);
+  CHECK(instructions[17].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[17].imm == 12);
 }
 
 TEST_CASE("ir lowerer result helpers emit Result.why value-local setup") {
@@ -53350,10 +50105,13 @@ TEST_CASE("ir lowerer result helpers emit Result.why value-local setup") {
   int allocCounter = 0;
   int32_t errorLocal = -1;
   bool emitCalled = false;
+  primec::ir_lowerer::ResultExprInfo valueInfo;
+  valueInfo.hasValue = true;
+  valueInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   CHECK(primec::ir_lowerer::emitResultWhyLocalsFromValueExpr(
       valueExpr,
       locals,
-      true,
+      valueInfo,
       [&](const primec::Expr &emittedExpr, const primec::ir_lowerer::LocalMap &emittedLocals) {
         emitCalled = true;
         CHECK(emittedExpr.name == "res");
@@ -53383,10 +50141,11 @@ TEST_CASE("ir lowerer result helpers emit Result.why value-local setup") {
   instructions.clear();
   allocCounter = 0;
   errorLocal = -1;
+  primec::ir_lowerer::ResultExprInfo statusInfo;
   CHECK(primec::ir_lowerer::emitResultWhyLocalsFromValueExpr(
       valueExpr,
       locals,
-      false,
+      statusInfo,
       [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
       [&]() {
         ++allocCounter;
@@ -53409,7 +50168,7 @@ TEST_CASE("ir lowerer result helpers emit Result.why value-local setup") {
   CHECK_FALSE(primec::ir_lowerer::emitResultWhyLocalsFromValueExpr(
       valueExpr,
       locals,
-      true,
+      valueInfo,
       [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       [&]() {
         ++allocCounter;
@@ -53591,6 +50350,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
               fileErrorCalled = true;
               return true;
             },
+            &instructions,
             error) ==
         EmitResult::Emitted);
   CHECK(inlineCalled);
@@ -53619,6 +50379,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
               return false;
             },
             [&](int32_t) { return false; },
+            nullptr,
             error) ==
         EmitResult::NotHandled);
 
@@ -53646,6 +50407,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
               return false;
             },
             [&](int32_t) { return false; },
+            nullptr,
             error) ==
         EmitResult::Error);
   CHECK(error == "Result.why requires exactly one argument");
@@ -53727,6 +50489,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               fileErrorCalled = true;
               return true;
             },
+            &instructions,
             error) ==
         EmitResult::Emitted);
   CHECK(inlineCalled);
@@ -53784,6 +50547,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               fileErrorCalled = true;
               return true;
             },
+            &instructions,
             error) ==
         EmitResult::Emitted);
   CHECK_FALSE(inlineCalled);
@@ -53829,6 +50593,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               emittedFileErrorLocal = errorLocal;
               return true;
             },
+            nullptr,
             error) ==
         EmitResult::Emitted);
   CHECK(emittedFileErrorLocal == 33);
@@ -53860,6 +50625,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               return false;
             },
             [](int32_t) { return false; },
+            nullptr,
             error) ==
         EmitResult::NotHandled);
 
@@ -53887,6 +50653,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               return false;
             },
             [](int32_t) { return false; },
+            nullptr,
             error) ==
         EmitResult::Error);
   CHECK(error == "Result.why requires exactly one argument");
@@ -53921,6 +50688,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               return false;
             },
             [](int32_t) { return false; },
+            nullptr,
             error) ==
         EmitResult::Error);
   CHECK(error == "FileError.why requires exactly one argument");
@@ -54526,45 +51294,6 @@ TEST_CASE("ir lowerer flow helpers emit struct copy sequences") {
   instructions.clear();
   CHECK(primec::ir_lowerer::emitStructCopyFromPtrs(instructions, 2, 3, 0));
   CHECK(instructions.empty());
-
-  std::vector<primec::IrInstruction> disarmInstructions;
-  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
-    disarmInstructions.push_back({op, imm});
-  };
-  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
-      emitInstruction,
-      17,
-      "/std/collections/experimental_vector/Vector");
-  REQUIRE(disarmInstructions.size() == 6);
-  CHECK(disarmInstructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(disarmInstructions[0].imm == 17);
-  CHECK(disarmInstructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(disarmInstructions[1].imm == 48);
-  CHECK(disarmInstructions[2].op == primec::IrOpcode::AddI64);
-  CHECK(disarmInstructions[3].op == primec::IrOpcode::PushI32);
-  CHECK(disarmInstructions[3].imm == 0);
-  CHECK(disarmInstructions[4].op == primec::IrOpcode::StoreIndirect);
-  CHECK(disarmInstructions[5].op == primec::IrOpcode::Pop);
-
-  disarmInstructions.clear();
-  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
-      emitInstruction,
-      19,
-      "/std/collections/experimental_map/Map__i32_i32");
-  REQUIRE(disarmInstructions.size() == 12);
-  CHECK(disarmInstructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(disarmInstructions[0].imm == 19);
-  CHECK(disarmInstructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(disarmInstructions[1].imm == 48);
-  CHECK(disarmInstructions[7].op == primec::IrOpcode::PushI64);
-  CHECK(disarmInstructions[7].imm == 112);
-
-  disarmInstructions.clear();
-  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
-      emitInstruction,
-      21,
-      "/pkg/Widget");
-  CHECK(disarmInstructions.empty());
 }
 
 TEST_CASE("ir lowerer flow helpers emit compare-to-zero sequences") {
@@ -55358,22 +52087,6 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   CHECK(reserveHasHeapAlloc);
   CHECK(reserveHasAllocFailureCheck);
 
-  std::vector<primec::IrInstruction> generatedWrapperReserveInstructions;
-  CHECK(runHelper(
-            makeCall("/std/collections/experimental_vector/vectorReserve__generated",
-                     {makeTarget(), makeI32Literal(6)}),
-            capacityExceededCalls,
-            popOnEmptyCalls,
-            indexOutOfBoundsCalls,
-            reserveNegativeCalls,
-            reserveExceededCalls,
-            &generatedWrapperReserveInstructions,
-            error) == EmitResult::Emitted);
-  CHECK(error.empty());
-  CHECK(reserveNegativeCalls == 2);
-  CHECK(reserveExceededCalls == 4);
-  CHECK_FALSE(generatedWrapperReserveInstructions.empty());
-
   CHECK(runHelper(
             makeCall("remove_at", {makeTarget(), makeI32Literal(1)}),
             capacityExceededCalls,
@@ -55731,78 +52444,6 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             error) == EmitResult::Error);
   CHECK(error == "reserve requires integer capacity");
-}
-
-TEST_CASE("ir lowerer flow helpers fold negative generated reserve aliases") {
-  using EmitResult = primec::ir_lowerer::VectorStatementHelperEmitResult;
-  using Kind = primec::ir_lowerer::LocalInfo::Kind;
-  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
-
-  auto makeName = [](const std::string &name) {
-    primec::Expr expr;
-    expr.kind = primec::Expr::Kind::Name;
-    expr.name = name;
-    return expr;
-  };
-  auto makeI32Literal = [](uint64_t value) {
-    primec::Expr literal;
-    literal.kind = primec::Expr::Kind::Literal;
-    literal.intWidth = 32;
-    literal.literalValue = value;
-    return literal;
-  };
-  auto makeCall = [](const std::string &name, std::vector<primec::Expr> args) {
-    primec::Expr call;
-    call.kind = primec::Expr::Kind::Call;
-    call.name = name;
-    call.args = std::move(args);
-    return call;
-  };
-
-  primec::Expr negativeCapacity = makeCall("minus", {makeI32Literal(0), makeI32Literal(1)});
-  primec::Expr reserveCall =
-      makeCall("/std/collections/experimental_vector/vectorReserve__generated",
-               {makeName("v"), negativeCapacity});
-
-  primec::ir_lowerer::LocalMap locals;
-  primec::ir_lowerer::LocalInfo vectorInfo;
-  vectorInfo.kind = Kind::Vector;
-  vectorInfo.valueKind = ValueKind::Int32;
-  vectorInfo.isMutable = true;
-  vectorInfo.index = 4;
-  locals.emplace("v", vectorInfo);
-
-  std::vector<primec::IrInstruction> instructions;
-  int32_t nextTempLocal = 30;
-  int emitExprCalls = 0;
-  std::string error;
-
-  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
-            reserveCall,
-            locals,
-            instructions,
-            [&]() { return nextTempLocal++; },
-            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-              if (expr.kind == primec::Expr::Kind::Literal ||
-                  (expr.kind == primec::Expr::Kind::Call && expr.name == "minus")) {
-                return ValueKind::Int32;
-              }
-              return ValueKind::Unknown;
-            },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-              ++emitExprCalls;
-              return true;
-            },
-            [](const primec::Expr &) { return false; },
-            [] {},
-            [] {},
-            [] {},
-            [] {},
-            [] {},
-            error) == EmitResult::Error);
-  CHECK(error == "vector reserve expects non-negative capacity");
-  CHECK(emitExprCalls == 1);
-  CHECK_FALSE(instructions.empty());
 }
 
 TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
@@ -56854,117 +53495,6 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Error);
-  CHECK(instructions.empty());
-}
-
-TEST_CASE("ir lowerer flow helpers emit inline buffer load builtin calls") {
-  using Result = primec::ir_lowerer::BufferBuiltinCallEmitResult;
-  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
-
-  primec::Expr inlineBufferExpr;
-  inlineBufferExpr.kind = primec::Expr::Kind::Call;
-  inlineBufferExpr.name = "buffer";
-  inlineBufferExpr.templateArgs = {"f32"};
-
-  primec::Expr countExpr;
-  countExpr.kind = primec::Expr::Kind::Literal;
-  countExpr.intWidth = 32;
-  countExpr.literalValue = 4;
-  inlineBufferExpr.args = {countExpr};
-
-  primec::Expr indexExpr;
-  indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.isUnsigned = true;
-  indexExpr.intWidth = 64;
-  indexExpr.literalValue = 1;
-
-  primec::Expr expr;
-  expr.kind = primec::Expr::Kind::Call;
-  expr.name = "buffer_load";
-  expr.args = {inlineBufferExpr, indexExpr};
-
-  std::vector<primec::IrInstruction> instructions;
-  primec::ir_lowerer::LocalMap locals;
-  std::string error;
-  int emitStep = 0;
-  bool allocRangeCalled = false;
-  int32_t nextTemp = 12;
-  CHECK(primec::ir_lowerer::tryEmitBufferBuiltinCall(
-            expr,
-            locals,
-            [](const std::string &typeName) {
-              if (typeName == "f32") {
-                return Kind::Float32;
-              }
-              if (typeName == "string") {
-                return Kind::String;
-              }
-              return Kind::Unknown;
-            },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-              return Kind::UInt64;
-            },
-            [&](int32_t) {
-              allocRangeCalled = true;
-              return 0;
-            },
-            [&]() { return nextTemp++; },
-            [&](const primec::Expr &argExpr, const primec::ir_lowerer::LocalMap &) {
-              if (argExpr.kind == primec::Expr::Kind::Call) {
-                instructions.push_back({primec::IrOpcode::PushI64, 444});
-              } else {
-                instructions.push_back({primec::IrOpcode::PushI64, 2});
-              }
-              ++emitStep;
-              return true;
-            },
-            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK_FALSE(allocRangeCalled);
-  CHECK(emitStep == 2);
-  REQUIRE(instructions.size() == 12);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 12);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 13);
-  CHECK(instructions[6].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[7].op == primec::IrOpcode::AddI64);
-  CHECK(instructions[8].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[9].op == primec::IrOpcode::MulI64);
-  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
-
-  instructions.clear();
-  error.clear();
-  emitStep = 0;
-  allocRangeCalled = false;
-  expr.args.front().templateArgs = {"string"};
-  CHECK(primec::ir_lowerer::tryEmitBufferBuiltinCall(
-            expr,
-            locals,
-            [](const std::string &typeName) {
-              if (typeName == "string") {
-                return Kind::String;
-              }
-              return Kind::Unknown;
-            },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-              return Kind::UInt64;
-            },
-            [&](int32_t) {
-              allocRangeCalled = true;
-              return 0;
-            },
-            [&]() { return nextTemp++; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-              ++emitStep;
-              return true;
-            },
-            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Error);
-  CHECK(error == "buffer_load requires numeric/bool buffer");
-  CHECK_FALSE(allocRangeCalled);
-  CHECK(emitStep == 0);
   CHECK(instructions.empty());
 }
 

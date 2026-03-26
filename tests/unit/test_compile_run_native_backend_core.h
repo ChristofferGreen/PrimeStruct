@@ -752,7 +752,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 30);
+  CHECK(runCommand(exePath) == 24);
 }
 
 TEST_CASE("native rejects variadic borrowed Result packs until IR arg-pack Result materialization lands") {
@@ -7763,7 +7763,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("native backend compiles Buffer Result payloads on IR-backed paths") {
+TEST_CASE("native backend supports Buffer Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -7773,23 +7773,61 @@ make_buffer() {
   return(Result.ok(/std/gfx/Buffer/upload(values)))
 }
 
-[effects(io_err)]
-log_gfx_error([GfxError] err) {
-  print_line_error(err.why())
+[return<int> on_error<GfxError, /swallow_gfx_error>]
+consume_error() {
+  [GfxError] err{queueSubmitFailed()}
+  [Result<Buffer<i32>, GfxError>] failed{err.result<Buffer<i32>>()}
+  [Buffer<i32>] unreachable{try(failed)}
+  return(unreachable.count())
 }
 
-[return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
+[effects(io_err)]
+swallow_gfx_error([GfxError] err) {}
+
+[return<int> effects(gpu_dispatch) on_error<GfxError, /swallow_gfx_error>]
 main() {
-  [Buffer<i32>] direct{try(make_buffer())}
-  [Buffer<i32>] mappedValue{
-    try(Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) }))
+  [Result<Buffer<i32>, GfxError>] directStatus{make_buffer()}
+  [Result<Buffer<i32>, GfxError>] mappedStatus{
+    Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) })
   }
-  [Buffer<i32>] chainedValue{
-    try(Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) }))
+  [Result<Buffer<i32>, GfxError>] chainedStatus{
+    Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) })
   }
-  [Buffer<i32>] combinedValue{
-    try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) }))
+  [Result<Buffer<i32>, GfxError>] combinedStatus{
+    Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) })
   }
+  [GfxError] err{queueSubmitFailed()}
+  [Result<Buffer<i32>, GfxError>] failedStatus{err.result<Buffer<i32>>()}
+
+  if(Result.error(directStatus)) {
+    return(1i32)
+  }
+  if(Result.error(mappedStatus)) {
+    return(2i32)
+  }
+  if(Result.error(chainedStatus)) {
+    return(3i32)
+  }
+  if(Result.error(combinedStatus)) {
+    return(4i32)
+  }
+  if(not(Result.error(failedStatus))) {
+    return(5i32)
+  }
+  if(not(equal(count(Result.why(directStatus)), 0i32))) {
+    return(6i32)
+  }
+  if(not(equal(count(Result.why(failedStatus)), 19i32))) {
+    return(7i32)
+  }
+  if(not(equal(consume_error(), 8i32))) {
+    return(8i32)
+  }
+
+  [Buffer<i32>] direct{try(directStatus)}
+  [Buffer<i32>] mappedValue{try(mappedStatus)}
+  [Buffer<i32>] chainedValue{try(chainedStatus)}
+  [Buffer<i32>] combinedValue{try(combinedStatus)}
   [array<i32>] directOut{direct.readback()}
   [array<i32>] mappedOut{mappedValue.readback()}
   [array<i32>] chainedOut{chainedValue.readback()}
@@ -7800,9 +7838,13 @@ main() {
   const std::string srcPath = writeTemp("compile_native_result_buffer_payload_ir_backed.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_result_buffer_payload_ir_backed").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_buffer_payload_ir_backed_out.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 10);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("native backend rejects auto-bound direct Result combinator try consumers") {
@@ -7934,7 +7976,7 @@ main_fail() {
   CHECK(runCommand(compileFailCmd) == 0);
   CHECK(runCommand(okExePath) == 9);
   CHECK(runCommand(failExePath + " 2> " + errPath) == 7);
-  CHECK(readFile(errPath).empty());
+  CHECK(readFile(errPath) == "frame_acquire_failed\n");
 }
 
 TEST_CASE("native backend supports string Result.ok payloads through try") {

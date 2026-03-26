@@ -7,15 +7,15 @@
 #include <string>
 #include <vector>
 
+#include "IrLowererFlowHelpers.h"
 #include "IrLowererSharedTypes.h"
+#include "IrLowererResultHelpers.h"
 #include "primec/Ast.h"
 #include "primec/Ir.h"
 
 namespace primec::ir_lowerer {
 
-struct LayoutFieldBinding;
 struct StructSlotLayoutInfo;
-struct StructSlotFieldInfo;
 struct UninitializedStorageAccessInfo;
 struct PrintBuiltin;
 
@@ -115,21 +115,6 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                      &resolveMethodCallDefinition = {},
                                  const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
                                  const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo = {});
-bool inferInlineParameterExprLocalInfo(
-    const Expr &expr,
-    const LocalMap &localsForKindInference,
-    const InferBindingExprKindFn &inferExprKind,
-    const ApplyStructBindingInfoFn &applyStructArrayInfo,
-    const ApplyStructBindingInfoFn &applyStructValueInfo,
-    LocalInfo &infoOut,
-    std::string &error,
-    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition = {},
-    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
-    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath = {},
-    const std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>
-        &resolveStructFieldBinding = {},
-    const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
-        &resolveStructFieldSlot = {});
 bool emitStringStatementBindingInitializer(const Expr &stmt,
                                            const Expr &init,
                                            LocalMap &localsIn,
@@ -172,11 +157,12 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const std::optional<ReturnStatementInlineContext> &inlineContext,
-    bool declaredReturnIsReferenceHandle,
+    const std::optional<ResultReturnInfo> &resultReturnInfo,
     bool definitionReturnsVoid,
     bool &sawReturn,
     const EmitExprForBindingFn &emitExpr,
     const InferBindingExprKindFn &inferExprKind,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
     const std::function<void()> &emitFileScopeCleanupAll,
     std::string &error);

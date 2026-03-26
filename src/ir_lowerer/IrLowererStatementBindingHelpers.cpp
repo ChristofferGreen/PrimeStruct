@@ -6,7 +6,6 @@
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererStringCallHelpers.h"
 #include "IrLowererStringLiteralHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
@@ -66,13 +65,6 @@ bool hasSoaVectorTypeTransform(const Expr &expr) {
   return false;
 }
 
-void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut);
-void applyArgsPackElementStructMetadata(const Expr &param,
-                                        const std::string &typeText,
-                                        const ApplyStructBindingInfoFn &applyStructArrayInfo,
-                                        const ApplyStructBindingInfoFn &applyStructValueInfo,
-                                        LocalInfo &infoOut);
-
 bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut) {
   typeTextOut.clear();
   for (const auto &transform : expr.transforms) {
@@ -92,6 +84,18 @@ bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut) 
     return !typeTextOut.empty();
   }
   return false;
+}
+
+bool isExplicitPackedResultLiteral(const Expr &expr) {
+  return expr.kind == Expr::Kind::Literal && !expr.isUnsigned && expr.intWidth == 64 &&
+         expr.literalValue == 4294967296ull;
+}
+
+bool isExplicitPackedResultReturnExpr(const Expr &expr) {
+  if (!(expr.kind == Expr::Kind::Call && isSimpleCallName(expr, "multiply") && expr.args.size() == 2)) {
+    return false;
+  }
+  return isExplicitPackedResultLiteral(expr.args[0]) || isExplicitPackedResultLiteral(expr.args[1]);
 }
 
 bool inferCallParameterDefaultResultInfo(const Expr &expr,
@@ -117,81 +121,6 @@ bool inferCallParameterDefaultResultInfo(const Expr &expr,
       lookupReturnInfo,
       [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
       infoOut);
-}
-
-bool inferIndexedArgsPackElementLocalInfo(const Expr &expr,
-                                          const LocalMap &localsForKindInference,
-                                          LocalInfo &infoOut) {
-  std::string accessName;
-  if (!getBuiltinArrayAccessName(expr, accessName) || accessName.empty() || expr.args.size() != 2 ||
-      expr.args.front().kind != Expr::Kind::Name) {
-    return false;
-  }
-
-  auto it = localsForKindInference.find(expr.args.front().name);
-  if (it == localsForKindInference.end() || !it->second.isArgsPack) {
-    return false;
-  }
-
-  infoOut = it->second;
-  infoOut.kind = (infoOut.argsPackElementKind == LocalInfo::Kind::Value) ? LocalInfo::Kind::Value
-                                                                          : infoOut.argsPackElementKind;
-  infoOut.isArgsPack = false;
-  infoOut.argsPackElementKind = LocalInfo::Kind::Value;
-  infoOut.argsPackElementCount = -1;
-  return true;
-}
-
-bool inferFieldAccessLocalInfo(const Expr &expr,
-                               const LocalMap &localsForKindInference,
-                               const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
-                               const std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>
-                                   &resolveStructFieldBinding,
-                               const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
-                                   &resolveStructFieldSlot,
-                               const ApplyStructBindingInfoFn &applyStructArrayInfo,
-                               const ApplyStructBindingInfoFn &applyStructValueInfo,
-                               LocalInfo &infoOut) {
-  if (!expr.isFieldAccess || expr.args.size() != 1 || !inferStructExprPath) {
-    return false;
-  }
-
-  const std::string receiverStruct = inferStructExprPath(expr.args.front(), localsForKindInference);
-  if (receiverStruct.empty()) {
-    return false;
-  }
-
-  LayoutFieldBinding fieldBinding;
-  if (resolveStructFieldBinding && resolveStructFieldBinding(receiverStruct, expr.name, fieldBinding)) {
-    const std::string fieldTypeText = formatLayoutFieldEnvelope(fieldBinding);
-    infoOut = LocalInfo{};
-    applyArgsPackElementMetadata(fieldTypeText, infoOut);
-    applyArgsPackElementStructMetadata(expr, fieldTypeText, applyStructArrayInfo, applyStructValueInfo, infoOut);
-    infoOut.kind = (infoOut.argsPackElementKind == LocalInfo::Kind::Value) ? LocalInfo::Kind::Value
-                                                                            : infoOut.argsPackElementKind;
-    infoOut.isArgsPack = false;
-    infoOut.argsPackElementKind = LocalInfo::Kind::Value;
-    if (infoOut.kind != LocalInfo::Kind::Value || infoOut.valueKind != LocalInfo::ValueKind::Unknown ||
-        !infoOut.structTypeName.empty() || infoOut.isFileHandle || infoOut.isFileError ||
-        infoOut.isResult) {
-      return true;
-    }
-  }
-
-  if (!resolveStructFieldSlot) {
-    return false;
-  }
-
-  StructSlotFieldInfo fieldInfo;
-  if (!resolveStructFieldSlot(receiverStruct, expr.name, fieldInfo)) {
-    return false;
-  }
-
-  infoOut = LocalInfo{};
-  infoOut.kind = LocalInfo::Kind::Value;
-  infoOut.valueKind = fieldInfo.valueKind;
-  infoOut.structTypeName = fieldInfo.structPath;
-  return infoOut.valueKind != LocalInfo::ValueKind::Unknown || !infoOut.structTypeName.empty();
 }
 
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut) {
@@ -951,89 +880,6 @@ bool inferCallParameterLocalInfo(const Expr &param,
   return true;
 }
 
-bool inferInlineParameterExprLocalInfo(
-    const Expr &expr,
-    const LocalMap &localsForKindInference,
-    const InferBindingExprKindFn &inferExprKind,
-    const ApplyStructBindingInfoFn &applyStructArrayInfo,
-    const ApplyStructBindingInfoFn &applyStructValueInfo,
-    LocalInfo &infoOut,
-    std::string &error,
-    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
-    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
-    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
-    const std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>
-        &resolveStructFieldBinding,
-    const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
-        &resolveStructFieldSlot) {
-  infoOut = LocalInfo{};
-  error.clear();
-
-  if (expr.kind == Expr::Kind::Name) {
-    auto it = localsForKindInference.find(expr.name);
-    if (it == localsForKindInference.end()) {
-      return false;
-    }
-    infoOut = it->second;
-    return true;
-  }
-
-  if (expr.kind != Expr::Kind::Call) {
-    return false;
-  }
-
-  if (inferIndexedArgsPackElementLocalInfo(expr, localsForKindInference, infoOut)) {
-    return true;
-  }
-
-  if (inferFieldAccessLocalInfo(
-          expr,
-          localsForKindInference,
-          inferStructExprPath,
-          resolveStructFieldBinding,
-          resolveStructFieldSlot,
-          applyStructArrayInfo,
-          applyStructValueInfo,
-          infoOut)) {
-    return true;
-  }
-
-  const Definition *callee = nullptr;
-  if (expr.isMethodCall && resolveMethodCallDefinition) {
-    callee = resolveMethodCallDefinition(expr, localsForKindInference);
-  } else if (resolveDefinitionCall) {
-    callee = resolveDefinitionCall(expr);
-  }
-  if (callee == nullptr) {
-    return false;
-  }
-
-  std::string returnTypeText;
-  for (const auto &transform : callee->transforms) {
-    if (transform.name != "return" || transform.templateArgs.size() != 1) {
-      continue;
-    }
-    returnTypeText = trimTemplateTypeText(transform.templateArgs.front());
-    break;
-  }
-  if (returnTypeText.empty() || returnTypeText == "void" || returnTypeText == "auto") {
-    return false;
-  }
-
-  infoOut.valueKind = inferExprKind(expr, localsForKindInference);
-  applyArgsPackElementMetadata(returnTypeText, infoOut);
-  applyArgsPackElementStructMetadata(expr, returnTypeText, applyStructArrayInfo, applyStructValueInfo, infoOut);
-  infoOut.kind = (infoOut.argsPackElementKind == LocalInfo::Kind::Value) ? LocalInfo::Kind::Value
-                                                                          : infoOut.argsPackElementKind;
-  infoOut.isArgsPack = false;
-  infoOut.argsPackElementKind = LocalInfo::Kind::Value;
-  if (infoOut.valueKind == LocalInfo::ValueKind::Unknown && !infoOut.structTypeName.empty()) {
-    infoOut.valueKind = LocalInfo::ValueKind::Int64;
-  }
-  return infoOut.kind != LocalInfo::Kind::Value || infoOut.valueKind != LocalInfo::ValueKind::Unknown ||
-         !infoOut.structTypeName.empty() || infoOut.isFileHandle || infoOut.isFileError || infoOut.isResult;
-}
-
 bool selectUninitializedStorageZeroInstruction(LocalInfo::Kind kind,
                                                LocalInfo::ValueKind valueKind,
                                                const std::string &bindingName,
@@ -1382,11 +1228,12 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const std::optional<ReturnStatementInlineContext> &inlineContext,
-    bool declaredReturnIsReferenceHandle,
+    const std::optional<ResultReturnInfo> &resultReturnInfo,
     bool definitionReturnsVoid,
     bool &sawReturn,
     const EmitExprForBindingFn &emitExpr,
     const InferBindingExprKindFn &inferExprKind,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
     const std::function<void()> &emitFileScopeCleanupAll,
     std::string &error) {
@@ -1399,6 +1246,25 @@ ReturnStatementEmitResult tryEmitReturnStatement(
            kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool ||
            kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::Float64 ||
            kind == LocalInfo::ValueKind::String;
+  };
+
+  auto shouldPackResultErrorReturn = [&](const Expr &valueExpr) {
+    if (!resultReturnInfo.has_value() || !resultReturnInfo->isResult || !resultReturnInfo->hasValue) {
+      return false;
+    }
+    if (isExplicitPackedResultReturnExpr(valueExpr)) {
+      return false;
+    }
+    if (!resolveResultExprInfo) {
+      return true;
+    }
+    ResultExprInfo resultExprInfo;
+    return !(resolveResultExprInfo(valueExpr, localsIn, resultExprInfo) && resultExprInfo.isResult);
+  };
+
+  auto emitPackedResultErrorReturn = [&]() {
+    instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+    instructions.push_back({IrOpcode::MulI64, 0});
   };
 
   if (inlineContext.has_value()) {
@@ -1429,32 +1295,11 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     }
 
     const Expr &valueExpr = stmt.args.front();
-    auto emitOpaqueReturnHandle = [&](const Expr &exprIn) -> bool {
-      if (context.returnsArray || exprIn.kind != Expr::Kind::Name) {
-        return false;
-      }
-      auto it = localsIn.find(exprIn.name);
-      if (it == localsIn.end()) {
-        return false;
-      }
-      const LocalInfo &info = it->second;
-      const bool isOpaqueHandle =
-          info.kind == LocalInfo::Kind::Pointer ||
-          (declaredReturnIsReferenceHandle && info.kind == LocalInfo::Kind::Reference) ||
-          info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
-          info.kind == LocalInfo::Kind::Map || info.kind == LocalInfo::Kind::Buffer ||
-          !info.structTypeName.empty() || info.referenceToArray || info.pointerToArray ||
-          info.referenceToVector || info.pointerToVector || info.referenceToBuffer || info.pointerToBuffer ||
-          info.referenceToMap || info.pointerToMap || info.isFileHandle || info.isResult;
-      if (!isOpaqueHandle) {
-        return false;
-      }
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(info.index)});
-      return true;
-    };
-
-    if (!emitOpaqueReturnHandle(valueExpr) && !emitExpr(valueExpr, localsIn)) {
+    if (!emitExpr(valueExpr, localsIn)) {
       return ReturnStatementEmitResult::Error;
+    }
+    if (shouldPackResultErrorReturn(valueExpr)) {
+      emitPackedResultErrorReturn();
     }
 
     if (context.returnsArray) {
@@ -1526,32 +1371,11 @@ ReturnStatementEmitResult tryEmitReturnStatement(
   }
 
   const Expr &valueExpr = stmt.args.front();
-  auto emitOpaqueReturnHandle = [&](const Expr &exprIn) -> bool {
-    if (exprIn.kind != Expr::Kind::Name) {
-      return false;
-    }
-    auto it = localsIn.find(exprIn.name);
-    if (it == localsIn.end()) {
-      return false;
-    }
-    const LocalInfo &info = it->second;
-    const bool isOpaqueHandle =
-        info.kind == LocalInfo::Kind::Pointer ||
-        (declaredReturnIsReferenceHandle && info.kind == LocalInfo::Kind::Reference) ||
-        info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
-        info.kind == LocalInfo::Kind::Map || info.kind == LocalInfo::Kind::Buffer || !info.structTypeName.empty() ||
-        info.referenceToArray || info.pointerToArray || info.referenceToVector || info.pointerToVector ||
-        info.referenceToBuffer || info.pointerToBuffer || info.referenceToMap || info.pointerToMap ||
-        info.isFileHandle || info.isResult;
-    if (!isOpaqueHandle) {
-      return false;
-    }
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(info.index)});
-    return true;
-  };
-
-  if (!emitOpaqueReturnHandle(valueExpr) && !emitExpr(valueExpr, localsIn)) {
+  if (!emitExpr(valueExpr, localsIn)) {
     return ReturnStatementEmitResult::Error;
+  }
+  if (shouldPackResultErrorReturn(valueExpr)) {
+    emitPackedResultErrorReturn();
   }
   if (emitFileScopeCleanupAll) {
     emitFileScopeCleanupAll();

@@ -1016,9 +1016,6 @@ bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
                          int32_t srcPtrLocal,
                          int32_t slotCount,
                          const std::function<int32_t()> &allocTempLocal);
-void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-                                        int32_t srcPtrLocal,
-                                        const std::string &structTypeName);
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        LocalInfo::ValueKind kind,
                        bool equals,
@@ -1796,8 +1793,6 @@ using EmitInlineParameterStringValueFn =
 using InferInlineParameterStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using InferInlineParameterExprKindFn =
     std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
-using InferInlineParameterExprLocalInfoFn =
-    std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)>;
 using ResolveInlineParameterStructSlotLayoutFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
 using EmitInlineParameterExprFn = std::function<bool(const Expr &, const LocalMap &)>;
 using EmitInlineParameterStructCopySlotsFn = std::function<bool(int32_t, int32_t, int32_t)>;
@@ -1824,8 +1819,7 @@ bool emitInlineDefinitionCallParameters(
     const AllocInlineParameterTempLocalFn &allocTempLocal,
     const EmitInlineParameterInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
-    std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {});
+    std::string &error);
 
 // END IrLowererInlineParamHelpers.h
 
@@ -1838,13 +1832,11 @@ using ResolveInlineStructSlotLayoutFn = std::function<bool(const std::string &, 
 using InferInlineStructExprKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using InferInlineStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using EmitInlineStructExprFn = std::function<bool(const Expr &, const LocalMap &)>;
-using InferInlineStructFieldLocalInfoFn = std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)>;
 using EmitInlineStructCopySlotsFn = std::function<bool(int32_t, int32_t, int32_t)>;
 using AllocInlineStructTempLocalFn = std::function<int32_t()>;
 using EmitInlineStructInstructionFn = std::function<void(IrOpcode, uint64_t)>;
 
 bool emitInlineStructDefinitionArguments(const std::string &calleePath,
-                                         const std::vector<Expr> &params,
                                          const std::vector<const Expr *> &orderedArgs,
                                          const LocalMap &callerLocals,
                                          bool requireValue,
@@ -1853,12 +1845,10 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          const InferInlineStructExprKindFn &inferExprKind,
                                          const InferInlineStructExprPathFn &inferStructExprPath,
                                          const EmitInlineStructExprFn &emitExpr,
-                                         const InferInlineStructFieldLocalInfoFn &inferFieldLocalInfo,
                                          const EmitInlineStructCopySlotsFn &emitStructCopySlots,
                                          const AllocInlineStructTempLocalFn &allocTempLocal,
                                          const EmitInlineStructInstructionFn &emitInstruction,
-                                         std::string &error,
-                                         std::optional<int32_t> destBaseLocal = std::nullopt);
+                                         std::string &error);
 
 // END IrLowererInlineStructArgHelpers.h
 
@@ -3572,8 +3562,6 @@ using ResolveConversionsAndCallsStructTypeNameFn =
 using ResolveConversionsAndCallsStructSlotCountFn = std::function<bool(const std::string &, int32_t &)>;
 using ResolveConversionsAndCallsStructFieldInfoFn =
     std::function<bool(const std::string &, const std::string &, int32_t &, int32_t &, std::string &)>;
-using ResolveConversionsAndCallsStructFieldBindingFn =
-    std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>;
 using EmitConversionsAndCallsStructCopyFromPtrsFn = std::function<bool(int32_t, int32_t, int32_t)>;
 using HasConversionsAndCallsNamedArgumentsFn =
     std::function<bool(const std::vector<std::optional<std::string>> &)>;
@@ -3611,12 +3599,10 @@ bool emitConversionsAndCallsOperatorExpr(
     const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
     const ResolveConversionsAndCallsStructSlotCountFn &resolveStructSlotCount,
     const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
-    const ResolveConversionsAndCallsStructFieldBindingFn &resolveStructFieldBinding,
     const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
     std::vector<IrInstruction> &instructions,
     bool &handled,
-    std::string &error,
-    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall = {});
+    std::string &error);
 
 bool emitConversionsAndCallsControlExprTail(
     const Expr &expr,
@@ -3816,7 +3802,7 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
 bool emitResultWhyLocalsFromValueExpr(
     const Expr &valueExpr,
     const LocalMap &localsIn,
-    bool resultHasValue,
+    const ResultExprInfo &resultInfo,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -3838,6 +3824,7 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::vector<IrInstruction> *instructionsOut,
     std::string &error);
 ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     const Expr &expr,
@@ -3856,6 +3843,7 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::vector<IrInstruction> *instructionsOut,
     std::string &error);
 ResultWhyExprOps makeResultWhyExprOps(
     int32_t errorLocal,
@@ -3894,8 +3882,15 @@ bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
 void emitResultWhyErrorLocalFromResult(
     int32_t resultLocal,
-    bool resultHasValue,
+    const ResultExprInfo &resultInfo,
     int32_t errorLocal,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+void emitPackedResultPayloadLocalFromResult(
+    int32_t resultLocal,
+    const ResultExprInfo &resultInfo,
+    int32_t errorLocal,
+    int32_t payloadLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 bool emitResultWhyEmptyString(
     const std::function<int32_t(const std::string &)> &internString,
@@ -4043,21 +4038,6 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                      &resolveMethodCallDefinition = {},
                                  const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
                                  const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo = {});
-bool inferInlineParameterExprLocalInfo(
-    const Expr &expr,
-    const LocalMap &localsForKindInference,
-    const InferBindingExprKindFn &inferExprKind,
-    const ApplyStructBindingInfoFn &applyStructArrayInfo,
-    const ApplyStructBindingInfoFn &applyStructValueInfo,
-    LocalInfo &infoOut,
-    std::string &error,
-    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition = {},
-    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
-    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath = {},
-    const std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>
-        &resolveStructFieldBinding = {},
-    const std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>
-        &resolveStructFieldSlot = {});
 bool emitStringStatementBindingInitializer(const Expr &stmt,
                                            const Expr &init,
                                            LocalMap &localsIn,
@@ -4100,11 +4080,12 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const std::optional<ReturnStatementInlineContext> &inlineContext,
-    bool declaredReturnIsReferenceHandle,
+    const std::optional<ResultReturnInfo> &resultReturnInfo,
     bool definitionReturnsVoid,
     bool &sawReturn,
     const EmitExprForBindingFn &emitExpr,
     const InferBindingExprKindFn &inferExprKind,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
     const std::function<void()> &emitFileScopeCleanupAll,
     std::string &error);

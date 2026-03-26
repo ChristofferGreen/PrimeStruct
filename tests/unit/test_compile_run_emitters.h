@@ -1168,7 +1168,7 @@ main_fail() {
   CHECK(runCommand(compileFailCmd) == 0);
   CHECK(runCommand(okExePath) == 9);
   CHECK(runCommand(failExePath + " 2> " + errPath) == 7);
-  CHECK(readFile(errPath).empty());
+  CHECK(readFile(errPath) == "frame_acquire_failed\n");
 }
 
 TEST_CASE("C++ emitter renders static fields and visibility") {

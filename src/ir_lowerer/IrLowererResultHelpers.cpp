@@ -57,6 +57,10 @@ bool isBufferHandleCall(const Expr &expr) {
          expr.name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
 }
 
+bool usesInlineBufferResultErrorDiscriminator(const ResultExprInfo &resultInfo) {
+  return resultInfo.hasValue && resultInfo.valueCollectionKind == LocalInfo::Kind::Buffer;
+}
+
 bool extractResultValueTypeText(const std::string &typeText, std::string &valueTypeOut) {
   valueTypeOut.clear();
   std::string base;
@@ -1477,7 +1481,7 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
   if (!emitResultWhyLocalsFromValueExpr(
           expr.args[1],
           localsIn,
-          resultInfo.hasValue,
+          resultInfo,
           emitExpr,
           allocTempLocal,
           emitInstruction,
@@ -1510,6 +1514,7 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::vector<IrInstruction> *instructionsOut,
     std::string &error) {
   if (!(expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
         expr.args.front().name == "Result" && expr.name == "why")) {
@@ -1526,7 +1531,7 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
   if (!emitResultWhyLocalsFromValueExpr(
           expr.args[1],
           localsIn,
-          resultInfo.hasValue,
+          resultInfo,
           emitExpr,
           allocTempLocal,
           emitInstruction,
@@ -1541,6 +1546,43 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
       internString,
       allocTempLocal,
       emitInstruction);
+
+  if (instructionsOut != nullptr) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+    emitInstruction(IrOpcode::PushI64, 0);
+    emitInstruction(IrOpcode::CmpEqI64, 0);
+    const size_t jumpNonEmptyIndex = instructionsOut->size();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    if (!resultWhyExprOps.emitEmptyString()) {
+      return ResultWhyMethodCallEmitResult::Error;
+    }
+    const size_t jumpEndIndex = instructionsOut->size();
+    emitInstruction(IrOpcode::Jump, 0);
+    const size_t nonEmptyIndex = instructionsOut->size();
+    (*instructionsOut)[jumpNonEmptyIndex].imm = static_cast<int32_t>(nonEmptyIndex);
+
+    if (!emitResultWhyCallWithComposedOps(
+            expr,
+            resultInfo,
+            localsIn,
+            errorLocal,
+            defMap,
+            resultWhyExprOps,
+            resolveStructTypeName,
+            getReturnInfo,
+            bindingKind,
+            resolveStructSlotLayout,
+            valueKindFromTypeName,
+            emitInlineDefinitionCall,
+            emitFileErrorWhy,
+            error)) {
+      return ResultWhyMethodCallEmitResult::Error;
+    }
+
+    const size_t endIndex = instructionsOut->size();
+    (*instructionsOut)[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
+    return ResultWhyMethodCallEmitResult::Emitted;
+  }
 
   return emitResultWhyCallWithComposedOps(
              expr,
@@ -1578,6 +1620,7 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::vector<IrInstruction> *instructionsOut,
     std::string &error) {
   const ResultWhyMethodCallEmitResult resultWhyCallResult = tryEmitResultWhyCall(
       expr,
@@ -1596,6 +1639,7 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
       valueKindFromTypeName,
       emitInlineDefinitionCall,
       emitFileErrorWhy,
+      instructionsOut,
       error);
   if (resultWhyCallResult == ResultWhyMethodCallEmitResult::Emitted) {
     return ResultWhyDispatchEmitResult::Emitted;
@@ -1626,7 +1670,7 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
 bool emitResultWhyLocalsFromValueExpr(
     const Expr &valueExpr,
     const LocalMap &localsIn,
-    bool resultHasValue,
+    const ResultExprInfo &resultInfo,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -1639,7 +1683,7 @@ bool emitResultWhyLocalsFromValueExpr(
   emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal));
   errorLocalOut = allocTempLocal();
   emitResultWhyErrorLocalFromResult(
-      resultLocal, resultHasValue, errorLocalOut, emitInstruction);
+      resultLocal, resultInfo, errorLocalOut, allocTempLocal, emitInstruction);
   return true;
 }
 
@@ -1764,15 +1808,56 @@ std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo:
 
 void emitResultWhyErrorLocalFromResult(
     int32_t resultLocal,
-    bool resultHasValue,
+    const ResultExprInfo &resultInfo,
     int32_t errorLocal,
+    const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  if (usesInlineBufferResultErrorDiscriminator(resultInfo)) {
+    const int32_t upperLocal = allocTempLocal();
+    const int32_t lowerLocal = allocTempLocal();
+    const int32_t isErrorLocal = allocTempLocal();
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal));
+    emitInstruction(IrOpcode::PushI64, 4294967296ull);
+    emitInstruction(IrOpcode::DivI64, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(upperLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal));
+    emitInstruction(IrOpcode::PushI64, 4294967296ull);
+    emitInstruction(IrOpcode::MulI64, 0);
+    emitInstruction(IrOpcode::SubI64, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(lowerLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(lowerLocal));
+    emitInstruction(IrOpcode::PushI64, 0);
+    emitInstruction(IrOpcode::CmpEqI64, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(isErrorLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(isErrorLocal));
+    emitInstruction(IrOpcode::MulI64, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+    return;
+  }
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal));
-  if (resultHasValue) {
+  if (resultInfo.hasValue) {
     emitInstruction(IrOpcode::PushI64, 4294967296ull);
     emitInstruction(IrOpcode::DivI64, 0);
   }
   emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+}
+
+void emitPackedResultPayloadLocalFromResult(
+    int32_t resultLocal,
+    const ResultExprInfo &resultInfo,
+    int32_t errorLocal,
+    int32_t payloadLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal));
+  if (!usesInlineBufferResultErrorDiscriminator(resultInfo)) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+    emitInstruction(IrOpcode::PushI64, 4294967296ull);
+    emitInstruction(IrOpcode::MulI64, 0);
+    emitInstruction(IrOpcode::SubI64, 0);
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(payloadLocal));
 }
 
 bool emitResultWhyEmptyString(
