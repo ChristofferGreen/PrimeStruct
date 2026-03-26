@@ -4,6 +4,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `arg-pack-dereference-struct-inference`: IR struct-type inference now
+  propagates through `dereference(...)`, so indexed borrowed arg-pack values
+  (for example `args<Reference<Map<K, V>>>`) preserve their struct identity
+  when forwarded directly into helper calls instead of failing with
+  `<unknown>` struct-parameter mismatches.
 - `experimental-vector-negative-index-guard`: `/std/collections/experimental_vector/*`
   checked access now rejects negative indices via `vectorCheckIndex` (same
   bounds-error path as high indices), and `vectorAtUnsafe` now routes through
