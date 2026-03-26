@@ -6,9 +6,10 @@ BUILD_DIR="$ROOT_DIR/build-debug"
 BUILD_TYPE="Debug"
 FAST_MODE=0
 FAST_TEST_THRESHOLD_SECONDS=10
+SKIP_TESTS=0
 
 usage() {
-  echo "Usage: ./scripts/compile.sh [--release] [--fast]" >&2
+  echo "Usage: ./scripts/compile.sh [--release] [--fast] [--skip-tests]" >&2
 }
 
 detect_jobs() {
@@ -60,6 +61,9 @@ for arg in "$@"; do
     --fast)
       FAST_MODE=1
       ;;
+    --skip-tests)
+      SKIP_TESTS=1
+      ;;
     *)
       usage
       exit 2
@@ -74,6 +78,11 @@ cmake -S "$ROOT_DIR" -B "$BUILD_DIR" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 cmake --build "$BUILD_DIR" --parallel "$JOBS"
+
+if [[ "$SKIP_TESTS" -eq 1 ]]; then
+  echo "Skipping tests."
+  exit 0
+fi
 
 ctest_args=(
   --test-dir "$BUILD_DIR"
