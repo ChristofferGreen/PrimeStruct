@@ -745,11 +745,16 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
   } else if (mode == "remove_at_oob") {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorSingle<i32>(4i32)}\n";
     source += "  vectorRemoveAt<i32>(values, 1i32)\n";
+  } else if (mode == "at_negative_index") {
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
+    source += "  return(vectorAt<i32>(values, -1i32))\n";
   } else {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorSingle<i32>(4i32)}\n";
     source += "  vectorRemoveSwap<i32>(values, 1i32)\n";
   }
-  source += "  return(0i32)\n";
+  if (mode != "at_negative_index") {
+    source += "  return(0i32)\n";
+  }
   source += "}\n";
   return source;
 }

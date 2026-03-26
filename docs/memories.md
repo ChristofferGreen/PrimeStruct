@@ -4,7 +4,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
-_No durable session memories recorded yet._
+- `experimental-vector-negative-index-guard`: `/std/collections/experimental_vector/*`
+  checked access now rejects negative indices via `vectorCheckIndex` (same
+  bounds-error path as high indices) instead of falling through to invalid
+  pointer arithmetic.
 
 ## Maintenance Notes
 

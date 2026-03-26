@@ -114,7 +114,7 @@ namespace std {
 
   [return<void>]
   vectorCheckIndex<T>([Vector<T>] values, [i32] index) {
-    if(not(less_than(index, values.field_count())),
+    if(or(less_than(index, 0i32), not(less_than(index, values.field_count()))),
        then() {
          [vector<i32>] empty{/vector/vector<i32>()}
          empty[index]
