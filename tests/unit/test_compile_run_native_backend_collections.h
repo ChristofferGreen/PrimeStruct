@@ -1027,7 +1027,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles native bare map contains call without imported canonical helper") {
+TEST_CASE("rejects native bare map contains call without imported canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 main() {
@@ -1045,9 +1045,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("compiles native bare map contains method without imported canonical helper") {

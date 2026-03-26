@@ -13,6 +13,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/experimental_vector/vectorPush` now diverts capacity-
   doubling overflow into the shared runtime-contract path instead of letting
   the doubled capacity wrap or continue into unchecked growth.
+- `map-bare-contains-canonical-helper-contract`: bare-root
+  `contains(values, key)` on builtin `map<K, V>` now rejects with
+  `unknown call target: /std/collections/map/contains` unless a canonical
+  helper is imported or explicitly defined, matching the same-path contract
+  already enforced for the surrounding bare-root map helpers.
 
 ## Maintenance Notes
 
