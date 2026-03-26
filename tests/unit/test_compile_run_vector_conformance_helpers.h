@@ -748,6 +748,9 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
   } else if (mode == "at_negative_index") {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
     source += "  return(vectorAt<i32>(values, -1i32))\n";
+  } else if (mode == "at_unsafe_negative_index") {
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
+    source += "  return(vectorAtUnsafe<i32>(values, -1i32))\n";
   } else if (mode == "reserve_negative") {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
     source += "  vectorReserve<i32>(values, -1i32)\n";
@@ -755,7 +758,7 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorSingle<i32>(4i32)}\n";
     source += "  vectorRemoveSwap<i32>(values, 1i32)\n";
   }
-  if (mode != "at_negative_index") {
+  if (mode != "at_negative_index" && mode != "at_unsafe_negative_index") {
     source += "  return(0i32)\n";
   }
   source += "}\n";

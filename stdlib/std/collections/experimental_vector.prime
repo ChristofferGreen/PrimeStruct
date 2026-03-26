@@ -287,6 +287,12 @@ namespace std {
 
   [public return<T>]
   vectorAtUnsafe<T>([Vector<T>] values, [i32] index) {
+    if(less_than(index, 0i32),
+       then() {
+         [vector<i32>] empty{/vector/vector<i32>()}
+         empty[index]
+       },
+       else() { })
     return(vectorBorrowSlot<T>(values, index))
   }
   }

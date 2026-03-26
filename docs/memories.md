@@ -6,8 +6,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 - `experimental-vector-negative-index-guard`: `/std/collections/experimental_vector/*`
   checked access now rejects negative indices via `vectorCheckIndex` (same
-  bounds-error path as high indices) instead of falling through to invalid
-  pointer arithmetic.
+  bounds-error path as high indices), and `vectorAtUnsafe` now also rejects
+  negative indices explicitly, so negative indices no longer fall through to
+  invalid pointer arithmetic/indirect-address traps.
 
 ## Maintenance Notes
 
