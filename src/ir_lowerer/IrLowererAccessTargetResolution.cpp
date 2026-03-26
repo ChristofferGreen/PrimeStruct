@@ -263,6 +263,16 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const LocalMap &localsIn,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo) {
   ArrayVectorAccessTargetInfo info;
+  const auto elementSlotCountForLocal = [](const LocalInfo &localInfo) {
+    if (localInfo.isArgsPack) {
+      const bool isInlineStructPack =
+          localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
+          !localInfo.structTypeName.empty() &&
+          localInfo.structSlotCount > 0;
+      return isInlineStructPack ? localInfo.structSlotCount : 1;
+    }
+    return localInfo.structSlotCount;
+  };
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
     if (it != localsIn.end() &&
@@ -273,7 +283,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isSoaVector = it->second.isSoaVector;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
-      info.elemSlotCount = it->second.structSlotCount;
+      info.elemSlotCount = elementSlotCountForLocal(it->second);
       info.structTypeName = it->second.structTypeName;
       return info;
     }
@@ -285,7 +295,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isSoaVector = it->second.isSoaVector;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
-      info.elemSlotCount = it->second.structSlotCount;
+      info.elemSlotCount = elementSlotCountForLocal(it->second);
       info.structTypeName = it->second.structTypeName;
       return info;
     }
@@ -295,7 +305,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isVectorTarget = false;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
-      info.elemSlotCount = it->second.structSlotCount;
+      info.elemSlotCount = elementSlotCountForLocal(it->second);
       info.structTypeName = it->second.structTypeName;
       return info;
     }
@@ -306,7 +316,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isSoaVector = it->second.isSoaVector;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
-      info.elemSlotCount = it->second.structSlotCount;
+      info.elemSlotCount = elementSlotCountForLocal(it->second);
       info.structTypeName = it->second.structTypeName;
       return info;
     }
@@ -336,7 +346,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.isVectorTarget = false;
         info.isArgsPackTarget = false;
         info.argsPackElementKind = localInfo.argsPackElementKind;
-        info.elemSlotCount = localInfo.structSlotCount;
+        info.elemSlotCount = elementSlotCountForLocal(localInfo);
         info.structTypeName = localInfo.structTypeName;
         return true;
       }
@@ -347,7 +357,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.isSoaVector = localInfo.isSoaVector;
         info.isArgsPackTarget = false;
         info.argsPackElementKind = localInfo.argsPackElementKind;
-        info.elemSlotCount = localInfo.structSlotCount;
+        info.elemSlotCount = elementSlotCountForLocal(localInfo);
         info.structTypeName = localInfo.structTypeName;
         return true;
       }
@@ -359,7 +369,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.isSoaVector = localInfo.isSoaVector;
         info.isArgsPackTarget = false;
         info.argsPackElementKind = localInfo.argsPackElementKind;
-        info.elemSlotCount = localInfo.structSlotCount;
+        info.elemSlotCount = elementSlotCountForLocal(localInfo);
         info.structTypeName = localInfo.structTypeName;
         return true;
       }
@@ -371,7 +381,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.isSoaVector = localInfo.isSoaVector;
         info.isArgsPackTarget = false;
         info.argsPackElementKind = localInfo.argsPackElementKind;
-        info.elemSlotCount = localInfo.structSlotCount;
+        info.elemSlotCount = elementSlotCountForLocal(localInfo);
         info.structTypeName = localInfo.structTypeName;
         return true;
       }
@@ -391,7 +401,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.isSoaVector = localIt->second.isSoaVector;
             info.isArgsPackTarget = true;
             info.argsPackElementKind = localIt->second.argsPackElementKind;
-            info.elemSlotCount = localIt->second.structSlotCount;
+            info.elemSlotCount = elementSlotCountForLocal(localIt->second);
             info.structTypeName = localIt->second.structTypeName;
             return info;
           }
@@ -406,7 +416,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.isSoaVector = localIt->second.isSoaVector;
             info.isArgsPackTarget = true;
             info.argsPackElementKind = localIt->second.argsPackElementKind;
-            info.elemSlotCount = localIt->second.structSlotCount;
+            info.elemSlotCount = elementSlotCountForLocal(localIt->second);
             info.structTypeName = localIt->second.structTypeName;
             return info;
           }
@@ -416,7 +426,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.isVectorTarget = false;
             info.isArgsPackTarget = true;
             info.argsPackElementKind = localIt->second.argsPackElementKind;
-            info.elemSlotCount = localIt->second.structSlotCount;
+            info.elemSlotCount = elementSlotCountForLocal(localIt->second);
             info.structTypeName = localIt->second.structTypeName;
             return info;
           }
@@ -427,7 +437,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.isSoaVector = localIt->second.isSoaVector;
             info.isArgsPackTarget = true;
             info.argsPackElementKind = localIt->second.argsPackElementKind;
-            info.elemSlotCount = localIt->second.structSlotCount;
+            info.elemSlotCount = elementSlotCountForLocal(localIt->second);
             info.structTypeName = localIt->second.structTypeName;
             return info;
           }

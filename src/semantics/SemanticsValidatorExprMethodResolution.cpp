@@ -1246,6 +1246,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isBuiltinOut = true;
       return true;
     }
+    if (resolvedOut.rfind("/array/", 0) == 0 &&
+        defMap_.count(resolvedOut) == 0 &&
+        !hasDeclaredDefinitionPath(resolvedOut)) {
+      isBuiltinOut = true;
+      return true;
+    }
     if ((resolvedOut == "/std/collections/map/count" ||
          resolvedOut == "/std/collections/map/contains" ||
          resolvedOut == "/std/collections/map/tryAt" ||

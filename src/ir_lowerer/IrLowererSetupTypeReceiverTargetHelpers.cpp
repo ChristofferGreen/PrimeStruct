@@ -444,7 +444,9 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         auto localIt = localsIn.find(accessReceiver.name);
         if (localIt != localsIn.end() && localIt->second.isArgsPack) {
           if (localIt->second.isFileError &&
-              localIt->second.argsPackElementKind == LocalInfo::Kind::Value) {
+              (localIt->second.argsPackElementKind == LocalInfo::Kind::Value ||
+               localIt->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+               localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
             typeNameOut = "FileError";
             return true;
           }

@@ -137,4 +137,38 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
   return true;
 }
 
+bool emitInlineStructDefinitionArguments(const std::string &calleePath,
+                                         const std::vector<const Expr *> &orderedArgs,
+                                         const LocalMap &callerLocals,
+                                         bool requireValue,
+                                         int32_t &nextLocal,
+                                         const ResolveInlineStructSlotLayoutFn &resolveStructSlotLayout,
+                                         const InferInlineStructExprKindFn &inferExprKind,
+                                         const InferInlineStructExprPathFn &inferStructExprPath,
+                                         const EmitInlineStructExprFn &emitExpr,
+                                         const EmitInlineStructCopySlotsFn &emitStructCopySlots,
+                                         const AllocInlineStructTempLocalFn &allocTempLocal,
+                                         const EmitInlineStructInstructionFn &emitInstruction,
+                                         std::string &error) {
+  std::vector<Expr> synthesizedParams(orderedArgs.size());
+  return emitInlineStructDefinitionArguments(calleePath,
+                                             synthesizedParams,
+                                             orderedArgs,
+                                             callerLocals,
+                                             requireValue,
+                                             nextLocal,
+                                             resolveStructSlotLayout,
+                                             inferExprKind,
+                                             inferStructExprPath,
+                                             emitExpr,
+                                             [](const Expr &, const LocalMap &, LocalInfo &fieldInfoOut, std::string &) {
+                                               fieldInfoOut = LocalInfo{};
+                                               return true;
+                                             },
+                                             emitStructCopySlots,
+                                             allocTempLocal,
+                                             emitInstruction,
+                                             error);
+}
+
 } // namespace primec::ir_lowerer

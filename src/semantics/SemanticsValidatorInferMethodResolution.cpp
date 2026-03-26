@@ -524,8 +524,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     std::string bufferElemType;
     if (resolveBufferTarget != nullptr && resolveBufferTarget(receiver, bufferElemType) &&
         !bufferElemType.empty()) {
-      resolvedOut = preferredBufferMethodTargetForCall(normalizedMethodName);
-      return true;
+      resolvedOut = preferredBufferMethodTargetForCall(receiver, normalizedMethodName);
+      return !resolvedOut.empty();
     }
     resolvedType = inferStructReturnPath(receiver, params, locals);
     if (!resolvedType.empty()) {
@@ -595,8 +595,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     std::string bufferElemType;
     if (resolveBufferTarget != nullptr && resolveBufferTarget(receiver, bufferElemType) &&
         !bufferElemType.empty()) {
-      resolvedOut = preferredBufferMethodTargetForCall(normalizedMethodName);
-      return true;
+      resolvedOut = preferredBufferMethodTargetForCall(receiver, normalizedMethodName);
+      return !resolvedOut.empty();
     }
   }
   if (receiver.kind == Expr::Kind::Call) {

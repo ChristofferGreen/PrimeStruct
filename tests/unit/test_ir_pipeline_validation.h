@@ -28153,13 +28153,13 @@ TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       error));
   CHECK(error.empty());
-  CHECK(nextLocal == 14);
+  CHECK(nextLocal == 15);
   CHECK(emitExprCalls == 2);
   CHECK(copyCalls == 1);
   CHECK(copiedDest == 12);
   CHECK(copiedSrc == 50);
   CHECK(copiedCount == 2);
-  REQUIRE(instructions.size() == 5u);
+  REQUIRE(instructions.size() == 7u);
   CHECK(instructions[0].op == primec::IrOpcode::PushI32);
   CHECK(instructions[0].imm == 3u);
   CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
@@ -28169,7 +28169,11 @@ TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument
   CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[3].imm == 50u);
   CHECK(instructions[4].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[4].imm == 10u);
+  CHECK(instructions[4].imm == 12u);
+  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[5].imm == 14u);
+  CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[6].imm == 10u);
 }
 
 TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {

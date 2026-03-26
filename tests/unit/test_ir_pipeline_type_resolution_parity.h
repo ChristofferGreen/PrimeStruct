@@ -236,7 +236,7 @@ main() {
 }
 )",
           false,
-          "unknown call target: do",
+          "unknown method: /array/count",
       },
       {
           "query_map_receiver_type_text",

@@ -1228,6 +1228,7 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const std::optional<ReturnStatementInlineContext> &inlineContext,
+    bool declaredReturnIsReferenceHandle,
     const std::optional<ResultReturnInfo> &resultReturnInfo,
     bool definitionReturnsVoid,
     bool &sawReturn,
@@ -1295,7 +1296,31 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     }
 
     const Expr &valueExpr = stmt.args.front();
-    if (!emitExpr(valueExpr, localsIn)) {
+    auto emitOpaqueReturnHandle = [&](const Expr &exprIn) -> bool {
+      if (context.returnsArray || exprIn.kind != Expr::Kind::Name) {
+        return false;
+      }
+      auto it = localsIn.find(exprIn.name);
+      if (it == localsIn.end()) {
+        return false;
+      }
+      const LocalInfo &info = it->second;
+      const bool isOpaqueHandle =
+          info.kind == LocalInfo::Kind::Pointer ||
+          (declaredReturnIsReferenceHandle && info.kind == LocalInfo::Kind::Reference) ||
+          info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
+          info.kind == LocalInfo::Kind::Map || info.kind == LocalInfo::Kind::Buffer ||
+          !info.structTypeName.empty() || info.referenceToArray || info.pointerToArray ||
+          info.referenceToVector || info.pointerToVector || info.referenceToBuffer || info.pointerToBuffer ||
+          info.referenceToMap || info.pointerToMap || info.isFileHandle || info.isResult;
+      if (!isOpaqueHandle) {
+        return false;
+      }
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(info.index)});
+      return true;
+    };
+
+    if (!emitOpaqueReturnHandle(valueExpr) && !emitExpr(valueExpr, localsIn)) {
       return ReturnStatementEmitResult::Error;
     }
     if (shouldPackResultErrorReturn(valueExpr)) {
@@ -1371,7 +1396,31 @@ ReturnStatementEmitResult tryEmitReturnStatement(
   }
 
   const Expr &valueExpr = stmt.args.front();
-  if (!emitExpr(valueExpr, localsIn)) {
+  auto emitOpaqueReturnHandle = [&](const Expr &exprIn) -> bool {
+    if (exprIn.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(exprIn.name);
+    if (it == localsIn.end()) {
+      return false;
+    }
+    const LocalInfo &info = it->second;
+    const bool isOpaqueHandle =
+        info.kind == LocalInfo::Kind::Pointer ||
+        (declaredReturnIsReferenceHandle && info.kind == LocalInfo::Kind::Reference) ||
+        info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
+        info.kind == LocalInfo::Kind::Map || info.kind == LocalInfo::Kind::Buffer || !info.structTypeName.empty() ||
+        info.referenceToArray || info.pointerToArray || info.referenceToVector || info.pointerToVector ||
+        info.referenceToBuffer || info.pointerToBuffer || info.referenceToMap || info.pointerToMap ||
+        info.isFileHandle || info.isResult;
+    if (!isOpaqueHandle) {
+      return false;
+    }
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(info.index)});
+    return true;
+  };
+
+  if (!emitOpaqueReturnHandle(valueExpr) && !emitExpr(valueExpr, localsIn)) {
     return ReturnStatementEmitResult::Error;
   }
   if (shouldPackResultErrorReturn(valueExpr)) {
@@ -1408,6 +1457,36 @@ ReturnStatementEmitResult tryEmitReturnStatement(
 
   sawReturn = true;
   return ReturnStatementEmitResult::Emitted;
+}
+
+ReturnStatementEmitResult tryEmitReturnStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::optional<ReturnStatementInlineContext> &inlineContext,
+    const std::optional<ResultReturnInfo> &resultReturnInfo,
+    bool definitionReturnsVoid,
+    bool &sawReturn,
+    const EmitExprForBindingFn &emitExpr,
+    const InferBindingExprKindFn &inferExprKind,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
+    const std::function<void()> &emitFileScopeCleanupAll,
+    std::string &error) {
+  return tryEmitReturnStatement(stmt,
+                                localsIn,
+                                instructions,
+                                inlineContext,
+                                false,
+                                resultReturnInfo,
+                                definitionReturnsVoid,
+                                sawReturn,
+                                emitExpr,
+                                inferExprKind,
+                                resolveResultExprInfo,
+                                inferArrayElementKind,
+                                emitFileScopeCleanupAll,
+                                error);
 }
 
 StatementMatchIfEmitResult tryEmitMatchIfStatement(const Expr &stmt,

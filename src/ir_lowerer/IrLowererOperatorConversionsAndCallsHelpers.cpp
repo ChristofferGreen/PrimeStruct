@@ -1340,4 +1340,52 @@ bool emitConversionsAndCallsOperatorExpr(
   return true;
 }
 
+bool emitConversionsAndCallsOperatorExpr(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    int32_t &nextLocal,
+    const EmitConversionsAndCallsExprWithLocalsFn &emitExpr,
+    const InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind,
+    const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero,
+    const AllocConversionsAndCallsTempLocalFn &allocTempLocal,
+    const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite,
+    const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds,
+    const EmitConversionsAndCallsArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+    const ResolveConversionsAndCallsStringTableTargetFn &resolveStringTableTarget,
+    const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
+    const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,
+    const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
+    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
+    const ResolveConversionsAndCallsStructSlotCountFn &resolveStructSlotCount,
+    const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
+    const EmitConversionsAndCallsStructCopyFromPtrsFn &emitStructCopyFromPtrs,
+    std::vector<IrInstruction> &instructions,
+    bool &handled,
+    std::string &error) {
+  return emitConversionsAndCallsOperatorExpr(
+      expr,
+      localsIn,
+      nextLocal,
+      emitExpr,
+      inferExprKind,
+      emitCompareToZero,
+      allocTempLocal,
+      emitFloatToIntNonFinite,
+      emitPointerIndexOutOfBounds,
+      emitArrayIndexOutOfBounds,
+      resolveStringTableTarget,
+      valueKindFromTypeName,
+      getMathConstantName,
+      inferStructExprPath,
+      resolveStructTypeName,
+      resolveStructSlotCount,
+      resolveStructFieldInfo,
+      [](const std::string &, const std::string &, LayoutFieldBinding &) { return false; },
+      emitStructCopyFromPtrs,
+      instructions,
+      handled,
+      error,
+      {});
+}
+
 } // namespace primec::ir_lowerer

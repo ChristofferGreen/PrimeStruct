@@ -634,25 +634,6 @@ CombineNumericKindsFn makeCombineNumericKinds() {
   };
 }
 
-bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut) {
-  collectionOut.clear();
-  helperOut.clear();
-
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-
-  if (resolveVectorHelperAliasName(expr, helperOut)) {
-    collectionOut = "vector";
-    return true;
-  }
-  if (resolveMapHelperAliasName(expr, helperOut)) {
-    collectionOut = "map";
-    return true;
-  }
-  return false;
-}
-
 LocalInfo::ValueKind valueKindFromTypeName(const std::string &name) {
   const std::string trimmed = trimTemplateTypeText(name);
   const size_t lastSlash = trimmed.rfind('/');
@@ -2842,7 +2823,9 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         auto localIt = localsIn.find(accessReceiver.name);
         if (localIt != localsIn.end() && localIt->second.isArgsPack) {
           if (localIt->second.isFileError &&
-              localIt->second.argsPackElementKind == LocalInfo::Kind::Value) {
+              (localIt->second.argsPackElementKind == LocalInfo::Kind::Value ||
+               localIt->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+               localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
             typeNameOut = "FileError";
             return true;
           }

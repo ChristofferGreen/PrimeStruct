@@ -39,4 +39,18 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          std::string &error,
                                          std::optional<int32_t> destBaseLocal = std::nullopt);
 
+bool emitInlineStructDefinitionArguments(const std::string &calleePath,
+                                         const std::vector<const Expr *> &orderedArgs,
+                                         const LocalMap &callerLocals,
+                                         bool requireValue,
+                                         int32_t &nextLocal,
+                                         const ResolveInlineStructSlotLayoutFn &resolveStructSlotLayout,
+                                         const InferInlineStructExprKindFn &inferExprKind,
+                                         const InferInlineStructExprPathFn &inferStructExprPath,
+                                         const EmitInlineStructExprFn &emitExpr,
+                                         const EmitInlineStructCopySlotsFn &emitStructCopySlots,
+                                         const AllocInlineStructTempLocalFn &allocTempLocal,
+                                         const EmitInlineStructInstructionFn &emitInstruction,
+                                         std::string &error);
+
 } // namespace primec::ir_lowerer

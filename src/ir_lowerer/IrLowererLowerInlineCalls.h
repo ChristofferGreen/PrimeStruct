@@ -157,34 +157,7 @@
             [&]() { return allocTempLocal(); },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             [&](int32_t localIndex) { fileScopeStack.back().push_back(localIndex); },
-            error,
-            [&](const Expr &argExpr, const LocalMap &locals, LocalInfo &infoOut, std::string &errorOut) {
-              return ir_lowerer::inferInlineParameterExprLocalInfo(
-                  argExpr,
-                  locals,
-                  inferExprKind,
-                  applyStructArrayInfo,
-                  applyStructValueInfo,
-                  infoOut,
-                  errorOut,
-                  [&](const Expr &callExpr, const LocalMap &callLocals) {
-                    return resolveMethodCallDefinition(callExpr, callLocals);
-                  },
-                  [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
-                  [&](const Expr &callExpr, const LocalMap &callLocals) {
-                    return inferStructExprPath(callExpr, callLocals);
-                  },
-                  [&](const std::string &structPath,
-                      const std::string &fieldName,
-                      LayoutFieldBinding &fieldBindingOut) {
-                    return resolveStructLayoutFieldBinding(structPath, fieldName, structFieldInfoByName, defMap, fieldBindingOut);
-                  },
-                  [&](const std::string &structPath,
-                      const std::string &fieldName,
-                      StructSlotFieldInfo &fieldInfoOut) {
-                    return resolveStructFieldSlot(structPath, fieldName, fieldInfoOut);
-                  });
-            })) {
+            error)) {
       inlineStack.erase(callee.fullPath);
       return false;
     }
