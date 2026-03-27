@@ -244,6 +244,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererResultHelpers.cpp
   src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp
   src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp
+  src/ir_lowerer/IrLowererSetupInferenceReturnKinds.cpp
   src/ir_lowerer/IrLowererSetupLocalsHelpers.cpp
   src/ir_lowerer/IrLowererSetupMathHelpers.cpp
   src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp
