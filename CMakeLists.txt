@@ -259,6 +259,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp
   src/ir_lowerer/IrLowererSetupTypeStructPathHelpers.cpp
   src/ir_lowerer/IrLowererStatementBindingHelpers.cpp
+  src/ir_lowerer/IrLowererStatementCallEmission.cpp
   src/ir_lowerer/IrLowererStatementCallHelpers.cpp
   src/ir_lowerer/IrLowererStringCallHelpers.cpp
   src/ir_lowerer/IrLowererStringLiteralHelpers.cpp
