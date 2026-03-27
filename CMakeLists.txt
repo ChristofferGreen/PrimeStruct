@@ -40,6 +40,9 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/ImportResolverHelpers.cpp
   src/Lexer.cpp
   src/parser/ParserCore.cpp
+  src/parser/ParserCoreBodyStatements.cpp
+  src/parser/ParserCoreDefinitionBodies.cpp
+  src/parser/ParserCoreDefinitions.cpp
   src/parser/ParserExpr.cpp
   src/parser/ParserExprControl.cpp
   src/parser/ParserHelpers.cpp
