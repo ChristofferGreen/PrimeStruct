@@ -1649,6 +1649,27 @@ inline void expectExperimentalVectorIsEmptyRefConformance(const std::string &emi
                                      102);
 }
 
+inline std::string makeExperimentalVectorCountRefAfterPushConformanceSource() {
+  std::string source;
+  source += "import /std/collections/experimental_vector/*\n";
+  source += "\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32>] values{vector<i32>(1i32)}\n";
+  source += "  [Reference<Vector<i32>>] borrowed{location(values)}\n";
+  source += "  vectorPush<i32>(values, 5i32)\n";
+  source += "  return(vectorCountRef<i32>(borrowed))\n";
+  source += "}\n";
+  return source;
+}
+
+inline void expectExperimentalVectorCountRefAfterPushConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(makeExperimentalVectorCountRefAfterPushConformanceSource(),
+                                     "experimental_vector_count_ref_after_push_" + emitMode,
+                                     emitMode,
+                                     2);
+}
+
 inline std::string makeVectorIndexedRemovalOwnershipRejectSource(const std::string &mode) {
   std::string source;
   if (mode == "remove_at_drop") {
