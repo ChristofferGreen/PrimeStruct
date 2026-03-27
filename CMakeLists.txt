@@ -332,6 +332,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/IrToGlslEmitterFunctionEmitter.cpp
   src/native_emitter/NativeEmitterHelpers.cpp
   src/native_emitter/NativeEmitterEmit.cpp
+  src/native_emitter/NativeEmitterFunctionEmit.cpp
   src/wasm_emitter/WasmEmitter.cpp
   src/wasm_emitter/WasmEmitterControlFlow.cpp
   src/wasm_emitter/WasmEmitterFunctionBodies.cpp
