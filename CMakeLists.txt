@@ -164,6 +164,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/text_filter/TextFilterHelpers.cpp
   src/text_filter/TextFilterUnaryRewrites.cpp
   src/text_filter/TextFilterPipelineEnvelope.cpp
+  src/text_filter/TextFilterPipelineEnvelopeHelpers.cpp
   src/text_filter/TextFilterPipelinePass.cpp
   src/text_filter/TextFilterPipelineScan.cpp
   src/text_filter/TextFilterPipeline.cpp
