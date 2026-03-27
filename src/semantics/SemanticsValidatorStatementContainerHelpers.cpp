@@ -68,6 +68,9 @@ bool SemanticsValidator::isDropTrivialContainerElementType(const std::string &ty
   }
 
   const std::string structPath = resolveStructTypePath(base, namespacePrefix, structNames_);
+  if (structPath.rfind("/std/collections/experimental_map", 0) == 0) {
+    return true;
+  }
   if (structPath.empty() || structNames_.count(structPath) == 0) {
     return true;
   }
@@ -156,6 +159,9 @@ bool SemanticsValidator::isRelocationTrivialContainerElementType(const std::stri
   }
 
   const std::string structPath = resolveStructTypePath(base, namespacePrefix, structNames_);
+  if (structPath.rfind("/std/collections/experimental_map", 0) == 0) {
+    return true;
+  }
   if (structPath.empty() || structNames_.count(structPath) == 0) {
     return true;
   }
