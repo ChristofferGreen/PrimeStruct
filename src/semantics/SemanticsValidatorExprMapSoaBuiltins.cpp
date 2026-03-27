@@ -160,6 +160,14 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
       resolvedMissing) {
     handledOut = true;
+    if (hasNamedArguments(expr.argNames) &&
+        !(context.isNamedArgsPackMethodAccessCall != nullptr &&
+          context.isNamedArgsPackMethodAccessCall(expr)) &&
+        !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
+          context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
     const std::string helperName =
         isSimpleCallName(expr, "to_soa") ? "to_soa" : "to_aos";
     if (!expr.templateArgs.empty()) {
@@ -194,6 +202,14 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
 
   if (resolvedMethod && (resolved == "/soa_vector/get" || resolved == "/soa_vector/ref")) {
     handledOut = true;
+    if (hasNamedArguments(expr.argNames) &&
+        !(context.isNamedArgsPackMethodAccessCall != nullptr &&
+          context.isNamedArgsPackMethodAccessCall(expr)) &&
+        !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
+          context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
     const std::string helperName = resolved == "/soa_vector/ref" ? "ref" : "get";
     if (!expr.templateArgs.empty()) {
       error_ = helperName + " does not accept template arguments";
@@ -244,7 +260,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return false;
     }
     if (expr.args.size() != 1) {
-      error_ = expr.name + " does not accept arguments";
+      error_ = "soa_vector field views require value.<field>()[index] syntax: " + expr.name;
       return false;
     }
     std::string elemType;
@@ -259,6 +275,14 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
 
   if (!resolvedMethod && (expr.name == "get" || expr.name == "ref") && resolvedMissing) {
     handledOut = true;
+    if (hasNamedArguments(expr.argNames) &&
+        !(context.isNamedArgsPackMethodAccessCall != nullptr &&
+          context.isNamedArgsPackMethodAccessCall(expr)) &&
+        !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
+          context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
     const std::string helperName = expr.name;
     if (!expr.templateArgs.empty()) {
       error_ = helperName + " does not accept template arguments";
@@ -288,6 +312,24 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       }
     }
     return true;
+  }
+
+  if (!resolvedMethod && !expr.isMethodCall && resolvedMissing && !expr.args.empty()) {
+    const bool handledBuiltinName = isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref") ||
+                                    isSimpleCallName(expr, "to_soa") ||
+                                    isSimpleCallName(expr, "to_aos") ||
+                                    isSimpleCallName(expr, "contains");
+    if (!handledBuiltinName) {
+      std::string elemType;
+      if (context.resolveSoaVectorTarget != nullptr &&
+          context.resolveSoaVectorTarget(expr.args.front(), elemType)) {
+        handledOut = true;
+        if (expr.args.size() != 1) {
+          error_ = "soa_vector field views require value.<field>()[index] syntax: " + expr.name;
+          return false;
+        }
+      }
+    }
   }
 
   return true;

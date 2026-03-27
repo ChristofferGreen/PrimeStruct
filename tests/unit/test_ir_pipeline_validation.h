@@ -489,6 +489,74 @@ Particle() {
   CHECK(error == "soa_vector field views are not implemented yet: x");
 }
 
+TEST_CASE("semantics rejects soa_vector field-view direct-call index shape before lowerer") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/use([soa_vector<Particle>] values) {
+  values.x(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error == "soa_vector field views require value.<field>()[index] syntax: x");
+}
+
+TEST_CASE("semantics rejects soa_vector field-view call-form index shape before lowerer") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/use([soa_vector<Particle>] values) {
+  x(values, 0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error == "soa_vector field views require value.<field>()[index] syntax: x");
+}
+
+TEST_CASE("semantics rejects soa_vector get method named args before lowerer") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/use([soa_vector<Particle>] values) {
+  values.get([index] 0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error == "named arguments not supported for builtin calls");
+}
+
+TEST_CASE("semantics rejects soa_vector ref method named args before lowerer") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/use([soa_vector<Particle>] values) {
+  values.ref([index] 0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error == "named arguments not supported for builtin calls");
+}
+
 TEST_CASE("ir lowerer effects unit validates program effect traversal") {
   auto makeEffectsTransform = [](const std::vector<std::string> &effects) {
     primec::Transform transform;
