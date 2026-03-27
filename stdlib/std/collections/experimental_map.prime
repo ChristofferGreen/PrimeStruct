@@ -94,6 +94,8 @@ namespace std {
     Move([Reference<Self>] other) {
       assign(this.keys, other.keys)
       assign(this.payloads, other.payloads)
+      assign(other.keys, /std/collections/experimental_vector/vector<K>())
+      assign(other.payloads, /std/collections/experimental_vector/vector<V>())
     }
 
     [public effects(heap_alloc)]
