@@ -1,6 +1,5 @@
 #include "SemanticsValidator.h"
 
-#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -13,21 +12,6 @@ std::string_view trimLeadingSlash(std::string_view text) {
     text.remove_prefix(1);
   }
   return text;
-}
-
-ReturnKind returnKindForStatementBinding(const BindingInfo &binding) {
-  if (binding.typeName == "Reference") {
-    std::string base;
-    std::string arg;
-    if (splitTemplateTypeName(binding.typeTemplateArg, base, arg) && base == "array") {
-      std::vector<std::string> args;
-      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
-        return ReturnKind::Array;
-      }
-    }
-    return returnKindForTypeName(binding.typeTemplateArg);
-  }
-  return returnKindForTypeName(binding.typeName);
 }
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
@@ -127,438 +111,6 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
                                                        size_t statementIndex,
                                                        bool &handled) {
   handled = false;
-  std::optional<BindingInfo> resolvedVectorBindingStorage;
-  auto isIntegerExpr = [&](const Expr &arg) -> bool {
-    ReturnKind kind = inferExprReturnKind(arg, params, locals);
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
-      return true;
-    }
-    if (kind == ReturnKind::Bool || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
-        kind == ReturnKind::Void || kind == ReturnKind::Array) {
-      return false;
-    }
-    if (kind == ReturnKind::Unknown) {
-      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral) {
-        return false;
-      }
-      if (isPointerExpr(arg, params, locals)) {
-        return false;
-      }
-      if (arg.kind == Expr::Kind::Name) {
-        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
-          ReturnKind paramKind = returnKindForStatementBinding(*paramBinding);
-          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64;
-        }
-        auto it = locals.find(arg.name);
-        if (it != locals.end()) {
-          ReturnKind localKind = returnKindForStatementBinding(it->second);
-          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64;
-        }
-      }
-      return true;
-    }
-    return false;
-  };
-  auto resolveVectorBinding = [&](const Expr &target, const BindingInfo *&bindingOut) -> bool {
-    bindingOut = nullptr;
-    resolvedVectorBindingStorage.reset();
-    auto resolveNamedBinding = [&](const std::string &name) -> const BindingInfo * {
-      if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
-        return paramBinding;
-      }
-      auto it = locals.find(name);
-      if (it != locals.end()) {
-        return &it->second;
-      }
-      return nullptr;
-    };
-    auto resolveVectorTypeText = [&](const std::string &typeText, bool isMutable) -> bool {
-      if (typeText.empty()) {
-        return false;
-      }
-      std::string normalizedType = normalizeBindingTypeName(typeText);
-      std::string base;
-      std::string arg;
-      if (splitTemplateTypeName(normalizedType, base, arg)) {
-        const std::string normalizedBase = normalizeBindingTypeName(base);
-        if ((normalizedBase == "vector" || normalizedBase == "soa_vector") && !arg.empty()) {
-          resolvedVectorBindingStorage.emplace();
-          resolvedVectorBindingStorage->typeName = normalizedBase;
-          resolvedVectorBindingStorage->typeTemplateArg = arg;
-          resolvedVectorBindingStorage->isMutable = isMutable;
-          bindingOut = &*resolvedVectorBindingStorage;
-          return true;
-        }
-      } else if (normalizedType == "vector" || normalizedType == "soa_vector") {
-        resolvedVectorBindingStorage.emplace();
-        resolvedVectorBindingStorage->typeName = normalizedType;
-        resolvedVectorBindingStorage->typeTemplateArg.clear();
-        resolvedVectorBindingStorage->isMutable = isMutable;
-        bindingOut = &*resolvedVectorBindingStorage;
-        return true;
-      }
-      BindingInfo inferredBinding;
-      inferredBinding.typeName = normalizedType;
-      if (splitTemplateTypeName(normalizedType, base, arg)) {
-        inferredBinding.typeName = normalizeBindingTypeName(base);
-        inferredBinding.typeTemplateArg = arg;
-      }
-      std::string elemType;
-      if (!extractExperimentalVectorElementType(inferredBinding, elemType)) {
-        return false;
-      }
-      resolvedVectorBindingStorage.emplace();
-      resolvedVectorBindingStorage->typeName = "Vector";
-      resolvedVectorBindingStorage->typeTemplateArg = elemType;
-      resolvedVectorBindingStorage->isMutable = isMutable;
-      bindingOut = &*resolvedVectorBindingStorage;
-      return true;
-    };
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *binding = resolveNamedBinding(target.name)) {
-        if ((binding->typeName == "vector" || binding->typeName == "soa_vector") &&
-            !binding->typeTemplateArg.empty()) {
-          bindingOut = binding;
-          return true;
-        }
-        std::string elemType;
-        if (!extractExperimentalVectorElementType(*binding, elemType)) {
-          return false;
-        }
-        resolvedVectorBindingStorage.emplace();
-        resolvedVectorBindingStorage->typeName = "Vector";
-        resolvedVectorBindingStorage->typeTemplateArg = elemType;
-        resolvedVectorBindingStorage->isMutable = binding->isMutable;
-        bindingOut = &*resolvedVectorBindingStorage;
-        return true;
-      }
-      return false;
-    }
-    if (target.kind == Expr::Kind::Call) {
-      std::string accessName;
-      if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
-          target.args.front().kind == Expr::Kind::Name) {
-        if (const BindingInfo *binding = resolveNamedBinding(target.args.front().name)) {
-          std::string elementType;
-          if (getArgsPackElementType(*binding, elementType)) {
-            return resolveVectorTypeText(elementType, true);
-          }
-        }
-        return false;
-      }
-      if (isSimpleCallName(target, "dereference") && target.args.size() == 1) {
-        const Expr &derefTarget = target.args.front();
-        if (derefTarget.kind == Expr::Kind::Name) {
-          const BindingInfo *binding = resolveNamedBinding(derefTarget.name);
-          if (binding == nullptr || binding->typeTemplateArg.empty()) {
-            return false;
-          }
-          const std::string normalizedType = normalizeBindingTypeName(binding->typeName);
-          if (normalizedType != "Reference" && normalizedType != "Pointer") {
-            return false;
-          }
-          return resolveVectorTypeText(binding->typeTemplateArg, true);
-        }
-        if (getBuiltinArrayAccessName(derefTarget, accessName) && derefTarget.args.size() == 2 &&
-            derefTarget.args.front().kind == Expr::Kind::Name) {
-          if (const BindingInfo *binding = resolveNamedBinding(derefTarget.args.front().name)) {
-            std::string elementType;
-            if (getArgsPackElementType(*binding, elementType)) {
-              std::string base;
-              std::string arg;
-              if (splitTemplateTypeName(normalizeBindingTypeName(elementType), base, arg)) {
-                const std::string normalizedBase = normalizeBindingTypeName(base);
-                if ((normalizedBase == "Reference" || normalizedBase == "Pointer") && !arg.empty()) {
-                  return resolveVectorTypeText(arg, true);
-                }
-              }
-            }
-          }
-        }
-        return false;
-      }
-    }
-    return false;
-  };
-  auto validateVectorElementType = [&](const Expr &arg, const std::string &typeName) -> bool {
-    if (typeName.empty()) {
-      error_ = "push requires vector element type";
-      return false;
-    }
-    const std::string normalizedType = normalizeBindingTypeName(typeName);
-    auto isStringValueExpr = [&](const Expr &candidate) {
-      if (candidate.kind == Expr::Kind::StringLiteral) {
-        return true;
-      }
-      if (candidate.kind == Expr::Kind::Name) {
-        if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
-          return paramBinding->typeName == "string";
-        }
-        auto it = locals.find(candidate.name);
-        return it != locals.end() && it->second.typeName == "string";
-      }
-      return inferExprReturnKind(candidate, params, locals) == ReturnKind::String;
-    };
-    if (normalizedType == "string") {
-      if (!isStringValueExpr(arg)) {
-        error_ = "push requires element type " + typeName;
-        return false;
-      }
-      return true;
-    }
-    ReturnKind expectedKind = returnKindForTypeName(normalizedType);
-    if (expectedKind == ReturnKind::Unknown) {
-      return true;
-    }
-    if (isStringValueExpr(arg)) {
-      error_ = "push requires element type " + typeName;
-      return false;
-    }
-    ReturnKind argKind = inferExprReturnKind(arg, params, locals);
-    if (argKind != ReturnKind::Unknown && argKind != expectedKind) {
-      error_ = "push requires element type " + typeName;
-      return false;
-    }
-    return true;
-  };
-  auto validateVectorHelperTarget = [&](const Expr &target, const char *helperName, const BindingInfo *&bindingOut) -> bool {
-    const std::string helper = helperName == nullptr ? "" : std::string(helperName);
-    const bool allowSoaVectorTarget = helper == "push" || helper == "reserve";
-    if (!resolveVectorBinding(target, bindingOut) || bindingOut == nullptr) {
-      error_ = std::string(helperName) + " requires vector binding";
-      return false;
-    }
-    std::string experimentalElemType;
-    const bool isExperimentalVectorTarget = extractExperimentalVectorElementType(*bindingOut, experimentalElemType);
-    if (
-        (bindingOut->typeName != "vector" &&
-         !(allowSoaVectorTarget && bindingOut->typeName == "soa_vector") &&
-         !isExperimentalVectorTarget)) {
-      error_ = std::string(helperName) + " requires vector binding";
-      return false;
-    }
-    if (!bindingOut->isMutable) {
-      error_ = std::string(helperName) + " requires mutable vector binding";
-      return false;
-    }
-    return true;
-  };
-  auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
-    if (isSimpleCallName(candidate, helper)) {
-      return true;
-    }
-    std::string namespacedCollection;
-    std::string namespacedHelper;
-    if (!getNamespacedCollectionHelperName(candidate, namespacedCollection, namespacedHelper)) {
-      const std::string resolvedPath = resolveCalleePath(candidate);
-      if (resolvedPath.rfind("/std/", 0) != 0 || defMap_.count(resolvedPath) != 0) {
-        return false;
-      }
-      const std::string helperName = helper == nullptr ? std::string() : std::string(helper);
-      const size_t lastSlash = resolvedPath.find_last_of('/');
-      if (lastSlash == std::string::npos || resolvedPath.substr(lastSlash + 1) != helperName) {
-        return false;
-      }
-      return true;
-    }
-    return namespacedCollection == "vector" && namespacedHelper == helper;
-  };
-  auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
-    if (candidate.kind != Expr::Kind::Call) {
-      return false;
-    }
-    auto matchesHelper = [&](const char *helper) {
-      return isVectorBuiltinName(candidate, helper);
-    };
-    if (matchesHelper("push")) {
-      nameOut = "push";
-      return true;
-    }
-    if (matchesHelper("pop")) {
-      nameOut = "pop";
-      return true;
-    }
-    if (matchesHelper("reserve")) {
-      nameOut = "reserve";
-      return true;
-    }
-    if (matchesHelper("clear")) {
-      nameOut = "clear";
-      return true;
-    }
-    if (matchesHelper("remove_at")) {
-      nameOut = "remove_at";
-      return true;
-    }
-    if (matchesHelper("remove_swap")) {
-      nameOut = "remove_swap";
-      return true;
-    }
-    return false;
-  };
-  auto resolveVectorHelperTargetPath = [&](const Expr &receiver,
-                                           const std::string &helperName,
-                                           std::string &resolvedOut) -> bool {
-    resolvedOut.clear();
-    auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
-                                                 std::string &elemTypeOut) -> bool {
-      BindingInfo inferredBinding;
-      if (candidate.kind == Expr::Kind::Call) {
-        const std::string resolvedCandidate = resolveCalleePath(candidate);
-        auto matchesVectorCtorPath = [&](std::string_view basePath) {
-          return resolvedCandidate == basePath ||
-                 resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
-        };
-        if (matchesVectorCtorPath("/std/collections/vector/vector") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vector") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vectorNew") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vectorSingle") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vectorPair") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vectorTriple") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vectorQuad") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vectorQuint") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vectorSext") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vectorSept") ||
-            matchesVectorCtorPath("/std/collections/experimental_vector/vectorOct")) {
-          std::vector<std::string> templateArgs;
-          if (resolveCallCollectionTemplateArgs(candidate, "vector", params, locals, templateArgs) &&
-              templateArgs.size() == 1) {
-            elemTypeOut = templateArgs.front();
-            return true;
-          }
-          if (candidate.templateArgs.size() == 1) {
-            elemTypeOut = candidate.templateArgs.front();
-            return true;
-          }
-        }
-      }
-      if (candidate.kind == Expr::Kind::Call &&
-          inferBindingTypeFromInitializer(candidate, params, locals, inferredBinding) &&
-          extractExperimentalVectorElementType(inferredBinding, elemTypeOut)) {
-        return true;
-      }
-      std::string receiverTypeText;
-      if (inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
-          [&]() {
-            std::string base;
-            std::string arg;
-            const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
-            if (splitTemplateTypeName(normalizedType, base, arg)) {
-              inferredBinding.typeName = normalizeBindingTypeName(base);
-              inferredBinding.typeTemplateArg = arg;
-            } else {
-              inferredBinding.typeName = normalizedType;
-            }
-            return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
-          }()) {
-        return true;
-      }
-      return false;
-    };
-    std::string experimentalElemType;
-    if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
-      resolvedOut = (helperName == "count" || helperName == "capacity" ||
-                     helperName == "at" || helperName == "at_unsafe")
-                        ? preferredBareVectorHelperTarget(helperName)
-                        : specializedExperimentalVectorHelperTarget(helperName, experimentalElemType);
-      return true;
-    }
-    if (receiver.kind == Expr::Kind::Call &&
-        (helperName == "count" || helperName == "capacity" ||
-         helperName == "at" || helperName == "at_unsafe")) {
-      std::string collectionTypePath;
-      if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath) &&
-          collectionTypePath == "/vector") {
-        resolvedOut = preferredBareVectorHelperTarget(helperName);
-        return true;
-      }
-    }
-    const BindingInfo *vectorBinding = nullptr;
-    if (resolveVectorBinding(receiver, vectorBinding) && vectorBinding != nullptr) {
-      if (extractExperimentalVectorElementType(*vectorBinding, experimentalElemType)) {
-        resolvedOut = specializedExperimentalVectorHelperTarget(helperName, experimentalElemType);
-        return true;
-      }
-      if (vectorBinding->typeName == "vector" || vectorBinding->typeName == "soa_vector") {
-        resolvedOut = "/" + vectorBinding->typeName + "/" + helperName;
-        return true;
-      }
-    }
-    auto resolveReceiverTypePath = [&](const std::string &typeName, const std::string &receiverNamespacePrefix) {
-      if (typeName.empty()) {
-        return std::string{};
-      }
-      if (isPrimitiveBindingTypeName(typeName)) {
-        return "/" + normalizeBindingTypeName(typeName);
-      }
-      std::string resolvedType = resolveTypePath(typeName, receiverNamespacePrefix);
-      if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
-        auto importIt = importAliases_.find(typeName);
-        if (importIt != importAliases_.end()) {
-          resolvedType = importIt->second;
-        }
-      }
-      return resolvedType;
-    };
-    if (receiver.kind == Expr::Kind::Name) {
-      std::string typeName;
-      if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
-        typeName = paramBinding->typeName;
-      } else {
-        auto it = locals.find(receiver.name);
-        if (it != locals.end()) {
-          typeName = it->second.typeName;
-        }
-      }
-      if (typeName.empty() || typeName == "Pointer" || typeName == "Reference") {
-        return false;
-      }
-      const std::string resolvedType = resolveReceiverTypePath(typeName, receiver.namespacePrefix);
-      if (resolvedType.empty()) {
-        return false;
-      }
-      resolvedOut = resolvedType + "/" + helperName;
-      return true;
-    }
-    if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
-      std::string resolvedType = resolveCalleePath(receiver);
-      if (resolvedType.empty() || structNames_.count(resolvedType) == 0) {
-        resolvedType = inferStructReturnPath(receiver, params, locals);
-      }
-      if (resolvedType.empty()) {
-        return false;
-      }
-      resolvedOut = resolvedType + "/" + helperName;
-      return true;
-    }
-    return false;
-  };
-  auto isNonCollectionStructVectorHelperTarget = [&](const std::string &resolvedPath) -> bool {
-    const size_t slash = resolvedPath.find_last_of('/');
-    if (slash == std::string::npos || slash == 0) {
-      return false;
-    }
-    const std::string receiverPath = resolvedPath.substr(0, slash);
-    if (receiverPath == "/array" || receiverPath == "/vector" || receiverPath == "/map" || receiverPath == "/string") {
-      return false;
-    }
-    return structNames_.count(receiverPath) > 0;
-  };
-  auto validateVectorHelperReceiver = [&](const Expr &receiver, const std::string &helperName) -> bool {
-    if (!validateExpr(params, locals, receiver)) {
-      return false;
-    }
-    std::string resolvedMethod;
-    if (!resolveVectorHelperTargetPath(receiver, helperName, resolvedMethod)) {
-      return true;
-    }
-    if (defMap_.find(resolvedMethod) == defMap_.end() && isNonCollectionStructVectorHelperTarget(resolvedMethod)) {
-      error_ = "unknown method: " + resolvedMethod;
-      return false;
-    }
-    return true;
-  };
-
   std::string vectorHelper;
   if (!getVectorStatementHelperName(stmt, vectorHelper)) {
     return true;
@@ -650,16 +202,16 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       if (candidate.kind != Expr::Kind::Name) {
         return false;
       }
-      const BindingInfo *binding = nullptr;
-      if (!resolveVectorBinding(candidate, binding) || binding == nullptr) {
+      BindingInfo binding;
+      if (!resolveVectorStatementBinding(params, locals, candidate, binding)) {
         return false;
       }
-      if (binding->typeName == "soa_vector") {
+      if (binding.typeName == "soa_vector") {
         return true;
       }
       std::string experimentalElemType;
-      return (binding->typeName == "vector" || extractExperimentalVectorElementType(*binding, experimentalElemType)) &&
-             binding->isMutable;
+      return (binding.typeName == "vector" || extractExperimentalVectorElementType(binding, experimentalElemType)) &&
+             binding.isMutable;
     };
     std::vector<size_t> receiverIndices;
     auto appendReceiverIndex = [&](size_t index) {
@@ -708,7 +260,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       }
       const Expr &receiverCandidate = stmt.args[receiverIndex];
       std::string methodTarget;
-      if (resolveVectorHelperTargetPath(receiverCandidate, vectorHelper, methodTarget)) {
+      if (resolveVectorStatementHelperTargetPath(params, locals, receiverCandidate, vectorHelper, methodTarget)) {
         methodTarget = preferVectorStdlibHelperPath(methodTarget);
       }
       if (hasVisibleDefinitionPath(methodTarget)) {
@@ -766,13 +318,13 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       }
     }
     for (size_t receiverIndex : receiverIndices) {
-      const BindingInfo *receiverBinding = nullptr;
-      if (!resolveVectorBinding(stmt.args[receiverIndex], receiverBinding) || receiverBinding == nullptr) {
+      BindingInfo receiverBinding;
+      if (!resolveVectorStatementBinding(params, locals, stmt.args[receiverIndex], receiverBinding)) {
         continue;
       }
       const bool allowSoaVectorTarget = vectorHelper == "push" || vectorHelper == "reserve";
-      if (receiverBinding->typeName == "vector" ||
-          (allowSoaVectorTarget && receiverBinding->typeName == "soa_vector")) {
+      if (receiverBinding.typeName == "vector" ||
+          (allowSoaVectorTarget && receiverBinding.typeName == "soa_vector")) {
         shouldUseCanonicalBuiltinCompatibilityFallback = true;
         canonicalBuiltinCompatibilityReceiverIndex = receiverIndex;
         break;
@@ -868,13 +420,13 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     if (!hasExplicitValuesReceiver) {
       for (size_t i = 0; i < stmt.args.size(); ++i) {
-        const BindingInfo *candidateBinding = nullptr;
-        if (!resolveVectorBinding(stmt.args[i], candidateBinding) || candidateBinding == nullptr) {
+        BindingInfo candidateBinding;
+        if (!resolveVectorStatementBinding(params, locals, stmt.args[i], candidateBinding)) {
           continue;
         }
         const bool allowSoaVectorTarget = helperName == "push" || helperName == "reserve";
-        if (candidateBinding->typeName == "vector" ||
-            (allowSoaVectorTarget && candidateBinding->typeName == "soa_vector")) {
+        if (candidateBinding.typeName == "vector" ||
+            (allowSoaVectorTarget && candidateBinding.typeName == "soa_vector")) {
           receiverIndex = i;
           break;
         }
@@ -883,11 +435,12 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (receiverIndex >= stmt.args.size()) {
       receiverIndex = 0;
     }
-    if (!validateVectorHelperReceiver(stmt.args[receiverIndex], helperName)) {
+    if (!validateVectorStatementHelperReceiver(params, locals, stmt.args[receiverIndex], helperName)) {
       return false;
     }
-    const BindingInfo *binding = nullptr;
-    return validateVectorHelperTarget(stmt.args[receiverIndex], helperName.c_str(), binding);
+    BindingInfo binding;
+    return validateVectorStatementHelperTarget(
+        params, locals, stmt.args[receiverIndex], helperName.c_str(), binding);
   };
   auto findCanonicalBuiltinCompatibilityOperandIndex = [&](std::string_view namedArg) -> size_t {
     if (!shouldUseCanonicalBuiltinCompatibilityFallback || stmt.args.empty()) {
@@ -944,11 +497,11 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       error_ = "push requires exactly two arguments";
       return false;
     }
-    if (!validateVectorHelperReceiver(stmt.args[receiverIndex], "push")) {
+    if (!validateVectorStatementHelperReceiver(params, locals, stmt.args[receiverIndex], "push")) {
       return false;
     }
-    const BindingInfo *binding = nullptr;
-    if (!validateVectorHelperTarget(stmt.args[receiverIndex], "push", binding)) {
+    BindingInfo binding;
+    if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "push", binding)) {
       return false;
     }
     if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
@@ -958,10 +511,10 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateExpr(params, locals, stmt.args[valueIndex])) {
       return false;
     }
-    if (!validateVectorElementType(stmt.args[valueIndex], binding->typeTemplateArg)) {
+    if (!validateVectorStatementElementType(params, locals, stmt.args[valueIndex], binding.typeTemplateArg)) {
       return false;
     }
-    if (!validateVectorRelocationHelperElementType(*binding, "push", namespacePrefix, definitionTemplateArgs)) {
+    if (!validateVectorRelocationHelperElementType(binding, "push", namespacePrefix, definitionTemplateArgs)) {
       return false;
     }
     return true;
@@ -981,11 +534,11 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       error_ = "reserve requires exactly two arguments";
       return false;
     }
-    if (!validateVectorHelperReceiver(stmt.args[receiverIndex], "reserve")) {
+    if (!validateVectorStatementHelperReceiver(params, locals, stmt.args[receiverIndex], "reserve")) {
       return false;
     }
-    const BindingInfo *binding = nullptr;
-    if (!validateVectorHelperTarget(stmt.args[receiverIndex], "reserve", binding)) {
+    BindingInfo binding;
+    if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "reserve", binding)) {
       return false;
     }
     if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
@@ -995,11 +548,11 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateExpr(params, locals, stmt.args[capacityIndex])) {
       return false;
     }
-    if (!isIntegerExpr(stmt.args[capacityIndex])) {
+    if (!isVectorStatementIntegerExpr(params, locals, stmt.args[capacityIndex])) {
       error_ = "reserve requires integer capacity";
       return false;
     }
-    if (!validateVectorRelocationHelperElementType(*binding, "reserve", namespacePrefix, definitionTemplateArgs)) {
+    if (!validateVectorRelocationHelperElementType(binding, "reserve", namespacePrefix, definitionTemplateArgs)) {
       return false;
     }
     return true;
@@ -1019,21 +572,22 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       error_ = vectorHelper + " requires exactly two arguments";
       return false;
     }
-    if (!validateVectorHelperReceiver(stmt.args[receiverIndex], vectorHelper)) {
+    if (!validateVectorStatementHelperReceiver(params, locals, stmt.args[receiverIndex], vectorHelper)) {
       return false;
     }
-    const BindingInfo *binding = nullptr;
-    if (!validateVectorHelperTarget(stmt.args[receiverIndex], vectorHelper.c_str(), binding)) {
+    BindingInfo binding;
+    if (!validateVectorStatementHelperTarget(
+            params, locals, stmt.args[receiverIndex], vectorHelper.c_str(), binding)) {
       return false;
     }
     if (!validateExpr(params, locals, stmt.args[indexArgIndex])) {
       return false;
     }
-    if (!isIntegerExpr(stmt.args[indexArgIndex])) {
+    if (!isVectorStatementIntegerExpr(params, locals, stmt.args[indexArgIndex])) {
       error_ = vectorHelper + " requires integer index";
       return false;
     }
-    if (!validateVectorIndexedRemovalHelperElementType(*binding, vectorHelper, namespacePrefix, definitionTemplateArgs)) {
+    if (!validateVectorIndexedRemovalHelperElementType(binding, vectorHelper, namespacePrefix, definitionTemplateArgs)) {
       return false;
     }
     return true;
@@ -1050,14 +604,15 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       error_ = vectorHelper + " requires exactly one argument";
       return false;
     }
-    if (!validateVectorHelperReceiver(stmt.args[receiverIndex], vectorHelper)) {
+    if (!validateVectorStatementHelperReceiver(params, locals, stmt.args[receiverIndex], vectorHelper)) {
       return false;
     }
-    const BindingInfo *binding = nullptr;
-    if (!validateVectorHelperTarget(stmt.args[receiverIndex], vectorHelper.c_str(), binding)) {
+    BindingInfo binding;
+    if (!validateVectorStatementHelperTarget(
+            params, locals, stmt.args[receiverIndex], vectorHelper.c_str(), binding)) {
       return false;
     }
-    if (!validateVectorDiscardHelperElementType(*binding, vectorHelper, namespacePrefix, definitionTemplateArgs)) {
+    if (!validateVectorDiscardHelperElementType(binding, vectorHelper, namespacePrefix, definitionTemplateArgs)) {
       return false;
     }
     return true;
