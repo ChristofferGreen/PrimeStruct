@@ -78,42 +78,18 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   auto inferCollectionBindingType = [&](const Expr &candidate,
                                         std::string &baseOut,
                                         std::vector<std::string> &argsOut) -> bool {
-    auto inferFromCallCollection = [&](const Expr &callCandidate) -> bool {
-      if (callCandidate.kind != Expr::Kind::Call) {
-        return false;
-      }
-      std::string collectionTypePath;
-      if (!resolveCallCollectionTypePath(callCandidate, params, locals, collectionTypePath)) {
-        return false;
-      }
-      baseOut = normalizeBindingTypeName(collectionTypePath);
-      if (!baseOut.empty() && baseOut.front() == '/') {
-        baseOut.erase(baseOut.begin());
-      }
-      if (baseOut.empty()) {
-        return false;
-      }
-      std::vector<std::string> resolvedArgs;
-      if (resolveCallCollectionTemplateArgs(callCandidate, baseOut, params, locals, resolvedArgs)) {
-        argsOut = std::move(resolvedArgs);
-      }
-      return true;
-    };
     baseOut.clear();
     argsOut.clear();
     BindingInfo inferredBinding;
     if (!inferBindingTypeFromInitializer(candidate, params, locals, inferredBinding)) {
-      return inferFromCallCollection(candidate);
+      return false;
     }
     const std::string inferredTypeText = expectedBindingTypeText(inferredBinding);
     if (inferredTypeText.empty()) {
-      return inferFromCallCollection(candidate);
+      return false;
     }
     std::string argText;
     if (!splitTemplateTypeName(inferredTypeText, baseOut, argText)) {
-      if (inferFromCallCollection(candidate)) {
-        return true;
-      }
       baseOut = normalizeBindingTypeName(inferredTypeText);
       return !baseOut.empty();
     }
@@ -556,10 +532,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     std::vector<std::string> inferredArgs;
     if (inferCollectionBindingType(arg, inferredBase, inferredArgs) &&
         inferredArgs.size() == 1) {
-      std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
-      if (!normalizedInferredBase.empty() && normalizedInferredBase.front() == '/') {
-        normalizedInferredBase.erase(normalizedInferredBase.begin());
-      }
+      const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
       if ((normalizedInferredBase == "vector" ||
            normalizedInferredBase == "Vector" ||
            normalizedInferredBase == "std/collections/experimental_vector/Vector") &&
@@ -588,10 +561,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     if (!splitTopLevelTemplateArgs(inferredArgText, inferredTypeArgs) || inferredTypeArgs.size() != 1) {
       return false;
     }
-    std::string normalizedInferredBase = normalizeBindingTypeName(inferredBaseText);
-    if (!normalizedInferredBase.empty() && normalizedInferredBase.front() == '/') {
-      normalizedInferredBase.erase(normalizedInferredBase.begin());
-    }
+    const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBaseText);
     return (normalizedInferredBase == "vector" ||
             normalizedInferredBase == "Vector" ||
             normalizedInferredBase == "std/collections/experimental_vector/Vector") &&
