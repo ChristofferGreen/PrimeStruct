@@ -11876,16 +11876,20 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementControlFlow.cpp";
   const std::filesystem::path semanticsStatementVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementVectorHelpers.cpp";
+  const std::filesystem::path semanticsStatementVectorResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorStatementVectorResolution.cpp";
   REQUIRE(std::filesystem::exists(semanticsStatementPath));
   REQUIRE(std::filesystem::exists(semanticsStatementBindingsPath));
   REQUIRE(std::filesystem::exists(semanticsStatementBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsStatementControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsStatementVectorHelpersPath));
+  REQUIRE(std::filesystem::exists(semanticsStatementVectorResolutionPath));
   const std::string semanticsStatementSource = readText(semanticsStatementPath);
   const std::string semanticsStatementBindingsSource = readText(semanticsStatementBindingsPath);
   const std::string semanticsStatementBuiltinsSource = readText(semanticsStatementBuiltinsPath);
   const std::string semanticsStatementControlFlowSource = readText(semanticsStatementControlFlowPath);
   const std::string semanticsStatementVectorHelpersSource = readText(semanticsStatementVectorHelpersPath);
+  const std::string semanticsStatementVectorResolutionSource = readText(semanticsStatementVectorResolutionPath);
   CHECK(semanticsStatementSource.find("bool SemanticsValidator::validateStatement") != std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementLoopCountStep.h\"") !=
         std::string::npos);
@@ -11967,11 +11971,17 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("std::string SemanticsValidator::preferVectorStdlibHelperPath(") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("auto resolveVectorBinding = [&](const Expr &target, const BindingInfo *&bindingOut) -> bool {") !=
-        std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("std::string vectorHelper;") != std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("if (vectorHelper == \"push\") {") != std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("validateVectorRelocationHelperElementType(*binding, \"push\"") !=
+  CHECK(semanticsStatementVectorHelpersSource.find("validateVectorRelocationHelperElementType(binding, \"push\"") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::resolveVectorStatementBinding(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::validateVectorStatementElementType(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::validateVectorStatementHelperTarget(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::resolveVectorStatementHelperTargetPath(") !=
         std::string::npos);
   CHECK(semanticsStatementReturnsSource.find("bool SemanticsValidator::statementAlwaysReturns") !=
         std::string::npos);
