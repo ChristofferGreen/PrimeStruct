@@ -37,6 +37,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
 set(PRIMESTRUCT_FRONTEND_SOURCES
   src/AstPrinter.cpp
   src/ImportResolver.cpp
+  src/ImportResolverHelpers.cpp
   src/Lexer.cpp
   src/parser/ParserCore.cpp
   src/parser/ParserExpr.cpp

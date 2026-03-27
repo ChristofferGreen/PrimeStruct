@@ -145,7 +145,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/parser/ParserExpr.cpp` (`1083` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererStructTypeHelpers.cpp` (`1058` lines) below the `700`-line target.
 - ✓ Refactor `src/text_filter/TextFilterPipelinePass.cpp` (`691` lines) below the `700`-line target by extracting the binary-operator precedence parser and rewrite helpers into `src/text_filter/TextFilterPipelineOperatorRewrite.cpp`, leaving `TextFilterPipelinePass.cpp` focused on pass orchestration, collection literal rewrites, and token-by-token filter application.
-- ○ Refactor `src/ImportResolver.cpp` (`1010` lines) below the `700`-line target.
+- ✓ Refactor `src/ImportResolver.cpp` (`402` lines) below the `700`-line target by extracting import scanning, archive expansion, version parsing, and `.prime` file collection helpers into `src/ImportResolverHelpers.cpp` behind `src/ImportResolverInternal.h`, leaving `ImportResolver.cpp` focused on import expansion and path resolution flow.
 - ○ Refactor `src/semantics/SemanticsValidatorBuildInitializerInference.cpp` (`1113` lines) below the `700`-line target.
 - ✓ Refactor `src/native_emitter/NativeEmitterHelpers.cpp` (`520` lines) below the `700`-line target by extracting the Apple Mach-O image builder and code-signature helpers into `src/native_emitter/NativeEmitterMachO.cpp`, leaving `NativeEmitterHelpers.cpp` focused on stack-depth analysis and output-file writing.
 - ○ Refactor `src/semantics/SemanticsValidatorStatementVectorHelpers.cpp` (`1068` lines) below the `700`-line target.
