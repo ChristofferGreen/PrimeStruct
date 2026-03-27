@@ -157,7 +157,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Refactor `src/IrPrinter.cpp` (`537` lines) below the `700`-line target by extracting template/type and builtin return-kind helper logic into `src/IrPrinterHelpers.cpp`, leaving `IrPrinter.cpp` focused on expression/definition/execution printing plus local return-kind inference.
 - ○ Refactor `src/semantics/SemanticsValidator.cpp` (`938` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererLowerStatementsBindings.h` (`918` lines) below the `700`-line target.
-- ○ Refactor `src/semantics/SemanticsValidatorExprNumeric.cpp` (`916` lines) below the `700`-line target.
+- ✓ Refactor `src/semantics/SemanticsValidatorExprNumeric.cpp` (`663` lines) below the `700`-line target by extracting numeric predicate, comparison-operand, and matrix/vector type-family helpers into `src/semantics/SemanticsValidatorExprNumericPredicates.cpp`, leaving `SemanticsValidatorExprNumeric.cpp` focused on builtin numeric validation.
 - ○ Refactor `src/emitter/EmitterEmitSetupReturnInference.h` (`914` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererInlineParamHelpers.cpp` (`912` lines) below the `700`-line target.
 - ✓ Refactor `src/semantics/SemanticsValidatorInferStructReturn.cpp` (`466` lines) below the `700`-line target by extracting collection-path normalization, pointer-target inference, and collection-helper compatibility helpers into `src/semantics/SemanticsValidatorInferStructReturnHelpers.cpp`, leaving `SemanticsValidatorInferStructReturn.cpp` focused on the main struct-return inference flow.

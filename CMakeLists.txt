@@ -108,6 +108,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp
   src/semantics/SemanticsValidatorExprMethodResolution.cpp
   src/semantics/SemanticsValidatorExprNumeric.cpp
+  src/semantics/SemanticsValidatorExprNumericPredicates.cpp
   src/semantics/SemanticsValidatorExprArgumentValidation.cpp
   src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp
   src/semantics/SemanticsValidatorExprLateBuiltins.cpp
