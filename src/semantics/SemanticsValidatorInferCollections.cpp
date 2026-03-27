@@ -2762,6 +2762,15 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
            explicitTarget.rfind(specializedPrefix, 0) == 0;
   };
   if (matchesCollectionCtorPath("/std/collections/vector/vector") ||
+      matchesCollectionCtorPath("/std/collections/vectorNew") ||
+      matchesCollectionCtorPath("/std/collections/vectorSingle") ||
+      matchesCollectionCtorPath("/std/collections/vectorPair") ||
+      matchesCollectionCtorPath("/std/collections/vectorTriple") ||
+      matchesCollectionCtorPath("/std/collections/vectorQuad") ||
+      matchesCollectionCtorPath("/std/collections/vectorQuint") ||
+      matchesCollectionCtorPath("/std/collections/vectorSext") ||
+      matchesCollectionCtorPath("/std/collections/vectorSept") ||
+      matchesCollectionCtorPath("/std/collections/vectorOct") ||
       matchesCollectionCtorPath("/std/collections/experimental_vector/vector") ||
       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
@@ -2807,6 +2816,11 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
           inferCollectionTypePathFromType(inferredReturnTypeText, inferCollectionTypePathFromType);
       if (!inferred.empty()) {
         typePathOut = inferred;
+        return true;
+      }
+      std::string inferredVectorElemType;
+      if (extractExperimentalVectorElementType(inferredReturn, inferredVectorElemType)) {
+        typePathOut = "/vector";
         return true;
       }
       const std::string normalizedReturnType = normalizeBindingTypeName(inferredReturn.typeName);
@@ -2880,6 +2894,13 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   }
 
   auto extractCollectionArgsFromBinding = [&](const BindingInfo &binding) {
+    if (expectedBase == "vector") {
+      std::string elemType;
+      if (extractExperimentalVectorElementType(binding, elemType)) {
+        argsOut = {elemType};
+        return true;
+      }
+    }
     const std::string typeText = binding.typeTemplateArg.empty()
                                      ? binding.typeName
                                      : binding.typeName + "<" + binding.typeTemplateArg + ">";
@@ -2912,6 +2933,15 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
 
   if (expectedBase == "vector" &&
       (matchesCollectionCtorPath("/std/collections/vector/vector") ||
+       matchesCollectionCtorPath("/std/collections/vectorNew") ||
+       matchesCollectionCtorPath("/std/collections/vectorSingle") ||
+       matchesCollectionCtorPath("/std/collections/vectorPair") ||
+       matchesCollectionCtorPath("/std/collections/vectorTriple") ||
+       matchesCollectionCtorPath("/std/collections/vectorQuad") ||
+       matchesCollectionCtorPath("/std/collections/vectorQuint") ||
+       matchesCollectionCtorPath("/std/collections/vectorSext") ||
+       matchesCollectionCtorPath("/std/collections/vectorSept") ||
+       matchesCollectionCtorPath("/std/collections/vectorOct") ||
        matchesCollectionCtorPath("/std/collections/experimental_vector/vector") ||
        matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
        matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
