@@ -543,6 +543,28 @@
             }
           }
 
+          if (candidate.kind == Expr::Kind::Call && isSimpleCallName(candidate, "dereference") &&
+              candidate.args.size() == 1) {
+            BindingInfo derefSourceBinding;
+            if (resolveExprBinding(candidate.args.front(), derefSourceBinding)) {
+              const std::string normalizedSourceType =
+                  normalizeBindingTypeName(derefSourceBinding.typeName);
+              if ((normalizedSourceType == "Reference" || normalizedSourceType == "Pointer") &&
+                  !derefSourceBinding.typeTemplateArg.empty()) {
+                bindingOut = BindingInfo{};
+                std::string base;
+                std::string arg;
+                if (splitTemplateTypeName(derefSourceBinding.typeTemplateArg, base, arg)) {
+                  bindingOut.typeName = normalizeBindingTypeName(base);
+                  bindingOut.typeTemplateArg = arg;
+                } else {
+                  bindingOut.typeName = normalizeBindingTypeName(derefSourceBinding.typeTemplateArg);
+                }
+                return !bindingOut.typeName.empty();
+              }
+            }
+          }
+
           auto resolveAccessBinding = [&](const Expr &accessExpr, BindingInfo &accessBindingOut) -> bool {
             if (accessExpr.kind != Expr::Kind::Call || accessExpr.args.size() != 2 || accessExpr.name.empty()) {
               return false;
