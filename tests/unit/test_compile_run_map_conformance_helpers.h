@@ -1241,14 +1241,26 @@ inline std::string makeInferredExperimentalMapDefaultParameterConformanceSource(
   source += "  print_line(left)\n";
   source += "  return(plus(count, left))\n";
   source += "}\n\n";
+  source += "[return<int> effects(io_out, heap_alloc)]\n";
+  source +=
+      "scorePairDefault([auto mut] values{/std/collections/mapPair(\"left\"raw_utf8, 6i32, \"right\"raw_utf8, 8i32)}) {\n";
+  source += "  mapInsert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
+  source += "  [i32] count{/std/collections/map/count(values)}\n";
+  source += "  [i32] bonus{/std/collections/map/at(values, \"bonus\"raw_utf8)}\n";
+  source += "  print_line(count)\n";
+  source += "  print_line(bonus)\n";
+  source += "  return(plus(count, bonus))\n";
+  source += "}\n\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
   source +=
       "  [i32] explicitValues{scoreValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
   source += "  [i32] defaultValues{scoreValues()}\n";
+  source += "  [i32] defaultPair{scorePairDefault()}\n";
   source += "  print_line(explicitValues)\n";
   source += "  print_line(defaultValues)\n";
-  source += "  return(plus(explicitValues, defaultValues))\n";
+  source += "  print_line(defaultPair)\n";
+  source += "  return(plus(plus(explicitValues, defaultValues), defaultPair))\n";
   source += "}\n";
   return source;
 }
@@ -1990,8 +2002,8 @@ inline void expectInferredExperimentalMapDefaultParameterConformance(const std::
       makeInferredExperimentalMapDefaultParameterConformanceSource(),
       "map_experimental_inferred_default_parameter_" + emitMode,
       emitMode,
-      11,
-      "2\n4\n1\n4\n6\n5\n");
+      19,
+      "2\n4\n1\n4\n6\n5\n3\n5\n8\n");
 }
 
 inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {

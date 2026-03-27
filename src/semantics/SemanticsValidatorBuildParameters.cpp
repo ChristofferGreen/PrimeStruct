@@ -137,7 +137,7 @@ bool SemanticsValidator::buildParameters() {
     auto bindingCarriesExperimentalMapValue = [&](const BindingInfo &binding) {
       return typeTextIsExperimentalMapValue(bindingTypeText(binding));
     };
-    auto isResolvedExperimentalMapNewPath = [](std::string resolvedPath) {
+    auto isResolvedExperimentalMapConstructorPath = [](std::string resolvedPath) {
       const size_t specializationSuffix = resolvedPath.find("__t");
       if (specializationSuffix != std::string::npos) {
         resolvedPath.erase(specializationSuffix);
@@ -146,8 +146,27 @@ bool SemanticsValidator::buildParameters() {
       if (overloadSuffix != std::string::npos) {
         resolvedPath.erase(overloadSuffix);
       }
-      return resolvedPath == "/std/collections/mapNew" ||
-             resolvedPath == "/std/collections/experimental_map/mapNew";
+      return resolvedPath == "/std/collections/map/map" ||
+             resolvedPath == "/std/collections/mapNew" ||
+             resolvedPath == "/std/collections/mapSingle" ||
+             resolvedPath == "/std/collections/mapDouble" ||
+             resolvedPath == "/std/collections/mapPair" ||
+             resolvedPath == "/std/collections/mapTriple" ||
+             resolvedPath == "/std/collections/mapQuad" ||
+             resolvedPath == "/std/collections/mapQuint" ||
+             resolvedPath == "/std/collections/mapSext" ||
+             resolvedPath == "/std/collections/mapSept" ||
+             resolvedPath == "/std/collections/mapOct" ||
+             resolvedPath == "/std/collections/experimental_map/mapNew" ||
+             resolvedPath == "/std/collections/experimental_map/mapSingle" ||
+             resolvedPath == "/std/collections/experimental_map/mapDouble" ||
+             resolvedPath == "/std/collections/experimental_map/mapPair" ||
+             resolvedPath == "/std/collections/experimental_map/mapTriple" ||
+             resolvedPath == "/std/collections/experimental_map/mapQuad" ||
+             resolvedPath == "/std/collections/experimental_map/mapQuint" ||
+             resolvedPath == "/std/collections/experimental_map/mapSext" ||
+             resolvedPath == "/std/collections/experimental_map/mapSept" ||
+             resolvedPath == "/std/collections/experimental_map/mapOct";
     };
     auto isAllowedExperimentalMapDefaultExpr = [&](const Expr &candidate) {
       if (isDefaultExprAllowed(candidate, defaultResolvesToDefinition)) {
@@ -159,7 +178,7 @@ bool SemanticsValidator::buildParameters() {
       if (hasNamedArguments(candidate.argNames) || candidate.hasBodyArguments || !candidate.bodyArguments.empty()) {
         return false;
       }
-      if (!isResolvedExperimentalMapNewPath(resolveCalleePath(candidate))) {
+      if (!isResolvedExperimentalMapConstructorPath(resolveCalleePath(candidate))) {
         return false;
       }
       BindingInfo inferredBinding;
