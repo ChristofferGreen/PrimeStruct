@@ -1,139 +1,26 @@
 #include "SemanticsValidateExperimentalGfxConstructors.h"
 
 #include "SemanticsHelpers.h"
+#include "SemanticsValidateExperimentalGfxConstructorsInternal.h"
 
 #include <cstddef>
 #include <optional>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 
 namespace primec::semantics {
 
 bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
   (void)error;
-  std::unordered_set<std::string> structNames;
-  structNames.reserve(program.definitions.size());
-  for (const auto &def : program.definitions) {
-    bool hasStructTransform = false;
-    bool hasReturnTransform = false;
-    for (const auto &transform : def.transforms) {
-      if (transform.name == "return") {
-        hasReturnTransform = true;
-      }
-      if (isStructTransformName(transform.name)) {
-        hasStructTransform = true;
-      }
-    }
-    bool fieldOnlyStruct = false;
-    if (!hasStructTransform && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement &&
-        !def.returnExpr.has_value()) {
-      fieldOnlyStruct = true;
-      for (const auto &stmt : def.statements) {
-        if (!stmt.isBinding) {
-          fieldOnlyStruct = false;
-          break;
-        }
-      }
-    }
-    if (hasStructTransform || fieldOnlyStruct) {
-      structNames.insert(def.fullPath);
-    }
-  }
-
-  std::unordered_set<std::string> publicDefinitions;
-  publicDefinitions.reserve(program.definitions.size());
-  for (const auto &def : program.definitions) {
-    bool sawPublic = false;
-    bool sawPrivate = false;
-    for (const auto &transform : def.transforms) {
-      if (transform.name == "public") {
-        sawPublic = true;
-      } else if (transform.name == "private") {
-        sawPrivate = true;
-      }
-    }
-    if (sawPublic && !sawPrivate) {
-      publicDefinitions.insert(def.fullPath);
-    }
-  }
-
-  std::unordered_map<std::string, std::string> importAliases;
-  auto isWildcardImport = [](const std::string &path, std::string &prefixOut) -> bool {
-    if (path.size() >= 2 && path.compare(path.size() - 2, 2, "/*") == 0) {
-      prefixOut = path.substr(0, path.size() - 2);
-      return true;
-    }
-    if (path.find('/', 1) == std::string::npos) {
-      prefixOut = path;
-      return true;
-    }
-    return false;
-  };
-  for (const auto &importPath : program.imports) {
-    std::string prefix;
-    if (isWildcardImport(importPath, prefix)) {
-      std::string scopedPrefix = prefix;
-      if (!scopedPrefix.empty() && scopedPrefix.back() != '/') {
-        scopedPrefix += "/";
-      }
-      for (const auto &def : program.definitions) {
-        if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
-          continue;
-        }
-        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
-        if (remainder.empty() || remainder.find('/') != std::string::npos) {
-          continue;
-        }
-        if (publicDefinitions.count(def.fullPath) == 0) {
-          continue;
-        }
-        importAliases.emplace(remainder, def.fullPath);
-      }
-      continue;
-    }
-    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
-    if (remainder.empty()) {
-      continue;
-    }
-    if (publicDefinitions.count(importPath) == 0) {
-      continue;
-    }
-    importAliases.emplace(remainder, importPath);
-  }
+  ExperimentalGfxRewriteContext rewriteContext = buildExperimentalGfxRewriteContext(program);
+  const auto &structNames = rewriteContext.structNames;
+  const auto &importAliases = rewriteContext.importAliases;
 
   auto resolveImportedStructPath = [&](const std::string &name, const std::string &namespacePrefix) {
-    std::string resolved = resolveStructTypePath(name, namespacePrefix, structNames);
-    if (resolved.empty()) {
-      auto it = importAliases.find(name);
-      if (it != importAliases.end() && structNames.count(it->second) > 0) {
-        resolved = it->second;
-      }
-    }
-    return resolved;
+    return rewriteContext.resolveImportedStructPath(name, namespacePrefix);
   };
-
   auto hasImportedDefinitionPath = [&](const std::string &path) {
-    std::string canonicalPath = path;
-    const size_t suffix = canonicalPath.find("__t");
-    if (suffix != std::string::npos) {
-      canonicalPath.erase(suffix);
-    }
-    if (canonicalPath.rfind("/File/", 0) == 0 || canonicalPath.rfind("/FileError/", 0) == 0) {
-      canonicalPath.insert(0, "/std/file");
-    }
-    for (const auto &importPath : program.imports) {
-      if (importPath == canonicalPath) {
-        return true;
-      }
-      if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
-        const std::string prefix = importPath.substr(0, importPath.size() - 2);
-        if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return hasExperimentalGfxImportedDefinitionPath(program, path);
   };
 
   enum class BufferBindingInitKind {
