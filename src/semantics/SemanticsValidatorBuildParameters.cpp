@@ -216,6 +216,19 @@ bool SemanticsValidator::buildParameters() {
       if (!validateBuiltinMapKeyType(binding, &def.templateArgs, error_)) {
         return false;
       }
+      std::string argsPackElementType;
+      if (getArgsPackElementType(binding, argsPackElementType)) {
+        std::string elementBase;
+        std::string elementArg;
+        if (splitTemplateTypeName(normalizeBindingTypeName(argsPackElementType), elementBase, elementArg)) {
+          const std::string normalizedElementBase = normalizeBindingTypeName(elementBase);
+          if ((normalizedElementBase == "Pointer" || normalizedElementBase == "Reference") &&
+              normalizeBindingTypeName(elementArg) == "string") {
+            error_ = "variadic args<T> does not support string pointers or references";
+            return false;
+          }
+        }
+      }
       ParameterInfo info;
       info.name = param.name;
       info.binding = std::move(binding);

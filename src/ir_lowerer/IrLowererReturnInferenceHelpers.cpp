@@ -331,13 +331,33 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
   if (bindingInfo.kind == LocalInfo::Kind::Value && !bindingInfo.structTypeName.empty()) {
     bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
   }
+  const bool isUnsupportedStringPointerReferenceArgsPack = [&bindingExpr]() {
+    for (const auto &transform : bindingExpr.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities" ||
+          isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (transform.name != "args" || transform.templateArgs.size() != 1) {
+        return false;
+      }
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, arg)) {
+        return false;
+      }
+      const std::string normalizedBase = normalizeCollectionBindingTypeName(base);
+      return (normalizedBase == "Pointer" || normalizedBase == "Reference") &&
+             trimTemplateTypeText(arg) == "string";
+    }
+    return false;
+  }();
+  if (isUnsupportedStringPointerReferenceArgsPack) {
+    error = "variadic args<T> does not support string pointers or references";
+    return false;
+  }
   if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value &&
       bindingInfo.kind != LocalInfo::Kind::Map) {
-    if (bindingInfo.isArgsPack) {
-      error = "variadic args<T> does not support string pointers or references";
-    } else {
-      error = "native backend does not support string pointers or references";
-    }
+    error = "native backend does not support string pointers or references";
     return false;
   }
   if (!bindingInfo.isArgsPack &&

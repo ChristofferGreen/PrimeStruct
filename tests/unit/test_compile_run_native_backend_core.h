@@ -9539,6 +9539,54 @@ main() {
   CHECK(readFile(errPath).empty());
 }
 
+TEST_CASE("native rejects variadic pointer string packs") {
+  const std::string source = R"(
+[return<int>]
+score([args<Pointer<string>>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  [string] first{"first"utf8}
+  [Pointer<string>] p0{location(first)}
+  score(p0)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_string_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_pointer_string_reject_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("variadic args<T> does not support string pointers or references") != std::string::npos);
+}
+
+TEST_CASE("native rejects variadic reference string packs") {
+  const std::string source = R"(
+[return<int>]
+score([args<Reference<string>>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  [string] first{"first"utf8}
+  [Reference<string>] r0{location(first)}
+  score(r0)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_reference_string_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_reference_string_reject_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("variadic args<T> does not support string pointers or references") != std::string::npos);
+}
+
 TEST_CASE("native ignores top-level executions") {
   const std::string source = R"(
 [return<bool>]

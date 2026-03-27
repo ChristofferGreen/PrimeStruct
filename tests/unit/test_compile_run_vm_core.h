@@ -3017,15 +3017,40 @@ score([args<Pointer<string>>] values) {
 [return<int>]
 main() {
   [string] first{"first"utf8}
-  [string] second{"second"utf8}
   [Pointer<string>] p0{location(first)}
-  [Pointer<string>] p1{location(second)}
-  return(score(p0, p1))
+  score(p0)
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("vm_variadic_args_pointer_string_reject.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_variadic_args_pointer_string_reject_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("variadic args<T> does not support string pointers or references") != std::string::npos);
+}
+
+TEST_CASE("vm rejects variadic reference string packs") {
+  const std::string source = R"(
+[return<int>]
+score([args<Reference<string>>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  [string] first{"first"utf8}
+  [Reference<string>] r0{location(first)}
+  score(r0)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_variadic_args_reference_string_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_variadic_args_reference_string_reject_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("variadic args<T> does not support string pointers or references") != std::string::npos);
 }
 
 TEST_CASE("vm ignores top-level executions") {

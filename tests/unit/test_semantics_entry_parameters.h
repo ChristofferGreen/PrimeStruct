@@ -544,4 +544,44 @@ count_values([spread] 1i32)
   CHECK(error.find("spread argument requires args<T> value") != std::string::npos);
 }
 
+TEST_CASE("variadic pointer string pack declaration is rejected") {
+  const std::string source = R"(
+[return<i32>]
+score([args<Pointer<string>>] values) {
+  return(count(values))
+}
+
+[return<i32>]
+main() {
+  [string] first{"first"utf8}
+  [Pointer<string>] p0{location(first)}
+  score(p0)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("variadic args<T> does not support string pointers or references") != std::string::npos);
+}
+
+TEST_CASE("variadic reference string pack declaration is rejected") {
+  const std::string source = R"(
+[return<i32>]
+score([args<Reference<string>>] values) {
+  return(count(values))
+}
+
+[return<i32>]
+main() {
+  [string] first{"first"utf8}
+  [Reference<string>] r0{location(first)}
+  score(r0)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("variadic args<T> does not support string pointers or references") != std::string::npos);
+}
+
 TEST_SUITE_END();
