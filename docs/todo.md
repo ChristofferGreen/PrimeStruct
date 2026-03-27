@@ -139,7 +139,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp` (`1427` lines) below the `700`-line target.
 - ○ Refactor `src/IrToCppEmitter.cpp` (`1421` lines) below the `700`-line target.
 - ○ Refactor `src/parser/ParserCore.cpp` (`1289` lines) below the `700`-line target.
-- ○ Refactor `src/parser/ParserLists.cpp` (`1245` lines) below the `700`-line target.
+- ✓ Refactor `src/parser/ParserLists.cpp` (`432` lines) below the `700`-line target by extracting transform-list parsing into `src/parser/ParserListsTransforms.cpp` and template/lambda/parameter list parsing into `src/parser/ParserListsSignatures.cpp`, leaving `ParserLists.cpp` focused on call arguments, binding initializers, value-block normalization, and brace-body parsing.
 - ○ Refactor `src/ir_lowerer/IrLowererStatementBindingHelpers.cpp` (`1190` lines) below the `700`-line target.
 - ✓ Refactor `src/VmDebugDap.cpp` (`551` lines) below the `700`-line target by extracting JSON parsing, DAP frame I/O, and protocol response/event helpers into `src/VmDebugDapProtocol.cpp` behind `src/VmDebugDapProtocol.h`, leaving `VmDebugDap.cpp` focused on breakpoint parsing, runtime request dispatch, and the session loop.
 - ✓ Refactor `src/parser/ParserExpr.cpp` (`683` lines) below the `700`-line target by extracting control-flow sugar, loop-form parsing, lambda parsing, and return-statement parsing into `src/parser/ParserExprControl.cpp`, leaving `ParserExpr.cpp` focused on primary expression parsing, literal/name handling, and postfix expression chaining.
