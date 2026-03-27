@@ -185,7 +185,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`775` lines) below the `700`-line target.
 - ✓ Refactor `src/ir_lowerer/IrLowererCallHelpers.h` (`654` lines) below the `700`-line target by extracting call-dispatch/access-target result enums plus map-lookup loop helper structs into `src/ir_lowerer/IrLowererCallHelperTypes.h`, leaving `IrLowererCallHelpers.h` focused on call-helper function declarations.
 - ○ Refactor `src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp` (`717` lines) below the `700`-line target.
-- ○ Refactor `src/semantics/SemanticsValidatorPassesDiagnostics.cpp` (`713` lines) below the `700`-line target.
+- ✓ Refactor `src/semantics/SemanticsValidatorPassesDiagnostics.cpp` (`371` lines) below the `700`-line target by extracting execution intra-body call diagnostics into `src/semantics/SemanticsValidatorExecutionDiagnostics.cpp`, leaving `SemanticsValidatorPassesDiagnostics.cpp` focused on definition intra-body call diagnostics and shared builtin/reflection diagnostic helpers.
 - ✓ Refactor `src/ir_lowerer/IrLowererCountAccessHelpers.cpp` (`514` lines) below the `700`-line target by extracting count-access alias and receiver-classifier helpers into `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`, leaving `IrLowererCountAccessHelpers.cpp` focused on entry/count-access setup plus count/capacity emission.
 
 **Group 10A - Oversized test/support queue**

@@ -22,17 +22,13 @@ bool isFlowEffectDiagnosticMessage(const std::string &message) {
 
 } // namespace
 
-void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
-    const Definition &def,
+void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
+    const Execution &exec,
     std::vector<SemanticDiagnosticRecord> &out) {
-  const auto &definitionParams = paramsByDef_[def.fullPath];
-  std::unordered_map<std::string, BindingInfo> definitionLocals;
-  definitionLocals.reserve(definitionParams.size());
-  for (const auto &param : definitionParams) {
-    definitionLocals.emplace(param.name, param.binding);
-  }
+  const std::vector<ParameterInfo> executionParams;
+  const std::unordered_map<std::string, BindingInfo> executionLocals;
 
-  auto appendDefinitionRecord = [&](const Expr &expr, std::string message) {
+  auto appendExecutionRecord = [&](const Expr &expr, std::string message) {
     SemanticDiagnosticRecord record;
     record.message = std::move(message);
     if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
@@ -42,13 +38,13 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       record.primarySpan.endColumn = expr.sourceColumn;
       record.hasPrimarySpan = true;
     }
-    if (def.sourceLine > 0 && def.sourceColumn > 0) {
+    if (exec.sourceLine > 0 && exec.sourceColumn > 0) {
       SemanticDiagnosticRelatedSpan related;
-      related.span.line = def.sourceLine;
-      related.span.column = def.sourceColumn;
-      related.span.endLine = def.sourceLine;
-      related.span.endColumn = def.sourceColumn;
-      related.label = "definition: " + def.fullPath;
+      related.span.line = exec.sourceLine;
+      related.span.column = exec.sourceColumn;
+      related.span.endLine = exec.sourceLine;
+      related.span.endColumn = exec.sourceColumn;
+      related.label = "execution: " + exec.fullPath;
       record.relatedSpans.push_back(std::move(related));
     }
     out.push_back(std::move(record));
@@ -99,10 +95,10 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       if (receiver.kind != Expr::Kind::Name || receiver.name != "meta") {
         return false;
       }
-      if (findParamBinding(definitionParams, receiver.name) != nullptr) {
+      if (findParamBinding(executionParams, receiver.name) != nullptr) {
         return false;
       }
-      return definitionLocals.find(receiver.name) == definitionLocals.end();
+      return executionLocals.find(receiver.name) == executionLocals.end();
     };
     if (expr.isMethodCall && !expr.args.empty()) {
       const Expr &receiver = expr.args.front();
@@ -146,13 +142,13 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     auto appendArgumentTypeMismatch = [&](const std::string &paramName,
                                           const std::string &expectedType,
                                           const std::string &actualType) {
-      appendDefinitionRecord(expr,
-                             "argument type mismatch for " + diagnosticResolved + " parameter " + paramName +
-                                 ": expected " + expectedType + " got " + actualType);
+      appendExecutionRecord(expr,
+                            "argument type mismatch for " + diagnosticResolved + " parameter " + paramName +
+                                ": expected " + expectedType + " got " + actualType);
     };
     std::string message;
     if (!validateNamedArguments(expr.args, expr.argNames, diagnosticResolved, message)) {
-      appendDefinitionRecord(expr, std::move(message));
+      appendExecutionRecord(expr, std::move(message));
       return true;
     }
     if (structNames_.count(resolved) > 0) {
@@ -164,7 +160,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     }
     const auto &calleeParams = paramsIt->second;
     if (!validateNamedArgumentsAgainstParams(calleeParams, expr.argNames, message)) {
-      appendDefinitionRecord(expr, std::move(message));
+      appendExecutionRecord(expr, std::move(message));
       return true;
     }
     std::vector<const Expr *> orderedArgs;
@@ -178,7 +174,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       } else {
         message = std::move(orderError);
       }
-      appendDefinitionRecord(expr, std::move(message));
+      appendExecutionRecord(expr, std::move(message));
       return true;
     }
     std::unordered_set<const Expr *> explicitArgs;
@@ -195,7 +191,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       }
       ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
       if (expectedKind != ReturnKind::Unknown) {
-        ReturnKind actualKind = inferExprReturnKind(arg, definitionParams, definitionLocals);
+        ReturnKind actualKind = inferExprReturnKind(arg, executionParams, executionLocals);
         if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array || actualKind == expectedKind) {
           return;
         }
@@ -212,14 +208,14 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       if (expectedStructPath.empty()) {
         return;
       }
-      const std::string actualStructPath = inferStructReturnPath(arg, definitionParams, definitionLocals);
+      const std::string actualStructPath = inferStructReturnPath(arg, executionParams, executionLocals);
       if (!actualStructPath.empty()) {
         if (actualStructPath != expectedStructPath) {
           appendArgumentTypeMismatch(param.name, expectedStructPath, actualStructPath);
         }
         return;
       }
-      ReturnKind actualKind = inferExprReturnKind(arg, definitionParams, definitionLocals);
+      ReturnKind actualKind = inferExprReturnKind(arg, executionParams, executionLocals);
       if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array) {
         return;
       }
@@ -234,8 +230,8 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
                                                   const ParameterInfo &param,
                                                   const std::string &expectedTypeName) {
       std::string actualElementType;
-      if (!resolveArgsPackElementTypeForExpr(arg, definitionParams, definitionLocals, actualElementType)) {
-        appendDefinitionRecord(arg, "spread argument requires args<T> value");
+      if (!resolveArgsPackElementTypeForExpr(arg, executionParams, executionLocals, actualElementType)) {
+        appendExecutionRecord(arg, "spread argument requires args<T> value");
         return;
       }
       ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
@@ -331,7 +327,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
           const std::string effectError = error_;
           error_.clear();
           if (isFlowEffectDiagnosticMessage(effectError)) {
-            appendDefinitionRecord(expr, effectError);
+            appendExecutionRecord(expr, effectError);
           }
           return;
         }
@@ -341,12 +337,12 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
           !isBuiltinCall(expr)) {
         std::string reflectionDiagnostic;
         if (describeReflectionCallDiagnostic(expr, reflectionDiagnostic)) {
-          appendDefinitionRecord(expr, std::move(reflectionDiagnostic));
+          appendExecutionRecord(expr, std::move(reflectionDiagnostic));
           return;
         }
         const std::string resolved = resolveCalleePath(expr);
         if (defMap_.count(resolved) == 0) {
-          appendDefinitionRecord(expr, "unknown call target: " + formatUnknownCallTarget(expr));
+          appendExecutionRecord(expr, "unknown call target: " + formatUnknownCallTarget(expr));
         } else {
           collectResolvedCallArgumentDiagnostic(expr, resolved);
         }
@@ -360,11 +356,11 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     }
   };
 
-  for (const auto &stmt : def.statements) {
-    scanExpr(stmt);
+  for (const auto &arg : exec.arguments) {
+    scanExpr(arg);
   }
-  if (def.returnExpr.has_value()) {
-    scanExpr(*def.returnExpr);
+  for (const auto &arg : exec.bodyArguments) {
+    scanExpr(arg);
   }
 }
 
