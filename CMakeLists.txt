@@ -48,6 +48,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsReturnKindHelpers.cpp
   src/semantics/SemanticsHelpersCore.cpp
   src/semantics/SemanticsHelpersValidation.cpp
+  src/semantics/SemanticsArgumentOrdering.cpp
   src/semantics/TemplateMonomorph.cpp
   src/semantics/CondensationDag.cpp
   src/semantics/StronglyConnectedComponents.cpp
