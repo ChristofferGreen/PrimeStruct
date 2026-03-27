@@ -253,8 +253,14 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     } else if (resolvedPath == "/std/collections/map/map" || resolvedPath == "/map/map") {
       helperPath = mapConstructorHelperPath(expr.args.size());
     }
-    if (!helperPath.empty() && defMap_.count(helperPath) > 0) {
-      return helperPath;
+    if (!helperPath.empty()) {
+      if (defMap_.count(helperPath) > 0) {
+        return helperPath;
+      }
+      const std::string experimentalHelper = canonicalMapConstructorToExperimental(helperPath);
+      if (!experimentalHelper.empty() && defMap_.count(experimentalHelper) > 0) {
+        return experimentalHelper;
+      }
     }
     return rewriteCanonicalCollectionHelperPath(resolvedPath);
   };
