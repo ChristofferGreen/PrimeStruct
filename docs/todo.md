@@ -126,7 +126,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 
 **Group 10 - Remaining oversized-file queue**
 - ○ Refactor `src/ir_lowerer/IrLowererSetupTypeHelpers.cpp` (`1989` lines) below the `700`-line target.
-- ○ Refactor `src/ir_lowerer/IrLowererLowerInferenceSetup.cpp` (`1976` lines) below the `700`-line target.
+- ✓ Refactor `src/ir_lowerer/IrLowererLowerInferenceSetup.cpp` (`247` lines) below the `700`-line target by removing the duplicate setup implementations that already lived in `src/ir_lowerer/IrLowererLowerInferenceArrayKindSetup.cpp`, `src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp`, `src/ir_lowerer/IrLowererLowerInferenceCallReturnSetup.cpp`, `src/ir_lowerer/IrLowererLowerInferenceFallbackSetup.cpp`, `src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp`, and `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp`, leaving `IrLowererLowerInferenceSetup.cpp` focused on bootstrap wiring and top-level orchestration.
 - ○ Refactor `src/semantics/SemanticsValidatorInferCollections.cpp` (`2959` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorExprMethodResolution.cpp` (`2591` lines) below the `700`-line target.
 - ✓ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`616` lines) below the `700`-line target; the file already sits under target and remains focused on binding parsing plus pointer/pointer-like helper classification.
