@@ -152,7 +152,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/emitter/EmitterExprLambda.h` (`1018` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorPassesEffectFree.cpp` (`1015` lines) below the `700`-line target.
 - ○ Refactor `src/VmDebugSessionInstruction.cpp` (`1000` lines) below the `700`-line target.
-- ○ Refactor `src/semantics/SemanticsValidateTransforms.cpp` (`970` lines) below the `700`-line target.
+- ✓ Refactor `src/semantics/SemanticsValidateTransforms.cpp` (`588` lines) below the `700`-line target by extracting enum transform parsing and rewrite logic into `src/semantics/SemanticsValidateTransformsEnums.cpp` behind `src/semantics/SemanticsValidateTransformsInternal.h`, leaving `SemanticsValidateTransforms.cpp` focused on transform validation, text-transform stripping, indexed-access sugar, shared-scope rewriting, and final semantic-transform orchestration.
 - ✓ Refactor `src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.cpp` (`499` lines) below the `700`-line target by extracting angle conversion, trig, and two-argument trig lowering into `src/ir_lowerer/IrLowererOperatorAngleTrigHelpers.cpp`, leaving `IrLowererOperatorClampMinMaxTrigHelpers.cpp` focused on clamp/min/max, lerp, FMA, hypot, and copysign helpers.
 - ✓ Refactor `src/IrPrinter.cpp` (`537` lines) below the `700`-line target by extracting template/type and builtin return-kind helper logic into `src/IrPrinterHelpers.cpp`, leaving `IrPrinter.cpp` focused on expression/definition/execution printing plus local return-kind inference.
 - ○ Refactor `src/semantics/SemanticsValidator.cpp` (`938` lines) below the `700`-line target.

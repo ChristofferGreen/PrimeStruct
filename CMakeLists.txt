@@ -66,6 +66,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateReflectionGeneratedHelpersValidate.cpp
   src/semantics/SemanticsValidateReflectionMetadataContext.cpp
   src/semantics/SemanticsValidateReflectionMetadata.cpp
+  src/semantics/SemanticsValidateTransformsEnums.cpp
   src/semantics/SemanticsValidateTransforms.cpp
   src/semantics/SemanticsValidator.cpp
   src/semantics/SemanticsValidatorBuild.cpp
