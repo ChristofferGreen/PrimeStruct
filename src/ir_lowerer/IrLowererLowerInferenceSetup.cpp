@@ -24,7 +24,9 @@ bool isIndexedArgsPackFileHandleReceiver(const Expr &receiverExpr, const LocalMa
   }
   auto it = localsIn.find(receiverExpr.args.front().name);
   return it != localsIn.end() && it->second.isArgsPack && it->second.isFileHandle &&
-         it->second.argsPackElementKind == LocalInfo::Kind::Value;
+         (it->second.argsPackElementKind == LocalInfo::Kind::Value ||
+          it->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+          it->second.argsPackElementKind == LocalInfo::Kind::Pointer);
 }
 
 bool isIndexedBorrowedArgsPackFileHandleReceiver(const Expr &receiverExpr, const LocalMap &localsIn) {

@@ -50384,6 +50384,16 @@ TEST_CASE("ir lowerer result helpers resolve indexed args-pack file handle metho
   CHECK(out.isResult);
   CHECK_FALSE(out.hasValue);
   CHECK(out.errorType == "FileError");
+
+  primec::Expr wrappedWriteExpr = writeExpr;
+  wrappedWriteExpr.args = {accessExpr, lineExpr};
+
+  primec::ir_lowerer::ResultExprInfo wrappedOut;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      wrappedWriteExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, wrappedOut));
+  CHECK(wrappedOut.isResult);
+  CHECK_FALSE(wrappedOut.hasValue);
+  CHECK(wrappedOut.errorType == "FileError");
 }
 
 TEST_CASE("ir lowerer result helpers resolve indexed borrowed args-pack file handle method results") {
@@ -50439,6 +50449,16 @@ TEST_CASE("ir lowerer result helpers resolve indexed borrowed args-pack file han
   CHECK(out.isResult);
   CHECK_FALSE(out.hasValue);
   CHECK(out.errorType == "FileError");
+
+  primec::Expr wrappedWriteExpr = writeExpr;
+  wrappedWriteExpr.args = {accessExpr, lineExpr};
+
+  primec::ir_lowerer::ResultExprInfo wrappedOut;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      wrappedWriteExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, wrappedOut));
+  CHECK(wrappedOut.isResult);
+  CHECK_FALSE(wrappedOut.hasValue);
+  CHECK(wrappedOut.errorType == "FileError");
 }
 
 TEST_CASE("ir lowerer result helpers resolve indexed pointer args-pack file handle method results") {

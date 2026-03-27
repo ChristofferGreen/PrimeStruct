@@ -465,11 +465,21 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
       return FileHandleMethodCallEmitResult::NotMatched;
     }
     auto it = localsIn.find(receiverExpr.args.front().name);
-    if (it == localsIn.end() || !it->second.isArgsPack || !it->second.isFileHandle ||
-        it->second.argsPackElementKind != LocalInfo::Kind::Value) {
+    if (it == localsIn.end() || !it->second.isArgsPack || !it->second.isFileHandle) {
       return FileHandleMethodCallEmitResult::NotMatched;
     }
-    if (!emitExpr(receiverExpr, localsIn)) {
+    const Expr *materializedReceiverExpr = &receiverExpr;
+    Expr derefExpr;
+    if (it->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+        it->second.argsPackElementKind == LocalInfo::Kind::Pointer) {
+      derefExpr.kind = Expr::Kind::Call;
+      derefExpr.name = "dereference";
+      derefExpr.args.push_back(receiverExpr);
+      materializedReceiverExpr = &derefExpr;
+    } else if (it->second.argsPackElementKind != LocalInfo::Kind::Value) {
+      return FileHandleMethodCallEmitResult::NotMatched;
+    }
+    if (!emitExpr(*materializedReceiverExpr, localsIn)) {
       return FileHandleMethodCallEmitResult::Error;
     }
     handleIndex = allocTempLocal();
