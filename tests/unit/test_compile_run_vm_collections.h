@@ -9049,7 +9049,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm user vector push call expression shadow during lowering") {
+TEST_CASE("runs vm user vector push call expression shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -9063,11 +9063,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_push_call_expr_shadow.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_push_call_expr_shadow_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend does not support vector helper: push") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("rejects vm reordered namespaced vector push call expression compatibility alias") {
@@ -9092,7 +9089,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("rejects vm named vector push expression receiver precedence during lowering") {
+TEST_CASE("runs vm named vector push expression receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -9112,16 +9109,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_push_expr_named_receiver_precedence.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_user_vector_push_expr_named_receiver_precedence_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend does not support vector helper: push") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("rejects vm auto-inferred named vector push expression receiver precedence during lowering") {
+TEST_CASE("runs vm auto-inferred named vector push expression receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -9142,13 +9134,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_push_expr_named_receiver_precedence_auto.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_user_vector_push_expr_named_receiver_precedence_auto_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend does not support vector helper: push") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
 }
 
 TEST_CASE("runs vm auto-inferred std namespaced vector push compatibility alias precedence") {
@@ -9648,6 +9635,24 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm user vector pop call expression shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/pop([vector<i32> mut] values) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  return(pop(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_pop_call_expr_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
+}
+
 TEST_CASE("runs vm with user vector reserve call shadow") {
   const std::string source = R"(
 import /std/collections/*
@@ -9688,6 +9693,24 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm user vector reserve call expression shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/reserve([vector<i32> mut] values, [i32] capacity) {
+  return(capacity)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  return(reserve(values, 9i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_reserve_call_expr_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
 TEST_CASE("runs vm with user vector clear call shadow") {
   const std::string source = R"(
 import /std/collections/*
@@ -9706,6 +9729,60 @@ main() {
   const std::string srcPath = writeTemp("vm_user_vector_clear_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
+}
+
+TEST_CASE("runs vm user vector clear call expression shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/clear([vector<i32> mut] values) {
+  return(8i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  return(clear(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_clear_call_expr_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 8);
+}
+
+TEST_CASE("runs vm user vector remove_at call expression shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/remove_at([vector<i32> mut] values, [i32] index) {
+  return(index)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  return(remove_at(values, 6i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_remove_at_call_expr_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
+TEST_CASE("runs vm user vector remove_swap call expression shadow") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/remove_swap([vector<i32> mut] values, [i32] index) {
+  return(index)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  return(remove_swap(values, 5i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_user_vector_remove_swap_call_expr_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
 }
 
 TEST_CASE("runs vm with user vector clear method shadow") {

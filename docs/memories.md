@@ -21,6 +21,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/experimental_vector/vectorPush` now diverts capacity-
   doubling overflow into the shared runtime-contract path instead of letting
   the doubled capacity wrap or continue into unchecked growth.
+- `ir-lowerer-vector-mutator-call-form-expression-resolution`: IR lowering now
+  probes bare vector mutator expression calls (`push`, `pop`, `reserve`,
+  `clear`, `remove_at`, `remove_swap`) through the same receiver-based method
+  resolution path as statement form, so VM-lowered user-defined `/vector/*`
+  expression shadows no longer fall into backend-owned `vector helper`
+  rejects.
 - `map-bare-access-canonical-helper-contract`: bare-root
   `contains(values, key)`, `at(values, key)`, and `at_unsafe(values, key)`
   on builtin `map<K, V>` now reject with canonical

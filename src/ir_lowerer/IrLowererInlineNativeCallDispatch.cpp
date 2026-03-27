@@ -299,6 +299,94 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     return emitInlineDefinitionCallFn(callExpr, callee, localsIn);
   };
+  auto tryEmitVectorMutatorCallFormExpr = [&]() {
+    const bool isVectorMutatorCall =
+        isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "pop") ||
+        isVectorBuiltinName(expr, "reserve") || isVectorBuiltinName(expr, "clear") ||
+        isVectorBuiltinName(expr, "remove_at") || isVectorBuiltinName(expr, "remove_swap");
+    if (expr.isMethodCall || !isVectorMutatorCall || expr.args.empty()) {
+      return InlineCallDispatchResult::NotHandled;
+    }
+
+    std::vector<size_t> receiverIndices;
+    auto appendReceiverIndex = [&](size_t index) {
+      if (index >= expr.args.size()) {
+        return;
+      }
+      for (size_t existing : receiverIndices) {
+        if (existing == index) {
+          return;
+        }
+      }
+      receiverIndices.push_back(index);
+    };
+
+    const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+    if (hasNamedArgs) {
+      bool hasValuesNamedReceiver = false;
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+            *expr.argNames[i] == "values") {
+          appendReceiverIndex(i);
+          hasValuesNamedReceiver = true;
+        }
+      }
+      if (!hasValuesNamedReceiver) {
+        appendReceiverIndex(0);
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          appendReceiverIndex(i);
+        }
+      }
+    } else {
+      appendReceiverIndex(0);
+    }
+
+    const bool probePositionalReorderedReceiver =
+        !hasNamedArgs && expr.args.size() > 1 &&
+        (expr.args.front().kind == Expr::Kind::Literal ||
+         expr.args.front().kind == Expr::Kind::BoolLiteral ||
+         expr.args.front().kind == Expr::Kind::FloatLiteral ||
+         expr.args.front().kind == Expr::Kind::StringLiteral ||
+         expr.args.front().kind == Expr::Kind::Name);
+    if (probePositionalReorderedReceiver) {
+      for (size_t i = 1; i < expr.args.size(); ++i) {
+        appendReceiverIndex(i);
+      }
+    }
+
+    for (size_t receiverIndex : receiverIndices) {
+      Expr methodExpr = expr;
+      methodExpr.isMethodCall = true;
+      std::string normalizedHelperName;
+      if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
+        methodExpr.name = normalizedHelperName;
+      }
+      if (receiverIndex != 0) {
+        std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);
+        if (methodExpr.argNames.size() < methodExpr.args.size()) {
+          methodExpr.argNames.resize(methodExpr.args.size());
+        }
+        std::swap(methodExpr.argNames[0], methodExpr.argNames[receiverIndex]);
+      }
+      const std::string priorError = error;
+      const Definition *callee = resolveMethodCallDefinitionFn(methodExpr, localsIn);
+      if (callee == nullptr) {
+        error = priorError;
+        continue;
+      }
+      if (methodExpr.hasBodyArguments || !methodExpr.bodyArguments.empty()) {
+        error = "native backend does not support block arguments on calls";
+        return InlineCallDispatchResult::Error;
+      }
+      if (!emitCanonicalInlineDefinitionCall(methodExpr, *callee)) {
+        return InlineCallDispatchResult::Error;
+      }
+      error = priorError;
+      return InlineCallDispatchResult::Emitted;
+    }
+
+    return InlineCallDispatchResult::NotHandled;
+  };
   if (!expr.isMethodCall && expr.args.size() == 1 &&
       isSoaVectorTarget(expr.args.front(), localsIn)) {
     Expr methodExpr = expr;
@@ -345,6 +433,10 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       return InlineCallDispatchResult::Emitted;
     }
     return InlineCallDispatchResult::NotHandled;
+  }
+  const auto vectorMutatorCallFormResult = tryEmitVectorMutatorCallFormExpr();
+  if (vectorMutatorCallFormResult != InlineCallDispatchResult::NotHandled) {
+    return vectorMutatorCallFormResult;
   }
   return tryEmitInlineCallWithCountFallbacks(
       expr,
