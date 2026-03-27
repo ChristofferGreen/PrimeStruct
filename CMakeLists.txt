@@ -44,6 +44,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/parser/ParserExprControl.cpp
   src/parser/ParserHelpers.cpp
   src/parser/ParserLists.cpp
+  src/parser/ParserListsTransforms.cpp
+  src/parser/ParserListsSignatures.cpp
   src/semantics/SemanticsBindingTypeHelpers.cpp
   src/semantics/SemanticsBuiltinPathHelpers.cpp
   src/semantics/SemanticsCallPathHelpers.cpp
