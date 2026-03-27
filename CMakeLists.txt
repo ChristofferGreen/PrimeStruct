@@ -198,6 +198,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererFlowVectorHelpers.cpp
   src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp
   src/ir_lowerer/IrLowererFlowHelpers.cpp
+  src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererIndexKindHelpers.cpp
   src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp
