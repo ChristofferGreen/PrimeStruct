@@ -138,6 +138,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorInferDefinition.cpp
   src/semantics/SemanticsValidatorInferGraph.cpp
   src/semantics/SemanticsValidatorInferMethodResolution.cpp
+  src/semantics/SemanticsValidatorInferMethodResolutionHelpers.cpp
   src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp
   src/semantics/SemanticsValidatorInferResolvedCalls.cpp
   src/semantics/SemanticsValidatorInferScalarBuiltins.cpp
