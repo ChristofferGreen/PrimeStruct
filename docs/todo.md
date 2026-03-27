@@ -476,7 +476,7 @@ Guiding notes:
 - ○ Refactor `src/primevm_main.cpp` (`868` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterHelpersTypes.cpp` (`857` lines) below the `700`-line target.
 - ✓ Refactor `src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.cpp` (`210` lines) below the `700`-line target by extracting exp/log/hyperbolic builtin emission helpers into `src/ir_lowerer/IrLowererOperatorExpLogHyperbolicHelpers.cpp`, leaving `IrLowererOperatorArcHyperbolicHelpers.cpp` focused on arc-trig lowering and dispatch.
-- ○ Refactor `src/native_emitter/NativeEmitterEmit.cpp` (`822` lines) below the `700`-line target.
+- ✓ Refactor `src/native_emitter/NativeEmitterEmit.cpp` (`333` lines) below the `700`-line target by extracting the per-function native instruction emission loop and fixup bookkeeping into `src/native_emitter/NativeEmitterFunctionEmit.cpp`, leaving `NativeEmitterEmit.cpp` focused on layout planning, relocation patching, and final image assembly.
 - ✓ Refactor `src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp` (`514` lines) below the `700`-line target by extracting the call return-kind classifiers into `src/ir_lowerer/IrLowererSetupInferenceReturnKinds.cpp`, leaving `IrLowererSetupInferenceHelpers.cpp` focused on pointer, buffer, array, and body/local inference helpers.
 - ○ Refactor `src/ir_lowerer/IrLowererResultHelpers.cpp` (`805` lines) below the `700`-line target.
 - ✓ Refactor `src/IrToGlslEmitter.cpp` (`46` lines) below the `700`-line target by extracting GLSL instruction/function emission helpers into `src/IrToGlslEmitterFunctionEmitter.cpp`, leaving `IrToGlslEmitter.cpp` focused on top-level shader source assembly.
