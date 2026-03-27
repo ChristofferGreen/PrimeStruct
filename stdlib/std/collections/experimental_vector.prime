@@ -298,6 +298,18 @@ namespace std {
     return(vectorCapacityRef<T>(values))
   }
 
+  [public return<bool>]
+  vectorIsEmptyRef<T>([Reference<Vector<T>>] values) {
+    [Vector<T>] materialized{values}
+    vectorCheckShape<T>(materialized)
+    return(equal(materialized.field_count(), 0i32))
+  }
+
+  [public return<bool>]
+  /std/collections/vector/is_empty_ref<T>([Reference<Vector<T>>] values) {
+    return(vectorIsEmptyRef<T>(values))
+  }
+
   [public effects(heap_alloc), return<void>]
   vectorReserve<T>([Vector<T> mut] values, [i32] capacity) {
     vectorReserveInternal<T>(values, capacity)

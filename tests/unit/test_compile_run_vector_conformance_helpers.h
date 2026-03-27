@@ -1614,6 +1614,41 @@ inline void expectExperimentalVectorCapacityRefConformance(const std::string &em
                                      6);
 }
 
+inline std::string makeExperimentalVectorIsEmptyRefConformanceSource() {
+  std::string source;
+  source += "import /std/collections/experimental_vector/*\n";
+  source += "\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32>] values{vector<i32>(3i32)}\n";
+  source += "  [Vector<i32>] empty{vector<i32>()}\n";
+  source += "  [Reference<Vector<i32>>] borrowedValues{location(values)}\n";
+  source += "  [Reference<Vector<i32>>] borrowedEmpty{location(empty)}\n";
+  source += "  [i32 mut] total{0i32}\n";
+  source += "  if(vectorIsEmptyRef<i32>(borrowedValues),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { assign(total, plus(total, 2i32)) })\n";
+  source += "  if(vectorIsEmptyRef<i32>(borrowedEmpty),\n";
+  source += "     then() { assign(total, plus(total, 4i32)) },\n";
+  source += "     else() { assign(total, plus(total, 8i32)) })\n";
+  source += "  if(/std/collections/vector/is_empty_ref<i32>(borrowedValues),\n";
+  source += "     then() { assign(total, plus(total, 16i32)) },\n";
+  source += "     else() { assign(total, plus(total, 32i32)) })\n";
+  source += "  if(/std/collections/vector/is_empty_ref<i32>(borrowedEmpty),\n";
+  source += "     then() { assign(total, plus(total, 64i32)) },\n";
+  source += "     else() { assign(total, plus(total, 128i32)) })\n";
+  source += "  return(total)\n";
+  source += "}\n";
+  return source;
+}
+
+inline void expectExperimentalVectorIsEmptyRefConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(makeExperimentalVectorIsEmptyRefConformanceSource(),
+                                     "experimental_vector_is_empty_ref_" + emitMode,
+                                     emitMode,
+                                     102);
+}
+
 inline std::string makeVectorIndexedRemovalOwnershipRejectSource(const std::string &mode) {
   std::string source;
   if (mode == "remove_at_drop") {
