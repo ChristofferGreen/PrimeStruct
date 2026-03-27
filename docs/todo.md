@@ -159,7 +159,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Refactor `src/text_filter/TextFilterHelpers.cpp` (`537` lines) below the `700`-line target by extracting unary rewrite helpers into `src/text_filter/TextFilterUnaryRewrites.cpp`, leaving `TextFilterHelpers.cpp` focused on token classification and operand-scanning helpers.
 - ○ Refactor `src/glsl_emitter/GlslEmitterExpr.cpp` (`788` lines) below the `700`-line target.
 - ✓ Refactor `src/semantics/SemanticsHelpersValidation.cpp` (`618` lines) below the `700`-line target by extracting argument-ordering and named-argument validation helpers into `src/semantics/SemanticsArgumentOrdering.cpp`, leaving `SemanticsHelpersValidation.cpp` focused on transform/default-expression/type-inference validation helpers.
-- ○ Refactor `src/emitter/EmitterEmitBody.h` (`781` lines) below the `700`-line target.
+- ✓ Refactor `src/emitter/EmitterEmitBody.h` (`636` lines) below the `700`-line target by extracting vector-mutator statement emission into `src/emitter/EmitterEmitBodyVectorHelpers.h`, leaving `EmitterEmitBody.h` focused on shared statement/control-flow emission and top-level body assembly.
 - ○ Refactor `src/ir_lowerer/IrLowererStatementCallHelpers.cpp` (`768` lines) below the `700`-line target.
 - ✓ Refactor `src/ir_lowerer/IrLowererHelpers.cpp` (`338` lines) below the `700`-line target by extracting builtin math/name classification helpers into `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp`, leaving `IrLowererHelpers.cpp` focused on shared control-flow, match-lowering, and core builtin classification helpers.
 - ○ Refactor `src/ir_lowerer/IrLowererLowerEmitExpr.h` (`735` lines) below the `700`-line target.
