@@ -90,6 +90,12 @@ namespace std {
       mapInsert<K, V>(this, key, value)
     }
 
+    [public mut]
+    Move([Reference<Self>] other) {
+      assign(this.keys, other.keys)
+      assign(this.payloads, other.payloads)
+    }
+
     [public effects(heap_alloc)]
     Destroy() {
       drop(this.keys)
