@@ -130,7 +130,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/semantics/SemanticsValidatorInferCollections.cpp` (`2959` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidatorExprMethodResolution.cpp` (`2591` lines) below the `700`-line target.
 - ✓ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`616` lines) below the `700`-line target; the file already sits under target and remains focused on binding parsing plus pointer/pointer-like helper classification.
-- ○ Refactor `src/emitter/EmitterHelpersBuiltins.cpp` (`1695` lines) below the `700`-line target.
+- ✓ Refactor `src/emitter/EmitterHelpersBuiltins.cpp` (`202` lines) below the `700`-line target by relying on the existing split collection-inference and method-resolution helper sources, leaving `EmitterHelpersBuiltins.cpp` focused on builtin assignment/vector-mutator classification, argument ordering, and control-flow builtin checks.
 - ○ Refactor `src/semantics/SemanticsValidator.h` (`1577` lines) below the `700`-line target.
 - ✓ Refactor `src/native_emitter/NativeEmitterInternals.h` (`508` lines) below the `700`-line target; the file already sits under target and remains focused on ARM64 emitter constants, instruction encoders, and shared native-emitter internal declarations.
 - ✓ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`134` lines) below the `700`-line target; the file already sits under target and remains focused on on-error/result-return scope guards plus shared compare/float-literal/return helper emission.
