@@ -312,6 +312,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string collectionsVectorWrapperPrefix = "std/collections/vector";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
+    if (helperNameOut == "count" || helperNameOut == "capacity") {
+      return true;
+    }
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }

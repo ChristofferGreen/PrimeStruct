@@ -9389,6 +9389,14 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
     }
     return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   };
+  auto readTexts = [&](const std::vector<std::filesystem::path> &paths) {
+    std::string combined;
+    for (const auto &path : paths) {
+      combined += readText(path);
+      combined.push_back('\n');
+    }
+    return combined;
+  };
   const std::filesystem::path repoRoot =
       std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
                                                              : std::filesystem::path("..");
@@ -9412,6 +9420,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprFieldResolution.cpp";
   const std::filesystem::path semanticsExprArgumentValidationPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidation.cpp";
+  const std::filesystem::path semanticsExprArgumentValidationCollectionsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidationCollections.cpp";
   const std::filesystem::path semanticsExprCollectionPredicatesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionPredicates.cpp";
   const std::filesystem::path semanticsExprCollectionAccessValidationPath =
@@ -9482,6 +9492,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationPath));
+  REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionPredicatesPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionDispatchSetupPath));
@@ -9525,6 +9536,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprArgumentValidationSource = readText(semanticsExprArgumentValidationPath);
+  const std::string semanticsExprArgumentValidationCombinedSource = readTexts({
+      semanticsExprArgumentValidationPath,
+      semanticsExprArgumentValidationCollectionsPath,
+  });
   const std::string semanticsExprCollectionPredicatesSource = readText(semanticsExprCollectionPredicatesPath);
   const std::string semanticsExprCollectionAccessValidationSource =
       readText(semanticsExprCollectionAccessValidationPath);
@@ -10315,10 +10330,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprArgumentValidationSource.find(
             "std::string SemanticsValidator::argumentStructMismatchDiagnostic") !=
         std::string::npos);
-  CHECK(semanticsExprArgumentValidationSource.find(
+  CHECK(semanticsExprArgumentValidationCombinedSource.find(
             "bool SemanticsValidator::isBuiltinCollectionLiteralExpr") !=
         std::string::npos);
-  CHECK(semanticsExprArgumentValidationSource.find(
+  CHECK(semanticsExprArgumentValidationCombinedSource.find(
             "bool SemanticsValidator::extractExperimentalMapFieldTypesFromStructPath") !=
         std::string::npos);
   CHECK(semanticsExprArgumentValidationSource.find(
@@ -11780,12 +11795,15 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesEffects.cpp";
   const std::filesystem::path semanticsPassesDiagnosticsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesDiagnostics.cpp";
+  const std::filesystem::path semanticsExecutionDiagnosticsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExecutionDiagnostics.cpp";
   const std::filesystem::path semanticsPassesExecutionsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesExecutions.cpp";
   REQUIRE(std::filesystem::exists(semanticsPassesPath));
   REQUIRE(std::filesystem::exists(semanticsPassesDefinitionsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesEffectsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesDiagnosticsPath));
+  REQUIRE(std::filesystem::exists(semanticsExecutionDiagnosticsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesExecutionsPath));
   const std::string semanticsPassesSource = readText(semanticsPassesPath);
   const std::string semanticsPassesCombinedSource = readTexts({
@@ -11796,6 +11814,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   });
   const std::string semanticsPassesEffectsSource = readText(semanticsPassesEffectsPath);
   const std::string semanticsPassesDiagnosticsSource = readText(semanticsPassesDiagnosticsPath);
+  const std::string semanticsExecutionDiagnosticsSource = readText(semanticsExecutionDiagnosticsPath);
 
   CHECK(semanticsPassesCombinedSource.find("bool SemanticsValidator::validateDefinitions()") != std::string::npos);
   CHECK(semanticsPassesCombinedSource.find("bool SemanticsValidator::validateExecutions()") != std::string::npos);
@@ -11820,7 +11839,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(") !=
         std::string::npos);
-  CHECK(semanticsPassesDiagnosticsSource.find("void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(") !=
+  CHECK(semanticsExecutionDiagnosticsSource.find("void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(") !=
         std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("isFlowEffectDiagnosticMessage(") != std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("collectResolvedCallArgumentDiagnostic") != std::string::npos);
