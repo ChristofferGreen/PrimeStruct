@@ -143,7 +143,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/ir_lowerer/IrLowererStructTypeHelpers.cpp` (`1058` lines) below the `700`-line target.
 - ○ Refactor `src/text_filter/TextFilterPipelinePass.cpp` (`1037` lines) below the `700`-line target.
 - ○ Refactor `src/ImportResolver.cpp` (`1010` lines) below the `700`-line target.
-- ○ Refactor `src/native_emitter/NativeEmitterHelpers.cpp` (`991` lines) below the `700`-line target.
+- ✓ Refactor `src/native_emitter/NativeEmitterHelpers.cpp` (`520` lines) below the `700`-line target by extracting the Apple Mach-O image builder and code-signature helpers into `src/native_emitter/NativeEmitterMachO.cpp`, leaving `NativeEmitterHelpers.cpp` focused on stack-depth analysis and output-file writing.
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.cpp` (`953` lines) below the `700`-line target.
 - ✓ Refactor `src/IrPrinter.cpp` (`537` lines) below the `700`-line target by extracting template/type and builtin return-kind helper logic into `src/IrPrinterHelpers.cpp`, leaving `IrPrinter.cpp` focused on expression/definition/execution printing plus local return-kind inference.
 - ○ Refactor `src/semantics/SemanticsValidator.cpp` (`938` lines) below the `700`-line target.
