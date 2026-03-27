@@ -183,6 +183,42 @@ main() {
   CHECK(runCommand(runCmd) == 24);
 }
 
+TEST_CASE("runs vm variadic Pointer<Buffer> packs with dereference helpers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int> effects(gpu_dispatch)]
+score_buffers_pointer([args<Pointer<Buffer<i32>>>] values) {
+  [Pointer<Buffer<i32>>] head{at(values, 0i32)}
+  [Pointer<Buffer<i32>>] tail{at(values, minus(count(values), 1i32))}
+  [Buffer<i32>] headValue{dereference(head)}
+  [Buffer<i32>] tailValue{dereference(tail)}
+  return(plus(headValue.count(), plus(tailValue.count(), count(values))))
+}
+
+[return<int> effects(gpu_dispatch)]
+forward_pointer([args<Pointer<Buffer<i32>>>] values) {
+  return(score_buffers_pointer([spread] values))
+}
+
+[return<int> effects(gpu_dispatch)]
+forward_pointer_mixed([args<Pointer<Buffer<i32>>>] values) {
+  return(score_buffers_pointer(location(Buffer<i32>(10i32)), [spread] values))
+}
+
+[return<int> effects(gpu_dispatch)]
+main() {
+  return(plus(score_buffers_pointer(location(Buffer<i32>(3i32)), location(Buffer<i32>(1i32)), location(Buffer<i32>(2i32))),
+              plus(forward_pointer(location(Buffer<i32>(4i32)), location(Buffer<i32>(1i32)), location(Buffer<i32>(5i32))),
+                   forward_pointer_mixed(location(Buffer<i32>(6i32)), location(Buffer<i32>(2i32)))))
+}
+";
+  const std::string srcPath = writeTemp("vm_variadic_args_buffer_pointer.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 24);
+}
+
+
 TEST_CASE("runs vm with gpu dispatch fallback and borrowed variadic Buffer packs") {
   const std::string source = R"(
 [compute workgroup_size(1, 1, 1)]
