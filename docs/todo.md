@@ -115,7 +115,7 @@ Minimal vector substrate note: the remaining items below are only worth keeping 
 - ○ Delete compiler-owned `soa_vector` helper routing and backend special cases from semantics, IR lowering, emitters, and runtime code until no C++ source mentions `soa_vector`.
 
 **Maintainability / File-size refactors**
-File-size note: keep production source under `src/` below roughly 700 lines when practical. The items below track oversized production files under `src/` as behavior-preserving refactors; prefer extracting coherent helper units over purely mechanical file splits.
+File-size note: keep implementation, helper, and test sources under `src/`, `include/`, and `tests/` below roughly 700 lines when practical. The items below track oversized implementation files, testing-support headers, and test sources above that threshold as behavior-preserving refactors; prefer extracting coherent helper units over purely mechanical file splits.
 
 **Group 9 - Focused refactor slices**
 - ◐ Refactor `src/semantics/TemplateMonomorph.cpp` (`2355` lines) below the `700`-line target. Progress: extracted templated fallback type-inference helpers into `src/semantics/TemplateMonomorphFallbackTypeInference.h`, method-call target resolution helpers into `src/semantics/TemplateMonomorphMethodTargets.h`, call/return binding inference into `src/semantics/TemplateMonomorphBindingCallInference.h`, block-bodied binding inference into `src/semantics/TemplateMonomorphBindingBlockInference.h`, type-string resolution plus transform/callee-path rewriting helpers into `src/semantics/TemplateMonomorphTypeResolution.h`, stdlib collection helper template inference into `src/semantics/TemplateMonomorphCollectionHelperInference.h`, assignment-target resolution helpers into `src/semantics/TemplateMonomorphAssignmentTargetResolution.h`, experimental collection argument rewrite helpers into `src/semantics/TemplateMonomorphExperimentalCollectionArgumentRewrites.h`, canonical experimental collection constructor rewrites into `src/semantics/TemplateMonomorphExperimentalCollectionConstructorRewrites.h`, experimental collection target-value rewrites into `src/semantics/TemplateMonomorphExperimentalCollectionTargetValueRewrites.h`, experimental collection value-rewrite helpers into `src/semantics/TemplateMonomorphExperimentalCollectionValueRewrites.h`, experimental collection receiver/template-resolution helpers into `src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h`, shared experimental collection constructor path rewrites into `src/semantics/TemplateMonomorphExperimentalCollectionConstructorPaths.h`, return-path constructor rewrites into `src/semantics/TemplateMonomorphExperimentalCollectionReturnRewrites.h`, return-plan setup helpers into `src/semantics/TemplateMonomorphExperimentalCollectionReturnSetup.h`, definition binding setup helpers into `src/semantics/TemplateMonomorphDefinitionBindingSetup.h`, definition return orchestration helpers into `src/semantics/TemplateMonomorphDefinitionReturnOrchestration.h`, definition experimental collection rewrite helpers into `src/semantics/TemplateMonomorphDefinitionExperimentalCollectionRewrites.h`, execution rewrite entrypoint helpers into `src/semantics/TemplateMonomorphExecutionRewrites.h`, top-level definition rewrite entrypoint helpers into `src/semantics/TemplateMonomorphDefinitionRewrites.h`, and template-specialization family helpers into `src/semantics/TemplateMonomorphTemplateSpecialization.h`.
@@ -127,8 +127,11 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 **Group 10 - Remaining oversized-file queue**
 - ○ Refactor `src/ir_lowerer/IrLowererSetupTypeHelpers.cpp` (`1989` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererLowerInferenceSetup.cpp` (`1976` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorInferCollections.cpp` (`2959` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorExprMethodResolution.cpp` (`2591` lines) below the `700`-line target.
 - ✓ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`616` lines) below the `700`-line target; the file already sits under target and remains focused on binding parsing plus pointer/pointer-like helper classification.
 - ○ Refactor `src/emitter/EmitterHelpersBuiltins.cpp` (`1695` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidator.h` (`1577` lines) below the `700`-line target.
 - ✓ Refactor `src/native_emitter/NativeEmitterInternals.h` (`508` lines) below the `700`-line target; the file already sits under target and remains focused on ARM64 emitter constants, instruction encoders, and shared native-emitter internal declarations.
 - ✓ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`134` lines) below the `700`-line target; the file already sits under target and remains focused on on-error/result-return scope guards plus shared compare/float-literal/return helper emission.
 - ✓ Refactor `src/emitter/EmitterExprCalls.h` (`488` lines) below the `700`-line target by extracting packed-argument binding resolution and rendering helpers into `src/emitter/EmitterExprPackedArgs.h`, leaving `EmitterExprCalls.h` focused on builtin-call rewrites, operator emission, and direct call dispatch.
@@ -143,10 +146,26 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/ir_lowerer/IrLowererStructTypeHelpers.cpp` (`1058` lines) below the `700`-line target.
 - ✓ Refactor `src/text_filter/TextFilterPipelinePass.cpp` (`691` lines) below the `700`-line target by extracting the binary-operator precedence parser and rewrite helpers into `src/text_filter/TextFilterPipelineOperatorRewrite.cpp`, leaving `TextFilterPipelinePass.cpp` focused on pass orchestration, collection literal rewrites, and token-by-token filter application.
 - ○ Refactor `src/ImportResolver.cpp` (`1010` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorBuildInitializerInference.cpp` (`1113` lines) below the `700`-line target.
 - ✓ Refactor `src/native_emitter/NativeEmitterHelpers.cpp` (`520` lines) below the `700`-line target by extracting the Apple Mach-O image builder and code-signature helpers into `src/native_emitter/NativeEmitterMachO.cpp`, leaving `NativeEmitterHelpers.cpp` focused on stack-depth analysis and output-file writing.
+- ○ Refactor `src/semantics/SemanticsValidatorStatementVectorHelpers.cpp` (`1068` lines) below the `700`-line target.
+- ○ Refactor `src/emitter/EmitterExprLambda.h` (`1018` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorPassesEffectFree.cpp` (`1015` lines) below the `700`-line target.
+- ○ Refactor `src/VmDebugSessionInstruction.cpp` (`1000` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidateTransforms.cpp` (`970` lines) below the `700`-line target.
 - ✓ Refactor `src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.cpp` (`499` lines) below the `700`-line target by extracting angle conversion, trig, and two-argument trig lowering into `src/ir_lowerer/IrLowererOperatorAngleTrigHelpers.cpp`, leaving `IrLowererOperatorClampMinMaxTrigHelpers.cpp` focused on clamp/min/max, lerp, FMA, hypot, and copysign helpers.
 - ✓ Refactor `src/IrPrinter.cpp` (`537` lines) below the `700`-line target by extracting template/type and builtin return-kind helper logic into `src/IrPrinterHelpers.cpp`, leaving `IrPrinter.cpp` focused on expression/definition/execution printing plus local return-kind inference.
 - ○ Refactor `src/semantics/SemanticsValidator.cpp` (`938` lines) below the `700`-line target.
+- ○ Refactor `src/ir_lowerer/IrLowererLowerStatementsBindings.h` (`918` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorExprNumeric.cpp` (`916` lines) below the `700`-line target.
+- ○ Refactor `src/emitter/EmitterEmitSetupReturnInference.h` (`914` lines) below the `700`-line target.
+- ○ Refactor `src/ir_lowerer/IrLowererInlineParamHelpers.cpp` (`912` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorInferStructReturn.cpp` (`899` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorInferMethodResolution.cpp` (`890` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorExprArgumentValidation.cpp` (`841` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorExpr.cpp` (`829` lines) below the `700`-line target.
+- ○ Refactor `src/ir_lowerer/IrLowererNativeTailDispatch.cpp` (`812` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidateReflectionMetadata.cpp` (`809` lines) below the `700`-line target.
 - ✓ Refactor `src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp` (`924` lines) below the `700`-line target by extracting entry/runtime setup-builder orchestration into `src/ir_lowerer/IrLowererUninitializedSetupBuilders.cpp` and struct inference helpers into `src/ir_lowerer/IrLowererUninitializedStructInference.cpp`, leaving `IrLowererUninitializedTypeHelpers.cpp` below target while preserving the existing helper APIs.
 - ✓ Refactor `src/text_filter/TextFilterPipelineEnvelope.cpp` (`272` lines) below the `700`-line target by extracting namespace/definition envelope scanning helpers into `src/text_filter/TextFilterPipelineEnvelopeHelpers.cpp`, leaving `TextFilterPipelineEnvelope.cpp` focused on per-envelope filter application and rule dispatch.
 - ✓ Refactor `src/primevm_main.cpp` (`690` lines) below the `700`-line target; the file already sits under target and remains focused on CLI/debug dispatch, replay/trace helpers, and final VM execution.
@@ -163,7 +182,64 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ✓ Refactor `src/ir_lowerer/IrLowererStatementCallHelpers.cpp` (`283` lines) below the `700`-line target by extracting statement-emission helpers into `src/ir_lowerer/IrLowererStatementCallEmission.cpp`, leaving `IrLowererStatementCallHelpers.cpp` focused on callable-definition orchestration, entry handling, and finalization.
 - ✓ Refactor `src/ir_lowerer/IrLowererHelpers.cpp` (`338` lines) below the `700`-line target by extracting builtin math/name classification helpers into `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp`, leaving `IrLowererHelpers.cpp` focused on shared control-flow, match-lowering, and core builtin classification helpers.
 - ○ Refactor `src/ir_lowerer/IrLowererLowerEmitExpr.h` (`735` lines) below the `700`-line target.
+- ○ Refactor `src/ir_lowerer/IrLowererCallHelpers.cpp` (`775` lines) below the `700`-line target.
 - ✓ Refactor `src/ir_lowerer/IrLowererCallHelpers.h` (`654` lines) below the `700`-line target by extracting call-dispatch/access-target result enums plus map-lookup loop helper structs into `src/ir_lowerer/IrLowererCallHelperTypes.h`, leaving `IrLowererCallHelpers.h` focused on call-helper function declarations.
+- ○ Refactor `src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp` (`717` lines) below the `700`-line target.
+- ○ Refactor `src/semantics/SemanticsValidatorPassesDiagnostics.cpp` (`713` lines) below the `700`-line target.
+- ✓ Refactor `src/ir_lowerer/IrLowererCountAccessHelpers.cpp` (`514` lines) below the `700`-line target by extracting count-access alias and receiver-classifier helpers into `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`, leaving `IrLowererCountAccessHelpers.cpp` focused on entry/count-access setup plus count/capacity emission.
+
+**Group 10A - Oversized test/support queue**
+Test-source note: keep `tests/unit/` and `include/primec/testing/` under the same `700`-line target when practical. Prefer splitting by scenario families, backend families, or helper themes instead of mechanically chopping assertion blocks.
+- ○ Refactor `tests/unit/test_ir_pipeline_validation.h` (`56261` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_calls_and_flow_collections.h` (`19285` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_emitters.h` (`17435` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_text_filters_dumps_and_if.h` (`13404` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_native_backend_collections.h` (`12062` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_vm_collections.h` (`10321` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_native_backend_core.h` (`9762` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_smoke_core.h` (`6136` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_bindings_and_examples.h` (`5615` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ir_pipeline_conversions_calls_and_args.h` (`5244` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ir_pipeline_backends.h` (`4626` lines) below the `700`-line target.
+- ○ Refactor `include/primec/testing/IrLowererHelpers.h` (`4497` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_capabilities_structs.h` (`3582` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_vm_core.h` (`3478` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ir_pipeline_serialization_control_flow.h` (`3434` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_vm_outputs.h` (`3393` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_math_conformance.h` (`2544` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_manual.cpp` (`2377` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_parser_basic_definitions.h` (`2304` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_map_conformance_helpers.h` (`2282` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ir_pipeline_conversions_numbers.h` (`1972` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_vector_conformance_helpers.h` (`1847` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_calls_and_flow_effects.h` (`1819` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_text_filters_core.h` (`1795` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_result_helpers.h` (`1685` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_glsl.h` (`1534` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_vm_debug_session.h` (`1396` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_parser_basic_literals.h` (`1348` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_imports.h` (`1287` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_entry_transforms.h` (`1273` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_bindings_pointers.h` (`1262` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ir_pipeline_to_glsl.h` (`1211` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ir_pipeline_pointers.h` (`1135` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_native_backend_math_numeric.h` (`1059` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_calls_and_flow_control_core.h` (`976` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ast_ir_dump.cpp` (`904` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_imports_versions.h` (`864` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ir_pipeline_serialization_structs.h` (`839` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ir_pipeline_to_cpp.h` (`835` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_import_resolver.cpp` (`815` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_ir_pipeline_wasm.h` (`801` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_bindings_struct_defaults.h` (`796` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_parser_errors_more_transforms.h` (`784` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_bindings_core.h` (`775` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_type_resolution_graph.h` (`759` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_calls_and_flow_access.h` (`745` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_text_filter_helpers.cpp` (`724` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_compile_run_reflection_codegen.h` (`720` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_semantics_bindings_control_flow.h` (`715` lines) below the `700`-line target.
+- ○ Refactor `tests/unit/test_parser_basic_control_flow.h` (`715` lines) below the `700`-line target.
 
 **Architecture / Type-resolution graph**
 Graph next-slice note: the finished graph/SCC parity and snapshot work above now needs to turn back into a short explicit queue. Keep new work grouped into broader migration slices instead of inventing more one-off snapshot micro-follow-ups.

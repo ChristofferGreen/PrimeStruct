@@ -196,6 +196,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererNativeTailDispatch.cpp
   src/ir_lowerer/IrLowererBindingTransformHelpers.cpp
   src/ir_lowerer/IrLowererBindingTypeHelpers.cpp
+  src/ir_lowerer/IrLowererCountAccessClassifiers.cpp
   src/ir_lowerer/IrLowererCountAccessHelpers.cpp
   src/ir_lowerer/IrLowererFileWriteHelpers.cpp
   src/ir_lowerer/IrLowererFlowBufferHelpers.cpp
