@@ -129,7 +129,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/ir_lowerer/IrLowererLowerInferenceSetup.cpp` (`1976` lines) below the `700`-line target.
 - ✓ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`616` lines) below the `700`-line target; the file already sits under target and remains focused on binding parsing plus pointer/pointer-like helper classification.
 - ○ Refactor `src/emitter/EmitterHelpersBuiltins.cpp` (`1695` lines) below the `700`-line target.
-- ○ Refactor `src/native_emitter/NativeEmitterInternals.h` (`1619` lines) below the `700`-line target.
+- ✓ Refactor `src/native_emitter/NativeEmitterInternals.h` (`508` lines) below the `700`-line target; the file already sits under target and remains focused on ARM64 emitter constants, instruction encoders, and shared native-emitter internal declarations.
 - ✓ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`134` lines) below the `700`-line target; the file already sits under target and remains focused on on-error/result-return scope guards plus shared compare/float-literal/return helper emission.
 - ○ Refactor `src/emitter/EmitterExprCalls.h` (`1512` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterEmitSetup.h` (`1458` lines) below the `700`-line target.
