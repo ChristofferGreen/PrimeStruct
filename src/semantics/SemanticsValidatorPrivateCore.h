@@ -1,0 +1,195 @@
+#pragma once
+
+  void forEachLocalAwareSnapshotCall(
+      const std::function<void(const Definition &,
+                               const std::vector<ParameterInfo> &,
+                               const Expr &,
+                               const std::unordered_map<std::string, BindingInfo> &)> &visitor);
+  bool buildDefinitionMaps();
+  bool validateDefinitionBuildTransforms(const Definition &def,
+                                         bool isStructHelper,
+                                         bool isLifecycleHelper,
+                                         std::unordered_set<std::string> &explicitStructs,
+                                         std::vector<SemanticDiagnosticRecord> *transformDiagnosticRecords,
+                                         bool &definitionTransformError);
+  bool buildImportAliases();
+  std::string resolveStructReturnPathForBuild(const std::string &typeName,
+                                              const std::string &namespacePrefix) const;
+  bool buildDefinitionReturnKinds(const std::unordered_set<std::string> &explicitStructs);
+  bool validateLifecycleHelperDefinitions();
+  bool buildParameters();
+  bool inferUnknownReturnKinds();
+  bool inferUnknownReturnKindsGraph();
+  void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);
+  bool validateTraitConstraints();
+  bool validateStructLayouts();
+  bool validateDefinitions();
+  bool validateExecutions();
+  void collectDefinitionIntraBodyCallDiagnostics(const Definition &def,
+                                                 std::vector<SemanticDiagnosticRecord> &out);
+  void collectExecutionIntraBodyCallDiagnostics(const Execution &exec,
+                                                std::vector<SemanticDiagnosticRecord> &out);
+  bool validateEntry();
+  std::optional<std::string> validateUninitializedDefiniteState(
+      const std::vector<ParameterInfo> &params,
+      const std::vector<Expr> &statements);
+  bool validateOmittedBindingInitializer(const Expr &binding,
+                                         const BindingInfo &info,
+                                         const std::string &namespacePrefix);
+  bool hasStructZeroArgConstructor(const std::string &structPath) const;
+  bool isOutsideEffectFreeStructConstructor(const std::string &structPath);
+
+  std::string resolveCalleePath(const Expr &expr) const;
+  std::string formatUnknownCallTarget(const Expr &expr) const;
+  std::string diagnosticCallTargetPath(const std::string &path) const;
+  bool isParam(const std::vector<ParameterInfo> &params, const std::string &name) const;
+  const BindingInfo *findParamBinding(const std::vector<ParameterInfo> &params, const std::string &name) const;
+  std::string typeNameForReturnKind(ReturnKind kind) const;
+  std::string inferStructReturnPath(const Expr &expr,
+                                    const std::vector<ParameterInfo> &params,
+                                    const std::unordered_map<std::string, BindingInfo> &locals);
+  ReturnKind combineInferredNumericKinds(ReturnKind left, ReturnKind right) const;
+  bool isInferStructTypeName(const std::string &typeName, const std::string &namespacePrefix) const;
+  ReturnKind inferReferenceTargetKind(const std::string &templateArg, const std::string &namespacePrefix) const;
+  ReturnKind inferUninitializedTargetKind(const std::string &templateArg,
+                                          const std::string &namespacePrefix) const;
+  bool resolveInferArgsPackCountTarget(const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       const Expr &target,
+                                       std::string &elemType) const;
+  bool extractInferExperimentalMapFieldTypes(const BindingInfo &binding,
+                                             std::string &keyTypeOut,
+                                             std::string &valueTypeOut) const;
+  bool resolveInferExperimentalMapTarget(const std::vector<ParameterInfo> &params,
+                                         const std::unordered_map<std::string, BindingInfo> &locals,
+                                         const Expr &target,
+                                         std::string &keyTypeOut,
+                                         std::string &valueTypeOut);
+  bool resolveInferExperimentalMapValueTarget(const std::vector<ParameterInfo> &params,
+                                              const std::unordered_map<std::string, BindingInfo> &locals,
+                                              const Expr &target,
+                                              std::string &keyTypeOut,
+                                              std::string &valueTypeOut);
+  bool resolveInferMethodCallPath(const Expr &expr,
+                                  const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals,
+                                  const std::string &methodName,
+                                  std::string &resolvedOut);
+  bool inferQuerySnapshotData(const std::vector<ParameterInfo> &defParams,
+                              const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                              const Expr &expr,
+                              QuerySnapshotData &out);
+  bool inferCallSnapshotData(const std::vector<ParameterInfo> &defParams,
+                             const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                             const Expr &expr,
+                             CallSnapshotData &out);
+  bool inferTrySnapshotData(const Definition &def,
+                            const std::vector<ParameterInfo> &defParams,
+                            const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                            const Expr &expr,
+                            LocalAutoTrySnapshotData &out);
+  bool inferBindingTypeFromInitializer(const Expr &initializer,
+                                       const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       BindingInfo &bindingOut,
+                                       const Expr *bindingExpr = nullptr);
+  bool graphBindingIsUsable(const BindingInfo &binding) const;
+  bool shouldBypassGraphBindingLookup(const Expr &candidate) const;
+  bool hasDirectExperimentalVectorImport() const;
+  bool canonicalizeInferredCollectionBinding(const Expr *sourceExpr,
+                                             const std::vector<ParameterInfo> &params,
+                                             const std::unordered_map<std::string, BindingInfo> &locals,
+                                             BindingInfo &bindingOut);
+  bool inferCollectionBindingFromExpr(const Expr &expr,
+                                      const std::vector<ParameterInfo> &params,
+                                      const std::unordered_map<std::string, BindingInfo> &locals,
+                                      BindingInfo &bindingOut);
+  bool inferBuiltinCollectionValueBinding(const Expr &expr,
+                                          const std::vector<ParameterInfo> &params,
+                                          const std::unordered_map<std::string, BindingInfo> &locals,
+                                          BindingInfo &bindingOut);
+  bool inferBuiltinPointerBinding(const Expr &expr,
+                                  const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals,
+                                  BindingInfo &bindingOut);
+  bool inferCallInitializerBinding(const Expr &initializer,
+                                   const std::vector<ParameterInfo> &params,
+                                   const std::unordered_map<std::string, BindingInfo> &locals,
+                                   BindingInfo &bindingOut);
+  static std::string graphLocalAutoBindingKey(const std::string &scopePath, int sourceLine, int sourceColumn);
+  static std::pair<int, int> graphLocalAutoSourceLocation(const Expr &expr);
+  bool lookupGraphLocalAutoBinding(const std::string &scopePath,
+                                   const Expr &bindingExpr,
+                                   BindingInfo &bindingOut) const;
+  bool lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const;
+  bool inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const;
+  bool resolveStructFieldBinding(const Definition &structDef,
+                                 const Expr &fieldStmt,
+                                 BindingInfo &bindingOut);
+  bool resolveStructFieldReceiverPath(const std::vector<ParameterInfo> &params,
+                                      const std::unordered_map<std::string, BindingInfo> &locals,
+                                      const Expr &receiver,
+                                      std::string &structPathOut);
+  bool isTypeNamespaceFieldReceiver(const std::vector<ParameterInfo> &params,
+                                    const std::unordered_map<std::string, BindingInfo> &locals,
+                                    const Expr &receiver,
+                                    std::string &structPathOut);
+  bool resolveStructFieldBinding(const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 const Expr &receiver,
+                                 const std::string &fieldName,
+                                 BindingInfo &bindingOut);
+  bool isTypeNamespaceMethodCall(const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 const Expr &callExpr,
+                                 const std::string &resolvedPath) const;
+  std::string describeMethodReflectionTarget(const std::vector<ParameterInfo> &params,
+                                             const std::unordered_map<std::string, BindingInfo> &locals,
+                                             const Expr &callExpr) const;
+  bool validateSoaVectorElementFieldEnvelopes(const std::string &typeArg, const std::string &namespacePrefix);
+  bool isDropTrivialContainerElementType(const std::string &typeName,
+                                         const std::string &namespacePrefix,
+                                         const std::vector<std::string> *definitionTemplateArgs,
+                                         std::unordered_set<std::string> &visitingStructs);
+  bool isRelocationTrivialContainerElementType(const std::string &typeName,
+                                               const std::string &namespacePrefix,
+                                               const std::vector<std::string> *definitionTemplateArgs,
+                                               std::unordered_set<std::string> &visitingStructs);
+  bool validateVectorDiscardHelperElementType(const BindingInfo &binding,
+                                              const std::string &helperName,
+                                              const std::string &namespacePrefix,
+                                              const std::vector<std::string> *definitionTemplateArgs);
+  bool validateVectorIndexedRemovalHelperElementType(const BindingInfo &binding,
+                                                     const std::string &helperName,
+                                                     const std::string &namespacePrefix,
+                                                     const std::vector<std::string> *definitionTemplateArgs);
+  bool validateVectorRelocationHelperElementType(const BindingInfo &binding,
+                                                 const std::string &helperName,
+                                                 const std::string &namespacePrefix,
+                                                 const std::vector<std::string> *definitionTemplateArgs);
+  bool isStringStatementExpr(const Expr &arg,
+                             const std::vector<ParameterInfo> &params,
+                             const std::unordered_map<std::string, BindingInfo> &locals);
+  bool isPrintableStatementExpr(const Expr &arg,
+                                const std::vector<ParameterInfo> &params,
+                                const std::unordered_map<std::string, BindingInfo> &locals);
+  bool allowMathBareName(const std::string &name) const;
+  bool hasAnyMathImport() const;
+  bool isEntryArgsName(const std::string &name) const;
+  bool isEntryArgsAccess(const Expr &expr) const;
+  bool isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr) const;
+  bool isBuiltinBlockCall(const Expr &expr) const;
+  bool isEnvelopeValueExpr(const Expr &expr, bool allowAnyName) const;
+  bool isSyntheticBlockValueBinding(const Expr &expr) const;
+  const Expr *getEnvelopeValueExpr(const Expr &expr, bool allowAnyName) const;
+  struct ValidationContext;
+  bool makeDefinitionValidationContext(const Definition &def, ValidationContext &out);
+  ValidationContext makeExecutionValidationContext(const Execution &exec) const;
+  const ValidationContext &buildDefinitionValidationContext(const Definition &def) const;
+  const ValidationContext &buildExecutionValidationContext(const Execution &exec) const;
+  void capturePrimarySpanIfUnset(int line, int column);
+  void captureRelatedSpan(int line, int column, const std::string &label);
+  void captureExprContext(const Expr &expr);
+  void captureDefinitionContext(const Definition &def);
+  void captureExecutionContext(const Execution &exec);
+  bool collectDuplicateDefinitionDiagnostics();
