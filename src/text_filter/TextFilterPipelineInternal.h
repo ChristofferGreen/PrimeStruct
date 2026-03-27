@@ -18,6 +18,10 @@ bool applyPass(const std::string &input,
                std::string &error,
                const TextFilterOptions &options);
 
+bool rewriteBinaryOperatorsWithPrecedence(const std::string &input,
+                                          std::string &output,
+                                          std::string &error);
+
 bool applyPerEnvelope(const std::string &input,
                       std::string &output,
                       std::string &error,

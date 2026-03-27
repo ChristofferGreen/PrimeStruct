@@ -141,7 +141,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/VmDebugDap.cpp` (`1104` lines) below the `700`-line target.
 - ○ Refactor `src/parser/ParserExpr.cpp` (`1083` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererStructTypeHelpers.cpp` (`1058` lines) below the `700`-line target.
-- ○ Refactor `src/text_filter/TextFilterPipelinePass.cpp` (`1037` lines) below the `700`-line target.
+- ✓ Refactor `src/text_filter/TextFilterPipelinePass.cpp` (`691` lines) below the `700`-line target by extracting the binary-operator precedence parser and rewrite helpers into `src/text_filter/TextFilterPipelineOperatorRewrite.cpp`, leaving `TextFilterPipelinePass.cpp` focused on pass orchestration, collection literal rewrites, and token-by-token filter application.
 - ○ Refactor `src/ImportResolver.cpp` (`1010` lines) below the `700`-line target.
 - ✓ Refactor `src/native_emitter/NativeEmitterHelpers.cpp` (`520` lines) below the `700`-line target by extracting the Apple Mach-O image builder and code-signature helpers into `src/native_emitter/NativeEmitterMachO.cpp`, leaving `NativeEmitterHelpers.cpp` focused on stack-depth analysis and output-file writing.
 - ✓ Refactor `src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.cpp` (`499` lines) below the `700`-line target by extracting angle conversion, trig, and two-argument trig lowering into `src/ir_lowerer/IrLowererOperatorAngleTrigHelpers.cpp`, leaving `IrLowererOperatorClampMinMaxTrigHelpers.cpp` focused on clamp/min/max, lerp, FMA, hypot, and copysign helpers.
