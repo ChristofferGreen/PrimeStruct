@@ -260,6 +260,8 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp
   src/ir_lowerer/IrLowererStructTypeHelpers.cpp
   src/ir_lowerer/IrLowererTemplateTypeParseHelpers.cpp
+  src/ir_lowerer/IrLowererUninitializedSetupBuilders.cpp
+  src/ir_lowerer/IrLowererUninitializedStructInference.cpp
   src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp
 )
 

@@ -147,7 +147,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.cpp` (`953` lines) below the `700`-line target.
 - ○ Refactor `src/IrPrinter.cpp` (`943` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsValidator.cpp` (`938` lines) below the `700`-line target.
-- ○ Refactor `src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp` (`924` lines) below the `700`-line target.
+- ✓ Refactor `src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp` (`924` lines) below the `700`-line target by extracting entry/runtime setup-builder orchestration into `src/ir_lowerer/IrLowererUninitializedSetupBuilders.cpp` and struct inference helpers into `src/ir_lowerer/IrLowererUninitializedStructInference.cpp`, leaving `IrLowererUninitializedTypeHelpers.cpp` below target while preserving the existing helper APIs.
 - ○ Refactor `src/text_filter/TextFilterPipelineEnvelope.cpp` (`906` lines) below the `700`-line target.
 - ○ Refactor `src/primevm_main.cpp` (`868` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterHelpersTypes.cpp` (`857` lines) below the `700`-line target.

@@ -36894,6 +36894,36 @@ TEST_CASE("ir lowerer uninitialized type helpers build expression struct path in
   CHECK(inferStructExprPath(accessExpr, locals) == "/pkg/Ctor");
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers infer dereference expression struct paths") {
+  const std::unordered_map<std::string, const primec::Definition *> defMap;
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto resolveExprPath = [](const primec::Expr &) { return std::string(); };
+  auto resolveStructFieldSlot = [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.structTypeName = "/pkg/Ctor";
+  locals.emplace("ptr", pointerInfo);
+
+  primec::Expr ptrExpr;
+  ptrExpr.kind = primec::Expr::Kind::Name;
+  ptrExpr.name = "ptr";
+
+  primec::Expr dereferenceExpr;
+  dereferenceExpr.kind = primec::Expr::Kind::Call;
+  dereferenceExpr.name = "dereference";
+  dereferenceExpr.args = {ptrExpr};
+
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            dereferenceExpr, locals, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot) ==
+        "/pkg/Ctor");
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});

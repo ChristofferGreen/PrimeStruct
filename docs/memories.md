@@ -36,6 +36,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `src/semantics/TemplateMonomorphCoreUtilities.h` and are included by
   `TemplateMonomorph.cpp`, covering builtin type and collection
   classification plus overload path and import utility helpers.
+- `uninitialized-type-helpers-split`: Group 10 reduced
+  `src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp` to 578 lines by
+  moving entry/runtime setup-builder orchestration into
+  `src/ir_lowerer/IrLowererUninitializedSetupBuilders.cpp` and struct-return
+  inference into `src/ir_lowerer/IrLowererUninitializedStructInference.cpp`,
+  while leaving storage-access helpers in `IrLowererUninitializedTypeHelpers.cpp`
+  so the existing helper API surface and validation coverage remain intact.
 
 ### template-monomorph-final-orchestration-header
 - Updated: 2026-03-26
