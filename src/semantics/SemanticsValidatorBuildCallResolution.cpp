@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "semantics/MapConstructorHelpers.h"
 
 #include <string_view>
 
@@ -240,29 +241,8 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         return {};
       }
     };
-    auto mapConstructorHelperPath = [&]() -> std::string {
-      switch (expr.args.size()) {
-      case 0:
-        return "/std/collections/mapNew";
-      case 2:
-        return "/std/collections/mapSingle";
-      case 4:
-        return "/std/collections/mapPair";
-      case 6:
-        return "/std/collections/mapTriple";
-      case 8:
-        return "/std/collections/mapQuad";
-      case 10:
-        return "/std/collections/mapQuint";
-      case 12:
-        return "/std/collections/mapSext";
-      case 14:
-        return "/std/collections/mapSept";
-      case 16:
-        return "/std/collections/mapOct";
-      default:
-        return {};
-      }
+    auto mapConstructorHelperPath = [&](size_t argumentCount) -> std::string {
+      return canonicalMapConstructorHelperPath(argumentCount);
     };
     std::string helperPath;
     if (resolvedPath == "/std/collections/vector/vector") {
@@ -270,8 +250,8 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         return resolvedPath;
       }
       helperPath = vectorConstructorHelperPath();
-    } else if (resolvedPath == "/std/collections/map/map") {
-      helperPath = mapConstructorHelperPath();
+    } else if (resolvedPath == "/std/collections/map/map" || resolvedPath == "/map/map") {
+      helperPath = mapConstructorHelperPath(expr.args.size());
     }
     if (!helperPath.empty() && defMap_.count(helperPath) > 0) {
       return helperPath;
