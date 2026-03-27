@@ -185,18 +185,22 @@ namespace std {
          /vector/reserve(empty, capacity)
        },
        else() { })
-    if(greater_than(capacity, values.field_capacity()),
+    if(not(greater_than(capacity, 1073741823i32)),
        then() {
-         [i32 mut] allocCount{capacity}
-         if(equal(allocCount, 0i32),
-            then() { assign(allocCount, 1i32) },
+         if(greater_than(capacity, values.field_capacity()),
+            then() {
+              [i32 mut] allocCount{capacity}
+              if(equal(allocCount, 0i32),
+                 then() { assign(allocCount, 1i32) },
+                 else() { })
+              [Pointer<uninitialized<T>> mut] grown{
+                  /std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
+              vectorMovePrefixToBuffer<T>(grown, values, values.field_count())
+              /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(values.data)
+              assign(values.data, grown)
+              values.set_field_capacity(capacity)
+            },
             else() { })
-         [Pointer<uninitialized<T>> mut] grown{
-             /std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
-         vectorMovePrefixToBuffer<T>(grown, values, values.field_count())
-         /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(values.data)
-         assign(values.data, grown)
-         values.set_field_capacity(capacity)
        },
        else() { })
   }
@@ -284,12 +288,8 @@ namespace std {
          if(equal(nextCapacity, 0i32),
             then() { assign(nextCapacity, 1i32) },
             else() {
-              if(greater_than(nextCapacity, 1073741823i32),
-                 then() {
-                   [vector<i32> mut] empty{/vector/vector<i32>()}
-                   [i32] invalidCapacity{minus(0i32, nextCapacity)}
-                   /vector/reserve(empty, invalidCapacity)
-                 },
+              if(greater_than(nextCapacity, 536870911i32),
+                 then() { assign(nextCapacity, 1073741824i32) },
                  else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
             })
          vectorReserveInternal<T>(values, nextCapacity)

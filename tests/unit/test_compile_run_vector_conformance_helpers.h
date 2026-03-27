@@ -753,8 +753,8 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
     source += "  return(vectorAtUnsafe<i32>(values, -1i32))\n";
   } else if (mode == "push_growth_overflow") {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorNew<i32>()}\n";
-    source += "  values.set_field_count(1073741824i32)\n";
-    source += "  values.set_field_capacity(1073741824i32)\n";
+    source += "  values.set_field_count(1073741823i32)\n";
+    source += "  values.set_field_capacity(1073741823i32)\n";
     source += "  vectorPush<i32>(values, 3i32)\n";
   } else if (mode == "reserve_negative") {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
