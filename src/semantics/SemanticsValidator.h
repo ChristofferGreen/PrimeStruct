@@ -1008,6 +1008,25 @@ private:
                                          const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          std::vector<std::string> &argsOut);
+  std::string inferMethodCollectionTypePathFromTypeText(const std::string &typeText) const;
+  std::string resolveMethodStructTypePath(const std::string &typeName,
+                                          const std::string &namespacePrefix) const;
+  bool hasDefinitionFamilyPath(std::string_view path) const;
+  std::string preferredFileErrorHelperTarget(std::string_view helperName) const;
+  std::string preferredImageErrorHelperTarget(std::string_view helperName) const;
+  std::string preferredContainerErrorHelperTarget(std::string_view helperName) const;
+  std::string preferredGfxErrorHelperTarget(std::string_view helperName,
+                                            const std::string &resolvedStructPath) const;
+  std::string preferredMapMethodTargetForCall(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &receiverExpr,
+      const std::string &helperName);
+  std::string preferredBufferMethodTargetForCall(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &receiverExpr,
+      const std::string &helperName);
   std::string preferredExperimentalMapHelperTarget(std::string_view helperName) const;
   std::string preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const;
   bool canonicalExperimentalMapHelperPath(const std::string &resolvedPath,
