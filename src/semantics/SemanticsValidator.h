@@ -831,6 +831,17 @@ private:
     std::function<bool(const Expr &)> isDeclaredPointerLikeCall;
     std::function<bool(const Expr &)> resolveMapTarget;
   };
+  bool validateExprEarlyPointerBuiltin(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const ExprDispatchBootstrap &dispatchBootstrap,
+      bool &handledOut);
+  std::string resolveExprConcreteCallPath(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      const std::string &candidatePath) const;
   void prepareExprDispatchBootstrap(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
