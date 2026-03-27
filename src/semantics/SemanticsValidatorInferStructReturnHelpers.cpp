@@ -44,43 +44,10 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
   if (typeName.empty()) {
     return {};
   }
-
-  std::string normalizedTypeName = typeName;
-  std::string normalizedTypeTemplateArg = typeTemplateArg;
-  if ((normalizedTypeName == "Reference" || normalizedTypeName == "Pointer") &&
-      !normalizedTypeTemplateArg.empty()) {
-    normalizedTypeName = normalizeBindingTypeName(normalizedTypeTemplateArg);
-    normalizedTypeTemplateArg.clear();
-  } else {
-    normalizedTypeName = normalizeBindingTypeName(normalizedTypeName);
+  if (typeTemplateArg.empty()) {
+    return normalizeCollectionTypePath(typeName);
   }
-
-  if (normalizedTypeName == "string") {
-    return "/string";
-  }
-  if ((normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "soa_vector") &&
-      !normalizedTypeTemplateArg.empty()) {
-    return "/" + normalizedTypeName;
-  }
-  if (isMapCollectionTypeName(normalizedTypeName) && !normalizedTypeTemplateArg.empty()) {
-    return "/map";
-  }
-
-  std::string base;
-  std::string argText;
-  if (splitTemplateTypeName(normalizedTypeName, base, argText)) {
-    std::vector<std::string> args;
-    if (splitTopLevelTemplateArgs(argText, args)) {
-      if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
-        return "/" + base;
-      }
-      if (isMapCollectionTypeName(base) && args.size() == 2) {
-        return "/map";
-      }
-    }
-  }
-
-  return {};
+  return normalizeCollectionTypePath(typeName + "<" + typeTemplateArg + ">");
 }
 
 std::string SemanticsValidator::resolveInferStructTypePath(const std::string &typeName,
