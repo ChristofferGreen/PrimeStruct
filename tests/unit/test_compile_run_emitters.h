@@ -15565,6 +15565,205 @@ main() {
   CHECK(runCommand(exePath) == 39);
 }
 
+TEST_CASE("C++ emitter materializes variadic FileError value packs with indexed why methods") {
+#if defined(EACCES) && defined(ENOENT) && defined(EEXIST)
+  const std::string source =
+      "[return<int>]\n"
+      "score_errors([args<FileError>] values) {\n"
+      "  return(plus(count(values[0i32].why()), count(values[2i32].why())))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward([args<FileError>] values) {\n"
+      "  return(score_errors([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "forward_mixed([args<FileError>] values) {\n"
+      "  [FileError] extra{" + std::to_string(EACCES) + "i32}\n"
+      "  return(score_errors(extra, [spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "main() {\n"
+      "  [FileError] a0{" + std::to_string(EACCES) + "i32}\n"
+      "  [FileError] a1{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] a2{" + std::to_string(EEXIST) + "i32}\n"
+      "  [FileError] b0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] b1{" + std::to_string(EEXIST) + "i32}\n"
+      "  [FileError] b2{" + std::to_string(EACCES) + "i32}\n"
+      "  [FileError] c0{" + std::to_string(ENOENT) + "i32}\n"
+      "  [FileError] c1{" + std::to_string(EEXIST) + "i32}\n"
+      "  return(plus(score_errors(a0, a1, a2),\n"
+      "              plus(forward(b0, b1, b2),\n"
+      "                   forward_mixed(c0, c1))))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_file_error.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_args_file_error_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 36);
+#else
+  DOCTEST_INFO("FileError errno constants unavailable on this platform");
+  CHECK(true);
+#endif
+}
+
+TEST_CASE("C++ emitter materializes variadic map value packs with indexed count methods") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
+score_maps([args<map<i32, i32>>] values) {
+  return(plus(values[0i32].count(), values[2i32].count()))
+}
+
+[return<int> effects(heap_alloc)]
+forward([args<map<i32, i32>>] values) {
+  return(score_maps([spread] values))
+}
+
+[return<int> effects(heap_alloc)]
+forward_mixed([args<map<i32, i32>>] values) {
+  return(score_maps(mapSingle(1i32, 2i32), [spread] values))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  return(plus(score_maps(mapPair(1i32, 2i32, 3i32, 4i32),
+                         mapSingle(5i32, 6i32),
+                         mapTriple(7i32, 8i32, 9i32, 10i32, 11i32, 12i32)),
+              plus(forward(mapSingle(13i32, 14i32),
+                           mapPair(15i32, 16i32, 17i32, 18i32),
+                           mapSingle(19i32, 20i32)),
+                   forward_mixed(mapPair(21i32, 22i32, 23i32, 24i32),
+                                 mapTriple(25i32, 26i32, 27i32, 28i32, 29i32, 30i32)))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_map_count.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_args_map_count_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 36);
+}
+
+TEST_CASE("C++ emitter materializes variadic Buffer value packs with indexed count helpers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int> effects(gpu_dispatch)]
+score_buffers([args<Buffer<i32>>] values) {
+  [Buffer<i32>] head{at(values, 0i32)}
+  [Buffer<i32>] tail{at(values, minus(count(values), 1i32))}
+  return(plus(head.count(), plus(tail.count(), count(values))))
+}
+
+[return<int> effects(gpu_dispatch)]
+forward([args<Buffer<i32>>] values) {
+  return(score_buffers([spread] values))
+}
+
+[return<int> effects(gpu_dispatch)]
+forward_mixed([args<Buffer<i32>>] values) {
+  return(score_buffers(Buffer<i32>(1i32), [spread] values))
+}
+
+[return<int> effects(gpu_dispatch)]
+main() {
+  return(plus(score_buffers(Buffer<i32>(3i32), Buffer<i32>(1i32), Buffer<i32>(2i32)),
+              plus(forward(Buffer<i32>(4i32), Buffer<i32>(1i32), Buffer<i32>(5i32)),
+                   forward_mixed(Buffer<i32>(6i32), Buffer<i32>(2i32)))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_buffer_count.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_args_buffer_count_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 26);
+}
+
+TEST_CASE("C++ emitter materializes variadic File handle packs with indexed file methods") {
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string pathA0 = (testScratchPath("") / "primec_cpp_variadic_file_handle_a0.txt").string();
+  const std::string pathA1 = (testScratchPath("") / "primec_cpp_variadic_file_handle_a1.txt").string();
+  const std::string pathA2 = (testScratchPath("") / "primec_cpp_variadic_file_handle_a2.txt").string();
+  const std::string pathB0 = (testScratchPath("") / "primec_cpp_variadic_file_handle_b0.txt").string();
+  const std::string pathB1 = (testScratchPath("") / "primec_cpp_variadic_file_handle_b1.txt").string();
+  const std::string pathB2 = (testScratchPath("") / "primec_cpp_variadic_file_handle_b2.txt").string();
+  const std::string pathC0 = (testScratchPath("") / "primec_cpp_variadic_file_handle_c0.txt").string();
+  const std::string pathC1 = (testScratchPath("") / "primec_cpp_variadic_file_handle_c1.txt").string();
+  const std::string pathExtra =
+      (testScratchPath("") / "primec_cpp_variadic_file_handle_extra.txt").string();
+
+  const std::string source =
+      "[effects(file_write)]\n"
+      "swallow_file_error([FileError] err) {}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "score_files([args<File<Write>>] values) {\n"
+      "  values[0i32].write_line(\"alpha\"utf8)?\n"
+      "  values[minus(count(values), 1i32)].write_line(\"omega\"utf8)?\n"
+      "  values[0i32].flush()?\n"
+      "  values[minus(count(values), 1i32)].flush()?\n"
+      "  values[0i32].close()?\n"
+      "  values[minus(count(values), 1i32)].close()?\n"
+      "  return(plus(count(values), 10i32))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward([args<File<Write>>] values) {\n"
+      "  return(score_files([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward_mixed([args<File<Write>>] values) {\n"
+      "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
+      "  return(score_files(extra, [spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] a0{File<Write>(\"" + escape(pathA0) + "\"utf8)?}\n"
+      "  [File<Write>] a1{File<Write>(\"" + escape(pathA1) + "\"utf8)?}\n"
+      "  [File<Write>] a2{File<Write>(\"" + escape(pathA2) + "\"utf8)?}\n"
+      "  [File<Write>] b0{File<Write>(\"" + escape(pathB0) + "\"utf8)?}\n"
+      "  [File<Write>] b1{File<Write>(\"" + escape(pathB1) + "\"utf8)?}\n"
+      "  [File<Write>] b2{File<Write>(\"" + escape(pathB2) + "\"utf8)?}\n"
+      "  [File<Write>] c0{File<Write>(\"" + escape(pathC0) + "\"utf8)?}\n"
+      "  [File<Write>] c1{File<Write>(\"" + escape(pathC1) + "\"utf8)?}\n"
+      "  return(plus(score_files(a0, a1, a2), plus(forward(b0, b1, b2), forward_mixed(c0, c1))))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_file_handle.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_args_file_handle_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 39);
+  CHECK(readFile(pathA0) == "alpha\n");
+  CHECK(readFile(pathA2) == "omega\n");
+  CHECK(readFile(pathB0) == "alpha\n");
+  CHECK(readFile(pathB2) == "omega\n");
+  CHECK(readFile(pathExtra) == "alpha\n");
+  CHECK(readFile(pathC1) == "omega\n");
+}
+
 TEST_CASE("C++ emitter rejects variadic pointer string packs") {
   const std::string source = R"(
 [return<int>]
