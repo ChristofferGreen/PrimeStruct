@@ -1,6 +1,7 @@
 #include "SemanticsValidateReflectionMetadata.h"
 
 #include "SemanticsHelpers.h"
+#include "SemanticsValidateReflectionMetadataInternal.h"
 #include "primec/StringLiteral.h"
 
 #include <algorithm>
@@ -15,109 +16,12 @@
 namespace primec::semantics {
 
 bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
-  struct FieldMetadata {
-    std::string name;
-    std::string typeName;
-    std::string visibility;
-  };
-
-  std::unordered_set<std::string> structNames;
-  std::unordered_set<std::string> reflectedStructNames;
-  std::unordered_map<std::string, std::vector<FieldMetadata>> structFieldMetadata;
-  std::unordered_map<std::string, const Definition *> definitionByPath;
-  std::unordered_set<std::string> publicDefinitions;
-  auto isDefinitionPublic = [](const Definition &def) -> bool {
-    bool sawVisibility = false;
-    bool isPublic = false;
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "public" && transform.name != "private") {
-        continue;
-      }
-      if (sawVisibility) {
-        return false;
-      }
-      sawVisibility = true;
-      isPublic = (transform.name == "public");
-    }
-    return isPublic;
-  };
-
-  for (const auto &def : program.definitions) {
-    definitionByPath.emplace(def.fullPath, &def);
-    bool hasStructTransform = false;
-    bool hasReturnTransform = false;
-    for (const auto &transform : def.transforms) {
-      if (isStructTransformName(transform.name)) {
-        hasStructTransform = true;
-      }
-      if (transform.name == "return") {
-        hasReturnTransform = true;
-      }
-    }
-    bool fieldOnlyStruct = false;
-    if (!hasStructTransform && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement &&
-        !def.returnExpr.has_value()) {
-      fieldOnlyStruct = true;
-      for (const auto &stmt : def.statements) {
-        if (!stmt.isBinding) {
-          fieldOnlyStruct = false;
-          break;
-        }
-      }
-    }
-    if (hasStructTransform || fieldOnlyStruct) {
-      structNames.insert(def.fullPath);
-      if (std::any_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
-            return transform.name == "reflect";
-          })) {
-        reflectedStructNames.insert(def.fullPath);
-      }
-    }
-    if (isDefinitionPublic(def)) {
-      publicDefinitions.insert(def.fullPath);
-    }
-  }
-
-  std::unordered_map<std::string, std::string> importAliases;
-  for (const auto &importPath : program.imports) {
-    if (importPath.empty() || importPath[0] != '/') {
-      continue;
-    }
-    bool isWildcard = false;
-    std::string prefix;
-    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
-      isWildcard = true;
-      prefix = importPath.substr(0, importPath.size() - 2);
-    } else if (importPath.find('/', 1) == std::string::npos) {
-      isWildcard = true;
-      prefix = importPath;
-    }
-    if (isWildcard) {
-      const std::string scopedPrefix = prefix + "/";
-      for (const auto &def : program.definitions) {
-        if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
-          continue;
-        }
-        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
-        if (remainder.empty() || remainder.find('/') != std::string::npos) {
-          continue;
-        }
-        if (publicDefinitions.count(def.fullPath) == 0) {
-          continue;
-        }
-        importAliases.emplace(remainder, def.fullPath);
-      }
-      continue;
-    }
-    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
-    if (remainder.empty()) {
-      continue;
-    }
-    if (publicDefinitions.count(importPath) == 0) {
-      continue;
-    }
-    importAliases.emplace(remainder, importPath);
-  }
+  ReflectionMetadataRewriteContext rewriteContext = buildReflectionMetadataRewriteContext(program);
+  const auto &structNames = rewriteContext.structNames;
+  const auto &reflectedStructNames = rewriteContext.reflectedStructNames;
+  const auto &structFieldMetadata = rewriteContext.structFieldMetadata;
+  const auto &definitionByPath = rewriteContext.definitionByPath;
+  const auto &importAliases = rewriteContext.importAliases;
 
   auto trim = [](const std::string &text) -> std::string {
     const size_t start = text.find_first_not_of(" \t\r\n");
@@ -140,147 +44,6 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     escaped += "\"utf8";
     return escaped;
   };
-
-  std::function<bool(const std::string &, const std::string &, std::string &, std::string &)> canonicalizeTypeName;
-  canonicalizeTypeName = [&](const std::string &typeName,
-                             const std::string &namespacePrefix,
-                             std::string &canonicalOut,
-                             std::string &structPathOut) {
-    canonicalOut.clear();
-    structPathOut.clear();
-    const std::string trimmed = trim(typeName);
-    if (trimmed.empty()) {
-      error = "reflection query requires a type argument";
-      return false;
-    }
-    if (trimmed == "Self" && structNames.count(namespacePrefix) > 0) {
-      canonicalOut = namespacePrefix;
-      structPathOut = namespacePrefix;
-      return true;
-    }
-
-    const std::string normalized = normalizeBindingTypeName(trimmed);
-    std::string resolvedStruct = resolveStructTypePath(normalized, namespacePrefix, structNames);
-    if (resolvedStruct.empty()) {
-      auto importIt = importAliases.find(normalized);
-      if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
-        resolvedStruct = importIt->second;
-      }
-    }
-    if (!resolvedStruct.empty()) {
-      canonicalOut = resolvedStruct;
-      structPathOut = resolvedStruct;
-      return true;
-    }
-
-    std::string base;
-    std::string arg;
-    if (!splitTemplateTypeName(normalized, base, arg)) {
-      canonicalOut = normalized;
-      return true;
-    }
-
-    std::vector<std::string> args;
-    if (!splitTopLevelTemplateArgs(arg, args) || args.empty()) {
-      canonicalOut = normalized;
-      return true;
-    }
-
-    std::string canonicalBase;
-    std::string baseStructPath;
-    if (!canonicalizeTypeName(base, namespacePrefix, canonicalBase, baseStructPath)) {
-      return false;
-    }
-    std::vector<std::string> canonicalArgs;
-    canonicalArgs.reserve(args.size());
-    for (const auto &nestedArg : args) {
-      std::string canonicalArg;
-      std::string nestedStructPath;
-      if (!canonicalizeTypeName(nestedArg, namespacePrefix, canonicalArg, nestedStructPath)) {
-        return false;
-      }
-      canonicalArgs.push_back(std::move(canonicalArg));
-    }
-    canonicalOut = canonicalBase + "<" + joinTemplateArgs(canonicalArgs) + ">";
-    return true;
-  };
-
-  auto resolveFieldTypeName = [&](const Definition &def, const Expr &stmt) {
-    std::string typeCandidate;
-    bool hasExplicitType = false;
-    for (const auto &transform : stmt.transforms) {
-      if (transform.name == "effects" || transform.name == "capabilities") {
-        continue;
-      }
-      if (transform.name == "restrict" && transform.templateArgs.size() == 1) {
-        typeCandidate = transform.templateArgs.front();
-        hasExplicitType = true;
-        continue;
-      }
-      if (isBindingAuxTransformName(transform.name)) {
-        continue;
-      }
-      if (!transform.arguments.empty()) {
-        continue;
-      }
-      if (!transform.templateArgs.empty()) {
-        typeCandidate = transform.name + "<" + joinTemplateArgs(transform.templateArgs) + ">";
-      } else {
-        typeCandidate = transform.name;
-      }
-      hasExplicitType = true;
-      break;
-    }
-
-    if (!hasExplicitType && stmt.args.size() == 1) {
-      BindingInfo inferred;
-      if (tryInferBindingTypeFromInitializer(stmt.args.front(), {}, {}, inferred, true)) {
-        typeCandidate = inferred.typeName;
-        if (!inferred.typeTemplateArg.empty()) {
-          typeCandidate += "<" + inferred.typeTemplateArg + ">";
-        }
-      }
-    }
-    if (typeCandidate.empty()) {
-      typeCandidate = "int";
-    }
-
-    std::string canonicalType;
-    std::string ignoredStructPath;
-    if (canonicalizeTypeName(typeCandidate, def.namespacePrefix, canonicalType, ignoredStructPath)) {
-      return canonicalType;
-    }
-    return normalizeBindingTypeName(typeCandidate);
-  };
-
-  for (const auto &def : program.definitions) {
-    if (structNames.count(def.fullPath) == 0) {
-      continue;
-    }
-    std::vector<FieldMetadata> fields;
-    fields.reserve(def.statements.size());
-    for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding) {
-        continue;
-      }
-      FieldMetadata field;
-      field.name = stmt.name;
-      field.typeName = resolveFieldTypeName(def, stmt);
-      field.visibility = "public";
-      for (const auto &transform : stmt.transforms) {
-        if (transform.name == "private") {
-          field.visibility = "private";
-          break;
-        }
-        if (transform.name == "public") {
-          field.visibility = "public";
-          break;
-        }
-      }
-      fields.push_back(std::move(field));
-    }
-    structFieldMetadata.emplace(def.fullPath, std::move(fields));
-  }
 
   auto typeKindForCanonical = [](const std::string &canonicalType, const std::string &structPath) {
     if (!structPath.empty()) {
@@ -487,7 +250,8 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
       return false;
     }
     std::string ignoredStructPath;
-    return canonicalizeTypeName(typeName, ownerDef.namespacePrefix, canonicalOut, ignoredStructPath);
+    return rewriteContext.canonicalizeTypeName(typeName, ownerDef.namespacePrefix, canonicalOut, ignoredStructPath,
+                                               error);
   };
   auto resolveDefinitionReturnCanonicalType = [&](const Definition &definition, std::string &canonicalOut) -> bool {
     for (const auto &transform : definition.transforms) {
@@ -498,8 +262,8 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
         return false;
       }
       std::string ignoredStructPath;
-      return canonicalizeTypeName(transform.templateArgs.front(), definition.namespacePrefix, canonicalOut,
-                                  ignoredStructPath);
+      return rewriteContext.canonicalizeTypeName(transform.templateArgs.front(), definition.namespacePrefix,
+                                                 canonicalOut, ignoredStructPath, error);
     }
     return false;
   };
@@ -650,7 +414,8 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
 
     std::string canonicalType;
     std::string structPath;
-    if (!canonicalizeTypeName(expr.templateArgs.front(), expr.namespacePrefix, canonicalType, structPath)) {
+    if (!rewriteContext.canonicalizeTypeName(expr.templateArgs.front(), expr.namespacePrefix, canonicalType,
+                                             structPath, error)) {
       return false;
     }
 
@@ -733,7 +498,8 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
       if (isIndexable) {
         std::string elemStructPath;
         std::string elemCanonical;
-        if (!canonicalizeTypeName(expr.templateArgs[1], expr.namespacePrefix, elemCanonical, elemStructPath)) {
+        if (!rewriteContext.canonicalizeTypeName(expr.templateArgs[1], expr.namespacePrefix, elemCanonical,
+                                                 elemStructPath, error)) {
           return false;
         }
         elemCanonicalType = std::move(elemCanonical);
@@ -760,7 +526,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
                 std::to_string(fieldIndex);
         return false;
       }
-      const FieldMetadata &field = fieldMetaIt->second[fieldIndex];
+      const ReflectionFieldMetadata &field = fieldMetaIt->second[fieldIndex];
       rewritten.kind = Expr::Kind::StringLiteral;
       if (queryName == "field_name") {
         rewritten.stringValue = escapeStringLiteral(field.name);
