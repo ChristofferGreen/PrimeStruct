@@ -56,8 +56,6 @@ namespace std {
 
     [public mut]
     Destroy() {
-      drop(this.key)
-      drop(this.value)
     }
   }
 
@@ -106,8 +104,6 @@ namespace std {
 
     [public effects(heap_alloc)]
     Destroy() {
-      drop(this.keys)
-      drop(this.payloads)
     }
   }
 

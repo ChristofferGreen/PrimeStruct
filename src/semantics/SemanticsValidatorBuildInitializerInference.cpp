@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "semantics/MapConstructorHelpers.h"
+#include "MapConstructorHelpers.h"
 
 namespace primec::semantics {
 

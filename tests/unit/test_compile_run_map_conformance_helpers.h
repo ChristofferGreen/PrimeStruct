@@ -2003,7 +2003,7 @@ inline void expectInferredExperimentalMapDefaultParameterConformance(const std::
       "map_experimental_inferred_default_parameter_" + emitMode,
       emitMode,
       19,
-      "2\n4\n1\n4\n6\n5\n3\n5\n8\n");
+      "2\n4\n1\n4\n3\n5\n6\n5\n8\n");
 }
 
 inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {

@@ -3,7 +3,7 @@
 #include <array>
 #include <string_view>
 
-#include "semantics/MapConstructorHelpers.h"
+#include "MapConstructorHelpers.h"
 
 namespace primec::semantics {
 
@@ -140,15 +140,16 @@ bool SemanticsValidator::buildParameters() {
       return typeTextIsExperimentalMapValue(bindingTypeText(binding));
     };
     auto isResolvedExperimentalMapConstructorPath = [](const std::string &resolvedPath) {
-      const size_t specializationSuffix = resolvedPath.find("__t");
+      std::string normalizedPath = resolvedPath;
+      const size_t specializationSuffix = normalizedPath.find("__t");
       if (specializationSuffix != std::string::npos) {
-        resolvedPath.erase(specializationSuffix);
+        normalizedPath.erase(specializationSuffix);
       }
-      const size_t overloadSuffix = resolvedPath.find("__ov");
+      const size_t overloadSuffix = normalizedPath.find("__ov");
       if (overloadSuffix != std::string::npos) {
-        resolvedPath.erase(overloadSuffix);
+        normalizedPath.erase(overloadSuffix);
       }
-      return isResolvedMapConstructorPath(resolvedPath);
+      return isResolvedMapConstructorPath(normalizedPath);
     };
     auto isAllowedExperimentalMapDefaultExpr = [&](const Expr &candidate) {
       if (isDefaultExprAllowed(candidate, defaultResolvesToDefinition)) {

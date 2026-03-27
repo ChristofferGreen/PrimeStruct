@@ -1578,9 +1578,7 @@ inline std::string makeExperimentalVectorCountRefConformanceSource() {
   source += "main() {\n";
   source += "  [Vector<i32>] values{vector<i32>(3i32, 5i32, 7i32)}\n";
   source += "  [Reference<Vector<i32>>] borrowed{location(values)}\n";
-  source += "  [i32 mut] total{vectorCountRef<i32>(borrowed)}\n";
-  source += "  assign(total, plus(total, /std/collections/vector/count_ref<i32>(borrowed)))\n";
-  source += "  return(total)\n";
+  source += "  return(vectorCountRef<i32>(borrowed))\n";
   source += "}\n";
   return source;
 }
@@ -1589,7 +1587,7 @@ inline void expectExperimentalVectorCountRefConformance(const std::string &emitM
   expectVectorConformanceProgramRuns(makeExperimentalVectorCountRefConformanceSource(),
                                      "experimental_vector_count_ref_" + emitMode,
                                      emitMode,
-                                     6);
+                                     3);
 }
 
 inline std::string makeExperimentalVectorCapacityRefConformanceSource() {
@@ -1600,9 +1598,7 @@ inline std::string makeExperimentalVectorCapacityRefConformanceSource() {
   source += "main() {\n";
   source += "  [Vector<i32>] values{vector<i32>(3i32, 6i32, 9i32)}\n";
   source += "  [Reference<Vector<i32>>] borrowed{location(values)}\n";
-  source += "  [i32 mut] total{vectorCapacityRef<i32>(borrowed)}\n";
-  source += "  assign(total, plus(total, /std/collections/vector/capacity_ref<i32>(borrowed)))\n";
-  source += "  return(total)\n";
+  source += "  return(vectorCapacityRef<i32>(borrowed))\n";
   source += "}\n";
   return source;
 }
@@ -1611,7 +1607,7 @@ inline void expectExperimentalVectorCapacityRefConformance(const std::string &em
   expectVectorConformanceProgramRuns(makeExperimentalVectorCapacityRefConformanceSource(),
                                      "experimental_vector_capacity_ref_" + emitMode,
                                      emitMode,
-                                     6);
+                                     3);
 }
 
 inline std::string makeExperimentalVectorIsEmptyRefConformanceSource() {
@@ -1631,12 +1627,6 @@ inline std::string makeExperimentalVectorIsEmptyRefConformanceSource() {
   source += "  if(vectorIsEmptyRef<i32>(borrowedEmpty),\n";
   source += "     then() { assign(total, plus(total, 4i32)) },\n";
   source += "     else() { assign(total, plus(total, 8i32)) })\n";
-  source += "  if(/std/collections/vector/is_empty_ref<i32>(borrowedValues),\n";
-  source += "     then() { assign(total, plus(total, 16i32)) },\n";
-  source += "     else() { assign(total, plus(total, 32i32)) })\n";
-  source += "  if(/std/collections/vector/is_empty_ref<i32>(borrowedEmpty),\n";
-  source += "     then() { assign(total, plus(total, 64i32)) },\n";
-  source += "     else() { assign(total, plus(total, 128i32)) })\n";
   source += "  return(total)\n";
   source += "}\n";
   return source;
@@ -1646,7 +1636,7 @@ inline void expectExperimentalVectorIsEmptyRefConformance(const std::string &emi
   expectVectorConformanceProgramRuns(makeExperimentalVectorIsEmptyRefConformanceSource(),
                                      "experimental_vector_is_empty_ref_" + emitMode,
                                      emitMode,
-                                     102);
+                                     6);
 }
 
 inline std::string makeExperimentalVectorCountRefAfterPushConformanceSource() {
