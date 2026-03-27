@@ -94,9 +94,20 @@ bool SemanticsValidator::buildParameters() {
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
     ValidationContext definitionValidationContext;
-    if (!makeDefinitionValidationContext(def, definitionValidationContext)) {
-      return false;
+    definitionValidationContext.definitionPath = def.fullPath;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "compute") {
+        definitionValidationContext.definitionIsCompute = true;
+      } else if (transform.name == "unsafe") {
+        definitionValidationContext.definitionIsUnsafe = true;
+      } else if (transform.name == "return" && transform.templateArgs.size() == 1) {
+        ResultTypeInfo resultInfo;
+        if (resolveResultTypeFromTypeName(transform.templateArgs.front(), resultInfo)) {
+          definitionValidationContext.resultType = std::move(resultInfo);
+        }
+      }
     }
+    definitionValidationContext.activeEffects = resolveEffects(def.transforms, def.fullPath == entryPath_);
     ValidationContextScope validationContextScope(*this, std::move(definitionValidationContext));
     std::unordered_set<std::string> seen;
     std::vector<ParameterInfo> params;
