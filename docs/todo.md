@@ -131,7 +131,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/emitter/EmitterHelpersBuiltins.cpp` (`1695` lines) below the `700`-line target.
 - ✓ Refactor `src/native_emitter/NativeEmitterInternals.h` (`508` lines) below the `700`-line target; the file already sits under target and remains focused on ARM64 emitter constants, instruction encoders, and shared native-emitter internal declarations.
 - ✓ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`134` lines) below the `700`-line target; the file already sits under target and remains focused on on-error/result-return scope guards plus shared compare/float-literal/return helper emission.
-- ○ Refactor `src/emitter/EmitterExprCalls.h` (`1512` lines) below the `700`-line target.
+- ✓ Refactor `src/emitter/EmitterExprCalls.h` (`488` lines) below the `700`-line target by extracting packed-argument binding resolution and rendering helpers into `src/emitter/EmitterExprPackedArgs.h`, leaving `EmitterExprCalls.h` focused on builtin-call rewrites, operator emission, and direct call dispatch.
 - ✓ Refactor `src/emitter/EmitterEmitSetup.h` (`545` lines) below the `700`-line target; the file already sits under target and remains focused on C++ emitter setup/orchestration, including struct/helper discovery, return-kind setup, and `on_error` transform preparation.
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp` (`1427` lines) below the `700`-line target.
 - ○ Refactor `src/IrToCppEmitter.cpp` (`1421` lines) below the `700`-line target.
