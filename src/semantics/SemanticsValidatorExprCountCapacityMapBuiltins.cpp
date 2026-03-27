@@ -25,10 +25,12 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
 
   const bool isDirectVectorCountWrapperCall =
       !expr.isMethodCall && !resolvedMethod &&
-      resolved.rfind("/std/collections/vectorCount", 0) == 0;
+      (resolved.rfind("/std/collections/vectorCount", 0) == 0 ||
+       resolved.rfind("/std/collections/experimental_vector/vectorCount", 0) == 0);
   const bool isDirectVectorCapacityWrapperCall =
       !expr.isMethodCall && !resolvedMethod &&
-      resolved.rfind("/std/collections/vectorCapacity", 0) == 0;
+      (resolved.rfind("/std/collections/vectorCapacity", 0) == 0 ||
+       resolved.rfind("/std/collections/experimental_vector/vectorCapacity", 0) == 0);
   const bool isDirectStdNamespacedVectorCountBuiltinCall =
       !expr.isMethodCall && !resolvedMethod &&
       context.shouldBuiltinValidateStdNamespacedVectorCountCall &&
@@ -39,6 +41,31 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       context.shouldBuiltinValidateStdNamespacedVectorCapacityCall &&
       expr.args.size() == 1 &&
       resolved.rfind("/std/collections/vector/capacity", 0) == 0;
+  auto inferDirectVectorElementType = [&](const Expr &target, std::string &elemTypeOut) {
+    elemTypeOut.clear();
+    std::string inferredTypeText;
+    if (inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
+      BindingInfo inferredBinding;
+      const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        inferredBinding.typeName = normalizeBindingTypeName(base);
+        inferredBinding.typeTemplateArg = argText;
+      } else {
+        inferredBinding.typeName = normalizedType;
+      }
+      if (extractExperimentalVectorElementType(inferredBinding, elemTypeOut)) {
+        return true;
+      }
+      const std::string normalizedBase = normalizeBindingTypeName(inferredBinding.typeName);
+      if (normalizedBase == "vector" && !inferredBinding.typeTemplateArg.empty()) {
+        elemTypeOut = inferredBinding.typeTemplateArg;
+        return true;
+      }
+    }
+    return context.resolveVectorTarget(target, elemTypeOut);
+  };
   auto validateDirectVectorCountCapacityCall =
       [&](const char *helperName, const char *resolvedPath) {
         handledOut = true;
@@ -51,21 +78,47 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           return false;
         }
         std::string elemType;
-        if (!context.resolveVectorTarget(expr.args.front(), elemType)) {
+        if (!inferDirectVectorElementType(expr.args.front(), elemType)) {
           if (!validateExpr(params, locals, expr.args.front())) {
             return false;
           }
           error_ = std::string(helperName) + " requires vector target";
           return false;
         }
+        std::string expectedElemType;
         if (!expr.templateArgs.empty()) {
-          if (expr.templateArgs.size() != 1 ||
-              normalizeBindingTypeName(expr.templateArgs.front()) !=
-                  normalizeBindingTypeName(elemType)) {
+          if (expr.templateArgs.size() != 1) {
             error_ = "argument type mismatch for " + std::string(resolvedPath) +
                      " parameter values";
             return false;
           }
+          expectedElemType = expr.templateArgs.front();
+        } else if (it != defMap_.end() && it->second != nullptr &&
+                   !it->second->parameters.empty()) {
+          BindingInfo paramBinding;
+          std::optional<std::string> restrictType;
+          std::string parseError;
+          if (parseBindingInfo(it->second->parameters.front(),
+                               it->second->namespacePrefix,
+                               structNames_,
+                               importAliases_,
+                               paramBinding,
+                               restrictType,
+                               parseError)) {
+            if (normalizeBindingTypeName(paramBinding.typeName) == "vector" &&
+                !paramBinding.typeTemplateArg.empty()) {
+              expectedElemType = paramBinding.typeTemplateArg;
+            } else {
+              extractExperimentalVectorElementType(paramBinding, expectedElemType);
+            }
+          }
+        }
+        if (!expectedElemType.empty() &&
+            normalizeBindingTypeName(expectedElemType) !=
+                normalizeBindingTypeName(elemType)) {
+          error_ = "argument type mismatch for " + std::string(resolvedPath) +
+                   " parameter values";
+          return false;
         }
         return validateExpr(params, locals, expr.args.front());
       };
