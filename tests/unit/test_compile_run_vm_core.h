@@ -3072,6 +3072,114 @@ unused()
   CHECK(runCommand(runCmd) == 0);
 }
 
+TEST_CASE("vm materializes variadic Result packs with indexed why and try access") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return(if(equal(err.code, 7i32), then() { "bad"utf8 }, else() { "other"utf8 }))
+  }
+}
+
+swallow_parse_error([ParseError] err) {}
+
+[return<Result<i32, ParseError>>]
+ok_value([i32] value) {
+  return(Result.ok(value))
+}
+
+[return<Result<i32, ParseError>>]
+fail_bad() {
+  return(7i64)
+}
+
+[return<int> on_error<ParseError, /swallow_parse_error>]
+score_results([args<Result<i32, ParseError>>] values) {
+  [i32] head{try(values[0i32])}
+  [i32] tailWhyCount{count(Result.why(values[minus(count(values), 1i32)]))}
+  return(plus(head, tailWhyCount))
+}
+
+[return<int>]
+forward([args<Result<i32, ParseError>>] values) {
+  return(score_results([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Result<i32, ParseError>>] values) {
+  return(score_results(ok_value(10i32), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(plus(score_results(ok_value(2i32), fail_bad()),
+              plus(forward(ok_value(3i32), fail_bad()),
+                   forward_mixed(ok_value(4i32), fail_bad()))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_variadic_args_result_value_pack.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 24);
+}
+
+TEST_CASE("vm materializes variadic status-only Result packs with indexed error and why access") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return(if(equal(err.code, 7i32), then() { "bad"utf8 }, else() { "other"utf8 }))
+  }
+}
+
+[return<Result<ParseError>>]
+ok_status() {
+  return(Result.ok())
+}
+
+[return<Result<ParseError>>]
+fail_bad() {
+  return(7i32)
+}
+
+[return<int>]
+score_results([args<Result<ParseError>>] values) {
+  [bool] tailHasError{Result.error(values[minus(count(values), 1i32)])}
+  [i32] tailWhyCount{count(Result.why(values[minus(count(values), 1i32)]))}
+  return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
+}
+
+[return<int>]
+forward([args<Result<ParseError>>] values) {
+  return(score_results([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Result<ParseError>>] values) {
+  return(score_results(ok_status(), [spread] values))
+}
+
+[return<int>]
+main() {
+  return(plus(score_results(ok_status(), fail_bad()),
+              plus(forward(ok_status(), fail_bad()),
+                   forward_mixed(ok_status(), fail_bad()))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_variadic_args_result_status_only_value_pack.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 39);
+}
+
 TEST_CASE("vm materializes variadic experimental map packs with indexed canonical count calls") {
   const std::string source = R"(
 import /std/collections/*
