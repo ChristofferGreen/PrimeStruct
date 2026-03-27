@@ -127,7 +127,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 **Group 10 - Remaining oversized-file queue**
 - ○ Refactor `src/ir_lowerer/IrLowererSetupTypeHelpers.cpp` (`1989` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererLowerInferenceSetup.cpp` (`1976` lines) below the `700`-line target.
-- ○ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`1973` lines) below the `700`-line target.
+- ✓ Refactor `src/semantics/SemanticsHelpersCore.cpp` (`616` lines) below the `700`-line target; the file already sits under target and remains focused on binding parsing plus pointer/pointer-like helper classification.
 - ○ Refactor `src/emitter/EmitterHelpersBuiltins.cpp` (`1695` lines) below the `700`-line target.
 - ○ Refactor `src/native_emitter/NativeEmitterInternals.h` (`1619` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererFlowHelpers.cpp` (`1568` lines) below the `700`-line target.
