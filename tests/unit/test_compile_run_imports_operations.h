@@ -235,7 +235,7 @@ TEST_CASE("rejects stdlib wrapper vector method receiver mismatch in C++ emitter
   expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("exe");
 }
 
-TEST_CASE("rejects canonical namespaced vector constructor temporaries in C++ emitter") {
+TEST_CASE("compiles and runs canonical namespaced vector constructor count/capacity temporaries in C++ emitter") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("exe");
 }
 

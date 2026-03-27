@@ -2714,7 +2714,7 @@ TEST_CASE("rejects native stdlib wrapper vector method receiver mismatch") {
   expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("native");
 }
 
-TEST_CASE("rejects native canonical namespaced vector constructor temporaries") {
+TEST_CASE("compiles and runs native canonical namespaced vector constructor count/capacity temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("native");
 }
 

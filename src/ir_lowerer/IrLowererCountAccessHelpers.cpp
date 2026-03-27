@@ -516,18 +516,6 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
                  collection == "vector" && expr.args.front().templateArgs.size() == 1;
         }()));
 
-  const bool blocksBareVectorCountCall =
-      expr.kind == Expr::Kind::Call && expr.name == "count" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
-      (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn) &&
-       !isVectorCountTarget(expr.args.front(), localsIn));
-  const bool blocksBareVectorCapacityCall =
-      expr.kind == Expr::Kind::Call && expr.name == "capacity" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
-      (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn) &&
-       !(isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)));
-  if (blocksBareVectorCountCall || blocksBareVectorCapacityCall) {
-    return CountAccessCallEmitResult::NotHandled;
-  }
-
   if (isExplicitStdVectorCountCall) {
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
@@ -569,7 +557,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   }
 
   if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
-      isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
+      ((isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) ||
+       (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn)))) {
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
     }

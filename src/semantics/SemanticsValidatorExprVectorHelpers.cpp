@@ -117,9 +117,19 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     BindingInfo inferredBinding;
     if (candidate.kind == Expr::Kind::Call) {
       const std::string resolvedCandidate = resolveCalleePath(candidate);
+      std::string explicitCandidate = candidate.name;
+      if (!explicitCandidate.empty() && explicitCandidate.front() != '/') {
+        if (!candidate.namespacePrefix.empty()) {
+          explicitCandidate = candidate.namespacePrefix + "/" + explicitCandidate;
+        } else {
+          explicitCandidate = "/" + explicitCandidate;
+        }
+      }
       auto matchesVectorCtorPath = [&](std::string_view basePath) {
         return resolvedCandidate == basePath ||
-               resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
+               resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0 ||
+               resolvedCandidate.rfind(std::string(basePath) + "__ov", 0) == 0 ||
+               explicitCandidate == basePath;
       };
       if (matchesVectorCtorPath("/std/collections/vector/vector") ||
           matchesVectorCtorPath("/std/collections/experimental_vector/vector") ||
@@ -182,7 +192,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   };
   std::string experimentalElemType;
   if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
-    if ((helperName == "at" || helperName == "at_unsafe") &&
+    if ((helperName == "count" || helperName == "capacity") &&
         (hasDeclaredDefinitionPath("/std/collections/vector/" + helperName) ||
          hasImportedDefinitionPath("/std/collections/vector/" + helperName) ||
          hasDeclaredDefinitionPath("/vector/" + helperName) ||

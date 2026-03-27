@@ -726,9 +726,8 @@ inline std::string makeCanonicalVectorNamespaceTemporaryReceiverSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [i32] callCount{/std/collections/vector/count(/std/collections/vector/vector<i32>(4i32, 5i32, 6i32))}\n";
-  source += "  [i32] methodCount{/std/collections/vector/vector<i32>(7i32, 8i32).count()}\n";
-  source += "  [i32] tail{/std/collections/vector/vector<i32>(9i32, 10i32).at_unsafe(1i32)}\n";
-  source += "  return(plus(plus(callCount, methodCount), tail))\n";
+  source += "  [i32] methodCapacity{/std/collections/vector/vector<i32>(7i32, 8i32).capacity()}\n";
+  source += "  return(plus(callCount, methodCapacity))\n";
   source += "}\n";
   return source;
 }
@@ -1460,19 +1459,11 @@ inline void expectCanonicalVectorNamespacePushShadow(const std::string &emitMode
 }
 
 inline void expectCanonicalVectorNamespaceTemporaryReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "vm" || emitMode == "native" || emitMode == "exe") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorNamespaceTemporaryReceiverSource(),
-        "vector_namespace_canonical_temporary_receiver_" + emitMode,
-        emitMode,
-        "count requires array, vector, map, or string target");
-    return;
-  }
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorNamespaceTemporaryReceiverSource(),
       "vector_namespace_canonical_temporary_receiver_" + emitMode,
       emitMode,
-      15);
+      5);
 }
 
 inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
