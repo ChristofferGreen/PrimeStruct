@@ -15764,6 +15764,266 @@ TEST_CASE("C++ emitter materializes variadic File handle packs with indexed file
   CHECK(readFile(pathC1) == "omega\n");
 }
 
+TEST_CASE("C++ emitter materializes variadic borrowed FileError packs with indexed dereference why methods") {
+  const std::string source = R"(
+[return<int>]
+score_refs([args<Reference<FileError>>] values) {
+  return(plus(count(dereference(values[0i32]).why()), count(dereference(values[2i32]).why())))
+}
+
+[return<int>]
+forward([args<Reference<FileError>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference<FileError>>] values) {
+  [FileError] extra{13i32}
+  [Reference<FileError>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
+}
+
+[return<int>]
+main() {
+  [FileError] a0{13i32}
+  [FileError] a1{2i32}
+  [FileError] a2{17i32}
+  [Reference<FileError>] r0{location(a0)}
+  [Reference<FileError>] r1{location(a1)}
+  [Reference<FileError>] r2{location(a2)}
+  [FileError] b0{2i32}
+  [FileError] b1{17i32}
+  [FileError] b2{13i32}
+  [Reference<FileError>] s0{location(b0)}
+  [Reference<FileError>] s1{location(b1)}
+  [Reference<FileError>] s2{location(b2)}
+  [FileError] c0{2i32}
+  [FileError] c1{17i32}
+  [Reference<FileError>] t0{location(c0)}
+  [Reference<FileError>] t1{location(c1)}
+  return(plus(score_refs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_borrowed_file_error.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_args_borrowed_file_error_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 36);
+}
+
+TEST_CASE("C++ emitter materializes variadic pointer FileError packs with indexed dereference why methods") {
+  const std::string source = R"(
+[return<int>]
+score_ptrs([args<Pointer<FileError>>] values) {
+  return(plus(count(dereference(values[0i32]).why()), count(dereference(values[2i32]).why())))
+}
+
+[return<int>]
+forward([args<Pointer<FileError>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<FileError>>] values) {
+  [FileError] extra{13i32}
+  [Pointer<FileError>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [FileError] a0{13i32}
+  [FileError] a1{2i32}
+  [FileError] a2{17i32}
+  [Pointer<FileError>] r0{location(a0)}
+  [Pointer<FileError>] r1{location(a1)}
+  [Pointer<FileError>] r2{location(a2)}
+  [FileError] b0{2i32}
+  [FileError] b1{17i32}
+  [FileError] b2{13i32}
+  [Pointer<FileError>] s0{location(b0)}
+  [Pointer<FileError>] s1{location(b1)}
+  [Pointer<FileError>] s2{location(b2)}
+  [FileError] c0{2i32}
+  [FileError] c1{17i32}
+  [Pointer<FileError>] t0{location(c0)}
+  [Pointer<FileError>] t1{location(c1)}
+  return(plus(score_ptrs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_pointer_file_error.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_args_pointer_file_error_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 36);
+}
+
+TEST_CASE("C++ emitter materializes variadic borrowed File handle packs with indexed dereference file methods") {
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string pathA0 = (testScratchPath("") / "primec_cpp_variadic_borrowed_file_handle_a0.txt").string();
+  const std::string pathA1 = (testScratchPath("") / "primec_cpp_variadic_borrowed_file_handle_a1.txt").string();
+  const std::string pathA2 = (testScratchPath("") / "primec_cpp_variadic_borrowed_file_handle_a2.txt").string();
+  const std::string pathB0 = (testScratchPath("") / "primec_cpp_variadic_borrowed_file_handle_b0.txt").string();
+  const std::string pathB1 = (testScratchPath("") / "primec_cpp_variadic_borrowed_file_handle_b1.txt").string();
+  const std::string pathB2 = (testScratchPath("") / "primec_cpp_variadic_borrowed_file_handle_b2.txt").string();
+  const std::string pathC0 = (testScratchPath("") / "primec_cpp_variadic_borrowed_file_handle_c0.txt").string();
+  const std::string pathC1 = (testScratchPath("") / "primec_cpp_variadic_borrowed_file_handle_c1.txt").string();
+  const std::string pathExtra =
+      (testScratchPath("") / "primec_cpp_variadic_borrowed_file_handle_extra.txt").string();
+
+  const std::string source =
+      "[effects(file_write)]\n"
+      "swallow_file_error([FileError] err) {}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "score_refs([args<Reference<File<Write>>>] values) {\n"
+      "  dereference(values[0i32]).write_line(\"alpha\"utf8)?\n"
+      "  dereference(values[minus(count(values), 1i32)]).write_line(\"omega\"utf8)?\n"
+      "  dereference(values[0i32]).flush()?\n"
+      "  dereference(values[minus(count(values), 1i32)]).flush()?\n"
+      "  return(plus(count(values), 10i32))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward([args<Reference<File<Write>>>] values) {\n"
+      "  return(score_refs([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward_mixed([args<Reference<File<Write>>>] values) {\n"
+      "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
+      "  [Reference<File<Write>>] extra_ref{location(extra)}\n"
+      "  return(score_refs(extra_ref, [spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] a0{File<Write>(\"" + escape(pathA0) + "\"utf8)?}\n"
+      "  [File<Write>] a1{File<Write>(\"" + escape(pathA1) + "\"utf8)?}\n"
+      "  [File<Write>] a2{File<Write>(\"" + escape(pathA2) + "\"utf8)?}\n"
+      "  [Reference<File<Write>>] r0{location(a0)}\n"
+      "  [Reference<File<Write>>] r1{location(a1)}\n"
+      "  [Reference<File<Write>>] r2{location(a2)}\n"
+      "  [File<Write>] b0{File<Write>(\"" + escape(pathB0) + "\"utf8)?}\n"
+      "  [File<Write>] b1{File<Write>(\"" + escape(pathB1) + "\"utf8)?}\n"
+      "  [File<Write>] b2{File<Write>(\"" + escape(pathB2) + "\"utf8)?}\n"
+      "  [Reference<File<Write>>] s0{location(b0)}\n"
+      "  [Reference<File<Write>>] s1{location(b1)}\n"
+      "  [Reference<File<Write>>] s2{location(b2)}\n"
+      "  [File<Write>] c0{File<Write>(\"" + escape(pathC0) + "\"utf8)?}\n"
+      "  [File<Write>] c1{File<Write>(\"" + escape(pathC1) + "\"utf8)?}\n"
+      "  [Reference<File<Write>>] t0{location(c0)}\n"
+      "  [Reference<File<Write>>] t1{location(c1)}\n"
+      "  return(plus(score_refs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_borrowed_file_handle.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_args_borrowed_file_handle_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 39);
+  CHECK(readFile(pathA0) == "alpha\n");
+  CHECK(readFile(pathA2) == "omega\n");
+  CHECK(readFile(pathExtra) == "alpha\n");
+  CHECK(readFile(pathC1) == "omega\n");
+}
+
+TEST_CASE("C++ emitter materializes variadic pointer File handle packs with indexed dereference file methods") {
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string pathA0 = (testScratchPath("") / "primec_cpp_variadic_pointer_file_handle_a0.txt").string();
+  const std::string pathA1 = (testScratchPath("") / "primec_cpp_variadic_pointer_file_handle_a1.txt").string();
+  const std::string pathA2 = (testScratchPath("") / "primec_cpp_variadic_pointer_file_handle_a2.txt").string();
+  const std::string pathB0 = (testScratchPath("") / "primec_cpp_variadic_pointer_file_handle_b0.txt").string();
+  const std::string pathB1 = (testScratchPath("") / "primec_cpp_variadic_pointer_file_handle_b1.txt").string();
+  const std::string pathB2 = (testScratchPath("") / "primec_cpp_variadic_pointer_file_handle_b2.txt").string();
+  const std::string pathC0 = (testScratchPath("") / "primec_cpp_variadic_pointer_file_handle_c0.txt").string();
+  const std::string pathC1 = (testScratchPath("") / "primec_cpp_variadic_pointer_file_handle_c1.txt").string();
+  const std::string pathExtra =
+      (testScratchPath("") / "primec_cpp_variadic_pointer_file_handle_extra.txt").string();
+
+  const std::string source =
+      "[effects(file_write)]\n"
+      "swallow_file_error([FileError] err) {}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "score_ptrs([args<Pointer<File<Write>>>] values) {\n"
+      "  dereference(values[0i32]).write_line(\"alpha\"utf8)?\n"
+      "  dereference(values[minus(count(values), 1i32)]).write_line(\"omega\"utf8)?\n"
+      "  dereference(values[0i32]).flush()?\n"
+      "  dereference(values[minus(count(values), 1i32)]).flush()?\n"
+      "  return(plus(count(values), 10i32))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward([args<Pointer<File<Write>>>] values) {\n"
+      "  return(score_ptrs([spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "forward_mixed([args<Pointer<File<Write>>>] values) {\n"
+      "  [File<Write>] extra{File<Write>(\"" + escape(pathExtra) + "\"utf8)?}\n"
+      "  [Pointer<File<Write>>] extra_ptr{location(extra)}\n"
+      "  return(score_ptrs(extra_ptr, [spread] values))\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(file_write) on_error<FileError, /swallow_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] a0{File<Write>(\"" + escape(pathA0) + "\"utf8)?}\n"
+      "  [File<Write>] a1{File<Write>(\"" + escape(pathA1) + "\"utf8)?}\n"
+      "  [File<Write>] a2{File<Write>(\"" + escape(pathA2) + "\"utf8)?}\n"
+      "  [Pointer<File<Write>>] r0{location(a0)}\n"
+      "  [Pointer<File<Write>>] r1{location(a1)}\n"
+      "  [Pointer<File<Write>>] r2{location(a2)}\n"
+      "  [File<Write>] b0{File<Write>(\"" + escape(pathB0) + "\"utf8)?}\n"
+      "  [File<Write>] b1{File<Write>(\"" + escape(pathB1) + "\"utf8)?}\n"
+      "  [File<Write>] b2{File<Write>(\"" + escape(pathB2) + "\"utf8)?}\n"
+      "  [Pointer<File<Write>>] s0{location(b0)}\n"
+      "  [Pointer<File<Write>>] s1{location(b1)}\n"
+      "  [Pointer<File<Write>>] s2{location(b2)}\n"
+      "  [File<Write>] c0{File<Write>(\"" + escape(pathC0) + "\"utf8)?}\n"
+      "  [File<Write>] c1{File<Write>(\"" + escape(pathC1) + "\"utf8)?}\n"
+      "  [Pointer<File<Write>>] t0{location(c0)}\n"
+      "  [Pointer<File<Write>>] t1{location(c1)}\n"
+      "  return(plus(score_ptrs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_pointer_file_handle.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_args_pointer_file_handle_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 39);
+  CHECK(readFile(pathA0) == "alpha\n");
+  CHECK(readFile(pathA2) == "omega\n");
+  CHECK(readFile(pathExtra) == "alpha\n");
+  CHECK(readFile(pathC1) == "omega\n");
+}
+
 TEST_CASE("C++ emitter rejects variadic pointer string packs") {
   const std::string source = R"(
 [return<int>]
