@@ -37,18 +37,11 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
 set(PRIMESTRUCT_FRONTEND_SOURCES
   src/AstPrinter.cpp
   src/ImportResolver.cpp
-  src/ImportResolverHelpers.cpp
   src/Lexer.cpp
   src/parser/ParserCore.cpp
-  src/parser/ParserCoreBodyStatements.cpp
-  src/parser/ParserCoreDefinitionBodies.cpp
-  src/parser/ParserCoreDefinitions.cpp
   src/parser/ParserExpr.cpp
-  src/parser/ParserExprControl.cpp
   src/parser/ParserHelpers.cpp
   src/parser/ParserLists.cpp
-  src/parser/ParserListsTransforms.cpp
-  src/parser/ParserListsSignatures.cpp
   src/semantics/SemanticsBindingTypeHelpers.cpp
   src/semantics/SemanticsBuiltinPathHelpers.cpp
   src/semantics/SemanticsCallPathHelpers.cpp
@@ -64,24 +57,15 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidate.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
-  src/semantics/SemanticsValidateExperimentalGfxConstructorsContext.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersCloneDebug.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersCompare.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersSerialization.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersState.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersValidate.cpp
-  src/semantics/SemanticsValidateReflectionMetadataContext.cpp
   src/semantics/SemanticsValidateReflectionMetadata.cpp
-  src/semantics/SemanticsValidateTransformsEnums.cpp
   src/semantics/SemanticsValidateTransforms.cpp
   src/semantics/SemanticsValidator.cpp
-  src/semantics/SemanticsValidatorSnapshots.cpp
-  src/semantics/SemanticsValidatorSnapshotLocals.cpp
-  src/semantics/SemanticsValidatorValidationContext.cpp
-  src/semantics/SemanticsValidatorDiagnostics.cpp
-  src/semantics/SemanticsValidatorBorrowExpiry.cpp
-  src/semantics/SemanticsValidatorResultHelpers.cpp
   src/semantics/SemanticsValidatorBuild.cpp
   src/semantics/SemanticsValidatorBuildTransforms.cpp
   src/semantics/SemanticsValidatorBuildImports.cpp
@@ -94,8 +78,6 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorBuildUtility.cpp
   src/semantics/SemanticsValidatorBuildDirectCallBinding.cpp
   src/semantics/SemanticsValidatorBuildInitializerInference.cpp
-  src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp
-  src/semantics/SemanticsValidatorEffectFreeCollections.cpp
   src/semantics/SemanticsValidatorExprBlock.cpp
   src/semantics/SemanticsValidatorExprCaptureSplitStep.cpp
   src/semantics/SemanticsValidatorExprBodyArguments.cpp
@@ -124,9 +106,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp
   src/semantics/SemanticsValidatorExprMethodResolution.cpp
   src/semantics/SemanticsValidatorExprNumeric.cpp
-  src/semantics/SemanticsValidatorExprNumericPredicates.cpp
   src/semantics/SemanticsValidatorExprArgumentValidation.cpp
-  src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp
   src/semantics/SemanticsValidatorExprLateBuiltins.cpp
   src/semantics/SemanticsValidatorExprLateMapSoaBuiltins.cpp
   src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp
@@ -143,13 +123,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprStructConstructors.cpp
   src/semantics/SemanticsValidatorExprTry.cpp
   src/semantics/SemanticsValidatorExprVectorHelpers.cpp
-  src/semantics/SemanticsValidatorExprCallResolution.cpp
   src/semantics/SemanticsValidatorExpr.cpp
-  src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp
-  src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp
-  src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp
-  src/semantics/SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp
-  src/semantics/SemanticsValidatorInferCollectionStringResolver.cpp
   src/semantics/SemanticsValidatorInferCollectionCountCapacity.cpp
   src/semantics/SemanticsValidatorInferCollectionDirectCountCapacity.cpp
   src/semantics/SemanticsValidatorInferCollectionDispatch.cpp
@@ -160,18 +134,15 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorInferDefinition.cpp
   src/semantics/SemanticsValidatorInferGraph.cpp
   src/semantics/SemanticsValidatorInferMethodResolution.cpp
-  src/semantics/SemanticsValidatorInferMethodResolutionHelpers.cpp
   src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp
   src/semantics/SemanticsValidatorInferResolvedCalls.cpp
   src/semantics/SemanticsValidatorInferScalarBuiltins.cpp
-  src/semantics/SemanticsValidatorInferStructReturnHelpers.cpp
   src/semantics/SemanticsValidatorInferTargetResolution.cpp
   src/semantics/SemanticsValidatorInferUtility.cpp
   src/semantics/SemanticsValidatorInferStructReturn.cpp
   src/semantics/SemanticsValidatorInfer.cpp
   src/semantics/SemanticsValidatorPassesEffects.cpp
   src/semantics/SemanticsValidatorPassesDiagnostics.cpp
-  src/semantics/SemanticsValidatorExecutionDiagnostics.cpp
   src/semantics/SemanticsValidatorPassesDefinitions.cpp
   src/semantics/SemanticsValidatorPassesEffectFree.cpp
   src/semantics/SemanticsValidatorPassesExecutions.cpp
@@ -188,14 +159,11 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorStatementPrintability.cpp
   src/semantics/SemanticsValidatorStatementReturns.cpp
   src/semantics/SemanticsValidatorStatementVectorHelpers.cpp
-  src/semantics/SemanticsValidatorStatementVectorResolution.cpp
   src/semantics/SemanticsValidatorStatement.cpp
   src/semantics/SemanticsValidatorTraits.cpp
   src/text_filter/TextFilterHelpers.cpp
   src/text_filter/TextFilterUnaryRewrites.cpp
   src/text_filter/TextFilterPipelineEnvelope.cpp
-  src/text_filter/TextFilterPipelineEnvelopeHelpers.cpp
-  src/text_filter/TextFilterPipelineOperatorRewrite.cpp
   src/text_filter/TextFilterPipelinePass.cpp
   src/text_filter/TextFilterPipelineScan.cpp
   src/text_filter/TextFilterPipeline.cpp
@@ -206,7 +174,6 @@ set(PRIMESTRUCT_IR_SOURCES
   src/CompilePipeline.cpp
   src/IrBackendProfiles.cpp
   src/IrInliner.cpp
-  src/IrPrinterHelpers.cpp
   src/IrPreparation.cpp
   src/IrPrinter.cpp
   src/IrSerializer.cpp
@@ -226,7 +193,6 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererNativeTailDispatch.cpp
   src/ir_lowerer/IrLowererBindingTransformHelpers.cpp
   src/ir_lowerer/IrLowererBindingTypeHelpers.cpp
-  src/ir_lowerer/IrLowererCountAccessClassifiers.cpp
   src/ir_lowerer/IrLowererCountAccessHelpers.cpp
   src/ir_lowerer/IrLowererFileWriteHelpers.cpp
   src/ir_lowerer/IrLowererFlowBufferHelpers.cpp
@@ -238,7 +204,6 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererIndexKindHelpers.cpp
   src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp
-  src/ir_lowerer/IrLowererInlinePackedArgs.cpp
   src/ir_lowerer/IrLowererInlineParamHelpers.cpp
   src/ir_lowerer/IrLowererInlineStructArgHelpers.cpp
   src/ir_lowerer/IrLowererLower.cpp
@@ -269,21 +234,15 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererOnErrorHelpers.cpp
   src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp
   src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.cpp
-  src/ir_lowerer/IrLowererOperatorAngleTrigHelpers.cpp
   src/ir_lowerer/IrLowererOperatorExpLogHyperbolicHelpers.cpp
   src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.cpp
   src/ir_lowerer/IrLowererOperatorComparisonHelpers.cpp
   src/ir_lowerer/IrLowererOperatorConversionsAndCallsControlHelpers.cpp
-  src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp
   src/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.cpp
-  src/ir_lowerer/IrLowererOperatorMemoryPointerHelpers.cpp
   src/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.cpp
   src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp
   src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp
-  src/ir_lowerer/IrLowererResultMetadataHelpers.cpp
   src/ir_lowerer/IrLowererResultHelpers.cpp
-  src/ir_lowerer/IrLowererPackedResultHelpers.cpp
-  src/ir_lowerer/IrLowererResultWhyHelpers.cpp
   src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp
   src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp
   src/ir_lowerer/IrLowererSetupInferenceReturnKinds.cpp
@@ -297,16 +256,12 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererSetupTypeHelpers.cpp
   src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp
   src/ir_lowerer/IrLowererSetupTypeStructPathHelpers.cpp
-  src/ir_lowerer/IrLowererStatementBindingStatementEmit.cpp
   src/ir_lowerer/IrLowererStatementBindingHelpers.cpp
-  src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp
-  src/ir_lowerer/IrLowererStatementCallEmission.cpp
   src/ir_lowerer/IrLowererStatementCallHelpers.cpp
   src/ir_lowerer/IrLowererStringCallHelpers.cpp
   src/ir_lowerer/IrLowererStringLiteralHelpers.cpp
   src/ir_lowerer/IrLowererStructFieldBindingHelpers.cpp
   src/ir_lowerer/IrLowererStructLayoutHelpers.cpp
-  src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp
   src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp
   src/ir_lowerer/IrLowererStructTypeHelpers.cpp
   src/ir_lowerer/IrLowererTemplateTypeParseHelpers.cpp
@@ -367,23 +322,16 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp
   src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp
   src/emitter/EmitterHelpersBuiltins.cpp
-  src/emitter/EmitterHelpersStructTypes.cpp
   src/emitter/EmitterHelpersTypes.cpp
   src/glsl_emitter/GlslEmitter.cpp
   src/glsl_emitter/GlslEmitterExpr.cpp
-  src/glsl_emitter/GlslEmitterExprBuiltins.cpp
-  src/glsl_emitter/GlslEmitterExprMathBuiltins.cpp
   src/glsl_emitter/GlslEmitterHelpers.cpp
   src/glsl_emitter/GlslEmitterStatements.cpp
   src/IrToCppEmitter.cpp
-  src/IrToCppEmitterInstructionEmitter.cpp
-  src/IrToCppEmitterPrintAndFileEmitter.cpp
   src/IrToGlslEmitter.cpp
   src/IrToGlslEmitterFunctionEmitter.cpp
   src/native_emitter/NativeEmitterHelpers.cpp
-  src/native_emitter/NativeEmitterMachO.cpp
   src/native_emitter/NativeEmitterEmit.cpp
-  src/native_emitter/NativeEmitterFunctionEmit.cpp
   src/wasm_emitter/WasmEmitter.cpp
   src/wasm_emitter/WasmEmitterControlFlow.cpp
   src/wasm_emitter/WasmEmitterFunctionBodies.cpp
@@ -399,7 +347,6 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/VmDebugHelpers.cpp
   src/VmDebugSession.cpp
   src/VmDebugSessionInstruction.cpp
-  src/VmDebugSessionInstructionNumeric.cpp
   src/VmDebugSessionSetup.cpp
   src/VmExecution.cpp
   src/VmExecutionNumeric.cpp
@@ -407,7 +354,6 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/VmIoHelpers.cpp
   src/VmDebugAdapter.cpp
   src/VmDebugDap.cpp
-  src/VmDebugDapProtocol.cpp
 )
 
 set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES
@@ -503,7 +449,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_text_filter_tests
     tests/unit/test_main.cpp
     tests/unit/test_text_filter_helpers.cpp
-    tests/unit/test_text_filter_transform_rules.cpp
     tests/unit/test_text_filter_pipeline_basics.cpp
     tests/unit/test_text_filter_pipeline_rewrites.cpp
     tests/unit/test_text_filter_pipeline_implicit_utf8.cpp
