@@ -149,6 +149,222 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("vm experimental vector at_unsafe rejects index past capacity even if count is forged") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_count(2i32)
+  return(vectorAtUnsafe<i32>(values, 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_vector_at_unsafe_forged_count_capacity_err.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_at_unsafe_forged_count_capacity_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector method at rejects index past capacity even if count is forged") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_count(2i32)
+  return(values.at(1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_vector_method_at_forged_count_capacity_err.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_method_at_forged_count_capacity_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector reserve rejects forged count above capacity") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_count(2i32)
+  vectorReserve<i32>(values, 3i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_vector_reserve_forged_count_capacity_err.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_reserve_forged_count_capacity_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector clear rejects forged count above capacity") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_count(2i32)
+  vectorClear<i32>(values)
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_vector_clear_forged_count_capacity_err.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_clear_forged_count_capacity_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector destroy rejects forged count above capacity") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+make_bad() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_count(2i32)
+  return(0i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(make_bad())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_vector_destroy_forged_count_capacity_err.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_destroy_forged_count_capacity_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector count rejects forged count above capacity") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_count(2i32)
+  return(vectorCount<i32>(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_vector_count_forged_count_capacity_err.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_count_forged_count_capacity_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector capacity rejects forged negative capacity") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_capacity(-1i32)
+  return(vectorCapacity<i32>(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_vector_capacity_forged_negative_capacity_err.prime", source);
+  const std::string errPath = (testScratchPath("") /
+                               "primec_vm_experimental_vector_capacity_forged_negative_capacity_err.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector capacity rejects forged excessive capacity") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_capacity(2147483647i32)
+  return(vectorCapacity<i32>(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_vector_capacity_forged_excessive_capacity_err.prime", source);
+  const std::string errPath = (testScratchPath("") /
+                               "primec_vm_experimental_vector_capacity_forged_excessive_capacity_err.txt")
+                                  .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector set_field_count rejects negative count") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_count(-1i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_vector_set_field_count_negative_err.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_set_field_count_negative_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm experimental vector set_field_capacity rejects below-count value") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  values.set_field_capacity(0i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_vector_set_field_capacity_below_count_err.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_vector_set_field_capacity_below_count_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
 TEST_CASE("vm rejects misaligned pointer dereference") {
   const std::string source = R"(
 [return<int>]

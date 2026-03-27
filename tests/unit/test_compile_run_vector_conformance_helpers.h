@@ -1485,12 +1485,14 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
       (testScratchPath("") /
        ("primec_vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + "_err.txt"))
           .string();
+  const bool experimentalPath = importPath == "/std/collections/experimental_vector/*";
   const std::string expectedError = mode == "pop_empty"         ? "container empty\n"
                                     : mode == "reserve_negative" ? "vector reserve expects non-negative capacity\n"
                                     : mode == "reserve_growth_overflow"
                                         ? "vector reserve allocation failed (out of memory)\n"
                                     : mode == "push_growth_overflow"
-                                        ? "vector reserve expects non-negative capacity\n"
+                                        ? (experimentalPath ? "array index out of bounds\n"
+                                                            : "vector reserve expects non-negative capacity\n")
                                                                  : "array index out of bounds\n";
 
   if (emitMode == "vm") {
