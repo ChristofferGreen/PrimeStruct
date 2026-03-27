@@ -169,6 +169,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 Graph next-slice note: the finished graph/SCC parity and snapshot work above now needs to turn back into a short explicit queue. Keep new work grouped into broader migration slices instead of inventing more one-off snapshot micro-follow-ups.
 
 **Group 11 - Near-term graph queue**
+Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.
 - ○ Expand end-to-end graph conformance coverage for local `auto`, query, and `try(...)` consumers on the single graph-resolver path so the current snapshot-heavy checks are backed by real compile-pipeline scenarios.
 - ○ Expand end-to-end graph conformance coverage for backend dispatch, deleted-path diagnostics, and canonical helper/method resolution on C++/VM/native so graph-solved metadata is exercised beyond the snapshot harness.
 - ○ Land graph-backed query invalidation rules and coverage for local-binding, control-flow, and initializer-shape edits so cached query/binding/result metadata has one explicit contract for intra-definition churn.
