@@ -3220,6 +3220,62 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("vm forwards variadic Reference<Buffer> packs through helper methods") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int> effects(gpu_dispatch)]
+score([args<Reference<Buffer<i32>>>] values) {
+  if(not(dereference(values[0i32]).empty())) {
+    return(100i32)
+  }
+  if(not(dereference(values[1i32]).is_valid())) {
+    return(101i32)
+  }
+  return(plus(dereference(values[1i32]).count(), dereference(values[2i32]).count()))
+}
+
+[return<int> effects(gpu_dispatch)]
+main() {
+  [Buffer<i32>] b0{Buffer<i32>(0i32)}
+  [Buffer<i32>] b1{Buffer<i32>(3i32)}
+  [Buffer<i32>] b2{Buffer<i32>(2i32)}
+  return(score(location(b0), location(b1), location(b2)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_variadic_args_buffer_reference_methods.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
+}
+
+TEST_CASE("vm forwards variadic Pointer<Buffer> packs through helper methods") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int> effects(gpu_dispatch)]
+score([args<Pointer<Buffer<i32>>>] values) {
+  if(not(dereference(values[0i32]).empty())) {
+    return(100i32)
+  }
+  if(not(dereference(values[1i32]).is_valid())) {
+    return(101i32)
+  }
+  return(plus(dereference(values[1i32]).count(), dereference(values[2i32]).count()))
+}
+
+[return<int> effects(gpu_dispatch)]
+main() {
+  [Buffer<i32>] b0{Buffer<i32>(0i32)}
+  [Buffer<i32>] b1{Buffer<i32>(3i32)}
+  [Buffer<i32>] b2{Buffer<i32>(2i32)}
+  return(score(location(b0), location(b1), location(b2)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_variadic_args_buffer_pointer_methods.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
+}
+
 TEST_CASE("vm materializes variadic pointer uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<int>]

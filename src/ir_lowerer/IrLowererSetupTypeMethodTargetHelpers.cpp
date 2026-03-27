@@ -47,6 +47,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   auto isMapReceiverTarget = [&](const std::string &candidate) {
     return candidate == "map" || candidate == "std/collections/map";
   };
+  auto isBufferReceiverTarget = [&](const std::string &candidate) {
+    return candidate == "Buffer" || candidate == "std/gfx/Buffer" || candidate == "std/gfx/experimental/Buffer";
+  };
   auto shouldPreferCanonicalMapPath = [&](const std::string &candidate) {
     return !isExplicitCompatibilityMapMethodAlias && !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
            isMapReceiverTarget(candidate) &&
@@ -131,6 +134,45 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         }
       }
     }
+    if (path.rfind("/Buffer/", 0) == 0) {
+      const std::string suffix = path.substr(std::string("/Buffer/").size());
+      const std::string canonicalAlias = "/std/gfx/Buffer/" + suffix;
+      defIt = defMap.find(canonicalAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      const std::string experimentalAlias = "/std/gfx/experimental/Buffer/" + suffix;
+      defIt = defMap.find(experimentalAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
+    if (path.rfind("/std/gfx/Buffer/", 0) == 0) {
+      const std::string suffix = path.substr(std::string("/std/gfx/Buffer/").size());
+      const std::string alias = "/Buffer/" + suffix;
+      defIt = defMap.find(alias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      const std::string experimentalAlias = "/std/gfx/experimental/Buffer/" + suffix;
+      defIt = defMap.find(experimentalAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
+    if (path.rfind("/std/gfx/experimental/Buffer/", 0) == 0) {
+      const std::string suffix = path.substr(std::string("/std/gfx/experimental/Buffer/").size());
+      const std::string canonicalAlias = "/std/gfx/Buffer/" + suffix;
+      defIt = defMap.find(canonicalAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      const std::string alias = "/Buffer/" + suffix;
+      defIt = defMap.find(alias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
     return nullptr;
   };
   if (!resolvedTypePath.empty()) {
@@ -176,6 +218,17 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   if (normalizedTypeName.empty()) {
     errorOut = "unknown method target for " + normalizedMethodName;
     return nullptr;
+  }
+
+  if (isBufferReceiverTarget(normalizedTypeName)) {
+    if (const Definition *resolved = findMethodDefinitionByPath("/std/gfx/Buffer/" + normalizedMethodName)) {
+      errorOut.clear();
+      return resolved;
+    }
+    if (const Definition *resolved = findMethodDefinitionByPath("/Buffer/" + normalizedMethodName)) {
+      errorOut.clear();
+      return resolved;
+    }
   }
 
   const std::string resolvedBase =

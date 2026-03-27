@@ -276,7 +276,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
     if (it != localsIn.end() &&
-        (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
+        (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
+         it->second.kind == LocalInfo::Kind::Buffer)) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = (it->second.kind == LocalInfo::Kind::Vector);
@@ -288,7 +289,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       return info;
     }
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference &&
-        (it->second.referenceToArray || it->second.referenceToVector)) {
+        (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToBuffer)) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = it->second.referenceToVector;
@@ -299,7 +300,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.structTypeName = it->second.structTypeName;
       return info;
     }
-    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToArray) {
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Pointer &&
+        (it->second.pointerToArray || it->second.pointerToBuffer)) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = false;
@@ -350,6 +352,16 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         info.structTypeName = localInfo.structTypeName;
         return true;
       }
+      if (localInfo.argsPackElementKind == LocalInfo::Kind::Buffer) {
+        info.isArrayOrVectorTarget = true;
+        info.elemKind = localInfo.valueKind;
+        info.isVectorTarget = false;
+        info.isArgsPackTarget = false;
+        info.argsPackElementKind = localInfo.argsPackElementKind;
+        info.elemSlotCount = elementSlotCountForLocal(localInfo);
+        info.structTypeName = localInfo.structTypeName;
+        return true;
+      }
       if (localInfo.argsPackElementKind == LocalInfo::Kind::Vector) {
         info.isArrayOrVectorTarget = true;
         info.elemKind = localInfo.valueKind;
@@ -362,7 +374,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         return true;
       }
       if (localInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
-          (localInfo.referenceToArray || localInfo.referenceToVector)) {
+          (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToBuffer)) {
         info.isArrayOrVectorTarget = true;
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = localInfo.referenceToVector;
@@ -374,7 +386,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         return true;
       }
       if (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
-          (localInfo.pointerToArray || localInfo.pointerToVector)) {
+          (localInfo.pointerToArray || localInfo.pointerToVector || localInfo.pointerToBuffer)) {
         info.isArrayOrVectorTarget = true;
         info.elemKind = localInfo.valueKind;
         info.isVectorTarget = localInfo.pointerToVector;
@@ -406,8 +418,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             return info;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Array ||
+              localIt->second.argsPackElementKind == LocalInfo::Kind::Buffer ||
               (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
-               (localIt->second.referenceToArray || localIt->second.referenceToVector))) {
+               (localIt->second.referenceToArray || localIt->second.referenceToVector ||
+                localIt->second.referenceToBuffer))) {
             info.isArrayOrVectorTarget = true;
             info.elemKind = localIt->second.valueKind;
             info.isVectorTarget =
@@ -420,7 +434,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
             info.structTypeName = localIt->second.structTypeName;
             return info;
           }
-          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer && localIt->second.pointerToArray) {
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+              (localIt->second.pointerToArray || localIt->second.pointerToBuffer)) {
             info.isArrayOrVectorTarget = true;
             info.elemKind = localIt->second.valueKind;
             info.isVectorTarget = false;
@@ -449,7 +464,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       return info;
     }
     std::string collection;
-    if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+    if (getBuiltinCollectionName(target, collection) &&
+        (collection == "array" || collection == "vector" || collection == "Buffer") &&
         target.templateArgs.size() == 1) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = valueKindFromTypeName(target.templateArgs.front());

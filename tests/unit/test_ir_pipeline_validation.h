@@ -17727,6 +17727,17 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   refArrayInfo.valueKind = Kind::Bool;
   locals.emplace("refArr", refArrayInfo);
 
+  LocalInfo bufferInfo;
+  bufferInfo.kind = LocalInfo::Kind::Buffer;
+  bufferInfo.valueKind = Kind::Int32;
+  locals.emplace("buffer", bufferInfo);
+
+  LocalInfo refBufferInfo;
+  refBufferInfo.kind = LocalInfo::Kind::Reference;
+  refBufferInfo.referenceToBuffer = true;
+  refBufferInfo.valueKind = Kind::Int32;
+  locals.emplace("refBuffer", refBufferInfo);
+
   LocalInfo structArgsInfo;
   structArgsInfo.kind = LocalInfo::Kind::Array;
   structArgsInfo.isArgsPack = true;
@@ -17772,6 +17783,22 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   pointerVectorArgsInfo.valueKind = Kind::Int32;
   locals.emplace("pointerVectorArgs", pointerVectorArgsInfo);
 
+  LocalInfo borrowedBufferArgsInfo;
+  borrowedBufferArgsInfo.kind = LocalInfo::Kind::Array;
+  borrowedBufferArgsInfo.isArgsPack = true;
+  borrowedBufferArgsInfo.argsPackElementKind = LocalInfo::Kind::Reference;
+  borrowedBufferArgsInfo.referenceToBuffer = true;
+  borrowedBufferArgsInfo.valueKind = Kind::Int32;
+  locals.emplace("borrowedBufferArgs", borrowedBufferArgsInfo);
+
+  LocalInfo pointerBufferArgsInfo;
+  pointerBufferArgsInfo.kind = LocalInfo::Kind::Array;
+  pointerBufferArgsInfo.isArgsPack = true;
+  pointerBufferArgsInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
+  pointerBufferArgsInfo.pointerToBuffer = true;
+  pointerBufferArgsInfo.valueKind = Kind::Int32;
+  locals.emplace("pointerBufferArgs", pointerBufferArgsInfo);
+
   LocalInfo scalarRefArgsInfo;
   scalarRefArgsInfo.kind = LocalInfo::Kind::Array;
   scalarRefArgsInfo.isArgsPack = true;
@@ -17801,6 +17828,22 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(refArrName, locals);
   CHECK(resolved.isArrayOrVectorTarget);
   CHECK(resolved.elemKind == Kind::Bool);
+  CHECK_FALSE(resolved.isVectorTarget);
+
+  primec::Expr bufferName;
+  bufferName.kind = primec::Expr::Kind::Name;
+  bufferName.name = "buffer";
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(bufferName, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK_FALSE(resolved.isVectorTarget);
+
+  primec::Expr refBufferName;
+  refBufferName.kind = primec::Expr::Kind::Name;
+  refBufferName.name = "refBuffer";
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(refBufferName, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
   CHECK_FALSE(resolved.isVectorTarget);
 
   primec::Expr vectorCtor;
@@ -17893,6 +17936,18 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.isVectorTarget);
   CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error.empty());
+
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      makeDereferencedArgsPackAccess("borrowedBufferArgs"), locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK_FALSE(resolved.isVectorTarget);
+
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      makeDereferencedArgsPackAccess("pointerBufferArgs"), locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK_FALSE(resolved.isVectorTarget);
 
   resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
       makeDereferencedArgsPackAccess("scalarRefArgs"), locals);
@@ -21616,6 +21671,12 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   CHECK(typeName == "map");
   CHECK(resolvedTypePath.empty());
 
+  LocalInfo bufferLocal;
+  bufferLocal.kind = LocalInfo::Kind::Buffer;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(bufferLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "Buffer");
+  CHECK(resolvedTypePath.empty());
+
   LocalInfo soaVectorLocal;
   soaVectorLocal.kind = LocalInfo::Kind::Value;
   soaVectorLocal.valueKind = LocalInfo::ValueKind::Unknown;
@@ -21629,6 +21690,20 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   referenceArrayLocal.referenceToArray = true;
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(referenceArrayLocal, typeName, resolvedTypePath));
   CHECK(typeName == "array");
+  CHECK(resolvedTypePath.empty());
+
+  LocalInfo referenceBufferLocal;
+  referenceBufferLocal.kind = LocalInfo::Kind::Reference;
+  referenceBufferLocal.referenceToBuffer = true;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(referenceBufferLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "Buffer");
+  CHECK(resolvedTypePath.empty());
+
+  LocalInfo pointerBufferLocal;
+  pointerBufferLocal.kind = LocalInfo::Kind::Pointer;
+  pointerBufferLocal.pointerToBuffer = true;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(pointerBufferLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "Buffer");
   CHECK(resolvedTypePath.empty());
 
   LocalInfo valueLocal;
@@ -21691,6 +21766,12 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver call targets") 
   mapCall.name = "map";
   mapCall.templateArgs = {"i32", "i64"};
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(mapCall, ValueKind::Unknown) == "map");
+
+  primec::Expr bufferCall;
+  bufferCall.kind = primec::Expr::Kind::Call;
+  bufferCall.name = "Buffer";
+  bufferCall.templateArgs = {"i32"};
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(bufferCall, ValueKind::Unknown) == "Buffer");
 
   primec::Expr soaVectorCall;
   soaVectorCall.kind = primec::Expr::Kind::Call;
@@ -21836,6 +21917,10 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   mapAtDef.fullPath = "/map/at";
   primec::Definition stdMapAtDef;
   stdMapAtDef.fullPath = "/std/collections/map/at";
+  primec::Definition bufferCountDef;
+  bufferCountDef.fullPath = "/std/gfx/Buffer/count";
+  primec::Definition bufferEmptyDef;
+  bufferEmptyDef.fullPath = "/std/gfx/Buffer/empty";
   primec::Definition structMethodDef;
   structMethodDef.fullPath = "/pkg/Ctor/length";
 
@@ -21847,6 +21932,8 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
       {"/std/collections/map/count", &stdMapCountDef},
       {"/map/at", &mapAtDef},
       {"/std/collections/map/at", &stdMapAtDef},
+      {"/std/gfx/Buffer/count", &bufferCountDef},
+      {"/std/gfx/Buffer/empty", &bufferEmptyDef},
       {"/pkg/Ctor/length", &structMethodDef},
   };
 
@@ -21925,6 +22012,14 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "at", "", "std/collections/map", canonicalMapDefMap, error) == &stdMapAtDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "count", "Buffer", "", defMap, error) == &bufferCountDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "empty", "std/gfx/Buffer", "", defMap, error) == &bufferEmptyDef);
   CHECK(error.empty());
 }
 
@@ -22786,6 +22881,145 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack map receivers
                                                         resolvedTypePath,
                                                         error));
   CHECK(typeName == "map");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves indexed args-pack Buffer receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Buffer;
+  valuesLocal.valueKind = ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr callReceiver;
+  callReceiver.kind = primec::Expr::Kind::Call;
+  callReceiver.name = "at";
+  callReceiver.args = {receiverName, indexExpr};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(callReceiver,
+                                                        locals,
+                                                        "empty",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "Buffer");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack borrowed Buffer receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Reference;
+  valuesLocal.referenceToBuffer = true;
+  valuesLocal.valueKind = ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessReceiver;
+  accessReceiver.kind = primec::Expr::Kind::Call;
+  accessReceiver.name = "at";
+  accessReceiver.args = {receiverName, indexExpr};
+  primec::Expr dereferenceReceiver;
+  dereferenceReceiver.kind = primec::Expr::Kind::Call;
+  dereferenceReceiver.name = "dereference";
+  dereferenceReceiver.args = {accessReceiver};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(dereferenceReceiver,
+                                                        locals,
+                                                        "count",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "Buffer");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack pointer Buffer receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Pointer;
+  valuesLocal.pointerToBuffer = true;
+  valuesLocal.valueKind = ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessReceiver;
+  accessReceiver.kind = primec::Expr::Kind::Call;
+  accessReceiver.name = "at";
+  accessReceiver.args = {receiverName, indexExpr};
+  primec::Expr dereferenceReceiver;
+  dereferenceReceiver.kind = primec::Expr::Kind::Call;
+  dereferenceReceiver.name = "dereference";
+  dereferenceReceiver.args = {accessReceiver};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(dereferenceReceiver,
+                                                        locals,
+                                                        "count",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "Buffer");
   CHECK(resolvedTypePath.empty());
   CHECK(error.empty());
 }
@@ -38662,6 +38896,50 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   mapPtrDeref.name = "dereference";
   mapPtrDeref.args = {mapPtrAccess};
   countEntry.args = {mapPtrDeref};
+  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
+
+  primec::ir_lowerer::LocalInfo bufferRefArgs;
+  bufferRefArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  bufferRefArgs.isArgsPack = true;
+  bufferRefArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  bufferRefArgs.referenceToBuffer = true;
+  bufferRefArgs.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("bufferRefs", bufferRefArgs);
+
+  primec::Expr bufferRefsName;
+  bufferRefsName.kind = primec::Expr::Kind::Name;
+  bufferRefsName.name = "bufferRefs";
+  primec::Expr bufferRefAccess;
+  bufferRefAccess.kind = primec::Expr::Kind::Call;
+  bufferRefAccess.name = "at";
+  bufferRefAccess.args = {bufferRefsName, zeroIndex};
+  primec::Expr bufferRefDeref;
+  bufferRefDeref.kind = primec::Expr::Kind::Call;
+  bufferRefDeref.name = "dereference";
+  bufferRefDeref.args = {bufferRefAccess};
+  countEntry.args = {bufferRefDeref};
+  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
+
+  primec::ir_lowerer::LocalInfo bufferPtrArgs;
+  bufferPtrArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  bufferPtrArgs.isArgsPack = true;
+  bufferPtrArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  bufferPtrArgs.pointerToBuffer = true;
+  bufferPtrArgs.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("bufferPtrs", bufferPtrArgs);
+
+  primec::Expr bufferPtrsName;
+  bufferPtrsName.kind = primec::Expr::Kind::Name;
+  bufferPtrsName.name = "bufferPtrs";
+  primec::Expr bufferPtrAccess;
+  bufferPtrAccess.kind = primec::Expr::Kind::Call;
+  bufferPtrAccess.name = "at";
+  bufferPtrAccess.args = {bufferPtrsName, zeroIndex};
+  primec::Expr bufferPtrDeref;
+  bufferPtrDeref.kind = primec::Expr::Kind::Call;
+  bufferPtrDeref.name = "dereference";
+  bufferPtrDeref.args = {bufferPtrAccess};
+  countEntry.args = {bufferPtrDeref};
   CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
 }
 

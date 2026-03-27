@@ -1133,16 +1133,24 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = "map";
     return true;
   }
+  if (localInfo.kind == LocalInfo::Kind::Buffer) {
+    typeNameOut = "Buffer";
+    return true;
+  }
   if (localInfo.isSoaVector) {
     typeNameOut = "soa_vector";
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Reference &&
-      (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToMap)) {
+      (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToMap ||
+       localInfo.referenceToBuffer)) {
     if (!localInfo.structTypeName.empty()) {
       resolvedTypePathOut = localInfo.structTypeName;
     } else {
-      typeNameOut = localInfo.referenceToMap ? "map" : (localInfo.referenceToVector ? "vector" : "array");
+      typeNameOut = localInfo.referenceToMap ? "map"
+                                             : (localInfo.referenceToVector ? "vector"
+                                                                            : (localInfo.referenceToBuffer ? "Buffer"
+                                                                                                            : "array"));
     }
     return true;
   }
@@ -1156,6 +1164,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
   }
   if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) {
     typeNameOut = "map";
+    return true;
+  }
+  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToBuffer) {
+    typeNameOut = "Buffer";
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Reference && !localInfo.structTypeName.empty()) {
@@ -1176,6 +1188,14 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
 
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind) {
+  auto isBufferConstructorCall = [&](const std::string &name) {
+    return name == "Buffer" || name == "/std/gfx/Buffer" || name == "/std/gfx/experimental/Buffer" ||
+           name.rfind("/std/gfx/Buffer__t", 0) == 0 || name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
+  };
+  if (receiverCallExpr.kind == Expr::Kind::Call && receiverCallExpr.templateArgs.size() == 1 &&
+      isBufferConstructorCall(receiverCallExpr.name)) {
+    return "Buffer";
+  }
   std::string collection;
   if (getBuiltinCollectionName(receiverCallExpr, collection)) {
     if (collection == "array" && receiverCallExpr.templateArgs.size() == 1) {
@@ -1186,6 +1206,9 @@ std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallEx
     }
     if (collection == "map" && receiverCallExpr.templateArgs.size() == 2) {
       return "map";
+    }
+    if (collection == "Buffer" && receiverCallExpr.templateArgs.size() == 1) {
+      return "Buffer";
     }
     if (collection == "soa_vector" && receiverCallExpr.templateArgs.size() == 1) {
       return "soa_vector";
@@ -1410,6 +1433,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   auto isMapReceiverTarget = [&](const std::string &candidate) {
     return candidate == "map" || candidate == "std/collections/map";
   };
+  auto isBufferReceiverTarget = [&](const std::string &candidate) {
+    return candidate == "Buffer" || candidate == "std/gfx/Buffer" || candidate == "std/gfx/experimental/Buffer";
+  };
   auto shouldPreferCanonicalMapPath = [&](const std::string &candidate) {
     return !isExplicitCompatibilityMapMethodAlias && !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
            isMapReceiverTarget(candidate) &&
@@ -1494,6 +1520,45 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         }
       }
     }
+    if (path.rfind("/Buffer/", 0) == 0) {
+      const std::string suffix = path.substr(std::string("/Buffer/").size());
+      const std::string canonicalAlias = "/std/gfx/Buffer/" + suffix;
+      defIt = defMap.find(canonicalAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      const std::string experimentalAlias = "/std/gfx/experimental/Buffer/" + suffix;
+      defIt = defMap.find(experimentalAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
+    if (path.rfind("/std/gfx/Buffer/", 0) == 0) {
+      const std::string suffix = path.substr(std::string("/std/gfx/Buffer/").size());
+      const std::string alias = "/Buffer/" + suffix;
+      defIt = defMap.find(alias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      const std::string experimentalAlias = "/std/gfx/experimental/Buffer/" + suffix;
+      defIt = defMap.find(experimentalAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
+    if (path.rfind("/std/gfx/experimental/Buffer/", 0) == 0) {
+      const std::string suffix = path.substr(std::string("/std/gfx/experimental/Buffer/").size());
+      const std::string canonicalAlias = "/std/gfx/Buffer/" + suffix;
+      defIt = defMap.find(canonicalAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      const std::string alias = "/Buffer/" + suffix;
+      defIt = defMap.find(alias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
     return nullptr;
   };
   if (!resolvedTypePath.empty()) {
@@ -1539,6 +1604,17 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   if (normalizedTypeName.empty()) {
     errorOut = "unknown method target for " + normalizedMethodName;
     return nullptr;
+  }
+
+  if (isBufferReceiverTarget(normalizedTypeName)) {
+    if (const Definition *resolved = findMethodDefinitionByPath("/std/gfx/Buffer/" + normalizedMethodName)) {
+      errorOut.clear();
+      return resolved;
+    }
+    if (const Definition *resolved = findMethodDefinitionByPath("/Buffer/" + normalizedMethodName)) {
+      errorOut.clear();
+      return resolved;
+    }
   }
 
   const std::string resolvedBase =
@@ -2786,6 +2862,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         const bool isPointerVector = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToVector;
         const bool isReferenceMap = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToMap;
         const bool isPointerMap = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap;
+        const bool isReferenceBuffer = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToBuffer;
+        const bool isPointerBuffer = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToBuffer;
         if (localInfo.isFileError &&
             (receiverKind == LocalInfo::Kind::Reference || receiverKind == LocalInfo::Kind::Pointer)) {
           typeNameOut = "FileError";
@@ -2801,6 +2879,10 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         }
         if (isReferenceMap || isPointerMap) {
           typeNameOut = "map";
+          return true;
+        }
+        if (isReferenceBuffer || isPointerBuffer) {
+          typeNameOut = "Buffer";
           return true;
         }
         return false;
@@ -2879,6 +2961,20 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Map) {
             typeNameOut = "map";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Buffer) {
+            typeNameOut = "Buffer";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+              localIt->second.referenceToBuffer) {
+            typeNameOut = "Buffer";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+              localIt->second.pointerToBuffer) {
+            typeNameOut = "Buffer";
             return true;
           }
         }

@@ -141,16 +141,24 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = "map";
     return true;
   }
+  if (localInfo.kind == LocalInfo::Kind::Buffer) {
+    typeNameOut = "Buffer";
+    return true;
+  }
   if (localInfo.isSoaVector) {
     typeNameOut = "soa_vector";
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Reference &&
-      (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToMap)) {
+      (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToMap ||
+       localInfo.referenceToBuffer)) {
     if (!localInfo.structTypeName.empty()) {
       resolvedTypePathOut = localInfo.structTypeName;
     } else {
-      typeNameOut = localInfo.referenceToMap ? "map" : (localInfo.referenceToVector ? "vector" : "array");
+      typeNameOut = localInfo.referenceToMap ? "map"
+                                             : (localInfo.referenceToVector ? "vector"
+                                                                            : (localInfo.referenceToBuffer ? "Buffer"
+                                                                                                            : "array"));
     }
     return true;
   }
@@ -164,6 +172,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
   }
   if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) {
     typeNameOut = "map";
+    return true;
+  }
+  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToBuffer) {
+    typeNameOut = "Buffer";
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Reference && !localInfo.structTypeName.empty()) {
@@ -184,6 +196,14 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
 
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind) {
+  auto isBufferConstructorCall = [&](const std::string &name) {
+    return name == "Buffer" || name == "/std/gfx/Buffer" || name == "/std/gfx/experimental/Buffer" ||
+           name.rfind("/std/gfx/Buffer__t", 0) == 0 || name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
+  };
+  if (receiverCallExpr.kind == Expr::Kind::Call && receiverCallExpr.templateArgs.size() == 1 &&
+      isBufferConstructorCall(receiverCallExpr.name)) {
+    return "Buffer";
+  }
   std::string collection;
   if (getBuiltinCollectionName(receiverCallExpr, collection)) {
     if (collection == "array" && receiverCallExpr.templateArgs.size() == 1) {
@@ -194,6 +214,9 @@ std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallEx
     }
     if (collection == "map" && receiverCallExpr.templateArgs.size() == 2) {
       return "map";
+    }
+    if (collection == "Buffer" && receiverCallExpr.templateArgs.size() == 1) {
+      return "Buffer";
     }
     if (collection == "soa_vector" && receiverCallExpr.templateArgs.size() == 1) {
       return "soa_vector";
@@ -401,6 +424,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         const bool isPointerVector = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToVector;
         const bool isReferenceMap = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToMap;
         const bool isPointerMap = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap;
+        const bool isReferenceBuffer = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToBuffer;
+        const bool isPointerBuffer = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToBuffer;
         if (localInfo.isFileError &&
             (receiverKind == LocalInfo::Kind::Reference || receiverKind == LocalInfo::Kind::Pointer)) {
           typeNameOut = "FileError";
@@ -416,6 +441,10 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         }
         if (isReferenceMap || isPointerMap) {
           typeNameOut = "map";
+          return true;
+        }
+        if (isReferenceBuffer || isPointerBuffer) {
+          typeNameOut = "Buffer";
           return true;
         }
         return false;
@@ -494,6 +523,20 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Map) {
             typeNameOut = "map";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Buffer) {
+            typeNameOut = "Buffer";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
+              localIt->second.referenceToBuffer) {
+            typeNameOut = "Buffer";
+            return true;
+          }
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
+              localIt->second.pointerToBuffer) {
+            typeNameOut = "Buffer";
             return true;
           }
         }

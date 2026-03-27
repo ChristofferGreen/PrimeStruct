@@ -77,10 +77,13 @@ bool isDereferencedCollectionCountTarget(const Expr &countExpr, const Expr &targ
     const bool isVectorTarget =
         (kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToVector);
+    const bool isBufferTarget =
+        (kind == LocalInfo::Kind::Reference && info.referenceToBuffer) ||
+        (kind == LocalInfo::Kind::Pointer && info.pointerToBuffer);
     const bool isMapTarget =
         (kind == LocalInfo::Kind::Reference && info.referenceToMap) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToMap);
-    if (!isArrayTarget && !isVectorTarget && !isMapTarget) {
+    if (!isArrayTarget && !isVectorTarget && !isBufferTarget && !isMapTarget) {
       return false;
     }
     if (isVectorTarget && info.isSoaVector && isExplicitVectorCompatibilityName(countExpr, "count")) {
