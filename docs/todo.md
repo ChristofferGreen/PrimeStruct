@@ -156,7 +156,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp` (`815` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererResultHelpers.cpp` (`805` lines) below the `700`-line target.
 - ○ Refactor `src/IrToGlslEmitter.cpp` (`793` lines) below the `700`-line target.
-- ○ Refactor `src/text_filter/TextFilterHelpers.cpp` (`789` lines) below the `700`-line target.
+- ✓ Refactor `src/text_filter/TextFilterHelpers.cpp` (`537` lines) below the `700`-line target by extracting unary rewrite helpers into `src/text_filter/TextFilterUnaryRewrites.cpp`, leaving `TextFilterHelpers.cpp` focused on token classification and operand-scanning helpers.
 - ○ Refactor `src/glsl_emitter/GlslEmitterExpr.cpp` (`788` lines) below the `700`-line target.
 - ○ Refactor `src/semantics/SemanticsHelpersValidation.cpp` (`783` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterEmitBody.h` (`781` lines) below the `700`-line target.
