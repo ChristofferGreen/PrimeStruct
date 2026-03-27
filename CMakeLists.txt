@@ -460,6 +460,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_text_filter_tests
     tests/unit/test_main.cpp
     tests/unit/test_text_filter_helpers.cpp
+    tests/unit/test_text_filter_transform_rules.cpp
     tests/unit/test_text_filter_pipeline_basics.cpp
     tests/unit/test_text_filter_pipeline_rewrites.cpp
     tests/unit/test_text_filter_pipeline_implicit_utf8.cpp
