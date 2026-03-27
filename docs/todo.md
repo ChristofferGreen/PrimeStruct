@@ -161,7 +161,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/semantics/SemanticsHelpersValidation.cpp` (`783` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterEmitBody.h` (`781` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererStatementCallHelpers.cpp` (`768` lines) below the `700`-line target.
-- ○ Refactor `src/ir_lowerer/IrLowererHelpers.cpp` (`745` lines) below the `700`-line target.
+- ✓ Refactor `src/ir_lowerer/IrLowererHelpers.cpp` (`338` lines) below the `700`-line target by extracting builtin math/name classification helpers into `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp`, leaving `IrLowererHelpers.cpp` focused on shared control-flow, match-lowering, and core builtin classification helpers.
 - ○ Refactor `src/ir_lowerer/IrLowererLowerEmitExpr.h` (`735` lines) below the `700`-line target.
 - ✓ Refactor `src/ir_lowerer/IrLowererCallHelpers.h` (`654` lines) below the `700`-line target by extracting call-dispatch/access-target result enums plus map-lookup loop helper structs into `src/ir_lowerer/IrLowererCallHelperTypes.h`, leaving `IrLowererCallHelpers.h` focused on call-helper function declarations.
 
