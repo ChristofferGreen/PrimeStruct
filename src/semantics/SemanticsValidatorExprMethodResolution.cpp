@@ -65,41 +65,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
-  auto resolveCallDefinition = [&](const Expr &callExpr, std::string *resolvedPathOut = nullptr)
-      -> const Definition * {
-    if (callExpr.kind != Expr::Kind::Call) {
-      return nullptr;
-    }
-    std::string resolvedPath = resolveCalleePath(callExpr);
-    auto defIt = defMap_.find(resolvedPath);
-    if (defIt != defMap_.end() && defIt->second != nullptr) {
-      if (resolvedPathOut != nullptr) {
-        *resolvedPathOut = resolvedPath;
-      }
-      return defIt->second;
-    }
-
-    const std::string overloadPrefix = resolvedPath + "__ov";
-    const std::string specializedPrefix = resolvedPath + "__t";
-    const size_t argCount = callExpr.args.size();
-    for (const auto &[path, paramList] : paramsByDef_) {
-      if (paramList.size() != argCount) {
-        continue;
-      }
-      if (path.rfind(overloadPrefix, 0) != 0 && path.rfind(specializedPrefix, 0) != 0) {
-        continue;
-      }
-      auto overloadIt = defMap_.find(path);
-      if (overloadIt == defMap_.end() || overloadIt->second == nullptr) {
-        continue;
-      }
-      if (resolvedPathOut != nullptr) {
-        *resolvedPathOut = path;
-      }
-      return overloadIt->second;
-    }
-    return nullptr;
-  };
   auto explicitRemovedCollectionMethodPath = [&](const std::string &rawMethodName) -> std::string {
     std::string candidate = rawMethodName;
     if (!candidate.empty() && candidate.front() == '/') {
@@ -409,9 +374,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
     }
     if (target.kind == Expr::Kind::Call) {
-      if (const Definition *targetDef = resolveCallDefinition(target);
-          targetDef != nullptr &&
-          inferDefinitionReturnBinding(*targetDef, binding) &&
+      auto defIt = defMap_.find(resolveCalleePath(target));
+      if (defIt != defMap_.end() && defIt->second != nullptr &&
+          inferDefinitionReturnBinding(*defIt->second, binding) &&
           extractValueBinding(binding)) {
         return true;
       }
@@ -757,10 +722,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         }
         return false;
       }
-      if (const Definition *targetDef = resolveCallDefinition(target);
-          targetDef != nullptr) {
+      auto defIt = defMap_.find(resolveCalleePath(target));
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
         BindingInfo inferredReturn;
-        if (inferDefinitionReturnBinding(*targetDef, inferredReturn) &&
+        if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
             normalizeBindingTypeName(inferredReturn.typeName) == "vector" &&
             !inferredReturn.typeTemplateArg.empty()) {
           elemType = inferredReturn.typeTemplateArg;
@@ -790,7 +755,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           }
         } else if (source.kind == Expr::Kind::Call) {
           std::string sourceCollectionTypePath;
-          if (resolveCallDefinition(source) == nullptr) {
+          if (defMap_.find(resolveCalleePath(source)) == defMap_.end()) {
             std::string collection;
             if (getBuiltinCollectionName(source, collection) && collection == "soa_vector" &&
                 source.templateArgs.size() == 1) {
@@ -1039,16 +1004,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         }
         return true;
       }
-      const Definition *targetDef = resolveCallDefinition(target);
-      if (targetDef == nullptr) {
+      auto defIt = defMap_.find(resolveCalleePath(target));
+      if (defIt == defMap_.end() || !defIt->second) {
         return false;
       }
       BindingInfo inferredReturn;
-      if (inferDefinitionReturnBinding(*targetDef, inferredReturn) &&
+      if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
           extractAnyMapKeyValueTypes(inferredReturn, keyType, valueType)) {
         return true;
       }
-      for (const auto &transform : targetDef->transforms) {
+      for (const auto &transform : defIt->second->transforms) {
         if (transform.name == "return" && transform.templateArgs.size() == 1) {
           return returnsMapCollectionType(transform.templateArgs.front());
         }
@@ -1405,11 +1370,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
       return false;
     }
-    const Definition *receiverDef = resolveCallDefinition(receiverExpr);
-    if (receiverDef == nullptr) {
+    auto defIt = defMap_.find(resolveCalleePath(receiverExpr));
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
       return false;
     }
-    for (const auto &transform : receiverDef->transforms) {
+    for (const auto &transform : defIt->second->transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
         continue;
       }
@@ -1437,9 +1402,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         resolvedOut = "/" + normalizedReturnBaseType + "/" + normalizedMethodName;
         return true;
       }
-      std::string resolvedReturnType = resolveStructTypePath(normalizedReturnType, receiverDef->namespacePrefix);
+      std::string resolvedReturnType = resolveStructTypePath(normalizedReturnType, defIt->second->namespacePrefix);
       if (resolvedReturnType.empty()) {
-        resolvedReturnType = resolveTypePath(normalizedReturnType, receiverDef->namespacePrefix);
+        resolvedReturnType = resolveTypePath(normalizedReturnType, defIt->second->namespacePrefix);
       }
       if (!resolvedReturnType.empty()) {
         resolvedOut = resolvedReturnType + "/" + normalizedMethodName;
@@ -1978,21 +1943,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
-    if (normalizedMethodName == "count" || normalizedMethodName == "capacity") {
-      if (const Definition *receiverDef = resolveCallDefinition(receiver);
-          receiverDef != nullptr) {
-        BindingInfo inferredReturn;
-        std::string experimentalElemType;
-        if (inferDefinitionReturnBinding(*receiverDef, inferredReturn) &&
-            (normalizeBindingTypeName(inferredReturn.typeName) == "vector" ||
-             extractExperimentalVectorElementType(inferredReturn, experimentalElemType))) {
-          if (normalizedMethodName == "count") {
-            return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
-          }
-          return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
-        }
-      }
-    }
     const std::string resolvedType = resolveCalleePath(receiver);
     if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
       std::string experimentalElemType;
@@ -2072,10 +2022,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (typeName.empty()) {
     if (receiver.kind == Expr::Kind::Call) {
-      if (const Definition *receiverDef = resolveCallDefinition(receiver);
-          receiverDef != nullptr) {
+      auto defIt = defMap_.find(resolveCalleePath(receiver));
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
         BindingInfo inferredReturn;
-        if (inferDefinitionReturnBinding(*receiverDef, inferredReturn)) {
+        if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
           typeName = normalizeBindingTypeName(inferredReturn.typeName);
           typeTemplateArg = inferredReturn.typeTemplateArg;
         }

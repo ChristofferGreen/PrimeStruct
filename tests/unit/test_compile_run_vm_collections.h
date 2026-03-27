@@ -2303,7 +2303,7 @@ TEST_CASE("rejects vm stdlib wrapper vector method receiver mismatch") {
   expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("vm");
 }
 
-TEST_CASE("runs vm canonical namespaced vector constructor count/capacity temporaries") {
+TEST_CASE("rejects vm canonical namespaced vector constructor temporaries") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("vm");
 }
 

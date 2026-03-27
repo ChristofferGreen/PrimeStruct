@@ -5242,21 +5242,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced vector constructor supports positional count/capacity temporary receivers") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(plus(/std/collections/vector/count(/std/collections/vector/vector<i32>(4i32, 5i32, 6i32)),
-              /std/collections/vector/vector<i32>(7i32, 8i32).capacity()))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("stdlib namespaced vector constructor rejects explicit builtin vector binding") {
   const std::string source = R"(
 import /std/collections/*
