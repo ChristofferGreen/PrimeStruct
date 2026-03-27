@@ -139,12 +139,60 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
 
   auto collectResolvedCallArgumentDiagnostic = [&](const Expr &expr, const std::string &resolved) -> bool {
     const std::string diagnosticResolved = diagnosticCallTargetPath(resolved);
+    const BuiltinCollectionDispatchResolverAdapters dispatchResolverAdapters;
+    const BuiltinCollectionDispatchResolvers dispatchResolvers =
+        makeBuiltinCollectionDispatchResolvers(executionParams, executionLocals, dispatchResolverAdapters);
     auto appendArgumentTypeMismatch = [&](const std::string &paramName,
                                           const std::string &expectedType,
                                           const std::string &actualType) {
       appendExecutionRecord(expr,
                             "argument type mismatch for " + diagnosticResolved + " parameter " + paramName +
                                 ": expected " + expectedType + " got " + actualType);
+    };
+    auto isCompatibleExperimentalVectorReceiver = [&](const Expr &arg,
+                                                      const ParameterInfo &param,
+                                                      const std::string &expectedStructPath) {
+      std::string expectedElemType;
+      std::string actualElemType;
+      if (!(extractExperimentalVectorElementType(param.binding, expectedElemType) ||
+            extractExperimentalVectorElementTypeFromStructPath(expectedStructPath, expectedElemType))) {
+        return false;
+      }
+      if (dispatchResolvers.resolveVectorTarget != nullptr &&
+          dispatchResolvers.resolveVectorTarget(arg, actualElemType) &&
+          normalizeBindingTypeName(expectedElemType) == normalizeBindingTypeName(actualElemType)) {
+        return true;
+      }
+      std::vector<std::string> resolvedVectorArgs;
+      if (resolveCallCollectionTemplateArgs(arg,
+                                            "vector",
+                                            executionParams,
+                                            executionLocals,
+                                            resolvedVectorArgs) &&
+          resolvedVectorArgs.size() == 1 &&
+          normalizeBindingTypeName(expectedElemType) ==
+              normalizeBindingTypeName(resolvedVectorArgs.front())) {
+        return true;
+      }
+      std::string inferredTypeText;
+      if (!inferQueryExprTypeText(arg, executionParams, executionLocals, inferredTypeText) ||
+          inferredTypeText.empty()) {
+        return false;
+      }
+      std::string inferredBase;
+      std::string inferredArgText;
+      if (!splitTemplateTypeName(inferredTypeText, inferredBase, inferredArgText)) {
+        return false;
+      }
+      std::vector<std::string> inferredArgs;
+      if (!splitTopLevelTemplateArgs(inferredArgText, inferredArgs) || inferredArgs.size() != 1) {
+        return false;
+      }
+      const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
+      return (normalizedInferredBase == "vector" ||
+              normalizedInferredBase == "Vector" ||
+              normalizedInferredBase == "std/collections/experimental_vector/Vector") &&
+             normalizeBindingTypeName(expectedElemType) == normalizeBindingTypeName(inferredArgs.front());
     };
     std::string message;
     if (!validateNamedArguments(expr.args, expr.argNames, diagnosticResolved, message)) {
@@ -211,6 +259,13 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
       const std::string actualStructPath = inferStructReturnPath(arg, executionParams, executionLocals);
       if (!actualStructPath.empty()) {
         if (actualStructPath != expectedStructPath) {
+          if (actualStructPath == "/vector" &&
+              expectedStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+            return;
+          }
+          if (isCompatibleExperimentalVectorReceiver(arg, param, expectedStructPath)) {
+            return;
+          }
           appendArgumentTypeMismatch(param.name, expectedStructPath, actualStructPath);
         }
         return;

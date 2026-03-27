@@ -2144,16 +2144,7 @@ bool instantiateTemplate(const std::string &basePath,
 } // namespace
 
 bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error) {
-  Context ctx{program, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
-  ctx.sourceDefs.clear();
-  ctx.templateDefs.clear();
-  ctx.outputDefs.clear();
-  ctx.outputExecs.clear();
-  ctx.outputPaths.clear();
-  ctx.implicitTemplateDefs.clear();
-  ctx.implicitTemplateParams.clear();
-  ctx.helperOverloads.clear();
-  ctx.helperOverloadInternalToPublic.clear();
+  Context ctx = makeTemplateMonomorphContext(program);
 
   if (!applyImplicitAutoTemplates(program, ctx, error)) {
     return false;

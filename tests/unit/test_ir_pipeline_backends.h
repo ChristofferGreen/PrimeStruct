@@ -1225,9 +1225,9 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(validatorInfer.find("if (!ensureDefinitionReturnKindReady(*defIt->second)) {") !=
         std::string::npos);
-  CHECK(validatorInfer.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
+  CHECK(validatorCollections.find("bool SemanticsValidator::resolveCallCollectionTypePath(") !=
         std::string::npos);
-  CHECK(validatorInfer.find("return SemanticsValidator::resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, argsOut);") !=
+  CHECK(validatorCollections.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs(") !=
         std::string::npos);
   CHECK(validatorInferMain.find("auto inferTargetTypeText = [&](const Expr &candidate, std::string &typeTextOut) -> bool {") ==
         std::string::npos);

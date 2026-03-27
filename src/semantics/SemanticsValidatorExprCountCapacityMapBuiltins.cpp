@@ -14,16 +14,74 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     const ExprCountCapacityMapBuiltinContext &context,
     bool &handledOut) {
   handledOut = false;
-  auto it = defMap_.find(resolved);
-  if (it != defMap_.end() && !resolvedMethod) {
-    return true;
-  }
-
   const auto *dispatchResolverAdapters = context.dispatchResolverAdapters;
   const auto *dispatchResolvers = context.dispatchResolvers;
   if (dispatchResolverAdapters == nullptr || dispatchResolvers == nullptr ||
       context.resolveMapTarget == nullptr ||
       context.resolveVectorTarget == nullptr) {
+    return true;
+  }
+  auto it = defMap_.find(resolved);
+
+  const bool isDirectVectorCountWrapperCall =
+      !expr.isMethodCall && !resolvedMethod &&
+      resolved.rfind("/std/collections/vectorCount", 0) == 0;
+  const bool isDirectVectorCapacityWrapperCall =
+      !expr.isMethodCall && !resolvedMethod &&
+      resolved.rfind("/std/collections/vectorCapacity", 0) == 0;
+  const bool isDirectStdNamespacedVectorCountBuiltinCall =
+      !expr.isMethodCall && !resolvedMethod &&
+      context.shouldBuiltinValidateStdNamespacedVectorCountCall &&
+      expr.args.size() == 1 &&
+      resolved.rfind("/std/collections/vector/count", 0) == 0;
+  const bool isDirectStdNamespacedVectorCapacityBuiltinCall =
+      !expr.isMethodCall && !resolvedMethod &&
+      context.shouldBuiltinValidateStdNamespacedVectorCapacityCall &&
+      expr.args.size() == 1 &&
+      resolved.rfind("/std/collections/vector/capacity", 0) == 0;
+  auto validateDirectVectorCountCapacityCall =
+      [&](const char *helperName, const char *resolvedPath) {
+        handledOut = true;
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = std::string(helperName) + " does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 1) {
+          error_ = "argument count mismatch for builtin " + std::string(helperName);
+          return false;
+        }
+        std::string elemType;
+        if (!context.resolveVectorTarget(expr.args.front(), elemType)) {
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          error_ = std::string(helperName) + " requires vector target";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          if (expr.templateArgs.size() != 1 ||
+              normalizeBindingTypeName(expr.templateArgs.front()) !=
+                  normalizeBindingTypeName(elemType)) {
+            error_ = "argument type mismatch for " + std::string(resolvedPath) +
+                     " parameter values";
+            return false;
+          }
+        }
+        return validateExpr(params, locals, expr.args.front());
+      };
+  if (isDirectVectorCountWrapperCall) {
+    return validateDirectVectorCountCapacityCall("count", "/std/collections/vectorCount");
+  }
+  if (isDirectVectorCapacityWrapperCall) {
+    return validateDirectVectorCountCapacityCall("capacity", "/std/collections/vectorCapacity");
+  }
+  if (isDirectStdNamespacedVectorCountBuiltinCall) {
+    return validateDirectVectorCountCapacityCall("count", "/std/collections/vector/count");
+  }
+  if (isDirectStdNamespacedVectorCapacityBuiltinCall) {
+    return validateDirectVectorCountCapacityCall("capacity", "/std/collections/vector/capacity");
+  }
+  if (it != defMap_.end() && !resolvedMethod) {
     return true;
   }
 

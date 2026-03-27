@@ -9416,6 +9416,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
   const std::filesystem::path semanticsExprNumericPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
+  const std::filesystem::path semanticsExprNumericPredicatesPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumericPredicates.cpp";
   const std::filesystem::path semanticsExprFieldResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprFieldResolution.cpp";
   const std::filesystem::path semanticsExprArgumentValidationPath =
@@ -9490,6 +9492,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
+  REQUIRE(std::filesystem::exists(semanticsExprNumericPredicatesPath));
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationCollectionsPath));
@@ -9534,6 +9537,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
+  const std::string semanticsExprNumericPredicatesSource = readText(semanticsExprNumericPredicatesPath);
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprArgumentValidationSource = readText(semanticsExprArgumentValidationPath);
   const std::string semanticsExprArgumentValidationCombinedSource = readTexts({
@@ -10323,7 +10327,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprLambdaSource.find("duplicate lambda capture") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("bool SemanticsValidator::validateNumericBuiltinExpr") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("multiply requires scalar scaling") != std::string::npos);
-  CHECK(semanticsExprNumericSource.find("implicit matrix/quaternion family conversion requires explicit helper") !=
+  CHECK(semanticsExprNumericPredicatesSource.find("implicit matrix/quaternion family conversion requires explicit helper") !=
         std::string::npos);
   CHECK(semanticsExprArgumentValidationSource.find("std::string SemanticsValidator::expectedBindingTypeText") !=
         std::string::npos);
@@ -11107,6 +11111,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidateTransforms.cpp";
   const std::filesystem::path semanticsValidateTransformsHeaderPath =
       repoRoot / "src" / "semantics" / "SemanticsValidateTransforms.h";
+  const std::filesystem::path semanticsValidateTransformsEnumsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidateTransformsEnums.cpp";
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
   REQUIRE(std::filesystem::exists(semanticsValidateConvertConstructorsPath));
   REQUIRE(std::filesystem::exists(semanticsValidateConvertConstructorsHeaderPath));
@@ -11128,6 +11134,7 @@ TEST_CASE("semantics validate source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsValidateReflectionMetadataHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidateTransformsPath));
   REQUIRE(std::filesystem::exists(semanticsValidateTransformsHeaderPath));
+  REQUIRE(std::filesystem::exists(semanticsValidateTransformsEnumsPath));
   const std::string semanticsValidateSource = readText(semanticsValidatePath);
   const std::string semanticsValidateConvertConstructorsSource = readText(semanticsValidateConvertConstructorsPath);
   const std::string semanticsValidateConvertConstructorsHeaderSource =
@@ -11165,6 +11172,7 @@ TEST_CASE("semantics validate source delegation stays stable") {
       readText(semanticsValidateReflectionMetadataHeaderPath);
   const std::string semanticsValidateTransformsSource = readText(semanticsValidateTransformsPath);
   const std::string semanticsValidateTransformsHeaderSource = readText(semanticsValidateTransformsHeaderPath);
+  const std::string semanticsValidateTransformsEnumsSource = readText(semanticsValidateTransformsEnumsPath);
 
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateConvertConstructors.h\"") != std::string::npos);
   CHECK(semanticsValidateSource.find("#include \"SemanticsValidateExperimentalGfxConstructors.h\"") !=
@@ -11375,7 +11383,7 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateTransformsSource.find("bool validateExprTransforms(const Expr &expr,") !=
         std::string::npos);
-  CHECK(semanticsValidateTransformsSource.find("bool rewriteEnumDefinitions(Program &program, std::string &error)") !=
+  CHECK(semanticsValidateTransformsEnumsSource.find("bool rewriteEnumDefinitions(Program &program, std::string &error)") !=
         std::string::npos);
   CHECK(semanticsValidateTransformsSource.find("bool rewriteSharedScopeStatements(std::vector<Expr> &statements, std::string &error)") !=
         std::string::npos);
@@ -11544,9 +11552,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
         std::string::npos);
-  CHECK(semanticsInferCombinedSource.find("return SemanticsValidator::resolveCallCollectionTypePath(target, params, locals, typePathOut);") !=
+  CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTypePath(") !=
         std::string::npos);
-  CHECK(semanticsInferCombinedSource.find("return SemanticsValidator::resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, argsOut);") !=
+  CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs(") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);

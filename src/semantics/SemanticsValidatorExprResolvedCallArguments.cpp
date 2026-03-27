@@ -122,6 +122,61 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     const std::string &expectedTypeName = param.binding.typeName;
     const std::string expectedTypeText =
         this->expectedBindingTypeText(param.binding);
+    std::string expectedExperimentalVectorElemType;
+    if (context.argumentValidationContext->dispatchResolvers != nullptr &&
+        this->extractExperimentalVectorElementType(
+            param.binding, expectedExperimentalVectorElemType)) {
+      std::string actualElemType;
+      std::string actualVectorSurface;
+      const auto &dispatchResolvers =
+          *context.argumentValidationContext->dispatchResolvers;
+      if (dispatchResolvers.resolveVectorTarget != nullptr &&
+          dispatchResolvers.resolveVectorTarget(*arg, actualElemType)) {
+        actualVectorSurface = "vector";
+      } else if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
+                 dispatchResolvers.resolveSoaVectorTarget(*arg, actualElemType)) {
+        actualVectorSurface = "soa_vector";
+      } else if (dispatchResolvers.resolveArrayTarget != nullptr &&
+                 dispatchResolvers.resolveArrayTarget(*arg, actualElemType)) {
+        actualVectorSurface = "array";
+      } else {
+        std::string actualTypeText;
+        if (this->inferQueryExprTypeText(*arg, params, locals, actualTypeText)) {
+          std::string actualBase;
+          std::string actualArgText;
+          if (splitTemplateTypeName(actualTypeText, actualBase, actualArgText)) {
+            std::vector<std::string> actualTypeArgs;
+            if (splitTopLevelTemplateArgs(actualArgText, actualTypeArgs) &&
+                actualTypeArgs.size() == 1) {
+              const std::string normalizedActualBase =
+                  normalizeBindingTypeName(actualBase);
+              if (normalizedActualBase == "vector" ||
+                  normalizedActualBase == "Vector" ||
+                  normalizedActualBase ==
+                      "std/collections/experimental_vector/Vector") {
+                actualVectorSurface = "vector";
+                actualElemType = actualTypeArgs.front();
+              } else if (normalizedActualBase == "soa_vector") {
+                actualVectorSurface = "soa_vector";
+                actualElemType = actualTypeArgs.front();
+              } else if (normalizedActualBase == "array") {
+                actualVectorSurface = "array";
+                actualElemType = actualTypeArgs.front();
+              }
+            }
+          }
+        }
+      }
+      if (!actualVectorSurface.empty() &&
+          (actualVectorSurface != "vector" ||
+           normalizeBindingTypeName(expectedExperimentalVectorElemType) !=
+               normalizeBindingTypeName(actualElemType))) {
+        error_ = "argument type mismatch for " + *context.diagnosticResolved +
+                 " parameter " + param.name + ": expected " + expectedTypeText +
+                 " got " + actualVectorSurface + "<" + actualElemType + ">";
+        return false;
+      }
+    }
     if (!this->validateArgumentTypeAgainstParam(
             *arg, param, expectedTypeName, expectedTypeText,
             *context.argumentValidationContext)) {

@@ -9,21 +9,6 @@ namespace primec::semantics {
 
 namespace {
 
-bool isCanonicalVectorCompatibilitySurface(const std::string &resolvedPath) {
-  return resolvedPath.rfind("/std/collections/vector/", 0) == 0 ||
-         resolvedPath.rfind("/vector/", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorCount", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorCapacity", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorAt", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorAtUnsafe", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorPush", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorPop", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorReserve", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorClear", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorRemoveAt", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/vectorRemoveSwap", 0) == 0;
-}
-
 bool isCollectionLikeTemplateBase(std::string_view baseName) {
   const std::string normalizedBase = normalizeBindingTypeName(std::string(baseName));
   return normalizedBase == "array" || normalizedBase == "vector" ||
@@ -298,8 +283,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         std::string actualElemType;
         if (dispatchResolvers.resolveVectorTarget != nullptr &&
             dispatchResolvers.resolveVectorTarget(arg, actualElemType)) {
-          if (isCanonicalVectorCompatibilitySurface(resolved) &&
-              normalizeBindingTypeName(expectedTemplateArgs.front()) ==
+          if (normalizeBindingTypeName(expectedTemplateArgs.front()) ==
                   normalizeBindingTypeName(actualElemType)) {
             return true;
           }
@@ -447,6 +431,33 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     }
   }
 
+  std::string expectedExplicitVectorElemType;
+  if (extractExperimentalVectorElementType(param.binding, expectedExplicitVectorElemType)) {
+    std::string actualElemType;
+    if (dispatchResolvers.resolveVectorTarget != nullptr &&
+        dispatchResolvers.resolveVectorTarget(arg, actualElemType)) {
+      if (normalizeBindingTypeName(expectedExplicitVectorElemType) ==
+          normalizeBindingTypeName(actualElemType)) {
+        return true;
+      }
+      error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+               ": expected " + expectedTypeText + " got vector<" + actualElemType + ">";
+      return false;
+    }
+    if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
+        dispatchResolvers.resolveSoaVectorTarget(arg, actualElemType)) {
+      error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+               ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">";
+      return false;
+    }
+    if (dispatchResolvers.resolveArrayTarget != nullptr &&
+        dispatchResolvers.resolveArrayTarget(arg, actualElemType)) {
+      error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+               ": expected " + expectedTypeText + " got array<" + actualElemType + ">";
+      return false;
+    }
+  }
+
   const ReturnKind expectedKind =
       returnKindForTypeName(normalizeBindingTypeName(expectedTypeName));
   if (expectedKind != ReturnKind::Unknown) {
@@ -505,14 +516,58 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
             normalizeBindingTypeName(actualMapTemplateArgs[0]) &&
         normalizeBindingTypeName(expectedMapValueType) ==
             normalizeBindingTypeName(actualMapTemplateArgs[1])));
-  const bool isCompatibleCanonicalVectorReceiver =
-      isCanonicalVectorCompatibilitySurface(resolved) &&
-      extractExperimentalVectorElementTypeFromStructPath(
-          expectedStructPath, expectedExperimentalVectorElemType) &&
-      dispatchResolvers.resolveVectorTarget != nullptr &&
-      dispatchResolvers.resolveVectorTarget(arg, actualVectorElemType) &&
-      normalizeBindingTypeName(expectedExperimentalVectorElemType) ==
-          normalizeBindingTypeName(actualVectorElemType);
+  const bool isCompatibleCanonicalVectorReceiver = [&] {
+    if (!(extractExperimentalVectorElementType(param.binding, expectedExperimentalVectorElemType) ||
+          extractExperimentalVectorElementTypeFromStructPath(
+              expectedStructPath, expectedExperimentalVectorElemType))) {
+      return false;
+    }
+    if (dispatchResolvers.resolveVectorTarget != nullptr &&
+        dispatchResolvers.resolveVectorTarget(arg, actualVectorElemType) &&
+        normalizeBindingTypeName(expectedExperimentalVectorElemType) ==
+            normalizeBindingTypeName(actualVectorElemType)) {
+      return true;
+    }
+    std::string inferredBase;
+    std::vector<std::string> inferredArgs;
+    if (inferCollectionBindingType(arg, inferredBase, inferredArgs) &&
+        inferredArgs.size() == 1) {
+      const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
+      if ((normalizedInferredBase == "vector" ||
+           normalizedInferredBase == "Vector" ||
+           normalizedInferredBase == "std/collections/experimental_vector/Vector") &&
+          normalizeBindingTypeName(expectedExperimentalVectorElemType) ==
+              normalizeBindingTypeName(inferredArgs.front())) {
+        return true;
+      }
+    }
+    std::vector<std::string> resolvedVectorArgs;
+    if (resolveCallCollectionTemplateArgs(arg, "vector", params, locals, resolvedVectorArgs) &&
+        resolvedVectorArgs.size() == 1 &&
+        normalizeBindingTypeName(expectedExperimentalVectorElemType) ==
+            normalizeBindingTypeName(resolvedVectorArgs.front())) {
+      return true;
+    }
+    std::string inferredTypeText;
+    if (!inferQueryExprTypeText(arg, params, locals, inferredTypeText) || inferredTypeText.empty()) {
+      return false;
+    }
+    std::string inferredBaseText;
+    std::string inferredArgText;
+    if (!splitTemplateTypeName(inferredTypeText, inferredBaseText, inferredArgText)) {
+      return false;
+    }
+    std::vector<std::string> inferredTypeArgs;
+    if (!splitTopLevelTemplateArgs(inferredArgText, inferredTypeArgs) || inferredTypeArgs.size() != 1) {
+      return false;
+    }
+    const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBaseText);
+    return (normalizedInferredBase == "vector" ||
+            normalizedInferredBase == "Vector" ||
+            normalizedInferredBase == "std/collections/experimental_vector/Vector") &&
+           normalizeBindingTypeName(expectedExperimentalVectorElemType) ==
+               normalizeBindingTypeName(inferredTypeArgs.front());
+  }();
   const std::string actualStructPath = inferStructReturnPath(arg, params, locals);
   if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
     if (isCompatibleExperimentalMapReceiver || isCompatibleCanonicalVectorReceiver) {

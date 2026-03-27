@@ -46,12 +46,12 @@ namespace std {
   }
 
   [public return<i32>]
-  vectorCount<T>([auto] values) {
+  vectorCount<T>([Vector<T>] values) {
     return(/std/collections/vector/count<T>(values))
   }
 
   [public return<i32>]
-  vectorCapacity<T>([auto] values) {
+  vectorCapacity<T>([Vector<T>] values) {
     return(/std/collections/vector/capacity<T>(values))
   }
 

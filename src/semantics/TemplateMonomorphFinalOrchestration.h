@@ -1,5 +1,9 @@
 #pragma once
 
+Context makeTemplateMonomorphContext(Program &program) {
+  return Context{program, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
+}
+
 void buildImportAliases(Context &ctx) {
   ctx.importAliases.clear();
   const auto &importPaths = ctx.program.imports;
