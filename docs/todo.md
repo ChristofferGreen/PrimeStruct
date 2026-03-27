@@ -153,7 +153,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/emitter/EmitterHelpersTypes.cpp` (`857` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.cpp` (`828` lines) below the `700`-line target.
 - ○ Refactor `src/native_emitter/NativeEmitterEmit.cpp` (`822` lines) below the `700`-line target.
-- ○ Refactor `src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp` (`815` lines) below the `700`-line target.
+- ✓ Refactor `src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp` (`514` lines) below the `700`-line target by extracting the call return-kind classifiers into `src/ir_lowerer/IrLowererSetupInferenceReturnKinds.cpp`, leaving `IrLowererSetupInferenceHelpers.cpp` focused on pointer, buffer, array, and body/local inference helpers.
 - ○ Refactor `src/ir_lowerer/IrLowererResultHelpers.cpp` (`805` lines) below the `700`-line target.
 - ✓ Refactor `src/IrToGlslEmitter.cpp` (`46` lines) below the `700`-line target by extracting GLSL instruction/function emission helpers into `src/IrToGlslEmitterFunctionEmitter.cpp`, leaving `IrToGlslEmitter.cpp` focused on top-level shader source assembly.
 - ✓ Refactor `src/text_filter/TextFilterHelpers.cpp` (`537` lines) below the `700`-line target by extracting unary rewrite helpers into `src/text_filter/TextFilterUnaryRewrites.cpp`, leaving `TextFilterHelpers.cpp` focused on token classification and operand-scanning helpers.
