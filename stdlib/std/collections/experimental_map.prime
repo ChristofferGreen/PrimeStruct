@@ -53,6 +53,12 @@ namespace std {
   Entry<K, V>() {
     [public K] key
     [public V] value
+
+    [public mut]
+    Destroy() {
+      drop(this.key)
+      drop(this.value)
+    }
   }
 
   [public struct]
