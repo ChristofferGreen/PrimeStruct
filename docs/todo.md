@@ -487,7 +487,7 @@ Guiding notes:
 - ○ Refactor `src/ir_lowerer/IrLowererStatementCallHelpers.cpp` (`768` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererHelpers.cpp` (`745` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererLowerEmitExpr.h` (`735` lines) below the `700`-line target.
-- ○ Refactor `src/ir_lowerer/IrLowererCallHelpers.h` (`725` lines) below the `700`-line target.
+- ✓ Refactor `src/ir_lowerer/IrLowererCallHelpers.h` (`654` lines) below the `700`-line target by extracting call-dispatch/access-target result enums plus map-lookup loop helper structs into `src/ir_lowerer/IrLowererCallHelperTypes.h`, leaving `IrLowererCallHelpers.h` focused on call-helper function declarations.
 
 **Section - Architecture / Type-resolution graph**
 Guiding note: the finished graph/SCC parity and snapshot work above now needs to turn back into a short explicit queue.
