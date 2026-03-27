@@ -43,6 +43,22 @@ bool emitInlineDefinitionCallParameters(
           !paramInfo.structTypeName.empty() &&
           (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
            paramInfo.argsPackElementKind == LocalInfo::Kind::Reference);
+      const bool isUnsupportedStringPointerReferenceArgsPack =
+          ((paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
+            !paramInfo.referenceToArray &&
+            !paramInfo.referenceToVector &&
+            !paramInfo.referenceToMap &&
+            !paramInfo.referenceToBuffer) ||
+           (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
+            !paramInfo.pointerToArray &&
+            !paramInfo.pointerToVector &&
+            !paramInfo.pointerToMap &&
+            !paramInfo.pointerToBuffer)) &&
+          paramInfo.valueKind == LocalInfo::ValueKind::String;
+      if (isUnsupportedStringPointerReferenceArgsPack) {
+        error = "variadic args<T> does not support string pointers or references";
+        return false;
+      }
 
       auto inferDirectLocationTargetInfo = [&](const Expr &argExpr,
                                                LocalInfo &targetInfoOut) -> bool {
