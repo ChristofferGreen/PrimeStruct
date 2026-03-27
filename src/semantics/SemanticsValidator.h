@@ -1468,6 +1468,17 @@ private:
   };
 
   EffectFreeSummary effectFreeSummaryForDefinition(const Definition &def);
+  std::string normalizeEffectFreeCollectionMethodName(const std::string &receiverPath,
+                                                      std::string methodName) const;
+  std::vector<std::string> effectFreeMethodPathCandidatesForReceiver(const std::string &receiverPath,
+                                                                     const std::string &methodName) const;
+  std::string preferEffectFreeCollectionHelperPath(const std::string &path) const;
+  std::vector<std::string> effectFreeCollectionHelperPathCandidates(const std::string &path) const;
+  std::string effectFreeCollectionPathFromType(const std::string &typeName,
+                                               const std::string &typeTemplateArg) const;
+  std::string effectFreeCollectionPathFromBinding(const BindingInfo &binding) const;
+  std::string effectFreeCollectionPathFromCallExpr(const Expr &callExpr) const;
+  std::string resolveEffectFreeBareMapCallPath(const Expr &callExpr, const EffectFreeContext &ctx) const;
   bool isOutsideEffectFreeStatement(const Expr &stmt, EffectFreeContext &ctx, bool &writesThis);
   bool isOutsideEffectFreeExpr(const Expr &expr, EffectFreeContext &ctx, bool &writesThis);
 
