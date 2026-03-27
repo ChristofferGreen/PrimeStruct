@@ -145,7 +145,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/ImportResolver.cpp` (`1010` lines) below the `700`-line target.
 - ○ Refactor `src/native_emitter/NativeEmitterHelpers.cpp` (`991` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.cpp` (`953` lines) below the `700`-line target.
-- ○ Refactor `src/IrPrinter.cpp` (`943` lines) below the `700`-line target.
+- ✓ Refactor `src/IrPrinter.cpp` (`537` lines) below the `700`-line target by extracting template/type and builtin return-kind helper logic into `src/IrPrinterHelpers.cpp`, leaving `IrPrinter.cpp` focused on expression/definition/execution printing plus local return-kind inference.
 - ○ Refactor `src/semantics/SemanticsValidator.cpp` (`938` lines) below the `700`-line target.
 - ✓ Refactor `src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp` (`924` lines) below the `700`-line target by extracting entry/runtime setup-builder orchestration into `src/ir_lowerer/IrLowererUninitializedSetupBuilders.cpp` and struct inference helpers into `src/ir_lowerer/IrLowererUninitializedStructInference.cpp`, leaving `IrLowererUninitializedTypeHelpers.cpp` below target while preserving the existing helper APIs.
 - ✓ Refactor `src/text_filter/TextFilterPipelineEnvelope.cpp` (`272` lines) below the `700`-line target by extracting namespace/definition envelope scanning helpers into `src/text_filter/TextFilterPipelineEnvelopeHelpers.cpp`, leaving `TextFilterPipelineEnvelope.cpp` focused on per-envelope filter application and rule dispatch.
