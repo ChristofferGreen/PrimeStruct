@@ -378,6 +378,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/VmIoHelpers.cpp
   src/VmDebugAdapter.cpp
   src/VmDebugDap.cpp
+  src/VmDebugDapProtocol.cpp
 )
 
 set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES

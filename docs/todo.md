@@ -141,7 +141,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/parser/ParserCore.cpp` (`1289` lines) below the `700`-line target.
 - ○ Refactor `src/parser/ParserLists.cpp` (`1245` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererStatementBindingHelpers.cpp` (`1190` lines) below the `700`-line target.
-- ○ Refactor `src/VmDebugDap.cpp` (`1104` lines) below the `700`-line target.
+- ✓ Refactor `src/VmDebugDap.cpp` (`551` lines) below the `700`-line target by extracting JSON parsing, DAP frame I/O, and protocol response/event helpers into `src/VmDebugDapProtocol.cpp` behind `src/VmDebugDapProtocol.h`, leaving `VmDebugDap.cpp` focused on breakpoint parsing, runtime request dispatch, and the session loop.
 - ○ Refactor `src/parser/ParserExpr.cpp` (`1083` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererStructTypeHelpers.cpp` (`1058` lines) below the `700`-line target.
 - ✓ Refactor `src/text_filter/TextFilterPipelinePass.cpp` (`691` lines) below the `700`-line target by extracting the binary-operator precedence parser and rewrite helpers into `src/text_filter/TextFilterPipelineOperatorRewrite.cpp`, leaving `TextFilterPipelinePass.cpp` focused on pass orchestration, collection literal rewrites, and token-by-token filter application.
