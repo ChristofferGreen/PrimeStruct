@@ -1,0 +1,624 @@
+#include "ImportResolverInternal.h"
+
+#include "primec/TempPaths.h"
+
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <sstream>
+#include <string>
+#include <system_error>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+namespace primec::import_resolver_detail {
+namespace {
+
+bool isIncludeBoundaryChar(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_' || c == '/';
+}
+
+bool isReservedKeyword(const std::string &text) {
+  return text == "mut" || text == "return" || text == "include" || text == "import" || text == "namespace" ||
+         text == "true" || text == "false" || text == "if" || text == "else" || text == "loop" || text == "while" ||
+         text == "for" || text == "match";
+}
+
+bool isAsciiAlpha(char c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+bool isAsciiDigit(char c) {
+  return c >= '0' && c <= '9';
+}
+
+bool isIdentifierSegmentStart(char c) {
+  return isAsciiAlpha(c) || c == '_';
+}
+
+bool isIdentifierSegmentChar(char c) {
+  return isAsciiAlpha(c) || isAsciiDigit(c) || c == '_';
+}
+
+bool isIncludeSegmentChar(char c) {
+  return isIdentifierSegmentChar(c);
+}
+
+} // namespace
+
+bool validateSlashPath(const std::string &text, std::string &error) {
+  if (text.size() < 2 || text[0] != '/') {
+    error = "invalid slash path identifier: " + text;
+    return false;
+  }
+  size_t start = 1;
+  while (start < text.size()) {
+    size_t end = text.find('/', start);
+    std::string segment = text.substr(start, end == std::string::npos ? std::string::npos : end - start);
+    if (segment.empty() || !isIdentifierSegmentStart(segment[0])) {
+      error = "invalid slash path identifier: " + text;
+      return false;
+    }
+    for (size_t i = 1; i < segment.size(); ++i) {
+      if (!isIncludeSegmentChar(segment[i])) {
+        error = "invalid slash path identifier: " + text;
+        return false;
+      }
+    }
+    if (isReservedKeyword(segment)) {
+      error = "reserved keyword cannot be used as identifier: " + segment;
+      return false;
+    }
+    if (end == std::string::npos) {
+      break;
+    }
+    start = end + 1;
+  }
+  if (text.back() == '/') {
+    error = "invalid slash path identifier: " + text;
+    return false;
+  }
+  return true;
+}
+
+bool readFile(const std::string &path, std::string &out) {
+  std::ifstream file(path);
+  if (!file) {
+    return false;
+  }
+  std::ostringstream buffer;
+  buffer << file.rdbuf();
+  out = buffer.str();
+  return true;
+}
+
+std::string normalizePathKey(const std::filesystem::path &path) {
+  std::error_code ec;
+  std::filesystem::path absolute = std::filesystem::absolute(path, ec);
+  if (ec) {
+    absolute = path;
+  }
+  std::filesystem::path canonical = std::filesystem::weakly_canonical(absolute, ec);
+  if (ec) {
+    canonical = absolute.lexically_normal();
+  }
+  return canonical.generic_string();
+}
+
+std::string trim(const std::string &value) {
+  size_t start = 0;
+  while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start]))) {
+    ++start;
+  }
+  size_t end = value.size();
+  while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1]))) {
+    --end;
+  }
+  return value.substr(start, end - start);
+}
+
+size_t skipQuotedLiteral(const std::string &text, size_t start) {
+  if (start >= text.size()) {
+    return start;
+  }
+  char quote = text[start];
+  size_t pos = start + 1;
+  while (pos < text.size()) {
+    char c = text[pos];
+    if (quote == '"' && c == '\\' && pos + 1 < text.size()) {
+      pos += 2;
+      continue;
+    }
+    if (c == quote) {
+      return pos + 1;
+    }
+    ++pos;
+  }
+  return text.size();
+}
+
+size_t skipLineComment(const std::string &text, size_t start) {
+  size_t pos = start + 2;
+  while (pos < text.size() && text[pos] != '\n') {
+    ++pos;
+  }
+  return pos;
+}
+
+size_t skipBlockComment(const std::string &text, size_t start) {
+  const size_t end = text.find("*/", start + 2);
+  if (end == std::string::npos) {
+    return text.size();
+  }
+  return end + 2;
+}
+
+size_t skipWhitespaceAndComments(const std::string &text, size_t start) {
+  size_t pos = start;
+  while (pos < text.size()) {
+    bool advanced = false;
+    while (pos < text.size() && std::isspace(static_cast<unsigned char>(text[pos]))) {
+      ++pos;
+      advanced = true;
+    }
+    if (pos + 1 < text.size() && text[pos] == '/') {
+      if (text[pos + 1] == '/') {
+        pos = skipLineComment(text, pos);
+        advanced = true;
+      } else if (text[pos + 1] == '*') {
+        pos = skipBlockComment(text, pos);
+        advanced = true;
+      }
+    }
+    if (!advanced) {
+      break;
+    }
+  }
+  return pos;
+}
+
+size_t findIncludePayloadEnd(const std::string &source, size_t start) {
+  size_t pos = start;
+  bool inBarePath = false;
+  while (pos < source.size()) {
+    char c = source[pos];
+    if (c == '>') {
+      return pos;
+    }
+    if (c == '"' || c == '\'') {
+      size_t next = skipQuotedLiteral(source, pos);
+      if (next >= source.size()) {
+        return source.find('>', pos + 1);
+      }
+      pos = next;
+      inBarePath = false;
+      continue;
+    }
+    if (std::isspace(static_cast<unsigned char>(c)) || c == ',' || c == ';') {
+      ++pos;
+      inBarePath = false;
+      continue;
+    }
+    if (c == '=') {
+      ++pos;
+      inBarePath = false;
+      continue;
+    }
+    if (!inBarePath && c == '/' && pos + 1 < source.size()) {
+      if (source[pos + 1] == '/') {
+        pos = skipLineComment(source, pos);
+        continue;
+      }
+      if (source[pos + 1] == '*') {
+        pos = skipBlockComment(source, pos);
+        continue;
+      }
+      inBarePath = true;
+      ++pos;
+      continue;
+    }
+    if (!inBarePath && c == '/') {
+      inBarePath = true;
+      ++pos;
+      continue;
+    }
+    ++pos;
+  }
+  return std::string::npos;
+}
+
+bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payloadStart, size_t &payloadEnd) {
+  size_t directiveLength = 0;
+  if (pos + 6 <= source.size() && source.compare(pos, 6, "import") == 0) {
+    directiveLength = 6;
+  } else {
+    return false;
+  }
+  if (pos > 0 && isIncludeBoundaryChar(source[pos - 1])) {
+    return false;
+  }
+  size_t scan = pos + directiveLength;
+  if (scan < source.size() && isIncludeBoundaryChar(source[scan])) {
+    if (!(source[scan] == '/' && scan + 1 < source.size() &&
+          (source[scan + 1] == '/' || source[scan + 1] == '*'))) {
+      return false;
+    }
+  }
+  scan = skipWhitespaceAndComments(source, scan);
+  if (scan >= source.size() || source[scan] != '<') {
+    return false;
+  }
+  payloadStart = scan + 1;
+  payloadEnd = findIncludePayloadEnd(source, payloadStart);
+  return true;
+}
+
+bool scanLegacyIncludeDirective(const std::string &source, size_t pos, size_t &payloadStart, size_t &payloadEnd) {
+  if (!(pos + 7 <= source.size() && source.compare(pos, 7, "include") == 0)) {
+    return false;
+  }
+  if (pos > 0 && isIncludeBoundaryChar(source[pos - 1])) {
+    return false;
+  }
+  size_t scan = pos + 7;
+  if (scan < source.size() && isIncludeBoundaryChar(source[scan])) {
+    if (!(source[scan] == '/' && scan + 1 < source.size() &&
+          (source[scan + 1] == '/' || source[scan + 1] == '*'))) {
+      return false;
+    }
+  }
+  scan = skipWhitespaceAndComments(source, scan);
+  if (scan >= source.size() || source[scan] != '<') {
+    return false;
+  }
+  payloadStart = scan + 1;
+  payloadEnd = findIncludePayloadEnd(source, payloadStart);
+  return true;
+}
+
+bool readQuotedString(const std::string &payload, size_t &pos, std::string &out, std::string &error) {
+  if (pos >= payload.size() || (payload[pos] != '"' && payload[pos] != '\'')) {
+    error = "expected quoted string in import<...>";
+    return false;
+  }
+  char quote = payload[pos];
+  ++pos;
+  size_t quoteEnd = payload.find(quote, pos);
+  if (quoteEnd == std::string::npos) {
+    error = "unterminated import string literal";
+    return false;
+  }
+  out = payload.substr(pos, quoteEnd - pos);
+  pos = quoteEnd + 1;
+  return true;
+}
+
+bool readBareIncludePath(const std::string &payload, size_t &pos, std::string &out) {
+  size_t start = pos;
+  while (pos < payload.size()) {
+    char c = payload[pos];
+    if (std::isspace(static_cast<unsigned char>(c)) || c == ',' || c == ';') {
+      break;
+    }
+    ++pos;
+  }
+  if (pos <= start) {
+    return false;
+  }
+  out = payload.substr(start, pos - start);
+  return true;
+}
+
+bool tryConsumeIncludeKeyword(const std::string &payload, size_t &pos, const std::string &keyword) {
+  if (payload.compare(pos, keyword.size(), keyword) != 0) {
+    return false;
+  }
+  size_t end = pos + keyword.size();
+  if (end < payload.size()) {
+    char c = payload[end];
+    if (isIncludeBoundaryChar(c)) {
+      return false;
+    }
+  }
+  pos = end;
+  return true;
+}
+
+bool extractArchive(const std::filesystem::path &archive,
+                    const ProcessRunner &processRunner,
+                    std::filesystem::path &outDir,
+                    std::string &error) {
+  std::string absPath = std::filesystem::absolute(archive).string();
+  std::size_t hash = std::hash<std::string>{}(absPath);
+  outDir = primecCacheDir("archives", std::to_string(hash));
+  std::error_code ec;
+  std::filesystem::create_directories(outDir, ec);
+  if (ec) {
+    error = "failed to create archive cache directory: " + outDir.string();
+    return false;
+  }
+  if (processRunner.run({"unzip", "-q", "-o", absPath, "-d", outDir.string()}) != 0) {
+    error = "failed to extract archive: " + absPath;
+    return false;
+  }
+  return true;
+}
+
+bool appendArchiveRoots(const std::vector<std::filesystem::path> &roots,
+                        const ProcessRunner &processRunner,
+                        std::vector<std::filesystem::path> &expanded,
+                        std::string &error) {
+  expanded.clear();
+  std::unordered_set<std::string> seenRoots;
+  auto pushUniqueRoot = [&](const std::filesystem::path &root) {
+    std::error_code ec;
+    std::filesystem::path absolute = std::filesystem::absolute(root, ec);
+    if (ec) {
+      absolute = root;
+    }
+    const std::string key = normalizePathKey(absolute);
+    if (!seenRoots.insert(key).second) {
+      return;
+    }
+    expanded.push_back(std::move(absolute));
+  };
+
+  for (const auto &root : roots) {
+    pushUniqueRoot(root);
+  }
+
+  for (const auto &root : roots) {
+    std::error_code ec;
+    std::filesystem::path rootPath = std::filesystem::absolute(root, ec);
+    if (ec) {
+      rootPath = root;
+    }
+    if (!std::filesystem::exists(rootPath)) {
+      continue;
+    }
+    if (std::filesystem::is_regular_file(rootPath) && rootPath.extension() == ".zip") {
+      std::filesystem::path extracted;
+      if (!extractArchive(rootPath, processRunner, extracted, error)) {
+        return false;
+      }
+      pushUniqueRoot(extracted);
+      continue;
+    }
+    if (!std::filesystem::is_directory(rootPath)) {
+      continue;
+    }
+    std::vector<std::filesystem::path> archives;
+    for (const auto &entry : std::filesystem::directory_iterator(rootPath)) {
+      if (!entry.is_regular_file()) {
+        continue;
+      }
+      if (entry.path().extension() != ".zip") {
+        continue;
+      }
+      archives.push_back(entry.path());
+    }
+    std::sort(archives.begin(), archives.end(), [](const std::filesystem::path &lhs, const std::filesystem::path &rhs) {
+      return normalizePathKey(lhs) < normalizePathKey(rhs);
+    });
+    for (const auto &archive : archives) {
+      std::filesystem::path extracted;
+      if (!extractArchive(archive, processRunner, extracted, error)) {
+        return false;
+      }
+      pushUniqueRoot(extracted);
+    }
+  }
+  return true;
+}
+
+bool parseVersionParts(const std::string &text, std::vector<int> &parts, std::string &error) {
+  parts.clear();
+  if (text.empty()) {
+    error = "import version cannot be empty";
+    return false;
+  }
+  int current = 0;
+  bool hasDigit = false;
+  for (size_t i = 0; i <= text.size(); ++i) {
+    if (i == text.size() || text[i] == '.') {
+      if (!hasDigit) {
+        error = "invalid import version: " + text;
+        return false;
+      }
+      parts.push_back(current);
+      current = 0;
+      hasDigit = false;
+      continue;
+    }
+    if (!std::isdigit(static_cast<unsigned char>(text[i]))) {
+      error = "invalid import version: " + text;
+      return false;
+    }
+    hasDigit = true;
+    current = current * 10 + (text[i] - '0');
+  }
+  if (parts.size() < 1 || parts.size() > 3) {
+    error = "import version must have 1 to 3 numeric parts: " + text;
+    return false;
+  }
+  return true;
+}
+
+bool hasPrefix(const std::vector<int> &candidate, const std::vector<int> &prefix) {
+  if (candidate.size() < prefix.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < prefix.size(); ++i) {
+    if (candidate[i] != prefix[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool isNewerVersion(const std::vector<int> &lhs, const std::vector<int> &rhs) {
+  size_t maxSize = std::max(lhs.size(), rhs.size());
+  for (size_t i = 0; i < maxSize; ++i) {
+    int left = i < lhs.size() ? lhs[i] : 0;
+    int right = i < rhs.size() ? rhs[i] : 0;
+    if (left != right) {
+      return left > right;
+    }
+  }
+  return false;
+}
+
+bool isPrivatePath(const std::filesystem::path &path) {
+  std::error_code ec;
+  const bool isDir = std::filesystem::is_directory(path, ec);
+  std::filesystem::path scanPath = isDir ? path : path.parent_path();
+  for (const auto &part : scanPath) {
+    std::string segment = part.string();
+    if (segment.empty()) {
+      continue;
+    }
+    if (segment == "." || segment == "..") {
+      continue;
+    }
+    if (!segment.empty() && segment[0] == '_') {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool collectPrimeFiles(const std::filesystem::path &root,
+                       std::vector<std::filesystem::path> &out,
+                       std::string &error) {
+  out.clear();
+  if (isPrivatePath(root)) {
+    error = "import path refers to private folder: " + std::filesystem::absolute(root).string();
+    return false;
+  }
+  if (std::filesystem::is_regular_file(root)) {
+    out.push_back(std::filesystem::path(normalizePathKey(root)));
+    return true;
+  }
+  if (!std::filesystem::is_directory(root)) {
+    error = "failed to read import: " + std::filesystem::absolute(root).string();
+    return false;
+  }
+  std::error_code ec;
+  std::filesystem::recursive_directory_iterator it(root, std::filesystem::directory_options::skip_permission_denied,
+                                                   ec);
+  std::filesystem::recursive_directory_iterator end;
+  for (; it != end; it.increment(ec)) {
+    if (ec) {
+      error = "failed to read import: " + std::filesystem::absolute(root).string();
+      return false;
+    }
+    const std::filesystem::path current = it->path();
+    if (it->is_directory()) {
+      if (isPrivatePath(current)) {
+        it.disable_recursion_pending();
+      }
+      continue;
+    }
+    if (!it->is_regular_file()) {
+      continue;
+    }
+    if (current.extension() != ".prime") {
+      continue;
+    }
+    if (isPrivatePath(current)) {
+      continue;
+    }
+    out.push_back(current);
+  }
+  if (out.empty()) {
+    error = "import directory contains no .prime files: " + std::filesystem::absolute(root).string();
+    return false;
+  }
+  std::vector<std::pair<std::string, std::filesystem::path>> keyed;
+  keyed.reserve(out.size());
+  std::unordered_set<std::string> seen;
+  for (const auto &path : out) {
+    std::string key = normalizePathKey(path);
+    if (!seen.insert(key).second) {
+      continue;
+    }
+    keyed.push_back({std::move(key), path});
+  }
+  std::sort(keyed.begin(), keyed.end(), [](const auto &lhs, const auto &rhs) { return lhs.first < rhs.first; });
+  out.clear();
+  out.reserve(keyed.size());
+  for (const auto &entry : keyed) {
+    out.push_back(entry.second);
+  }
+  return true;
+}
+
+bool selectVersionDirectory(const std::filesystem::path &baseDir,
+                            const std::vector<int> &requested,
+                            std::string &selected,
+                            std::string &error) {
+  if (requested.size() == 3) {
+    std::ostringstream exact;
+    exact << requested[0] << "." << requested[1] << "." << requested[2];
+    std::filesystem::path candidate = baseDir / exact.str();
+    if (std::filesystem::exists(candidate) && std::filesystem::is_directory(candidate)) {
+      selected = exact.str();
+      return true;
+    }
+    error = "import version not found: " + exact.str();
+    return false;
+  }
+
+  if (!std::filesystem::exists(baseDir) || !std::filesystem::is_directory(baseDir)) {
+    std::ostringstream requestedText;
+    for (size_t i = 0; i < requested.size(); ++i) {
+      if (i > 0) {
+        requestedText << ".";
+      }
+      requestedText << requested[i];
+    }
+    error = "import version not found: " + requestedText.str();
+    return false;
+  }
+
+  bool found = false;
+  std::vector<int> bestParts;
+  std::string bestName;
+  for (const auto &entry : std::filesystem::directory_iterator(baseDir)) {
+    if (!entry.is_directory()) {
+      continue;
+    }
+    std::string name = entry.path().filename().string();
+    std::vector<int> parts;
+    std::string parseError;
+    if (!parseVersionParts(name, parts, parseError)) {
+      continue;
+    }
+    if (!hasPrefix(parts, requested)) {
+      continue;
+    }
+    if (!found || isNewerVersion(parts, bestParts)) {
+      bestParts = parts;
+      bestName = name;
+      found = true;
+    }
+  }
+  if (!found) {
+    std::ostringstream requestedText;
+    for (size_t i = 0; i < requested.size(); ++i) {
+      if (i > 0) {
+        requestedText << ".";
+      }
+      requestedText << requested[i];
+    }
+    error = "import version not found: " + requestedText.str();
+    return false;
+  }
+  selected = bestName;
+  return true;
+}
+
+} // namespace primec::import_resolver_detail
