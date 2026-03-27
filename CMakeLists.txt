@@ -41,6 +41,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/Lexer.cpp
   src/parser/ParserCore.cpp
   src/parser/ParserExpr.cpp
+  src/parser/ParserExprControl.cpp
   src/parser/ParserHelpers.cpp
   src/parser/ParserLists.cpp
   src/semantics/SemanticsBindingTypeHelpers.cpp
