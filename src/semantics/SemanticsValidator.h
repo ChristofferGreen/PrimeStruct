@@ -1008,6 +1008,33 @@ private:
                                          const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          std::vector<std::string> &argsOut);
+  std::string inferStructReturnCollectionPath(const std::string &typeName,
+                                              const std::string &typeTemplateArg) const;
+  std::string resolveInferStructTypePath(const std::string &typeName,
+                                         const std::string &namespacePrefix) const;
+  bool isInferStructReturnNumericScalarExpr(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
+  std::string inferStructReturnPointerTargetTypeText(
+      const Expr &pointerExpr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
+  std::vector<std::string> inferStructReturnCollectionHelperPathCandidates(
+      const std::string &path) const;
+  void pruneInferStructReturnMapAccessCompatibilityCandidates(
+      const std::string &path,
+      std::vector<std::string> &candidates) const;
+  void pruneInferStructReturnBuiltinVectorAccessCandidates(
+      const Expr &candidate,
+      const std::string &path,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+      std::vector<std::string> &candidates) const;
+  bool isExplicitMapAccessStructReturnCompatibilityCall(
+      const Expr &candidate,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
+  std::string specializedExperimentalMapStructReturnPath(
+      const std::vector<std::string> &templateArgs) const;
   std::string inferMethodCollectionTypePathFromTypeText(const std::string &typeText) const;
   std::string resolveMethodStructTypePath(const std::string &typeName,
                                           const std::string &namespacePrefix) const;
