@@ -667,8 +667,14 @@ LocalInfo::ValueKind valueKindFromTypeName(const std::string &name) {
 
   std::string base;
   std::string arg;
-  if (splitTemplateTypeName(normalized, base, arg) && normalizeCollectionBindingTypeName(base) == "File") {
-    return LocalInfo::ValueKind::Int64;
+  if (splitTemplateTypeName(normalized, base, arg)) {
+    const std::string normalizedBase = normalizeCollectionBindingTypeName(base);
+    if (normalizedBase == "File") {
+      return LocalInfo::ValueKind::Int64;
+    }
+    if (normalizedBase == "Buffer") {
+      return valueKindFromTypeName(trimTemplateTypeText(arg));
+    }
   }
   return LocalInfo::ValueKind::Unknown;
 }
