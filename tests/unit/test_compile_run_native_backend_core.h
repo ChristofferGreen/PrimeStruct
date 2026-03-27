@@ -3852,6 +3852,45 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
+TEST_CASE("native materializes variadic Pointer<Buffer> packs with dereference helpers") {
+  const std::string source = R"(
+import /std/gfx/*
+
+[return<int> effects(gpu_dispatch)]
+score_buffers_pointer([args<Pointer<Buffer<i32>>>] values) {
+  [Pointer<Buffer<i32>>] head{at(values, 0i32)}
+  [Pointer<Buffer<i32>>] tail{at(values, minus(count(values), 1i32))}
+  [Buffer<i32>] headValue{dereference(head)}
+  [Buffer<i32>] tailValue{dereference(tail)}
+  return(plus(headValue.count(), plus(tailValue.count(), count(values))))
+}
+
+[return<int> effects(gpu_dispatch)]
+forward_pointer([args<Pointer<Buffer<i32>>>] values) {
+  return(score_buffers_pointer([spread] values))
+}
+
+[return<int> effects(gpu_dispatch)]
+forward_pointer_mixed([args<Pointer<Buffer<i32>>>] values) {
+  return(score_buffers_pointer(location(Buffer<i32>(10i32)), [spread] values))
+}
+
+[return<int> effects(gpu_dispatch)]
+main() {
+  return(plus(score_buffers_pointer(location(Buffer<i32>(3i32)), location(Buffer<i32>(1i32)), location(Buffer<i32>(2i32))),
+              plus(forward_pointer(location(Buffer<i32>(4i32)), location(Buffer<i32>(1i32)), location(Buffer<i32>(5i32))),
+                   forward_pointer_mixed(location(Buffer<i32>(6i32)), location(Buffer<i32>(2i32)))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_variadic_args_buffer_pointer.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_variadic_args_buffer_pointer").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 24);
+}
+
 TEST_CASE("native preserves if expression values in arithmetic context") {
   const std::string source = R"(
 [return<int>]
