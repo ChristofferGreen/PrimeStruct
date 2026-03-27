@@ -88,6 +88,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorBuildUtility.cpp
   src/semantics/SemanticsValidatorBuildDirectCallBinding.cpp
   src/semantics/SemanticsValidatorBuildInitializerInference.cpp
+  src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp
   src/semantics/SemanticsValidatorEffectFreeCollections.cpp
   src/semantics/SemanticsValidatorExprBlock.cpp
   src/semantics/SemanticsValidatorExprCaptureSplitStep.cpp

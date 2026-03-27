@@ -287,6 +287,29 @@ private:
                                        const std::unordered_map<std::string, BindingInfo> &locals,
                                        BindingInfo &bindingOut,
                                        const Expr *bindingExpr = nullptr);
+  bool graphBindingIsUsable(const BindingInfo &binding) const;
+  bool shouldBypassGraphBindingLookup(const Expr &candidate) const;
+  bool hasDirectExperimentalVectorImport() const;
+  bool canonicalizeInferredCollectionBinding(const Expr *sourceExpr,
+                                             const std::vector<ParameterInfo> &params,
+                                             const std::unordered_map<std::string, BindingInfo> &locals,
+                                             BindingInfo &bindingOut);
+  bool inferCollectionBindingFromExpr(const Expr &expr,
+                                      const std::vector<ParameterInfo> &params,
+                                      const std::unordered_map<std::string, BindingInfo> &locals,
+                                      BindingInfo &bindingOut);
+  bool inferBuiltinCollectionValueBinding(const Expr &expr,
+                                          const std::vector<ParameterInfo> &params,
+                                          const std::unordered_map<std::string, BindingInfo> &locals,
+                                          BindingInfo &bindingOut);
+  bool inferBuiltinPointerBinding(const Expr &expr,
+                                  const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals,
+                                  BindingInfo &bindingOut);
+  bool inferCallInitializerBinding(const Expr &initializer,
+                                   const std::vector<ParameterInfo> &params,
+                                   const std::unordered_map<std::string, BindingInfo> &locals,
+                                   BindingInfo &bindingOut);
   static std::string graphLocalAutoBindingKey(const std::string &scopePath, int sourceLine, int sourceColumn);
   static std::pair<int, int> graphLocalAutoSourceLocation(const Expr &expr);
   bool lookupGraphLocalAutoBinding(const std::string &scopePath,
