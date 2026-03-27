@@ -2157,6 +2157,10 @@ TEST_CASE("runs vm inferred experimental map parameters") {
   expectInferredExperimentalMapParameterConformance("vm");
 }
 
+TEST_CASE("runs vm inferred experimental map default parameters") {
+  expectInferredExperimentalMapDefaultParameterConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map helper receivers") {
   expectExperimentalMapHelperReceiverConformance("vm");
 }

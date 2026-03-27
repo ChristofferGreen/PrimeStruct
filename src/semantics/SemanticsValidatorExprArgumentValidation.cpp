@@ -554,6 +554,45 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         if (maybePreferExplicitCanonicalMapKeyDiagnostic(expectedTemplateArgs)) {
           return false;
         }
+      } else if ((normalizedExpectedBase == "Map" ||
+                  normalizedExpectedBase == "std/collections/experimental_map/Map") &&
+                 expectedTemplateArgs.size() == 2) {
+        std::string actualKeyType;
+        std::string actualValueType;
+        if (resolveMapKeyType(arg, dispatchResolvers, actualKeyType) &&
+            resolveMapValueType(arg, dispatchResolvers, actualValueType)) {
+          if (normalizeBindingTypeName(expectedTemplateArgs[0]) ==
+                  normalizeBindingTypeName(actualKeyType) &&
+              normalizeBindingTypeName(expectedTemplateArgs[1]) ==
+                  normalizeBindingTypeName(actualValueType)) {
+            return true;
+          }
+          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                   ": expected " + expectedTypeText + " got map<" + actualKeyType + ", " +
+                   actualValueType + ">";
+          return false;
+        }
+
+        std::string inferredBase;
+        std::vector<std::string> inferredArgs;
+        if (inferCollectionBindingType(arg, inferredBase, inferredArgs) &&
+            inferredArgs.size() == 2) {
+          const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
+          if (isMapCollectionTypeName(normalizedInferredBase) ||
+              normalizedInferredBase == "Map" ||
+              normalizedInferredBase == "std/collections/experimental_map/Map") {
+            if (normalizeBindingTypeName(expectedTemplateArgs[0]) ==
+                    normalizeBindingTypeName(inferredArgs[0]) &&
+                normalizeBindingTypeName(expectedTemplateArgs[1]) ==
+                    normalizeBindingTypeName(inferredArgs[1])) {
+              return true;
+            }
+            error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                     ": expected " + expectedTypeText + " got map<" + inferredArgs[0] + ", " +
+                     inferredArgs[1] + ">";
+            return false;
+          }
+        }
       }
     }
     if (isCollectionLikeTemplateBase(normalizedExpectedBase)) {
@@ -635,17 +674,28 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   std::string expectedMapValueType;
   std::string actualMapKeyType;
   std::string actualMapValueType;
+  std::string actualMapBase;
+  std::vector<std::string> actualMapTemplateArgs;
   std::string expectedExperimentalVectorElemType;
   std::string actualVectorElemType;
   const bool isCompatibleExperimentalMapReceiver =
       extractExperimentalMapFieldTypesFromStructPath(
           expectedStructPath, expectedMapKeyType, expectedMapValueType) &&
-      resolveMapKeyType(arg, dispatchResolvers, actualMapKeyType) &&
-      resolveMapValueType(arg, dispatchResolvers, actualMapValueType) &&
-      normalizeBindingTypeName(expectedMapKeyType) ==
-          normalizeBindingTypeName(actualMapKeyType) &&
-      normalizeBindingTypeName(expectedMapValueType) ==
-          normalizeBindingTypeName(actualMapValueType);
+      ((resolveMapKeyType(arg, dispatchResolvers, actualMapKeyType) &&
+        resolveMapValueType(arg, dispatchResolvers, actualMapValueType) &&
+        normalizeBindingTypeName(expectedMapKeyType) ==
+            normalizeBindingTypeName(actualMapKeyType) &&
+        normalizeBindingTypeName(expectedMapValueType) ==
+            normalizeBindingTypeName(actualMapValueType)) ||
+       (inferCollectionBindingType(arg, actualMapBase, actualMapTemplateArgs) &&
+        actualMapTemplateArgs.size() == 2 &&
+        (isMapCollectionTypeName(normalizeBindingTypeName(actualMapBase)) ||
+         normalizeBindingTypeName(actualMapBase) == "Map" ||
+         normalizeBindingTypeName(actualMapBase) == "std/collections/experimental_map/Map") &&
+        normalizeBindingTypeName(expectedMapKeyType) ==
+            normalizeBindingTypeName(actualMapTemplateArgs[0]) &&
+        normalizeBindingTypeName(expectedMapValueType) ==
+            normalizeBindingTypeName(actualMapTemplateArgs[1])));
   const bool isCompatibleCanonicalVectorReceiver =
       isCanonicalVectorCompatibilitySurface(resolved) &&
       extractExperimentalVectorElementTypeFromStructPath(

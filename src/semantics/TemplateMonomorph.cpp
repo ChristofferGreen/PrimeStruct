@@ -1089,6 +1089,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (!extractExplicitBindingType(param, paramInfo)) {
       continue;
     }
+    if (paramInfo.typeName == "auto" && param.args.size() == 1 &&
+        inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, paramInfo)) {
+      // Auto parameters participate in implicit-template inference through
+      // their default initializer shape.
+    }
     if (i < paramIndexOffset) {
       continue;
     }
@@ -1150,7 +1155,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
         error = "unable to infer implicit template arguments for " + def.fullPath;
         return false;
       }
-      if (argExpr->isSpread) {
+      const bool usesDefaultArgBinding =
+          !inferFromPackedArgs && callParamIndex >= orderedArgs.size() && param.args.size() == 1 &&
+          argExpr == &param.args.front();
+      if (usesDefaultArgBinding) {
+        argInfo = paramInfo;
+      } else if (argExpr->isSpread) {
         std::string spreadElementType;
         if (!resolveArgsPackElementTypeForExpr(*argExpr, params, locals, spreadElementType)) {
           error = "spread argument requires args<T> value";

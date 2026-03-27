@@ -1228,6 +1228,31 @@ inline std::string makeInferredExperimentalMapParameterConformanceSource() {
   return source;
 }
 
+inline std::string makeInferredExperimentalMapDefaultParameterConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<int> effects(io_out, heap_alloc)]\n";
+  source += "scoreValues([auto mut] values{mapNew<string, i32>()}) {\n";
+  source += "  mapInsert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
+  source += "  [i32] count{/std/collections/map/count(values)}\n";
+  source += "  [i32] left{/std/collections/map/at(values, \"left\"raw_utf8)}\n";
+  source += "  print_line(count)\n";
+  source += "  print_line(left)\n";
+  source += "  return(plus(count, left))\n";
+  source += "}\n\n";
+  source += "[effects(io_out, heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source +=
+      "  [i32] explicitValues{scoreValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
+  source += "  [i32] defaultValues{scoreValues()}\n";
+  source += "  print_line(explicitValues)\n";
+  source += "  print_line(defaultValues)\n";
+  source += "  return(plus(explicitValues, defaultValues))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapHelperReceiverConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
@@ -1958,6 +1983,15 @@ inline void expectInferredExperimentalMapParameterConformance(const std::string 
       emitMode,
       19,
       "3\n4\n3\n9\n7\n12\n");
+}
+
+inline void expectInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(
+      makeInferredExperimentalMapDefaultParameterConformanceSource(),
+      "map_experimental_inferred_default_parameter_" + emitMode,
+      emitMode,
+      11,
+      "2\n4\n1\n4\n6\n5\n");
 }
 
 inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {

@@ -2574,6 +2574,10 @@ TEST_CASE("compiles and runs native inferred experimental map parameters") {
   expectInferredExperimentalMapParameterConformance("native");
 }
 
+TEST_CASE("compiles and runs native inferred experimental map default parameters") {
+  expectInferredExperimentalMapDefaultParameterConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map helper receivers") {
   expectExperimentalMapHelperReceiverConformance("native");
 }

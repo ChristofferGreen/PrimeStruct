@@ -116,6 +116,9 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (arg == nullptr) {
       continue;
     }
+    if (arg == param.defaultExpr) {
+      continue;
+    }
     const std::string &expectedTypeName = param.binding.typeName;
     const std::string expectedTypeText =
         this->expectedBindingTypeText(param.binding);

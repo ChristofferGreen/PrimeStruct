@@ -93,11 +93,70 @@ bool SemanticsValidator::buildParameters() {
 
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
+    ValidationContext definitionValidationContext;
+    if (!makeDefinitionValidationContext(def, definitionValidationContext)) {
+      return false;
+    }
+    ValidationContextScope validationContextScope(*this, std::move(definitionValidationContext));
     std::unordered_set<std::string> seen;
     std::vector<ParameterInfo> params;
     params.reserve(def.parameters.size());
+    auto bindingTypeText = [](const BindingInfo &binding) {
+      if (binding.typeTemplateArg.empty()) {
+        return binding.typeName;
+      }
+      return binding.typeName + "<" + binding.typeTemplateArg + ">";
+    };
     auto defaultResolvesToDefinition = [&](const Expr &candidate) -> bool {
       return candidate.kind == Expr::Kind::Call && defMap_.find(resolveCalleePath(candidate)) != defMap_.end();
+    };
+    auto typeTextIsExperimentalMapValue = [](const std::string &typeText) {
+      std::string normalizedType = normalizeBindingTypeName(typeText);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        normalizedType = normalizeBindingTypeName(base);
+      }
+      if (!normalizedType.empty() && normalizedType.front() == '/') {
+        normalizedType.erase(normalizedType.begin());
+      }
+      return normalizedType == "Map" || normalizedType == "std/collections/experimental_map/Map" ||
+             normalizedType.rfind("std/collections/experimental_map/Map__", 0) == 0;
+    };
+    auto bindingCarriesExperimentalMapValue = [&](const BindingInfo &binding) {
+      return typeTextIsExperimentalMapValue(bindingTypeText(binding));
+    };
+    auto isResolvedExperimentalMapNewPath = [](std::string resolvedPath) {
+      const size_t specializationSuffix = resolvedPath.find("__t");
+      if (specializationSuffix != std::string::npos) {
+        resolvedPath.erase(specializationSuffix);
+      }
+      const size_t overloadSuffix = resolvedPath.find("__ov");
+      if (overloadSuffix != std::string::npos) {
+        resolvedPath.erase(overloadSuffix);
+      }
+      return resolvedPath == "/std/collections/mapNew" ||
+             resolvedPath == "/std/collections/experimental_map/mapNew";
+    };
+    auto isAllowedExperimentalMapDefaultExpr = [&](const Expr &candidate) {
+      if (isDefaultExprAllowed(candidate, defaultResolvesToDefinition)) {
+        return true;
+      }
+      if (candidate.isBinding || candidate.kind != Expr::Kind::Call) {
+        return false;
+      }
+      if (hasNamedArguments(candidate.argNames) || candidate.hasBodyArguments || !candidate.bodyArguments.empty()) {
+        return false;
+      }
+      if (!isResolvedExperimentalMapNewPath(resolveCalleePath(candidate))) {
+        return false;
+      }
+      BindingInfo inferredBinding;
+      if (!inferBindingTypeFromInitializer(candidate, {}, {}, inferredBinding) ||
+          !bindingCarriesExperimentalMapValue(inferredBinding)) {
+        return false;
+      }
+      return true;
     };
     for (const auto &param : def.parameters) {
       if (!param.isBinding) {
@@ -125,7 +184,9 @@ bool SemanticsValidator::buildParameters() {
         error_ = "parameter defaults accept at most one argument: " + param.name;
         return false;
       }
-      if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front(), defaultResolvesToDefinition)) {
+      if (param.args.size() == 1 &&
+          !isDefaultExprAllowed(param.args.front(), defaultResolvesToDefinition) &&
+          !isAllowedExperimentalMapDefaultExpr(param.args.front())) {
         if (param.args.front().kind == Expr::Kind::Call && hasNamedArguments(param.args.front().argNames)) {
           error_ = "parameter default does not accept named arguments: " + param.name;
         } else {
@@ -134,7 +195,12 @@ bool SemanticsValidator::buildParameters() {
         return false;
       }
       if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
-        (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasAnyMathImport());
+        BindingInfo inferredBinding;
+        if (inferBindingTypeFromInitializer(param.args.front(), {}, {}, inferredBinding, &param)) {
+          binding = std::move(inferredBinding);
+        } else {
+          (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasAnyMathImport());
+        }
       }
       if (!validateBuiltinMapKeyType(binding, &def.templateArgs, error_)) {
         return false;
