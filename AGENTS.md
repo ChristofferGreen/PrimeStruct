@@ -78,12 +78,9 @@ build and layout solidify.
   - one negative/diagnostic test
 
 ## TODO slicing workflow
-- If any repository tests are failing at the start of a TODO implementation run, treat fixing those failures as the top priority before adding new behavior.
-- Treat `./scripts/compile.sh --release --fast` as the health gate for TODO work. Only fall back to debug-mode test runs when release-mode evidence is insufficient and a debugger-level investigation is actually required.
 - If the highest-priority TODO is too large, split it into explicit sub-items in `docs/todo.md` before continuing implementation.
-- Each implementation run should complete one vertical slice that changes behavior/code, not only tests.
 - Do not ship repeated test-only slices on the same parent TODO; if tests reveal more work, add follow-up TODO sub-items and move to the next code-affecting slice.
-- If the repo is red, stabilize the existing failing tests before starting a new TODO slice; only proceed under a clear "no new failures" rule when red status cannot be resolved immediately.
+- For TODO items prefer to attempt to finish the TODO item, if this cannot be done, prefer splitting it up into multiple smaller items and finishing one of the smaller ones.
 
 ## Code guidelines
 - **Language:** C++23 for compiler/VM tooling unless otherwise documented.
