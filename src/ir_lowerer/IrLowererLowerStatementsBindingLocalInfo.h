@@ -1,0 +1,235 @@
+      if (!hasExplicitBindingTypeTransform(stmt) && info.kind == LocalInfo::Kind::Value) {
+        ResultExprInfo inferredResultInfo;
+        if (resolveResultExprInfoFromLocals(
+                init,
+                localsIn,
+                [&](const Expr &callExpr, const LocalMap &callLocals) {
+                  return resolveMethodCallDefinition(callExpr, callLocals);
+                },
+                [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+                inferredResultInfo) &&
+            inferredResultInfo.isResult) {
+          info.isResult = true;
+          info.resultHasValue = inferredResultInfo.hasValue;
+          info.resultValueKind = inferredResultInfo.valueKind;
+          info.resultValueCollectionKind = inferredResultInfo.valueCollectionKind;
+          info.resultValueMapKeyKind = inferredResultInfo.valueMapKeyKind;
+          info.resultValueIsFileHandle = inferredResultInfo.valueIsFileHandle;
+          info.resultValueStructType = inferredResultInfo.valueStructType;
+          info.resultErrorType = inferredResultInfo.errorType;
+          info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        }
+      }
+      auto assignInferredFileHandleBinding = [&]() {
+        if (hasExplicitBindingTypeTransform(stmt) || info.kind != LocalInfo::Kind::Value || info.isResult ||
+            info.isFileHandle) {
+          return;
+        }
+        if (init.kind == Expr::Kind::Name) {
+          auto existing = localsIn.find(init.name);
+          if (existing != localsIn.end() && existing->second.isFileHandle) {
+            info.isFileHandle = true;
+            info.valueKind = LocalInfo::ValueKind::Int64;
+          }
+          return;
+        }
+        if (init.kind == Expr::Kind::Call && !init.isMethodCall && isSimpleCallName(init, "File") &&
+            init.templateArgs.size() == 1) {
+          info.isFileHandle = true;
+          info.valueKind = LocalInfo::ValueKind::Int64;
+          return;
+        }
+        if (!(init.kind == Expr::Kind::Call && !init.isMethodCall && isSimpleCallName(init, "try") &&
+              init.args.size() == 1)) {
+          return;
+        }
+        ResultExprInfo inferredTryResultInfo;
+        if (!resolveResultExprInfoFromLocals(
+                init.args.front(),
+                localsIn,
+                [&](const Expr &callExpr, const LocalMap &callLocals) {
+                  return resolveMethodCallDefinition(callExpr, callLocals);
+                },
+                [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+                inferredTryResultInfo) ||
+            !inferredTryResultInfo.isResult || !inferredTryResultInfo.hasValue || !inferredTryResultInfo.valueIsFileHandle) {
+          return;
+        }
+        info.isFileHandle = true;
+        info.valueKind = LocalInfo::ValueKind::Int64;
+      };
+      assignInferredFileHandleBinding();
+      for (const auto &transform : stmt.transforms) {
+        if (transform.name == "soa_vector") {
+          info.isSoaVector = true;
+          break;
+        }
+      }
+      if (!info.isSoaVector && init.kind == Expr::Kind::Name) {
+        auto existing = localsIn.find(init.name);
+        if (existing != localsIn.end() && existing->second.isSoaVector) {
+          info.isSoaVector = true;
+        }
+      }
+      if (!info.isSoaVector && init.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (getBuiltinCollectionName(init, collection) && collection == "soa_vector") {
+          info.isSoaVector = true;
+        }
+      }
+      setReferenceArrayInfo(stmt, info);
+      applyStructArrayInfo(stmt, info);
+      applyStructValueInfo(stmt, info);
+      for (const auto &transform : stmt.transforms) {
+        if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
+          std::string targetType;
+          if (ir_lowerer::extractTopLevelUninitializedTypeText(transform.templateArgs.front(), targetType)) {
+            info.targetsUninitializedStorage = true;
+            break;
+          }
+        }
+      }
+      if (!info.targetsUninitializedStorage && init.kind == Expr::Kind::Name) {
+        auto existing = localsIn.find(init.name);
+        if (existing != localsIn.end() &&
+            (existing->second.kind == LocalInfo::Kind::Pointer ||
+             existing->second.kind == LocalInfo::Kind::Reference)) {
+          info.targetsUninitializedStorage = existing->second.targetsUninitializedStorage;
+        }
+      }
+      if (!info.targetsUninitializedStorage && isPointerMemoryIntrinsicCall(init)) {
+        info.targetsUninitializedStorage =
+            inferPointerMemoryIntrinsicTargetsUninitializedStorage(init, localsIn);
+      }
+      if ((info.kind == LocalInfo::Kind::Pointer || info.kind == LocalInfo::Kind::Reference) &&
+          info.structTypeName.empty()) {
+        std::function<std::string(const Expr &)> inferPointerStructType = [&](const Expr &exprIn) -> std::string {
+          if (exprIn.kind == Expr::Kind::Name) {
+            auto localIt = localsIn.find(exprIn.name);
+            if (localIt == localsIn.end()) {
+              return "";
+            }
+            if (localIt->second.kind == LocalInfo::Kind::Pointer || localIt->second.kind == LocalInfo::Kind::Reference) {
+              return localIt->second.structTypeName;
+            }
+            return "";
+          }
+          if (exprIn.kind != Expr::Kind::Call) {
+            return "";
+          }
+          std::string memoryBuiltin;
+          if (getBuiltinMemoryName(exprIn, memoryBuiltin)) {
+            if (memoryBuiltin == "alloc" && exprIn.templateArgs.size() == 1) {
+              const std::string targetType =
+                  ir_lowerer::unwrapTopLevelUninitializedTypeText(exprIn.templateArgs.front());
+              std::string resolvedStruct;
+              if (resolveStructTypeName(targetType, exprIn.namespacePrefix, resolvedStruct)) {
+                return resolvedStruct;
+              }
+              return "";
+            }
+            if (memoryBuiltin == "realloc" && exprIn.args.size() == 2) {
+              return inferPointerStructType(exprIn.args.front());
+            }
+          }
+          std::string builtinName;
+          if (getBuiltinOperatorName(exprIn, builtinName) &&
+              (builtinName == "plus" || builtinName == "minus") &&
+              exprIn.args.size() == 2) {
+            return inferPointerStructType(exprIn.args.front());
+          }
+          if (isSimpleCallName(exprIn, "location") && exprIn.args.size() == 1) {
+            if (exprIn.args.front().kind != Expr::Kind::Name) {
+              return "";
+            }
+            auto localIt = localsIn.find(exprIn.args.front().name);
+            return localIt == localsIn.end() ? "" : localIt->second.structTypeName;
+          }
+          return "";
+        };
+        info.structTypeName = inferPointerStructType(init);
+      }
+      if (info.kind == LocalInfo::Kind::Value && info.structTypeName.empty()) {
+        std::string inferredStruct = inferStructExprPath(init, localsIn);
+        if (!inferredStruct.empty()) {
+          info.structTypeName = inferredStruct;
+        } else if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+          info.valueKind = LocalInfo::ValueKind::Int32;
+        }
+      }
+      if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
+        info.valueKind = LocalInfo::ValueKind::Int64;
+      }
+      for (const auto &transform : stmt.transforms) {
+        if (transform.name == "File") {
+          info.isFileHandle = true;
+          info.valueKind = LocalInfo::ValueKind::Int64;
+        } else if (transform.name == "Result") {
+          info.isResult = true;
+          info.resultHasValue = (transform.templateArgs.size() == 2);
+          info.resultValueKind = LocalInfo::ValueKind::Unknown;
+          info.resultValueCollectionKind = LocalInfo::Kind::Value;
+          info.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+          if (info.resultHasValue && !transform.templateArgs.empty()) {
+            assignDeclaredResultCollection(transform.templateArgs.front());
+            if (info.resultValueCollectionKind == LocalInfo::Kind::Value) {
+              info.resultValueKind = valueKindFromTypeName(transform.templateArgs.front());
+            }
+            assignDeclaredResultFileHandle(transform.templateArgs.front());
+            if (info.resultValueIsFileHandle) {
+              info.resultValueKind = LocalInfo::ValueKind::Int64;
+            }
+            assignDeclaredResultStructType(transform.templateArgs.front());
+          }
+          info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+          if (!transform.templateArgs.empty()) {
+            info.resultErrorType = transform.templateArgs.back();
+          }
+        } else if ((transform.name == "Reference" || transform.name == "Pointer") &&
+                   transform.templateArgs.size() == 1) {
+          const std::string originalTargetType = trimTemplateTypeText(transform.templateArgs.front());
+          std::string targetType = originalTargetType;
+          if (ir_lowerer::extractTopLevelUninitializedTypeText(originalTargetType, targetType)) {
+            info.targetsUninitializedStorage = true;
+          }
+          std::string wrappedBase;
+          std::string wrappedArg;
+          if (splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
+              normalizeCollectionBindingTypeName(wrappedBase) == "File") {
+            info.isFileHandle = true;
+            info.valueKind = LocalInfo::ValueKind::Int64;
+          }
+          bool resultHasValue = false;
+          LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+          std::string resultErrorType;
+          if (parseResultTypeName(targetType, resultHasValue, resultValueKind, resultErrorType)) {
+            info.isResult = true;
+            info.resultHasValue = resultHasValue;
+            info.resultValueKind = resultValueKind;
+            info.resultValueCollectionKind = LocalInfo::Kind::Value;
+            info.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+            if (info.resultHasValue) {
+              std::string resultValueType;
+              if (extractDeclaredResultValueType(targetType, resultValueType)) {
+                assignDeclaredResultCollection(resultValueType);
+                if (info.resultValueCollectionKind == LocalInfo::Kind::Value) {
+                  info.resultValueKind = valueKindFromTypeName(resultValueType);
+                }
+                assignDeclaredResultFileHandle(resultValueType);
+                if (info.resultValueIsFileHandle) {
+                  info.resultValueKind = LocalInfo::ValueKind::Int64;
+                }
+                assignDeclaredResultStructType(resultValueType);
+              }
+            }
+            info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+            info.resultErrorType = resultErrorType;
+          }
+        }
+      }
+      info.isFileError = isFileErrorBinding(stmt);
+      valueKind = info.valueKind;
