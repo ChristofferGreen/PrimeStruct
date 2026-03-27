@@ -36,7 +36,8 @@ semantics after canonicalization.
 - Prefer explicit math-family conversions; never rely on implicit scalar/vector/matrix/quaternion coercions.
 - Prefer `mat * vec` ordering (column-vector convention) and keep transform-composition order explicit at call sites.
 - Normalize quaternions before repeated composition or vector rotation (`q.toNormalized()` or `q.normalize()`).
-- Prefer exact `==`/`!=` only for invariants and integer-like checks; use explicit tolerance helpers for float/vector/matrix/quaternion comparisons.
+- Prefer exact `==`/`!=` only for invariants and integer-like checks; use explicit tolerance helpers for
+  float/vector/matrix/quaternion comparisons.
 - Prefer typed enums/descriptors over stringly-typed GPU config
   (`PresentMode.Fifo` over `"fifo"`).
 - Prefer labeled arguments on public API calls to keep call sites self-documenting,
@@ -88,9 +89,21 @@ semantics after canonicalization.
   delegates to a shared browser launch helper, the browser runtime shell now
   lives in a shared JS helper, and broader backend conformance remains staged.
 - Status snapshot phrases kept contiguous for doc-lock checks:
-  Current `/std/gfx/experimental/*` status: the constructor-shaped `Window(...)` and `Device()` entry points now rewrite through substrate-backed helpers there, the fallible `create_swapchain(...)`, `create_mesh(...)`, and `frame()` wrapper paths now route through substrate-backed configs/helpers, the non-Result `render_pass(...)` / `draw_mesh(...)` / `end()` path now routes through minimal pass-encoding substrate helpers with deterministic zero-token / no-op fallback on invalid handles, the shared spinning-cube native-window sample path now emits and consumes a deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via `--gfx`), real compile-run conformance now imports `/std/gfx/experimental/*` and exercises that wrapper path across exe/vm/native, and `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites through the matching pipeline helper.
-  The canonical `/std/gfx/*` entry points now mirror that same helper-backed slice in `.prime` and also have real compile-run conformance across exe/vm/native.
-  The native/Metal sample hosts now share one canonical host-side `GfxError` + `VertexColored` contract header, the native window launcher now delegates to a shared canonical gfx launch helper, the native window host runtime shell now lives in a shared presenter helper, the Metal launcher now delegates to a shared metal launch helper, the Metal snapshot/parity helper modes now also bind to a shared spinning-cube simulation reference helper, the browser launcher now delegates to a shared browser launch helper, and the browser runtime shell now lives in a shared JS helper.
+  Current `/std/gfx/experimental/*` status: the constructor-shaped `Window(...)` and `Device()` entry points now rewrite
+  through substrate-backed helpers there, the fallible `create_swapchain(...)`, `create_mesh(...)`, and `frame()`
+  wrapper paths now route through substrate-backed configs/helpers, the non-Result `render_pass(...)` / `draw_mesh(...)`
+  / `end()` path now routes through minimal pass-encoding substrate helpers with deterministic zero-token / no-op
+  fallback on invalid handles, the shared spinning-cube native-window sample path now emits and consumes a deterministic
+  canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via `--gfx`), real compile-run conformance now imports
+  `/std/gfx/experimental/*` and exercises that wrapper path across exe/vm/native, and
+  `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites through the matching pipeline helper.
+  The canonical `/std/gfx/*` entry points now mirror that same helper-backed slice in `.prime` and also have real
+  compile-run conformance across exe/vm/native.
+  The native/Metal sample hosts now share one canonical host-side `GfxError` + `VertexColored` contract header, the
+  native window launcher now delegates to a shared canonical gfx launch helper, the native window host runtime shell now
+  lives in a shared presenter helper, the Metal launcher now delegates to a shared metal launch helper, the Metal
+  snapshot/parity helper modes now also bind to a shared spinning-cube simulation reference helper, the browser launcher
+  now delegates to a shared browser launch helper, and the browser runtime shell now lives in a shared JS helper.
 - Prefer `Result` propagation with `?` plus `on_error<...>` handlers over
   ad-hoc unwrap helpers.
   Canonical `/std/gfx/*` contract example: `window{Window(...) ?}` with

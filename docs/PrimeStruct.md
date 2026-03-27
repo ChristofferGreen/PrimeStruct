@@ -1,75 +1,169 @@
 # PrimeStruct Plan
 
-PrimeStruct is built around a simple idea: program meaning comes from two primitives—**definitions** (potential) and **executions** (actual). Both map to a single canonical **Envelope** in the AST; executions are envelopes with an implicit empty body. Compile-time transforms rewrite the surface into a small canonical core. That core is what we target to C++, GLSL, and the PrimeStruct VM. It also keeps semantics deterministic and leaves room for future tooling and visual editors.
+PrimeStruct is built around a simple idea: program meaning comes from two primitives—**definitions** (potential) and
+**executions** (actual). Both map to a single canonical **Envelope** in the AST; executions are envelopes with an
+implicit empty body. Compile-time transforms rewrite the surface into a small canonical core. That core is what we
+target to C++, GLSL, and the PrimeStruct VM. It also keeps semantics deterministic and leaves room for future tooling
+and visual editors.
+
+At a glance:
+- One canonical envelope model underlies both definitions and executions.
+- Surface syntax is convenience only; transforms rewrite it into a smaller deterministic core.
+- Backends target the shared canonical representation rather than reinterpreting surface syntax.
 
 ### Source-processing pipeline
-1. **Import resolver:** first pass walks the raw text and expands every `import<...>` source entry so the compiler always works on a single flattened source stream.
-2. **Text transforms:** the flattened stream flows through ordered token-level transforms (operator sugar, collection literals, implicit suffixes, project-specific macros, etc.). Text transforms apply to the entire envelope (transform list, templates, parameters, and body). Executions are treated as envelopes with an implicit empty body, so the same rule applies. Text transforms may append additional text transforms to the same node.
+1. **Import resolver:** first pass walks the raw text and expands every `import<...>` source entry so the compiler
+   always works on a single flattened source stream.
+2. **Text transforms:** the flattened stream flows through ordered token-level transforms (operator sugar, collection
+   literals, implicit suffixes, project-specific macros, etc.). Text transforms apply to the entire envelope (transform
+   list, templates, parameters, and body). Executions are treated as envelopes with an implicit empty body, so the same
+   rule applies. Text transforms may append additional text transforms to the same node.
 3. **AST builder:** once text transforms finish, the parser builds the canonical AST.
-4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (effects) so the tree is fully resolved and contains only concrete envelopes.
-5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved; the base-level tree contains no templates or `auto`, and every backend consumes an identical canonical form.
+4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (effects)
+   so the tree is fully resolved and contains only concrete envelopes.
+5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved; the base-level tree
+   contains no templates or `auto`, and every backend consumes an identical canonical form.
 
-Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. `--collect-diagnostics` enables stable multi-error reporting for parse-stage failures, semantic build-map failures (duplicate-definition/import/invalid-transform/return-kind), semantic definition/execution pass failures across independent definitions/executions, and multiple intra-body call diagnostics inside a single definition/execution body (unresolved targets plus resolved-call argument-shape/type and flow/effect errors such as duplicate/unknown named arguments, count mismatches, inferable parameter type mismatches, and effect/capability subset failures). Other validation inside a single definition/execution body remains fail-fast. Text transforms are configured via `--text-transforms=<list>`; the default list enables `collections`, `operators`, `implicit-utf8` (auto-appends `utf8` to bare string literals), and `implicit-i32` (auto-appends `i32` to bare integer literals). Order matters: `collections` runs before `operators` so map literal `key=value` pairs are rewritten as key/value arguments rather than assignment expressions. Semantic transforms are configured via `--semantic-transforms=<list>`. `--transform-list=<list>` is an auto-deducing shorthand that routes each transform name to its declared phase (text or semantic); ambiguous names are errors. Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require canonical syntax. `--ir-inline` enables a post-validation IR inlining optimization pass before VM/native/IR emission.
+Pipeline operating rules:
+- Each stage halts on error and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just
+  before failure.
+- `--collect-diagnostics` enables stable multi-error reporting for parse-stage failures, semantic build-map failures
+  (duplicate-definition/import/invalid-transform/return-kind), semantic definition/execution pass failures across
+  independent definitions/executions, and multiple intra-body call diagnostics inside a single definition/execution
+  body (unresolved targets plus resolved-call argument-shape/type and flow/effect errors such as duplicate/unknown
+  named arguments, count mismatches, inferable parameter type mismatches, and effect/capability subset failures).
+  Other validation inside a single definition/execution body remains fail-fast.
+- Text transforms are configured via `--text-transforms=<list>`. The default list enables `collections`, `operators`,
+  `implicit-utf8` (auto-appends `utf8` to bare string literals), and `implicit-i32` (auto-appends `i32` to bare
+  integer literals). Order matters: `collections` runs before `operators` so map literal `key=value` pairs are
+  rewritten as key/value arguments rather than assignment expressions.
+- Semantic transforms are configured via `--semantic-transforms=<list>`.
+- `--transform-list=<list>` is an auto-deducing shorthand that routes each transform name to its declared phase (text
+  or semantic); ambiguous names are errors.
+- Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require
+  canonical syntax.
+- `--ir-inline` enables a post-validation IR inlining optimization pass before VM/native/IR emission.
 
 ### Language levels (0.Concrete → 3.Surface)
 PrimeStruct is organized into four language levels. Each higher level desugars into the level below it.
-- **0.Concrete:** fully explicit envelopes only (definitions may omit an empty parameter list; executions still require parentheses). Definition transforms use prefix placement only (`[transforms] name(...) { ... }`). No text transforms, no templates, no `auto`. Explicit `return<T>`, explicit literal suffixes, canonical calls (`if(cond, then(){...}, else(){...})`, `loop/while/for` as calls).
+- **0.Concrete:** fully explicit envelopes only (definitions may omit an empty parameter list; executions still require
+  parentheses). Definition transforms use prefix placement only (`[transforms] name(...) { ... }`). No text transforms,
+  no templates, no `auto`. Explicit `return<T>`, explicit literal suffixes, canonical calls (`if(cond, then(){...},
+  else(){...})`, `loop/while/for` as calls).
 - **1.Template:** canonical syntax plus explicit templates (`array<i32>`, `Pointer<T>`, `convert<T>(...)`). No `auto`.
-- **2.Inference:** canonical syntax plus `auto`/omitted envelopes. Implicit template parameters are resolved per call site, then lowered to explicit templates.
-- **3.Surface:** surface syntax and text transforms (operator sugar, collection literals, indexing sugar, `if(...) {}` blocks, and `name() [transforms] { ... }` definition sugar) that rewrite into canonical forms.
+- **2.Inference:** canonical syntax plus `auto`/omitted envelopes. Implicit template parameters are resolved per call
+  site, then lowered to explicit templates.
+- **3.Surface:** surface syntax and text transforms (operator sugar, collection literals, indexing sugar, `if(...) {}`
+  blocks, and `name() [transforms] { ... }` definition sugar) that rewrite into canonical forms.
 
 ### Compilation model (v1)
-- **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution runs over that full unit; implicit-template inference may use call sites anywhere in the expanded source. The v1 toolchain prioritises fast full rebuilds over incremental compilation.
-- **Envelope stream boundary:** high-level features are lowered into the canonical envelope form, and backends consume this stable envelope stream. Emission can stream envelopes directly into IR/bytecode or native codegen without reintroducing surface syntax.
-- **Deterministic emission:** canonicalization happens once, before backend selection, so all emitters see the same fully-resolved envelopes and produce consistent results.
-- **Backend boundary policy:** all codegen modes consume canonical IR via `IrBackend` (`docs/adr/0001-backend-ir-boundary.md`), including production aliases (`cpp`, `exe`, `glsl`, `spirv`) that resolve to canonical IR backend kinds before dispatch.
+- **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution runs over
+  that full unit; implicit-template inference may use call sites anywhere in the expanded source. The v1 toolchain
+  prioritises fast full rebuilds over incremental compilation.
+- **Envelope stream boundary:** high-level features are lowered into the canonical envelope form, and backends consume
+  this stable envelope stream. Emission can stream envelopes directly into IR/bytecode or native codegen without
+  reintroducing surface syntax.
+- **Deterministic emission:** canonicalization happens once, before backend selection, so all emitters see the same
+  fully-resolved envelopes and produce consistent results.
+- **Backend boundary policy:** all codegen modes consume canonical IR via `IrBackend`
+  (`docs/adr/0001-backend-ir-boundary.md`), including production aliases (`cpp`, `exe`, `glsl`, `spirv`) that resolve to
+  canonical IR backend kinds before dispatch.
 
 ### Planned Type-Resolution Graph
-The planned graph-backed resolver is an internal semantics model built from the canonical AST after semantic transforms and template monomorphization, and before IR lowering. Its purpose is to replace ad hoc inference ordering with one deterministic dependency model without changing the public language surface.
-- **Node kinds:** definition return-kind nodes model the inferred or validated result of each callable definition; call-site constraint nodes model argument/receiver/template constraints that connect a specific call to its callee; local `auto` constraint nodes model each local or omitted-envelope inference site that must converge to one concrete envelope.
-- **Edge kinds:** dependency edges mean the source node must wait for or revisit the target node during solving because the target contributes information needed for convergence; requirement edges mean the source imposes a concrete compatibility requirement on the target and preserve diagnostic provenance even when they do not introduce a new solve-order dependency.
-- **Cycle policy:** strongly connected components are the unit of solving. Cycles that represent real mutual dependencies are legal and are solved to a fixed point across the whole SCC. Cycles that remain ungrounded or collapse to contradictory requirements are illegal and must produce deterministic diagnostics instead of partial inference.
-- **Deterministic ordering guarantees:** for a fixed canonical program, node creation order, node IDs, edge insertion order, SCC member ordering, condensation-DAG traversal order, and emitted diagnostics must be stable. Graph dumps and diagnostics must not depend on hash iteration order, parallel scheduling, or unrelated definitions elsewhere in the program.
+The planned graph-backed resolver is an internal semantics model built from the canonical AST after semantic transforms
+and template monomorphization, and before IR lowering. Its purpose is to replace ad hoc inference ordering with one
+deterministic dependency model without changing the public language surface.
+- **Node kinds:** definition return-kind nodes model the inferred or validated result of each callable definition;
+  call-site constraint nodes model argument/receiver/template constraints that connect a specific call to its callee;
+  local `auto` constraint nodes model each local or omitted-envelope inference site that must converge to one concrete
+  envelope.
+- **Edge kinds:** dependency edges mean the source node must wait for or revisit the target node during solving because
+  the target contributes information needed for convergence; requirement edges mean the source imposes a concrete
+  compatibility requirement on the target and preserve diagnostic provenance even when they do not introduce a new
+  solve-order dependency.
+- **Cycle policy:** strongly connected components are the unit of solving. Cycles that represent real mutual
+  dependencies are legal and are solved to a fixed point across the whole SCC. Cycles that remain ungrounded or collapse
+  to contradictory requirements are illegal and must produce deterministic diagnostics instead of partial inference.
+- **Deterministic ordering guarantees:** for a fixed canonical program, node creation order, node IDs, edge insertion
+  order, SCC member ordering, condensation-DAG traversal order, and emitted diagnostics must be stable. Graph dumps and
+  diagnostics must not depend on hash iteration order, parallel scheduling, or unrelated definitions elsewhere in the
+  program.
 
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
-- **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions, surprising overload rules, or hidden allocations.
-- **Python spirit for ergonomics:** readable defaults and small conveniences (e.g., optional separators, concise literals), without sacrificing determinism or making meaning depend on tooling.
-- **Ease of understanding first:** prefer features that are easy to explain and reason about, and reject features that add power without clarity.
-- **Concrete rules:** explicit envelopes, explicit conversions, explicit effects, immutable-by-default bindings, and deterministic evaluation order.
+- **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions,
+  surprising overload rules, or hidden allocations.
+- **Python spirit for ergonomics:** readable defaults and small conveniences (e.g., optional separators, concise
+  literals), without sacrificing determinism or making meaning depend on tooling.
+- **Ease of understanding first:** prefer features that are easy to explain and reason about, and reject features that
+  add power without clarity.
+- **Concrete rules:** explicit envelopes, explicit conversions, explicit effects, immutable-by-default bindings, and
+  deterministic evaluation order.
 
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
-- **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct, and list anything explicitly deferred to later phases.
+- **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct, and list
+  anything explicitly deferred to later phases.
 - **Success criteria:** define measurable gates (parser coverage, IR validation, backend round-trips, sample programs)
-- **Ownership map:** assign leads for parser, IR/envelope system, first backend, and test infrastructure, plus security/runtime reviewers.
-- **Integration plan:** describe how the compiler/test suite slots into the build (targets, CI loops, feature flags, artifact publishing).
-- **Risk log:** record open questions (borrow checker, capability taxonomy, GPU backend constraints) and mitigation/rollback strategies.
-- **Exit:** only after this phase is reviewed/approved do parser/IR/backend implementations begin; the conformance suite derives from the frozen charter instead of chasing a moving target.
+- **Ownership map:** assign leads for parser, IR/envelope system, first backend, and test infrastructure, plus
+  security/runtime reviewers.
+- **Integration plan:** describe how the compiler/test suite slots into the build (targets, CI loops, feature flags,
+  artifact publishing).
+- **Risk log:** record open questions (borrow checker, capability taxonomy, GPU backend constraints) and
+  mitigation/rollback strategies.
+- **Exit:** only after this phase is reviewed/approved do parser/IR/backend implementations begin; the conformance suite
+  derives from the frozen charter instead of chasing a moving target.
 
 ## Project Charter (v1 target)
-- Language core: envelope syntax (definitions + executions), slash paths, namespaces, imports (source + namespace exposure), binding initializers, return annotations, effects annotations, and deterministic canonicalization rules.
-- Transform pipeline: ordered text transforms, ordered semantic transforms, explicit `text(...)` / `semantic(...)` grouping, and auto-deduction for registered transforms.
-- Determinism: stable diagnostics, fixed evaluation order, stable IR emission, and canonical string normalization across backends.
-- IR: PSIR serialization with versioning, explicit opcode list, and a stable module layout shared by all backends.
-- Backends: C++ emitter and VM bytecode are required targets; GLSL/SPIR-V is a supported optional target with explicit documented constraints.
-- Standard library: a documented core subset (math + collections + IO primitives) with a per-backend support matrix.
-- Tooling: `primec`, `primevm`, `--dump-stage` and snapshot-style tests for parser/IR/diagnostics.
-- Change control: any feature outside this charter requires a docs update plus an explicit acceptance gate.
+- **Language core:** envelope syntax (definitions + executions), slash paths, namespaces, imports (source + namespace
+  exposure), binding initializers, return annotations, effects annotations, and deterministic canonicalization rules.
+- **Transform pipeline:** ordered text transforms, ordered semantic transforms, explicit `text(...)` / `semantic(...)`
+  grouping, and auto-deduction for registered transforms.
+- **Determinism:** stable diagnostics, fixed evaluation order, stable IR emission, and canonical string normalization
+  across backends.
+- **IR:** PSIR serialization with versioning, explicit opcode list, and a stable module layout shared by all backends.
+- **Backends:** C++ emitter and VM bytecode are required targets; GLSL/SPIR-V is a supported optional target with
+  explicit documented constraints.
+- **Standard library:** a documented core subset (math + collections + IO primitives) with a per-backend support
+  matrix.
+- **Tooling:** `primec`, `primevm`, `--dump-stage`, and snapshot-style tests for parser/IR/diagnostics.
+- **Change control:** any feature outside this charter requires a docs update plus an explicit acceptance gate.
 
 ## Risk Log (Phase 0)
 Each risk lists a mitigation and a concrete fallback so the project can keep moving if the
 open question is unresolved.
 
-| Risk | Impact | Mitigation | Fallback |
-| --- | --- | --- | --- |
-| Borrow checker deferred in v1. | Resource safety rules vary by backend, leading to unsound or inconsistent behavior. | Document explicit resource rules and keep borrow checks out of v1. | Keep borrow-checking claims removed until a design lands. |
-| Capability taxonomy is not finalized. | Effects/capabilities drift between docs, diagnostics, and runtime logging. | Define a minimal capability list (IO + memory + GPU) and lock it for v1. | Treat capabilities as diagnostic-only metadata until taxonomy stabilizes. |
-| GPU backend constraints are underspecified. | GLSL/SPIR-V output may accept unsupported effects or types. | Publish an explicit GPU support matrix and reject unsupported effects/types early. | Mark GPU backend as experimental and limit to math-only + POD structs. |
-| IR/PSIR versioning slips. | Backends diverge on opcode interpretation or serialized layouts. | Freeze v1 opcode set, add migration notes, and version the serialized header. | Reject unknown IR versions and require recompile in tooling. |
-| Struct layout guarantees are ambiguous. | ABI/layout mismatches across native/VM/GPU. | Require layout manifests and add conformance tests per backend. | Document layout as backend-defined and disallow cross-backend struct reuse. |
-| Default effect policy changes. | Behavior differs between CLI defaults and docs. | Keep defaults centralized in `Options` and tests covering defaults. | Require explicit `[effects]` in examples and templates. |
-| Execution emission is unclear. | Executions parse but are ignored by some backends. | Decide and document whether executions are lowered per backend. | Treat executions as diagnostics-only until a backend implements them. |
-| Stdlib surface drifts across backends. | Code runs on one backend but fails on another. | Maintain a per-backend stdlib support table + tests. | Provide a “core subset” and gate all samples to it. |
+- Risk: Borrow checker deferred in v1.
+  Impact: Resource safety rules vary by backend, leading to unsound or inconsistent behavior.
+  Mitigation: Document explicit resource rules and keep borrow checks out of v1.
+  Fallback: Keep borrow-checking claims removed until a design lands.
+- Risk: Capability taxonomy is not finalized.
+  Impact: Effects/capabilities drift between docs, diagnostics, and runtime logging.
+  Mitigation: Define a minimal capability list (IO + memory + GPU) and lock it for v1.
+  Fallback: Treat capabilities as diagnostic-only metadata until taxonomy stabilizes.
+- Risk: GPU backend constraints are underspecified.
+  Impact: GLSL/SPIR-V output may accept unsupported effects or types.
+  Mitigation: Publish an explicit GPU support matrix and reject unsupported effects/types early.
+  Fallback: Mark GPU backend as experimental and limit to math-only + POD structs.
+- Risk: IR/PSIR versioning slips.
+  Impact: Backends diverge on opcode interpretation or serialized layouts.
+  Mitigation: Freeze v1 opcode set, add migration notes, and version the serialized header.
+  Fallback: Reject unknown IR versions and require recompile in tooling.
+- Risk: Struct layout guarantees are ambiguous.
+  Impact: ABI/layout mismatches across native/VM/GPU.
+  Mitigation: Require layout manifests and add conformance tests per backend.
+  Fallback: Document layout as backend-defined and disallow cross-backend struct reuse.
+- Risk: Default effect policy changes.
+  Impact: Behavior differs between CLI defaults and docs.
+  Mitigation: Keep defaults centralized in `Options` and tests covering defaults.
+  Fallback: Require explicit `[effects]` in examples and templates.
+- Risk: Execution emission is unclear.
+  Impact: Executions parse but are ignored by some backends.
+  Mitigation: Decide and document whether executions are lowered per backend.
+  Fallback: Treat executions as diagnostics-only until a backend implements them.
+- Risk: Stdlib surface drifts across backends.
+  Impact: Code runs on one backend but fails on another.
+  Mitigation: Maintain a per-backend stdlib support table + tests.
+  Fallback: Provide a "core subset" and gate all samples to it.
 
 ## Deferred Features (not in v1)
 - Borrow checker and lifetime enforcement beyond basic effects gating.
@@ -81,11 +175,13 @@ open question is unresolved.
 - JIT, chunk caching, or dynamic recompilation tooling.
 - IDE/LSP integration and editor tooling.
 - Standard library packaging/version negotiation beyond a single in-tree reference set.
-- `tools/PrimeStructc` feature parity with the main compiler and template codegen (PrimeStructc stays a minimal subset; template codegen and import version selection are explicitly out of scope for v1).
+- `tools/PrimeStructc` feature parity with the main compiler and template codegen (PrimeStructc stays a minimal subset;
+  template codegen and import version selection are explicitly out of scope for v1).
 - Tail-call or tail-execution optimization guarantees across all backends.
 
 ## Phase 1 — Minimal Compiler That Emits an Executable
-Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source file into a runnable native executable. This is the smallest vertical slice that proves parsing, IR, a backend, and a host toolchain handoff.
+Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source file into a runnable native executable.
+This is the smallest vertical slice that proves parsing, IR, a backend, and a host toolchain handoff.
 
 ### Acceptance criteria
 - A single-file PrimeStruct program with one entry definition compiles to a native executable on macOS (initial target).
@@ -122,7 +218,11 @@ module {
 - `primec --emit=native input.prime -o hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: fixed-width integer/bool/float literals (`i32`, `i64`, `u64`, `f32`, `f64`), locals + assign, basic arithmetic/comparisons (signed/unsigned integers plus floats), boolean ops (`and`/`or`/`not`), explicit conversions via `T{value}` for `i32/i64/u64/bool/f32/f64`, abs/sign/min/max/clamp/saturate, `if`, `print`, `print_line`, `print_error`, and `print_line_error` for integer/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
+  - Current subset: fixed-width integer/bool/float literals (`i32`, `i64`, `u64`, `f32`, `f64`), locals + assign, basic
+    arithmetic/comparisons (signed/unsigned integers plus floats), boolean ops (`and`/`or`/`not`), explicit conversions
+    via `T{value}` for `i32/i64/u64/bool/f32/f64`, abs/sign/min/max/clamp/saturate, `if`, `print`, `print_line`,
+    `print_error`, and `print_line_error` for integer/bool or string literals/bindings, and pointer/reference helpers
+    (`location`, `dereference`, `Reference`) in a single entry definition.
 - `primec --emit=ir input.prime -o module.psir`
   - Emits serialized PSIR bytecode after semantic validation (no execution).
   - Output is written as `.psir` and includes a PSIR header/version tag.
@@ -135,54 +235,138 @@ module {
   - Requires `glslangValidator` or `glslc` on `PATH`.
 - `primec --emit=wasm input.prime -o module`
   - Routes through canonical IR into `WasmEmitter`.
-  - Runs `IrValidationTarget::Wasm` or `IrValidationTarget::WasmBrowser` before emission based on `--wasm-profile` (`wasi` default, `browser` optional).
+  - Runs `IrValidationTarget::Wasm` or `IrValidationTarget::WasmBrowser` before emission based on `--wasm-profile`
+    (`wasi` default, `browser` optional).
   - Rejects unsupported opcode/effect/capability combinations during `ir-validate` before backend emission.
   - When `-o` is omitted, output defaults to `<input-stem>.wasm`.
 - `primevm input.prime --entry /main -- <args>`
   - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
-  - `--debug-json` streams VM debug events as NDJSON to stdout (`session_start`, hook events, and `stop` records with snapshots).
-  - `--debug-json-snapshots=none|stop|all` adds on-demand `snapshot_payload` fields (`instruction_pointer`, `call_stack`, `frame_locals`, `current_frame_locals`, `operand_stack`) to debug-json events.
-  - `--debug-trace <path>` writes a deterministic VM event log (NDJSON) to the given file path using the same event schema family as debug-json (`session_start`, hook events, and `stop`).
-  - `--debug-replay <trace>` replays a trace file generated by `--debug-trace` and emits a single `replay_checkpoint` NDJSON event to stdout containing the restored snapshot + snapshot payload.
-  - `--debug-replay-sequence <n>` time-travels to the latest checkpoint with `sequence <= n` (without this flag, replay restores the terminal checkpoint from the trace).
-  - `--debug-dap` runs a stdio DAP endpoint using `Content-Length` framing and routes debugger requests to `VmDebugAdapter`.
+  - `--debug-json` streams VM debug events as NDJSON to stdout (`session_start`, hook events, and `stop` records with
+    snapshots).
+  - `--debug-json-snapshots=none|stop|all` adds on-demand `snapshot_payload` fields (`instruction_pointer`,
+    `call_stack`, `frame_locals`, `current_frame_locals`, `operand_stack`) to debug-json events.
+  - `--debug-trace <path>` writes a deterministic VM event log (NDJSON) to the given file path using the same event
+    schema family as debug-json (`session_start`, hook events, and `stop`).
+  - `--debug-replay <trace>` replays a trace file generated by `--debug-trace` and emits a single `replay_checkpoint`
+    NDJSON event to stdout containing the restored snapshot + snapshot payload.
+  - `--debug-replay-sequence <n>` time-travels to the latest checkpoint with `sequence <= n` (without this flag, replay
+    restores the terminal checkpoint from the trace).
+  - `--debug-dap` runs a stdio DAP endpoint using `Content-Length` framing and routes debugger requests to
+    `VmDebugAdapter`.
 - `--ir-inline`
   - Enables the optional IR inlining optimization pass after IR validation and before VM/native/IR output.
-- Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
+- Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the
+  input filename stem (still under `--out-dir`).
 - All generated outputs land in the current directory (configurable by `--out-dir`).
 
 ### Wasm backend limits (current)
-- `WASM-LIMIT-MEM-ON-DEMAND`: the emitter allocates linear memory only when the lowered IR uses WASI runtime opcodes (`PushArgc`, `Print*`, `File*`). Pure compute/control-flow modules emit no memory section.
-- `WASM-LIMIT-MEM-SINGLE`: when memory is present, the module uses exactly one linear memory (`memory index 0`) sized for runtime scratch space and literal data segments; no additional memories are emitted.
-- `WASM-LIMIT-IMPORTS-WASI`: imported host calls are limited to `wasi_snapshot_preview1` and the fixed symbol set `{fd_write, fd_read, args_sizes_get, args_get, path_open, fd_close, fd_sync}` selected on demand from IR opcode usage.
-- `WASM-LIMIT-PROFILE-BROWSER`: `--wasm-profile=browser` rejects all non-zero effect/capability masks and rejects WASI-only opcodes (`PushArgc`, `Print*`, `File*`) during IR validation.
-- `WASM-LIMIT-PROFILE-WASI-ALLOWLIST`: `--wasm-profile=wasi` accepts only the explicit Wasm opcode/effect/capability allowlist; unsupported IR operations fail with deterministic `ir-validate` diagnostics.
+- `WASM-LIMIT-MEM-ON-DEMAND`: the emitter allocates linear memory only when the lowered IR uses WASI runtime opcodes
+  (`PushArgc`, `Print*`, `File*`). Pure compute/control-flow modules emit no memory section.
+- `WASM-LIMIT-MEM-SINGLE`: when memory is present, the module uses exactly one linear memory (`memory index 0`) sized
+  for runtime scratch space and literal data segments; no additional memories are emitted.
+- `WASM-LIMIT-IMPORTS-WASI`: imported host calls are limited to `wasi_snapshot_preview1` and the fixed symbol set
+  `{fd_write, fd_read, args_sizes_get, args_get, path_open, fd_close, fd_sync}` selected on demand from IR opcode usage.
+- `WASM-LIMIT-PROFILE-BROWSER`: `--wasm-profile=browser` rejects all non-zero effect/capability masks and rejects
+  WASI-only opcodes (`PushArgc`, `Print*`, `File*`) during IR validation.
+- `WASM-LIMIT-PROFILE-WASI-ALLOWLIST`: `--wasm-profile=wasi` accepts only the explicit Wasm opcode/effect/capability
+  allowlist; unsupported IR operations fail with deterministic `ir-validate` diagnostics.
 
 ## Goals
 - Single authoring language spanning gameplay/domain scripting, UI logic, automation, and rendering shaders.
-- Emit high-performance C++ for engine integration, optional GLSL/SPIR-V targets via external toolchains, and bytecode for an embedded VM without diverging semantics.
-- Share a consistent standard library (math, texture IO, resource bindings) across backends while preserving determinism for replay/testing.
+- Emit high-performance C++ for engine integration, optional GLSL/SPIR-V targets via external toolchains, and bytecode
+  for an embedded VM without diverging semantics.
+- Share a consistent standard library (math, texture IO, resource bindings) across backends while preserving determinism
+  for replay/testing.
 
 ## Proposed Architecture
-- **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control flow, and explicit resource usage.
-- **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/std/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; the default semantic chain enables `single_type_to_return`. Projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
-- **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM). Normalisation happens once; backends never see syntactic sugar.
-- **Graphics contract:** the windowed graphics language surface and locked spinning-cube v1 mini-spec are defined in `docs/Graphics_API_Design.md` (`/std/gfx/*`, profile deduction, `VertexColored` wire layout, deterministic `GfxError` codes). Current implementation status: the contract and host/sample coverage exist, the repo now ships an experimental `.prime` graphics type surface plus an explicit `.prime` `GraphicsSubstrate` token/config boundary at `/std/gfx/experimental/*`, the constructor-shaped experimental and canonical `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers, canonical `Window(...)` and `Device()` now also route through a private `.prime` `GraphicsSubstrate.createWindow(...)` / `createDevice(...)` / `createQueue(...)` boundary inside `/std/gfx/*`, the experimental and canonical `create_swapchain(...)`, `create_mesh(...)`, `frame()`, and `Device.create_pipeline([vertex_type] VertexColored, ...)` wrapper paths now run through the same proven first-slice logic in `.prime`, canonical `/std/gfx/*` now also routes those fallible resource/frame/pipeline helpers through the same private `GraphicsSubstrate.createSwapchain(...)` / `createMesh(...)` / `createPipeline(...)` / `acquireFrame(...)` layer, the non-Result `render_pass(...)` / `draw_mesh(...)` / `end()` path now routes through minimal pass-encoding helpers with deterministic zero-token / no-op fallback on invalid handles, canonical `/std/gfx/*` now also routes `render_pass(...)`, `draw_mesh(...)`, `end()`, `submit(...)`, and `present()` through the matching private `GraphicsSubstrate.openRenderPass(...)` / `drawMesh(...)` / `endRenderPass(...)` / `submitFrame(...)` / `presentFrame(...)` layer, canonical and experimental `Buffer<T>` now also expose `.prime`-authored `count()`, `empty()`, `is_valid()`, `readback()`, compute-only `load(index)`, and compute-only `store(index, value)` plus the preferred constructor-shaped `Buffer<T>(count)` entry point and explicit slash-call `allocate<T>(count)` / `upload(...)` / `load(...)` / `store(...)` helpers so public buffer inspection, host-side allocation/readback/upload, and compute storage access no longer have to route directly through raw fields or builtin `/std/gpu/buffer(...)` / `/std/gpu/readback(...)` / `/std/gpu/upload(...)` / `/std/gpu/buffer_load(...)` / `/std/gpu/buffer_store(...)` call sites, status-only experimental and canonical gfx flows now use the same stdlib-owned `GfxError.status(err)` helper layer as other `Result<Error>` surfaces instead of hand-packing `err.code`, the shared spinning-cube native-window sample path now emits a deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream`) that the macOS host and launcher consume via `--gfx` so submit/present can drive one real window end-to-end, the native launcher script itself is now only a thin wrapper over a shared canonical gfx launch helper, the native window host runtime shell now also lives in one shared presenter helper instead of staying embedded in the spinning-cube sample file, the Metal sample launcher now also delegates to one shared metal launch helper while its offscreen runtime shell lives in one shared helper instead of staying embedded in `metal_host.mm`, the Metal sample’s snapshot/parity helper modes now also bind to one shared spinning-cube simulation reference helper instead of carrying their own inline fixed-step copy, the browser sample launcher now also delegates to one shared browser launch helper while its bootstrap/runtime shell now lives in `examples/web/shared/browser_runtime_shared.js` instead of staying embedded in `main.js`, real compile-run conformance now imports both `/std/gfx/experimental/*` and `/std/gfx/*` and exercises that end-to-end wrapper path across exe/vm/native, canonical and experimental gfx imports now reject deterministically on wasm (`wasm-browser`, `wasm-wasi`) and shader-only (`glsl`, `spirv`) emits until those targets gain runtime substrate, host-side sample `GfxError` mapping plus locked `VertexColored` upload layout definitions now live in one shared example header instead of being duplicated per macOS host, bare explicit bindings of Result-returning gfx wrappers still fail deterministically during semantics, unsupported `create_pipeline` vertex types now reject deterministically instead of degrading into generic compiler errors, and broader backend/runtime follow-up work is still staged; current spinning-cube execution therefore still mixes shared `.prime` simulation with browser/native/Metal host glue outside the fully canonical package path.
-- **Layered UI/rendering roadmap:** the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, basic control emission, a basic panel container primitive, and the first composite widget helper, plus deterministic HTML/backend adapter records and deterministic platform input records (`CommandList`, `draw_text`, `draw_rounded_rect`, `push_clip`, `pop_clip`, `draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `draw_login_form`, `HtmlCommandList`, `emit_panel`, `emit_label`, `emit_button`, `emit_input`, `bind_event`, `emit_login_form`, `UiEventStream`, `push_pointer_move`, `push_pointer_down`, `push_pointer_up`, `push_key_down`, `push_key_up`, `push_ime_preedit`, `push_ime_commit`, `push_resize`, `push_focus_gained`, `push_focus_lost`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`, `arrange`, deterministic `serialize()` output), and the current host bridge can blit a deterministic BGRA8 software surface through the native window presenter and macOS Metal host paths while the shared widget/layout model can also emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into deterministic UI event-stream records; planned follow-up layers now center on platform/runtime consumption of that shared event stream, with composite-widget composition locked to the basic widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
+- **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control
+  flow, and explicit resource usage.
+- **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate
+  the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach
+  `operators` to every function) with optional path filters (`/std/math/*`, recurse or not) so common rewrites don’t
+  have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example,
+  `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; the default
+  semantic chain enables `single_type_to_return`. Projects can override via `--text-transforms` /
+  `--semantic-transforms` or the auto-deducing `--transform-list`.
+- **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM). Normalisation
+  happens once; backends never see syntactic sugar.
+- **Graphics contract:** the windowed graphics language surface and locked spinning-cube v1 mini-spec are defined in
+  `docs/Graphics_API_Design.md` (`/std/gfx/*`, profile deduction, `VertexColored` wire layout, deterministic `GfxError`
+  codes). Current implementation status: the contract and host/sample coverage exist, the repo now ships an experimental
+  `.prime` graphics type surface plus an explicit `.prime` `GraphicsSubstrate` token/config boundary at
+  `/std/gfx/experimental/*`, the constructor-shaped experimental and canonical `Window(...)`, `Device()`, and
+  `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers, canonical `Window(...)` and `Device()` now
+  also route through a private `.prime` `GraphicsSubstrate.createWindow(...)` / `createDevice(...)` / `createQueue(...)`
+  boundary inside `/std/gfx/*`, the experimental and canonical `create_swapchain(...)`, `create_mesh(...)`, `frame()`,
+  and `Device.create_pipeline([vertex_type] VertexColored, ...)` wrapper paths now run through the same proven
+  first-slice logic in `.prime`, canonical `/std/gfx/*` now also routes those fallible resource/frame/pipeline helpers
+  through the same private `GraphicsSubstrate.createSwapchain(...)` / `createMesh(...)` / `createPipeline(...)` /
+  `acquireFrame(...)` layer, the non-Result `render_pass(...)` / `draw_mesh(...)` / `end()` path now routes through
+  minimal pass-encoding helpers with deterministic zero-token / no-op fallback on invalid handles, canonical
+  `/std/gfx/*` now also routes `render_pass(...)`, `draw_mesh(...)`, `end()`, `submit(...)`, and `present()` through the
+  matching private `GraphicsSubstrate.openRenderPass(...)` / `drawMesh(...)` / `endRenderPass(...)` / `submitFrame(...)`
+  / `presentFrame(...)` layer, canonical and experimental `Buffer<T>` now also expose `.prime`-authored `count()`,
+  `empty()`, `is_valid()`, `readback()`, compute-only `load(index)`, and compute-only `store(index, value)` plus the
+  preferred constructor-shaped `Buffer<T>(count)` entry point and explicit slash-call `allocate<T>(count)` /
+  `upload(...)` / `load(...)` / `store(...)` helpers so public buffer inspection, host-side allocation/readback/upload,
+  and compute storage access no longer have to route directly through raw fields or builtin `/std/gpu/buffer(...)` /
+  `/std/gpu/readback(...)` / `/std/gpu/upload(...)` / `/std/gpu/buffer_load(...)` / `/std/gpu/buffer_store(...)` call
+  sites, status-only experimental and canonical gfx flows now use the same stdlib-owned `GfxError.status(err)` helper
+  layer as other `Result<Error>` surfaces instead of hand-packing `err.code`, the shared spinning-cube native-window
+  sample path now emits a deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream`) that the macOS host
+  and launcher consume via `--gfx` so submit/present can drive one real window end-to-end, the native launcher script
+  itself is now only a thin wrapper over a shared canonical gfx launch helper, the native window host runtime shell now
+  also lives in one shared presenter helper instead of staying embedded in the spinning-cube sample file, the Metal
+  sample launcher now also delegates to one shared metal launch helper while its offscreen runtime shell lives in one
+  shared helper instead of staying embedded in `metal_host.mm`, the Metal sample’s snapshot/parity helper modes now also
+  bind to one shared spinning-cube simulation reference helper instead of carrying their own inline fixed-step copy, the
+  browser sample launcher now also delegates to one shared browser launch helper while its bootstrap/runtime shell now
+  lives in `examples/web/shared/browser_runtime_shared.js` instead of staying embedded in `main.js`, real compile-run
+  conformance now imports both `/std/gfx/experimental/*` and `/std/gfx/*` and exercises that end-to-end wrapper path
+  across exe/vm/native, canonical and experimental gfx imports now reject deterministically on wasm (`wasm-browser`,
+  `wasm-wasi`) and shader-only (`glsl`, `spirv`) emits until those targets gain runtime substrate, host-side sample
+  `GfxError` mapping plus locked `VertexColored` upload layout definitions now live in one shared example header instead
+  of being duplicated per macOS host, bare explicit bindings of Result-returning gfx wrappers still fail
+  deterministically during semantics, unsupported `create_pipeline` vertex types now reject deterministically instead of
+  degrading into generic compiler errors, and broader backend/runtime follow-up work is still staged; current
+  spinning-cube execution therefore still mixes shared `.prime` simulation with browser/native/Metal host glue outside
+  the fully canonical package path.
+- **Layered UI/rendering roadmap:** the first `/std/ui/*` foundation now includes deterministic command-list rendering,
+  a two-pass layout tree contract, basic control emission, a basic panel container primitive, and the first composite
+  widget helper, plus deterministic HTML/backend adapter records and deterministic platform input records
+  (`CommandList`, `draw_text`, `draw_rounded_rect`, `push_clip`, `pop_clip`, `draw_label`, `draw_button`, `draw_input`,
+  `begin_panel`, `end_panel`, `draw_login_form`, `HtmlCommandList`, `emit_panel`, `emit_label`, `emit_button`,
+  `emit_input`, `bind_event`, `emit_login_form`, `UiEventStream`, `push_pointer_move`, `push_pointer_down`,
+  `push_pointer_up`, `push_key_down`, `push_key_up`, `push_ime_preedit`, `push_ime_commit`, `push_resize`,
+  `push_focus_gained`, `push_focus_lost`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`,
+  `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`,
+  `arrange`, deterministic `serialize()` output), and the current host bridge can blit a deterministic BGRA8 software
+  surface through the native window presenter and macOS Metal host paths while the shared widget/layout model can also
+  emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into
+  deterministic UI event-stream records; planned follow-up layers now center on platform/runtime consumption of that
+  shared event stream, with composite-widget composition locked to the basic widget/container APIs rather than raw
+  draw-command helpers or raw HTML record append helpers.
 - **IR definition (stable, PSIR v21):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, entry_index, version }`.
-  - **Function:** `{ name, metadata, local_debug_slots, instructions }` where instructions are linear, stack-based ops with immediates and debug IDs.
+  - **Function:** `{ name, metadata, local_debug_slots, instructions }` where instructions are linear, stack-based ops
+    with immediates and debug IDs.
   - **Metadata:** `{ effect_mask, capability_mask, scheduling_scope, instrumentation_flags }` (see PSIR binary layout).
-  - **Instruction:** `{ op, imm, debug_id }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning depends on `op`, and `debug_id` is a deterministic per-instruction identifier used for source-map linkage.
-  - **Instruction source map entry:** `{ debug_id, line, column, provenance }`; entries map instruction debug IDs back to canonical AST statement/expression coordinates when available (including inlined callee statements) and provenance tags (`canonical_ast` for direct statement/expression mappings, `synthetic_ir` for compiler-generated instructions). Instructions with no direct AST origin currently fall back to definition coordinates.
+  - **Instruction:** `{ op, imm, debug_id }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning
+    depends on `op`, and `debug_id` is a deterministic per-instruction identifier used for source-map linkage.
+  - **Instruction source map entry:** `{ debug_id, line, column, provenance }`; entries map instruction debug IDs back
+    to canonical AST statement/expression coordinates when available (including inlined callee statements) and
+    provenance tags (`canonical_ast` for direct statement/expression mappings, `synthetic_ir` for compiler-generated
+    instructions). Instructions with no direct AST origin currently fall back to definition coordinates.
   - **Locals:** addressed by index; `LoadLocal`, `StoreLocal`, `AddressOfLocal` operate on the index encoded in `imm`.
-  - **Strings:** string literals are interned in `string_table` and referenced by index in print ops (see PSIR versioning).
+  - **Strings:** string literals are interned in `string_table` and referenced by index in print ops (see PSIR
+    versioning).
   - **Entry:** `entry_index` points to the entry function in `functions`; its signature is enforced by the front-end.
   - **PSIR binary layout (little-endian):**
     - `u32 magic` (`0x50534952` = `"PSIR"`), `u32 version`, `u32 function_count`, `u32 entry_index`, `u32 string_count`.
     - `string_count` entries: `u32 byte_len` + raw bytes.
     - `u32 struct_count`.
-    - `struct_count` entries: `u32 name_len` + name bytes, `u32 total_size`, `u32 alignment`, `u32 field_count`, then `field_count` entries:
+    - `struct_count` entries: `u32 name_len` + name bytes, `u32 total_size`, `u32 alignment`, `u32 field_count`, then
+      `field_count` entries:
       `u32 field_name_len` + bytes, `u32 envelope_len` + bytes, `u32 offset`, `u32 size`, `u32 alignment`,
       `u32 padding_kind`, `u32 category`, `u32 visibility`, `u32 is_static`.
     - `function_count` entries: `u32 name_len` + name bytes, `u64 effect_mask`, `u64 capability_mask`,
@@ -192,46 +376,120 @@ module {
     - `u32 instruction_source_map_count`, then `instruction_source_map_count` entries:
       `u32 debug_id`, `u32 line`, `u32 column`, `u8 provenance`.
   - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v21, VM/native)” section below.
-- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`; v10 adds `LoadStringByte` for string indexing in VM/native backends; v11 adds struct layout manifests; v12 adds struct field visibility/static metadata; v13 adds float arithmetic/compare/convert opcodes; v14 adds float return opcodes (`ReturnF32`, `ReturnF64`); v15 adds per-function execution metadata (effect/capability masks plus scheduling/instrumentation fields); v16 adds `Call` and `CallVoid` function-call opcodes for callable IR; v17 adds per-function local debug slot metadata (`slot_index`, `name`, `type`) without runtime semantic changes; v18 adds per-instruction debug IDs for source-map linkage; v19 adds per-instruction source-map metadata entries keyed by instruction debug ID (`line`, `column`, `provenance`); v20 adds `FileReadByte` for deterministic single-byte file reads with explicit EOF mapping and `HeapFree` for `/std/intrinsics/memory/free`; v21 adds `HeapRealloc` for `/std/intrinsics/memory/realloc`.
-  - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
+- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and
+  `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native
+  backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with
+  newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for
+  entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds
+  `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`; v10 adds `LoadStringByte` for string indexing in
+  VM/native backends; v11 adds struct layout manifests; v12 adds struct field visibility/static metadata; v13 adds float
+  arithmetic/compare/convert opcodes; v14 adds float return opcodes (`ReturnF32`, `ReturnF64`); v15 adds per-function
+  execution metadata (effect/capability masks plus scheduling/instrumentation fields); v16 adds `Call` and `CallVoid`
+  function-call opcodes for callable IR; v17 adds per-function local debug slot metadata (`slot_index`, `name`, `type`)
+  without runtime semantic changes; v18 adds per-instruction debug IDs for source-map linkage; v19 adds per-instruction
+  source-map metadata entries keyed by instruction debug ID (`line`, `column`, `provenance`); v20 adds `FileReadByte`
+  for deterministic single-byte file reads with explicit EOF mapping and `HeapFree` for `/std/intrinsics/memory/free`;
+  v21 adds `HeapRealloc` for `/std/intrinsics/memory/realloc`.
+  - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support
+    `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
-  - **Versioning policy:** the `version` field is a single, monotonically increasing integer for incompatible changes. There is no forward/backward compatibility guarantee today; tools reject unknown versions and require recompilation. Migration tooling may be added later, but no automatic migrations exist yet.
+  - **Versioning policy:** the `version` field is a single, monotonically increasing integer for incompatible changes.
+    There is no forward/backward compatibility guarantee today; tools reject unknown versions and require recompilation.
+    Migration tooling may be added later, but no automatic migrations exist yet.
 - **Backends:**
   - **C++ emitter** – generates host code for native binaries.
   - **GLSL emitter** – produces shader code; SPIR-V output is available via `--emit=spirv`.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
-- **Tooling:** CLI compiler `primec`, plus the VM runner `primevm` and build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). Import search roots are configured with `--import-path <dir>` (or `-I <dir>`). Entry definitions currently accept either no parameters or a single `[array<string>]` parameter for command-line arguments; `args.count()` and `count(args)` are supported, and checked indexing is available via either `args[index]` or `args.at(index)` (`at_unsafe(args, index)` / `args.at_unsafe(index)` skips checks). String bindings may be initialised from checked/unchecked entry-arg indexing (print-only). The C++ emitter maps the array argument to `argv` and otherwise uses the same restriction. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
-- **AST/IR dumps:** the debug printers include executions with their argument lists so tooling can capture scheduling intent in snapshots.
-  - Dumps show collection literals after text-transform rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1, 2)`).
+- **Tooling:** CLI compiler `primec`, plus the VM runner `primevm` and build/test helpers. The compiler accepts `--entry
+  /path` to select the entry definition (default: `/main`). Import search roots are configured with `--import-path
+  <dir>` (or `-I <dir>`). Entry definitions currently accept either no parameters or a single `[array<string>]`
+  parameter for command-line arguments; `args.count()` and `count(args)` are supported, and checked indexing is
+  available via either `args[index]` or `args.at(index)` (`at_unsafe(args, index)` / `args.at_unsafe(index)` skips
+  checks). String bindings may be initialised from checked/unchecked entry-arg indexing (print-only). The C++ emitter
+  maps the array argument to `argv` and otherwise uses the same restriction. The definition/execution split maps cleanly
+  to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
+- **AST/IR dumps:** the debug printers include executions with their argument lists so tooling can capture scheduling
+  intent in snapshots.
+  - Dumps show collection literals after text-transform rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1,
+    2)`).
   - Labeled execution arguments appear inline (e.g., `exec /execute_task([count] 2)`).
 
 ## Language Design Highlights
-- **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but identifiers are constrained to ASCII for predictable tooling and hashing. `auto`, `mut`, `return`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, and `for` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
--- **String literals:** surface forms accept `"..."utf8` / `"..."ascii` with escape processing, or raw `'...'utf8` / `'...'ascii` with no escape processing. The `implicit-utf8` text transform (enabled by default) appends `utf8` when omitted in surface syntax. **Canonical/bottom-level form uses double-quoted strings with escapes normalized and an explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rejects non-ASCII bytes). Example surface: `"hello"utf8`, `'moo'ascii`. Example canonical: `"hello"utf8`. Raw example: `'C:\temp'ascii` keeps backslashes verbatim.
-- **Numeric envelopes:** fixed-width `i32`, `i64`, `u64`, `f32`, and `f64` map directly to hardware instructions and are the only numeric envelopes supported across all backends today. Software numeric envelopes `integer`, `decimal`, and `complex` are accepted by the parser/semantic validator (bindings, returns, collections, and `convert<T>` targets), but current backends reject them at lowering/emission time. Mixed software/fixed arithmetic is rejected, and mixed software categories or ordered comparisons on `complex` are also diagnostics today.
-- **Core type set (v1):** the closed set of envelopes that every backend must understand and that the type system treats as cross-backend portable is:
+- **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified
+  paths. Unicode may arrive later, but identifiers are constrained to ASCII for predictable tooling and hashing. `auto`,
+  `mut`, `return`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, and `for` are reserved
+  keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
+-- **String literals:** surface forms accept `"..."utf8` / `"..."ascii` with escape processing, or raw `'...'utf8` /
+`'...'ascii` with no escape processing. The `implicit-utf8` text transform (enabled by default) appends `utf8` when
+omitted in surface syntax. **Canonical/bottom-level form uses double-quoted strings with escapes normalized and an
+explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rejects non-ASCII bytes). Example surface:
+`"hello"utf8`, `'moo'ascii`. Example canonical: `"hello"utf8`. Raw example: `'C:\temp'ascii` keeps backslashes verbatim.
+- **Numeric envelopes:** fixed-width `i32`, `i64`, `u64`, `f32`, and `f64` map directly to hardware instructions and are
+  the only numeric envelopes supported across all backends today. Software numeric envelopes `integer`, `decimal`, and
+  `complex` are accepted by the parser/semantic validator (bindings, returns, collections, and `convert<T>` targets),
+  but current backends reject them at lowering/emission time. Mixed software/fixed arithmetic is rejected, and mixed
+  software categories or ordered comparisons on `complex` are also diagnostics today.
+- **Core type set (v1):** the closed set of envelopes that every backend must understand and that the type system treats
+  as cross-backend portable is:
   - `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`
   - `array<T>`, `vector<T>`, `map<K, V>`
   - `Pointer<T>`, `Reference<T>`
   - User-defined struct types (including `[struct]`-tagged definitions)
-  - Draft math extension types (`Vec2`, `Vec3`, `Vec4`, `Mat2`, `Mat3`, `Mat4`, `Quat`) are currently backend-specific and are not part of this portable core set.
-  Backends may accept additional types, but any type outside this core set is backend-specific and must be rejected by backends that do not explicitly support it. For collections, element/key/value types must themselves be in the core set unless a backend explicitly documents wider support.
+  - Draft math extension types (`Vec2`, `Vec3`, `Vec4`, `Mat2`, `Mat3`, `Mat4`, `Quat`) are currently backend-specific
+    and are not part of this portable core set.
+  Backends may accept additional types, but any type outside this core set is backend-specific and must be rejected by
+  backends that do not explicitly support it. For collections, element/key/value types must themselves be in the core
+  set unless a backend explicitly documents wider support.
 - **Aliases:** none for numeric widths; use explicit `i32`, `i64`, `u64`, `f32`, `f64`.
-- **`auto` (implicit templates + local inference):** `auto` may appear on binding envelopes, parameters, or return transforms. In parameter/return positions it introduces an implicit template parameter (equivalent to adding a fresh type parameter) and is inferred per call site; omitted parameter envelopes are treated as `auto`. In bindings, `auto` requests local inference from the initializer and must resolve to a concrete envelope; unresolved or conflicting local inference is a diagnostic. Return `auto` is constrained by return statements; if all constraints resolve to a concrete envelope the definition becomes monomorphic.
-  - Float literals accept standard decimal forms, including optional fractional digits (e.g., `1.`, `1.0`, `1.f32`, `1.e2`).
-- **Envelope:** the canonical AST uses a single envelope form for definitions and executions: `[transform-list] identifier<template-list>(parameter-or-arg-list) {body-list}`. Surface definitions require an explicit `{...}` body and may spell transforms either in canonical prefix form (`[transform-list] name(...) { ... }`) or in surface post-parameter form (`name(...) [transform-list] { ... }`), which is normalized to the prefix form before semantic validation/lowering. The post-parameter form is definition-only and requires `[]` to be followed by `{...}`. `name[]() { ... }` is rejected to avoid indexing-like ambiguity. Surface executions are call-style (`identifier<template-list>(arg-list)`) and map to an envelope with an implicit empty body. **Definitions may omit an empty parameter list** (e.g., `Foo { ... }` is treated as `Foo() { ... }`), and this is accepted even at the concrete level; executions still require parentheses. Bindings use the form `[Envelope qualifiers…] name{initializer}`. In inference/surface levels, locals and struct fields may omit the envelope annotation when the initializer resolves to one concrete envelope; unresolved or ambiguous inference is a diagnostic. Struct field envelopes must be concrete before layout manifest emission. Parameters that omit an explicit envelope are treated as `auto` and become implicit template parameters inferred per call site. Lists recursively reuse whitespace-separated tokens.
-  - Syntax markers: `[]` compile-time transforms, `<>` templates, `()` runtime parameters/calls, `{}` runtime code (definition bodies, binding initializers).
+- **`auto` (implicit templates + local inference):** `auto` may appear on binding envelopes, parameters, or return
+  transforms. In parameter/return positions it introduces an implicit template parameter (equivalent to adding a fresh
+  type parameter) and is inferred per call site; omitted parameter envelopes are treated as `auto`. In bindings, `auto`
+  requests local inference from the initializer and must resolve to a concrete envelope; unresolved or conflicting local
+  inference is a diagnostic. Return `auto` is constrained by return statements; if all constraints resolve to a concrete
+  envelope the definition becomes monomorphic.
+  - Float literals accept standard decimal forms, including optional fractional digits (e.g., `1.`, `1.0`, `1.f32`,
+    `1.e2`).
+- **Envelope:** the canonical AST uses a single envelope form for definitions and executions: `[transform-list]
+  identifier<template-list>(parameter-or-arg-list) {body-list}`. Surface definitions require an explicit `{...}` body
+  and may spell transforms either in canonical prefix form (`[transform-list] name(...) { ... }`) or in surface
+  post-parameter form (`name(...) [transform-list] { ... }`), which is normalized to the prefix form before semantic
+  validation/lowering. The post-parameter form is definition-only and requires `[]` to be followed by `{...}`. `name[]()
+  { ... }` is rejected to avoid indexing-like ambiguity. Surface executions are call-style
+  (`identifier<template-list>(arg-list)`) and map to an envelope with an implicit empty body. **Definitions may omit an
+  empty parameter list** (e.g., `Foo { ... }` is treated as `Foo() { ... }`), and this is accepted even at the concrete
+  level; executions still require parentheses. Bindings use the form `[Envelope qualifiers…] name{initializer}`. In
+  inference/surface levels, locals and struct fields may omit the envelope annotation when the initializer resolves to
+  one concrete envelope; unresolved or ambiguous inference is a diagnostic. Struct field envelopes must be concrete
+  before layout manifest emission. Parameters that omit an explicit envelope are treated as `auto` and become implicit
+  template parameters inferred per call site. Lists recursively reuse whitespace-separated tokens.
+  - Syntax markers: `[]` compile-time transforms, `<>` templates, `()` runtime parameters/calls, `{}` runtime code
+    (definition bodies, binding initializers).
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time envelopes/templates—primarily for transforms or when inference must be overridden.
   - `(...)` lists runtime parameters; calls always include `()` (even with no args), and `()` never appears on bindings.
-  - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`. Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms (no name references).
-  - `{...}` holds runtime code for definition bodies and value blocks for binding initializers. Binding initializers evaluate the block and use its resulting value (last item or `return(value)`); use explicit constructor calls when passing multiple arguments (e.g., `[T] name{ T(arg1, arg2) }`).
+  - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`.
+    Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms
+    (no name references).
+  - `{...}` holds runtime code for definition bodies and value blocks for binding initializers. Binding initializers
+    evaluate the block and use its resulting value (last item or `return(value)`); use explicit constructor calls when
+    passing multiple arguments (e.g., `[T] name{ T(arg1, arg2) }`).
   - Bindings are only valid inside definition bodies or parameter lists; top-level bindings are rejected.
-- **Draft variadic argument packs (parser + call semantics + read-only body API + spread call-lowering landed; backend/runtime materialization is now partial):** to support stdlib-owned `vector`/`map` implementations without hand-written `Single/Pair/Triple/...` constructor ladders, the surface syntax now parses rest parameters and spread calls while keeping the canonical meaning inside the envelope system.
-  - Surface parameter sugar: `collect(values...) { ... }` now desugars during parsing to `collect<__pack_T>([args<__pack_T>] values) { ... }`.
-  - Typed surface parameter sugar: `collect([string] values...) { ... }` now desugars during parsing to `collect([args<string>] values) { ... }`.
-  - Surface call sugar: `build(values...)` inside a call now desugars to `[spread] values` on that argument node, and explicit canonical `[spread] values` is accepted directly in call-argument position.
-  - Canonical parser form therefore uses a real pack envelope plus an explicit spread marker instead of storing syntax in bare identifier spelling. Call semantics now bind trailing positional arguments into that trailing pack, infer omitted pack element types homogeneously across packed values, reject named arguments targeting the variadic parameter directly, and allow a final `[spread] values` argument to forward an existing `args<T>` pack into another trailing variadic slot with the same omitted-pack inference path; the read-only body API is now available and backend/runtime materialization remains tracked by the follow-up arg-pack TODO slice below.
+- **Draft variadic argument packs (parser + call semantics + read-only body API + spread call-lowering landed;
+  backend/runtime materialization is now partial):** to support stdlib-owned `vector`/`map` implementations without
+  hand-written `Single/Pair/Triple/...` constructor ladders, the surface syntax now parses rest parameters and spread
+  calls while keeping the canonical meaning inside the envelope system.
+  - Surface parameter sugar: `collect(values...) { ... }` now desugars during parsing to
+    `collect<__pack_T>([args<__pack_T>] values) { ... }`.
+  - Typed surface parameter sugar: `collect([string] values...) { ... }` now desugars during parsing to
+    `collect([args<string>] values) { ... }`.
+  - Surface call sugar: `build(values...)` inside a call now desugars to `[spread] values` on that argument node, and
+    explicit canonical `[spread] values` is accepted directly in call-argument position.
+  - Canonical parser form therefore uses a real pack envelope plus an explicit spread marker instead of storing syntax
+    in bare identifier spelling. Call semantics now bind trailing positional arguments into that trailing pack, infer
+    omitted pack element types homogeneously across packed values, reject named arguments targeting the variadic
+    parameter directly, and allow a final `[spread] values` argument to forward an existing `args<T>` pack into another
+    trailing variadic slot with the same omitted-pack inference path; the read-only body API is now available and
+    backend/runtime materialization remains tracked by the follow-up arg-pack TODO slice below.
   - After monomorphisation, bottom-level form contains no templates. Example:
     - Surface:
       ```text
@@ -250,16 +508,69 @@ module {
         [vector<i32>] xs{collect__i32(1i32, 2i32, 3i32)}
       }
       ```
-  - Current v1 constraints: one `args<T>` parameter per definition, it must be last, it is homogeneous, named arguments bind only fixed parameters, and `[spread]` is only valid in call-argument position.
-  - Current body API: `count(values)`, `values.count()`, `values[index]`, `at(values, index)`, `values.at(index)`, and `values.at_unsafe(index)` work on `args<T>` parameters.
-  - Runtime status: the legacy C++ emitter now materializes concrete `args<T>` parameters for direct variadic calls plus mixed explicit-prefix + final-spread forwarding, and that emitted path executes the full read-only body API including downstream method resolution on indexed values. IR-backed VM/native lowering now covers direct numeric/bool/string variadic calls, pure final-spread forwarding of an existing pack, and mixed explicit-prefix + final-spread forwarding rebuilt from known-size numeric/bool/string packs through the same array-like body API, including indexed downstream string helpers. Struct packs now also materialize for direct calls plus pure/mixed forwarding across `count(...)`, checked/unchecked access, and downstream indexed field/helper resolution. `Result<T, Error>` packs now use the same IR storage across direct/pure/mixed forwarding and preserve indexed `Result.why(...)` / `?` behavior on VM/native, status-only `Result<Error>` packs preserve indexed `Result.error(...)` / `Result.why(...)` behavior across those same forwarding modes, `FileError` packs preserve indexed downstream `why()` mapping, `Reference<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping, `Pointer<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping, `Reference<Result<T, Error>>` packs preserve indexed downstream `dereference(...)`, `try(...)`, and `Result.why(...)` access, status-only `Reference<Result<Error>>` packs preserve indexed downstream `dereference(...)`, `Result.error(...)`, and `Result.why(...)` access, `Pointer<Result<T, Error>>` packs preserve indexed downstream `dereference(...)`, `try(...)`, and `Result.why(...)` access including payload-kind inference for `auto` bindings on indexed `try(...)` results, and status-only `Pointer<Result<Error>>` packs preserve indexed downstream `dereference(...)`, `Result.error(...)`, and `Result.why(...)` access. `File<Mode>` packs preserve indexed downstream file-handle method access, `Reference<File<Mode>>` packs preserve indexed downstream file-handle method access alongside explicit `dereference(...).write*` / `flush()` receiver forms plus helper-style `at(values, i).write*()` / `values.at(i).flush()` receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()` receivers, and direct indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).read_byte(...)` `?`, `Pointer<File<Mode>>` packs preserve indexed downstream file-handle method access alongside explicit `dereference(...).write*` / `flush()` receiver forms plus helper-style `at(values, i).write*()` / `values.at(i).flush()` receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()` receivers, and direct indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).read_byte(...)` `?`, `Buffer<T>` packs preserve indexed downstream `buffer_load(...)` and `buffer_store(...)` on the IR/VM GPU path, `Reference<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `Pointer<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`, empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>` packs now preserve indexed downstream `count()` resolution across the same forwarding modes, `vector<T>` packs also preserve indexed downstream `capacity()` and statement-mutator access, borrowed/pointer array and vector packs preserve explicit indexed `dereference(...)` receiver wrappers for downstream checked/unchecked access, borrowed/pointer vector packs preserve that same indexed `capacity()` and statement-mutator surface through explicit `dereference(...)` receiver wrappers, borrowed/pointer map packs preserve that same count and lookup surface through explicit indexed `dereference(...)` receiver wrappers, those same value, borrowed, and pointer map packs preserve indexed downstream `tryAt(...)` payload-kind inference for `auto` bindings, and `Pointer<map<K, V>>` packs preserve indexed downstream `contains()` / `at()` / `at_unsafe()` lookup access. Scalar `Pointer<T>` plus scalar `Reference<T>` packs now preserve indexed downstream `dereference(...)`, and struct `Pointer<T>` plus struct `Reference<T>` packs now preserve indexed downstream field/helper access; other unsupported non-string pack elements remain follow-up work.
-    Latest checkpoint: canonical free-builtin `at([values] values, [index] i)` on wrapped borrowed/pointer `File<Mode>` arg-packs now preserves `write*()` / `flush()` receivers plus `read_byte(...)` `?` inference across direct calls plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing named-argument rejection path.
-- **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body. Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.
+  - Current v1 constraints: one `args<T>` parameter per definition, it must be last, it is homogeneous, named arguments
+    bind only fixed parameters, and `[spread]` is only valid in call-argument position.
+  - Current body API: `count(values)`, `values.count()`, `values[index]`, `at(values, index)`, `values.at(index)`, and
+    `values.at_unsafe(index)` work on `args<T>` parameters.
+  - Runtime status: the legacy C++ emitter now materializes concrete `args<T>` parameters for direct variadic calls plus
+    mixed explicit-prefix + final-spread forwarding, and that emitted path executes the full read-only body API
+    including downstream method resolution on indexed values. IR-backed VM/native lowering now covers direct
+    numeric/bool/string variadic calls, pure final-spread forwarding of an existing pack, and mixed explicit-prefix +
+    final-spread forwarding rebuilt from known-size numeric/bool/string packs through the same array-like body API,
+    including indexed downstream string helpers. Struct packs now also materialize for direct calls plus pure/mixed
+    forwarding across `count(...)`, checked/unchecked access, and downstream indexed field/helper resolution. `Result<T,
+    Error>` packs now use the same IR storage across direct/pure/mixed forwarding and preserve indexed `Result.why(...)`
+    / `?` behavior on VM/native, status-only `Result<Error>` packs preserve indexed `Result.error(...)` /
+    `Result.why(...)` behavior across those same forwarding modes, `FileError` packs preserve indexed downstream `why()`
+    mapping, `Reference<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping,
+    `Pointer<FileError>` packs preserve indexed downstream `dereference(...).why()` mapping, `Reference<Result<T,
+    Error>>` packs preserve indexed downstream `dereference(...)`, `try(...)`, and `Result.why(...)` access, status-only
+    `Reference<Result<Error>>` packs preserve indexed downstream `dereference(...)`, `Result.error(...)`, and
+    `Result.why(...)` access, `Pointer<Result<T, Error>>` packs preserve indexed downstream `dereference(...)`,
+    `try(...)`, and `Result.why(...)` access including payload-kind inference for `auto` bindings on indexed `try(...)`
+    results, and status-only `Pointer<Result<Error>>` packs preserve indexed downstream `dereference(...)`,
+    `Result.error(...)`, and `Result.why(...)` access. `File<Mode>` packs preserve indexed downstream file-handle method
+    access, `Reference<File<Mode>>` packs preserve indexed downstream file-handle method access alongside explicit
+    `dereference(...).write*` / `flush()` receiver forms plus helper-style `at(values, i).write*()` /
+    `values.at(i).flush()` receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()`
+    receivers, and direct indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values,
+    [index] i).read_byte(...)` `?`, `Pointer<File<Mode>>` packs preserve indexed downstream file-handle method access
+    alongside explicit `dereference(...).write*` / `flush()` receiver forms plus helper-style `at(values, i).write*()` /
+    `values.at(i).flush()` receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()`
+    receivers, and direct indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values,
+    [index] i).read_byte(...)` `?`, `Buffer<T>` packs preserve indexed downstream `buffer_load(...)` and
+    `buffer_store(...)` on the IR/VM GPU path, `Reference<Buffer<T>>` packs preserve indexed downstream
+    `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU path,
+    `Pointer<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` and
+    `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `array<T>`, `Reference<array<T>>`,
+    `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`, empty/header-only `soa_vector<T>`,
+    `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>`
+    packs now preserve indexed downstream `count()` resolution across the same forwarding modes, `vector<T>` packs also
+    preserve indexed downstream `capacity()` and statement-mutator access, borrowed/pointer array and vector packs
+    preserve explicit indexed `dereference(...)` receiver wrappers for downstream checked/unchecked access,
+    borrowed/pointer vector packs preserve that same indexed `capacity()` and statement-mutator surface through explicit
+    `dereference(...)` receiver wrappers, borrowed/pointer map packs preserve that same count and lookup surface through
+    explicit indexed `dereference(...)` receiver wrappers, those same value, borrowed, and pointer map packs preserve
+    indexed downstream `tryAt(...)` payload-kind inference for `auto` bindings, and `Pointer<map<K, V>>` packs preserve
+    indexed downstream `contains()` / `at()` / `at_unsafe()` lookup access. Scalar `Pointer<T>` plus scalar
+    `Reference<T>` packs now preserve indexed downstream `dereference(...)`, and struct `Pointer<T>` plus struct
+    `Reference<T>` packs now preserve indexed downstream field/helper access; other unsupported non-string pack elements
+    remain follow-up work.
+    Latest checkpoint: canonical free-builtin `at([values] values, [index] i)` on wrapped borrowed/pointer `File<Mode>`
+    arg-packs now preserves `write*()` / `flush()` receivers plus `read_byte(...)` `?` inference across direct calls
+    plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing
+    named-argument rejection path.
+- **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style
+  (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body.
+  Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.
   - Executions accept the same argument syntax as calls, including labeled arguments (`[param] value`).
   - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>([first] 1i32)` is rejected).
   - Example: `execute_task([items] array<i32>(1i32, 2i32) [pairs] map<i32, i32>(1i32, 2i32))`.
-  - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
-  - **Helper overloading:** non-struct definitions may reuse the same public helper path when their exact parameter counts differ. Call resolution picks the exact-arity match before template specialization and method-call lowering, while same-path same-arity definitions are still duplicates. Minimal example:
+  - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name
+    resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
+  - **Helper overloading:** non-struct definitions may reuse the same public helper path when their exact parameter
+    counts differ. Call resolution picks the exact-arity match before template specialization and method-call lowering,
+    while same-path same-arity definitions are still duplicates. Minimal example:
     ```text
     [return<i32>] /helper/value<T>([T] value) { return(1i32) }
     [return<i32>] /helper/value<A, B>([A] first, [B] second) { return(2i32) }
@@ -270,12 +581,22 @@ module {
       return(0i32)
     }
     ```
-  - Note: current VM/native/GLSL/C++ emitters only generate code for definitions; top-level executions are parsed/validated but not emitted (tooling-only for now).
-- **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<f32>] blend<…>(…) { … }`). Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
-- **Surface vs canonical:** surface syntax may omit the return transform or use `return<auto>` (or `[auto]` with `single_type_to_return`) and rely on inference; canonical/bottom-level syntax always carries an explicit concrete `return<T>` after monomorphisation, and the base-level tree contains no templates or `auto`. Example surface: `main() { return(0) }` → canonical: `[return<i32>] main() { return(0i32) }`. If all return paths yield no value, `return<auto>` resolves to `return<void>`.
-- **Default convenience:** the `single_type_to_return` transform rewrites a single bare envelope in the transform list into `return<envelope>` (e.g., `[i32] main()` → `[return<i32>] main()`), and it is enabled by default (disable via `--no-semantic-transforms` or override the semantic transform list). If the bare envelope is `auto`, the transform yields `return<auto>` and inference resolves it later.
+  - Note: current VM/native/GLSL/C++ emitters only generate code for definitions; top-level executions are
+    parsed/validated but not emitted (tooling-only for now).
+- **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<f32>] blend<…>(…) { … }`).
+  Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
+- **Surface vs canonical:** surface syntax may omit the return transform or use `return<auto>` (or `[auto]` with
+  `single_type_to_return`) and rely on inference; canonical/bottom-level syntax always carries an explicit concrete
+  `return<T>` after monomorphisation, and the base-level tree contains no templates or `auto`. Example surface: `main()
+  { return(0) }` → canonical: `[return<i32>] main() { return(0i32) }`. If all return paths yield no value,
+  `return<auto>` resolves to `return<void>`.
+- **Default convenience:** the `single_type_to_return` transform rewrites a single bare envelope in the transform list
+  into `return<envelope>` (e.g., `[i32] main()` → `[return<i32>] main()`), and it is enabled by default (disable via
+  `--no-semantic-transforms` or override the semantic transform list). If the bare envelope is `auto`, the transform
+  yields `return<auto>` and inference resolves it later.
 Array returns use `return<array<T>>` (or `[array<T>]` with `single_type_to_return`) and surface as `array` in the IR.
-Struct returns use `return<StructName>` (or inference when the body returns a struct constructor/value); they surface as `array` in the IR with the struct layout manifest attached.
+Struct returns use `return<StructName>` (or inference when the body returns a struct constructor/value); they surface as
+`array` in the IR with the struct layout manifest attached.
 
 Example:
 ```
@@ -293,28 +614,78 @@ module {
   }
 }
 ```
-- **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_read`, `file_write`, `gpu_dispatch`, and `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`, `pathspace_schedule`); `file_write` also implies `file_read` for compatibility. GLSL accepts `io_out`, `io_err`, plus `pathspace_*` metadata effects/capabilities.
-- **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by `--default-effects` in the compiler/VM.
+- **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit
+  annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure
+  behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via
+  `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec
+  --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]`
+  (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a
+  subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_read`,
+  `file_write`, `gpu_dispatch`, and `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`, `pathspace_take`,
+  `pathspace_bind`, `pathspace_schedule`); `file_write` also implies `file_read` for compatibility. GLSL accepts
+  `io_out`, `io_err`, plus `pathspace_*` metadata effects/capabilities.
+- **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the
+  enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by
+  `--default-effects` in the compiler/VM.
 
 ### Backend Type Support (v1)
-- **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64`. `array`/`vector`/`map` support numeric/bool values; map string keys must be string literals or literal-backed bindings. Strings are limited to literals/literal-backed bindings for print/map contexts; string returns are supported for literal-backed values, while string arrays and string pointers/references are rejected. `convert<T>` supports `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
-- **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++ emitter); string comparisons are rejected and string literals are limited to print/count/index/map contexts; string array returns and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)` requires a string literal or literal-backed binding; `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept `i32`, `bool`, `f32`, literal-backed `string`, ordinary user structs whose fields lower through the existing stack-backed struct path, the current single-slot int-backed stdlib error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), packed `File<Mode>` handles, and `Buffer<T>` handles when downstream `try(...)` consumers are explicitly typed. Downstream `try(...)` preserves those handle/error-struct payloads alongside `array<T>` / `vector<T>` and `map<K, V>` handles whose element or key/value kinds already fit the current collection contract. IR-backed `[args<Result<T, Error>>]`, `[args<Reference<Result<T, Error>>>]`, and `[args<Pointer<Result<T, Error>>>]` packs now preserve indexed `try(...)`, `Result.error(...)`, and `Result.why(...)` access across direct, pure-spread, and mixed variadic forwarding when `T` already fits that same payload contract, and native executable `Result<Buffer<T>, GfxError>` values now preserve `try(...)`, `Result.error(...)`, and success/error `Result.why(...)` on that same explicit typed path. Unsupported math or GPU builtins fail.
-- **GLSL:** numeric/bool scalar locals (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`) plus nominal `Vec2`, `Vec3`, `Vec4`, `Quat`, `Mat2`, `Mat3`, and `Mat4` bindings; string literals and other non-supported composites are rejected, and entry definitions must return `void`. `convert<T>` targets match the numeric/bool list above.
-- **GLSL emitter restrictions (current):** at most one `return()` statement; static bindings are rejected; assign/increment/decrement require local mutable targets; control flow must use canonical forms (`if(cond, then() { ... }, else() { ... })`, `loop(count, body() { ... })`, `while(cond, body() { ... })`, `for(init, cond, step, body() { ... })`); builtins require positional args with no template/block arguments, and unsupported builtins fail.
-- **GLSL type support (current):** scalar `bool`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64` plus nominal `Vec2`, `Vec3`, `Vec4`, `Quat`, `Mat2`, `Mat3`, and `Mat4`. Using `i64`/`u64` or `f64` emits `GL_ARB_gpu_shader_int64`/`GL_ARB_gpu_shader_fp64` requirements. Arrays, strings, general structs, pointers/references, maps, and other unsupported composites are rejected.
-- **Matrix/quaternion status (draft):** VM/native, Wasm, and the C++ emitter support stdlib matrix/quaternion nominal values, conversion helpers, component-wise `Mat2`/`Mat3`/`Mat4` and `Quat` `plus` + `minus`, matrix/quaternion scalar scaling + divide, matrix-vector multiply, matching matrix-matrix multiply, quaternion Hamilton products, and quaternion-`Vec3` rotation. GLSL now lowers nominal `Vec2`/`Vec3`/`Vec4`, `Quat`, `Mat2`, `Mat3`, and `Mat4` values, direct vector/quaternion/matrix field access, component-wise vector/quaternion `plus`/`minus`, vector/quaternion scalar scale/divide, `MatN * VecN` interop, matching matrix-matrix multiply, quaternion Hamilton products, quaternion-`Vec3` rotation, and the explicit quaternion conversion helpers `quat_to_mat3`, `quat_to_mat4`, and `mat3_to_quat`.
-- **GLSL effects/capabilities (current):** `io_out`, `io_err`, and `pathspace_*` metadata entries are accepted; other effects/capabilities are rejected. `print*` calls are accepted but emitted as no-op expressions.
-- **GLSL determinism (current):** only local scalar plus nominal vector/matrix bindings are allowed; no static storage or heap/placement transforms. GPU backends are treated as deterministic with no external I/O.
+- **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64`. `array`/`vector`/`map` support numeric/bool values;
+  map string keys must be string literals or literal-backed bindings. Strings are limited to literals/literal-backed
+  bindings for print/map contexts; string returns are supported for literal-backed values, while string arrays and
+  string pointers/references are rejected. `convert<T>` supports `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
+- **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++
+  emitter); string comparisons are rejected and string literals are limited to print/count/index/map contexts; string
+  array returns and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and
+  arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)`
+  requires a string literal or literal-backed binding; `Result.ok(value)` plus `Result.map(...)`,
+  `Result.and_then(...)`, and `Result.map2(...)` currently accept `i32`, `bool`, `f32`, literal-backed `string`,
+  ordinary user structs whose fields lower through the existing stack-backed struct path, the current single-slot
+  int-backed stdlib error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), packed `File<Mode>`
+  handles, and `Buffer<T>` handles when downstream `try(...)` consumers are explicitly typed. Downstream `try(...)`
+  preserves those handle/error-struct payloads alongside `array<T>` / `vector<T>` and `map<K, V>` handles whose element
+  or key/value kinds already fit the current collection contract. IR-backed `[args<Result<T, Error>>]`,
+  `[args<Reference<Result<T, Error>>>]`, and `[args<Pointer<Result<T, Error>>>]` packs now preserve indexed `try(...)`,
+  `Result.error(...)`, and `Result.why(...)` access across direct, pure-spread, and mixed variadic forwarding when `T`
+  already fits that same payload contract, and native executable `Result<Buffer<T>, GfxError>` values now preserve
+  `try(...)`, `Result.error(...)`, and success/error `Result.why(...)` on that same explicit typed path. Unsupported
+  math or GPU builtins fail.
+- **GLSL:** numeric/bool scalar locals (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`) plus nominal `Vec2`, `Vec3`, `Vec4`,
+  `Quat`, `Mat2`, `Mat3`, and `Mat4` bindings; string literals and other non-supported composites are rejected, and
+  entry definitions must return `void`. `convert<T>` targets match the numeric/bool list above.
+- **GLSL emitter restrictions (current):** at most one `return()` statement; static bindings are rejected;
+  assign/increment/decrement require local mutable targets; control flow must use canonical forms (`if(cond, then() {
+  ... }, else() { ... })`, `loop(count, body() { ... })`, `while(cond, body() { ... })`, `for(init, cond, step, body() {
+  ... })`); builtins require positional args with no template/block arguments, and unsupported builtins fail.
+- **GLSL type support (current):** scalar `bool`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64` plus nominal `Vec2`, `Vec3`,
+  `Vec4`, `Quat`, `Mat2`, `Mat3`, and `Mat4`. Using `i64`/`u64` or `f64` emits
+  `GL_ARB_gpu_shader_int64`/`GL_ARB_gpu_shader_fp64` requirements. Arrays, strings, general structs,
+  pointers/references, maps, and other unsupported composites are rejected.
+- **Matrix/quaternion status (draft):** VM/native, Wasm, and the C++ emitter support stdlib matrix/quaternion nominal
+  values, conversion helpers, component-wise `Mat2`/`Mat3`/`Mat4` and `Quat` `plus` + `minus`, matrix/quaternion scalar
+  scaling + divide, matrix-vector multiply, matching matrix-matrix multiply, quaternion Hamilton products, and
+  quaternion-`Vec3` rotation. GLSL now lowers nominal `Vec2`/`Vec3`/`Vec4`, `Quat`, `Mat2`, `Mat3`, and `Mat4` values,
+  direct vector/quaternion/matrix field access, component-wise vector/quaternion `plus`/`minus`, vector/quaternion
+  scalar scale/divide, `MatN * VecN` interop, matching matrix-matrix multiply, quaternion Hamilton products,
+  quaternion-`Vec3` rotation, and the explicit quaternion conversion helpers `quat_to_mat3`, `quat_to_mat4`, and
+  `mat3_to_quat`.
+- **GLSL effects/capabilities (current):** `io_out`, `io_err`, and `pathspace_*` metadata entries are accepted; other
+  effects/capabilities are rejected. `print*` calls are accepted but emitted as no-op expressions.
+- **GLSL determinism (current):** only local scalar plus nominal vector/matrix bindings are allowed; no static storage
+  or heap/placement transforms. GPU backends are treated as deterministic with no external I/O.
 - **GPU compute (draft):**
-  - A definition tagged with `[compute]` is lowered as a GPU kernel. Kernels are `void` and write outputs via buffer parameters rather than return values.
+  - A definition tagged with `[compute]` is lowered as a GPU kernel. Kernels are `void` and write outputs via buffer
+    parameters rather than return values.
   - `workgroup_size(x, y, z)` fixes the local group size for the kernel; only valid alongside `[compute]`.
-  - Kernel bodies are restricted to the GPU-safe subset (POD/`gpu_lane` types, fixed-width numeric envelopes, no IO, no heap, no strings, no recursion). Backends reject unsupported features early with diagnostics.
+  - Kernel bodies are restricted to the GPU-safe subset (POD/`gpu_lane` types, fixed-width numeric envelopes, no IO, no
+    heap, no strings, no recursion). Backends reject unsupported features early with diagnostics.
   - Host-side submission uses `/std/gpu/dispatch(kernel, gx, gy, gz, args...)` and requires `effects(gpu_dispatch)`.
   - VM/native fallback currently requires `/std/gpu/buffer<T>(count)` to use a constant `i32` literal size.
   - GPU builtins live under `/std/gpu/*` (see Core library surface).
-  - GPU ID helpers are scalar: `/std/gpu/global_id_x()`, `/std/gpu/global_id_y()`, `/std/gpu/global_id_z()` return `i32`.
+  - GPU ID helpers are scalar: `/std/gpu/global_id_x()`, `/std/gpu/global_id_y()`, `/std/gpu/global_id_z()` return
+    `i32`.
 - **Capability taxonomy (v1):**
-  - **IO:** `io_out` (stdout), `io_err` (stderr), `file_read` (filesystem input), `file_write` (filesystem output; also implies `file_read`).
+  - **IO:** `io_out` (stdout), `io_err` (stderr), `file_read` (filesystem input), `file_write` (filesystem output; also
+    implies `file_read`).
   - **Memory:** `heap_alloc` (dynamic allocation), `global_write` (mutating global state).
   - **Assets:** `asset_read`, `asset_write` (asset/database I/O).
   - **GPU:** `gpu_dispatch` (host-side GPU submission/dispatch).
@@ -322,20 +693,52 @@ module {
     `pathspace_schedule` (host metadata/event hooks; currently treated as backend metadata/no-op operations).
   - Unknown capability names are errors; capability identifiers are `lower_snake_case`.
 - **Tooling vs runtime visibility:**
-  - **Tooling surfaces:** declared effects/capabilities, resolved defaults, entry defaults, and backend allowlist violations (diagnostics).
-  - **Runtime-only logs:** resolved effect/capability masks and execution identifiers (path hashes) for tracing; source spans are optional/debug-only.
-- **Paths & imports:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically. Import expansion produces a single compilation unit; implicit-template inference may use call sites anywhere in that unit; there are no module boundaries. Import paths are parsed before text transforms, so they remain quoted without literal suffixes.
-  - **Source imports:** `import<"/std/io", version="1.2.0">` resolves packages from the import path (zipped archive or plain directory) whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`import<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate imports are ignored. Folders prefixed with `_` remain private.
+  - **Tooling surfaces:** declared effects/capabilities, resolved defaults, entry defaults, and backend allowlist
+    violations (diagnostics).
+  - **Runtime-only logs:** resolved effect/capability masks and execution identifiers (path hashes) for tracing; source
+    spans are optional/debug-only.
+- **Paths & imports:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors
+  can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically. Import expansion
+  produces a single compilation unit; implicit-template inference may use call sites anywhere in that unit; there are no
+  module boundaries. Import paths are parsed before text transforms, so they remain quoted without literal suffixes.
+  - **Source imports:** `import<"/std/io", version="1.2.0">` resolves packages from the import path (zipped archive or
+    plain directory) whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may
+    contain multiple quoted string paths—`import<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver
+    applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live
+    in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or
+    two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact
+    match. Each `.prime` source file is expanded exactly once and registered under its namespace/path (e.g., `/std/io`);
+    duplicate imports are ignored. Folders prefixed with `_` remain private.
     Legacy `include<...>` source imports are removed; use `import<...>` only.
     Legacy `--include-path` is also removed; configure import roots with
     `--import-path` (or `-I`).
-  - **Namespace imports:** `import /foo/*` brings the immediate **public** children of `/foo` into the root namespace. `import /foo/bar` brings a single **public** definition (or builtin) by its final segment; importing a non-public definition is a diagnostic. `import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported without `/*` or an explicit name). `import /std/math/*` brings all math builtins into the root namespace, or import a subset via `import /std/math/sin /std/math/pi`; `import /std/math` without a wildcard or explicit name is not supported. Imports are resolved after source imports and can be listed as `import /std/math/*, /util/*` or whitespace-separated paths.
-  - **Exports:** definitions are private by default. Add `[public]` to a definition (function, struct, method) to make it importable; `[private]` explicitly marks it as non-exported. Private definitions are still callable within the same compilation unit; visibility only affects imports.
-- **Transform-driven control flow:** control structures desugar into prefix calls that accept envelope arguments. Surface `if(condition) { … } else { … }` rewrites into `if(condition, then() { … }, else() { … })`. Surface `if(condition) { … }` (without `else`) is statement-only sugar and rewrites into `if(condition, then() { … }, else() { })`. `loop(count) { … }`, `while(condition) { … }`, and `for(init cond step) { … }` rewrite into `loop(count, do() { … })`, `while(condition, do() { … })`, and `for(init, cond, step, do() { … })`. `match(condition) { … } else { … }` rewrites into `match(condition, then() { … }, else() { … })` and behaves like `if` for boolean conditions. Value matching uses the canonical call form `match(value, case(pattern) { … }, case(other) { … }, else() { … })`; cases compare with `equal(...)`, and a final `else` block is required. The envelope names (`do`, `then`, `else`, `case`) are for readability only; any name is accepted and ignored by the compiler. Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
-- **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure{42}`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
+  - **Namespace imports:** `import /foo/*` brings the immediate **public** children of `/foo` into the root namespace.
+    `import /foo/bar` brings a single **public** definition (or builtin) by its final segment; importing a non-public
+    definition is a diagnostic. `import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported
+    without `/*` or an explicit name). `import /std/math/*` brings all math builtins into the root namespace, or import
+    a subset via `import /std/math/sin /std/math/pi`; `import /std/math` without a wildcard or explicit name is not
+    supported. Imports are resolved after source imports and can be listed as `import /std/math/*, /util/*` or
+    whitespace-separated paths.
+  - **Exports:** definitions are private by default. Add `[public]` to a definition (function, struct, method) to make
+    it importable; `[private]` explicitly marks it as non-exported. Private definitions are still callable within the
+    same compilation unit; visibility only affects imports.
+- **Transform-driven control flow:** control structures desugar into prefix calls that accept envelope arguments.
+  Surface `if(condition) { … } else { … }` rewrites into `if(condition, then() { … }, else() { … })`. Surface
+  `if(condition) { … }` (without `else`) is statement-only sugar and rewrites into `if(condition, then() { … }, else() {
+  })`. `loop(count) { … }`, `while(condition) { … }`, and `for(init cond step) { … }` rewrite into `loop(count, do() { …
+  })`, `while(condition, do() { … })`, and `for(init, cond, step, do() { … })`. `match(condition) { … } else { … }`
+  rewrites into `match(condition, then() { … }, else() { … })` and behaves like `if` for boolean conditions. Value
+  matching uses the canonical call form `match(value, case(pattern) { … }, case(other) { … }, else() { … })`; cases
+  compare with `equal(...)`, and a final `else` block is required. The envelope names (`do`, `then`, `else`, `case`) are
+  for readability only; any name is accepted and ignored by the compiler. Infix operators (`a + b`) become canonical
+  calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
+- **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution
+  or helper (`[Integer mut] exposure{42}`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as
+  `assign` or pointer-write targets.
 
 ### Transform phases (draft)
-- **Two phases:** text transforms operate on raw tokens before AST construction; semantic transforms operate on the parsed AST node.
+- **Two phases:** text transforms operate on raw tokens before AST construction; semantic transforms operate on the
+  parsed AST node.
 - **Explicit grouping:** use `text(...)` and `semantic(...)` inside the transform list to force phase placement.
   - Example:
     ```
@@ -344,15 +747,21 @@ module {
       return(a + b)
     }
     ```
-- **Auto-deduce by name:** transforms listed without `text(...)` or `semantic(...)` are assigned to their declared phase automatically. If a name exists in both registries, the compiler emits an ambiguity error.
-- **Ordering:** the compiler scans transforms left-to-right, appending each to its phase list while preserving relative order within the text and semantic phases.
-- **Scope:** a text transform may rewrite any token inside the enclosing definition/execution envelope (transform list, templates, parameters, and body). Nested definitions/lambdas receive their own transform lists.
-- **Self-expansion:** text transforms may append additional text transforms to the same node; appended transforms run after the current transform.
+- **Auto-deduce by name:** transforms listed without `text(...)` or `semantic(...)` are assigned to their declared phase
+  automatically. If a name exists in both registries, the compiler emits an ambiguity error.
+- **Ordering:** the compiler scans transforms left-to-right, appending each to its phase list while preserving relative
+  order within the text and semantic phases.
+- **Scope:** a text transform may rewrite any token inside the enclosing definition/execution envelope (transform list,
+  templates, parameters, and body). Nested definitions/lambdas receive their own transform lists.
+- **Self-expansion:** text transforms may append additional text transforms to the same node; appended transforms run
+  after the current transform.
 - **Applicability limits (v1):**
-  - **Definitions/executions only:** `return<T>`, `effects(...)`, `capabilities(...)`, `text(...)`, `semantic(...)`, `single_type_to_return`.
+  - **Definitions/executions only:** `return<T>`, `effects(...)`, `capabilities(...)`, `text(...)`, `semantic(...)`,
+    `single_type_to_return`.
   - **Definitions only:** `compute`, `workgroup_size(x, y, z)`, `unsafe`.
   - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`.
-  - **Definitions/bindings:** access/visibility markers (`public`, `private`). `static` is valid on bindings and struct helpers (disables implicit `this` on helpers).
+  - **Definitions/bindings:** access/visibility markers (`public`, `private`). `static` is valid on bindings and struct
+    helpers (disables implicit `this` on helpers).
   - **Reserved/rejected in v1:** `stack`, `heap`, `buffer` placement transforms (diagnostic).
   - Any transform outside its allowed scope is a compile-time error with a diagnostic naming the enclosing path.
 
@@ -380,20 +789,51 @@ meaning outside numeric literals (where commas may act as digit separators). Pri
 statements and envelopes—any envelope can stand alone as a statement, and unused values are discarded (for example,
 `helper()` or `1i32` can appear as standalone statements).
 When an expression is immediately followed by a binding transform list (`[...] name{...}`), the parser treats the
-binding as a new statement rather than indexing sugar on the previous expression; use `at(value, index)` / `value.at(index)`
+binding as a new statement rather than indexing sugar on the previous expression; use `at(value, index)` /
+`value.at(index)`
 or a semicolon if you intended to index.
 
 ### Slash paths & textual operator transforms
-- Slash-prefixed identifiers (`/pkg/module/thing`) are valid anywhere the Envelope expects a name; `namespace foo { ... }` is shorthand for prepending `/foo` to enclosed names, and namespaces may be reopened freely.
-- Text transforms run before the AST exists. Operator transforms scan the raw character stream and rewrite when they see a left operand and right operand, allowing optional whitespace around the operator token. Slash paths remain intact when `/` begins a path segment with no left operand (start of line or immediately after whitespace/delimiters). Binary operators respect standard precedence and associativity: `*`/`/` bind tighter than `+`/`-`, comparisons (`<`, `>`, `<=`, `>=`, `==`, `!=`) bind tighter than `&&`/`||`, and assignment (`=`) is lowest precedence and right-associative. Operators follow the same operand-based rule (`a > b` → `greater_than(a, b)`, `a < b` → `less_than(a, b)`, `a >= b` → `greater_equal(a, b)`, `a <= b` → `less_equal(a, b)`, `a == b` → `equal(a, b)`, `a != b` → `not_equal(a, b)`, `a && b` → `and(a, b)`, `a || b` → `or(a, b)`, `!a` → `not(a)`, `-a` → `negate(a)`, `a = b` → `assign(a, b)`, `++a` / `a++` → `increment(a)`, `--a` / `a--` → `decrement(a)`).
-- Because imports expand first, slash paths survive every transform untouched until the AST builder consumes them, and IR lowering never needs to reason about infix syntax.
+- Slash-prefixed identifiers (`/pkg/module/thing`) are valid anywhere the Envelope expects a name; `namespace foo { ...
+  }` is shorthand for prepending `/foo` to enclosed names, and namespaces may be reopened freely.
+- Text transforms run before the AST exists. Operator transforms scan the raw character stream and rewrite when they see
+  a left operand and right operand, allowing optional whitespace around the operator token. Slash paths remain intact
+  when `/` begins a path segment with no left operand (start of line or immediately after whitespace/delimiters). Binary
+  operators respect standard precedence and associativity: `*`/`/` bind tighter than `+`/`-`, comparisons (`<`, `>`,
+  `<=`, `>=`, `==`, `!=`) bind tighter than `&&`/`||`, and assignment (`=`) is lowest precedence and right-associative.
+  Operators follow the same operand-based rule (`a > b` → `greater_than(a, b)`, `a < b` → `less_than(a, b)`, `a >= b` →
+  `greater_equal(a, b)`, `a <= b` → `less_equal(a, b)`, `a == b` → `equal(a, b)`, `a != b` → `not_equal(a, b)`, `a && b`
+  → `and(a, b)`, `a || b` → `or(a, b)`, `!a` → `not(a)`, `-a` → `negate(a)`, `a = b` → `assign(a, b)`, `++a` / `a++` →
+  `increment(a)`, `--a` / `a--` → `decrement(a)`).
+- Because imports expand first, slash paths survive every transform untouched until the AST builder consumes them, and
+  IR lowering never needs to reason about infix syntax.
 
 ### Struct & envelope categories
-- **Struct tag as transform:** any of `[struct]`, `[pod]`, `[handle]`, or `[gpu_lane]` marks the envelope as a struct-style definition. It records a layout manifest (field names, envelopes, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. The body may include nested helper definitions; only stack-value bindings contribute to layout. Non-lifecycle helpers lower into the struct method namespace (`/<Struct>/name`) and can be called via method sugar or as plain namespace functions. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform demands it.
-- **Placement policy:** where a value lives (stack/heap/buffer) is decided by allocation helpers plus capabilities, not by struct tags. Envelopes may express requirements (e.g., `pod`, `handle`, `gpu_lane`), but placement is a call-site decision gated by capabilities. The `stack`/`heap`/`buffer` transforms remain reserved and rejected in v1.
-- **POD tag as validation:** `[pod]` on a struct-style definition asserts trivially-copyable semantics. Violations (hidden lifetimes, handles, async captures) raise diagnostics; without the tag the compiler treats the body permissively.
-- **Member syntax:** every field is a stack-value binding (`[f32 mut] exposure{1.0f32}`, `[handle<PathNode>] target{get_default()}`). In inference/surface levels, fields may omit the envelope when the initializer resolves concretely (e.g., `center{Vec3(0.0f32, 0.0f32, 0.0f32)}`). Attributes (`[mut]`, `[align_bytes(16)]`, `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
-- **Method calls & indexing:** `value.method(args...)` desugars to `/<envelope>/method(value, args...)` in the method namespace (no hidden object model), where `<envelope>` is the envelope name associated with `value`. For struct helpers with implicit `this`, the receiver becomes the hidden `this` parameter; static helpers do not accept method-call sugar. For collections, method syntax is the preferred surface style (`value.count()`, `value.at(i)`, `value.push(x)`), while helper calls remain canonical (`count(value)`, `at(value, i)`, `push(value, x)`). Vector helper surface syntax currently requires `import /std/collections/*` so the canonical stdlib wrappers are in scope. Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks and is equivalent to `value.at(index)`; `at_unsafe(value, index)` / `value.at_unsafe(index)` skips checks.
+- **Struct tag as transform:** any of `[struct]`, `[pod]`, `[handle]`, or `[gpu_lane]` marks the envelope as a
+  struct-style definition. It records a layout manifest (field names, envelopes, offsets) and validates the body, but
+  the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return
+  transforms, and no return statements. The body may include nested helper definitions; only stack-value bindings
+  contribute to layout. Non-lifecycle helpers lower into the struct method namespace (`/<Struct>/name`) and can be
+  called via method sugar or as plain namespace functions. Un-tagged definitions may still be instantiated as structs;
+  they simply skip the extra validation/metadata until another transform demands it.
+- **Placement policy:** where a value lives (stack/heap/buffer) is decided by allocation helpers plus capabilities, not
+  by struct tags. Envelopes may express requirements (e.g., `pod`, `handle`, `gpu_lane`), but placement is a call-site
+  decision gated by capabilities. The `stack`/`heap`/`buffer` transforms remain reserved and rejected in v1.
+- **POD tag as validation:** `[pod]` on a struct-style definition asserts trivially-copyable semantics. Violations
+  (hidden lifetimes, handles, async captures) raise diagnostics; without the tag the compiler treats the body
+  permissively.
+- **Member syntax:** every field is a stack-value binding (`[f32 mut] exposure{1.0f32}`, `[handle<PathNode>]
+  target{get_default()}`). In inference/surface levels, fields may omit the envelope when the initializer resolves
+  concretely (e.g., `center{Vec3(0.0f32, 0.0f32, 0.0f32)}`). Attributes (`[mut]`, `[align_bytes(16)]`,
+  `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
+- **Method calls & indexing:** `value.method(args...)` desugars to `/<envelope>/method(value, args...)` in the method
+  namespace (no hidden object model), where `<envelope>` is the envelope name associated with `value`. For struct
+  helpers with implicit `this`, the receiver becomes the hidden `this` parameter; static helpers do not accept
+  method-call sugar. For collections, method syntax is the preferred surface style (`value.count()`, `value.at(i)`,
+  `value.push(x)`), while helper calls remain canonical (`count(value)`, `at(value, i)`, `push(value, x)`). Vector
+  helper surface syntax currently requires `import /std/collections/*` so the canonical stdlib wrappers are in scope.
+  Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks and is
+  equivalent to `value.at(index)`; `at_unsafe(value, index)` / `value.at_unsafe(index)` skips checks.
 - **Struct body semantics (example):**
   ```
   [struct]
@@ -428,12 +868,25 @@ or a semicolon if you intended to index.
     }
   }
   ```
-- **Baseline layout rule:** members default to source-order packing. Backend-imposed padding is allowed only when the metadata (`layout.fields[].padding_kind`) records the reason; `[no_padding]` and `[platform_independent_padding]` fail the build if the backend cannot honor them bit-for-bit.
-- **Alignment transforms:** `[align_bytes(n)]` (or `[align_kbytes(n)]`) may appear on the struct or field; violations again produce diagnostics instead of silent adjustments.
-- **Stack value executions:** every local binding and struct field uses the binding form `name{initializer}` with optional envelope annotation (`[Type qualifiers…] name{initializer}`), so stack frames remain declarative (e.g., `[f32 mut] exposure{1.0f32}`). Concrete level keeps the envelope explicit. In inference/surface levels, omitted envelopes are allowed only when inference resolves a single concrete envelope; struct fields must resolve before layout manifest emission. Default initializers are mandatory for fields; local bindings may omit the initializer only when the envelope is a struct type with a zero-argument constructor **and** the compiler can prove the construction has no outside effects. In that case the binding desugars to `Type()` (e.g., `[BrushSettings] s` → `[BrushSettings] s{BrushSettings()}`).
-  - **No outside effects (definition):** zero-arg construction is outside-effect-free only when all of the following hold:
-    - The constructor path has an empty effects/capabilities mask (no `effects(...)`/`capabilities(...)`, and no callees with non-empty effects).
-    - Writes are limited to the newly constructed value (`this`) and local temporaries; any writes through pointers/references or to non-local bindings are disallowed.
+- **Baseline layout rule:** members default to source-order packing. Backend-imposed padding is allowed only when the
+  metadata (`layout.fields[].padding_kind`) records the reason; `[no_padding]` and `[platform_independent_padding]` fail
+  the build if the backend cannot honor them bit-for-bit.
+- **Alignment transforms:** `[align_bytes(n)]` (or `[align_kbytes(n)]`) may appear on the struct or field; violations
+  again produce diagnostics instead of silent adjustments.
+- **Stack value executions:** every local binding and struct field uses the binding form `name{initializer}` with
+  optional envelope annotation (`[Type qualifiers…] name{initializer}`), so stack frames remain declarative (e.g., `[f32
+  mut] exposure{1.0f32}`). Concrete level keeps the envelope explicit. In inference/surface levels, omitted envelopes
+  are allowed only when inference resolves a single concrete envelope; struct fields must resolve before layout manifest
+  emission. Default initializers are mandatory for fields; local bindings may omit the initializer only when the
+  envelope is a struct type with a zero-argument constructor **and** the compiler can prove the construction has no
+  outside effects. In that case the binding desugars to `Type()` (e.g., `[BrushSettings] s` → `[BrushSettings]
+  s{BrushSettings()}`).
+  - **No outside effects (definition):** zero-arg construction is outside-effect-free only when all of the following
+    hold:
+    - The constructor path has an empty effects/capabilities mask (no `effects(...)`/`capabilities(...)`, and no callees
+      with non-empty effects).
+    - Writes are limited to the newly constructed value (`this`) and local temporaries; any writes through
+      pointers/references or to non-local bindings are disallowed.
     - Field initializers are effect-free under the same rules, and all called helpers are effect-free transitively.
     - If the compiler cannot prove these constraints, omitted-initializer bindings are rejected.
   - Multi-step initializer example:
@@ -448,8 +901,17 @@ or a semicolon if you intended to index.
       return(x)
     }
     ```
-- **Lifecycle helpers (Create/Destroy):** Within a struct-tagged or field-only struct definition, nested definitions named `Create` and `Destroy` gain constructor/destructor semantics. Placement-specific variants add suffixes (`CreateStack`, `DestroyHeap`, etc.). Without these helpers the field initializer list defines the default constructor/destructor semantics. Struct helpers receive an implicit `this` unless marked `[static]`; add `mut` to the helper’s transform list when it writes to `this` (otherwise `this` stays immutable). Lifecycle helpers must return `void` and accept no parameters. We capitalise system-provided helper names so they stand out, but authors are free to use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
-  - **Helper visibility:** nested non-lifecycle helpers are normal definitions in the struct method namespace. Use `[public]` on the helper definition to export it; private helpers remain callable within the same compilation unit. Non-static helpers receive an implicit `this` (`Reference<Self>`); `[static]` disables the implicit `this` and method-call sugar.
+- **Lifecycle helpers (Create/Destroy):** Within a struct-tagged or field-only struct definition, nested definitions
+  named `Create` and `Destroy` gain constructor/destructor semantics. Placement-specific variants add suffixes
+  (`CreateStack`, `DestroyHeap`, etc.). Without these helpers the field initializer list defines the default
+  constructor/destructor semantics. Struct helpers receive an implicit `this` unless marked `[static]`; add `mut` to the
+  helper’s transform list when it writes to `this` (otherwise `this` stays immutable). Lifecycle helpers must return
+  `void` and accept no parameters. We capitalise system-provided helper names so they stand out, but authors are free to
+  use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
+  - **Helper visibility:** nested non-lifecycle helpers are normal definitions in the struct method namespace. Use
+    `[public]` on the helper definition to export it; private helpers remain callable within the same compilation unit.
+    Non-static helpers receive an implicit `this` (`Reference<Self>`); `[static]` disables the implicit `this` and
+    method-call sugar.
   ```
   import /std/math/*
   namespace demo {
@@ -469,23 +931,36 @@ or a semicolon if you intended to index.
     }
   }
   ```
-- **IR layout manifest:** `[struct]` extends the IR descriptor with `layout.total_size_bytes`, `layout.alignment_bytes`, and ordered `layout.fields`. Each field record stores `{ name, envelope, offset_bytes, size_bytes, padding_kind, category }`. Placement transforms consume this manifest verbatim, ensuring C++, VM, and GPU backends share one source of truth.
-- **Categories:** `[pod]`, `[handle]`, `[gpu_lane]` tags classify members for resource rules. Handles remain opaque tokens with subsystem-managed lifetimes; GPU lanes require staging transforms before CPU inspection.
+- **IR layout manifest:** `[struct]` extends the IR descriptor with `layout.total_size_bytes`, `layout.alignment_bytes`,
+  and ordered `layout.fields`. Each field record stores `{ name, envelope, offset_bytes, size_bytes, padding_kind,
+  category }`. Placement transforms consume this manifest verbatim, ensuring C++, VM, and GPU backends share one source
+  of truth.
+- **Categories:** `[pod]`, `[handle]`, `[gpu_lane]` tags classify members for resource rules. Handles remain opaque
+  tokens with subsystem-managed lifetimes; GPU lanes require staging transforms before CPU inspection.
 - **Category mapping:**
   - `pod`: stored inline; treated as trivially-copyable for layout.
   - `handle`: stored as an opaque reference token; lifetime is managed by the owning subsystem.
   - `gpu_lane`: stored as a GPU-only handle; CPU access requires explicit staging transforms.
   - Un-tagged fields default to `default`.
-  - Conflicts are rejected (`pod` with `handle` or `gpu_lane`, `handle` with `gpu_lane`, and `pod` definitions containing `handle`/`gpu_lane` fields).
+  - Conflicts are rejected (`pod` with `handle` or `gpu_lane`, `handle` with `gpu_lane`, and `pod` definitions
+    containing `handle`/`gpu_lane` fields).
 
 ### Transforms (draft)
-- **Purpose:** transforms are metafunctions that rewrite tokens (text transforms) or stamp semantic flags on the AST (semantic transforms). Later passes (backend filters) consume the semantic flags; transforms do not emit code directly.
-- **Evaluation mode:** when the compiler sees `[transform ...]`, it routes through the metafunction's declared signature—pure token rewrites operate on the raw stream, while semantic transforms receive the AST node and in-place metadata writers.
-- **Registry note:** only registered text transforms can appear in `text(...)` groups or `--text-transforms`; only registered semantic transforms can appear in `semantic(...)` groups or `--semantic-transforms`. Other transform names are treated as semantic directives and validated by the semantics pass (they cannot be forced into `text(...)`).
+- **Purpose:** transforms are metafunctions that rewrite tokens (text transforms) or stamp semantic flags on the AST
+  (semantic transforms). Later passes (backend filters) consume the semantic flags; transforms do not emit code
+  directly.
+- **Evaluation mode:** when the compiler sees `[transform ...]`, it routes through the metafunction's declared
+  signature—pure token rewrites operate on the raw stream, while semantic transforms receive the AST node and in-place
+  metadata writers.
+- **Registry note:** only registered text transforms can appear in `text(...)` groups or `--text-transforms`; only
+  registered semantic transforms can appear in `semantic(...)` groups or `--semantic-transforms`. Other transform names
+  are treated as semantic directives and validated by the semantics pass (they cannot be forced into `text(...)`).
 
 **Text transforms (token-level, registered)**
-- **`append_operators`:** injects `operators` into the leading transform list when missing, enabling text-transform self-expansion without repeating `operators` everywhere.
-- **`operators`:** desugars infix/prefix operators, comparisons, boolean ops, assignment, and increment/decrement (`++`/`--`) into canonical calls (`plus`, `less_than`, `assign`, `increment`, etc.).
+- **`append_operators`:** injects `operators` into the leading transform list when missing, enabling text-transform
+  self-expansion without repeating `operators` everywhere.
+- **`operators`:** desugars infix/prefix operators, comparisons, boolean ops, assignment, and increment/decrement
+  (`++`/`--`) into canonical calls (`plus`, `less_than`, `assign`, `increment`, etc.).
   - Example: `a = b` rewrites to `assign(a, b)`.
 - **`collections`:** rewrites `array<T>{...}` / `vector<T>{...}` / `map<K,V>{...}` literals into constructor calls.
 - **`implicit-utf8`:** appends `utf8` to bare string literals.
@@ -493,82 +968,211 @@ or a semicolon if you intended to index.
   - Text transform arguments are limited to identifiers and literals (no nested envelopes or calls).
 
 **Semantic transforms (AST-level, registered)**
-- **`single_type_to_return`:** semantic transform that rewrites a single bare envelope in a transform list into `return<envelope>` (e.g., `[i32] main()` → `[return<i32>] main()`); enabled by default, but can be disabled or overridden via `--no-semantic-transforms`, `--semantic-transforms`, or `--transform-list`.
+- **`single_type_to_return`:** semantic transform that rewrites a single bare envelope in a transform list into
+  `return<envelope>` (e.g., `[i32] main()` → `[return<i32>] main()`); enabled by default, but can be disabled or
+  overridden via `--no-semantic-transforms`, `--semantic-transforms`, or `--transform-list`.
 
 **Semantic directives (AST-level, validated)**
-- **`copy`:** force a copy (instead of a move) on entry for a parameter or binding. Only valid for `Copy` types; otherwise a diagnostic. Often paired with `mut`.
-- **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is valid on struct helpers (including lifecycle helpers) to make the implicit `this` mutable; using `mut` on a `[static]` helper is a diagnostic. Executions do not accept `mut`.
-- **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the envelope directly (e.g., `[i32] x{...}`), and canonicalization rewrites `[i32]` into `[restrict<i32>]` at the low level.
-- **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules are relaxed within the body, and `Reference<T>` bindings may use pointer-like initializers (`Pointer<T>`/`Reference<T>` values, including pointer arithmetic) when the pointee type matches. References created there must not escape the unsafe scope.
-- **`return<T>`:** optional contract that pins the inferred return envelope. `return<auto>` requests inference; unresolved or conflicting returns are diagnostics.
-- **`effects(...)`:** declare side-effect capabilities; absence implies purity. Backends reject unsupported capabilities.
+- **`copy`:** force a copy (instead of a move) on entry for a parameter or binding. Only valid for `Copy` types;
+  otherwise a diagnostic. Often paired with `mut`.
+- **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On
+  definitions, `mut` is valid on struct helpers (including lifecycle helpers) to make the implicit `this` mutable; using
+  `mut` on a `[static]` helper is a diagnostic. Executions do not accept `mut`.
+- **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the
+  envelope directly (e.g., `[i32] x{...}`), and canonicalization rewrites `[i32]` into `[restrict<i32>]` at the low
+  level.
+- **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules are relaxed within the body, and
+  `Reference<T>` bindings may use pointer-like initializers (`Pointer<T>`/`Reference<T>` values, including pointer
+  arithmetic) when the pointee type matches. References created there must not escape the unsafe scope.
+- **`return<T>`:** optional contract that pins the inferred return envelope. `return<auto>` requests inference;
+  unresolved or conflicting returns are diagnostics.
+- **`effects(...)`:** declare side-effect capabilities; absence implies purity. Backends reject unsupported
+  capabilities.
 - **Transform scope:** `effects(...)` and `capabilities(...)` are only valid on definitions/executions, not bindings.
-- **`align_bytes(n)`, `align_kbytes(n)`:** encode alignment requirements for struct members and buffers. `align_kbytes` applies `n * 1024` bytes before emitting the metadata.
-- **`no_padding`, `platform_independent_padding`:** layout constraints for struct definitions; they reject backend-added padding or non-deterministic padding respectively.
-- **`capabilities(...)`:** reuse the transform plumbing to describe opt-in privileges without encoding backend-specific scheduling hints.
+- **`align_bytes(n)`, `align_kbytes(n)`:** encode alignment requirements for struct members and buffers. `align_kbytes`
+  applies `n * 1024` bytes before emitting the metadata.
+- **`no_padding`, `platform_independent_padding`:** layout constraints for struct definitions; they reject backend-added
+  padding or non-deterministic padding respectively.
+- **`capabilities(...)`:** reuse the transform plumbing to describe opt-in privileges without encoding backend-specific
+  scheduling hints.
 - **`compute`:** marks a definition as a GPU kernel; kernel bodies are validated against the GPU-safe subset.
 - **`workgroup_size(x, y, z)`:** fixes the kernel's local workgroup size (must appear with `compute`).
-- **`struct`, `pod`, `handle`, `gpu_lane`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids handles/async fields).
-- **`public`, `private`:** visibility tags. On definitions, they control export visibility for imports (default: private). On bindings, they control field visibility (default: public). Mutually exclusive.
-- **`static`:** on fields, hoists storage to namespace scope while keeping the field in the layout manifest. On struct helpers, disables the implicit `this` parameter and method-call sugar.
-- **`reflect`:** marks a struct definition as reflection-enabled. It accepts no template arguments or call arguments and is rejected on non-struct definitions/executions.
-- **`generate(...)`:** declares reflection helper generation intents for reflected structs. It accepts one or more generator names and validates the generator allowlist (`Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`, `DebugPrint`, `Compare`, `Hash64`, `Clear`, `CopyFrom`, `Validate`, `Serialize`, `Deserialize`) with deterministic diagnostics.
-  - **Naming contract:** generated helpers always use `/Type/Helper` paths (`/Type/Equal`, `/Type/Default`, etc.), where `Type` is the canonical struct path.
-  - **Visibility contract:** generated helpers are emitted with explicit `[public]`, so `import /Type/*` exposes them by helper name.
-  - **Collision/override contract:** generated helpers never silently override existing definitions; if any `/Type/Helper` path already exists, semantics reports `generated reflection helper already exists: /Type/Helper`.
+- **`struct`, `pod`, `handle`, `gpu_lane`:** declarative tags that emit metadata/validation only. They never change
+  syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids
+  handles/async fields).
+- **`public`, `private`:** visibility tags. On definitions, they control export visibility for imports (default:
+  private). On bindings, they control field visibility (default: public). Mutually exclusive.
+- **`static`:** on fields, hoists storage to namespace scope while keeping the field in the layout manifest. On struct
+  helpers, disables the implicit `this` parameter and method-call sugar.
+- **`reflect`:** marks a struct definition as reflection-enabled. It accepts no template arguments or call arguments and
+  is rejected on non-struct definitions/executions.
+- **`generate(...)`:** declares reflection helper generation intents for reflected structs. It accepts one or more
+  generator names and validates the generator allowlist (`Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`,
+  `DebugPrint`, `Compare`, `Hash64`, `Clear`, `CopyFrom`, `Validate`, `Serialize`, `Deserialize`) with deterministic
+  diagnostics.
+  - **Naming contract:** generated helpers always use `/Type/Helper` paths (`/Type/Equal`, `/Type/Default`, etc.), where
+    `Type` is the canonical struct path.
+  - **Visibility contract:** generated helpers are emitted with explicit `[public]`, so `import /Type/*` exposes them by
+    helper name.
+  - **Collision/override contract:** generated helpers never silently override existing definitions; if any
+    `/Type/Helper` path already exists, semantics reports `generated reflection helper already exists: /Type/Helper`.
   - **Current v1 generated helpers:** `Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`, and `DebugPrint`.
-  - **`Equal`/`NotEqual`:** emits `/Type/Equal([Type] left, [Type] right) -> bool` and `/Type/NotEqual([Type] left, [Type] right) -> bool` with field-wise comparisons over non-static fields (`equal(...)` folded by `and`, `not_equal(...)` folded by `or`), using identity results when no instance fields exist (`Equal -> true`, `NotEqual -> false`).
-  - **`Default`:** emits `/Type/Default() -> Type` returning `Type()`; static fields are ignored by constructor argument mapping.
-  - **`IsDefault`:** emits `/Type/IsDefault([Type] value) -> bool` by comparing non-static fields against a synthesized default instance (`Type()`); structs with no instance fields return `true`.
-  - **`Clone`:** emits `/Type/Clone([Type] value) -> Type` by rebuilding `Type(...)` from non-static fields (static-only structs clone as `Type()`).
-  - **`DebugPrint`:** emits `/Type/DebugPrint([Type] value) -> void` with deterministic line-based output (`/Type {`, one line per non-static field name, closing `}`, or `/Type {}` when no instance fields exist).
-  - **v1.1 progress (`Compare`, `Hash64`, `Clear`, `CopyFrom`):** `Compare` emits `/Type/Compare([Type] left, [Type] right) -> i32` with lexicographic field ordering over non-static fields (`-1` when `left < right`, `1` when `left > right`, `0` when equal); `Hash64` emits `/Type/Hash64([Type] value) -> u64` and folds non-static fields in deterministic source order using `convert<u64>(field)` with stable FNV-style multiply/add constants; `Clear` emits `/Type/Clear([Type mut] value) -> void` and resets non-static fields by assigning from a synthesized default instance (`Type()`); `CopyFrom` emits `/Type/CopyFrom([Type mut] value, [Type] other) -> void` and copies non-static fields from `other` into `value` in deterministic source order. Structs with no instance fields (or only static fields) keep identity/no-op behavior (`Compare -> 0`, `Hash64 -> 1469598103934665603u64`, `Clear -> no-op`, `CopyFrom -> no-op`), and `Compare`/`Hash64` now emit deterministic helper-scoped diagnostics when a field envelope is unsupported.
-  - **v2 progress (`Validate`, `Serialize`, `Deserialize`):** `Validate` emits `/Type/Validate([Type] value) -> Result<FileError>` plus deterministic field-check scaffolding hooks `/Type/ValidateField_<field>([Type] value) -> bool` for each non-static field in source order. The generated hooks currently return `true` by default, and `/Type/Validate` short-circuits in source order: the first failing hook returns a deterministic non-zero error code (`1`-based field index), otherwise `Result.ok()`. `Serialize` emits `/Type/Serialize([Type] value) -> array<u64>` with a stable leading format tag (`1u64`) followed by `convert<u64>(field)` payload slots in deterministic non-static field order. `Deserialize` emits `/Type/Deserialize([Type mut] value, [array<u64>] payload) -> Result<FileError>`, enforces deterministic payload shape/version guards (`count(payload) == field_count + 1`, `at(payload, 0i32) == 1u64`), returns deterministic non-zero error codes (`1` = size mismatch, `2` = version mismatch), decodes payload slots in source order via `convert<fieldType>(at(payload, index))`, and returns `Result.ok()` on success. Structs with no instance fields (or only static fields) keep identity behavior (`Validate` returns `Result.ok()`, `Serialize` returns `array<u64>(1u64)`, `Deserialize` only applies the size/version guards then returns `Result.ok()`). `ToString` generation remains deferred; requesting `generate(ToString)` emits a deterministic diagnostic directing users to `DebugPrint`.
-- **Baseline reflection API scope (v1):** reflection APIs are compile-time-only metadata queries. Runtime reflection objects/tables are out of scope and rejected (`/meta/object`, `/meta/table`).
-- **Reserved compile-time metadata query names:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`, `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, `meta.field_visibility<T>(i)`, `meta.has_transform<T>(name)`, and `meta.has_trait<T>(traitName)` / `meta.has_trait<T, Elem>(Indexable)`. Query execution semantics are implemented in follow-up roadmap items.
-- **Current primitive status:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`, `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, `meta.field_visibility<T>(i)`, `meta.has_transform<T>(name)`, and `meta.has_trait<...>(...)` evaluate at compile time in semantics. Reflection diagnostics for non-reflect field-metadata targets, invalid indices, and unsupported metadata query names are deterministic.
-- **Field metadata target rule:** `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)` require `T` to be a `reflect`-enabled struct.
-- **IR elimination rule:** reflection metadata queries must be eliminated before IR emission; the IR lowerer rejects non-eliminated reserved `/meta/*` reflection query paths.
+  - **`Equal`/`NotEqual`:** emits `/Type/Equal([Type] left, [Type] right) -> bool` and `/Type/NotEqual([Type] left,
+    [Type] right) -> bool` with field-wise comparisons over non-static fields (`equal(...)` folded by `and`,
+    `not_equal(...)` folded by `or`), using identity results when no instance fields exist (`Equal -> true`, `NotEqual
+    -> false`).
+  - **`Default`:** emits `/Type/Default() -> Type` returning `Type()`; static fields are ignored by constructor argument
+    mapping.
+  - **`IsDefault`:** emits `/Type/IsDefault([Type] value) -> bool` by comparing non-static fields against a synthesized
+    default instance (`Type()`); structs with no instance fields return `true`.
+  - **`Clone`:** emits `/Type/Clone([Type] value) -> Type` by rebuilding `Type(...)` from non-static fields (static-only
+    structs clone as `Type()`).
+  - **`DebugPrint`:** emits `/Type/DebugPrint([Type] value) -> void` with deterministic line-based output (`/Type {`,
+    one line per non-static field name, closing `}`, or `/Type {}` when no instance fields exist).
+  - **v1.1 progress (`Compare`, `Hash64`, `Clear`, `CopyFrom`):** `Compare` emits `/Type/Compare([Type] left, [Type]
+    right) -> i32` with lexicographic field ordering over non-static fields (`-1` when `left < right`, `1` when `left >
+    right`, `0` when equal); `Hash64` emits `/Type/Hash64([Type] value) -> u64` and folds non-static fields in
+    deterministic source order using `convert<u64>(field)` with stable FNV-style multiply/add constants; `Clear` emits
+    `/Type/Clear([Type mut] value) -> void` and resets non-static fields by assigning from a synthesized default
+    instance (`Type()`); `CopyFrom` emits `/Type/CopyFrom([Type mut] value, [Type] other) -> void` and copies non-static
+    fields from `other` into `value` in deterministic source order. Structs with no instance fields (or only static
+    fields) keep identity/no-op behavior (`Compare -> 0`, `Hash64 -> 1469598103934665603u64`, `Clear -> no-op`,
+    `CopyFrom -> no-op`), and `Compare`/`Hash64` now emit deterministic helper-scoped diagnostics when a field envelope
+    is unsupported.
+  - **v2 progress (`Validate`, `Serialize`, `Deserialize`):** `Validate` emits `/Type/Validate([Type] value) ->
+    Result<FileError>` plus deterministic field-check scaffolding hooks `/Type/ValidateField_<field>([Type] value) ->
+    bool` for each non-static field in source order. The generated hooks currently return `true` by default, and
+    `/Type/Validate` short-circuits in source order: the first failing hook returns a deterministic non-zero error code
+    (`1`-based field index), otherwise `Result.ok()`. `Serialize` emits `/Type/Serialize([Type] value) -> array<u64>`
+    with a stable leading format tag (`1u64`) followed by `convert<u64>(field)` payload slots in deterministic
+    non-static field order. `Deserialize` emits `/Type/Deserialize([Type mut] value, [array<u64>] payload) ->
+    Result<FileError>`, enforces deterministic payload shape/version guards (`count(payload) == field_count + 1`,
+    `at(payload, 0i32) == 1u64`), returns deterministic non-zero error codes (`1` = size mismatch, `2` = version
+    mismatch), decodes payload slots in source order via `convert<fieldType>(at(payload, index))`, and returns
+    `Result.ok()` on success. Structs with no instance fields (or only static fields) keep identity behavior (`Validate`
+    returns `Result.ok()`, `Serialize` returns `array<u64>(1u64)`, `Deserialize` only applies the size/version guards
+    then returns `Result.ok()`). `ToString` generation remains deferred; requesting `generate(ToString)` emits a
+    deterministic diagnostic directing users to `DebugPrint`.
+- **Baseline reflection API scope (v1):** reflection APIs are compile-time-only metadata queries. Runtime reflection
+  objects/tables are out of scope and rejected (`/meta/object`, `/meta/table`).
+- **Reserved compile-time metadata query names:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`,
+  `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, `meta.field_visibility<T>(i)`,
+  `meta.has_transform<T>(name)`, and `meta.has_trait<T>(traitName)` / `meta.has_trait<T, Elem>(Indexable)`. Query
+  execution semantics are implemented in follow-up roadmap items.
+- **Current primitive status:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`, `meta.field_count<T>`,
+  `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, `meta.field_visibility<T>(i)`, `meta.has_transform<T>(name)`, and
+  `meta.has_trait<...>(...)` evaluate at compile time in semantics. Reflection diagnostics for non-reflect
+  field-metadata targets, invalid indices, and unsupported metadata query names are deterministic.
+- **Field metadata target rule:** `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
+  `meta.field_visibility<T>(i)` require `T` to be a `reflect`-enabled struct.
+- **IR elimination rule:** reflection metadata queries must be eliminated before IR emission; the IR lowerer rejects
+  non-eliminated reserved `/meta/*` reflection query paths.
 - **`stack`, `heap`, `buffer`:** placement transforms reserved for future backends; currently rejected in validation.
-- **`shared_scope`:** loop-only transform that makes a loop body share one scope across all iterations. Valid on `loop`/`while`/`for` only. Bindings declared in the loop body are initialized once before the loop body runs and persist for the duration of the loop without escaping the surrounding scope.
-The lists above reflect the built-in transforms recognized by the compiler today; future additions will extend them here.
+- **`shared_scope`:** loop-only transform that makes a loop body share one scope across all iterations. Valid on
+  `loop`/`while`/`for` only. Bindings declared in the loop body are initialized once before the loop body runs and
+  persist for the duration of the loop without escaping the surrounding scope.
+The lists above reflect the built-in transforms recognized by the compiler today; future additions will extend them
+here.
 
 ### Core library surface (draft)
-- **Standard math (draft):** the core math set lives under `/std/math/*` (e.g., `/std/math/sin`, `/std/math/pi`). `import /std/math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification. Unsupported envelope/operation pairs produce diagnostics. Only fixed-width numeric envelopes are supported today; software numeric envelopes are parsed/typed but are rejected by current backends.
+- **Standard math (draft):** the core math set lives under `/std/math/*` (e.g., `/std/math/sin`, `/std/math/pi`).
+  `import /std/math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification.
+  Unsupported envelope/operation pairs produce diagnostics. Only fixed-width numeric envelopes are supported today;
+  software numeric envelopes are parsed/typed but are rejected by current backends.
   - **Constants:** `/std/math/pi`, `/std/math/tau`, `/std/math/e`.
-  - **Basic:** `/std/math/abs`, `/std/math/sign`, `/std/math/min`, `/std/math/max`, `/std/math/clamp`, `/std/math/lerp`, `/std/math/saturate`.
+  - **Basic:** `/std/math/abs`, `/std/math/sign`, `/std/math/min`, `/std/math/max`, `/std/math/clamp`, `/std/math/lerp`,
+    `/std/math/saturate`.
   - **Rounding:** `/std/math/floor`, `/std/math/ceil`, `/std/math/round`, `/std/math/trunc`, `/std/math/fract`.
-  - **Power/log:** `/std/math/sqrt`, `/std/math/cbrt`, `/std/math/pow`, `/std/math/exp`, `/std/math/exp2`, `/std/math/log`, `/std/math/log2`, `/std/math/log10`.
-  - **Operand rules (current):** `abs`, `sign`, `saturate`, `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands (`i32`, `i64`, `u64`, `f32`, `f64`). `min`, `max`, `clamp`, `lerp`, and `pow` reject mixed signed/unsigned or mixed integer/float operands. All remaining `/std/math/*` builtins require float operands (`atan2`, `hypot`, `copysign` are binary; `fma` is ternary).
-  - **Integer pow:** for integer operands, `pow` requires a non-negative exponent; negative exponents abort in VM/native (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
-  - **Trig:** `/std/math/sin`, `/std/math/cos`, `/std/math/tan`, `/std/math/asin`, `/std/math/acos`, `/std/math/atan`, `/std/math/atan2`, `/std/math/radians`, `/std/math/degrees`.
-  - **Hyperbolic:** `/std/math/sinh`, `/std/math/cosh`, `/std/math/tanh`, `/std/math/asinh`, `/std/math/acosh`, `/std/math/atanh`.
+  - **Power/log:** `/std/math/sqrt`, `/std/math/cbrt`, `/std/math/pow`, `/std/math/exp`, `/std/math/exp2`,
+    `/std/math/log`, `/std/math/log2`, `/std/math/log10`.
+  - **Operand rules (current):** `abs`, `sign`, `saturate`, `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric
+    operands (`i32`, `i64`, `u64`, `f32`, `f64`). `min`, `max`, `clamp`, `lerp`, and `pow` reject mixed signed/unsigned
+    or mixed integer/float operands. All remaining `/std/math/*` builtins require float operands (`atan2`, `hypot`,
+    `copysign` are binary; `fma` is ternary).
+  - **Integer pow:** for integer operands, `pow` requires a non-negative exponent; negative exponents abort in VM/native
+    (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
+  - **Trig:** `/std/math/sin`, `/std/math/cos`, `/std/math/tan`, `/std/math/asin`, `/std/math/acos`, `/std/math/atan`,
+    `/std/math/atan2`, `/std/math/radians`, `/std/math/degrees`.
+  - **Hyperbolic:** `/std/math/sinh`, `/std/math/cosh`, `/std/math/tanh`, `/std/math/asinh`, `/std/math/acosh`,
+    `/std/math/atanh`.
   - **Float utils:** `/std/math/fma`, `/std/math/hypot`, `/std/math/copysign`.
   - **Predicates:** `/std/math/is_nan`, `/std/math/is_inf`, `/std/math/is_finite`.
-  - **Backend limits (current):** VM/native math uses fast approximations and is validated against the C++/exe baseline within tolerances. Large-magnitude trig/log/exp inputs are only required to stay finite and within basic range bounds (e.g., `|sin(x)| <= 1`), and may diverge from the C++/exe baseline. Conformance tests use tolerance or range checks for these cases. Float matrix/quaternion reference suites currently use an absolute `1e-4` tolerance policy.
-  - **Vector, color, matrix, quaternion types (draft):** stdlib ships `.prime` definitions for `Vec2`, `Vec3`, `Vec4`, `ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`, `Mat2`, `Mat3`, `Mat4`, and `Quat`. These are distinct nominal types; colors are not aliases of vectors, matrices are not aliases of arrays/vectors, and quaternions are not aliases of `Vec4`.
-    - **Vectors:** constructors, component accessors, and member methods like `length()`, `normalize()` (in-place), and `toNormalized()` (returns a new value).
-    - **Colors:** constructors plus color-space helpers (e.g., sRGB/linear conversions) and per-channel ops. sRGB types remain distinct from linear `ColorRGB`/`ColorRGBA`.
-    - **Matrices:** constructors plus direct public scalar component access via `mRC` field names (`m00`, `m01`, ...), where the first index is the row and the second index is the column.
-    - **Quaternions:** constructors plus direct public scalar component access via `x`, `y`, `z`, and `w`, along with `toNormalized()` / `normalize()` helpers. The stdlib now also ships `quat_to_mat3(q)`, `quat_to_mat4(q)`, and `mat3_to_quat(m)`.
+  - **Backend limits (current):** VM/native math uses fast approximations and is validated against the C++/exe baseline
+    within tolerances. Large-magnitude trig/log/exp inputs are only required to stay finite and within basic range
+    bounds (e.g., `|sin(x)| <= 1`), and may diverge from the C++/exe baseline. Conformance tests use tolerance or range
+    checks for these cases. Float matrix/quaternion reference suites currently use an absolute `1e-4` tolerance policy.
+  - **Vector, color, matrix, quaternion types (draft):** stdlib ships `.prime` definitions for `Vec2`, `Vec3`, `Vec4`,
+    `ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`, `Mat2`, `Mat3`, `Mat4`, and `Quat`. These are distinct nominal
+    types; colors are not aliases of vectors, matrices are not aliases of arrays/vectors, and quaternions are not
+    aliases of `Vec4`.
+    - **Vectors:** constructors, component accessors, and member methods like `length()`, `normalize()` (in-place), and
+      `toNormalized()` (returns a new value).
+    - **Colors:** constructors plus color-space helpers (e.g., sRGB/linear conversions) and per-channel ops. sRGB types
+      remain distinct from linear `ColorRGB`/`ColorRGBA`.
+    - **Matrices:** constructors plus direct public scalar component access via `mRC` field names (`m00`, `m01`, ...),
+      where the first index is the row and the second index is the column.
+    - **Quaternions:** constructors plus direct public scalar component access via `x`, `y`, `z`, and `w`, along with
+      `toNormalized()` / `normalize()` helpers. The stdlib now also ships `quat_to_mat3(q)`, `quat_to_mat4(q)`, and
+      `mat3_to_quat(m)`.
   - **Matrix/quaternion interaction contract (draft):**
     - No implicit conversion between scalar/vector/matrix/quaternion families; use explicit constructor/helper calls.
-    - `plus`/`minus` require identical operand envelopes (`VecN` with same `N`, `MatRxC` with same shape, or `Quat` with `Quat`).
-    - Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules, the documented `Mat*`/`Quat` `multiply` allowlist, `Mat* / scalar` plus `Quat / scalar` divide validation, and deterministic binding/return/call diagnostics for implicit `Mat*`/`Quat` family conversions. VM/native, Wasm, and the C++ emitter now also lower component-wise `Mat2`/`Mat3`/`Mat4` and `Quat` `plus` + `minus`, scalar-left/right matrix/quaternion scaling, matrix/quaternion-by-scalar divide, matrix-vector multiply, matching matrix-matrix multiply, quaternion-quaternion Hamilton products, and quaternion-`Vec3` rotation through the documented contract. GLSL now lowers nominal `Vec2`/`Vec3`/`Vec4`, `Quat`, `Mat2`/`Mat3`/`Mat4` values, direct vector/quaternion/matrix field access, component-wise vector/quaternion `plus`/`minus`, vector/quaternion scalar scale/divide, `MatN * VecN` interop, matching matrix-matrix multiply, quaternion-quaternion Hamilton products, quaternion-`Vec3` rotation, and the explicit conversion helpers `quat_to_mat3`, `quat_to_mat4`, and `mat3_to_quat`.
-    - `multiply` is allowed for: scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`), matrix-vector (`Mat * VecN` with compatible inner dimension), matrix-matrix (`MatRxC * MatCxK`), quaternion-quaternion (Hamilton product), and quaternion-vector rotation (`Quat * Vec3`).
-    - `divide` is allowed only as composite-by-scalar (`VecN / S`, `Mat / S`, `Quat / S`); scalar/composite and composite/composite division are diagnostics unless explicitly documented.
-    - Matrix/vector multiplication uses a column-vector convention (`result = Mat * Vec`), and transform composition order follows canonical call nesting (`MatA * (MatB * Vec)`).
+    - `plus`/`minus` require identical operand envelopes (`VecN` with same `N`, `MatRxC` with same shape, or `Quat` with
+      `Quat`).
+    - Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules, the
+      documented `Mat*`/`Quat` `multiply` allowlist, `Mat* / scalar` plus `Quat / scalar` divide validation, and
+      deterministic binding/return/call diagnostics for implicit `Mat*`/`Quat` family conversions. VM/native, Wasm, and
+      the C++ emitter now also lower component-wise `Mat2`/`Mat3`/`Mat4` and `Quat` `plus` + `minus`, scalar-left/right
+      matrix/quaternion scaling, matrix/quaternion-by-scalar divide, matrix-vector multiply, matching matrix-matrix
+      multiply, quaternion-quaternion Hamilton products, and quaternion-`Vec3` rotation through the documented contract.
+      GLSL now lowers nominal `Vec2`/`Vec3`/`Vec4`, `Quat`, `Mat2`/`Mat3`/`Mat4` values, direct vector/quaternion/matrix
+      field access, component-wise vector/quaternion `plus`/`minus`, vector/quaternion scalar scale/divide, `MatN *
+      VecN` interop, matching matrix-matrix multiply, quaternion-quaternion Hamilton products, quaternion-`Vec3`
+      rotation, and the explicit conversion helpers `quat_to_mat3`, `quat_to_mat4`, and `mat3_to_quat`.
+    - `multiply` is allowed for: scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`),
+      matrix-vector (`Mat * VecN` with compatible inner dimension), matrix-matrix (`MatRxC * MatCxK`),
+      quaternion-quaternion (Hamilton product), and quaternion-vector rotation (`Quat * Vec3`).
+    - `divide` is allowed only as composite-by-scalar (`VecN / S`, `Mat / S`, `Quat / S`); scalar/composite and
+      composite/composite division are diagnostics unless explicitly documented.
+    - Matrix/vector multiplication uses a column-vector convention (`result = Mat * Vec`), and transform composition
+      order follows canonical call nesting (`MatA * (MatB * Vec)`).
     - Conformance reference tests for float matrix/quaternion outputs use an absolute `1e-4` tolerance policy.
-    - Equality is component-wise exact (`equal`, `not_equal`); tolerance-based comparison is explicit helper API, not operator sugar.
-    - Scalar `/std/math/*` builtins remain scalar-only unless a specific builtin documents vector/matrix/quaternion overloads.
-- **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time. The call evaluates to `value`, so it can be nested or returned.
-- **`increment(target)` / `decrement(target)`:** canonical mutation helpers used by `++`/`--` desugaring. Only valid on mutable numeric bindings; they evaluate to the updated value.
-- **`count(value)` / `value.count()` / `contains(value, key)` / `at(value, index)` / `value.at(index)` / `value[index]` / `at_unsafe(value, index)` / `value.at_unsafe(index)`:** collection helpers. Method-call and index forms are preferred surface syntax where supported; helper-call forms are canonical equivalents. `contains` is currently map-only and returns `bool`. `at` performs bounds checking; `at_unsafe` does not. In VM/native backends, an out-of-bounds `at` aborts execution (prints a diagnostic to stderr and returns exit code `3`).
-- **Runtime error reporting (VM/native):** runtime guards (bounds checks, missing map keys, invalid integer `pow` exponents, and the current fixed-capacity vector-growth guard) abort execution, print a diagnostic to stderr, and return exit code `3`. Parse/semantic/lowering errors remain exit code `2`.
-- **`print(value)` / `print_line(value)` / `print_error(value)` / `print_line_error(value)`:** stdout/stderr output primitives (statement-only). `print`/`print_line` require `io_out`, and `print_error`/`print_line_error` require `io_err`. VM/native backends support integer/bool values plus string literals/bindings; other string operations still require the C++ emitter.
-- **`plus`, `minus`, `multiply`, `divide`, `negate`:** arithmetic wrappers used after operator desugaring. Operands must be numeric (`i32`, `i64`, `u64`, `f32`, `f64`); bool/string/pointer operands are rejected. Mixed signed/unsigned integer operands are rejected in VM/native lowering (`u64` only combines with `u64`), and `negate` rejects unsigned operands. Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset (see Pointer arithmetic below).
-- **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`, `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned ordering; `i32`/`i64` use signed ordering), and mixed signed/unsigned comparisons are rejected in the current IR/native subset; `bool` participates as a signed `0/1`, so `bool` with `u64` is rejected as mixed signedness. Boolean combinators accept `bool` inputs only. Control-flow conditions (`if`/`while`/`for`) require `bool` results; use comparisons or `bool{value}` when needed. The current IR/native subset accepts integer/bool/float operands for comparisons; string comparisons still require the C++ emitter.
-- **`/std/math/clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports integer clamps (`i32`, `i64`, `u64`) and float clamps (`f32`, `f64`) and follows the usual integer promotion rules (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are rejected.
+    - Equality is component-wise exact (`equal`, `not_equal`); tolerance-based comparison is explicit helper API, not
+      operator sugar.
+    - Scalar `/std/math/*` builtins remain scalar-only unless a specific builtin documents vector/matrix/quaternion
+      overloads.
+- **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time.
+  The call evaluates to `value`, so it can be nested or returned.
+- **`increment(target)` / `decrement(target)`:** canonical mutation helpers used by `++`/`--` desugaring. Only valid on
+  mutable numeric bindings; they evaluate to the updated value.
+- **`count(value)` / `value.count()` / `contains(value, key)` / `at(value, index)` / `value.at(index)` / `value[index]`
+  / `at_unsafe(value, index)` / `value.at_unsafe(index)`:** collection helpers. Method-call and index forms are
+  preferred surface syntax where supported; helper-call forms are canonical equivalents. `contains` is currently
+  map-only and returns `bool`. `at` performs bounds checking; `at_unsafe` does not. In VM/native backends, an
+  out-of-bounds `at` aborts execution (prints a diagnostic to stderr and returns exit code `3`).
+- **Runtime error reporting (VM/native):** runtime guards (bounds checks, missing map keys, invalid integer `pow`
+  exponents, and the current fixed-capacity vector-growth guard) abort execution, print a diagnostic to stderr, and
+  return exit code `3`. Parse/semantic/lowering errors remain exit code `2`.
+- **`print(value)` / `print_line(value)` / `print_error(value)` / `print_line_error(value)`:** stdout/stderr output
+  primitives (statement-only). `print`/`print_line` require `io_out`, and `print_error`/`print_line_error` require
+  `io_err`. VM/native backends support integer/bool values plus string literals/bindings; other string operations still
+  require the C++ emitter.
+- **`plus`, `minus`, `multiply`, `divide`, `negate`:** arithmetic wrappers used after operator desugaring. Operands must
+  be numeric (`i32`, `i64`, `u64`, `f32`, `f64`); bool/string/pointer operands are rejected. Mixed signed/unsigned
+  integer operands are rejected in VM/native lowering (`u64` only combines with `u64`), and `negate` rejects unsigned
+  operands. Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset (see
+  Pointer arithmetic below).
+- **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`,
+  `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison
+  wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned
+  ordering; `i32`/`i64` use signed ordering), and mixed signed/unsigned comparisons are rejected in the current
+  IR/native subset; `bool` participates as a signed `0/1`, so `bool` with `u64` is rejected as mixed signedness. Boolean
+  combinators accept `bool` inputs only. Control-flow conditions (`if`/`while`/`for`) require `bool` results; use
+  comparisons or `bool{value}` when needed. The current IR/native subset accepts integer/bool/float operands for
+  comparisons; string comparisons still require the C++ emitter.
+- **`/std/math/clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports
+  integer clamps (`i32`, `i64`, `u64`) and float clamps (`f32`, `f64`) and follows the usual integer promotion rules
+  (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are
+  rejected.
 - **`if(condition, then() { ... }, else() { ... })`:** canonical conditional form after control-flow desugaring.
   - Signature: `if(Envelope, Envelope, Envelope)`
   - 1) must evaluate to a boolean (`bool`), either a boolean value or a function returning boolean
@@ -576,10 +1180,15 @@ The lists above reflect the built-in transforms recognized by the compiler today
   - 3) must be a definition envelope; its body yields the `if` result when the condition is `false`
   - Surface `if(condition) { ... }` is statement-only sugar and lowers to `if(condition, then() { ... }, else() { })`.
   - Evaluation is lazy: the condition is evaluated first, then exactly one of the two definition bodies is evaluated.
-- **`loop(count) { ... }`:** statement-only loop helper. `count` must be an integer envelope (`i32`, `i64`, `u64`), and the body is required. Negative counts are errors.
-- **`while(condition) { ... }`:** statement-only loop helper. `condition` must evaluate to `bool` (or a function returning `bool`).
-- **`for(init cond step) { ... }`:** statement-only loop helper. `init`, `cond`, and `step` are evaluated in order; `cond` must evaluate to `bool`. Bindings are allowed in any slot. Semicolons and commas are optional separators (e.g., `for(init; cond; step)`).
-- **Loop scope:** loop bodies default to per-iteration scope. Add `[shared_scope]` before the loop to share one scope across all iterations.
+- **`loop(count) { ... }`:** statement-only loop helper. `count` must be an integer envelope (`i32`, `i64`, `u64`), and
+  the body is required. Negative counts are errors.
+- **`while(condition) { ... }`:** statement-only loop helper. `condition` must evaluate to `bool` (or a function
+  returning `bool`).
+- **`for(init cond step) { ... }`:** statement-only loop helper. `init`, `cond`, and `step` are evaluated in order;
+  `cond` must evaluate to `bool`. Bindings are allowed in any slot. Semicolons and commas are optional separators (e.g.,
+  `for(init; cond; step)`).
+- **Loop scope:** loop bodies default to per-iteration scope. Add `[shared_scope]` before the loop to share one scope
+  across all iterations.
   - Example:
     ```
     [shared_scope]
@@ -614,8 +1223,25 @@ for(
   do() { work(i) }
 )
 ```
-- **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions must return on all control paths; fallthrough is a compile-time error. Inside value blocks (binding initializers / brace constructors), `return(value)` returns from the block and yields its value.
-- **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or bindings backed by literals (string table entries). VM/native vectors currently use fixed capacity; `push`/`reserve` succeed while capacity allows and error once exceeded, and shrinking helpers (`pop`, `clear`, `remove_at`, `remove_swap`) continue to work against the fixed capacity until dynamic-vector parity lands. Vector locals now lower through an explicit record header (`count`, `capacity`, `data_ptr`), and vector element access/mutation uses `data_ptr` indirection instead of fixed in-header element offsets. Vector constructors above the current VM/native local capacity limit (`256`) are rejected during lowering with `vector literal exceeds local capacity limit (256)`, and `reserve` with out-of-range or negative integer literal expressions (including folded signed/unsigned `plus`/`minus`/`negate`, such as `plus(200i32, 57i32)`, `minus(1u64, 2u64)`, `plus(18446744073709551615u64, 1u64)`, or `negate(1i32)`) is also rejected at lowering time (`vector reserve exceeds local capacity limit (256)` / `vector reserve expects non-negative capacity` / `vector reserve literal expression overflow`). Folded signed and unsigned literal-expression overflow now emits the deterministic lowering diagnostic `vector reserve literal expression overflow` instead of deferring to backend/runtime integer-overflow behavior.
+- **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void`
+  definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions
+  must return on all control paths; fallthrough is a compile-time error. Inside value blocks (binding initializers /
+  brace constructors), `return(value)` returns from the block and yields its value.
+- **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus
+  `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals
+  are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or
+  bindings backed by literals (string table entries). VM/native vectors currently use fixed capacity; `push`/`reserve`
+  succeed while capacity allows and error once exceeded, and shrinking helpers (`pop`, `clear`, `remove_at`,
+  `remove_swap`) continue to work against the fixed capacity until dynamic-vector parity lands. Vector locals now lower
+  through an explicit record header (`count`, `capacity`, `data_ptr`), and vector element access/mutation uses
+  `data_ptr` indirection instead of fixed in-header element offsets. Vector constructors above the current VM/native
+  local capacity limit (`256`) are rejected during lowering with `vector literal exceeds local capacity limit (256)`,
+  and `reserve` with out-of-range or negative integer literal expressions (including folded signed/unsigned
+  `plus`/`minus`/`negate`, such as `plus(200i32, 57i32)`, `minus(1u64, 2u64)`, `plus(18446744073709551615u64, 1u64)`, or
+  `negate(1i32)`) is also rejected at lowering time (`vector reserve exceeds local capacity limit (256)` / `vector
+  reserve expects non-negative capacity` / `vector reserve literal expression overflow`). Folded signed and unsigned
+  literal-expression overflow now emits the deterministic lowering diagnostic `vector reserve literal expression
+  overflow` instead of deferring to backend/runtime integer-overflow behavior.
 
 ### Standard Library Reference (v0)
 - **Status:** stable snapshot of the current builtin surface (v0).
@@ -632,13 +1258,69 @@ for(
   - **`VM/native (limited)`**: supported with the listed restrictions.
 - **Conformance notes:**
   - String comparisons are **`C++`** only; VM/native reject them.
-  - `map<K, V>` keys currently use the builtin ordered-map `Comparable` subset: `i32`, `i64`, `u64`, `f32`, `f64`, `bool`, or `string`. Template parameters defer this check until monomorphisation; user-defined `Comparable` keys remain blocked on the future stdlib-owned map runtime.
-  - Builtin `map<K, V>` values must be numeric/bool for **`VM/native`**; string values remain **`C++`** only on the builtin map path, while the experimental stdlib map helper path now has VM/native `mapTryAt` coverage for string values.
+  - `map<K, V>` keys currently use the builtin ordered-map `Comparable` subset: `i32`, `i64`, `u64`, `f32`, `f64`,
+    `bool`, or `string`. Template parameters defer this check until monomorphisation; user-defined `Comparable` keys
+    remain blocked on the future stdlib-owned map runtime.
+  - Builtin `map<K, V>` values must be numeric/bool for **`VM/native`**; string values remain **`C++`** only on the
+    builtin map path, while the experimental stdlib map helper path now has VM/native `mapTryAt` coverage for string
+    values.
   - String indexing in **`VM/native (limited)`** requires string literals or bindings backed by literals.
-  - `vector<T>` is specified as a C++-style dynamic contiguous sequence (`push`/`reserve` may grow capacity). VM/native currently still enforce fixed-capacity growth limits; migration to full dynamic semantics is tracked in `docs/todo.md`.
-  - Stdlib collection helpers now share `ContainerError` for deterministic error payloads: `containerMissingKey()` (`1`), `containerIndexOutOfBounds()` (`2`), `containerEmpty()` (`3`), and `containerCapacityExceeded()` (`4`). `containerErrorStatus(err)` packs a status-only `Result<ContainerError>`, `containerErrorResult<T>(err)` packs a `Result<T, ContainerError>` error value for the current IR-backed backends, the public `/ContainerError/why([ContainerError] err)` wrapper keeps explicit type-owned error strings on the stdlib surface, the public `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and `/ContainerError/capacity_exceeded()` wrappers keep the current constructor values on that same type-owned surface, and `Result.why(Result<ContainerError>)` maps container error codes to the same stable literal-backed messages. Builtin empty-vector `pop` runtime aborts and checked vector indexing/removal aborts now use the same `"container empty"` / `"container index out of bounds"` wording across VM/native/C++ flows.
-  - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_vector/*` (`vector<T>(...)`, `vectorNew`, `vectorSingle`, `vectorPair`, `vectorTriple`, `vectorQuad`, `vectorQuint`, `vectorSext`, `vectorSept`, `vectorOct`, `vectorCount`, `vectorCapacity`, `vectorReserve`, `vectorPush`, `vectorPop`, `vectorClear`, `vectorRemoveAt`, `vectorRemoveSwap`, `vectorAt`, `vectorAtUnsafe`) that now returns an experimental `Vector<T>` record backed by `.prime` heap-pointer storage. The current slice includes a real variadic `.prime` constructor built on `[args<T>]` parameters, with the older fixed-arity helper names retained as compatibility forwarders, plus reserve/push and pop/clear/remove helpers on that pointer-backed storage. `Vector<T>` now carries `.prime` `Move` and `Destroy` hooks plus `Pointer<uninitialized<T>>` slot storage, so constructor materialization, growth, checked/unchecked access, removed-element destruction, survivor compaction/swap, and scope-exit cleanup all run through stdlib-owned `init(...)`, `borrow(...)`, `take(...)`, and `drop(...)` flows instead of reusing builtin vector ownership gates. Imported canonical `/std/collections/vector/*` plus `/std/collections/vector*` helper spellings now rewrite onto that same experimental implementation whenever their receiver is an experimental `Vector<T>` value, the canonical namespaced `/std/collections/vector/*` declarations themselves now advertise `Vector<T>` receivers directly for explicit bindings, the wrapper-layer `vectorCount|vectorCapacity|vectorAt*|vectorPush|vectorPop|vectorReserve|vectorClear|vectorRemove*` helpers now forward through that same canonical vector wrapper path with inferred receivers instead of hard-coded builtin `vector<T>` parameters, imported wrapper-layer `vectorNew|vectorSingle|vectorPair|vectorTriple|...` constructor aliases now likewise rewrite onto `/std/collections/experimental_vector/*` whenever an explicit experimental `Vector<T>` destination already pins the target type, infer that same experimental `Vector<T>` type for imported `[auto]` locals and `return<auto>` definitions, and now also rewrite nested direct helper-call plus method-call receiver expressions built from those aliases onto the experimental constructor path before helper resolution, imported positional canonical `/std/collections/vector/vector<T>(...)` calls now prefer a real variadic canonical wrapper over that same experimental constructor for `auto` bindings and temporary receiver flows, and imported named-argument canonical constructor calls now resolve through same-path fixed-arity `/std/collections/vector/vector` overloads instead of helper-path rewrites for those same inferred and temporary receiver cases.
-  - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_map/*` (`Entry<K, V>`, `entry(key, value)`, `map<K, V>(entries...)`, `mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`, `mapQuint`, `mapSext`, `mapSept`, `mapOct`, `mapInsert`, `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, `mapAtUnsafe`, `mapInsertRef`, `mapCountRef`, `mapContainsRef`, `mapTryAtRef`, `mapAtRef`, `mapAtUnsafeRef`) that now returns an experimental `Map<K, V>` struct backed by parallel experimental `.prime` `Vector<K>` / `Vector<V>` storage. The current constructor surface includes a real variadic `.prime` `map(entries...)` helper over trailing `[args<Entry<K, V>>]` parameters, with the older fixed-arity helper names retained as compatibility forwarders. Lookup follows `Comparable<K>` instead of the canonical builtin map runtime, checked experimental `mapAt(...)` reuses the canonical `map key not found` runtime contract on misses, literal-backed `Map<string, V>` helper flows now work across C++/VM/native, VM/native non-literal string-key constructors/lookups preserve the canonical string-key reject diagnostics, experimental map values now support `mapInsert(...)` plus `values.insert(...)` updates, and overwrite/update plus scope-exit cleanup now run through the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly `drop(...)`ing and `init(...)`ing payload slots. Borrowed `Reference<Map<K, V>>` values now support distinct `*Ref` free-helper calls plus `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()`/`.insert()` method-call sugar through `.prime` `/Reference/*` helpers, and both value plus borrowed-reference experimental maps now participate in shared `value[key]` bracket access with the same key/type diagnostics as other map helper forms.
+  - `vector<T>` is specified as a C++-style dynamic contiguous sequence (`push`/`reserve` may grow capacity). VM/native
+    currently still enforce fixed-capacity growth limits; migration to full dynamic semantics is tracked in
+    `docs/todo.md`.
+  - Stdlib collection helpers now share `ContainerError` for deterministic error payloads: `containerMissingKey()`
+    (`1`), `containerIndexOutOfBounds()` (`2`), `containerEmpty()` (`3`), and `containerCapacityExceeded()` (`4`).
+    `containerErrorStatus(err)` packs a status-only `Result<ContainerError>`, `containerErrorResult<T>(err)` packs a
+    `Result<T, ContainerError>` error value for the current IR-backed backends, the public
+    `/ContainerError/why([ContainerError] err)` wrapper keeps explicit type-owned error strings on the stdlib surface,
+    the public `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and
+    `/ContainerError/capacity_exceeded()` wrappers keep the current constructor values on that same type-owned surface,
+    and `Result.why(Result<ContainerError>)` maps container error codes to the same stable literal-backed messages.
+    Builtin empty-vector `pop` runtime aborts and checked vector indexing/removal aborts now use the same `"container
+    empty"` / `"container index out of bounds"` wording across VM/native/C++ flows.
+  - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_vector/*`
+    (`vector<T>(...)`, `vectorNew`, `vectorSingle`, `vectorPair`, `vectorTriple`, `vectorQuad`, `vectorQuint`,
+    `vectorSext`, `vectorSept`, `vectorOct`, `vectorCount`, `vectorCapacity`, `vectorReserve`, `vectorPush`,
+    `vectorPop`, `vectorClear`, `vectorRemoveAt`, `vectorRemoveSwap`, `vectorAt`, `vectorAtUnsafe`) that now returns an
+    experimental `Vector<T>` record backed by `.prime` heap-pointer storage. The current slice includes a real variadic
+    `.prime` constructor built on `[args<T>]` parameters, with the older fixed-arity helper names retained as
+    compatibility forwarders, plus reserve/push and pop/clear/remove helpers on that pointer-backed storage. `Vector<T>`
+    now carries `.prime` `Move` and `Destroy` hooks plus `Pointer<uninitialized<T>>` slot storage, so constructor
+    materialization, growth, checked/unchecked access, removed-element destruction, survivor compaction/swap, and
+    scope-exit cleanup all run through stdlib-owned `init(...)`, `borrow(...)`, `take(...)`, and `drop(...)` flows
+    instead of reusing builtin vector ownership gates. Imported canonical `/std/collections/vector/*` plus
+    `/std/collections/vector*` helper spellings now rewrite onto that same experimental implementation whenever their
+    receiver is an experimental `Vector<T>` value, the canonical namespaced `/std/collections/vector/*` declarations
+    themselves now advertise `Vector<T>` receivers directly for explicit bindings, the wrapper-layer
+    `vectorCount|vectorCapacity|vectorAt*|vectorPush|vectorPop|vectorReserve|vectorClear|vectorRemove*` helpers now
+    forward through that same canonical vector wrapper path with inferred receivers instead of hard-coded builtin
+    `vector<T>` parameters, imported wrapper-layer `vectorNew|vectorSingle|vectorPair|vectorTriple|...` constructor
+    aliases now likewise rewrite onto `/std/collections/experimental_vector/*` whenever an explicit experimental
+    `Vector<T>` destination already pins the target type, infer that same experimental `Vector<T>` type for imported
+    `[auto]` locals and `return<auto>` definitions, and now also rewrite nested direct helper-call plus method-call
+    receiver expressions built from those aliases onto the experimental constructor path before helper resolution,
+    imported positional canonical `/std/collections/vector/vector<T>(...)` calls now prefer a real variadic canonical
+    wrapper over that same experimental constructor for `auto` bindings and temporary receiver flows, and imported
+    named-argument canonical constructor calls now resolve through same-path fixed-arity
+    `/std/collections/vector/vector` overloads instead of helper-path rewrites for those same inferred and temporary
+    receiver cases.
+  - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_map/*` (`Entry<K, V>`,
+    `entry(key, value)`, `map<K, V>(entries...)`, `mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`,
+    `mapQuint`, `mapSext`, `mapSept`, `mapOct`, `mapInsert`, `mapCount`, `mapContains`, `mapTryAt`, `mapAt`,
+    `mapAtUnsafe`, `mapInsertRef`, `mapCountRef`, `mapContainsRef`, `mapTryAtRef`, `mapAtRef`, `mapAtUnsafeRef`) that
+    now returns an experimental `Map<K, V>` struct backed by parallel experimental `.prime` `Vector<K>` / `Vector<V>`
+    storage. The current constructor surface includes a real variadic `.prime` `map(entries...)` helper over trailing
+    `[args<Entry<K, V>>]` parameters, with the older fixed-arity helper names retained as compatibility forwarders.
+    Lookup follows `Comparable<K>` instead of the canonical builtin map runtime, checked experimental `mapAt(...)`
+    reuses the canonical `map key not found` runtime contract on misses, literal-backed `Map<string, V>` helper flows
+    now work across C++/VM/native, VM/native non-literal string-key constructors/lookups preserve the canonical
+    string-key reject diagnostics, experimental map values now support `mapInsert(...)` plus `values.insert(...)`
+    updates, and overwrite/update plus scope-exit cleanup now run through the same pointer-backed uninitialized-slot
+    ownership flow as experimental vectors by explicitly `drop(...)`ing and `init(...)`ing payload slots. Borrowed
+    `Reference<Map<K, V>>` values now support distinct `*Ref` free-helper calls plus
+    `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()`/`.insert()` method-call sugar through `.prime`
+    `/Reference/*` helpers, and both value plus borrowed-reference experimental maps now participate in shared
+    `value[key]` bracket access with the same key/type diagnostics as other map helper forms.
 - **Core builtins (root namespace):**
   - **`assign(target, value)`** (statement): mutates a mutable binding or dereferenced pointer.
   - **`increment(target)` / `decrement(target)`** (statement): mutation helpers used by `++`/`--` desugaring.
@@ -648,26 +1330,41 @@ for(
   - **`for(init, cond, step, do() { ... })`** (statement): loop helper with init/cond/step.
   - **`return(value)`**: explicit return helper.
   - **`count(value)` / `value.count()`**: collection length. Vector forms currently require `import /std/collections/*`.
-  - **`contains(value, key)`**: map key probe without triggering the checked missing-key abort path used by `at(value, key)`.
-  - **`at(value, index)` / `value.at(index)` / `value[index]` / `at_unsafe(value, index)`**: bounds-checked and unchecked indexing (`value[index]` and `value.at(index)` are the same safe operation). Vector forms currently require `import /std/collections/*`.
+  - **`contains(value, key)`**: map key probe without triggering the checked missing-key abort path used by `at(value,
+    key)`.
+  - **`at(value, index)` / `value.at(index)` / `value[index]` / `at_unsafe(value, index)`**: bounds-checked and
+    unchecked indexing (`value[index]` and `value.at(index)` are the same safe operation). Vector forms currently
+    require `import /std/collections/*`.
   - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
   - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
   - **Pointer helpers:** `location`, `dereference`.
   - **Ownership helpers:** `move`, `clone`.
   - **Uninitialized helpers (draft):** `init`, `drop`, `take`, `borrow`.
   - **GPU builtins (draft):**
-    - `Buffer<T>` is a hybrid GPU resource-handle surface: allocation, upload/readback, dispatch, and storage access stay in language/runtime substrate, while higher-level wrappers should converge on stdlib `.prime` definitions. Canonical and experimental `/std/gfx/*` now provide `.prime`-authored `Buffer.count()`, `Buffer.empty()`, `Buffer.is_valid()`, `Buffer.readback()`, and compute-only `Buffer.load(index)` / `Buffer.store(index, value)` convenience helpers, the preferred constructor-shaped `Buffer<T>(count)` allocation surface, plus explicit slash-call `/std/gfx/Buffer/allocate<T>(count)`, `/std/gfx/Buffer/upload(...)`, `/std/gfx/Buffer/load(...)`, and `/std/gfx/Buffer/store(...)` wrappers over the public handle layout and builtin host allocation/readback/upload/storage substrate.
+    - `Buffer<T>` is a hybrid GPU resource-handle surface: allocation, upload/readback, dispatch, and storage access
+      stay in language/runtime substrate, while higher-level wrappers should converge on stdlib `.prime` definitions.
+      Canonical and experimental `/std/gfx/*` now provide `.prime`-authored `Buffer.count()`, `Buffer.empty()`,
+      `Buffer.is_valid()`, `Buffer.readback()`, and compute-only `Buffer.load(index)` / `Buffer.store(index, value)`
+      convenience helpers, the preferred constructor-shaped `Buffer<T>(count)` allocation surface, plus explicit
+      slash-call `/std/gfx/Buffer/allocate<T>(count)`, `/std/gfx/Buffer/upload(...)`, `/std/gfx/Buffer/load(...)`, and
+      `/std/gfx/Buffer/store(...)` wrappers over the public handle layout and builtin host
+      allocation/readback/upload/storage substrate.
     - `/std/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
     - `/std/gpu/global_id_y()` → `i32` (kernel invocation y coordinate).
     - `/std/gpu/global_id_z()` → `i32` (kernel invocation z coordinate).
     - `/std/gpu/buffer_load(Buffer<T>, index)` / `/std/gpu/buffer_store(Buffer<T>, index, value)` for storage buffers.
-    - `/std/gpu/buffer<T>(count)` / `/std/gpu/upload(array<T>)` / `/std/gpu/readback(Buffer<T>)` for host-side resource management.
-    - `/std/gpu/dispatch(kernel, gx, gy, gz, args...)` submits a compute kernel and requires `effects(gpu_dispatch)`. For determinism in v1, dispatch is blocking and `/std/gpu/readback` returns only after completion.
+    - `/std/gpu/buffer<T>(count)` / `/std/gpu/upload(array<T>)` / `/std/gpu/readback(Buffer<T>)` for host-side resource
+      management.
+    - `/std/gpu/dispatch(kernel, gx, gy, gz, args...)` submits a compute kernel and requires `effects(gpu_dispatch)`.
+      For determinism in v1, dispatch is blocking and `/std/gpu/readback` returns only after completion.
   - **Operators (desugared forms):** `plus`, `minus`, `multiply`, `divide`, `negate`, `increment`, `decrement`.
-  - **Comparisons/booleans:** `greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`, `and`, `or`, `not`.
+  - **Comparisons/booleans:** `greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`, `and`,
+    `or`, `not`.
   - **Result helpers (draft):**
   - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
-  - `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract stay language-defined, while constructors, helper combinators, and domain-specific error policy should keep moving into stdlib `.prime`.
+  - `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract stay
+    language-defined, while constructors, helper combinators, and domain-specific error policy should keep moving into
+    stdlib `.prime`.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
@@ -811,7 +1508,8 @@ sum_two_files([string] a, [string] b) {
 
 ### File I/O (draft)
 - **RAII object:** `File<Mode>` is the owning file handle with automatic close on scope exit (`Destroy`).
-  - `File<Mode>` is a hybrid surface: host file open/read/write/close behavior remains effect-gated runtime substrate, while the user-facing helper layer should live in stdlib `.prime`.
+  - `File<Mode>` is a hybrid surface: host file open/read/write/close behavior remains effect-gated runtime substrate,
+    while the user-facing helper layer should live in stdlib `.prime`.
   - `File<Mode>` is move-only; `Clone` is a compile-time error.
   - `close()` disarms the handle so `Destroy` becomes a no-op.
 - **Modes:** `Read`, `Write`, `Append`.
@@ -848,7 +1546,8 @@ sum_two_files([string] a, [string] b) {
     surface while platform-specific code-to-string translation stays builtin substrate. It also defines
     `FileError.eof()` so EOF values can be constructed from the same type-owned stdlib surface, plus
     `FileError.is_eof(err)` so EOF classification can use that same surface via direct calls or `err.is_eof()`.
-- **Effect requirement:** read-only file operations require `effects(file_read)` and write/append operations require `effects(file_write)`. `file_write` also implies `file_read` for compatibility.
+- **Effect requirement:** read-only file operations require `effects(file_read)` and write/append operations require
+  `effects(file_write)`. `file_write` also implies `file_read` for compatibility.
 - **Example:**
   ```
   [return<Result<FileError>> effects(file_write, io_err)
@@ -878,10 +1577,41 @@ sum_two_files([string] a, [string] b) {
   - `ppm.write(path, width, height, pixels) -> Result<ImageError>`
   - `png.read(width, height, pixels, path) -> Result<ImageError>`
   - `png.write(path, width, height, pixels) -> Result<ImageError>`
-- **Buffer contract:** `width` and `height` are `i32` out-parameters, and `pixels` is a flat `vector<i32>` in RGB byte order (`r, g, b, r, g, b, ...`).
-- **Current effect requirement:** image file I/O follows `File<...>` behavior: `ppm.read(...)` and `png.read(...)` require `effects(file_read, heap_alloc)` because they reset/materialize the pixel buffer, while `ppm.write(...)` and `png.write(...)` require `effects(file_write)`. `file_write` still implies `file_read` for compatibility with mixed read/write entrypoints.
-- **Current backend contract:** `ppm.read(...)` currently parses ASCII `P3` and binary `P6` PPM files in VM/native/Wasm (and C++ emitter flows via the shared stdlib implementation). Missing files, malformed headers, overflowed read-side size arithmetic, unsupported max values, non-positive dimensions, missing binary-raster separators, truncated payloads, and out-of-range ASCII component values deterministically return `image_invalid_operation`. On Wasm-wasi, the current `effects(file_read, heap_alloc)` read contract now compiles through target validation instead of failing on the shared heap-backed pixel-buffer materialization path. `ppm.write(...)` now emits ASCII `P3` PPM files in VM/native/Wasm for strictly positive `width`/`height` pairs with an exact `width * height * 3` RGB payload; invalid dimensions, payload mismatches, overflowed write-side size arithmetic, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`. `png.read(...)` now validates PNG signatures/chunks, including CRCs for critical chunks and stricter `PLTE`/`IDAT` ordering for the current subset, and fully decodes the current PNG read subset for both non-interlaced and Adam7-interlaced images: 1/2/4/8/16-bit grayscale, 1/2/4/8-bit indexed-color, 8/16-bit grayscale+alpha, and 8/16-bit RGB/RGBA inputs whose `IDAT` payload uses stored/no-compression deflate blocks, fixed-Huffman deflate blocks, or dynamic-Huffman deflate blocks, with filter-`0`, filter-`1` (`Sub`), filter-`2` (`Up`), filter-`3` (`Average`), and filter-`4` (`Paeth`) scanlines. The shared decoder accepts a single `PLTE` chunk before the `IDAT` run when present, indexed-color inputs require that palette before decode, and multi-chunk `IDAT` payloads must stay consecutive once decoding data begins. Fixed-Huffman reads now cover both literal-only payloads and length/distance backreferences with overlapping copy semantics, and dynamic-Huffman reads now cover both literal-only payloads and length/distance backreferences with explicit code-length tables. Successful reads materialize the public flat RGB buffer, reconstructing Adam7 passes into image order while expanding packed grayscale samples to full-range RGB, downscaling 16-bit channel samples into RGB bytes, expanding palette indexes into RGB, and dropping alpha when decoding 8/16-bit grayscale+alpha or 8/16-bit RGBA inputs. Malformed or missing PNGs, including critical-chunk CRC mismatches, overflowed read-side size arithmetic, invalid `PLTE`/`IDAT` ordering, malformed Adam7 scanline payloads, and indexed palette overruns, deterministically return `image_invalid_operation`. `png.write(...)` now emits non-interlaced 8-bit RGB PNG files in VM/native/Wasm (and C++ emitter flows via the shared stdlib implementation) using a single `IHDR`/`IDAT`/`IEND` layout, stored/no-compression deflate blocks, and filter-`0` scanlines for the current write subset; invalid dimensions, payload mismatches, overflowed write-side size arithmetic, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`.
-- **Error strings:** `ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or `image_invalid_operation`.
+- **Buffer contract:** `width` and `height` are `i32` out-parameters, and `pixels` is a flat `vector<i32>` in RGB byte
+  order (`r, g, b, r, g, b, ...`).
+- **Current effect requirement:** image file I/O follows `File<...>` behavior: `ppm.read(...)` and `png.read(...)`
+  require `effects(file_read, heap_alloc)` because they reset/materialize the pixel buffer, while `ppm.write(...)` and
+  `png.write(...)` require `effects(file_write)`. `file_write` still implies `file_read` for compatibility with mixed
+  read/write entrypoints.
+- **Current backend contract:** `ppm.read(...)` currently parses ASCII `P3` and binary `P6` PPM files in VM/native/Wasm
+  (and C++ emitter flows via the shared stdlib implementation). Missing files, malformed headers, overflowed read-side
+  size arithmetic, unsupported max values, non-positive dimensions, missing binary-raster separators, truncated
+  payloads, and out-of-range ASCII component values deterministically return `image_invalid_operation`. On Wasm-wasi,
+  the current `effects(file_read, heap_alloc)` read contract now compiles through target validation instead of failing
+  on the shared heap-backed pixel-buffer materialization path. `ppm.write(...)` now emits ASCII `P3` PPM files in
+  VM/native/Wasm for strictly positive `width`/`height` pairs with an exact `width * height * 3` RGB payload; invalid
+  dimensions, payload mismatches, overflowed write-side size arithmetic, out-of-range components, and file-open/write
+  failures deterministically return `image_invalid_operation`. `png.read(...)` now validates PNG signatures/chunks,
+  including CRCs for critical chunks and stricter `PLTE`/`IDAT` ordering for the current subset, and fully decodes the
+  current PNG read subset for both non-interlaced and Adam7-interlaced images: 1/2/4/8/16-bit grayscale, 1/2/4/8-bit
+  indexed-color, 8/16-bit grayscale+alpha, and 8/16-bit RGB/RGBA inputs whose `IDAT` payload uses stored/no-compression
+  deflate blocks, fixed-Huffman deflate blocks, or dynamic-Huffman deflate blocks, with filter-`0`, filter-`1` (`Sub`),
+  filter-`2` (`Up`), filter-`3` (`Average`), and filter-`4` (`Paeth`) scanlines. The shared decoder accepts a single
+  `PLTE` chunk before the `IDAT` run when present, indexed-color inputs require that palette before decode, and
+  multi-chunk `IDAT` payloads must stay consecutive once decoding data begins. Fixed-Huffman reads now cover both
+  literal-only payloads and length/distance backreferences with overlapping copy semantics, and dynamic-Huffman reads
+  now cover both literal-only payloads and length/distance backreferences with explicit code-length tables. Successful
+  reads materialize the public flat RGB buffer, reconstructing Adam7 passes into image order while expanding packed
+  grayscale samples to full-range RGB, downscaling 16-bit channel samples into RGB bytes, expanding palette indexes into
+  RGB, and dropping alpha when decoding 8/16-bit grayscale+alpha or 8/16-bit RGBA inputs. Malformed or missing PNGs,
+  including critical-chunk CRC mismatches, overflowed read-side size arithmetic, invalid `PLTE`/`IDAT` ordering,
+  malformed Adam7 scanline payloads, and indexed palette overruns, deterministically return `image_invalid_operation`.
+  `png.write(...)` now emits non-interlaced 8-bit RGB PNG files in VM/native/Wasm (and C++ emitter flows via the shared
+  stdlib implementation) using a single `IHDR`/`IDAT`/`IEND` layout, stored/no-compression deflate blocks, and
+  filter-`0` scanlines for the current write subset; invalid dimensions, payload mismatches, overflowed write-side size
+  arithmetic, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`.
+- **Error strings:** `ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or
+  `image_invalid_operation`.
   - Import `/std/image/*` for the current stdlib-authored ImageError helper layer:
     `imageReadUnsupported()`, `imageWriteUnsupported()`, `imageInvalidOperation()`,
     `imageErrorStatus(err)`, and `imageErrorResult<T>(err)`.
@@ -908,31 +1638,57 @@ sum_two_files([string] a, [string] b) {
   ```
 
 ## Runtime Stack Model
-- **Frames:** VM and native execution both support dynamic call frames for `Call`/`CallVoid` when callable IR opcodes are present. Lowering still inlines source-level definition calls, so entry-lowered source programs typically use one frame unless callable IR is emitted directly. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset into this slot space and `dereference` uses `LoadIndirect`/`StoreIndirect`.
-- **Deterministic evaluation:** arguments evaluate left-to-right; boolean `and`/`or` short-circuit; `return(value)` unwinds the current definition. In value blocks, `return(value)` exits the block and yields its value. Implicit `return(void)` fires if a definition body reaches the end.
+- **Frames:** VM and native execution both support dynamic call frames for `Call`/`CallVoid` when callable IR opcodes
+  are present. Lowering still inlines source-level definition calls, so entry-lowered source programs typically use one
+  frame unless callable IR is emitted directly. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset
+  into this slot space and `dereference` uses `LoadIndirect`/`StoreIndirect`.
+- **Deterministic evaluation:** arguments evaluate left-to-right; boolean `and`/`or` short-circuit; `return(value)`
+  unwinds the current definition. In value blocks, `return(value)` exits the block and yields its value. Implicit
+  `return(void)` fires if a definition body reaches the end.
 - **Indirect alignment:** indirect addresses must be 16-byte aligned; misaligned dereferences are VM runtime errors.
-- **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right argument evaluation inside the active frame.
+- **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right
+  argument evaluation inside the active frame.
 - **Resource handles:** handles live inside frame slots as opaque values; lifetimes follow lexical scope.
-- **Tail execution:** lowering marks tail-position calls in metadata; backends may reuse frames when the tail flag is set. VM/native currently ignore the hint; GPU backends may require tail-safe forms for determinism.
-- **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Effects are validated during lowering; runtime enforcement is limited to builtin checks.
+- **Tail execution:** lowering marks tail-position calls in metadata; backends may reuse frames when the tail flag is
+  set. VM/native currently ignore the hint; GPU backends may require tail-safe forms for determinism.
+- **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Effects are validated during lowering;
+  runtime enforcement is limited to builtin checks.
 
 ### Execution Metadata
-- **Scheduling scope:** queue/thread selection stays host-driven; there are no stack- or runner-specific annotations yet, so executions inherit the embedding runtime’s default placement. Lowering writes `scheduling_scope = 0` in PSIR metadata until explicit scheduling transforms exist.
-- **Effects & capabilities:** lowering records `effect_mask` and `capability_mask` in PSIR metadata. If no `capabilities` transform is supplied, `capability_mask` mirrors the active effects for the definition; explicit capability lists narrow the mask.
-- **Instrumentation:** `instrumentation_flags` are reserved for tracing/source-map hooks. Bit 0 (`tail_execution`) is set when the final statement is `return(def_call(...))` or (for `void` definitions) a final `def_call(...)`. Backends may treat this as a tail-call hint; no backend currently requires it.
+- **Scheduling scope:** queue/thread selection stays host-driven; there are no stack- or runner-specific annotations
+  yet, so executions inherit the embedding runtime’s default placement. Lowering writes `scheduling_scope = 0` in PSIR
+  metadata until explicit scheduling transforms exist.
+- **Effects & capabilities:** lowering records `effect_mask` and `capability_mask` in PSIR metadata. If no
+  `capabilities` transform is supplied, `capability_mask` mirrors the active effects for the definition; explicit
+  capability lists narrow the mask.
+- **Instrumentation:** `instrumentation_flags` are reserved for tracing/source-map hooks. Bit 0 (`tail_execution`) is
+  set when the final statement is `return(def_call(...))` or (for `void` definitions) a final `def_call(...)`. Backends
+  may treat this as a tail-call hint; no backend currently requires it.
 
 ### Native Allocator & Scheduler (IR Optimization Path)
-- **Pipeline shape:** stack-form IR is lowered to block-local virtual registers, then processed in deterministic order: liveness intervals, linear-scan allocation, spill/reload insertion, block-local scheduling, and verifier checks.
-- **Linear-scan allocator design:** each virtual register interval uses one `startPosition`/`endPosition` pair derived from liveness ranges; intervals are processed sorted by `(start, end, virtual_register)`.
-- **Register assignment policy:** free physical registers are kept sorted ascending, so allocation picks the lowest available register first.
-- **Spill heuristic:** only `SpillFarthestEnd` is supported. When pressure exceeds available physical registers, the active interval with the farthest end point is the spill candidate; ties spill the higher virtual register ID first.
-- **Spill insertion contract:** spill/reload insertion consumes allocator assignments and emits deterministic edge-safe reloads/spills; verifier passes reject assignment/edge mismatches before lifting back to stack-form IR.
-- **Scheduler design:** scheduling runs per basic block and preserves control-flow edge metadata. A dependency DAG is built from def-use edges plus barrier ordering constraints.
-- **Scheduler barriers:** control flow, calls, returns, prints, file I/O, `StoreLocal`, and indirect loads/stores are treated as barriers to preserve observable behavior and memory ordering.
-- **Scheduler heuristic:** ready instructions are chosen by highest latency score first (division > multiply > add/sub/compare > default), with a +2 penalty for each spilled use/def register; ties pick lower original instruction index.
-- **Verification contract:** the schedule/allocation verifier checks one-to-one instruction mapping, dependency ordering, barrier ordering, register range validity, and branch-edge compatibility.
-- **Debug dump format:** allocator/scheduler outcomes are tracked through the native emitter instrumentation dump format `native_emitter_debug_v1`, emitted by `formatNativeEmitterDebugDump(...)`.
-  - `[instrumentation]` reports totals and sorted per-function counters (`function[i].*`), ordered by `(functionIndex, functionName)`.
+- **Pipeline shape:** stack-form IR is lowered to block-local virtual registers, then processed in deterministic order:
+  liveness intervals, linear-scan allocation, spill/reload insertion, block-local scheduling, and verifier checks.
+- **Linear-scan allocator design:** each virtual register interval uses one `startPosition`/`endPosition` pair derived
+  from liveness ranges; intervals are processed sorted by `(start, end, virtual_register)`.
+- **Register assignment policy:** free physical registers are kept sorted ascending, so allocation picks the lowest
+  available register first.
+- **Spill heuristic:** only `SpillFarthestEnd` is supported. When pressure exceeds available physical registers, the
+  active interval with the farthest end point is the spill candidate; ties spill the higher virtual register ID first.
+- **Spill insertion contract:** spill/reload insertion consumes allocator assignments and emits deterministic edge-safe
+  reloads/spills; verifier passes reject assignment/edge mismatches before lifting back to stack-form IR.
+- **Scheduler design:** scheduling runs per basic block and preserves control-flow edge metadata. A dependency DAG is
+  built from def-use edges plus barrier ordering constraints.
+- **Scheduler barriers:** control flow, calls, returns, prints, file I/O, `StoreLocal`, and indirect loads/stores are
+  treated as barriers to preserve observable behavior and memory ordering.
+- **Scheduler heuristic:** ready instructions are chosen by highest latency score first (division > multiply >
+  add/sub/compare > default), with a +2 penalty for each spilled use/def register; ties pick lower original instruction
+  index.
+- **Verification contract:** the schedule/allocation verifier checks one-to-one instruction mapping, dependency
+  ordering, barrier ordering, register range validity, and branch-edge compatibility.
+- **Debug dump format:** allocator/scheduler outcomes are tracked through the native emitter instrumentation dump format
+  `native_emitter_debug_v1`, emitted by `formatNativeEmitterDebugDump(...)`.
+  - `[instrumentation]` reports totals and sorted per-function counters (`function[i].*`), ordered by `(functionIndex,
+    functionName)`.
   - `[optimization]` reports pre/post totals and `applied` (`1` when an optimization comparison was recorded, else `0`).
 - **Debug dump example (optimization applied):**
   ```text
@@ -1005,15 +1761,19 @@ sum_two_files([string] a, [string] b) {
 
 ### Type Grammar (canonical)
 - **Atomic:** `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `void`, `Self`.
-- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, draft stdlib-owned `soa_vector<T>`, and draft math value types (`Mat2`, `Mat3`, `Mat4`, `Quat`).
+- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, draft stdlib-owned `soa_vector<T>`,
+  and draft math value types (`Mat2`, `Mat3`, `Mat4`, `Quat`).
 - **User types:** struct definitions and named aliases.
 - **Template applications:** `Name<T1, T2, ...>`.
 
 ### Core Type Set (portable)
 - `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`.
 - `array<T>`, `vector<T>`, `map<K, V>` where parameters are core types.
-- Draft extension: `soa_vector<T>` for explicit structure-of-arrays storage of SoA-safe struct `T`. Target end-state: stdlib `.prime` implementation on top of generic language/runtime SoA substrate, not a permanent compiler-owned container.
-- Draft extension: `Mat2`, `Mat3`, `Mat4`, and `Quat` with explicit conversion-only interaction rules (not yet portable across backends).
+- Draft extension: `soa_vector<T>` for explicit structure-of-arrays storage of SoA-safe struct `T`. Target end-state:
+  stdlib `.prime` implementation on top of generic language/runtime SoA substrate, not a permanent compiler-owned
+  container.
+- Draft extension: `Mat2`, `Mat3`, `Mat4`, and `Quat` with explicit conversion-only interaction rules (not yet portable
+  across backends).
 - `Pointer<T>`, `Reference<T>` where `T` is primitive or a struct type.
 - User-defined structs with layout manifests.
 - Types outside this set are backend-specific and must be rejected by backends that do not support them.
@@ -1023,11 +1783,23 @@ The ownership matrix below is the canonical reference for which public type surf
 language/runtime-owned, which remain hybrid, and which should move fully into stdlib
 `.prime` implementations.
 
-| Category | Public types/surfaces | Ownership rule | Migration stance |
-| --- | --- | --- | --- |
-| `core` | fixed-width scalars, `string`, `array<T>`, `Pointer<T>`, `Reference<T>` | Language/runtime owns both the public surface and the substrate because other features depend on them directly. | Treat these as stable substrate; delete workaround routing around them instead of trying to de-builtinize them. |
-| `hybrid` | `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, `/std/gfx/*` | Keep only minimal builtin/runtime substrate for propagation, host I/O, and device interaction. | Move public constructors, helper APIs, and error-domain behavior into stdlib `.prime` wherever practical. |
-| `stdlib-owned` | `Maybe<T>`, `vector<T>`, `map<K, V>`, target-state `soa_vector<T>` | Public API should live in stdlib `.prime` on top of minimal generic substrate. | Prefer slices that replace type-named compiler special cases with generic allocation/layout/drop substrate, then delete the old compatibility paths. |
+- `core`
+  Public types/surfaces: fixed-width scalars, `string`, `array<T>`, `Pointer<T>`, `Reference<T>`.
+  Ownership rule: language/runtime owns both the public surface and the substrate because other
+  features depend on them directly.
+  Migration stance: treat these as stable substrate; delete workaround routing around them instead
+  of trying to de-builtinize them.
+- `hybrid`
+  Public types/surfaces: `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, `/std/gfx/*`.
+  Ownership rule: keep only minimal builtin/runtime substrate for propagation, host I/O, and
+  device interaction.
+  Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
+  `.prime` wherever practical.
+- `stdlib-owned`
+  Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, target-state `soa_vector<T>`.
+  Ownership rule: public API should live in stdlib `.prime` on top of minimal generic substrate.
+  Migration stance: prefer slices that replace type-named compiler special cases with generic
+  allocation/layout/drop substrate, then delete the old compatibility paths.
 
 - `vector<T>` and `map<K, V>` therefore still appear in the portable type set today, but that
   should not be read as a permanent compiler-owned collection contract.
@@ -1047,11 +1819,13 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
 ### Expression Rules
 - **Literals:** fixed type determined by suffix (`1i32`, `2u64`, `1.0f32`, `"hi"utf8`, `true`).
 - **Bindings:** declared type in the transform list, or `auto` if omitted.
-- **Calls:** well-typed if the callee resolves to a definition or builtin, and every argument matches the parameter type.
+- **Calls:** well-typed if the callee resolves to a definition or builtin, and every argument matches the parameter
+  type.
 - **Constructors:** struct constructors follow call rules; all fields must be provided or defaulted.
 - **`convert<T>` and `T{...}`:** explicit conversions; `T` must be a supported conversion target.
 - **`assign(target, value)`:** allowed only when `target` is mutable and `value` has the exact same type.
-- **Matrix/quaternion operators (draft):** matrix and quaternion arithmetic is explicit and shape-checked; no implicit widening or family conversion is allowed.
+- **Matrix/quaternion operators (draft):** matrix and quaternion arithmetic is explicit and shape-checked; no implicit
+  widening or family conversion is allowed.
 - **Control flow:** `if`, `while`, and `for` conditions must be `bool`. `loop(count)` requires an integer type.
 - **Pointers/references:** targets are restricted as described in pointer rules; no implicit conversions.
 
@@ -1131,13 +1905,19 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Borrow rules (safe scope):**
   - A `Reference<T>` is a borrow of a storage location.
   - Many immutable borrows are allowed, or one mutable borrow; they may not overlap.
-  - Borrows can end at last use before lexical scope exit (non-lexical lifetimes), including alias tracking through `location(ref)`.
-  - Last-use analysis is conservative across complex control flow: if later use cannot be proven absent, the borrow stays active.
+  - Borrows can end at last use before lexical scope exit (non-lexical lifetimes), including alias tracking through
+    `location(ref)`.
+  - Last-use analysis is conservative across complex control flow: if later use cannot be proven absent, the borrow
+    stays active.
   - Borrowing a field borrows the whole struct value (no field-splitting in v1).
   - Borrowed bindings cannot be reassigned or moved until all borrows end.
-  - `return<Reference<T>>` may only return a direct `Reference<T>` parameter (`return(paramRef)`); local and derived references are rejected.
-- **Unsafe scopes:** `[unsafe]` on a definition allows aliasing within that body, and also allows pointer-to-reference initialization from pointer-like expressions when types match. References created there must not escape the unsafe scope. Unsafe scopes are aliasing barriers for optimization.
-- **Unsafe calls:** unsafe definitions may be called from safe code; the call does not taint the caller as long as unsafe-created references do not escape.
+  - `return<Reference<T>>` may only return a direct `Reference<T>` parameter (`return(paramRef)`); local and derived
+    references are rejected.
+- **Unsafe scopes:** `[unsafe]` on a definition allows aliasing within that body, and also allows pointer-to-reference
+  initialization from pointer-like expressions when types match. References created there must not escape the unsafe
+  scope. Unsafe scopes are aliasing barriers for optimization.
+- **Unsafe calls:** unsafe definitions may be called from safe code; the call does not taint the caller as long as
+  unsafe-created references do not escape.
 
 ### Layout and Struct Semantics
 - Structs record layout manifests in IR.
@@ -1155,9 +1935,15 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Traits:** satisfied, missing requirement, incorrect signature.
 
 ### Type Semantics (draft)
-- **Nested generics:** template arguments may themselves be generic envelopes (`map<i32, array<i32>>`), and the parser preserves the nested envelope string for later lowering.
-- **Field visibility:** stack-value declarations accept `[public]` or `[private]` transforms (default: public); they are mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules consistently. Field visibility is in-language field-access metadata; it does not make a field a package-importable API symbol.
-- **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform. Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one storage slot exists per struct definition.
+- **Nested generics:** template arguments may themselves be generic envelopes (`map<i32, array<i32>>`), and the parser
+  preserves the nested envelope string for later lowering.
+- **Field visibility:** stack-value declarations accept `[public]` or `[private]` transforms (default: public); they are
+  mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules
+  consistently. Field visibility is in-language field-access metadata; it does not make a field a package-importable API
+  symbol.
+- **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform.
+  Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one
+  storage slot exists per struct definition.
 - **Example:**
   ```
   import /std/math/*
@@ -1175,31 +1961,45 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
     }
   }
   ```
-- **Constructor semantics:** struct constructors use field initializers as defaults; `Create`/`Destroy` remain optional hooks. Constant member behavior follows the normal `mut` rules (immutable unless declared `mut`).
-  - **Zero-arg constructor exists when:** either (a) every field has an initializer, or (b) a `Create()` helper exists and initializes every field (including `uninitialized<T>` fields via `init`).
+- **Constructor semantics:** struct constructors use field initializers as defaults; `Create`/`Destroy` remain optional
+  hooks. Constant member behavior follows the normal `mut` rules (immutable unless declared `mut`).
+  - **Zero-arg constructor exists when:** either (a) every field has an initializer, or (b) a `Create()` helper exists
+    and initializes every field (including `uninitialized<T>` fields via `init`).
   - **Execution order:** field initializers run first, then `Create()` runs (if present) and may override field values.
-  - **Effect interaction:** a zero-arg constructor is outside-effect-free only when both `Create()` (if present) and all field initializers are effect-free under the “no outside effects” rules.
+  - **Effect interaction:** a zero-arg constructor is outside-effect-free only when both `Create()` (if present) and all
+    field initializers are effect-free under the “no outside effects” rules.
 
 ## Move/Clone/Destroy
-- **Lifecycle set:** structured types can define `Create`, `Move`, `Clone`, and `Destroy` helpers. `Create`/`Destroy` are optional hooks; `Move`/`Clone` must be nested inside the struct, return `void`, and accept exactly one parameter.
-- **Clone signature:** the canonical clone constructor is `Clone([Reference<Self>] other) { ... }`. A shorthand `Clone(other) { ... }` desugars to the reference form.
-- **Move-by-default:** assignments, argument passing, and returns consume values unless the type is `Copy` or the value is a `Reference<T>`.
+- **Lifecycle set:** structured types can define `Create`, `Move`, `Clone`, and `Destroy` helpers. `Create`/`Destroy`
+  are optional hooks; `Move`/`Clone` must be nested inside the struct, return `void`, and accept exactly one parameter.
+- **Clone signature:** the canonical clone constructor is `Clone([Reference<Self>] other) { ... }`. A shorthand
+  `Clone(other) { ... }` desugars to the reference form.
+- **Move-by-default:** assignments, argument passing, and returns consume values unless the type is `Copy` or the value
+  is a `Reference<T>`.
 - **`Copy` types (Rust-aligned):** values that can be duplicated by a simple bitwise copy with no custom destruction.
   - Built-in `Copy` types: `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `Pointer<T>`, `Reference<T>`.
   - Structs are `Copy` when they are `[pod]`, all fields are `Copy`, and they do **not** define `Destroy` or `Clone`.
   - Types with `handle`/`gpu_lane` fields are not `Copy` (they cannot be `[pod]`).
-- **Explicit clone:** `clone(value)` invokes the `Clone` helper and returns a new value. It is a compile-time error if the type does not define `Clone`.
-- **Move signature:** the canonical move constructor is `Move([Reference<Self>] other) { ... }`. A shorthand `Move(other) { ... }` desugars to the reference form.
-- **Explicit move:** `move(value)` is the explicit consume helper. It requires a local binding or parameter name (no arbitrary expressions) and marks the source binding as moved-from while returning its value.
-- **Use-after-move:** any use of a moved-from binding is a compile error until it is re-initialized (e.g., `assign(value, ...)`). The analysis is conservative across control flow.
-- **Pointer behavior:** pointers can be moved; moved-from pointers are treated as invalid without being auto-zeroed (no implicit `null` literal; `0x0` is just a numeric value).
+- **Explicit clone:** `clone(value)` invokes the `Clone` helper and returns a new value. It is a compile-time error if
+  the type does not define `Clone`.
+- **Move signature:** the canonical move constructor is `Move([Reference<Self>] other) { ... }`. A shorthand
+  `Move(other) { ... }` desugars to the reference form.
+- **Explicit move:** `move(value)` is the explicit consume helper. It requires a local binding or parameter name (no
+  arbitrary expressions) and marks the source binding as moved-from while returning its value.
+- **Use-after-move:** any use of a moved-from binding is a compile error until it is re-initialized (e.g.,
+  `assign(value, ...)`). The analysis is conservative across control flow.
+- **Pointer behavior:** pointers can be moved; moved-from pointers are treated as invalid without being auto-zeroed (no
+  implicit `null` literal; `0x0` is just a numeric value).
 - **References:** `move(...)` rejects `Reference<T>` bindings; references do not participate in move semantics.
-- **Backend note:** `move(...)` is a semantic ownership marker. VM/native lower it as a passthrough; the C++ emitter emits `std::move`.
+- **Backend note:** `move(...)` is a semantic ownership marker. VM/native lower it as a passthrough; the C++ emitter
+  emits `std::move`.
 
 ## Uninitialized Storage (draft)
-- **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and optional values).
+- **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and
+  optional values).
 - **Envelope:** `uninitialized<T>` allocates space for `T` but does not construct a `T` value.
-- **Allowed locations:** local bindings and struct fields only. `uninitialized<T>` is rejected for parameters, return types,
+- **Allowed locations:** local bindings and struct fields only. `uninitialized<T>` is rejected for parameters, return
+  types,
   collection elements, nested pointer/reference targets, or template arguments to user-defined types. Top-level
   `Pointer<uninitialized<T>>` and `Reference<uninitialized<T>>` wrappers are allowed as storage handles.
 - **Initialization:** `init(storage, value)` constructs `T` in-place.
@@ -1220,11 +2020,15 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Purpose:** represent either "no value" or a value of `T` without heap allocation.
 - **Naming:** `Maybe<T>` is the canonical optional type in PrimeStruct; there is no separate `Option<T>`.
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
-- **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)` to destroy.
-- **Ergonomic constructor surface:** `Maybe()` yields empty. Use `some<T>(value)` for a present value and `none<T>()` for empty.
+- **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)`
+  to destroy.
+- **Ergonomic constructor surface:** `Maybe()` yields empty. Use `some<T>(value)` for a present value and `none<T>()`
+  for empty.
   - `Maybe<T>` is intended to be a stdlib-owned optional type, not a permanently compiler-owned special case.
-  - Present-value construction is explicit: `Maybe(value)` / `Maybe<T>(value)` are intentionally unsupported; use `some<T>(value)` instead.
-- **Helper surface (stdlib):** `is_empty()` / `is_some()`, `set(value)`, `clear()`, `take()` (consumes the stored value and marks empty).
+  - Present-value construction is explicit: `Maybe(value)` / `Maybe<T>(value)` are intentionally unsupported; use
+    `some<T>(value)` instead.
+- **Helper surface (stdlib):** `is_empty()` / `is_some()`, `set(value)`, `clear()`, `take()` (consumes the stored value
+  and marks empty).
 - **Example shape:**
   ```
   [struct]
@@ -1329,110 +2133,403 @@ bad_use_after_take() {
 ```
 
 ## Lambdas & Higher-Order Functions
-- **Syntax mirrors definitions:** lambdas omit the identifier (`[captures] <T>(params){ body }`). The capture list is required but may be empty (`[]`). Template arguments are optional.
-- **Capture semantics:** supported forms are `[]`, `[=]`, `[&]`, and explicit entries (`[name]`, `[value name]`, `[ref name]`). Entries are comma/semicolon separated. Explicit names must resolve to parameters or locals in the enclosing scope; duplicates are diagnostics. `=` or `&` capture-all tokens cannot be repeated. `ref` marks a by-reference capture; otherwise captures are by value.
-- **Parameters:** lambda parameters must use binding syntax. Defaults are allowed but must be literal/pure expressions and may not use named arguments.
-- **Backend support (current):** lambdas are supported only by the C++ emitter, which lowers them to native C++ lambdas with the same capture list. IR/VM/GLSL backends reject lambdas; use named definitions when targeting those backends.
-- **Inlining transforms:** standard transforms may inline pure lambdas in C++ emission paths; non-pure lambdas remain as closures.
+- **Syntax mirrors definitions:** lambdas omit the identifier (`[captures] <T>(params){ body }`). The capture list is
+  required but may be empty (`[]`). Template arguments are optional.
+- **Capture semantics:** supported forms are `[]`, `[=]`, `[&]`, and explicit entries (`[name]`, `[value name]`, `[ref
+  name]`). Entries are comma/semicolon separated. Explicit names must resolve to parameters or locals in the enclosing
+  scope; duplicates are diagnostics. `=` or `&` capture-all tokens cannot be repeated. `ref` marks a by-reference
+  capture; otherwise captures are by value.
+- **Parameters:** lambda parameters must use binding syntax. Defaults are allowed but must be literal/pure expressions
+  and may not use named arguments.
+- **Backend support (current):** lambdas are supported only by the C++ emitter, which lowers them to native C++ lambdas
+  with the same capture list. IR/VM/GLSL backends reject lambdas; use named definitions when targeting those backends.
+- **Inlining transforms:** standard transforms may inline pure lambdas in C++ emission paths; non-pure lambdas remain as
+  closures.
 
 ## Literals & Composite Construction
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42i64`, `42u64`, `1.0f64`).
-- Integer literals require explicit width suffixes (`42i32`, `42i64`, `42u64`) unless `implicit-i32` is enabled (on by default). Omit it from `--text-transforms` (or use `--no-text-transforms`) to require explicit suffixes.
-- Float literals accept `f32` or `f64` suffixes; when omitted in surface syntax they default to `f32`. Canonical form requires `f32`/`f64`. Exponent notation (`1e-3`, `1.0e6f32`) is supported.
-- Commas may appear between digits in the integer part as digit separators and are ignored for value (e.g., `1,000i32`, `12,345.0f32`). Commas are not allowed in the fractional or exponent parts, and `.` is the only decimal separator.
-- **Strings:** double-quoted strings process escapes unless a raw suffix is used; single-quoted strings are raw and do not process escapes. `raw_utf8` / `raw_ascii` force raw mode on either quote style. Surface literals accept `utf8`/`ascii`/`raw_utf8`/`raw_ascii` suffixes; the canonical/bottom-level form uses double-quoted strings with normalized escapes and an explicit `utf8`/`ascii` suffix. `implicit-utf8` (enabled by default) appends `utf8` when omitted.
+- Integer literals require explicit width suffixes (`42i32`, `42i64`, `42u64`) unless `implicit-i32` is enabled (on by
+  default). Omit it from `--text-transforms` (or use `--no-text-transforms`) to require explicit suffixes.
+- Float literals accept `f32` or `f64` suffixes; when omitted in surface syntax they default to `f32`. Canonical form
+  requires `f32`/`f64`. Exponent notation (`1e-3`, `1.0e6f32`) is supported.
+- Commas may appear between digits in the integer part as digit separators and are ignored for value (e.g., `1,000i32`,
+  `12,345.0f32`). Commas are not allowed in the fractional or exponent parts, and `.` is the only decimal separator.
+- **Strings:** double-quoted strings process escapes unless a raw suffix is used; single-quoted strings are raw and do
+  not process escapes. `raw_utf8` / `raw_ascii` force raw mode on either quote style. Surface literals accept
+  `utf8`/`ascii`/`raw_utf8`/`raw_ascii` suffixes; the canonical/bottom-level form uses double-quoted strings with
+  normalized escapes and an explicit `utf8`/`ascii` suffix. `implicit-utf8` (enabled by default) appends `utf8` when
+  omitted.
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
-- **Composite constructors:** structured values are introduced through standard envelope executions (`ColorGrade([hue_shift] 0.1f32 [exposure] 0.95f32)`) or brace constructor forms (`ColorGrade{ ... }`) in value positions; brace constructors evaluate the block and pass its resulting value to the constructor. If the block executes `return(value)`, that value is used; otherwise the last item is used. Binding initializers are value blocks; to pass multiple constructor arguments use an explicit call (e.g., `[ColorGrade] grade{ ColorGrade([hue_shift] 0.1f32 [exposure] 0.95f32) }`). Labeled arguments map to fields, and every field must have either an explicit argument or an envelope-provided default before validation. Labeled arguments may only be used on user-defined calls.
-  - **Defaults & validation:** struct constructors accept positional and labeled arguments. Missing fields are filled from their field initializers; if a field has no initializer, zero-arg construction requires a `Create()` helper to assign it. Extra arguments are a semantic error (`argument count mismatch`).
-  - **Multi-expression blocks:** `{ ... }` is a value block, not an argument list. If you need to pass multiple constructor arguments, use `Type(arg1, arg2)` (or labeled arguments). A brace block with multiple expressions still produces a single value via `return(value)` or the final expression.
-- **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries. Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept labeled arguments.
+- **Composite constructors:** structured values are introduced through standard envelope executions
+  (`ColorGrade([hue_shift] 0.1f32 [exposure] 0.95f32)`) or brace constructor forms (`ColorGrade{ ... }`) in value
+  positions; brace constructors evaluate the block and pass its resulting value to the constructor. If the block
+  executes `return(value)`, that value is used; otherwise the last item is used. Binding initializers are value blocks;
+  to pass multiple constructor arguments use an explicit call (e.g., `[ColorGrade] grade{ ColorGrade([hue_shift] 0.1f32
+  [exposure] 0.95f32) }`). Labeled arguments map to fields, and every field must have either an explicit argument or an
+  envelope-provided default before validation. Labeled arguments may only be used on user-defined calls.
+  - **Defaults & validation:** struct constructors accept positional and labeled arguments. Missing fields are filled
+    from their field initializers; if a field has no initializer, zero-arg construction requires a `Create()` helper to
+    assign it. Extra arguments are a semantic error (`argument count mismatch`).
+  - **Multi-expression blocks:** `{ ... }` is a value block, not an argument list. If you need to pass multiple
+    constructor arguments, use `Type(arg1, arg2)` (or labeled arguments). A brace block with multiple expressions still
+    produces a single value via `return(value)` or the final expression.
+- **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on
+  executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries.
+  Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept labeled arguments.
   - Example: `sum3(1i32 [c] 3i32 [b] 2i32)` is valid.
   - Example: `array<i32>([first] 1i32)` is rejected because collections are builtin calls.
   - Duplicate labeled arguments are rejected for definitions and executions (`execute_task([a] 1i32 [a] 2i32)`).
-  - Variadic-pack interaction: if a definition ends in `[args<T>] values`, positional arguments fill the fixed parameters first and the remaining positional arguments bind to `values`; named arguments do not target the `args<T>` parameter directly. A spread argument (`values...` surface, `[spread] values` canonical) is only legal in call-argument position and expands into that trailing variadic slot when the callee actually has one, and forwarded `args<T>` values now participate in omitted-pack inference. The body-side read-only API (`count(values)`, `values.count()`, `values[index]`, `at(values, index)`, `values.at(index)`, `values.at_unsafe(index)`) is now available; the legacy C++ emitter executes that API for concrete packs, while IR-backed VM/native now covers the direct numeric/bool/string pack slice plus pure and mixed-prefix pack forwarding from known-size sources, struct-pack materialization plus indexed field/helper access across direct/pure/mixed forwarding paths, `Result<T, Error>` packs with indexed `Result.why(...)` / `?` behavior across the same forwarding modes, status-only `Result<Error>` packs with indexed `Result.error(...)` / `Result.why(...)` behavior across those same forwarding modes, `FileError` packs with indexed downstream `why()` mapping, `Reference<FileError>` packs with indexed downstream `dereference(...).why()` mapping, and `Pointer<FileError>` packs with indexed downstream `dereference(...).why()` mapping. `File<Mode>` packs with indexed downstream file-handle method access, `Reference<File<Mode>>` packs with indexed downstream file-handle method access alongside explicit `dereference(...).write*` / `flush()` access plus helper-style `at(values, i).write*()` / `values.at(i).flush()` receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()` receivers, and direct indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).read_byte(...)` `?`, `Pointer<File<Mode>>` packs with indexed downstream file-handle method access alongside explicit `dereference(...).write*` / `flush()` access plus helper-style `at(values, i).write*()` / `values.at(i).flush()` receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()` receivers, and direct indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).read_byte(...)` `?`, `Buffer<T>` packs with indexed downstream `buffer_load(...)` and `buffer_store(...)` on the IR/VM GPU path, `Reference<Buffer<T>>` packs with indexed downstream `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `Pointer<Buffer<T>>` packs with indexed downstream `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`, empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>` packs with indexed downstream `count()` resolution across direct/pure/mixed forwarding, `vector<T>` packs with indexed downstream `capacity()` resolution, borrowed/pointer array and vector packs with explicit indexed `dereference(...)` receiver wrappers for downstream checked/unchecked access, borrowed/pointer vector packs with that same indexed `capacity()` surface through explicit `dereference(...)` receiver wrappers, borrowed/pointer map packs with that same count and lookup surface through explicit indexed `dereference(...)` receiver wrappers, those same value, borrowed, and pointer map packs with indexed downstream `tryAt(...)` payload-kind inference for `auto` bindings, and `Pointer<map<K, V>>` packs with indexed downstream `contains()` / `at()` / `at_unsafe()` lookup access. Scalar `Pointer<T>` plus scalar `Reference<T>` packs with indexed downstream `dereference(...)`, and struct `Pointer<T>` plus struct `Reference<T>` packs with indexed downstream field/helper access. Borrowed/pointer `Result` packs and the remaining unsupported non-string packs stay follow-up work.
-    Latest checkpoint: canonical free-builtin `at([values] values, [index] i)` on wrapped borrowed/pointer `File<Mode>` arg-packs now preserves `write*()` / `flush()` receivers plus `read_byte(...)` `?` inference across direct calls plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing named-argument rejection path.
-- **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `vector<Type>{ … }` / `vector<Type>[ … ]`, `map<Key,Value>{ … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals supply alternating key/value forms.
+  - Variadic-pack interaction: if a definition ends in `[args<T>] values`, positional arguments fill the fixed
+    parameters first and the remaining positional arguments bind to `values`; named arguments do not target the
+    `args<T>` parameter directly. A spread argument (`values...` surface, `[spread] values` canonical) is only legal in
+    call-argument position and expands into that trailing variadic slot when the callee actually has one, and forwarded
+    `args<T>` values now participate in omitted-pack inference. The body-side read-only API (`count(values)`,
+    `values.count()`, `values[index]`, `at(values, index)`, `values.at(index)`, `values.at_unsafe(index)`) is now
+    available; the legacy C++ emitter executes that API for concrete packs, while IR-backed VM/native now covers the
+    direct numeric/bool/string pack slice plus pure and mixed-prefix pack forwarding from known-size sources,
+    struct-pack materialization plus indexed field/helper access across direct/pure/mixed forwarding paths, `Result<T,
+    Error>` packs with indexed `Result.why(...)` / `?` behavior across the same forwarding modes, status-only
+    `Result<Error>` packs with indexed `Result.error(...)` / `Result.why(...)` behavior across those same forwarding
+    modes, `FileError` packs with indexed downstream `why()` mapping, `Reference<FileError>` packs with indexed
+    downstream `dereference(...).why()` mapping, and `Pointer<FileError>` packs with indexed downstream
+    `dereference(...).why()` mapping. `File<Mode>` packs with indexed downstream file-handle method access,
+    `Reference<File<Mode>>` packs with indexed downstream file-handle method access alongside explicit
+    `dereference(...).write*` / `flush()` access plus helper-style `at(values, i).write*()` / `values.at(i).flush()`
+    receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()` receivers, and direct
+    indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).read_byte(...)`
+    `?`, `Pointer<File<Mode>>` packs with indexed downstream file-handle method access alongside explicit
+    `dereference(...).write*` / `flush()` access plus helper-style `at(values, i).write*()` / `values.at(i).flush()`
+    receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()` receivers, and direct
+    indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).read_byte(...)`
+    `?`, `Buffer<T>` packs with indexed downstream `buffer_load(...)` and `buffer_store(...)` on the IR/VM GPU path,
+    `Reference<Buffer<T>>` packs with indexed downstream `buffer_load(dereference(...), ...)` and
+    `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `Pointer<Buffer<T>>` packs with indexed
+    downstream `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU
+    path, `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`,
+    `Pointer<vector<T>>`, empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`,
+    `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>` packs with indexed downstream `count()` resolution
+    across direct/pure/mixed forwarding, `vector<T>` packs with indexed downstream `capacity()` resolution,
+    borrowed/pointer array and vector packs with explicit indexed `dereference(...)` receiver wrappers for downstream
+    checked/unchecked access, borrowed/pointer vector packs with that same indexed `capacity()` surface through explicit
+    `dereference(...)` receiver wrappers, borrowed/pointer map packs with that same count and lookup surface through
+    explicit indexed `dereference(...)` receiver wrappers, those same value, borrowed, and pointer map packs with
+    indexed downstream `tryAt(...)` payload-kind inference for `auto` bindings, and `Pointer<map<K, V>>` packs with
+    indexed downstream `contains()` / `at()` / `at_unsafe()` lookup access. Scalar `Pointer<T>` plus scalar
+    `Reference<T>` packs with indexed downstream `dereference(...)`, and struct `Pointer<T>` plus struct `Reference<T>`
+    packs with indexed downstream field/helper access. Borrowed/pointer `Result` packs and the remaining unsupported
+    non-string packs stay follow-up work.
+    Latest checkpoint: canonical free-builtin `at([values] values, [index] i)` on wrapped borrowed/pointer `File<Mode>`
+    arg-packs now preserves `write*()` / `flush()` receivers plus `read_byte(...)` `?` inference across direct calls
+    plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing
+    named-argument rejection path.
+- **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `vector<Type>{ … }` / `vector<Type>[ … ]`, `map<Key,Value>{
+  … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to
+  `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals supply
+  alternating key/value forms.
   - Requires the `collections` text transform (enabled by default in `--text-transforms`).
   - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.
-  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested forms inside braces are rewritten as usual.
+  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested forms inside braces are
+    rewritten as usual.
   - Collections can appear anywhere forms are allowed, including execution arguments.
-  - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
-  - `array<T>` is a fixed-size contiguous value sequence once constructed (C++ `std::array`-like behavior). Arrays support read/write/index helpers but no growth helpers.
-  - PrimeStruct keeps `array<T>` as a runtime-count contract; envelope-level length forms like `array<T, N>` are intentionally unsupported.
-  - Array helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)` (canonical equivalents: `count(value)`, `at(value, index)`, `at_unsafe(value, index)`).
-  - Ownership direction: keep `array<T>` as language-core substrate, but move the public constructor/helper behavior of `vector<T>` and `map<K, V>` into stdlib `.prime` definitions; `soa_vector<T>` should follow the same model once the generic SoA substrate is ready.
-  - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic constructors (0..N). Growth operations require `effects(heap_alloc)` (or the active default effects set), and `push`/`reserve` may reallocate and invalidate references/pointers into vector storage.
-  - Planned stdlib-owned constructor surface: the temporary experimental vector namespace now uses `vector(values...)` over trailing `[args<T>] values`, and the remaining migration work is to move the canonical imported surface off fixed-arity helper wrappers onto that same variadic shape.
-  - Vector helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)`, `value.push(item)`, `value.pop()`, `value.reserve(capacity)`, `value.capacity()`, `value.clear()`, `value.remove_at(index)`, `value.remove_swap(index)` (canonical helper equivalents remain `count(value)`, `at(value, index)`, `push(value, item)`, etc.). Import `/std/collections/*` before using the vector helper surface.
-  - Map helpers: `count(value)`, `contains(value, key)`, `value.at(key)`, `value[key]`, `value.at_unsafe(key)` plus stdlib wrapper imports such as `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, and `mapAtUnsafe`. `mapTryAt` routes misses to `Result<ContainerError>` / `Result<T, ContainerError>` instead of the checked missing-key abort path and, on IR-backed backends, currently supports the same `i32`/`bool`/`f32`/`string` plus single-slot int-backed stdlib error-struct value subset as `Result.ok(value)`.
-  - Planned stdlib-owned map constructor surface: the temporary experimental map namespace now uses `map(entries...)` where each item is an `Entry<K, V>`/`entry(key, value)` pair, and the remaining migration work is to move the canonical imported constructor surface off the fixed-arity wrapper helpers onto that same entry-based variadic shape. The corresponding literal rewrite target is therefore planned to become `map(entry(k1, v1), entry(k2, v2), ...)` for the user-defined `.prime` implementation.
-  - Current discard contract: builtin `pop` and `clear` are only defined for drop-trivial element types while container-owned destruction is still being specified. Drop-trivial currently includes scalar primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of drop-trivial elements, and concrete structs that do not define `Destroy*` helpers and whose fields are also drop-trivial. Builtin `vector`/`map`/`soa_vector` elements and structs with `Destroy` hooks are rejected for builtin `pop`/`clear`.
-  - Current indexed-removal contract: builtin `remove_at` and `remove_swap` are only defined for element types that are both drop-trivial and relocation-trivial while removed-element destruction plus survivor compaction/swap semantics for non-trivial types are still being specified.
-  - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types while container move/reallocation semantics are still being specified. Relocation-trivial currently includes scalar primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of relocation-trivial elements, and concrete structs that do not define `Destroy*` or `Copy`/`Move` helpers and whose fields are also relocation-trivial. Builtin `vector`/`map`/`soa_vector` elements and structs with custom move/destroy hooks are rejected for builtin `push`/`reserve`.
+  - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower
+    through IR/VM/native.
+  - `array<T>` is a fixed-size contiguous value sequence once constructed (C++ `std::array`-like behavior). Arrays
+    support read/write/index helpers but no growth helpers.
+  - PrimeStruct keeps `array<T>` as a runtime-count contract; envelope-level length forms like `array<T, N>` are
+    intentionally unsupported.
+  - Array helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)` (canonical equivalents:
+    `count(value)`, `at(value, index)`, `at_unsafe(value, index)`).
+  - Ownership direction: keep `array<T>` as language-core substrate, but move the public constructor/helper behavior of
+    `vector<T>` and `map<K, V>` into stdlib `.prime` definitions; `soa_vector<T>` should follow the same model once the
+    generic SoA substrate is ready.
+  - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic
+    constructors (0..N). Growth operations require `effects(heap_alloc)` (or the active default effects set), and
+    `push`/`reserve` may reallocate and invalidate references/pointers into vector storage.
+  - Planned stdlib-owned constructor surface: the temporary experimental vector namespace now uses `vector(values...)`
+    over trailing `[args<T>] values`, and the remaining migration work is to move the canonical imported surface off
+    fixed-arity helper wrappers onto that same variadic shape.
+  - Vector helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)`, `value.push(item)`,
+    `value.pop()`, `value.reserve(capacity)`, `value.capacity()`, `value.clear()`, `value.remove_at(index)`,
+    `value.remove_swap(index)` (canonical helper equivalents remain `count(value)`, `at(value, index)`, `push(value,
+    item)`, etc.). Import `/std/collections/*` before using the vector helper surface.
+  - Map helpers: `count(value)`, `contains(value, key)`, `value.at(key)`, `value[key]`, `value.at_unsafe(key)` plus
+    stdlib wrapper imports such as `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, and `mapAtUnsafe`. `mapTryAt` routes
+    misses to `Result<ContainerError>` / `Result<T, ContainerError>` instead of the checked missing-key abort path and,
+    on IR-backed backends, currently supports the same `i32`/`bool`/`f32`/`string` plus single-slot int-backed stdlib
+    error-struct value subset as `Result.ok(value)`.
+  - Planned stdlib-owned map constructor surface: the temporary experimental map namespace now uses `map(entries...)`
+    where each item is an `Entry<K, V>`/`entry(key, value)` pair, and the remaining migration work is to move the
+    canonical imported constructor surface off the fixed-arity wrapper helpers onto that same entry-based variadic
+    shape. The corresponding literal rewrite target is therefore planned to become `map(entry(k1, v1), entry(k2, v2),
+    ...)` for the user-defined `.prime` implementation.
+  - Current discard contract: builtin `pop` and `clear` are only defined for drop-trivial element types while
+    container-owned destruction is still being specified. Drop-trivial currently includes scalar primitives, `string`,
+    `Pointer<T>`, `Reference<T>`, arrays of drop-trivial elements, and concrete structs that do not define `Destroy*`
+    helpers and whose fields are also drop-trivial. Builtin `vector`/`map`/`soa_vector` elements and structs with
+    `Destroy` hooks are rejected for builtin `pop`/`clear`.
+  - Current indexed-removal contract: builtin `remove_at` and `remove_swap` are only defined for element types that are
+    both drop-trivial and relocation-trivial while removed-element destruction plus survivor compaction/swap semantics
+    for non-trivial types are still being specified.
+  - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types
+    while container move/reallocation semantics are still being specified. Relocation-trivial currently includes scalar
+    primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of relocation-trivial elements, and concrete structs that
+    do not define `Destroy*` or `Copy`/`Move` helpers and whose fields are also relocation-trivial. Builtin
+    `vector`/`map`/`soa_vector` elements and structs with custom move/destroy hooks are rejected for builtin
+    `push`/`reserve`.
   - Vector binding forms:
     - `[vector<T> mut] v{vector<T>()}` and `[mut] v{vector<T>()}` are both valid.
     - `[vector<T> mut] v{}` is shorthand for zero-arg construction and rewrites to `[vector<T> mut] v{vector<T>()}`.
-  - `soa_vector<T>` is an explicit structure-of-arrays container (SoA). It is separate from `vector<T>`; the compiler must not silently rewrite AoS (`vector`) to SoA (`soa_vector`).
-  - Intended usage: data-oriented loops and ECS-style component storage where field-wise contiguous iteration is preferred.
-  - Target implementation model: the public `soa_vector` API should eventually live in stdlib `.prime` files, with compiler/runtime code reduced to generic SoA substrate only (field-layout/codegen/introspection, column storage, field-view borrowing/invalidation, and allocation primitives). The end-state is that C++ source does not contain `soa_vector`-named collection semantics.
+  - `soa_vector<T>` is an explicit structure-of-arrays container (SoA). It is separate from `vector<T>`; the compiler
+    must not silently rewrite AoS (`vector`) to SoA (`soa_vector`).
+  - Intended usage: data-oriented loops and ECS-style component storage where field-wise contiguous iteration is
+    preferred.
+  - Target implementation model: the public `soa_vector` API should eventually live in stdlib `.prime` files, with
+    compiler/runtime code reduced to generic SoA substrate only (field-layout/codegen/introspection, column storage,
+    field-view borrowing/invalidation, and allocation primitives). The end-state is that C++ source does not contain
+    `soa_vector`-named collection semantics.
   - Proposed `soa_vector<T>` surface:
-    - Construction/growth mirrors vector (`soa_vector<T>()`, `push`, `reserve`, `count`) and allocation still requires `effects(heap_alloc)`.
-    - Indexing/access is explicit and SoA-aware (`value.field()[i]`, `value.get(i)`, and optionally `value.ref(i)` proxy access).
+    - Construction/growth mirrors vector (`soa_vector<T>()`, `push`, `reserve`, `count`) and allocation still requires
+      `effects(heap_alloc)`.
+    - Indexing/access is explicit and SoA-aware (`value.field()[i]`, `value.get(i)`, and optionally `value.ref(i)` proxy
+      access).
     - Reallocation invalidates SoA field views/proxies the same way vector growth invalidates pointers/references.
   - Draft ownership/invalidation rules for ECS-style usage:
     - Treat `get(...)` as value-style element access.
     - Treat `ref(...)` and future field views as borrowed storage views that are invalid after structural mutation.
-    - Structural mutations (`push`, `reserve`) and explicit AoS/SoA conversions (`to_soa`, `to_aos`) are mutation boundaries; any previously acquired SoA views/proxies are invalid after these operations.
-    - Preferred update pattern is two-phase: run a stable-size update pass first, then apply deferred structural changes.
-    - Example (surface draft): `while(less_than(i, count(particles))) { get(particles, i) ... }` followed by `reserve(particles, plus(count(particles), count(to_soa(spawnQueue))))`.
-  - SoA eligibility (v1 draft): `T` must be a struct with SoA-safe fields (fixed-size, non-pointer/reference/string/template envelopes unless explicitly allowed by backend policy).
+    - Structural mutations (`push`, `reserve`) and explicit AoS/SoA conversions (`to_soa`, `to_aos`) are mutation
+      boundaries; any previously acquired SoA views/proxies are invalid after these operations.
+    - Preferred update pattern is two-phase: run a stable-size update pass first, then apply deferred structural
+      changes.
+    - Example (surface draft): `while(less_than(i, count(particles))) { get(particles, i) ... }` followed by
+      `reserve(particles, plus(count(particles), count(to_soa(spawnQueue))))`.
+  - SoA eligibility (v1 draft): `T` must be a struct with SoA-safe fields (fixed-size,
+    non-pointer/reference/string/template envelopes unless explicitly allowed by backend policy).
   - AoS/SoA conversions are explicit only (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`); no implicit interop.
-  - Draft example source lives at `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA runtime support lands).
-  - **Current implementation status:** `soa_vector<T>` surface parsing is recognized, and semantic validation now accepts `soa_vector` bindings/literals/returns when type constraints hold (`soa_vector` struct element requirement, template-arity checks, and deterministic element-field envelope diagnostics such as `soa_vector field envelope is unsupported on /Type/field/...: ...` for disallowed direct or nested fields). Builtin `count`/`get`/`ref` validation and current lowering behavior remain temporary scaffolding while the language grows the substrate needed for a real stdlib-owned implementation. Today, explicit AoS/SoA conversion helpers validate (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`), method-form/call-form field-view names emit deterministic semantic diagnostics (`soa_vector field views are not implemented yet: <field>`) unless a user-defined `/soa_vector/<field>` helper is present, `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, and empty `soa_vector<T>()` literals lower to header-only storage. Non-empty SoA literals and draft helper paths still emit deterministic unsupported diagnostics (`native backend does not support non-empty soa_vector literals`, `native backend does not support soa_vector get`, `native backend does not support soa_vector ref`, `native backend does not support to_soa`, `native backend does not support to_aos`, `native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper: reserve`). These compiler-owned `soa_vector` paths are not the intended end-state and should be deleted as the generic SoA substrate and stdlib `.prime` implementation land.
-  - **Current implementation status:** VM/native still use fixed-capacity vector locals; `push` and dynamic `reserve` values past capacity currently report runtime errors (`vector local capacity limit exceeded (256)` / `vector reserve exceeds local capacity limit (256)`), while `vector<T>(...)` constructors above `256` elements and out-of-range/negative folded `reserve` integer literal expressions are rejected at lowering time (`vector literal exceeds local capacity limit (256)` / `vector reserve exceeds local capacity limit (256)` / `vector reserve expects non-negative capacity` / `vector reserve literal expression overflow`). Folded literal support currently covers `plus`/`minus`/`negate` expression trees, and both signed and unsigned fold-overflow paths now emit `vector reserve literal expression overflow`. Vector locals now use a `count/capacity/data_ptr` record layout, but `data_ptr` still targets frame-local storage until heap-backed dynamic allocation lands. This is an implementation gap from the language contract.
+  - Draft example source lives at `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA
+    runtime support lands).
+  - **Current implementation status:** `soa_vector<T>` surface parsing is recognized, and semantic validation now
+    accepts `soa_vector` bindings/literals/returns when type constraints hold (`soa_vector` struct element requirement,
+    template-arity checks, and deterministic element-field envelope diagnostics such as `soa_vector field envelope is
+    unsupported on /Type/field/...: ...` for disallowed direct or nested fields). Builtin `count`/`get`/`ref` validation
+    and current lowering behavior remain temporary scaffolding while the language grows the substrate needed for a real
+    stdlib-owned implementation. Today, explicit AoS/SoA conversion helpers validate (`to_soa(vector<T>)`,
+    `to_aos(soa_vector<T>)`), method-form/call-form field-view names emit deterministic semantic diagnostics
+    (`soa_vector field views are not implemented yet: <field>`) unless a user-defined `/soa_vector/<field>` helper is
+    present, `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, and empty
+    `soa_vector<T>()` literals lower to header-only storage. Non-empty SoA literals and draft helper paths still emit
+    deterministic unsupported diagnostics (`native backend does not support non-empty soa_vector literals`, `native
+    backend does not support soa_vector get`, `native backend does not support soa_vector ref`, `native backend does not
+    support to_soa`, `native backend does not support to_aos`, `native backend does not support soa_vector helper:
+    push`, `native backend does not support soa_vector helper: reserve`). These compiler-owned `soa_vector` paths are
+    not the intended end-state and should be deleted as the generic SoA substrate and stdlib `.prime` implementation
+    land.
+  - **Current implementation status:** VM/native still use fixed-capacity vector locals; `push` and dynamic `reserve`
+    values past capacity currently report runtime errors (`vector local capacity limit exceeded (256)` / `vector reserve
+    exceeds local capacity limit (256)`), while `vector<T>(...)` constructors above `256` elements and
+    out-of-range/negative folded `reserve` integer literal expressions are rejected at lowering time (`vector literal
+    exceeds local capacity limit (256)` / `vector reserve exceeds local capacity limit (256)` / `vector reserve expects
+    non-negative capacity` / `vector reserve literal expression overflow`). Folded literal support currently covers
+    `plus`/`minus`/`negate` expression trees, and both signed and unsigned fold-overflow paths now emit `vector reserve
+    literal expression overflow`. Vector locals now use a `count/capacity/data_ptr` record layout, but `data_ptr` still
+    targets frame-local storage until heap-backed dynamic allocation lands. This is an implementation gap from the
+    language contract.
   - Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only.
-  - Current builtin map key contract: `K` must resolve to the builtin `Comparable` subset (`i32`, `i64`, `u64`, `f32`, `f64`, `bool`, or `string`). Generic `map<K, V>` helpers may defer that check until monomorphisation, but concrete user-defined `Comparable` structs are not accepted by the builtin map runtime yet.
-  - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
-  - String-keyed map literals lower through VM/native when keys are string literals or bindings backed by literals; other string key expressions require the C++ emitter (which uses `std::string_view` keys).
-- **Conversions:** no implicit coercions. Use explicit executions (`convert<f32>(value)` or `bool{value}`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper and supports `i32/i64/u64/bool/f32/f64` in the minimal native subset (integer width conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native, and converting NaN/Inf to an integer is a runtime error (stderr + exit code `3`).
+  - Current builtin map key contract: `K` must resolve to the builtin `Comparable` subset (`i32`, `i64`, `u64`, `f32`,
+    `f64`, `bool`, or `string`). Generic `map<K, V>` helpers may defer that check until monomorphisation, but concrete
+    user-defined `Comparable` structs are not accepted by the builtin map runtime yet.
+  - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native
+    (construction, `count`, `at`, and `at_unsafe`).
+  - String-keyed map literals lower through VM/native when keys are string literals or bindings backed by literals;
+    other string key expressions require the C++ emitter (which uses `std::string_view` keys).
+- **Conversions:** no implicit coercions. Use explicit executions (`convert<f32>(value)` or `bool{value}`) or custom
+  transforms. The builtin `convert<T>(value)` is the default cast helper and supports `i32/i64/u64/bool/f32/f64` in the
+  minimal native subset (integer width conversions currently lower as no-ops in the VM/native backends, while the C++
+  emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative
+  integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native, and converting
+  NaN/Inf to an integer is a runtime error (stderr + exit code `3`).
   - **Convert constructor resolution (v1):**
-    - Builtin fast-path: when `T` is `bool/i32/i64/u64/f32/f64` and `value` is numeric/bool, use the builtin conversion rules; user-defined conversions do not override this.
-    - Otherwise, resolve `convert<T>(value)` as a call to `T.Convert(value)` in the struct method namespace (`/T/Convert`).
-    - Signature must match exactly after monomorphisation: `[static return<T>] Convert([U] value)` (Convert helpers are static, no implicit `this`). No implicit conversions are applied to match the parameter type.
-    - If no match exists, emit a `no conversion found` diagnostic. If multiple matches exist, emit an `ambiguous conversion` diagnostic with the candidate list.
+    - Builtin fast-path: when `T` is `bool/i32/i64/u64/f32/f64` and `value` is numeric/bool, use the builtin conversion
+      rules; user-defined conversions do not override this.
+    - Otherwise, resolve `convert<T>(value)` as a call to `T.Convert(value)` in the struct method namespace
+      (`/T/Convert`).
+    - Signature must match exactly after monomorphisation: `[static return<T>] Convert([U] value)` (Convert helpers are
+      static, no implicit `this`). No implicit conversions are applied to match the parameter type.
+    - If no match exists, emit a `no conversion found` diagnostic. If multiple matches exist, emit an `ambiguous
+      conversion` diagnostic with the candidate list.
     - Visibility follows import rules: only `[public]` `Convert` helpers are visible across imports.
     - `convert<T>(value)` does not fall back to `T(value)` or `T{...}`.
-- **Float note:** VM/native lowering supports float literals, bindings, arithmetic, comparisons, numeric conversions, and `/std/math/*` helpers.
-- **String note:** VM/native lowering supports string literals and string bindings in `print*`, plus `count`/indexing (`at`/`at_unsafe`) on string literals and string bindings that originate from literals; other string operations still require the C++ emitter for now.
-  - **Struct note:** VM/native lowering supports struct values when fields are numeric/bool or other struct values (nested structs). Struct fields with strings or templated envelopes still require the C++ emitter.
+- **Float note:** VM/native lowering supports float literals, bindings, arithmetic, comparisons, numeric conversions,
+  and `/std/math/*` helpers.
+- **String note:** VM/native lowering supports string literals and string bindings in `print*`, plus `count`/indexing
+  (`at`/`at_unsafe`) on string literals and string bindings that originate from literals; other string operations still
+  require the C++ emitter for now.
+  - **Struct note:** VM/native lowering supports struct values when fields are numeric/bool or other struct values
+    (nested structs). Struct fields with strings or templated envelopes still require the C++ emitter.
   - `bool{...}` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
-- **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[f32 mut] value{...}`).
+- **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[f32 mut]
+  value{...}`).
 - **Open design:** raw string semantics across backends.
 
 ## Pointers & References
 - **Explicit envelopes:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
-- **Qualifiers:** `restrict<T>` is allowed on bindings and parameters only; it must match the binding type (including template args) and acts as an explicit type constraint. There is no `readonly` qualifier yet; use `mut` to opt into mutation.
-- **Target whitelist:** `Pointer<T>` targets always support primitive and struct pointees. Additional specialized pointer targets are accepted only where the language/runtime has explicit handling (for example the supported `array<T>`, `vector<T>`, header-only `soa_vector<T>`, `map<K, V>`, `File<Mode>`, `Result<T, Error>`, and `FileError` surfaces described elsewhere in this spec). `Reference<T>` targets always support primitive and struct pointees, and selected explicit wrapper cases such as `array<T>`, `vector<T>`, header-only `soa_vector<T>`, `map<K, V>`, `File<Mode>`, `Result<T, Error>`, and `FileError` where the runtime has dedicated handling. Heap intrinsics still reject `alloc<array<T>>` even though location-backed `Pointer<array<T>>` bindings are accepted.
-- **Backend limits:** VM/native lowering rejects `Pointer<string>` / `Reference<string>` (string pointers are not supported). Entry-argument arrays are not addressable (`location(args)` is invalid).
-- **Surface syntax:** canonical syntax uses explicit calls (`location`, `dereference`, `plus`/`minus`); the `operators` text transform rewrites `&name`/`*name` sugar into those calls.
-- **Reference binding:** in safe scopes, `Reference<T>` bindings are initialized from `location(...)`. In `[unsafe]` scopes they may also be initialized from pointer-like expressions (`Pointer<T>`/`Reference<T>` values and pointer arithmetic results) when the target type matches. References behave like `*Pointer<T>` in use. Use `mut` on the reference binding to allow `assign(ref, value)`.
-- **Array pointers:** `Pointer<array<T>>` is allowed for location-backed locals/parameters and participates in the same read-only array receiver API (`count`/`at`/indexing) that value and reference arrays use.
-- **Array references:** `Reference<array<T>>` is allowed; treat the reference like an array value for `count`/`at` and other array operations while still using `location(...)` to form the reference.
-- **Core pointer calls:** `location(value)` yields a pointer to a local binding or parameter (entry argument arrays are not addressable); `location(ref)` returns the pointer stored by a `Reference<T>` binding; `dereference(ptr)` reads through a pointer/reference form; `assign(dereference(ptr), value)` writes through the pointer. Pointer writes require the pointer binding to be declared `mut`; attempting to assign through an immutable pointer or reference is rejected.
-- **Heap intrinsics (semantic contract):** `/std/intrinsics/memory/alloc<T>(count)` returns `Pointer<T>`, `/std/intrinsics/memory/realloc(ptr, count)` returns the same `Pointer<T>` target type as `ptr`, and `/std/intrinsics/memory/free(ptr)` releases a pointer allocation. These names are recognized only in qualified `/std/intrinsics/memory/*` form. All three require `effects(heap_alloc)` (or the active default effects set), reject named/block arguments, and use element counts rather than raw byte sizes. `alloc` requires exactly one template argument plus one integer count argument; `realloc` requires one pointer argument plus one integer count argument; `free` requires one pointer argument and takes no template arguments. Current implementation status: semantic validation recognizes and validates all three calls; VM/native/IR-to-C++ lowering now lowers `alloc` onto the shared `HeapAlloc` runtime path (including struct element-count expansion by slot width), `free` now lowers onto `HeapFree`, `realloc` now lowers onto `HeapRealloc` on VM/native/IR-to-C++ backends, VM/IR-to-C++ runtimes reject dereferences into freed heap ranges deterministically, and `realloc` preserves slot payloads across successful growth/shrink reallocation while treating counts as element counts rather than raw bytes.
-- **Checked pointer element access:** `/std/intrinsics/memory/at(ptr, index, count)` returns the same `Pointer<T>` target type as `ptr` after checked element-wise pointer arithmetic. It is recognized only in qualified `/std/intrinsics/memory/*` form, takes no template arguments, rejects named/block arguments, requires `ptr` to be a `Pointer<T>`, and currently requires `index` and `count` to use the same integer kind (`i32`, `i64`, or `u64`). Signed negative `index`/`count` values and `index >= count` fail deterministically with `pointer index out of bounds`. Lowering scales the element offset by the pointee slot width, so struct pointers step by full struct slot counts rather than raw scalar slots.
-- **Unchecked pointer element access:** `/std/intrinsics/memory/at_unsafe(ptr, index)` returns the same `Pointer<T>` target type as `ptr` after unchecked element-wise pointer arithmetic. It is recognized only in qualified `/std/intrinsics/memory/*` form, takes no template arguments, rejects named/block arguments, requires `ptr` to be a `Pointer<T>`, and requires `index` to be an integer (`i32`, `i64`, or `u64`). Lowering scales the element offset by the pointee slot width just like checked `at(...)`, but performs no bounds check; this is the intended primitive for relocation/growth code paths in future stdlib-owned containers.
-- **Experimental pointer-helper shims:** `/std/collections/experimental_buffer_checked/*` and `/std/collections/experimental_buffer_unchecked/*` are temporary imported `.prime` helper namespaces used for container-conformance work. They wrap the qualified memory intrinsics into small alloc/grow/free plus checked/unchecked offset, read, and write helpers so future stdlib `vector`/`map` implementations can be proven through import-driven VM/native/C++ tests before the canonical container names switch over.
-  - When any `/std...` import is present, the stdlib now also provides canonical `.prime` wrappers at `/std/collections/vector/*` over the current stdlib `vectorNew` / `vectorCount` / `vectorPush` helper surface. That imported path is the active migration target for canonical namespaced vector helpers; canonical `/std/collections/vector/vector(...)`, `/std/collections/vector/count(...)`, `/std/collections/vector/capacity(...)`, `/std/collections/vector/at(...)`, `/std/collections/vector/at_unsafe(...)`, `/std/collections/vector/push(...)`, `/std/collections/vector/pop(...)`, `/std/collections/vector/reserve(...)`, `/std/collections/vector/clear(...)`, `/std/collections/vector/remove_at(...)`, and `/std/collections/vector/remove_swap(...)` calls now require either that imported stdlib path or an explicit source definition, and explicit canonical method forms such as `values./std/collections/vector/push(...)`, `values./std/collections/vector/pop()`, `values./std/collections/vector/reserve(...)`, `values./std/collections/vector/clear()`, `values./std/collections/vector/remove_at(...)`, and `values./std/collections/vector/remove_swap(...)` now reject with same-path `unknown method` diagnostics when no imported or declared canonical helper exists. The same explicit-helper rule now also covers bare builtin-vector `count()` method sugar: local `vector<T>` bindings such as `values.count()` reject with same-path `unknown method: /vector/count` unless an imported canonical helper or explicit `/vector/count` definition exists. Local non-vector explicit canonical slash-method `count()` and `capacity()` also now stay on that same-path rule: bindings such as `mapValues./std/collections/vector/count()`, `items./std/collections/vector/capacity()`, and `text./std/collections/vector/capacity()` reject with same-path `unknown method: /std/collections/vector/count` or `/std/collections/vector/capacity` unless a same-path helper exists. Wrapper-returned non-vector collection receivers now follow that same explicit-helper rule on both direct and slash-method `count`/`capacity` edges: `wrapMap()./std/collections/vector/capacity()`, `wrapMap()./vector/capacity()`, and `wrapMap()./vector/count()` reject with same-path `unknown method` diagnostics unless a same-path helper is declared, while direct canonical `/std/collections/vector/count(wrapMap())`, `/std/collections/vector/count(wrapText())`, and `/std/collections/vector/count(wrapArray())` calls also reject with same-path `unknown call target` diagnostics unless a same-path helper exists. Those canonical namespaced helper declarations now use experimental `Vector<T>` receivers directly, imported wrapper helpers `vectorCount|vectorCapacity|vectorAt*|vectorPush|vectorPop|vectorReserve|vectorClear|vectorRemove*` now likewise accept explicit experimental `Vector<T>` receivers by forwarding through that canonical vector wrapper path while keeping builtin `vector<T>` behavior, imported wrapper constructor aliases `vectorNew|vectorSingle|vectorPair|vectorTriple|...` now also rewrite onto the experimental `.prime` constructor path when explicit `Vector<T>` bindings, explicit `return<Vector<T>>` definitions, explicit `Vector<T>` parameters/fields, or explicit assignment/init targets require that value type, now also infer experimental `Vector<T>` results for `[auto]` locals and `return<auto>` definitions, and now also rewrite nested direct helper-call plus method-call receiver expressions built from those aliases before canonical helper or method resolution. Imported constructor/count/capacity/access wrappers plus statement-position mutators still follow ordinary definition argument rules such as named-argument support.
-  - When any `/std...` import is present, the stdlib also provides canonical `.prime` wrappers at `/std/collections/map/*` over the current stdlib `mapNew` / `mapCount` / `mapTryAt` helper surface. That imported path is now the active migration target for canonical namespaced map helpers; imported `/std/collections/map/map(...)`, `/std/collections/map/count(...)`, `/std/collections/map/contains(...)`, `/std/collections/map/tryAt(...)`, `/std/collections/map/at(...)`, and `/std/collections/map/at_unsafe(...)` wrappers follow ordinary definition argument rules such as named-argument support. Canonical `/std/collections/map/map(...)` constructor calls, `/std/collections/map/count(...)` count calls, `/std/collections/map/contains(...)` contains calls, `/std/collections/map/tryAt(...)` calls, and canonical `/std/collections/map/at(...)` plus `/std/collections/map/at_unsafe(...)` access calls now require those imported wrappers or an explicit source definition instead of falling back to builtin `/map/map`, `/map/count`, `/map/contains`, `/map/tryAt`, or `/map/at*` handling. Explicit removed compatibility `/map/count(...)`, `/map/contains(...)`, `/map/tryAt(...)`, `/map/at(...)`, and `/map/at_unsafe(...)` spellings also no longer inherit canonical `/std/collections/map/*` behavior and now require explicit `/map/count`, `/map/contains`, `/map/tryAt`, `/map/at`, or `/map/at_unsafe` definitions. Importing `/std/collections/experimental_map/*` now extends canonical namespaced helper calls in three distinct ways: value `Map<K, V>` receivers can use call-form `/std/collections/map/count|contains|tryAt|at|at_unsafe`, which rewrites directly onto the real experimental `.prime` helper implementation; wrapper-layer `/std/collections/mapCount|mapContains|mapTryAt|mapAt|mapAtUnsafe` calls on those same value receivers now rewrite onto the corresponding experimental `.prime` helpers as well, and direct canonical or wrapper-layer helper receivers built from canonical `/std/collections/map/map(...)` or wrapper-layer `/std/collections/mapNew|mapSingle|mapDouble|mapPair|...` constructor expressions now also rewrite those inner constructors onto `/std/collections/experimental_map/mapNew|mapSingle|mapDouble|mapPair|...`; direct method-call receivers built from those same constructor expressions now do the same before method lowering; explicit `[Map<K, V>]` bindings, explicit `return<Map<K, V>>` definitions, direct arguments flowing into explicit `[Map<K, V>]` parameters plus inferred `[auto]` parameters backed by experimental-map default initializers, helper-wrapped argument expressions flowing into those explicit or inferred parameter targets, those same explicit or inferred parameter targets reached through method-call sugar, explicit or inferred experimental `Map<K, V>` struct fields initialized through struct-constructor arguments, direct `assign(values, ...)` writes into explicit `[Map<K, V> mut]` locals or parameters plus explicit or inferred experimental `Map<K, V>` struct fields, both explicit-template plus implicit-template constructor calls flowing through `[auto]` locals and `return<auto>` definitions, `return<auto>` definitions whose inferred result is an experimental `Map<K, V>`, block-bodied value returns inside those inferred-return definitions, helper-wrapped return-path expressions inside those explicit or inferred experimental-map definitions, `auto` bindings nested inside those returned blocks, and direct method-call receivers produced by those inferred experimental-map definitions can initialize from either canonical `/std/collections/map/map(...)` or wrapper-layer `/std/collections/mapNew|mapSingle|mapDouble|mapPair|...` constructor aliases, which rewrite onto or infer `/std/collections/experimental_map/mapNew|mapSingle|mapDouble|mapPair|...` plus the real experimental `Map<K, V>` type during template monomorphization; and borrowed `Reference<Map<K, V>>` receivers use the overload-free canonical spellings `/std/collections/map/count_ref|contains_ref|tryAt_ref|at_ref|at_unsafe_ref`. Wrapper-layer helper names on builtin `map<K, V>` receivers and broader inference-driven constructor routing outside those explicit or first-step inferred experimental destinations still stay on `collections.prime` until the broader constructor/type-surface migration is ready. Bare builtin map method sugar now follows the same import-driven path: `values.count()`, `values.contains(...)`, and `values.tryAt(...)` require imported canonical `/std/collections/map/count`, `/std/collections/map/contains`, and `/std/collections/map/tryAt` wrappers or explicit `/map/count`, `/map/contains`, and `/map/tryAt` definitions, while `values.at(...)` plus `values.at_unsafe(...)` require imported canonical `/std/collections/map/at*` wrappers or explicit `/map/at*` definitions, instead of falling back to compiler-owned builtin method semantics. Bare root `count(values)`, `contains(values, key)`, `at(values, key)`, and `at_unsafe(values, key)` calls on builtin `map<K, V>` targets now follow that same helper path: `count(values)` requires imported canonical `/std/collections/map/count` or explicit `/count` or `/map/count` definitions, while `contains(values, key)` and `at*(values, key)` require imported canonical `/std/collections/map/contains` or `/std/collections/map/at*` helpers, or explicit `/contains` or `/map/*` definitions, instead of falling back to compiler-owned builtin call semantics.
-- **Pointer/reference helper returns:** explicit helper return transforms such as `return<Pointer<T>>` and `return<Reference<T>>` lower through the address-like `i64` return path on VM/native/IR-backed backends (unless they wrap one of the collection envelopes handled separately), so imported `.prime` helpers can pass checked-access pointers between allocation, growth, and indexing helpers without backend-specific special cases.
-- **Pointer arithmetic:** `plus(ptr, offset)` and `minus(ptr, offset)` treat `offset` as a byte offset. VM/native frames currently space locals in 16-byte slots, so adding or subtracting `16` advances one local slot. Offsets accept `i32`, `i64`, or `u64` in the front-end; non-integer offsets are rejected, and the native backend lowers all three widths.
+- **Qualifiers:** `restrict<T>` is allowed on bindings and parameters only; it must match the binding type (including
+  template args) and acts as an explicit type constraint. There is no `readonly` qualifier yet; use `mut` to opt into
+  mutation.
+- **Target whitelist:** `Pointer<T>` targets always support primitive and struct pointees. Additional specialized
+  pointer targets are accepted only where the language/runtime has explicit handling (for example the supported
+  `array<T>`, `vector<T>`, header-only `soa_vector<T>`, `map<K, V>`, `File<Mode>`, `Result<T, Error>`, and `FileError`
+  surfaces described elsewhere in this spec). `Reference<T>` targets always support primitive and struct pointees, and
+  selected explicit wrapper cases such as `array<T>`, `vector<T>`, header-only `soa_vector<T>`, `map<K, V>`,
+  `File<Mode>`, `Result<T, Error>`, and `FileError` where the runtime has dedicated handling. Heap intrinsics still
+  reject `alloc<array<T>>` even though location-backed `Pointer<array<T>>` bindings are accepted.
+- **Backend limits:** VM/native lowering rejects `Pointer<string>` / `Reference<string>` (string pointers are not
+  supported). Entry-argument arrays are not addressable (`location(args)` is invalid).
+- **Surface syntax:** canonical syntax uses explicit calls (`location`, `dereference`, `plus`/`minus`); the `operators`
+  text transform rewrites `&name`/`*name` sugar into those calls.
+- **Reference binding:** in safe scopes, `Reference<T>` bindings are initialized from `location(...)`. In `[unsafe]`
+  scopes they may also be initialized from pointer-like expressions (`Pointer<T>`/`Reference<T>` values and pointer
+  arithmetic results) when the target type matches. References behave like `*Pointer<T>` in use. Use `mut` on the
+  reference binding to allow `assign(ref, value)`.
+- **Array pointers:** `Pointer<array<T>>` is allowed for location-backed locals/parameters and participates in the same
+  read-only array receiver API (`count`/`at`/indexing) that value and reference arrays use.
+- **Array references:** `Reference<array<T>>` is allowed; treat the reference like an array value for `count`/`at` and
+  other array operations while still using `location(...)` to form the reference.
+- **Core pointer calls:** `location(value)` yields a pointer to a local binding or parameter (entry argument arrays are
+  not addressable); `location(ref)` returns the pointer stored by a `Reference<T>` binding; `dereference(ptr)` reads
+  through a pointer/reference form; `assign(dereference(ptr), value)` writes through the pointer. Pointer writes require
+  the pointer binding to be declared `mut`; attempting to assign through an immutable pointer or reference is rejected.
+- **Heap intrinsics (semantic contract):** `/std/intrinsics/memory/alloc<T>(count)` returns `Pointer<T>`,
+  `/std/intrinsics/memory/realloc(ptr, count)` returns the same `Pointer<T>` target type as `ptr`, and
+  `/std/intrinsics/memory/free(ptr)` releases a pointer allocation. These names are recognized only in qualified
+  `/std/intrinsics/memory/*` form. All three require `effects(heap_alloc)` (or the active default effects set), reject
+  named/block arguments, and use element counts rather than raw byte sizes. `alloc` requires exactly one template
+  argument plus one integer count argument; `realloc` requires one pointer argument plus one integer count argument;
+  `free` requires one pointer argument and takes no template arguments. Current implementation status: semantic
+  validation recognizes and validates all three calls; VM/native/IR-to-C++ lowering now lowers `alloc` onto the shared
+  `HeapAlloc` runtime path (including struct element-count expansion by slot width), `free` now lowers onto `HeapFree`,
+  `realloc` now lowers onto `HeapRealloc` on VM/native/IR-to-C++ backends, VM/IR-to-C++ runtimes reject dereferences
+  into freed heap ranges deterministically, and `realloc` preserves slot payloads across successful growth/shrink
+  reallocation while treating counts as element counts rather than raw bytes.
+- **Checked pointer element access:** `/std/intrinsics/memory/at(ptr, index, count)` returns the same `Pointer<T>`
+  target type as `ptr` after checked element-wise pointer arithmetic. It is recognized only in qualified
+  `/std/intrinsics/memory/*` form, takes no template arguments, rejects named/block arguments, requires `ptr` to be a
+  `Pointer<T>`, and currently requires `index` and `count` to use the same integer kind (`i32`, `i64`, or `u64`). Signed
+  negative `index`/`count` values and `index >= count` fail deterministically with `pointer index out of bounds`.
+  Lowering scales the element offset by the pointee slot width, so struct pointers step by full struct slot counts
+  rather than raw scalar slots.
+- **Unchecked pointer element access:** `/std/intrinsics/memory/at_unsafe(ptr, index)` returns the same `Pointer<T>`
+  target type as `ptr` after unchecked element-wise pointer arithmetic. It is recognized only in qualified
+  `/std/intrinsics/memory/*` form, takes no template arguments, rejects named/block arguments, requires `ptr` to be a
+  `Pointer<T>`, and requires `index` to be an integer (`i32`, `i64`, or `u64`). Lowering scales the element offset by
+  the pointee slot width just like checked `at(...)`, but performs no bounds check; this is the intended primitive for
+  relocation/growth code paths in future stdlib-owned containers.
+- **Experimental pointer-helper shims:** `/std/collections/experimental_buffer_checked/*` and
+  `/std/collections/experimental_buffer_unchecked/*` are temporary imported `.prime` helper namespaces used for
+  container-conformance work. They wrap the qualified memory intrinsics into small alloc/grow/free plus
+  checked/unchecked offset, read, and write helpers so future stdlib `vector`/`map` implementations can be proven
+  through import-driven VM/native/C++ tests before the canonical container names switch over.
+  - When any `/std...` import is present, the stdlib now also provides canonical `.prime` wrappers at
+    `/std/collections/vector/*` over the current stdlib `vectorNew` / `vectorCount` / `vectorPush` helper surface. That
+    imported path is the active migration target for canonical namespaced vector helpers; canonical
+    `/std/collections/vector/vector(...)`, `/std/collections/vector/count(...)`,
+    `/std/collections/vector/capacity(...)`, `/std/collections/vector/at(...)`,
+    `/std/collections/vector/at_unsafe(...)`, `/std/collections/vector/push(...)`, `/std/collections/vector/pop(...)`,
+    `/std/collections/vector/reserve(...)`, `/std/collections/vector/clear(...)`,
+    `/std/collections/vector/remove_at(...)`, and `/std/collections/vector/remove_swap(...)` calls now require either
+    that imported stdlib path or an explicit source definition, and explicit canonical method forms such as
+    `values./std/collections/vector/push(...)`, `values./std/collections/vector/pop()`,
+    `values./std/collections/vector/reserve(...)`, `values./std/collections/vector/clear()`,
+    `values./std/collections/vector/remove_at(...)`, and `values./std/collections/vector/remove_swap(...)` now reject
+    with same-path `unknown method` diagnostics when no imported or declared canonical helper exists. The same
+    explicit-helper rule now also covers bare builtin-vector `count()` method sugar: local `vector<T>` bindings such as
+    `values.count()` reject with same-path `unknown method: /vector/count` unless an imported canonical helper or
+    explicit `/vector/count` definition exists. Local non-vector explicit canonical slash-method `count()` and
+    `capacity()` also now stay on that same-path rule: bindings such as `mapValues./std/collections/vector/count()`,
+    `items./std/collections/vector/capacity()`, and `text./std/collections/vector/capacity()` reject with same-path
+    `unknown method: /std/collections/vector/count` or `/std/collections/vector/capacity` unless a same-path helper
+    exists. Wrapper-returned non-vector collection receivers now follow that same explicit-helper rule on both direct
+    and slash-method `count`/`capacity` edges: `wrapMap()./std/collections/vector/capacity()`,
+    `wrapMap()./vector/capacity()`, and `wrapMap()./vector/count()` reject with same-path `unknown method` diagnostics
+    unless a same-path helper is declared, while direct canonical `/std/collections/vector/count(wrapMap())`,
+    `/std/collections/vector/count(wrapText())`, and `/std/collections/vector/count(wrapArray())` calls also reject with
+    same-path `unknown call target` diagnostics unless a same-path helper exists. Those canonical namespaced helper
+    declarations now use experimental `Vector<T>` receivers directly, imported wrapper helpers
+    `vectorCount|vectorCapacity|vectorAt*|vectorPush|vectorPop|vectorReserve|vectorClear|vectorRemove*` now likewise
+    accept explicit experimental `Vector<T>` receivers by forwarding through that canonical vector wrapper path while
+    keeping builtin `vector<T>` behavior, imported wrapper constructor aliases
+    `vectorNew|vectorSingle|vectorPair|vectorTriple|...` now also rewrite onto the experimental `.prime` constructor
+    path when explicit `Vector<T>` bindings, explicit `return<Vector<T>>` definitions, explicit `Vector<T>`
+    parameters/fields, or explicit assignment/init targets require that value type, now also infer experimental
+    `Vector<T>` results for `[auto]` locals and `return<auto>` definitions, and now also rewrite nested direct
+    helper-call plus method-call receiver expressions built from those aliases before canonical helper or method
+    resolution. Imported constructor/count/capacity/access wrappers plus statement-position mutators still follow
+    ordinary definition argument rules such as named-argument support.
+  - When any `/std...` import is present, the stdlib also provides canonical `.prime` wrappers at
+    `/std/collections/map/*` over the current stdlib `mapNew` / `mapCount` / `mapTryAt` helper surface. That imported
+    path is now the active migration target for canonical namespaced map helpers; imported
+    `/std/collections/map/map(...)`, `/std/collections/map/count(...)`, `/std/collections/map/contains(...)`,
+    `/std/collections/map/tryAt(...)`, `/std/collections/map/at(...)`, and `/std/collections/map/at_unsafe(...)`
+    wrappers follow ordinary definition argument rules such as named-argument support. Canonical
+    `/std/collections/map/map(...)` constructor calls, `/std/collections/map/count(...)` count calls,
+    `/std/collections/map/contains(...)` contains calls, `/std/collections/map/tryAt(...)` calls, and canonical
+    `/std/collections/map/at(...)` plus `/std/collections/map/at_unsafe(...)` access calls now require those imported
+    wrappers or an explicit source definition instead of falling back to builtin `/map/map`, `/map/count`,
+    `/map/contains`, `/map/tryAt`, or `/map/at*` handling. Explicit removed compatibility `/map/count(...)`,
+    `/map/contains(...)`, `/map/tryAt(...)`, `/map/at(...)`, and `/map/at_unsafe(...)` spellings also no longer inherit
+    canonical `/std/collections/map/*` behavior and now require explicit `/map/count`, `/map/contains`, `/map/tryAt`,
+    `/map/at`, or `/map/at_unsafe` definitions. Importing `/std/collections/experimental_map/*` now extends canonical
+    namespaced helper calls in three distinct ways: value `Map<K, V>` receivers can use call-form
+    `/std/collections/map/count|contains|tryAt|at|at_unsafe`, which rewrites directly onto the real experimental
+    `.prime` helper implementation; wrapper-layer `/std/collections/mapCount|mapContains|mapTryAt|mapAt|mapAtUnsafe`
+    calls on those same value receivers now rewrite onto the corresponding experimental `.prime` helpers as well, and
+    direct canonical or wrapper-layer helper receivers built from canonical `/std/collections/map/map(...)` or
+    wrapper-layer `/std/collections/mapNew|mapSingle|mapDouble|mapPair|...` constructor expressions now also rewrite
+    those inner constructors onto `/std/collections/experimental_map/mapNew|mapSingle|mapDouble|mapPair|...`; direct
+    method-call receivers built from those same constructor expressions now do the same before method lowering; explicit
+    `[Map<K, V>]` bindings, explicit `return<Map<K, V>>` definitions, direct arguments flowing into explicit `[Map<K,
+    V>]` parameters plus inferred `[auto]` parameters backed by experimental-map default initializers, helper-wrapped
+    argument expressions flowing into those explicit or inferred parameter targets, those same explicit or inferred
+    parameter targets reached through method-call sugar, explicit or inferred experimental `Map<K, V>` struct fields
+    initialized through struct-constructor arguments, direct `assign(values, ...)` writes into explicit `[Map<K, V>
+    mut]` locals or parameters plus explicit or inferred experimental `Map<K, V>` struct fields, both explicit-template
+    plus implicit-template constructor calls flowing through `[auto]` locals and `return<auto>` definitions,
+    `return<auto>` definitions whose inferred result is an experimental `Map<K, V>`, block-bodied value returns inside
+    those inferred-return definitions, helper-wrapped return-path expressions inside those explicit or inferred
+    experimental-map definitions, `auto` bindings nested inside those returned blocks, and direct method-call receivers
+    produced by those inferred experimental-map definitions can initialize from either canonical
+    `/std/collections/map/map(...)` or wrapper-layer `/std/collections/mapNew|mapSingle|mapDouble|mapPair|...`
+    constructor aliases, which rewrite onto or infer
+    `/std/collections/experimental_map/mapNew|mapSingle|mapDouble|mapPair|...` plus the real experimental `Map<K, V>`
+    type during template monomorphization; and borrowed `Reference<Map<K, V>>` receivers use the overload-free canonical
+    spellings `/std/collections/map/count_ref|contains_ref|tryAt_ref|at_ref|at_unsafe_ref`. Wrapper-layer helper names
+    on builtin `map<K, V>` receivers and broader inference-driven constructor routing outside those explicit or
+    first-step inferred experimental destinations still stay on `collections.prime` until the broader
+    constructor/type-surface migration is ready. Bare builtin map method sugar now follows the same import-driven path:
+    `values.count()`, `values.contains(...)`, and `values.tryAt(...)` require imported canonical
+    `/std/collections/map/count`, `/std/collections/map/contains`, and `/std/collections/map/tryAt` wrappers or explicit
+    `/map/count`, `/map/contains`, and `/map/tryAt` definitions, while `values.at(...)` plus `values.at_unsafe(...)`
+    require imported canonical `/std/collections/map/at*` wrappers or explicit `/map/at*` definitions, instead of
+    falling back to compiler-owned builtin method semantics. Bare root `count(values)`, `contains(values, key)`,
+    `at(values, key)`, and `at_unsafe(values, key)` calls on builtin `map<K, V>` targets now follow that same helper
+    path: `count(values)` requires imported canonical `/std/collections/map/count` or explicit `/count` or `/map/count`
+    definitions, while `contains(values, key)` and `at*(values, key)` require imported canonical
+    `/std/collections/map/contains` or `/std/collections/map/at*` helpers, or explicit `/contains` or `/map/*`
+    definitions, instead of falling back to compiler-owned builtin call semantics.
+- **Pointer/reference helper returns:** explicit helper return transforms such as `return<Pointer<T>>` and
+  `return<Reference<T>>` lower through the address-like `i64` return path on VM/native/IR-backed backends (unless they
+  wrap one of the collection envelopes handled separately), so imported `.prime` helpers can pass checked-access
+  pointers between allocation, growth, and indexing helpers without backend-specific special cases.
+- **Pointer arithmetic:** `plus(ptr, offset)` and `minus(ptr, offset)` treat `offset` as a byte offset. VM/native frames
+  currently space locals in 16-byte slots, so adding or subtracting `16` advances one local slot. Offsets accept `i32`,
+  `i64`, or `u64` in the front-end; non-integer offsets are rejected, and the native backend lowers all three widths.
   - Pointer + pointer is rejected; only pointer ± integer offsets are allowed.
-  - Offsets are interpreted as unsigned byte counts at runtime; negative offsets require signed operands (e.g., `-16i64`).
+  - Offsets are interpreted as unsigned byte counts at runtime; negative offsets require signed operands (e.g.,
+    `-16i64`).
   - Example: `plus(location(second), -16i64)` steps back one 16-byte slot.
   - Example: `minus(location(second), 16u64)` also steps back one 16-byte slot.
   - You can use `location(ref)` inside pointer arithmetic when starting from a `Reference<T>` binding.
-  - The C++ emitter performs raw pointer arithmetic on actual addresses; offsets are only well-defined within the same allocated object.
+  - The C++ emitter performs raw pointer arithmetic on actual addresses; offsets are only well-defined within the same
+    allocated object.
   - Minimal runnable example:
     ```
     [return<i32>]
@@ -1456,7 +2553,8 @@ bad_use_after_take() {
     LoadLocal value
     ReturnI32
     ```
-- **Reference example:** `Reference<T>` behaves like a dereferenced pointer in value positions while still storing the address.
+- **Reference example:** `Reference<T>` behaves like a dereferenced pointer in value positions while still storing the
+  address.
   - Minimal runnable example:
     ```
     [return<i32>]
@@ -1467,7 +2565,8 @@ bad_use_after_take() {
       return(ref)
     }
     ```
-  - You can recover a raw pointer from a reference via `location(ref)` when needed for pointer arithmetic or passing into APIs.
+  - You can recover a raw pointer from a reference via `location(ref)` when needed for pointer arithmetic or passing
+    into APIs.
   - Expected IR (shape only):
     ```
     PushI32 2
@@ -1482,15 +2581,19 @@ bad_use_after_take() {
     LoadIndirect
     ReturnI32
     ```
-  - References can be used directly in arithmetic (e.g., `plus(ref, 2i32)`), and `location(ref)` yields the underlying pointer.
-- **Ownership:** references are non-owning, frame-bound views. Pointer ownership tags (`raw`, `unique`, `shared`) are reserved for future allocator integrations.
+  - References can be used directly in arithmetic (e.g., `plus(ref, 2i32)`), and `location(ref)` yields the underlying
+    pointer.
+- **Ownership:** references are non-owning, frame-bound views. Pointer ownership tags (`raw`, `unique`, `shared`) are
+  reserved for future allocator integrations.
 - **Raw memory:** `memory::load/store` primitives expose byte-level access; opt-in to highlight unsafe operations.
 - **Layout control:** attributes like `[packed]` guarantee interop-friendly layouts for C++/GLSL.
 - **Open design:** pointer qualifier syntax, aliasing rules (restrict/readonly), and GPU backend constraints remain TBD.
 
 ## VM Design
-- **Instruction set:** stack-based ops covering control flow, stack manipulation, memory/pointer access, IO, and explicit conversions. No implicit conversions; opcodes mirror the canonical language surface.
-- **PSIR opcode set (v20, VM/native):** `PushI32`, `PushI64`, `PushF32`, `PushF64`, `PushArgc`, `LoadLocal`, `StoreLocal`,
+- **Instruction set:** stack-based ops covering control flow, stack manipulation, memory/pointer access, IO, and
+  explicit conversions. No implicit conversions; opcodes mirror the canonical language surface.
+- **PSIR opcode set (v20, VM/native):** `PushI32`, `PushI64`, `PushF32`, `PushF64`, `PushArgc`, `LoadLocal`,
+  `StoreLocal`,
   `AddressOfLocal`, `LoadIndirect`, `StoreIndirect`, `Dup`, `Pop`, `AddI32`, `SubI32`, `MulI32`, `DivI32`, `NegI32`,
   `AddI64`, `SubI64`, `MulI64`, `DivI64`, `DivU64`, `NegI64`, `AddF32`, `SubF32`, `MulF32`, `DivF32`, `NegF32`,
   `AddF64`, `SubF64`, `MulF64`, `DivF64`, `NegF64`, `CmpEqI32`, `CmpNeI32`, `CmpLtI32`, `CmpLeI32`, `CmpGtI32`,
@@ -1504,15 +2607,35 @@ bad_use_after_take() {
   `FileOpenAppend`, `FileReadByte`, `FileClose`, `FileFlush`, `FileWriteI32`, `FileWriteI64`, `FileWriteU64`,
   `FileWriteString`, `FileWriteByte`, `FileWriteNewline`, `PrintStringDynamic`, `Call`, `CallVoid`, `HeapAlloc`,
   `HeapFree`, `HeapRealloc`.
-- **Call-opcode status:** `Call` and `CallVoid` are serialized/validated and execute in both VM and native backends with frame/call-stack semantics. Current lowering still inlines source-level definition calls and does not emit call opcodes yet.
-- **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`; these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v21 (adds `HeapRealloc` on top of v20’s `FileReadByte` and `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes, v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
-- **Frames & stack:** VM/native execution starts at the entry frame and pushes/pops frames for `Call`/`CallVoid`; each frame stores locals in 16-byte slots while the operand stack stores raw `u64` values interpreted by opcode (ints, floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be 16-byte aligned.
-- **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions plus reachable non-entry callable function bodies so function names/metadata and executable IR survive serialization. VM/native execution starts from `entryIndex`; lowering currently still inlines source-level calls, so recursion remains rejected in lowered source programs even though callable IR call opcodes support recursive execution.
-- **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it. File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via lowering.
-- **Memory/GC:** there is no GC in the VM today. Arrays are inline locals with count metadata plus contiguous element slots. Vectors are specified as dynamic contiguous storage (heap-backed semantics), but VM/native currently implement vectors as inline fixed-capacity locals; migration to dynamic storage is tracked in `docs/todo.md`. No reference counting is performed.
-- **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.
-- **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
+- **Call-opcode status:** `Call` and `CallVoid` are serialized/validated and execute in both VM and native backends with
+  frame/call-stack semantics. Current lowering still inlines source-level definition calls and does not emit call
+  opcodes yet.
+- **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
+  these modes emit backend output directly without requiring PSIR serialization.
+- **PSIR versioning:** current portable IR is PSIR v21 (adds `HeapRealloc` on top of v20’s `FileReadByte` and
+  `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
+  debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes,
+  v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`,
+  `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
+- **Frames & stack:** VM/native execution starts at the entry frame and pushes/pops frames for `Call`/`CallVoid`; each
+  frame stores locals in 16-byte slots while the operand stack stores raw `u64` values interpreted by opcode (ints,
+  floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be
+  16-byte aligned.
+- **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions
+  plus reachable non-entry callable function bodies so function names/metadata and executable IR survive serialization.
+  VM/native execution starts from `entryIndex`; lowering currently still inlines source-level calls, so recursion
+  remains rejected in lowered source programs even though callable IR call opcodes support recursive execution.
+- **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it.
+  File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via
+  lowering.
+- **Memory/GC:** there is no GC in the VM today. Arrays are inline locals with count metadata plus contiguous element
+  slots. Vectors are specified as dynamic contiguous storage (heap-backed semantics), but VM/native currently implement
+  vectors as inline fixed-capacity locals; migration to dynamic storage is tracked in `docs/todo.md`. No reference
+  counting is performed.
+- **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM
+  runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.
+- **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
+  code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
 
 ## Examples (sketch)
 ```
@@ -1629,44 +2752,72 @@ module {
 - **Diagnostics:** metrics/logs land under `diagnostics/PrimeStruct/*`. Effect annotations drive error messaging.
 
 ### Diagnostics & Tooling Roadmap
-- **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export (`--emit-diagnostics`) for tooling/tests.
-- **Phase 1 (source maps):** attach token spans to AST, keep span provenance through text/semantic transforms, and emit IR-to-source maps for VM/native/GLSL. Require every diagnostic to carry at least one source span.
-- **Phase 2 (incremental):** content-addressed caches for AST/IR, dependency graph tracking for imports, and invalidation rules per transform phase. Add `--watch` to reuse caches and stream diagnostics.
-- **Phase 3 (IDE/LSP):** go-to-definition, completion, and signature help using the same symbol tables as the compiler. Provide diagnostics in LSP format plus an editor adapter.
-- **Phase 4 (runtime):** VM/native stack traces mapped via source maps, crash reports emitted with IR/AST hashes, and opt-in runtime tracing for effect/capability usage.
+- **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include
+  canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export
+  (`--emit-diagnostics`) for tooling/tests.
+- **Phase 1 (source maps):** attach token spans to AST, keep span provenance through text/semantic transforms, and emit
+  IR-to-source maps for VM/native/GLSL. Require every diagnostic to carry at least one source span.
+- **Phase 2 (incremental):** content-addressed caches for AST/IR, dependency graph tracking for imports, and
+  invalidation rules per transform phase. Add `--watch` to reuse caches and stream diagnostics.
+- **Phase 3 (IDE/LSP):** go-to-definition, completion, and signature help using the same symbol tables as the compiler.
+  Provide diagnostics in LSP format plus an editor adapter.
+- **Phase 4 (runtime):** VM/native stack traces mapped via source maps, crash reports emitted with IR/AST hashes, and
+  opt-in runtime tracing for effect/capability usage.
 
 ### VM Debug Event Ordering
-- `VmDebugSession` hook callbacks are emitted in one total order with a monotonically increasing `sequence` value that starts at `0` on each `start(...)`.
-- Per instruction, hooks fire in this order: `beforeInstruction` -> zero or more in-instruction call events (`callPush` / `callPop`) -> `afterInstruction`.
+- `VmDebugSession` hook callbacks are emitted in one total order with a monotonically increasing `sequence` value that
+  starts at `0` on each `start(...)`.
+- Per instruction, hooks fire in this order: `beforeInstruction` -> zero or more in-instruction call events (`callPush`
+  / `callPop`) -> `afterInstruction`.
 - Faulted instructions emit `beforeInstruction` and then `fault`; they do not emit `afterInstruction`.
-- For identical IR + entry arguments + control flow (`step`/`continue` decisions), the emitted hook event stream is deterministic and replayable.
-- `primevm --debug-json` emits one JSON object per line (`version`, `event`, and event-specific fields). Hook records include `sequence` and `snapshot`; stop records include `reason` and a terminal snapshot.
-- `primevm --debug-json-snapshots=stop|all` adds `snapshot_payload` on demand; `stop` limits payloads to `stop` events, while `all` includes payloads on session/hook/stop events.
-- `primevm --debug-trace <path>` records deterministic VM events to a file (NDJSON) including hook `sequence` ordering, snapshots, and snapshot payloads; repeated runs over identical inputs must produce byte-identical trace logs.
-- `primevm --debug-replay <trace>` restores a deterministic checkpoint from a captured trace and emits a single `replay_checkpoint` record (`target_sequence`, resolved `checkpoint_sequence`, event/reason, snapshot, snapshot_payload).
-- `primevm --debug-replay-sequence <n>` selects the latest checkpoint with `sequence <= n` for time-travel; without an explicit sequence, replay uses the terminal checkpoint and mirrors traced exit codes for terminal `stop`/`Exit` checkpoints.
+- For identical IR + entry arguments + control flow (`step`/`continue` decisions), the emitted hook event stream is
+  deterministic and replayable.
+- `primevm --debug-json` emits one JSON object per line (`version`, `event`, and event-specific fields). Hook records
+  include `sequence` and `snapshot`; stop records include `reason` and a terminal snapshot.
+- `primevm --debug-json-snapshots=stop|all` adds `snapshot_payload` on demand; `stop` limits payloads to `stop` events,
+  while `all` includes payloads on session/hook/stop events.
+- `primevm --debug-trace <path>` records deterministic VM events to a file (NDJSON) including hook `sequence` ordering,
+  snapshots, and snapshot payloads; repeated runs over identical inputs must produce byte-identical trace logs.
+- `primevm --debug-replay <trace>` restores a deterministic checkpoint from a captured trace and emits a single
+  `replay_checkpoint` record (`target_sequence`, resolved `checkpoint_sequence`, event/reason, snapshot,
+  snapshot_payload).
+- `primevm --debug-replay-sequence <n>` selects the latest checkpoint with `sequence <= n` for time-travel; without an
+  explicit sequence, replay uses the terminal checkpoint and mirrors traced exit codes for terminal `stop`/`Exit`
+  checkpoints.
 
 ### VM IR Breakpoints
-- `VmDebugSession` supports IR-level breakpoints keyed by `(functionIndex, instructionPointer)` through `addBreakpoint`, `removeBreakpoint`, and `clearBreakpoints`.
-- `resolveSourceBreakpoints(...)` maps source locations (`line`, optional `column`) to executable IR breakpoint locations via canonical source-map entries; line-only requests reject ambiguous multi-column matches with explicit diagnostics.
-- `VmDebugSession::addSourceBreakpoint(line, column, resolvedCount, ...)` resolves and installs all matching IR breakpoints in one call; `resolvedCount` reports how many executable locations were mapped.
+- `VmDebugSession` supports IR-level breakpoints keyed by `(functionIndex, instructionPointer)` through `addBreakpoint`,
+  `removeBreakpoint`, and `clearBreakpoints`.
+- `resolveSourceBreakpoints(...)` maps source locations (`line`, optional `column`) to executable IR breakpoint
+  locations via canonical source-map entries; line-only requests reject ambiguous multi-column matches with explicit
+  diagnostics.
+- `VmDebugSession::addSourceBreakpoint(line, column, resolvedCount, ...)` resolves and installs all matching IR
+  breakpoints in one call; `resolvedCount` reports how many executable locations were mapped.
 - Breakpoints are checked in `continueExecution` before instruction execution and stop with reason `Breakpoint`.
-- Continuing from a breakpoint resumes past that same location once (prevents immediate repeat-stops at the same `(functionIndex, instructionPointer)`), then normal breakpoint checks resume.
+- Continuing from a breakpoint resumes past that same location once (prevents immediate repeat-stops at the same
+  `(functionIndex, instructionPointer)`), then normal breakpoint checks resume.
 
 ### VM Fault Stack Traces
 - `VmDebugSession` fault diagnostics append a deterministic mapped stack trace when source-map metadata is available.
-- Stack frames are listed from faulting frame to caller frames and include function path, instruction pointer, instruction debug ID, and mapped source span (`line:column`) with provenance.
-- Caller-frame mapping reports call-site instructions (the `Call`/`CallVoid` slot) rather than the post-call instruction pointer.
+- Stack frames are listed from faulting frame to caller frames and include function path, instruction pointer,
+  instruction debug ID, and mapped source span (`line:column`) with provenance.
+- Caller-frame mapping reports call-site instructions (the `Call`/`CallVoid` slot) rather than the post-call instruction
+  pointer.
 
 ### VM Debug Adapter (MVP)
 - `VmDebugAdapter` (`primec/VmDebugAdapter.h`) translates VM debug-session behavior into debugger-facing primitives:
   - execution control: `launch`, `continueExecution`, `step`, `pause`
   - debugger queries: `threads`, `stackTrace`, `scopes`, `variables`
   - breakpoints: `setInstructionBreakpoints`, `setSourceBreakpoints`
-- Stack-frame responses use source-map metadata when available (`line`, `column`, provenance) and keep the same call-site mapping behavior used by VM fault stack traces.
-- Adapter calls append deterministic transcript lines through `transcript()` to support protocol transcript tests and replay checks.
-- Snapshot payloads now carry per-frame locals (`frame_locals`) so `scopes/variables` return concrete local values for non-top frames as well as the active frame.
-- `primevm --debug-dap` adds stdio JSON-RPC (`Content-Length`) framing and a request router for `initialize`, `launch`, `setBreakpoints`, `setInstructionBreakpoints`, `threads`, `stackTrace`, `scopes`, `variables`, `continue`, `next`, `pause`, and `disconnect`.
+- Stack-frame responses use source-map metadata when available (`line`, `column`, provenance) and keep the same
+  call-site mapping behavior used by VM fault stack traces.
+- Adapter calls append deterministic transcript lines through `transcript()` to support protocol transcript tests and
+  replay checks.
+- Snapshot payloads now carry per-frame locals (`frame_locals`) so `scopes/variables` return concrete local values for
+  non-top frames as well as the active frame.
+- `primevm --debug-dap` adds stdio JSON-RPC (`Content-Length`) framing and a request router for `initialize`, `launch`,
+  `setBreakpoints`, `setInstructionBreakpoints`, `threads`, `stackTrace`, `scopes`, `variables`, `continue`, `next`,
+  `pause`, and `disconnect`.
 
 ### Semantics Parallelism (Investigation)
 We plan to parallelize semantic validation across root functions using a
@@ -1722,7 +2873,8 @@ Out of scope (initial):
 - Static analysis/lint integrated into CI to catch undefined constructs before codegen.
 
 ## Next Steps (Exploratory)
-1. Draft detailed syntax/semantics spec and circulate for review. _(Draft captured in a separate syntax spec on 2025-11-21; review/feedback tracking TBD.)_
+1. Draft detailed syntax/semantics spec and circulate for review. _(Draft captured in a separate syntax spec on
+   2025-11-21; review/feedback tracking TBD.)_
 2. Prototype parser + IR builder (Phase 0).
 3. Evaluate reuse of existing shader toolchains (glslang, SPIRV-Cross) vs bespoke emitters.
 4. Design import/package system (module syntax, search paths, visibility rules, transform distribution).

@@ -53,18 +53,23 @@ This file stores durable session-derived facts that are useful in later work. Ke
 ### template-monomorph-final-orchestration-header
 - Updated: 2026-03-26
 - Tags: semantics, template-monomorph, refactor
-- Fact: Final monomorphization orchestration now routes import-alias setup and definition/execution rewrite passes through `src/semantics/TemplateMonomorphFinalOrchestration.h`.
-- Evidence: Group 9 extracted `buildImportAliases(...)`, definition rewrite coordination, and execution rewrite coordination out of `monomorphizeTemplates(...)` into dedicated helper functions.
+- Fact: Final monomorphization orchestration now routes import-alias setup and definition/execution rewrite passes
+  through `src/semantics/TemplateMonomorphFinalOrchestration.h`.
+- Evidence: Group 9 extracted `buildImportAliases(...)`, definition rewrite coordination, and execution rewrite
+  coordination out of `monomorphizeTemplates(...)` into dedicated helper functions.
 
 ### template-monomorph-source-definition-setup-header
 - Updated: 2026-03-26
 - Tags: semantics, template-monomorph, refactor
-- Fact: Source-definition collation, helper-overload family expansion, and template-root entry-path validation for monomorphization now run via `src/semantics/TemplateMonomorphSourceDefinitionSetup.h`.
-- Evidence: Group 9 extracted the monomorph setup block from `monomorphizeTemplates(...)` into `initializeTemplateMonomorphSourceDefinitions(...)`.
+- Fact: Source-definition collation, helper-overload family expansion, and template-root entry-path validation for
+  monomorphization now run via `src/semantics/TemplateMonomorphSourceDefinitionSetup.h`.
+- Evidence: Group 9 extracted the monomorph setup block from `monomorphizeTemplates(...)` into
+  `initializeTemplateMonomorphSourceDefinitions(...)`.
 
 ## Maintenance Notes
 
 - Keep entries sorted by slug within the section.
 - Delete wrong entries instead of leaving contradictory facts behind.
 - Prefer updating an existing entry over adding a near-duplicate.
-- Avoid copying obvious facts from `AGENTS.md` or canonical design docs unless the shorter memory adds unique operational value.
+- Avoid copying obvious facts from `AGENTS.md` or canonical design docs unless the shorter memory adds unique
+  operational value.

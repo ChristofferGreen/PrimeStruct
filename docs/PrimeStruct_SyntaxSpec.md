@@ -20,7 +20,8 @@ PrimeStruct uses a single canonical form called an **Envelope** for definitions 
 - `(...)` contains parameters or arguments.
 - `{...}` contains a definition body (bindings use `{...}` for initializers).
 
-Executions are call-style forms with mandatory parentheses and no body. In the canonical AST they are envelopes with an implicit empty body:
+Executions are call-style forms with mandatory parentheses and no body. In the canonical AST they are envelopes with an
+implicit empty body:
 
 ```
 foo()
@@ -33,17 +34,20 @@ Surface definitions also accept a post-parameter transform placement:
 name<template-list>(param-list) [transform-list] { body-list }
 ```
 
-This is definition-only sugar. The parser normalizes it to canonical prefix form before semantic validation and IR lowering. `name[]() { ... }` is not valid syntax.
+This is definition-only sugar. The parser normalizes it to canonical prefix form before semantic validation and IR
+lowering. `name[]() { ... }` is not valid syntax.
 
 Transforms operate in two phases:
-- **Text transforms:** token-level rewrites that run before AST construction. They apply to the entire envelope (transform list, templates, parameters, and body) for the definition/execution they are attached to.
+- **Text transforms:** token-level rewrites that run before AST construction. They apply to the entire envelope
+  (transform list, templates, parameters, and body) for the definition/execution they are attached to.
 - **Semantic transforms:** AST-level annotations/validation that run after parsing.
 Use `text(...)` and `semantic(...)` inside the transform list to force phase placement. Unqualified transforms are
 auto-deduced by name; ambiguous names are errors. Text transforms may append additional text transforms to the same
 node, which run after the current transform.
 
 The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ... } else { ... }`,
-indexing `value[index]`, collection method forms like `value.push(x)`), then rewrites them into a small canonical core before semantic analysis
+indexing `value[index]`, collection method forms like `value.push(x)`), then rewrites them into a small canonical core
+before semantic analysis
 and IR lowering.
 Canonical/bottom-level syntax requires explicit return transforms and literal suffixes; surface syntax may omit
 them and rely on inference/transforms to insert the canonical forms. `auto` is permitted in signatures; in
@@ -56,10 +60,12 @@ is treated as `[struct] A() { ... }`. Helpers inside struct bodies receive an im
 unless marked `[static]`; `[static]` disables the implicit `this` and method-call sugar.
 
 Language levels (0.Concrete → 3.Surface) follow the same ordering as the compiler pipeline:
-- **0.Concrete:** canonical envelopes only, no text transforms, no templates, no `auto`. Definition transforms use prefix placement only (`[transforms] name(...) { ... }`).
+- **0.Concrete:** canonical envelopes only, no text transforms, no templates, no `auto`. Definition transforms use
+  prefix placement only (`[transforms] name(...) { ... }`).
 - **1.Template:** canonical envelopes plus explicit templates.
 - **2.Inference:** canonical envelopes plus `auto`/omitted envelopes (implicit template inference).
-- **3.Surface:** surface syntax + text transforms that rewrite into canonical forms, including `name(...) [transforms] { ... }` definition sugar.
+- **3.Surface:** surface syntax + text transforms that rewrite into canonical forms, including `name(...) [transforms] {
+  ... }` definition sugar.
 
 Import expansion runs before type checking and template inference. All definitions/executions live in a single
 compilation unit after imports are expanded, so implicit-template inference may use call sites anywhere in the
@@ -67,7 +73,8 @@ expanded source; there are no module boundaries.
 
 Transform template lists accept one or more envelope entries, so generic binding envelopes can be
 spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i32, i32>] pairs{...}`).
-Trait constraints are also encoded as transforms on definitions (e.g. `[Additive<i32>]`, `[Indexable<array<i32>, i32>]`);
+Trait constraints are also encoded as transforms on definitions (e.g. `[Additive<i32>]`, `[Indexable<array<i32>,
+i32>]`);
 they follow the same transform-list grammar and are validated during semantic analysis.
 
 The CLI supports `--dump-stage=pre_ast|ast|ast-semantic|ir` to emit the text after import expansion/text transforms,
@@ -89,7 +96,8 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
 - Base identifier: `[A-Za-z_][A-Za-z0-9_]*`
 - Slash path: `/segment/segment/...` where each segment is a base identifier.
 - Identifiers are ASCII only; non-ASCII characters are rejected by the parser.
-- Reserved keywords: `auto`, `mut`, `return`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, `for`.
+- Reserved keywords: `auto`, `mut`, `return`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`,
+  `for`.
 - Reserved keywords may not appear as identifier segments in slash paths.
 
 ### 2.2 Whitespace and Comments
@@ -97,7 +105,8 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
 - Whitespace separates tokens but is otherwise insignificant.
 - Statements are separated by whitespace/newlines; there is no line-based parsing.
 - Commas and semicolons are treated as whitespace separators and are ignored by the parser outside numeric literals.
-- Line comments (`// ...`) and block comments (`/* ... */`) are supported and ignored by the lexer (treated as whitespace).
+- Line comments (`// ...`) and block comments (`/* ... */`) are supported and ignored by the lexer (treated as
+  whitespace).
 - Text transforms also treat comments as opaque spans; operator/collection rewrites never run inside comments.
 
 ### 2.3 Literals
@@ -111,7 +120,8 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
 - Float literals:
   - Optional leading `-` is part of the literal token.
   - Decimal forms with optional exponent `e`/`E` are accepted.
-  - Commas may appear between digits in the integer part as digit separators; commas are not allowed in the fractional or exponent parts.
+  - Commas may appear between digits in the integer part as digit separators; commas are not allowed in the fractional
+    or exponent parts.
   - `f32` or `f64` suffixes are accepted; when omitted, the literal defaults to `f32`. Canonical form uses `f32`/`f64`.
   - Single-letter `f` suffix is accepted and treated as `f32`.
   - Examples: `0.5f32`, `1.0f32`, `2.0f64`, `1e-3f64`, `1f`, `1.5f`.
@@ -120,22 +130,31 @@ Type aliases:
 - No implicit width aliases; use explicit `i32`, `i64`, `u64`, `f32`, `f64`.
 - Software numeric envelopes `integer`, `decimal`, and `complex` are supported in the language spec:
   - `integer` is arbitrary-precision signed integer with exact arithmetic (no overflow/wrapping).
-  - `decimal` is arbitrary-precision floating with fixed 256-bit precision and deterministic round-to-nearest-even semantics.
+  - `decimal` is arbitrary-precision floating with fixed 256-bit precision and deterministic round-to-nearest-even
+    semantics.
   - `complex` is a pair of `decimal` values (`real`, `imag`) using the same 256-bit precision and rounding rules.
   - These envelopes are software-only; GPU backends reject them, and the current VM/native subset excludes them.
-  - Mixed ops between software envelopes and fixed-width envelopes are rejected; use explicit conversion syntax (`T{value}`). Conversions are total and deterministic: float -> integer truncates toward zero then clamps to the target range (NaN -> 0, +Inf -> max, -Inf -> min), and integer width changes use sign/zero extension on widening and two's-complement truncation on narrowing.
-  - Naming rationale: `integer`/`decimal`/`complex` model mathematical numbers and deterministic software arithmetic. Fixed-width envelopes (`i32`, `i64`, `u64`, `f32`, `f64`) model hardware behavior (modular integer arithmetic and IEEE-754 rounding), so they intentionally do not use the math-aligned names.
+  - Mixed ops between software envelopes and fixed-width envelopes are rejected; use explicit conversion syntax
+    (`T{value}`). Conversions are total and deterministic: float -> integer truncates toward zero then clamps to the
+    target range (NaN -> 0, +Inf -> max, -Inf -> min), and integer width changes use sign/zero extension on widening and
+    two's-complement truncation on narrowing.
+  - Naming rationale: `integer`/`decimal`/`complex` model mathematical numbers and deterministic software arithmetic.
+    Fixed-width envelopes (`i32`, `i64`, `u64`, `f32`, `f64`) model hardware behavior (modular integer arithmetic and
+    IEEE-754 rounding), so they intentionally do not use the math-aligned names.
 - Bool literals: `true`, `false`.
 - String literals:
   - Double-quoted strings process escapes unless a raw suffix is used.
   - Single-quoted strings are raw and do not process escapes; `raw_utf8` / `raw_ascii` also force raw.
-  - Surface form accepts `utf8`/`ascii`/`raw_utf8`/`raw_ascii` suffixes; the `implicit-utf8` text transform appends `utf8` to bare strings.
-  - **Canonical/bottom-level form uses double-quoted strings with normalized escapes and an explicit `utf8`/`ascii` suffix.**
+  - Surface form accepts `utf8`/`ascii`/`raw_utf8`/`raw_ascii` suffixes; the `implicit-utf8` text transform appends
+    `utf8` to bare strings.
+  - **Canonical/bottom-level form uses double-quoted strings with normalized escapes and an explicit `utf8`/`ascii`
+    suffix.**
   - `ascii` rejects non-ASCII bytes.
   - Escape sequences in double-quoted strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
   - Any other escape sequence is rejected.
   - To include a single quote, use a double-quoted string or a raw suffix.
-  - VM/native backends only support `count`/`at`/`at_unsafe` on string literals or bindings initialized from literals; argv-derived strings are print-only.
+  - VM/native backends only support `count`/`at`/`at_unsafe` on string literals or bindings initialized from literals;
+    argv-derived strings are print-only.
 
 ### 2.4 Punctuation Tokens
 
@@ -181,7 +200,8 @@ with `--import-path` (or `-I`); `--include-path` is not supported.
 Definitions are private by default; add `[public]` to a definition to make it importable. Private definitions remain
 callable within the same compilation unit; visibility only affects imports.
 
-Unknown import paths are errors. Imports are resolved after import expansion, and the same syntax is accepted by `primec`
+Unknown import paths are errors. Imports are resolved after import expansion, and the same syntax is accepted by
+`primec`
 and `primevm`.
 
 ### 3.2 Namespace Blocks
@@ -302,28 +322,44 @@ literal        = int_lit | float_lit | bool_lit | string_lit ;
 
 Notes:
 - `binding` reuses the Envelope; it becomes a local declaration.
-- `execution` is a call-style form (optionally prefixed by transforms) with mandatory parentheses and no body block. Definitions require a body block.
-  - AST mapping: `foo()` parses as a call-style execution and lowers to the canonical envelope `foo() { }` with an implicit empty body.
-- Definitions may use post-parameter transform placement (`name(...) [transforms] { ... }`) in surface syntax. The parser rewrites this to canonical prefix form (`[transforms] name(...) { ... }`) before semantic validation and lowering.
-- Post-parameter transform placement is definition-only and requires the transform list to be followed by a definition body. `name[]() { ... }` is rejected.
+- `execution` is a call-style form (optionally prefixed by transforms) with mandatory parentheses and no body block.
+  Definitions require a body block.
+  - AST mapping: `foo()` parses as a call-style execution and lowers to the canonical envelope `foo() { }` with an
+    implicit empty body.
+- Definitions may use post-parameter transform placement (`name(...) [transforms] { ... }`) in surface syntax. The
+  parser rewrites this to canonical prefix form (`[transforms] name(...) { ... }`) before semantic validation and
+  lowering.
+- Post-parameter transform placement is definition-only and requires the transform list to be followed by a definition
+  body. `name[]() { ... }` is rejected.
 - `form` includes surface `if` blocks, which are rewritten into canonical calls.
-- Surface `if(cond) { ... }` (without `else`) is allowed only in statement position; using it where a value/form result is required is a diagnostic.
-- `execution` is valid anywhere a form is allowed, so transform-prefixed calls can appear inside bodies and argument lists.
-- Definition order does not affect name resolution: calls may reference definitions that appear later in the same file or namespace. Resolution runs after import expansion and namespace expansion; unresolved names are diagnostics.
-- Return transforms may name struct definitions; functions can return struct values, and the return type may be inferred from struct constructor/value returns or `return<auto>`.
-- Commas and semicolons are treated as whitespace separators in transform lists and item lists; trailing separators are allowed.
+- Surface `if(cond) { ... }` (without `else`) is allowed only in statement position; using it where a value/form result
+  is required is a diagnostic.
+- `execution` is valid anywhere a form is allowed, so transform-prefixed calls can appear inside bodies and argument
+  lists.
+- Definition order does not affect name resolution: calls may reference definitions that appear later in the same file
+  or namespace. Resolution runs after import expansion and namespace expansion; unresolved names are diagnostics.
+- Return transforms may name struct definitions; functions can return struct values, and the return type may be inferred
+  from struct constructor/value returns or `return<auto>`.
+- Commas and semicolons are treated as whitespace separators in transform lists and item lists; trailing separators are
+  allowed.
 - Example mixed separators:
   - `array<i32; i64  u64>`
   - `call(a, b; c  d)`
   - `[text(operators; collections, implicit-utf8)]`
-- Calls may include a trailing body block (`foo(args) { ... }`) that becomes a list of body arguments on the call envelope.
+- Calls may include a trailing body block (`foo(args) { ... }`) that becomes a list of body arguments on the call
+  envelope.
 - `loop`, `while`, and `for` are special surface forms that accept a body block and are rewritten into canonical calls.
 - Canonical control-flow calls use definition envelopes as arguments (e.g., `if(cond, then() { ... }, else() { ... })`).
   Envelope names in this position are for readability only; any name is accepted and ignored by the compiler.
-- `loop`, `while`, and `for` may be prefixed by transforms; `[shared_scope]` marks the loop body scope as shared across iterations, initializing loop-body bindings once before the loop begins and keeping them alive for the loop duration.
-- Text transforms accept only identifier/literal arguments; semantic transforms may accept full forms. If a text transform is given a non-simple argument, it is a diagnostic.
-- `brace_ctor` is a constructor form: `Type{...}` in value positions evaluates the value block and passes its value to the constructor. If the block executes `return(value)`, that value is used; otherwise the last item is used. In statement position, `name{...}` is parsed as a binding.
-- `block()` with a trailing body block is allowed in any form position; `block{...}` is invalid and parsed as a binding or brace constructor.
+- `loop`, `while`, and `for` may be prefixed by transforms; `[shared_scope]` marks the loop body scope as shared across
+  iterations, initializing loop-body bindings once before the loop begins and keeping them alive for the loop duration.
+- Text transforms accept only identifier/literal arguments; semantic transforms may accept full forms. If a text
+  transform is given a non-simple argument, it is a diagnostic.
+- `brace_ctor` is a constructor form: `Type{...}` in value positions evaluates the value block and passes its value to
+  the constructor. If the block executes `return(value)`, that value is used; otherwise the last item is used. In
+  statement position, `name{...}` is parsed as a binding.
+- `block()` with a trailing body block is allowed in any form position; `block{...}` is invalid and parsed as a binding
+  or brace constructor.
 - `quoted_string` in `import<...>` declarations is a raw quoted string without suffixes.
 - Placement transforms `[stack]`, `[heap]`, and `[buffer]` are reserved and rejected by the compiler.
 - Recursive struct layouts (structs containing themselves by value, directly or indirectly) are rejected.
@@ -410,15 +446,21 @@ Bottom-level form therefore has:
   path, `Reference<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` and
   `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `Pointer<Buffer<T>>` packs preserve indexed
   downstream `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU
-  path, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`, `Pointer<vector<T>>`,
-  empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`, `Reference<map<K, V>>`, plus `Pointer<map<K, V>>`
+  path, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`,
+  `Pointer<vector<T>>`,
+  empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`,
+  `Reference<map<K, V>>`, plus `Pointer<map<K, V>>`
   packs preserve indexed downstream `count()` resolution across those
-  same forwarding modes, `vector<T>` packs also preserve indexed downstream `capacity()` plus statement-mutator resolution, borrowed/pointer array and vector packs preserve explicit indexed `dereference(...)`
+  same forwarding modes, `vector<T>` packs also preserve indexed downstream `capacity()` plus statement-mutator
+  resolution, borrowed/pointer array and vector packs preserve explicit indexed `dereference(...)`
   receiver wrappers for downstream checked/unchecked access, and borrowed/pointer vector packs preserve that same
-  indexed `capacity()` and statement-mutator surface through explicit `dereference(...)` receiver wrappers, those same value, borrowed, and pointer map packs preserve indexed downstream
-  `tryAt(...)` payload-kind inference for `auto` bindings, `Pointer<map<K, V>>` packs also preserve indexed downstream `contains()` / `at()` /
+  indexed `capacity()` and statement-mutator surface through explicit `dereference(...)` receiver wrappers, those same
+  value, borrowed, and pointer map packs preserve indexed downstream
+  `tryAt(...)` payload-kind inference for `auto` bindings, `Pointer<map<K, V>>` packs also preserve indexed downstream
+  `contains()` / `at()` /
   `at_unsafe()` lookup access, and borrowed/pointer map packs preserve that same count and lookup surface through
-  explicit indexed `dereference(...)` receiver wrappers. Scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve indexed downstream
+  explicit indexed `dereference(...)` receiver wrappers. Scalar `Pointer<T>` plus scalar `Reference<T>` packs preserve
+  indexed downstream
   `dereference(...)` and struct `Pointer<T>` plus struct `Reference<T>` packs preserve indexed downstream
   field/helper access; other unsupported non-string element support remains a separate follow-up slice.
 
@@ -444,10 +486,12 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
 - Loops:
   - `loop(count) { ... }` rewrites to `loop(count, do() { ... })`.
   - `while(cond) { ... }` rewrites to `while(cond, do() { ... })`.
-  - `for(init cond step) { ... }` rewrites to `for(init, cond, step, do() { ... })`; commas/semicolons are optional separators.
+  - `for(init cond step) { ... }` rewrites to `for(init, cond, step, do() { ... })`; commas/semicolons are optional
+    separators.
   - Envelope names are ignored (`do() { ... }` and `body() { ... }` are equivalent in the loop body position).
   - Bindings are allowed in any `for` slot; `cond` must evaluate to `bool`.
-- `repeat(count) { ... }` is a statement-only builtin; `count` accepts integer or `bool`, and non-positive counts skip the body.
+- `repeat(count) { ... }` is a statement-only builtin; `count` accepts integer or `bool`, and non-positive counts skip
+  the body.
 - Operators are rewritten into calls:
   - Binary operators allow optional whitespace around the operator token (e.g., `a = b`, `a= b`, `a =b`), but the
     operator token itself is still contiguous (`==` cannot be written as `= =`).
@@ -488,14 +532,21 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `array<T>{...}` / `array<T>[...]` -> `array<T>(...)`
   - `vector<T>{...}` / `vector<T>[...]` -> `vector<T>(...)`
   - `map<K, V>{...}` / `map<K, V>[...]` -> `map<K, V>(...)`
-  - Map literals accept `key = value` pairs as shorthand for alternating arguments (e.g., `map<i32, i32>{1i32=2i32}` -> `map<i32, i32>(1i32, 2i32)`).
-  - Planned stdlib-owned map lowering target: once variadic packs are available for user-defined constructors, the intended canonical helper target is `map<K, V>(entry(key1, value1), entry(key2, value2), ...)` rather than alternating raw key/value user-defined variadic parameters.
-- `/std/math/*` builtins include the core set (`abs`, `sign`, `min`, `max`, `clamp`, `saturate`, `lerp`, `pow`, `sqrt`, `sin`, `cos`, etc.) plus `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, and `is_finite`.
+  - Map literals accept `key = value` pairs as shorthand for alternating arguments (e.g., `map<i32, i32>{1i32=2i32}` ->
+    `map<i32, i32>(1i32, 2i32)`).
+  - Planned stdlib-owned map lowering target: once variadic packs are available for user-defined constructors, the
+    intended canonical helper target is `map<K, V>(entry(key1, value1), entry(key2, value2), ...)` rather than
+    alternating raw key/value user-defined variadic parameters.
+- `/std/math/*` builtins include the core set (`abs`, `sign`, `min`, `max`, `clamp`, `saturate`, `lerp`, `pow`, `sqrt`,
+  `sin`, `cos`, etc.) plus `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, and `is_finite`.
 - Math builtin operand rules:
   - `abs`, `sign`, and `saturate` accept numeric operands (`i32`, `i64`, `u64`, `f32`, `f64`).
-  - `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands but reject mixed signed/unsigned or mixed integer/float operands.
-  - Integer `pow` requires a non-negative exponent; VM/native backends abort on negative exponents (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
-  - All remaining `/std/math/*` builtins require float operands. `atan2`, `hypot`, and `copysign` take two float operands, while `fma` takes three float operands.
+  - `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands but reject mixed signed/unsigned or mixed
+    integer/float operands.
+  - Integer `pow` requires a non-negative exponent; VM/native backends abort on negative exponents (stderr + exit code
+    `3`), and the C++ emitter mirrors this behavior.
+  - All remaining `/std/math/*` builtins require float operands. `atan2`, `hypot`, and `copysign` take two float
+    operands, while `fma` takes three float operands.
   - Scalar math builtins remain scalar-only unless a builtin explicitly documents vector/matrix/quaternion overloads.
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form
@@ -549,10 +600,14 @@ block()
 ```
 
 - `[unsafe]` is a semantic transform on a definition; the body is an unsafe scope.
-- Unsafe scopes may violate `Reference<T>` aliasing rules and allow pointer-to-reference initialization from pointer-like expressions (`Pointer<T>`/`Reference<T>` values and pointer arithmetic results) when the pointee type matches.
-- References created inside an unsafe scope must not escape that scope (return, assign to outer bindings, or store into aggregates that outlive the scope).
+- Unsafe scopes may violate `Reference<T>` aliasing rules and allow pointer-to-reference initialization from
+  pointer-like expressions (`Pointer<T>`/`Reference<T>` values and pointer arithmetic results) when the pointee type
+  matches.
+- References created inside an unsafe scope must not escape that scope (return, assign to outer bindings, or store into
+  aggregates that outlive the scope).
 - `[unsafe] block { ... }` defines a local definition; it executes only when called (`block()`).
-- Unsafe definitions may be called from safe code; unsafe does not propagate to the caller when escape rules are satisfied.
+- Unsafe definitions may be called from safe code; unsafe does not propagate to the caller when escape rules are
+  satisfied.
 
 ## 7. Parameters, Arguments, and Bindings
 
@@ -627,7 +682,8 @@ array<i32>[1i32, 2i32]   // surface form
 ```
 
 Arrays are fixed-size contiguous value sequences once constructed (C++ `std::array`-like behavior).
-PrimeStruct keeps runtime-count `array<T>` as the long-term contract; envelope-level length forms (`array<T, N>`) are unsupported.
+PrimeStruct keeps runtime-count `array<T>` as the long-term contract; envelope-level length forms (`array<T, N>`) are
+unsupported.
 Helpers:
 - `value.count()` (canonical equivalent: `count(value)`)
 - `value.at(index)` / `value[index]` (canonical equivalent: `at(value, index)`)
@@ -635,9 +691,11 @@ Helpers:
 
 Architectural direction for type ownership:
 - `array<T>` remains a core language/runtime envelope.
-- `vector<T>` and `map<K, V>` remain portable surface envelopes today, but their public constructor/helper behavior should converge on stdlib `.prime` implementations over generic substrate.
+- `vector<T>` and `map<K, V>` remain portable surface envelopes today, but their public constructor/helper behavior
+  should converge on stdlib `.prime` implementations over generic substrate.
 - `soa_vector<T>` should follow that same stdlib-owned end-state once the generic SoA substrate exists.
-- `Maybe<T>` is intended to be stdlib-owned, while `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*` remain hybrid surfaces with minimal builtin/runtime substrate.
+- `Maybe<T>` is intended to be stdlib-owned, while `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*`
+  remain hybrid surfaces with minimal builtin/runtime substrate.
 
 ### 8.2 Vectors
 
@@ -650,7 +708,8 @@ vector<i32>[1i32, 2i32]
 Vectors are C++-style dynamic contiguous sequences. Construction is variadic; zero or more arguments are accepted.
 Planned stdlib-owned replacement: the user-defined constructor surface is intended to become `vector(values...)`,
 canonically represented as a trailing `[args<T>]` parameter rather than fixed-arity helper families.
-The current builtin/vector-envelope behavior is transitional; the intended steady state is stdlib-owned public vector behavior over generic allocation/access substrate.
+The current builtin/vector-envelope behavior is transitional; the intended steady state is stdlib-owned public vector
+behavior over generic allocation/access substrate.
 Growth operations (`push`, `reserve`) may reallocate and invalidate references/pointers into vector storage.
 Binding forms:
 - `[vector<T> mut] v{vector<T>()}`
@@ -658,14 +717,17 @@ Binding forms:
 - `[vector<T> mut] v{}` (rewrites to `[vector<T> mut] v{vector<T>()}`)
 Helpers:
 - `value.count()` (canonical equivalent: `count(value)`)
-- `value.at(index)` / `value[index]` / `value.at_unsafe(index)` (canonical equivalents: `at(value, index)`, `at_unsafe(value, index)`)
+- `value.at(index)` / `value[index]` / `value.at_unsafe(index)` (canonical equivalents: `at(value, index)`,
+  `at_unsafe(value, index)`)
 - `value.push(item)` / `value.pop()` (canonical equivalents: `push(value, item)`, `pop(value)`)
 - `value.reserve(capacity)` / `value.capacity()` (canonical equivalents: `reserve(value, capacity)`, `capacity(value)`)
-- `value.clear()` / `value.remove_at(index)` / `value.remove_swap(index)` (canonical equivalents: `clear(value)`, `remove_at(value, index)`, `remove_swap(value, index)`)
+- `value.clear()` / `value.remove_at(index)` / `value.remove_swap(index)` (canonical equivalents: `clear(value)`,
+  `remove_at(value, index)`, `remove_swap(value, index)`)
 
 Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only
 (not valid in expression contexts).
-Vector helper surface syntax currently requires `import /std/collections/*` so the canonical stdlib wrappers are available during semantic validation.
+Vector helper surface syntax currently requires `import /std/collections/*` so the canonical stdlib wrappers are
+available during semantic validation.
 
 Current ownership contract:
 - `pop` / `clear` require drop-trivial element types.
@@ -686,14 +748,16 @@ map<i32, i32>[1i32=2i32, 3i32=4i32]
 ```
 
 Map literals supply alternating key/value forms; an odd number of entries is a diagnostic.
-Maps likewise remain portable envelopes today, but the intended end-state is a stdlib-owned public map surface over generic memory/error substrate rather than permanent compiler-owned collection semantics.
+Maps likewise remain portable envelopes today, but the intended end-state is a stdlib-owned public map surface over
+generic memory/error substrate rather than permanent compiler-owned collection semantics.
 
 Helpers:
 - `value.count()` (canonical equivalent: `count(value)`)
 - `value.at(key)` (canonical equivalent: `at(value, key)`)
 - `value.at_unsafe(key)` (canonical equivalent: `at_unsafe(value, key)`)
 
-Map IR lowering is currently limited in VM/native backends: numeric/bool values only, with string keys allowed when they come from string literals or bindings backed by literals.
+Map IR lowering is currently limited in VM/native backends: numeric/bool values only, with string keys allowed when they
+come from string literals or bindings backed by literals.
 
 ### 8.4 SoA Vectors (Draft)
 
@@ -733,10 +797,12 @@ while empty `soa_vector<T>()` literals lower to header-only storage. Non-empty l
 emit deterministic unsupported diagnostics (`native backend does not support non-empty soa_vector literals`,
 `native backend does not support soa_vector get`, `native backend does not support soa_vector ref`,
 `native backend does not support to_soa`, `native backend does not support to_aos`,
-`native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper: reserve`).
+`native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper:
+reserve`).
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
 stdlib `.prime` implementation replace them.
-Draft example source: `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA runtime support lands).
+Draft example source: `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA runtime support
+lands).
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 
@@ -757,7 +823,16 @@ Current quaternion surface:
 Draft constraints:
 - No implicit scalar/vector/matrix/quaternion conversion; use explicit constructors/helpers.
 - `plus`/`minus` require matching envelopes and dimensions.
-- Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules, the documented `Mat*`/`Quat` `multiply` allowlist, `Mat* / scalar` plus `Quat / scalar` divide validation, and deterministic binding/return/call diagnostics for implicit `Mat*`/`Quat` family conversions. VM/native, Wasm, and the C++ emitter now also lower component-wise `Mat2`/`Mat3`/`Mat4` and `Quat` `plus` + `minus`, scalar-left/right matrix/quaternion scaling, matrix/quaternion-by-scalar divide, matrix-vector multiply, matching matrix-matrix multiply, quaternion-quaternion Hamilton products, and quaternion-`Vec3` rotation through the documented contract. GLSL now lowers nominal `Vec2`/`Vec3`/`Vec4`, `Quat`, `Mat2`/`Mat3`/`Mat4` values, direct vector/quaternion/matrix field access, component-wise vector/quaternion `plus`/`minus`, vector/quaternion scalar scale/divide, `MatN * VecN` interop, matching matrix-matrix multiply, quaternion-quaternion Hamilton products, quaternion-`Vec3` rotation, and the explicit conversion helpers `quat_to_mat3`, `quat_to_mat4`, and `mat3_to_quat`.
+- Current implementation status: semantics already enforces the `Mat*`/`Quat` `plus` and `minus` rules, the documented
+  `Mat*`/`Quat` `multiply` allowlist, `Mat* / scalar` plus `Quat / scalar` divide validation, and deterministic
+  binding/return/call diagnostics for implicit `Mat*`/`Quat` family conversions. VM/native, Wasm, and the C++ emitter
+  now also lower component-wise `Mat2`/`Mat3`/`Mat4` and `Quat` `plus` + `minus`, scalar-left/right matrix/quaternion
+  scaling, matrix/quaternion-by-scalar divide, matrix-vector multiply, matching matrix-matrix multiply,
+  quaternion-quaternion Hamilton products, and quaternion-`Vec3` rotation through the documented contract. GLSL now
+  lowers nominal `Vec2`/`Vec3`/`Vec4`, `Quat`, `Mat2`/`Mat3`/`Mat4` values, direct vector/quaternion/matrix field
+  access, component-wise vector/quaternion `plus`/`minus`, vector/quaternion scalar scale/divide, `MatN * VecN` interop,
+  matching matrix-matrix multiply, quaternion-quaternion Hamilton products, quaternion-`Vec3` rotation, and the explicit
+  conversion helpers `quat_to_mat3`, `quat_to_mat4`, and `mat3_to_quat`.
 - `multiply` supports:
   - Scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`)
   - Matrix-vector (`Mat * VecN`) when inner dimensions match
@@ -772,14 +847,18 @@ Draft constraints:
 ## 9. Effects
 
 - Effects are declared via `[effects(...)]` on definitions or executions.
-- Defaults can be supplied by `primec --default-effects` (the compiler enables `io_out` by default unless set to `none`).
+- Defaults can be supplied by `primec --default-effects` (the compiler enables `io_out` by default unless set to
+  `none`).
 - Backends reject unsupported effects.
-  - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a diagnostic.
-  - Recognized v1 capabilities: `io_out`, `io_err`, `file_read`, `file_write`, `heap_alloc`, `global_write`, `asset_read`, `asset_write`,
+  - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a
+    diagnostic.
+  - Recognized v1 capabilities: `io_out`, `io_err`, `file_read`, `file_write`, `heap_alloc`, `global_write`,
+    `asset_read`, `asset_write`,
     `gpu_dispatch`.
   - VM/native backends allow `io_out`, `io_err`, `heap_alloc`, `file_read`, `file_write`, `gpu_dispatch`, and
     `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`,
-    `pathspace_schedule`); `file_write` also implies `file_read`. GLSL allows `io_out`, `io_err`, and `pathspace_*` effects/capabilities.
+    `pathspace_schedule`); `file_write` also implies `file_read`. GLSL allows `io_out`, `io_err`, and `pathspace_*`
+    effects/capabilities.
 
 ### 9.1 Backend Type Support (v1)
 
@@ -811,7 +890,8 @@ Draft constraints:
 ## 10. Error Handling (Draft)
 
 - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
-- `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract are language-defined, while constructors/helpers/error-domain policy should live in stdlib `.prime` where practical.
+- `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract are
+  language-defined, while constructors/helpers/error-domain policy should live in stdlib `.prime` where practical.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches
@@ -828,7 +908,8 @@ Draft constraints:
   - `on_error` does not apply to nested blocks; any block containing `?` must declare its own `on_error`.
   - Missing `on_error` for a `?` usage is a compile-time error.
 - VM/native runtime errors (bounds checks, missing map keys, vector capacity, invalid integer `pow`, etc.) abort
-  execution, print a diagnostic to stderr, and return exit code `3`. Parse/semantic/lowering errors remain exit code `2`.
+  execution, print a diagnostic to stderr, and return exit code `3`. Parse/semantic/lowering errors remain exit code
+  `2`.
 
 ## 11. Return Semantics
 
@@ -850,10 +931,14 @@ Draft constraints:
 ## 13. Backend Notes (Syntax-Relevant)
 
 - VM/native backends accept a restricted subset of envelopes/operations (see design doc).
-- Strings are supported for printing, `count`, and indexing on string literals and string bindings in VM/native backends.
-- Struct values are supported in VM/native backends when fields are numeric/bool or other struct values; string or templated struct fields are rejected.
+- Strings are supported for printing, `count`, and indexing on string literals and string bindings in VM/native
+  backends.
+- Struct values are supported in VM/native backends when fields are numeric/bool or other struct values; string or
+  templated struct fields are rejected.
 - The C++ emitter supports broader operations and full string handling.
-- Wasm backend profiles use `primec --emit=wasm --wasm-profile=wasi|browser` (`wasi` default). The current normative Wasm limit IDs are `WASM-LIMIT-MEM-ON-DEMAND`, `WASM-LIMIT-MEM-SINGLE`, `WASM-LIMIT-IMPORTS-WASI`, `WASM-LIMIT-PROFILE-BROWSER`, and `WASM-LIMIT-PROFILE-WASI-ALLOWLIST` (see `docs/PrimeStruct.md`).
+- Wasm backend profiles use `primec --emit=wasm --wasm-profile=wasi|browser` (`wasi` default). The current normative
+  Wasm limit IDs are `WASM-LIMIT-MEM-ON-DEMAND`, `WASM-LIMIT-MEM-SINGLE`, `WASM-LIMIT-IMPORTS-WASI`,
+  `WASM-LIMIT-PROFILE-BROWSER`, and `WASM-LIMIT-PROFILE-WASI-ALLOWLIST` (see `docs/PrimeStruct.md`).
 - GPU backends accept only GPU-safe envelopes/operations; kernel bodies are validated against a GPU-safe allowlist.
 - VM/native emitter restrictions (current):
   - Recursive calls are rejected.
@@ -881,11 +966,13 @@ Draft constraints:
     handle/error-struct payloads, rebuild single-slot struct payloads, and keep multi-slot struct payloads on that
     same pointer-backed path on VM/native; other remaining wider non-struct payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.
-- Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
+- Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from
+  the entry definition are lowered.
 - VM/native consume the PSIR v16 opcode set (see design doc) and deserialization rejects unknown opcodes.
 - GLSL emitter restrictions (current):
   - Entry definitions must return `void` and may contain at most one `return()` statement.
-  - Bindings may use GLSL-supported scalar/vector/quaternion/matrix types only; arrays, maps, general structs, and string literals are rejected.
+  - Bindings may use GLSL-supported scalar/vector/quaternion/matrix types only; arrays, maps, general structs, and
+    string literals are rejected.
   - Static bindings are rejected.
   - Assign/increment/decrement targets must be local mutable bindings.
   - Control flow must use the canonical forms (`if(cond, then() { ... }, else() { ... })`,
@@ -898,9 +985,11 @@ Draft constraints:
 - Duplicate labeled arguments are rejected.
 - Unknown labeled arguments are rejected.
 - Labeled arguments are rejected for builtin calls.
-- `return` is valid inside definition bodies and value blocks. In a value block, `return(value)` returns from the block and yields its value.
+- `return` is valid inside definition bodies and value blocks. In a value block, `return(value)` returns from the block
+  and yields its value.
 - Transform argument lists may not be empty.
-- Single-branch surface `if(cond) { ... }` is allowed only in statement position; using it in value/form position is rejected.
+- Single-branch surface `if(cond) { ... }` is allowed only in statement position; using it in value/form position is
+  rejected.
 - `if(condition, then() { ... }, else() { ... })` requires both branches to produce a value when used in value position.
 - `if` / `while` / `for` conditions must evaluate to `bool` (or a function returning `bool`).
 - `loop` counts must be integer envelopes; negative counts are errors.
@@ -912,7 +1001,8 @@ Draft constraints:
 - `[compute]` marks a definition as a GPU kernel. Kernels are `void` and write outputs via buffer parameters.
 - `workgroup_size(x, y, z)` fixes the kernel's local workgroup size and must appear alongside `[compute]`.
 - Host-side submission uses `/std/gpu/dispatch(kernel, gx, gy, gz, args...)` and requires `effects(gpu_dispatch)`.
-- GPU builtins live under `/std/gpu/*`, starting with `/std/gpu/global_id_x()`, `/std/gpu/global_id_y()`, `/std/gpu/global_id_z()`.
+- GPU builtins live under `/std/gpu/*`, starting with `/std/gpu/global_id_x()`, `/std/gpu/global_id_y()`,
+  `/std/gpu/global_id_z()`.
 - GPU ID helpers are scalar (`i32`) per axis.
 - Storage buffers use `Buffer<T>` plus `/std/gpu/buffer_load` / `/std/gpu/buffer_store` helpers.
 - Windowed graphics API shape (`/std/gfx/*`, frame/present flow, vertex wire contracts) is specified in

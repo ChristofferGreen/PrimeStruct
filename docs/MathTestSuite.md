@@ -153,7 +153,8 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [ ] Add quaternion-vector rotation tests (`Quat * Vec3`) including identity and 90-degree axis rotations.
 - [ ] Add matrix/vector convention tests to lock column-vector semantics (`Mat * Vec`) and composition order.
 - [ ] Add exact-equality vs tolerance-helper behavior tests for float-backed matrix/quaternion values.
-- [ ] Add backend-gating tests verifying unsupported backends emit stable diagnostics for matrix/quaternion ops until support lands.
+- [ ] Add backend-gating tests verifying unsupported backends emit stable diagnostics for matrix/quaternion ops until
+      support lands.
 
 ## Cross-Backend Compliance
 - [x] Each category above has a C++/exe baseline test.

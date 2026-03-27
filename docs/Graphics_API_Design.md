@@ -9,77 +9,87 @@ apply profile-gated validation at compile time, and avoid backend-specific
 language namespaces in v1.
 
 Implementation status note (2026-03-17): this document locks the source-level
-contract, and the repo now ships both an experimental `.prime` graphics surface
-at `/std/gfx/experimental/*` and a first canonical `/std/gfx/*` stdlib surface
-that mirrors the proven wrapper slice in `.prime`. Current repo coverage
-therefore consists of contract checks, canonical + experimental
-import/type-surface coverage, the explicit experimental `.prime`
-`GraphicsSubstrate` token/config boundary for create/acquire/submit/present
-operations, constructor-shaped `Window(...)`, `Device()`, and `Buffer<T>(count)`
-entry points that now rewrite through dedicated stdlib helpers on both the
-experimental and canonical paths, a private canonical `.prime`
-`GraphicsSubstrate.createWindow(...)` / `createDevice(...)` / `createQueue(...)`
-boundary behind the `/std/gfx/*` constructor helpers, fallible `Device.create_swapchain(...)`,
-`Device.create_mesh(...)`, and `Swapchain.frame()` wrapper paths, a matching
-private canonical `.prime` `GraphicsSubstrate.createSwapchain(...)` /
-`createMesh(...)` / `createPipeline(...)` / `acquireFrame(...)` helper layer
-behind those canonical wrappers, and a
-type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)` entry
-point for the locked v1 vertex wire type. The non-Result
-`Frame.render_pass(...)` plus `RenderPass.draw_mesh(...)` / `RenderPass.end()`
-path preserves deterministic zero-token / no-op fallback on invalid handles,
-and the canonical path now also routes `render_pass(...)`, `draw_mesh(...)`,
-`end()`, `submit(...)`, and `present()` through a private `.prime`
-`GraphicsSubstrate.openRenderPass(...)` / `drawMesh(...)` /
-`endRenderPass(...)` / `submitFrame(...)` / `presentFrame(...)` layer,
-and canonical plus experimental `Buffer<T>` now also expose `.prime`-authored
-`load(index)` / `store(index, value)` compute-storage wrappers alongside the
-existing `count()` / `empty()` / `is_valid()` / `readback()` / `allocate(...)`
-/ `upload(...)` helper surface,
-and the first real native-desktop host/runtime path now consumes a
-deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via
-the macOS host `--gfx` mode) emitted by the shared spinning-cube `.prime`
-sample so submit/present can drive one real macOS window host end-to-end, and
-the launcher/docs/smoke coverage for that native window path no longer depend
-on the older `--cube-sim` host mode. The native macOS launcher path is now a
-thin wrapper over a shared canonical gfx launch helper, and the native macOS
-window host itself now binds its cube/software-surface callbacks onto a shared
-native Metal window presenter helper instead of owning the `NSWindow`,
-`CAMetalLayer`, timer, and first-frame/exit shell directly. The browser and
-Metal sample path now also routes through shared helpers: the offscreen Metal
-runtime shell lives in `examples/shared/metal_offscreen_host.h`, the sample
-launcher now delegates to `scripts/run_canonical_metal_host.sh` through
-`scripts/run_metal_spinning_cube.sh`, the Metal sample’s snapshot/parity helper
-modes now also bind to `examples/shared/spinning_cube_simulation_reference.h`
-instead of keeping a second inline copy of the cube fixed-step reference logic
-inside `metal_host.mm`, the browser runtime shell now lives in
-`examples/web/shared/browser_runtime_shared.js`, and the browser sample launcher
-now delegates to `scripts/run_canonical_browser_sample.sh` through
-`scripts/run_browser_spinning_cube.sh`. The repo now also
-ships real compile-run
-conformance programs that import both `/std/gfx/experimental/*` and
-`/std/gfx/*` and exercise `Window(...)`, `Device()`, `create_swapchain(...)`,
-`create_mesh(...)`, `create_pipeline(...)`, `frame()`, `render_pass(...)`,
-`draw_mesh(...)`, `submit(...)`, and `present()` across exe/vm/native instead
-of relying only on doc-lock coverage for that API surface. Source-level profile
-literals and unsupported `create_pipeline` vertex types are still
-intentionally rejected, Result-carrying method wrappers still reject bare
-explicit non-`Result` struct bindings during semantics, and follow-up work
-now also rejects `/std/gfx/*` and `/std/gfx/experimental/*` imports
-deterministically on wasm (`wasm-browser`, `wasm-wasi`) and shader-only
-(`glsl`, `spirv`) emits because those targets still lack the required runtime
-substrate. Follow-up work still needs to reduce the remaining sample-owned
-compatibility/contract glue and keep the remaining public graphics API
-primarily in `.prime` files while leaving only minimal backend substrate in
-C++/host code.
+contract. Current repo status:
+- **Source surfaces:** the repo now ships both an experimental `.prime`
+  graphics surface at `/std/gfx/experimental/*` and a first canonical
+  `/std/gfx/*` stdlib surface that mirrors the proven wrapper slice in
+  `.prime`.
+- **Coverage breadth:** current coverage includes contract checks plus
+  canonical and experimental import/type-surface coverage.
+- **Substrate boundaries:** the experimental path has an explicit `.prime`
+  `GraphicsSubstrate` token/config boundary for create/acquire/submit/present
+  operations. The canonical path also has private `.prime` substrate layers
+  behind its public helpers:
+  `GraphicsSubstrate.createWindow(...)`, `createDevice(...)`,
+  `createQueue(...)`, `createSwapchain(...)`, `createMesh(...)`,
+  `createPipeline(...)`, `acquireFrame(...)`, `openRenderPass(...)`,
+  `drawMesh(...)`, `endRenderPass(...)`, `submitFrame(...)`, and
+  `presentFrame(...)`.
+- **Locked constructor/resource entrypoints:** constructor-shaped `Window(...)`,
+  `Device()`, and `Buffer<T>(count)` now rewrite through dedicated stdlib
+  helpers on both experimental and canonical paths. Fallible
+  `Device.create_swapchain(...)`, `Device.create_mesh(...)`, and
+  `Swapchain.frame()` wrapper paths are also in place, as is the type-valued
+  `Device.create_pipeline([vertex_type] VertexColored, ...)` entrypoint for the
+  locked v1 vertex wire type.
+- **Render/submit/present behavior:** the non-Result `Frame.render_pass(...)`
+  plus `RenderPass.draw_mesh(...)` / `RenderPass.end()` path preserves
+  deterministic zero-token / no-op fallback on invalid handles, and the
+  canonical path routes `render_pass(...)`, `draw_mesh(...)`, `end()`,
+  `submit(...)`, and `present()` through the private `.prime` substrate layer.
+- **Buffer helpers:** canonical and experimental `Buffer<T>` now expose
+  `.prime`-authored `load(index)` / `store(index, value)` compute-storage
+  wrappers alongside the existing `count()` / `empty()` / `is_valid()` /
+  `readback()` / `allocate(...)` / `upload(...)` helper surface.
+- **Real native-desktop path:** the first real native-desktop host/runtime path
+  now consumes a deterministic canonical `/std/gfx/*` stream
+  (`cubeStdGfxEmitFrameStream` via the macOS host `--gfx` mode) emitted by the
+  shared spinning-cube `.prime` sample, so submit/present can drive one real
+  macOS window host end-to-end. Launcher/docs/smoke coverage for that native
+  window path no longer depend on the older `--cube-sim` host mode.
+- **Shared host/sample helpers:** the native macOS launcher is now a thin
+  wrapper over a shared canonical gfx launch helper, and the native macOS
+  window host now binds its cube/software-surface callbacks onto a shared
+  native Metal window presenter helper instead of owning the `NSWindow`,
+  `CAMetalLayer`, timer, and first-frame/exit shell directly. The browser and
+  Metal sample path also route through shared helpers: the offscreen Metal
+  runtime shell lives in `examples/shared/metal_offscreen_host.h`, the Metal
+  launcher delegates to `scripts/run_canonical_metal_host.sh` through
+  `scripts/run_metal_spinning_cube.sh`, the Metal snapshot/parity helpers bind
+  to `examples/shared/spinning_cube_simulation_reference.h`, the browser
+  runtime shell lives in `examples/web/shared/browser_runtime_shared.js`, and
+  the browser launcher delegates to `scripts/run_canonical_browser_sample.sh`
+  through `scripts/run_browser_spinning_cube.sh`.
+- **Compile-run conformance:** the repo now ships real compile-run conformance
+  programs that import both `/std/gfx/experimental/*` and `/std/gfx/*` and
+  exercise `Window(...)`, `Device()`, `create_swapchain(...)`,
+  `create_mesh(...)`, `create_pipeline(...)`, `frame()`, `render_pass(...)`,
+  `draw_mesh(...)`, `submit(...)`, and `present()` across exe/vm/native instead
+  of relying only on doc-lock coverage for that API surface.
+- **Intentional rejects still in place:** source-level profile literals and
+  unsupported `create_pipeline` vertex types are still intentionally rejected.
+  Result-carrying method wrappers still reject bare explicit non-`Result`
+  struct bindings during semantics. `/std/gfx/*` and
+  `/std/gfx/experimental/*` imports now also reject deterministically on wasm
+  (`wasm-browser`, `wasm-wasi`) and shader-only (`glsl`, `spirv`) emits because
+  those targets still lack the required runtime substrate.
+- **Remaining work:** reduce the remaining sample-owned
+  compatibility/contract glue and keep the remaining public graphics API
+  primarily in `.prime` files while leaving only minimal backend substrate in
+  C++/host code.
 
 Status snapshot phrases kept contiguous for doc-lock checks:
-- The non-Result `Frame.render_pass(...)` plus `RenderPass.draw_mesh(...)` / `RenderPass.end()` path now routes through minimal pass-encoding substrate helpers while preserving deterministic zero-token / no-op fallback on invalid handles.
-- The native-desktop host/runtime path now consumes a deterministic canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via the macOS host `--gfx` mode).
+- The non-Result `Frame.render_pass(...)` plus `RenderPass.draw_mesh(...)` / `RenderPass.end()` path now routes through
+  minimal pass-encoding substrate helpers while preserving deterministic zero-token / no-op fallback on invalid handles.
+- The native-desktop host/runtime path now consumes a deterministic canonical `/std/gfx/*` stream
+  (`cubeStdGfxEmitFrameStream` via the macOS host `--gfx` mode).
 - The native macOS launcher path is now a thin wrapper over a shared canonical gfx launch helper.
-- The native macOS window host itself now binds its cube/software-surface callbacks onto a shared native Metal window presenter helper.
-- The Metal sample path now also routes through shared helpers, including a shared metal launch helper and a shared spinning-cube simulation reference helper.
-- The browser runtime shell now lives in `examples/web/shared/browser_runtime_shared.js`, and the browser sample launcher now delegates to `scripts/run_canonical_browser_sample.sh` through `scripts/run_browser_spinning_cube.sh`.
+- The native macOS window host itself now binds its cube/software-surface callbacks onto a shared native Metal window
+  presenter helper.
+- The Metal sample path now also routes through shared helpers, including a shared metal launch helper and a shared
+  spinning-cube simulation reference helper.
+- The browser runtime shell now lives in `examples/web/shared/browser_runtime_shared.js`, and the browser sample
+  launcher now delegates to `scripts/run_canonical_browser_sample.sh` through `scripts/run_browser_spinning_cube.sh`.
 
 ## Scope
 - Covers the PrimeStruct language-facing graphics contract only.
@@ -397,13 +407,18 @@ The following architecture is planned but not locked as part of the v1 contract:
    - Normalizes OS/web input (pointer, keyboard, IME, resize, focus) into one
      UI event stream consumed by the UI runtime.
    - Current prototype contract:
-     - `push_pointer_move(...)`, `push_pointer_down(...)`, and `push_pointer_up(...)` normalize through one pointer event record shape: target node id, pointer id, button, x, y.
+     - `push_pointer_move(...)`, `push_pointer_down(...)`, and `push_pointer_up(...)` normalize through one pointer
+       event record shape: target node id, pointer id, button, x, y.
      - `push_pointer_move(...)` uses button `-1` to mark non-button pointer
        motion while preserving the same payload layout as button transitions.
-     - `push_key_down(...)` and `push_key_up(...)` normalize through one key event record shape: target node id, key code, modifier mask, is-repeat.
-     - `push_ime_preedit(...)` and `push_ime_commit(...)` normalize through one IME event record shape: target node id, selection start, selection end, text.
-     - `push_ime_commit(...)` uses selection start/end `-1` to mark committed text that no longer carries a live composition range.
-     - `push_resize(...)`, `push_focus_gained(...)`, and `push_focus_lost(...)` normalize through one view event record shape: target node id, arg0, arg1.
+     - `push_key_down(...)` and `push_key_up(...)` normalize through one key event record shape: target node id, key
+       code, modifier mask, is-repeat.
+     - `push_ime_preedit(...)` and `push_ime_commit(...)` normalize through one IME event record shape: target node id,
+       selection start, selection end, text.
+     - `push_ime_commit(...)` uses selection start/end `-1` to mark committed text that no longer carries a live
+       composition range.
+     - `push_resize(...)`, `push_focus_gained(...)`, and `push_focus_lost(...)` normalize through one view event record
+       shape: target node id, arg0, arg1.
      - `push_resize(...)` uses `arg0 = width` and `arg1 = height`.
      - `push_focus_gained(...)` and `push_focus_lost(...)` use `arg0 = 0` and `arg1 = 0`.
      - Current modifier mask bits are `1` = `shift`, `2` = `control`, `4` = `alt`, `8` = `meta`.
@@ -760,19 +775,37 @@ presentation layers are implemented.
 
 ## Locked Constraints and Conformance Hooks
 
-| ID | Locked Constraint | Conformance Hook |
-| --- | --- | --- |
-| `GFX-CORE-API-NAMESPACE` | Graphics API surface is rooted at `/std/gfx/*` and does not use backend-specific language namespaces. | `graphics_api_contract_doc_linked_constraints` (doc lock + unsupported backend emit check) |
-| `GFX-CORE-SURFACE-V1` | The v1 core object model names listed in this document are locked. | `graphics_api_contract_doc_linked_constraints` (doc lock checks) |
-| `GFX-CORE-NO-EXT-NS` | `/std/gfx/ext/*` is forbidden in v1. | `graphics_api_contract_doc_linked_constraints` (compile diagnostic check) |
-| `GFX-PROFILE-IDENTIFIERS` | Profile identifiers are locked to `wasm-browser`, `native-desktop`, `metal-osx`. | `graphics_api_contract_doc_linked_constraints` (profile value rejection check) |
-| `GFX-PROFILE-GATING` | Unsupported profile features fail at compile time before backend emission. | `graphics_api_contract_doc_linked_constraints` (wasm-browser reject check) |
-| `GFX-DIAG-PROFILE-CONTEXT` | Profile-gated failures must include deterministic profile/backend context in diagnostics. | `graphics_api_contract_doc_linked_constraints` (diagnostic content check) |
-| `GFX-V1-MINISPEC-SIGNATURES` | Spinning-cube mini-spec function/method signatures and object ownership shape are locked. | `graphics_api_contract_doc_linked_constraints` (doc lock checks) |
-| `GFX-V1-PROFILE-DEDUCTION` | Device creation is compile-target/profile deduced (no source profile literals required). | `graphics_api_contract_doc_linked_constraints` (profile-literal rejection/absence checks) |
-| `GFX-V1-VERTEXCOLORED-LAYOUT` | `/std/gfx/VertexColored` wire layout (offsets/size/alignment) is locked. | `graphics_api_contract_doc_linked_constraints` (layout lock checks) |
-| `GFX-V1-ERROR-CODES` | `GfxError` code identifiers for v1 spinning-cube stages are deterministic and locked. | `graphics_api_contract_doc_linked_constraints` (diagnostic code set checks) |
-| `GFX-V1-RESULT-PROPAGATION` | v1 fallible graphics examples/conformance use `?` + `on_error<...>` handler flow. | `graphics_api_contract_doc_linked_constraints` (doc lock checks) |
+- `GFX-CORE-API-NAMESPACE`: Graphics API surface is rooted at `/std/gfx/*` and does not use
+  backend-specific language namespaces. Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (doc lock + unsupported backend emit check).
+- `GFX-CORE-SURFACE-V1`: The v1 core object model names listed in this document are locked.
+  Conformance hook: `graphics_api_contract_doc_linked_constraints` (doc lock checks).
+- `GFX-CORE-NO-EXT-NS`: `/std/gfx/ext/*` is forbidden in v1. Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (compile diagnostic check).
+- `GFX-PROFILE-IDENTIFIERS`: Profile identifiers are locked to `wasm-browser`,
+  `native-desktop`, `metal-osx`. Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (profile value rejection check).
+- `GFX-PROFILE-GATING`: Unsupported profile features fail at compile time before backend
+  emission. Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (wasm-browser reject check).
+- `GFX-DIAG-PROFILE-CONTEXT`: Profile-gated failures must include deterministic profile/backend
+  context in diagnostics. Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (diagnostic content check).
+- `GFX-V1-MINISPEC-SIGNATURES`: Spinning-cube mini-spec function/method signatures and object
+  ownership shape are locked. Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (doc lock checks).
+- `GFX-V1-PROFILE-DEDUCTION`: Device creation is compile-target/profile deduced (no source
+  profile literals required). Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (profile-literal rejection/absence checks).
+- `GFX-V1-VERTEXCOLORED-LAYOUT`: `/std/gfx/VertexColored` wire layout
+  (offsets/size/alignment) is locked. Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (layout lock checks).
+- `GFX-V1-ERROR-CODES`: `GfxError` code identifiers for v1 spinning-cube stages are
+  deterministic and locked. Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (diagnostic code set checks).
+- `GFX-V1-RESULT-PROPAGATION`: v1 fallible graphics examples/conformance use `?` +
+  `on_error<...>` handler flow. Conformance hook:
+  `graphics_api_contract_doc_linked_constraints` (doc lock checks).
 
 ## Non-goals (v1)
 - No `/std/gfx/ext/*` backend extension namespace.
