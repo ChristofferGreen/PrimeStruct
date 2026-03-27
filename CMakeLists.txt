@@ -356,6 +356,8 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/glsl_emitter/GlslEmitterHelpers.cpp
   src/glsl_emitter/GlslEmitterStatements.cpp
   src/IrToCppEmitter.cpp
+  src/IrToCppEmitterInstructionEmitter.cpp
+  src/IrToCppEmitterPrintAndFileEmitter.cpp
   src/IrToGlslEmitter.cpp
   src/IrToGlslEmitterFunctionEmitter.cpp
   src/native_emitter/NativeEmitterHelpers.cpp

@@ -23,19 +23,17 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
     out << "          return 1;\n";
     out << "        }\n";
   };
+  auto decodePrintFlags = [](uint64_t imm) -> uint64_t { return imm >> 32; };
+  auto decodePrintStringIndex = [](uint64_t imm) -> uint64_t { return imm & 0xffffffffull; };
   const auto emitPrintValue = [&](const char *valueExpr, uint64_t flags) {
     const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
     const bool newline = (flags & PrintFlagNewline) != 0;
     out << "        " << stream << " << " << valueExpr << ";\n";
     if (newline) {
-      out << "        " << stream << " << '\\n';\n";
+      out << "        " << stream << " << '\n';\n";
     }
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
-  };
-  const auto stringOperandError = [&](const char *opcodeName, uint64_t stringIndex) {
-    error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index) + " (" + opcodeName +
-            ", imm=" + std::to_string(instruction.imm) + ", stringIndex=" + std::to_string(stringIndex) + ")";
   };
 
   switch (instruction.op) {
@@ -59,7 +57,7 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
     case IrOpcode::PrintString: {
       const uint64_t stringIndex = decodePrintStringIndex(instruction.imm);
       if (stringIndex >= context.stringCount) {
-        stringOperandError("PrintString", stringIndex);
+        error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
         return false;
       }
       std::ostringstream value;
@@ -123,10 +121,7 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:
       if (instruction.imm >= context.stringCount) {
-        stringOperandError(instruction.op == IrOpcode::FileOpenWrite
-                               ? "FileOpenWrite"
-                               : instruction.op == IrOpcode::FileOpenAppend ? "FileOpenAppend" : "FileOpenRead",
-                           instruction.imm);
+        error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
         return false;
       }
       out << "        int fileOpenFlags = ";
@@ -232,7 +227,7 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::FileWriteString:
       if (instruction.imm >= context.stringCount) {
-        stringOperandError("FileWriteString", instruction.imm);
+        error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
         return false;
       }
       emitStackUnderflowGuard(1, "file write");
@@ -300,7 +295,7 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::LoadStringByte:
       if (instruction.imm >= context.stringCount) {
-        stringOperandError("LoadStringByte", instruction.imm);
+        error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index);
         return false;
       }
       emitStackUnderflowGuard(1, "string byte");
