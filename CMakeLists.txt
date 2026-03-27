@@ -323,6 +323,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp
   src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp
   src/emitter/EmitterHelpersBuiltins.cpp
+  src/emitter/EmitterHelpersStructTypes.cpp
   src/emitter/EmitterHelpersTypes.cpp
   src/glsl_emitter/GlslEmitter.cpp
   src/glsl_emitter/GlslEmitterExpr.cpp
