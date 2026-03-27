@@ -89,6 +89,12 @@ namespace std {
     insert([K] key, [V] value) {
       mapInsert<K, V>(this, key, value)
     }
+
+    [public effects(heap_alloc)]
+    Destroy() {
+      drop(this.keys)
+      drop(this.payloads)
+    }
   }
 
   [return<i32> Comparable<K>]
