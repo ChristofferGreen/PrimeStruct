@@ -151,14 +151,14 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
 - ○ Refactor `src/text_filter/TextFilterPipelineEnvelope.cpp` (`906` lines) below the `700`-line target.
 - ○ Refactor `src/primevm_main.cpp` (`868` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterHelpersTypes.cpp` (`857` lines) below the `700`-line target.
-- ✓ Refactor `src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.cpp` (`210` lines) below the `700`-line target by extracting exp/log/hyperbolic builtin emission helpers into `src/ir_lowerer/IrLowererOperatorExpLogHyperbolicHelpers.cpp`, leaving `IrLowererOperatorArcHyperbolicHelpers.cpp` focused on arc-trig lowering and dispatch.
+- ○ Refactor `src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.cpp` (`828` lines) below the `700`-line target.
 - ○ Refactor `src/native_emitter/NativeEmitterEmit.cpp` (`822` lines) below the `700`-line target.
-- ✓ Refactor `src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp` (`514` lines) below the `700`-line target by extracting the call return-kind classifiers into `src/ir_lowerer/IrLowererSetupInferenceReturnKinds.cpp`, leaving `IrLowererSetupInferenceHelpers.cpp` focused on pointer, buffer, array, and body/local inference helpers.
+- ○ Refactor `src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp` (`815` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererResultHelpers.cpp` (`805` lines) below the `700`-line target.
-- ✓ Refactor `src/IrToGlslEmitter.cpp` (`46` lines) below the `700`-line target by extracting GLSL instruction/function emission helpers into `src/IrToGlslEmitterFunctionEmitter.cpp`, leaving `IrToGlslEmitter.cpp` focused on top-level shader source assembly.
+- ○ Refactor `src/IrToGlslEmitter.cpp` (`793` lines) below the `700`-line target.
 - ✓ Refactor `src/text_filter/TextFilterHelpers.cpp` (`537` lines) below the `700`-line target by extracting unary rewrite helpers into `src/text_filter/TextFilterUnaryRewrites.cpp`, leaving `TextFilterHelpers.cpp` focused on token classification and operand-scanning helpers.
 - ○ Refactor `src/glsl_emitter/GlslEmitterExpr.cpp` (`788` lines) below the `700`-line target.
-- ✓ Refactor `src/semantics/SemanticsHelpersValidation.cpp` (`618` lines) below the `700`-line target by extracting argument-ordering and named-argument validation helpers into `src/semantics/SemanticsArgumentOrdering.cpp`, leaving `SemanticsHelpersValidation.cpp` focused on transform/default-expression/type-inference validation helpers.
+- ○ Refactor `src/semantics/SemanticsHelpersValidation.cpp` (`783` lines) below the `700`-line target.
 - ○ Refactor `src/emitter/EmitterEmitBody.h` (`781` lines) below the `700`-line target.
 - ○ Refactor `src/ir_lowerer/IrLowererStatementCallHelpers.cpp` (`768` lines) below the `700`-line target.
 - ✓ Refactor `src/ir_lowerer/IrLowererHelpers.cpp` (`338` lines) below the `700`-line target by extracting builtin math/name classification helpers into `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp`, leaving `IrLowererHelpers.cpp` focused on shared control-flow, match-lowering, and core builtin classification helpers.
