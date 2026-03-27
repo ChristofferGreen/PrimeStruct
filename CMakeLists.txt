@@ -175,6 +175,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/CompilePipeline.cpp
   src/IrBackendProfiles.cpp
   src/IrInliner.cpp
+  src/IrPrinterHelpers.cpp
   src/IrPreparation.cpp
   src/IrPrinter.cpp
   src/IrSerializer.cpp
