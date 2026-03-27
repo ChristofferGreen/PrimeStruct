@@ -183,6 +183,13 @@ bool emitInlineDefinitionCallParameters(
                targetInfo.structTypeName == paramInfo.structTypeName;
       };
 
+      const auto wrappedArgsForwardingError = [&](LocalInfo::Kind wrappedKind) -> std::string {
+        if (wrappedKind == LocalInfo::Kind::Reference) {
+          return "variadic args<Reference<T>> requires reference values or location(...) forwarding";
+        }
+        return "variadic args<Pointer<T>> requires pointer values or location(...) forwarding";
+      };
+
       auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||
             paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||
@@ -232,7 +239,7 @@ bool emitInlineDefinitionCallParameters(
             emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
             return true;
           }
-          error = "variadic parameter type mismatch";
+          error = wrappedArgsForwardingError(LocalInfo::Kind::Reference);
           return false;
         }
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer) {
@@ -278,7 +285,7 @@ bool emitInlineDefinitionCallParameters(
             emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
             return true;
           }
-          error = "variadic parameter type mismatch";
+          error = wrappedArgsForwardingError(LocalInfo::Kind::Pointer);
           return false;
         }
         if (paramInfo.valueKind == LocalInfo::ValueKind::String) {
@@ -338,7 +345,7 @@ bool emitInlineDefinitionCallParameters(
           if (isSimpleCallName(argExpr, "location") && argExpr.args.size() == 1) {
             return true;
           }
-          error = "variadic parameter type mismatch";
+          error = wrappedArgsForwardingError(LocalInfo::Kind::Reference);
           return false;
         }
         if (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer) {
@@ -372,7 +379,7 @@ bool emitInlineDefinitionCallParameters(
           if (isSimpleCallName(argExpr, "location") && argExpr.args.size() == 1) {
             return true;
           }
-          error = "variadic parameter type mismatch";
+          error = wrappedArgsForwardingError(LocalInfo::Kind::Pointer);
           return false;
         }
         if (paramInfo.valueKind == LocalInfo::ValueKind::String) {

@@ -16072,6 +16072,54 @@ main() {
   CHECK(readFile(errPath).find("variadic args<T> does not support string pointers or references") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter rejects variadic reference packs without location forwarding") {
+  const std::string source = R"(
+[return<int>]
+score([args<Reference<i32>>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  return(score(1i32, 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_reference_forwarding_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_variadic_args_reference_forwarding_reject_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "variadic args<Reference<T>> requires reference values or location(...) forwarding") !=
+        std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects variadic pointer packs without location forwarding") {
+  const std::string source = R"(
+[return<int>]
+score([args<Pointer<i32>>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  return(score(1i32, 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_args_pointer_forwarding_reject.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() /
+                               "primec_cpp_variadic_args_pointer_forwarding_reject_err.txt")
+                                  .string();
+  const std::string compileCmd =
+      "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "variadic args<Pointer<T>> requires pointer values or location(...) forwarding") !=
+        std::string::npos);
+}
+
 TEST_CASE("C++ emitter materializes variadic borrowed experimental map packs with indexed dereference count calls") {
   const std::string source = R"(
 import /std/collections/*
