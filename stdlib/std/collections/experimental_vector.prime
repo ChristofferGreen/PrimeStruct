@@ -286,6 +286,18 @@ namespace std {
     return(values.field_capacity())
   }
 
+  [public return<i32>]
+  vectorCapacityRef<T>([Reference<Vector<T>>] values) {
+    [Vector<T>] materialized{values}
+    vectorCheckShape<T>(materialized)
+    return(materialized.field_capacity())
+  }
+
+  [public return<i32>]
+  /std/collections/vector/capacity_ref<T>([Reference<Vector<T>>] values) {
+    return(vectorCapacityRef<T>(values))
+  }
+
   [public effects(heap_alloc), return<void>]
   vectorReserve<T>([Vector<T> mut] values, [i32] capacity) {
     vectorReserveInternal<T>(values, capacity)

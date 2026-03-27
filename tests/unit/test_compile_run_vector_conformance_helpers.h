@@ -1592,6 +1592,28 @@ inline void expectExperimentalVectorCountRefConformance(const std::string &emitM
                                      6);
 }
 
+inline std::string makeExperimentalVectorCapacityRefConformanceSource() {
+  std::string source;
+  source += "import /std/collections/experimental_vector/*\n";
+  source += "\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<i32>] values{vector<i32>(3i32, 6i32, 9i32)}\n";
+  source += "  [Reference<Vector<i32>>] borrowed{location(values)}\n";
+  source += "  [i32 mut] total{vectorCapacityRef<i32>(borrowed)}\n";
+  source += "  assign(total, plus(total, /std/collections/vector/capacity_ref<i32>(borrowed)))\n";
+  source += "  return(total)\n";
+  source += "}\n";
+  return source;
+}
+
+inline void expectExperimentalVectorCapacityRefConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(makeExperimentalVectorCapacityRefConformanceSource(),
+                                     "experimental_vector_capacity_ref_" + emitMode,
+                                     emitMode,
+                                     6);
+}
+
 inline std::string makeVectorIndexedRemovalOwnershipRejectSource(const std::string &mode) {
   std::string source;
   if (mode == "remove_at_drop") {
