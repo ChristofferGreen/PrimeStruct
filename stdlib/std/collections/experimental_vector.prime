@@ -269,6 +269,18 @@ namespace std {
   }
 
   [public return<i32>]
+  vectorCountRef<T>([Reference<Vector<T>>] values) {
+    [Vector<T>] materialized{values}
+    vectorCheckShape<T>(materialized)
+    return(materialized.field_count())
+  }
+
+  [public return<i32>]
+  /std/collections/vector/count_ref<T>([Reference<Vector<T>>] values) {
+    return(vectorCountRef<T>(values))
+  }
+
+  [public return<i32>]
   vectorCapacity<T>([Vector<T>] values) {
     vectorCheckShape<T>(values)
     return(values.field_capacity())
