@@ -8829,8 +8829,6 @@ main() {
 }
 
 TEST_CASE("field-bound experimental map wrapper helpers accept struct field receivers") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*

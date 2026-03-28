@@ -550,6 +550,14 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   Context &ctx,
                                   BindingInfo &infoOut);
 
+bool resolveFieldBindingTarget(const Expr &target,
+                               const std::vector<ParameterInfo> &params,
+                               const LocalTypeMap &locals,
+                               bool allowMathBare,
+                               const std::string &namespacePrefix,
+                               Context &ctx,
+                               BindingInfo &bindingOut);
+
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
          helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
@@ -960,6 +968,15 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   Context &ctx,
                                   BindingInfo &infoOut) {
   if (tryInferBindingTypeFromInitializer(initializer, params, locals, infoOut, allowMathBare)) {
+    return true;
+  }
+  if (resolveFieldBindingTarget(initializer,
+                                params,
+                                locals,
+                                allowMathBare,
+                                initializer.namespacePrefix,
+                                ctx,
+                                infoOut)) {
     return true;
   }
   bool handledCallInference = false;
