@@ -175,7 +175,10 @@ Test TU sizing note: prefer many small/medium `.cpp` files over recreating giant
   - ✓ Move the grouped `backends.cpp_vm_*` slices into `tests/unit/test_ir_pipeline_backends_cpp_vm.cpp`, giving the continuous VM/C++ backend test body its own explicit suite boundary instead of keeping it in the umbrella backend TU.
   - ✓ Move the grouped `backends.glsl_*` slices into `tests/unit/test_ir_pipeline_backends_glsl.cpp`, giving the continuous GLSL/SPIR-V backend test body its own explicit suite boundary instead of keeping it in the umbrella backend TU.
   - ✓ Finish converting the remaining `backends` umbrella slices into standalone `.cpp` files or grouped translation units, leaving `tests/unit/test_ir_pipeline_backends.cpp` as an empty suite-boundary TU only if still needed for registration.
-  - ○ Move the remaining `conversions`, `serialization`, and any other IR wrapper suites that still compile test-body `.h` fragments through a single `.cpp` umbrella into standalone `.cpp` files or smaller themed TUs.
+  - ◐ Move the remaining `conversions`, `serialization`, and any other IR wrapper suites that still compile test-body `.h` fragments through a single `.cpp` umbrella into standalone `.cpp` files or smaller themed TUs.
+    - ✓ Move the `serialization.structs` suite into `tests/unit/test_ir_pipeline_serialization_structs.cpp`, removing its include-body form from the shared serialization umbrella while keeping the resulting TU at a manageable size.
+    - ○ Move the remaining `serialization.calls` and `serialization.control_flow` suites into standalone `.cpp` files so `tests/unit/test_ir_pipeline_serialization.cpp` stops owning test-body headers.
+    - ○ Move the remaining `conversions` umbrella suite bodies into standalone `.cpp` files or smaller themed grouped TUs, preserving explicit suite boundaries while shrinking the umbrella source.
 - ○ Finish converting the remaining compile-run suite wrappers into standalone `.cpp` files so `tests/unit/test_compile_run*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
 - ○ Add a final cleanup pass that removes obsolete include-wrapper translation units, collapses dead helper headers, and updates CMake targets so each test suite is compiled from explicit `.cpp` sources instead of transitive header inclusion.
 
