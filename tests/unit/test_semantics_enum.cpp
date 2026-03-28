@@ -1,3 +1,7 @@
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.enum");
 
 namespace {
@@ -70,7 +74,7 @@ main() {
     REQUIRE(binding != nullptr);
     CHECK(hasTransform(binding->transforms, "public"));
     CHECK(hasTransform(binding->transforms, "static"));
-  CHECK(hasTransform(binding->transforms, "/Colors"));
+    CHECK(hasTransform(binding->transforms, "/Colors"));
     REQUIRE(binding->args.size() == 1);
     const primec::Expr &call = binding->args.front();
     REQUIRE(call.kind == primec::Expr::Kind::Call);
