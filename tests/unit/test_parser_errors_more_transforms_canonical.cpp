@@ -1,3 +1,7 @@
+#include "test_parser_errors_more_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.parser.errors.transforms");
+
 TEST_CASE("statement transform requires callable syntax") {
   const std::string source = R"(
 [return<int>]

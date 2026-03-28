@@ -520,7 +520,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/test_parser_basic.cpp
     tests/unit/test_parser_errors.cpp
-    tests/unit/test_parser_errors_more.cpp
+    tests/unit/test_parser_errors_more_identifiers.cpp
+    tests/unit/test_parser_errors_more_punctuation.cpp
+    tests/unit/test_parser_errors_more_literals.cpp
+    tests/unit/test_parser_errors_more_named_args.cpp
+    tests/unit/test_parser_errors_more_transforms.cpp
+    tests/unit/test_parser_errors_more_transforms_canonical.cpp
     tests/unit/test_execution_parsing.cpp
     tests/unit/test_execution_whitespace.cpp
     tests/unit/test_template_parsing.cpp

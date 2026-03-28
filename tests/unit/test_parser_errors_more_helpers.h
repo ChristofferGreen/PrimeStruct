@@ -7,7 +7,7 @@
 #include "third_party/doctest.h"
 
 namespace {
-bool validateProgram(const std::string &source, const std::string &entry, std::string &error) {
+[[maybe_unused]] bool validateProgram(const std::string &source, const std::string &entry, std::string &error) {
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
@@ -19,4 +19,3 @@ bool validateProgram(const std::string &source, const std::string &entry, std::s
   return semantics.validate(program, entry, error, defaults, defaults);
 }
 } // namespace
-

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "test_parser_errors_more_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.parser.errors.punctuation");

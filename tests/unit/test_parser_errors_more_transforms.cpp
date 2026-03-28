@@ -1,5 +1,3 @@
-#pragma once
-
 #include "test_parser_errors_more_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.parser.errors.transforms");
@@ -639,3 +637,5 @@ main {
   CHECK(error.find("expected '(' after identifier; bindings are only allowed inside definition bodies or parameter lists") !=
         std::string::npos);
 }
+
+TEST_SUITE_END();
