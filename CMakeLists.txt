@@ -527,6 +527,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_benchmark_harness.cpp
     tests/unit/test_compile_run_imports.cpp
     tests/unit/test_compile_run_native_backend_core.cpp
+    tests/unit/test_compile_run_native_backend_collections.cpp
     tests/unit/test_compile_run_native_backend_maybe.cpp
     tests/unit/test_compile_run_native_backend_uninitialized.cpp
     tests/unit/test_compile_run_text_filters.cpp
@@ -1223,30 +1224,30 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 45 LAST 49)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.collections")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_aliases_and_wrappers"
-                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.cpp"
                                  FIRST 1 LAST 63)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "templated_wrapper_parity"
-                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.cpp"
                                  FIRST 64 LAST 141)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "stdlib_collection_shims"
-                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.cpp"
                                  FIRST 142 LAST 180)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "stdlib_collection_shims_extended"
-                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.cpp"
                                  FIRST 181 LAST 218)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "stdlib_collection_shims_accessors"
-                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.cpp"
                                  FIRST 219 LAST 257)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "user_shadow_and_receiver_precedence_core"
-                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.cpp"
                                  FIRST 258 LAST 296)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "user_shadow_and_receiver_precedence_advanced"
-                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.cpp"
                                  FIRST 297 LAST 335)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "growth_limits_and_map_access"
-                                 SOURCE_FILE "*test_compile_run_native_backend_collections.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_collections.cpp"
                                  FIRST 336 LAST 380)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.math_numeric")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_builtins"

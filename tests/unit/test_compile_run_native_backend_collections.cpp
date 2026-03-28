@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 #include "test_compile_run_collection_conformance_helpers.h"
 #include "test_compile_run_container_error_conformance_helpers.h"

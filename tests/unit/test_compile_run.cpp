@@ -302,6 +302,5 @@ void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
 #include "test_compile_run_native_backend_control.h"
 #include "test_compile_run_native_backend_pointers.h"
 #include "test_compile_run_native_backend_math_numeric.h"
-#include "test_compile_run_native_backend_collections.h"
 #include "test_compile_run_native_backend_imports.h"
 #include "test_compile_run_bindings_and_examples.h"
