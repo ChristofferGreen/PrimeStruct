@@ -526,6 +526,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run.cpp
     tests/unit/test_compile_run_benchmark_harness.cpp
     tests/unit/test_compile_run_imports.cpp
+    tests/unit/test_compile_run_native_backend_argv.cpp
     tests/unit/test_compile_run_native_backend_core.cpp
     tests/unit/test_compile_run_native_backend_collections.cpp
     tests/unit/test_compile_run_native_backend_maybe.cpp

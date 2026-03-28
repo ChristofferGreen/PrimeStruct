@@ -298,7 +298,6 @@ void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
 #include "test_compile_run_reflection_codegen.h"
 #include "test_compile_run_reflection_codegen_runtime.h"
 #include "test_compile_run_glsl.h"
-#include "test_compile_run_native_backend_argv.h"
 #include "test_compile_run_native_backend_control.h"
 #include "test_compile_run_native_backend_pointers.h"
 #include "test_compile_run_native_backend_math_numeric.h"
