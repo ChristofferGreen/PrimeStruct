@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.uninitialized");
 
@@ -12,10 +14,13 @@ main() {
   return(take(storage))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_uninitialized_local.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_native_uninitialized_local_exe").string();
+  const std::string srcPath =
+      writeTemp("compile_native_uninitialized_local.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_uninitialized_local_exe").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
 }
@@ -30,7 +35,8 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_uninitialized_string.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_native_uninitialized_string.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_uninitialized_string_exe").string();
   const std::string outPath =
@@ -39,9 +45,11 @@ main() {
       (testScratchPath("") / "primec_native_uninitialized_string_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " +
+      errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("return requires uninitialized storage to be dropped") != std::string::npos);
+  CHECK(readFile(errPath).find("return requires uninitialized storage to be dropped") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native pointer-backed uninitialized storage") {
@@ -55,11 +63,13 @@ main() {
   return(out)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_uninitialized_pointer.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_native_uninitialized_pointer.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_uninitialized_pointer_exe").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
 }
@@ -74,11 +84,13 @@ main() {
   return(take(dereference(ref)))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_uninitialized_reference.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_native_uninitialized_reference.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_uninitialized_reference_exe").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
 }
@@ -100,11 +112,13 @@ main() {
   return(value.right)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_uninitialized_pointer_struct.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_native_uninitialized_pointer_struct.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_uninitialized_pointer_struct_exe").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
 }
@@ -129,13 +143,16 @@ main() {
   return(out)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_uninitialized_struct.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_native_uninitialized_struct_exe").string();
+  const std::string srcPath =
+      writeTemp("compile_native_uninitialized_struct.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_uninitialized_struct_exe").string();
   const std::string errPath =
       (testScratchPath("") / "primec_native_uninitialized_struct_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " +
+      errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
         std::string::npos);

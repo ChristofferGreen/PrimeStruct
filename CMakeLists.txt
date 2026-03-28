@@ -526,6 +526,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run.cpp
     tests/unit/test_compile_run_imports.cpp
     tests/unit/test_compile_run_native_backend_maybe.cpp
+    tests/unit/test_compile_run_native_backend_uninitialized.cpp
     tests/unit/test_compile_run_text_filters.cpp
     tests/unit/test_compile_run_vm_maybe.cpp
     tests/unit/test_compile_run_vm_uninitialized.cpp
