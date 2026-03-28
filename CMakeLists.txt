@@ -470,9 +470,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_misc_tests
     tests/unit/test_main.cpp
     tests/unit/test_import_resolver.cpp
+    tests/unit/test_import_resolver_versions.cpp
     tests/unit/test_import_errors.cpp
     tests/unit/test_import_multiple.cpp
     tests/unit/test_ast_ir_dump.cpp
+    tests/unit/test_ast_ir_dump_inference.cpp
     tests/unit/test_ast_ir_dump_namespace.cpp
     tests/unit/test_printers_manual.cpp
     tests/unit/test_semantics_manual.cpp

@@ -1,85 +1,4 @@
-#include "primec/ImportResolver.h"
-#include "primec/ProcessRunner.h"
-#include "primec/testing/TestScratch.h"
-
-#include "third_party/doctest.h"
-
-#include <functional>
-#include <filesystem>
-#include <fstream>
-#include <cstdlib>
-#include <string>
-#include <vector>
-
-namespace {
-std::filesystem::path importResolverPath(std::string_view relativePath) {
-  return primec::testing::testScratchPath("imports_resolver/" + std::string(relativePath));
-}
-
-std::string writeTemp(const std::string &name, const std::string &contents) {
-  const auto path = importResolverPath(name);
-  std::ofstream file(path);
-  CHECK(file.good());
-  file << contents;
-  CHECK(file.good());
-  return path.string();
-}
-
-std::string writeFile(const std::filesystem::path &path, const std::string &contents) {
-  std::filesystem::create_directories(path.parent_path());
-  std::ofstream file(path);
-  CHECK(file.good());
-  file << contents;
-  CHECK(file.good());
-  return path.string();
-}
-
-std::string quoteShellArg(const std::string &value) {
-  std::string quoted = "'";
-  for (char c : value) {
-    if (c == '\'') {
-      quoted += "'\\''";
-    } else {
-      quoted += c;
-    }
-  }
-  quoted += "'";
-  return quoted;
-}
-
-bool runCommand(const std::string &command) {
-  return std::system(command.c_str()) == 0;
-}
-
-bool hasZipTools() {
-  return runCommand("zip -v > /dev/null 2>&1") && runCommand("unzip -v > /dev/null 2>&1");
-}
-
-bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path &sourceDir) {
-  std::string command = "cd " + quoteShellArg(sourceDir.string()) + " && zip -q -r " +
-                        quoteShellArg(zipPath.string()) + " .";
-  return runCommand(command);
-}
-
-class RecordingProcessRunner final : public primec::ProcessRunner {
-public:
-  explicit RecordingProcessRunner(std::function<int(const std::vector<std::string> &)> handler = {})
-      : handler_(std::move(handler)) {}
-
-  int run(const std::vector<std::string> &args) const override {
-    commands.push_back(args);
-    if (handler_) {
-      return handler_(args);
-    }
-    return 1;
-  }
-
-  mutable std::vector<std::vector<std::string>> commands;
-
-private:
-  std::function<int(const std::vector<std::string> &)> handler_;
-};
-} // namespace
+#include "test_import_resolver_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.imports.resolver");
 
@@ -418,5 +337,4 @@ TEST_CASE("supports semicolon separated imports") {
   CHECK(source.find(markerA) != std::string::npos);
   CHECK(source.find(markerB) != std::string::npos);
 }
-
-#include "test_import_resolver_versions.h"
+TEST_SUITE_END();
