@@ -533,6 +533,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_native_backend_collections.cpp
     tests/unit/test_compile_run_native_backend_control.cpp
     tests/unit/test_compile_run_native_backend_imports.cpp
+    tests/unit/test_compile_run_native_backend_math_numeric.cpp
     tests/unit/test_compile_run_native_backend_maybe.cpp
     tests/unit/test_compile_run_native_backend_pointers.cpp
     tests/unit/test_compile_run_native_backend_uninitialized.cpp
@@ -1261,13 +1262,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  FIRST 336 LAST 380)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.math_numeric")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_builtins"
-                                 SOURCE_FILE "*test_compile_run_native_backend_math_numeric.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_math_numeric.cpp"
                                  FIRST 1 LAST 22)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "numeric_and_boolean_flow"
-                                 SOURCE_FILE "*test_compile_run_native_backend_math_numeric.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_math_numeric.cpp"
                                  FIRST 23 LAST 34)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "conversions_and_rejections"
-                                 SOURCE_FILE "*test_compile_run_native_backend_math_numeric.h"
+                                 SOURCE_FILE "*test_compile_run_native_backend_math_numeric.cpp"
                                  FIRST 35 LAST 44)
     elseif(suite STREQUAL "primestruct.compile.run.imports")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "versioned_import_resolution"
