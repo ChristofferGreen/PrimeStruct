@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.uninitialized");
 
 TEST_CASE("runs vm with uninitialized local storage") {
@@ -27,12 +29,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_uninitialized_string.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_vm_uninitialized_string_out.txt").string();
-  const std::string errPath = (testScratchPath("") / "primec_vm_uninitialized_string_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
+  const std::string outPath =
+      (testScratchPath("") / "primec_vm_uninitialized_string_out.txt").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_uninitialized_string_err.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string errorText = readFile(errPath);
-  CHECK(errorText.find("return requires uninitialized storage to be dropped") != std::string::npos);
+  CHECK(errorText.find("return requires uninitialized storage to be dropped") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with pointer-backed uninitialized storage") {
@@ -99,10 +105,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_uninitialized_borrow.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_vm_uninitialized_borrow_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_uninitialized_borrow_err.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Reference bindings require location(...)") != std::string::npos);
+  CHECK(readFile(errPath).find("Reference bindings require location(...)") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with uninitialized struct field") {
@@ -126,8 +135,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_uninitialized_struct.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_vm_uninitialized_struct_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_uninitialized_struct_err.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
         std::string::npos);

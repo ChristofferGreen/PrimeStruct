@@ -418,7 +418,6 @@ bool hasPython3() {
 
 #include "test_compile_run_smoke.h"
 #include "test_compile_run_vm_core.h"
-#include "test_compile_run_vm_uninitialized.h"
 #include "test_compile_run_vm_collections.h"
 #include "test_compile_run_vm_math.h"
 #include "test_compile_run_vm_maps.h"
