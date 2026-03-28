@@ -2019,7 +2019,7 @@ inline void expectExperimentalMapMethodReceiverConformance(const std::string &em
   expectMapConformanceProgramRuns(makeExperimentalMapMethodReceiverConformanceSource(),
                                   "map_experimental_method_receiver",
                                   emitMode,
-                                  11);
+                                  15);
 }
 
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {

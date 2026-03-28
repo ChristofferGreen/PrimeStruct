@@ -9,6 +9,7 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo &info) {
+  info = {};
   if (target.kind != Expr::Kind::Call || target.isBinding || target.isMethodCall) {
     return false;
   }
@@ -89,6 +90,7 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
     return false;
   }
 
+  info.isMapTarget = true;
   LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
   for (size_t i = 0; i < target.args.size(); i += 2) {
@@ -96,7 +98,7 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
     LocalInfo::ValueKind currentValueKind = LocalInfo::ValueKind::Unknown;
     if (!inferLiteralKind(target.args[i], currentKeyKind) ||
         !inferLiteralKind(target.args[i + 1], currentValueKind)) {
-      return false;
+      return true;
     }
     if (keyKind == LocalInfo::ValueKind::Unknown) {
       keyKind = currentKeyKind;
@@ -110,7 +112,6 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
     }
   }
 
-  info.isMapTarget = true;
   info.mapKeyKind = keyKind;
   info.mapValueKind = valueKind;
   return true;
@@ -189,14 +190,16 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
       return info;
     }
-    if (inferDirectMapConstructorTargetInfo(target, info)) {
-      return info;
-    }
+    MapAccessTargetInfo directConstructorInfo;
+    const bool hasDirectConstructorInfo = inferDirectMapConstructorTargetInfo(target, directConstructorInfo);
     if (resolveCallMapAccessTargetInfo) {
       MapAccessTargetInfo inferred;
       if (resolveCallMapAccessTargetInfo(target, inferred)) {
         return inferred;
       }
+    }
+    if (hasDirectConstructorInfo) {
+      return directConstructorInfo;
     }
   }
   return info;

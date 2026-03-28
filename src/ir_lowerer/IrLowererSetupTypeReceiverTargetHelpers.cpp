@@ -3,6 +3,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeReceiverTargetHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -57,6 +58,70 @@ std::string resolveStructTypePathFromName(const std::string &typeName,
 }
 
 } // namespace
+
+bool inferReceiverTypeFromDeclaredReturn(const Definition &definition, std::string &typeNameOut) {
+  typeNameOut.clear();
+
+  std::string collectionName;
+  std::vector<std::string> collectionArgs;
+  if (inferDeclaredReturnCollection(definition, collectionName, collectionArgs)) {
+    typeNameOut = collectionName;
+    return true;
+  }
+
+  auto unwrapDeclaredReturnType = [](std::string typeText) {
+    while (!typeText.empty()) {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(typeText, base, argText)) {
+        break;
+      }
+      base = normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
+      std::vector<std::string> args;
+      if ((base != "Reference" && base != "Pointer") || !splitTemplateArgs(argText, args) || args.size() != 1) {
+        break;
+      }
+      typeText = trimTemplateTypeText(args.front());
+    }
+    return typeText;
+  };
+
+  for (const auto &transform : definition.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string declaredType = trimTemplateTypeText(transform.templateArgs.front());
+    if (declaredType == "auto") {
+      break;
+    }
+    declaredType = unwrapDeclaredReturnType(std::move(declaredType));
+
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(declaredType, base, argText)) {
+      base = normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
+      if (!base.empty() && base.front() == '/') {
+        typeNameOut = base;
+        return true;
+      }
+      typeNameOut = base;
+      return !typeNameOut.empty();
+    }
+
+    declaredType = normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(declaredType));
+    if (declaredType.empty()) {
+      return false;
+    }
+    if (declaredType.front() == '/') {
+      typeNameOut = declaredType;
+      return true;
+    }
+    typeNameOut = declaredType;
+    return true;
+  }
+
+  return false;
+}
 
 bool resolveMethodCallReceiverExpr(const Expr &callExpr,
                                    const LocalMap &localsIn,

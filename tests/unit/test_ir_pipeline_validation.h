@@ -11431,6 +11431,16 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferResolvedCalls.cpp";
   const std::filesystem::path semanticsInferCollectionsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
+  const std::filesystem::path semanticsInferCollectionCompatibilityPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionCompatibility.cpp";
+  const std::filesystem::path semanticsInferCollectionReturnInferencePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionReturnInference.cpp";
+  const std::filesystem::path semanticsInferCollectionCallResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionCallResolution.cpp";
+  const std::filesystem::path semanticsInferCollectionBufferAndMapResolversPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp";
+  const std::filesystem::path semanticsInferCollectionStringResolverPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionStringResolver.cpp";
   const std::filesystem::path semanticsInferControlFlowPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferControlFlow.cpp";
   const std::filesystem::path semanticsInferDefinitionPath =
@@ -11457,6 +11467,11 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferScalarBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsInferResolvedCallsPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
+  REQUIRE(std::filesystem::exists(semanticsInferCollectionCompatibilityPath));
+  REQUIRE(std::filesystem::exists(semanticsInferCollectionReturnInferencePath));
+  REQUIRE(std::filesystem::exists(semanticsInferCollectionCallResolutionPath));
+  REQUIRE(std::filesystem::exists(semanticsInferCollectionBufferAndMapResolversPath));
+  REQUIRE(std::filesystem::exists(semanticsInferCollectionStringResolverPath));
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsInferDefinitionPath));
   REQUIRE(std::filesystem::exists(semanticsInferGraphPath));
@@ -11477,6 +11492,11 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       semanticsInferScalarBuiltinsPath,
       semanticsInferResolvedCallsPath,
       semanticsInferCollectionsPath,
+      semanticsInferCollectionCompatibilityPath,
+      semanticsInferCollectionReturnInferencePath,
+      semanticsInferCollectionCallResolutionPath,
+      semanticsInferCollectionBufferAndMapResolversPath,
+      semanticsInferCollectionStringResolverPath,
       semanticsInferControlFlowPath,
       semanticsInferDefinitionPath,
       semanticsInferGraphPath,
@@ -11501,7 +11521,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       readText(semanticsInferScalarBuiltinsPath);
   const std::string semanticsInferResolvedCallsSource =
       readText(semanticsInferResolvedCallsPath);
-  const std::string semanticsInferCollectionsSource = readText(semanticsInferCollectionsPath);
+  const std::string semanticsInferCollectionsSource = readTexts({
+      semanticsInferCollectionsPath,
+      semanticsInferCollectionCompatibilityPath,
+      semanticsInferCollectionReturnInferencePath,
+      semanticsInferCollectionCallResolutionPath,
+      semanticsInferCollectionBufferAndMapResolversPath,
+      semanticsInferCollectionStringResolverPath,
+  });
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);

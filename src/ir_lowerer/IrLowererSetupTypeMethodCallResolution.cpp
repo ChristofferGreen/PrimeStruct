@@ -183,6 +183,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     if (receiverTypeName.empty()) {
       return nullptr;
     }
+    if (receiverTypeName.front() == '/') {
+      return resolveMethodDefinitionFromReceiverTarget(callExpr.name, "", receiverTypeName, defMap, errorOutRef);
+    }
     const Definition *resolved = resolveMethodDefinitionFromReceiverTarget(
         callExpr.name, receiverTypeName, "", defMap, errorOutRef);
     if (resolved != nullptr) {

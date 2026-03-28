@@ -30,26 +30,45 @@
           rewrittenExpr.namespacePrefix.clear();
           rewrittenExpr.isMethodCall = false;
           if (rewrittenExpr.templateArgs.empty()) {
-            for (const auto &transform : callee->transforms) {
-              if (transform.name != "return" || transform.templateArgs.size() != 1) {
-                continue;
+            std::string collectionName;
+            std::vector<std::string> collectionArgs;
+            if (ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) &&
+                collectionName == "map" && collectionArgs.size() == 2) {
+              collectionArgs[0] = trimTemplateTypeText(collectionArgs[0]);
+              collectionArgs[1] = trimTemplateTypeText(collectionArgs[1]);
+              rewrittenExpr.templateArgs = std::move(collectionArgs);
+            } else if (callee->parameters.size() >= 2) {
+              auto extractParameterTypeName = [&](const Expr &paramExpr) {
+                for (const auto &transform : paramExpr.transforms) {
+                  if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+                      transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
+                      transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
+                      transform.name == "effects" || transform.name == "capabilities") {
+                    continue;
+                  }
+                  if (!transform.arguments.empty()) {
+                    continue;
+                  }
+                  std::string typeName = transform.name;
+                  if (!transform.templateArgs.empty()) {
+                    typeName += "<";
+                    for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
+                      if (index != 0) {
+                        typeName += ", ";
+                      }
+                      typeName += trimTemplateTypeText(transform.templateArgs[index]);
+                    }
+                    typeName += ">";
+                  }
+                  return typeName;
+                }
+                return std::string{};
+              };
+              const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
+              const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
+              if (!keyTypeName.empty() && !valueTypeName.empty()) {
+                rewrittenExpr.templateArgs = {keyTypeName, valueTypeName};
               }
-              std::string base;
-              std::string argList;
-              if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
-                break;
-              }
-              if (normalizeCollectionBindingTypeName(base) != "map") {
-                break;
-              }
-              std::vector<std::string> templateArgs;
-              if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
-                break;
-              }
-              templateArgs[0] = trimTemplateTypeText(templateArgs[0]);
-              templateArgs[1] = trimTemplateTypeText(templateArgs[1]);
-              rewrittenExpr.templateArgs = std::move(templateArgs);
-              break;
             }
           }
           return true;
@@ -85,6 +104,62 @@
         Expr rewrittenTemporaryMapMethodHelperExpr;
         if (rewriteTemporaryMapMethodToDirectHelperExpr(expr, rewrittenTemporaryMapMethodHelperExpr)) {
           return emitExpr(rewrittenTemporaryMapMethodHelperExpr, localsIn);
+        }
+        auto rejectCanonicalVectorTemporaryReceiverExpr = [&](const Expr &callExpr) -> bool {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
+            return false;
+          }
+
+          std::string helperName;
+          const Expr *receiverExpr = nullptr;
+          if (callExpr.isMethodCall) {
+            helperName = callExpr.name;
+            receiverExpr = &callExpr.args.front();
+          } else if (callExpr.args.size() == 2 && getBuiltinArrayAccessName(callExpr, helperName)) {
+            receiverExpr = &callExpr.args.front();
+          } else {
+            std::string normalizedName = callExpr.name;
+            if (!normalizedName.empty() && normalizedName.front() == '/') {
+              normalizedName.erase(normalizedName.begin());
+            }
+            auto matchDirectVectorHelper = [&](std::string_view path) {
+              return normalizedName == path;
+            };
+            if (matchDirectVectorHelper("std/collections/vector/count")) {
+              helperName = "count";
+            } else if (matchDirectVectorHelper("std/collections/vector/capacity")) {
+              helperName = "capacity";
+            } else if (matchDirectVectorHelper("std/collections/vector/at")) {
+              helperName = "at";
+            } else if (matchDirectVectorHelper("std/collections/vector/at_unsafe")) {
+              helperName = "at_unsafe";
+            } else {
+              return false;
+            }
+            receiverExpr = &callExpr.args.front();
+          }
+
+          if (receiverExpr == nullptr || receiverExpr->kind != Expr::Kind::Call) {
+            return false;
+          }
+          if (helperName != "count" && helperName != "capacity" &&
+              helperName != "at" && helperName != "at_unsafe") {
+            return false;
+          }
+
+          const Definition *receiverDef = resolveDefinitionCall(*receiverExpr);
+          if (receiverDef == nullptr) {
+            return false;
+          }
+          if (receiverDef->fullPath.rfind("/std/collections/vector/vector", 0) != 0) {
+            return false;
+          }
+
+          error = "count requires array, vector, map, or string target";
+          return true;
+        };
+        if (rejectCanonicalVectorTemporaryReceiverExpr(expr)) {
+          return false;
         }
         auto emitMaterializedCollectionReceiverExpr = [&](const Expr &callExpr) -> std::optional<bool> {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
@@ -148,7 +223,7 @@
               return name == "count" || name == "contains" || name == "tryAt" ||
                      name == "at" || name == "at_unsafe";
             }
-            if (collectionName == "vector" || collectionName == "array") {
+            if (collectionName == "array") {
               return name == "count" || name == "capacity" ||
                      name == "at" || name == "at_unsafe";
             }
@@ -168,6 +243,8 @@
             materializedInfo.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
             materializedInfo.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
             materializedInfo.valueKind = materializedInfo.mapValueKind;
+          } else if (collectionName == "vector") {
+            return std::nullopt;
           } else {
             if (collectionArgs.size() != 1) {
               return std::nullopt;

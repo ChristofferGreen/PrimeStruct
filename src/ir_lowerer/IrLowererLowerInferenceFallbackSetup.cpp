@@ -159,6 +159,12 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
           }
 
           if (receiver.kind == Expr::Kind::Call) {
+            const auto mapTargetInfo = resolveMapAccessTargetInfo(receiver, candidateLocals);
+            if (mapTargetInfo.isMapTarget && mapTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+              kindOut = mapTargetInfo.mapValueKind;
+              return true;
+            }
+
             std::string collectionName;
             if (getBuiltinCollectionName(receiver, collectionName)) {
               if (assignReceiverCollectionValueKind(collectionName, receiver.templateArgs)) {

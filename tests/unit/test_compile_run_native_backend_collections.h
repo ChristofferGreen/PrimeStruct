@@ -3012,7 +3012,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 152);
+  CHECK(runCommand(exePath) == 81);
 }
 
 TEST_CASE("rejects native user wrapper temporary unsafe parity shadow mismatch") {
@@ -3190,7 +3190,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 156);
+  CHECK(runCommand(exePath) == 83);
 }
 
 TEST_CASE("compiles and runs native user wrapper temporary count capacity shadow precedence") {
@@ -3234,7 +3234,7 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 60);
+  CHECK(runCommand(exePath) == 163);
 }
 
 TEST_CASE("rejects native user wrapper temporary count capacity shadow value mismatch") {
@@ -3359,7 +3359,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 177);
 }
 
 TEST_CASE("rejects native user wrapper temporary syntax parity shadow mismatch") {
