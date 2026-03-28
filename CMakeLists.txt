@@ -146,6 +146,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprCallResolution.cpp
   src/semantics/SemanticsValidatorExpr.cpp
   src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp
+  src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp
   src/semantics/SemanticsValidatorInferCollectionCountCapacity.cpp
   src/semantics/SemanticsValidatorInferCollectionDirectCountCapacity.cpp
   src/semantics/SemanticsValidatorInferCollectionDispatch.cpp
