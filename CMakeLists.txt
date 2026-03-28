@@ -515,6 +515,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_entry_builtins_numeric.cpp
     tests/unit/test_semantics_entry_entry.cpp
     tests/unit/test_semantics_entry_executions.cpp
+    tests/unit/test_semantics_entry_operators.cpp
     tests/unit/test_semantics_entry_tags.cpp
     tests/unit/test_semantics_enum.cpp
     tests/unit/test_semantics_lambdas.cpp
@@ -914,28 +915,28 @@ if(PRIMESTRUCT_BUILD_TESTS)
       add_test(NAME "${testName}_matrix_and_shape_rules_core"
                COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
                        "--test-suite=${suite}"
-                       "--source-file=*test_semantics_entry_operators.h"
+                       "--source-file=*test_semantics_entry_operators.cpp"
                        "--order-by=file"
                        "--first=1"
                        "--last=5")
       add_test(NAME "${testName}_matrix_and_shape_rules_shapes"
                COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
                        "--test-suite=${suite}"
-                       "--source-file=*test_semantics_entry_operators.h"
+                       "--source-file=*test_semantics_entry_operators.cpp"
                        "--order-by=file"
                        "--first=6"
                        "--last=10")
       add_test(NAME "${testName}_matrix_and_shape_rules_products"
                COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
                        "--test-suite=${suite}"
-                       "--source-file=*test_semantics_entry_operators.h"
+                       "--source-file=*test_semantics_entry_operators.cpp"
                        "--order-by=file"
                        "--first=11"
                        "--last=15")
       add_test(NAME "${testName}_scalar_and_mixed_numeric_rules"
                COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
                        "--test-suite=${suite}"
-                       "--source-file=*test_semantics_entry_operators.h"
+                       "--source-file=*test_semantics_entry_operators.cpp"
                        "--order-by=file"
                        "--first=16"
                        "--last=29")

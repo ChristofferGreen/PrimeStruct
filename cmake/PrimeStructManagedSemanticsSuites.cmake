@@ -52,7 +52,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.operators"
   ${PrimeStructManagedSemanticsCommon}
-  SOURCE_FILE "*test_semantics_entry_operators.h"
+  SOURCE_FILE "*test_semantics_entry_operators.cpp"
   RANGE_FIRST 1
   RANGE_LAST 5
   SHARD_PREFIX "matrix_and_shape_rules_core"
@@ -61,7 +61,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.operators"
   ${PrimeStructManagedSemanticsCommon}
-  SOURCE_FILE "*test_semantics_entry_operators.h"
+  SOURCE_FILE "*test_semantics_entry_operators.cpp"
   RANGE_FIRST 6
   RANGE_LAST 10
   SHARD_PREFIX "matrix_and_shape_rules_shapes"
@@ -70,7 +70,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.operators"
   ${PrimeStructManagedSemanticsCommon}
-  SOURCE_FILE "*test_semantics_entry_operators.h"
+  SOURCE_FILE "*test_semantics_entry_operators.cpp"
   RANGE_FIRST 11
   RANGE_LAST 15
   SHARD_PREFIX "matrix_and_shape_rules_products"
@@ -79,7 +79,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.operators"
   ${PrimeStructManagedSemanticsCommon}
-  SOURCE_FILE "*test_semantics_entry_operators.h"
+  SOURCE_FILE "*test_semantics_entry_operators.cpp"
   RANGE_FIRST 16
   RANGE_LAST 29
   CASES_PER_SHARD 5
