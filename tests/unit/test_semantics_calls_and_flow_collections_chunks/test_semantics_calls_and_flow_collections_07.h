@@ -1,0 +1,627 @@
+TEST_CASE("bare vector pop requires imported stdlib helper before block-arg validation") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  pop(values) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("bare vector pop requires imported stdlib helper before template specialization") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  pop<i32>(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("bare vector pop requires imported stdlib helper before arity validation") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  pop(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("pop call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+/vector/pop([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  pop(values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pop method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+/vector/pop([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.pop()
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector clear alias requires mutable vector binding") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  /vector/clear(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("bare vector clear validates through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  clear(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("clear rejects vector elements with nested drop requirements") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Owned() {
+  [i32] value{1i32}
+
+  Destroy() {
+  }
+}
+
+[struct]
+Wrapper() {
+  [Owned] value{Owned()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper())}
+  clear(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("clear requires drop-trivial vector element type until container drop semantics are implemented: Wrapper") !=
+        std::string::npos);
+}
+
+TEST_CASE("clear call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+/vector/clear([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  clear(values)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("clear method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+/vector/clear([vector<i32> mut] values) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.clear()
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare vector clear requires imported stdlib helper before template specialization") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  clear<i32>(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("bare vector clear requires imported stdlib helper before arity validation") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  clear(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("vector remove_at alias requires mutable vector binding") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  /vector/remove_at(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("vector remove_at alias requires integer index") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /vector/remove_at(values, "hi"utf8)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("remove_at rejects bool index in call and method forms") {
+  const auto checkInvalidRemoveAt = [](const std::string &stmtText) {
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK_FALSE(error.empty());
+  };
+
+  checkInvalidRemoveAt("/vector/remove_at(values, true)");
+  checkInvalidRemoveAt("values.remove_at(true)");
+}
+
+TEST_CASE("bare vector remove_at requires imported stdlib helper before template specialization") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  remove_at<i32>(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("bare vector remove_at requires imported stdlib helper before arity validation") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  remove_at(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("remove_at rejects non-drop-trivial vector element types") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Owned() {
+  [i32] value{1i32}
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned())}
+  remove_at(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "remove_at requires drop-trivial vector element type until container drop semantics are implemented: "
+            "Owned") != std::string::npos);
+}
+
+TEST_CASE("remove_at rejects nested non-relocation-trivial vector element types") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[struct]
+Wrapper() {
+  [Mover] value{Mover()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(), Wrapper())}
+  remove_at(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "remove_at requires relocation-trivial vector element type until container move/reallocation semantics "
+            "are implemented: Wrapper") != std::string::npos);
+}
+
+TEST_CASE("remove_at call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+/vector/remove_at([vector<i32> mut] values, [i32] index) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_at(values, 1i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("remove_at method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+/vector/remove_at([vector<i32> mut] values, [i32] index) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.remove_at(1i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector remove_swap alias requires integer index") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /vector/remove_swap(values, "hi"utf8)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("remove_swap rejects bool index in call and method forms") {
+  const auto checkInvalidRemoveSwap = [](const std::string &stmtText) {
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK_FALSE(error.empty());
+  };
+
+  checkInvalidRemoveSwap("/vector/remove_swap(values, true)");
+  checkInvalidRemoveSwap("values.remove_swap(true)");
+}
+
+TEST_CASE("vector remove_swap alias requires mutable vector binding") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  /vector/remove_swap(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("bare vector remove_swap requires imported stdlib helper before template specialization") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_swap<i32>(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("bare vector remove_swap requires imported stdlib helper before arity validation") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_swap(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("remove_swap rejects non-drop-trivial vector element types") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Owned() {
+  [i32] value{1i32}
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned())}
+  remove_swap(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: "
+            "Owned") != std::string::npos);
+}
+
+TEST_CASE("remove_swap rejects nested non-relocation-trivial vector element types") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[struct]
+Wrapper() {
+  [Mover] value{Mover()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(), Wrapper())}
+  remove_swap(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "remove_swap requires relocation-trivial vector element type until container move/reallocation semantics "
+            "are implemented: Wrapper") != std::string::npos);
+}
+
+TEST_CASE("bare vector remove_swap validates through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_swap(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("remove_swap call keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+/vector/remove_swap([vector<i32> mut] values, [i32] index) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_swap(values, 1i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("remove_swap method keeps user-defined vector helper precedence") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+/vector/remove_swap([vector<i32> mut] values, [i32] index) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.remove_swap(1i32)
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector helpers are statement-only in expressions") {
+  struct HelperCase {
+    const char *name;
+    const char *args;
+  };
+  const HelperCase helpers[] = {
+      {"push", "values, 2i32"},       {"pop", "values"},       {"reserve", "values, 8i32"},
+      {"clear", "values"},            {"remove_at", "values, 0i32"}, {"remove_swap", "values, 0i32"}};
+  for (const auto &helper : helpers) {
+    CAPTURE(helper.name);
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32)}\n"
+        "  return(" +
+        std::string(helper.name) + "(" + helper.args + "))\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("only supported as a statement") != std::string::npos);
+  }
+}
+
+TEST_CASE("vector helper named args on array targets report vector binding") {
+  const auto checkInvalidStatement = [](const std::string &stmtText) {
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [array<i32> mut] values{array<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("requires vector binding") != std::string::npos);
+  };
+
+  checkInvalidStatement("push([values] values, [value] 3i32)");
+  checkInvalidStatement("reserve([values] values, [capacity] 8i32)");
+  checkInvalidStatement("remove_at([values] values, [index] 0i32)");
+  checkInvalidStatement("remove_swap([values] values, [index] 0i32)");
+  checkInvalidStatement("pop([values] values)");
+  checkInvalidStatement("clear([values] values)");
+  checkInvalidStatement("values.push([value] 3i32)");
+  checkInvalidStatement("values.reserve([capacity] 8i32)");
+  checkInvalidStatement("values.remove_at([index] 0i32)");
+  checkInvalidStatement("values.remove_swap([index] 0i32)");
+}
+

@@ -1,0 +1,644 @@
+TEST_CASE("wrapper-returned canonical map method falls back to alias helper when canonical helper is absent") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(71i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+makeValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(makeValues().count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper-returned canonical map method validates builtin wrapper receiver without helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+makeValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(makeValues().count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map slash return type keeps canonical method diagnostics") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values, [bool] marker) {
+  return(73i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+makeValues() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(makeValues().count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib canonical map count method auto inference falls back to canonical helper return") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map count method auto inference keeps return mismatch diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
+TEST_CASE("stdlib canonical map count method auto inference keeps canonical precedence over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map count method auto inference keeps canonical mismatch diagnostics over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{values.count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
+TEST_CASE("stdlib canonical map count call auto inference keeps canonical precedence over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map count call auto inference keeps canonical mismatch diagnostics over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<bool>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  [auto] inferred{count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
+TEST_CASE("stdlib canonical map access count shadow keeps canonical precedence over alias helper") {
+  const std::string source = R"(
+[return<int>]
+/map/at([map<i32, string>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<string>]
+/std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(5i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
+  return(plus(values.at(1i32).count(), values.at_unsafe(1i32).count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib canonical map access count shadow currently validates mixed canonical and alias returns") {
+  const std::string source = R"(
+[return<string>]
+/map/at([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<string>]
+/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(5i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
+  return(plus(values.at(1i32).count(), values.at_unsafe(1i32).count()))
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("rejects stdlib canonical vector helper method-precedence forwarding in method-call sugar") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/at([vector<i32>] values, [bool] index) {
+  return(40i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values.count(true), values.at(true)))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("array namespaced vector helper alias rejects method-call sugar auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./array/count(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+}
+
+TEST_CASE("array namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./array/count(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced helper alias rejects method-call sugar auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/count(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity alias rejects method-call sugar auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/capacity(true)}
+  return(inferred)
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector helper alias rejects method-call sugar auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./std/collections/vector/count(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector access alias rejects method-call sugar auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/at([vector<i32>] values, [bool] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./std/collections/vector/at(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires integer index") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./std/collections/vector/count(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector count method local same-path overload set rejects duplicate definitions") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([map<i32, i32>] values) {
+  return(31i32)
+}
+
+[return<int>]
+/std/collections/vector/count([array<i32>] values) {
+  return(32i32)
+}
+
+[return<int>]
+/std/collections/vector/count([string] values) {
+  return(33i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  [string] text{"abc"raw_utf8}
+  return(plus(plus(values./std/collections/vector/count(),
+                    items./std/collections/vector/count()),
+              text./std/collections/vector/count()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate definition: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector count method rejects map receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector count method rejects array receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(values./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector count method rejects string receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method local same-path overload set rejects duplicate definitions") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/capacity([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity([array<i32>] values) {
+  return(42i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity([string] values) {
+  return(43i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  [string] text{"abc"raw_utf8}
+  return(plus(plus(values./std/collections/vector/capacity(),
+                    items./std/collections/vector/capacity()),
+              text./std/collections/vector/capacity()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate definition: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method rejects map receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method rejects array receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(values./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method rejects string receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method rejects wrapper map receiver without helper") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity method rejects wrapper map receiver without helper") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("array namespaced slash method spelling rejects statement body arguments") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  values./array/count(true) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector helper alias rejects statement body arguments") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  values./std/collections/vector/count(true) { 1i32 }
+  return(0i32)
+  }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
+}
+
