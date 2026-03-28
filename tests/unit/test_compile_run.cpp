@@ -257,11 +257,6 @@ std::vector<std::string> parseDapFrames(const std::string &raw, bool &ok) {
   return payloads;
 }
 
-bool hasSpirvTools() {
-  return runCommand("glslangValidator -v > /dev/null 2>&1") == 0 ||
-         runCommand("glslc --version > /dev/null 2>&1") == 0;
-}
-
 bool hasWasmtime() {
   return runCommand("wasmtime --version > /dev/null 2>&1") == 0;
 }
@@ -293,7 +288,6 @@ void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
 #include "test_compile_run_vm_math.h"
 #include "test_compile_run_vm_bounds.h"
 #include "test_compile_run_emitters.h"
-#include "test_compile_run_glsl.h"
 #include "test_compile_run_native_backend_control.h"
 #include "test_compile_run_native_backend_math_numeric.h"
 #include "test_compile_run_native_backend_imports.h"

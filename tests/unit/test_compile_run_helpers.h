@@ -93,6 +93,11 @@ inline bool hasPython3() {
   return runCommand("python3 --version > /dev/null 2>&1") == 0;
 }
 
+inline bool hasSpirvTools() {
+  return runCommand("glslangValidator -v > /dev/null 2>&1") == 0 ||
+         runCommand("glslc --version > /dev/null 2>&1") == 0;
+}
+
 inline bool hasWasmtime() {
   return runCommand("wasmtime --version > /dev/null 2>&1") == 0;
 }
