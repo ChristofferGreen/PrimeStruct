@@ -1,3 +1,14 @@
+#include <algorithm>
+#include <cstdint>
+
+#include "primec/testing/SemanticsValidationHelpers.h"
+
+#include "third_party/doctest.h"
+#include "test_semantics_helpers.h"
+#include "test_semantics_type_resolution_graph_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.type_resolution_graph");
+
 TEST_CASE("type resolution try operand metadata stays aligned with query snapshots") {
   const std::string source = R"(
 MyError {

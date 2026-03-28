@@ -522,6 +522,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_strongly_connected_components.cpp
     tests/unit/test_semantics_struct_helpers.cpp
     tests/unit/test_semantics_traits.cpp
+    tests/unit/test_semantics_type_resolution_graph_snapshots.cpp
     tests/unit/test_semantics_uninitialized_fields.cpp
     tests/unit/test_semantics_entry_parameters.cpp
     tests/unit/test_semantics_entry_return_inference.cpp

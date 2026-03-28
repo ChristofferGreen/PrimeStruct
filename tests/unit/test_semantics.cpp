@@ -28,5 +28,4 @@
 #include "test_semantics_calls_and_flow_comparisons_literals.h"
 #include "test_semantics_calls_and_flow_effects.h"
 #include "test_semantics_type_resolution_graph.h"
-#include "test_semantics_type_resolution_graph_snapshots.h"
 #include "test_semantics_type_resolution_return_solver.h"
