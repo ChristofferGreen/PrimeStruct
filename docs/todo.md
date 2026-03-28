@@ -238,7 +238,7 @@ Test-source note: keep `tests/unit/` and `include/primec/testing/` under the sam
 - ○ Refactor `tests/unit/test_semantics_calls_and_flow_access.h` (`745` lines) below the `700`-line target.
 - ✓ Refactor `tests/unit/test_text_filter_helpers.cpp` (`602` lines) below the `700`-line target by extracting transform-registry and semantic-transform-rule coverage into `tests/unit/test_text_filter_transform_rules.cpp`, leaving `test_text_filter_helpers.cpp` focused on token helpers, unary rewrite helpers, and literal/template heuristics.
 - ○ Refactor `tests/unit/test_compile_run_reflection_codegen.h` (`720` lines) below the `700`-line target.
-- ○ Refactor `tests/unit/test_semantics_bindings_control_flow.h` (`715` lines) below the `700`-line target.
+- ✓ Refactor `tests/unit/test_semantics_bindings_control_flow.h` (`345` lines) below the `700`-line target by extracting pointer-alias borrow-checker control-flow cases into `tests/unit/test_semantics_bindings_control_flow_borrowing.h`, leaving `test_semantics_bindings_control_flow.h` focused on block/if/repeat validation and non-borrowing control-flow binding coverage.
 - ✓ Refactor `tests/unit/test_parser_basic_control_flow.h` (`643` lines) below the `700`-line target by extracting parser `if` block-argument and branch-body cases into `tests/unit/test_parser_basic_block_control_flow.h`, leaving `test_parser_basic_control_flow.h` focused on loop/syntax separator/comment parsing plus core binding/control-flow coverage.
 
 **Architecture / Type-resolution graph**
