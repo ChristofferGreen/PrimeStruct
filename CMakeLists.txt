@@ -493,6 +493,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_serialization_structs.cpp
     tests/unit/test_ir_pipeline_validation.cpp
     tests/unit/test_ir_pipeline_conversions.cpp
+    tests/unit/test_ir_pipeline_conversions_numbers.cpp
     tests/unit/test_ir_pipeline_entry_args.cpp
     tests/unit/test_ir_pipeline_gpu.cpp
     tests/unit/test_ir_pipeline_pointers.cpp
@@ -902,7 +903,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
       add_test(NAME "${testName}_numbers"
                COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
                        "--test-suite=${suite}"
-                       "--source-file=*test_ir_pipeline_conversions_numbers.h")
+                       "--source-file=*test_ir_pipeline_conversions_numbers.cpp")
       add_test(NAME "${testName}_calls_and_args_first_half"
                COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
                        "--test-suite=${suite}"

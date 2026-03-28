@@ -39,7 +39,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TARGET PrimeStruct_backend_tests
   LABEL "parallel-safe"
   TIMEOUT 600
-  SOURCE_FILE "*test_ir_pipeline_conversions_numbers.h"
+  SOURCE_FILE "*test_ir_pipeline_conversions_numbers.cpp"
   SHARD_PREFIX "numbers"
   TOTAL_CASES 44
   CASES_PER_SHARD 10
