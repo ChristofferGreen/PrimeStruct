@@ -1,0 +1,338 @@
+#include "SemanticsValidator.h"
+
+#include <array>
+#include <cctype>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string_view>
+#include <unordered_set>
+#include <utility>
+
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
+namespace primec::semantics {
+
+bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
+                                                       const std::vector<ParameterInfo> &params,
+                                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                                       std::string &typePathOut) {
+  typePathOut.clear();
+  auto explicitCallPath = [&](const Expr &callExpr) -> std::string {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.name.empty()) {
+      return {};
+    }
+    std::string rawName = callExpr.name;
+    if (!rawName.empty() && rawName.front() == '/') {
+      return rawName;
+    }
+    std::string rawPrefix = callExpr.namespacePrefix;
+    if (!rawPrefix.empty() && rawPrefix.front() != '/') {
+      rawPrefix.insert(rawPrefix.begin(), '/');
+    }
+    if (rawPrefix.empty()) {
+      return "/" + rawName;
+    }
+    return rawPrefix + "/" + rawName;
+  };
+  auto resolvedCallPath = [&](const Expr &callExpr) { return resolveCalleePath(callExpr); };
+  auto inferCollectionTypePathFromType =
+      [&](const std::string &typeName, auto &&inferCollectionTypePathFromTypeRef) -> std::string {
+    const std::string normalizedType = normalizeBindingTypeName(typeName);
+    std::string normalized = normalizeCollectionTypePath(normalizedType);
+    if (!normalized.empty()) {
+      return normalized;
+    }
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(normalizedType, base, arg)) {
+      return {};
+    }
+    base = normalizeBindingTypeName(base);
+    if (base == "Reference" || base == "Pointer") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+        return {};
+      }
+      return inferCollectionTypePathFromTypeRef(args.front(), inferCollectionTypePathFromTypeRef);
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(arg, args)) {
+      return {};
+    }
+    if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+      return "/" + base;
+    }
+    if (base == "Buffer" && args.size() == 1) {
+      return "/Buffer";
+    }
+    if ((base == "Vector" || base == "std/collections/experimental_vector/Vector") &&
+        args.size() == 1) {
+      return "/vector";
+    }
+    if (isMapCollectionTypeName(base) && args.size() == 2) {
+      return "/map";
+    }
+    return {};
+  };
+
+  if (target.kind != Expr::Kind::Call) {
+    return false;
+  }
+
+  const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters;
+  const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
+      makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters);
+  const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;
+
+  std::string targetTypeText;
+  if (inferQueryExprTypeText(target, params, locals, targetTypeText)) {
+    const std::string inferred = inferCollectionTypePathFromType(targetTypeText, inferCollectionTypePathFromType);
+    if (!inferred.empty()) {
+      typePathOut = inferred;
+      return true;
+    }
+  }
+
+  std::string bufferElemType;
+  if (resolveBufferTarget != nullptr && resolveBufferTarget(target, bufferElemType) && !bufferElemType.empty()) {
+    typePathOut = "/Buffer";
+    return true;
+  }
+
+  const std::string resolvedTarget = resolvedCallPath(target);
+  const std::string explicitTarget = explicitCallPath(target);
+  auto matchesCollectionCtorPath = [&](std::string_view basePath) {
+    const std::string specializedPrefix = std::string(basePath) + "__t";
+    return resolvedTarget == basePath ||
+           resolvedTarget.rfind(specializedPrefix, 0) == 0 ||
+           explicitTarget == basePath ||
+           explicitTarget.rfind(specializedPrefix, 0) == 0;
+  };
+  if (matchesCollectionCtorPath("/std/collections/vector/vector") ||
+      matchesCollectionCtorPath("/std/collections/vectorNew") ||
+      matchesCollectionCtorPath("/std/collections/vectorSingle") ||
+      matchesCollectionCtorPath("/std/collections/vectorPair") ||
+      matchesCollectionCtorPath("/std/collections/vectorTriple") ||
+      matchesCollectionCtorPath("/std/collections/vectorQuad") ||
+      matchesCollectionCtorPath("/std/collections/vectorQuint") ||
+      matchesCollectionCtorPath("/std/collections/vectorSext") ||
+      matchesCollectionCtorPath("/std/collections/vectorSept") ||
+      matchesCollectionCtorPath("/std/collections/vectorOct") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vector") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorPair") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorTriple") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuad") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuint") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSext") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSept") ||
+      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorOct")) {
+    typePathOut = "/vector";
+    return true;
+  }
+  for (const std::string *candidatePath : {&resolvedTarget, &explicitTarget}) {
+    if (candidatePath->empty()) {
+      continue;
+    }
+    auto structIt = returnStructs_.find(*candidatePath);
+    if (structIt == returnStructs_.end()) {
+      continue;
+    }
+    std::string normalized = normalizeCollectionTypePath(structIt->second);
+    if (!normalized.empty()) {
+      typePathOut = normalized;
+      return true;
+    }
+  }
+  for (const std::string *candidatePath : {&resolvedTarget, &explicitTarget}) {
+    if (candidatePath->empty()) {
+      continue;
+    }
+    auto defIt = defMap_.find(*candidatePath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      continue;
+    }
+    BindingInfo inferredReturn;
+    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
+      const std::string inferredReturnTypeText =
+          inferredReturn.typeTemplateArg.empty()
+              ? inferredReturn.typeName
+              : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
+      const std::string inferred =
+          inferCollectionTypePathFromType(inferredReturnTypeText, inferCollectionTypePathFromType);
+      if (!inferred.empty()) {
+        typePathOut = inferred;
+        return true;
+      }
+      std::string inferredVectorElemType;
+      if (extractExperimentalVectorElementType(inferredReturn, inferredVectorElemType)) {
+        typePathOut = "/vector";
+        return true;
+      }
+      const std::string normalizedReturnType = normalizeBindingTypeName(inferredReturn.typeName);
+      if (normalizedReturnType == "Pointer" || normalizedReturnType == "Reference") {
+        return false;
+      }
+    }
+  }
+  auto kindIt = returnKinds_.find(resolvedTarget);
+  if (kindIt != returnKinds_.end()) {
+    if (kindIt->second == ReturnKind::Array) {
+      typePathOut = "/array";
+      return true;
+    }
+    if (kindIt->second == ReturnKind::String) {
+      typePathOut = "/string";
+      return true;
+    }
+  }
+  return false;
+}
+
+bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
+                                                           const std::string &expectedBase,
+                                                           const std::vector<ParameterInfo> &params,
+                                                           const std::unordered_map<std::string, BindingInfo> &locals,
+                                                           std::vector<std::string> &argsOut) {
+  argsOut.clear();
+  auto explicitCallPath = [&](const Expr &callExpr) -> std::string {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.name.empty()) {
+      return {};
+    }
+    std::string rawName = callExpr.name;
+    if (!rawName.empty() && rawName.front() == '/') {
+      return rawName;
+    }
+    std::string rawPrefix = callExpr.namespacePrefix;
+    if (!rawPrefix.empty() && rawPrefix.front() != '/') {
+      rawPrefix.insert(rawPrefix.begin(), '/');
+    }
+    if (rawPrefix.empty()) {
+      return "/" + rawName;
+    }
+    return rawPrefix + "/" + rawName;
+  };
+  auto resolvedCallPath = [&](const Expr &callExpr) { return resolveCalleePath(callExpr); };
+  auto extractCollectionArgsFromType =
+      [&](const std::string &typeName, auto &&extractCollectionArgsFromTypeRef) -> bool {
+    std::string base;
+    std::string arg;
+    const std::string normalizedType = normalizeBindingTypeName(typeName);
+    if (!splitTemplateTypeName(normalizedType, base, arg)) {
+      return false;
+    }
+    base = normalizeBindingTypeName(base);
+    if (base == expectedBase ||
+        (expectedBase == "vector" &&
+         (base == "Vector" || base == "std/collections/experimental_vector/Vector")) ||
+        (expectedBase == "map" && isMapCollectionTypeName(base))) {
+      return splitTopLevelTemplateArgs(arg, argsOut);
+    }
+    std::vector<std::string> args;
+    if ((base == "Reference" || base == "Pointer") && splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+      return extractCollectionArgsFromTypeRef(args.front(), extractCollectionArgsFromTypeRef);
+    }
+    return false;
+  };
+
+  if (target.kind != Expr::Kind::Call) {
+    return false;
+  }
+
+  auto extractCollectionArgsFromBinding = [&](const BindingInfo &binding) {
+    if (expectedBase == "vector") {
+      std::string elemType;
+      if (extractExperimentalVectorElementType(binding, elemType)) {
+        argsOut = {elemType};
+        return true;
+      }
+    }
+    const std::string typeText = binding.typeTemplateArg.empty()
+                                     ? binding.typeName
+                                     : binding.typeName + "<" + binding.typeTemplateArg + ">";
+    return extractCollectionArgsFromType(typeText, extractCollectionArgsFromType);
+  };
+  auto matchesCollectionCtorPath = [&](std::string_view basePath) {
+    const std::string resolvedTarget = resolvedCallPath(target);
+    const std::string explicitTarget = explicitCallPath(target);
+    const std::string specializedPrefix = std::string(basePath) + "__t";
+    return resolvedTarget == basePath ||
+           resolvedTarget.rfind(specializedPrefix, 0) == 0 ||
+           explicitTarget == basePath ||
+           explicitTarget.rfind(specializedPrefix, 0) == 0;
+  };
+
+  std::string targetTypeText;
+  if (inferQueryExprTypeText(target, params, locals, targetTypeText) &&
+      extractCollectionArgsFromType(targetTypeText, extractCollectionArgsFromType)) {
+    return true;
+  }
+
+  std::string collectionName;
+  if (getBuiltinCollectionName(target, collectionName) && collectionName == expectedBase) {
+    const size_t expectedArgCount = expectedBase == "map" ? 2u : 1u;
+    if (target.templateArgs.size() == expectedArgCount) {
+      argsOut = target.templateArgs;
+      return true;
+    }
+  }
+
+  if (expectedBase == "vector" &&
+      (matchesCollectionCtorPath("/std/collections/vector/vector") ||
+       matchesCollectionCtorPath("/std/collections/vectorNew") ||
+       matchesCollectionCtorPath("/std/collections/vectorSingle") ||
+       matchesCollectionCtorPath("/std/collections/vectorPair") ||
+       matchesCollectionCtorPath("/std/collections/vectorTriple") ||
+       matchesCollectionCtorPath("/std/collections/vectorQuad") ||
+       matchesCollectionCtorPath("/std/collections/vectorQuint") ||
+       matchesCollectionCtorPath("/std/collections/vectorSext") ||
+       matchesCollectionCtorPath("/std/collections/vectorSept") ||
+       matchesCollectionCtorPath("/std/collections/vectorOct") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vector") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorPair") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorTriple") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuad") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuint") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSext") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSept") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorOct")) &&
+      target.templateArgs.size() == 1) {
+    argsOut = target.templateArgs;
+    return true;
+  }
+
+  const std::string resolvedTarget = resolvedCallPath(target);
+  const std::string explicitTarget = explicitCallPath(target);
+
+  if (expectedBase == "map" &&
+      (isDirectMapConstructorPath(resolvedTarget) ||
+       isDirectMapConstructorPath(explicitTarget)) &&
+      target.templateArgs.size() == 2) {
+    argsOut = target.templateArgs;
+    return true;
+  }
+
+  for (const std::string *candidatePath : {&resolvedTarget, &explicitTarget}) {
+    if (candidatePath->empty()) {
+      continue;
+    }
+    auto defIt = defMap_.find(*candidatePath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      continue;
+    }
+    BindingInfo inferredReturn;
+    if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+        extractCollectionArgsFromBinding(inferredReturn)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+} // namespace primec::semantics
