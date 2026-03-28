@@ -1,3 +1,9 @@
+#include "test_ir_pipeline_wasm_helpers.h"
+
+using namespace ir_pipeline_wasm_test;
+
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
+
 TEST_CASE("wasm emitter adds wasi imports memory and argv output lowering") {
   primec::WasmEmitter emitter;
   primec::IrModule module;

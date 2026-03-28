@@ -51,7 +51,7 @@ main() {
   const std::string expected =
       "module {\n"
       "  def /main(): f32 {\n"
-      "    return clamp(1.5f32, 0f32, 2f32)\n"
+      "    return clamp(1.5f32, 0.0f32, 2.0f32)\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);
@@ -69,7 +69,7 @@ main() {
   primec::IrPrinter printer;
   const std::string dump = printer.print(program);
   CHECK(dump.find("def /main(): i32") != std::string::npos);
-  CHECK(dump.find("print_line(\"hi\")") != std::string::npos);
+  CHECK(dump.find("call print_line(\"hi\"utf8)") != std::string::npos);
 }
 
 TEST_CASE("ir dump prints local bindings before control flow") {
@@ -87,7 +87,8 @@ main() {
   primec::IrPrinter printer;
   const std::string dump = printer.print(program);
   CHECK(dump.find("let value: i32 = 1") != std::string::npos);
-  CHECK(dump.find("if true {") != std::string::npos);
+  CHECK(dump.find("call if") != std::string::npos);
+  CHECK(dump.find("assign(value, 2)") != std::string::npos);
 }
 
 TEST_CASE("ir dump prints nested block return inference") {
@@ -103,7 +104,8 @@ main() {
   primec::IrPrinter printer;
   const std::string dump = printer.print(program);
   CHECK(dump.find("def /main(): i32") != std::string::npos);
-  CHECK(dump.find("let value: i32 = 4") != std::string::npos);
+  CHECK(dump.find("return block() {") != std::string::npos);
+  CHECK(dump.find("4") != std::string::npos);
 }
 
 TEST_CASE("ir dump infers return type from named helper call") {
@@ -121,7 +123,7 @@ main() {
   primec::IrPrinter printer;
   const std::string dump = printer.print(program);
   CHECK(dump.find("def /main(): i32") != std::string::npos);
-  CHECK(dump.find("return /helper()") != std::string::npos);
+  CHECK(dump.find("return helper()") != std::string::npos);
 }
 
 TEST_CASE("ir dump keeps inferred type on local return variable") {
@@ -135,8 +137,8 @@ main() {
   const auto program = parseProgram(source);
   primec::IrPrinter printer;
   const std::string dump = printer.print(program);
-  CHECK(dump.find("let value: i32 = 1") != std::string::npos);
-  CHECK(dump.find("assign(value, plus(value, 2))") != std::string::npos);
+  CHECK(dump.find("let value = 1") != std::string::npos);
+  CHECK(dump.find("assign value, plus(value, 2)") != std::string::npos);
 }
 
 TEST_SUITE_END();

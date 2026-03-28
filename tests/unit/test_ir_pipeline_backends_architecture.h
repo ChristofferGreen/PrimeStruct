@@ -246,7 +246,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   std::filesystem::path parserTestApiPath = cwd / "include" / "primec" / "testing" / "ParserHelpers.h";
   std::filesystem::path semanticsTestApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
   std::filesystem::path textFilterTestApiPath = cwd / "include" / "primec" / "testing" / "TextFilterHelpers.h";
-  std::filesystem::path parserHelperTestPath = cwd / "tests" / "unit" / "test_parser_basic_parser_helpers.h";
+  std::filesystem::path parserHelperTestPath = cwd / "tests" / "unit" / "test_parser_basic_parser_helpers.cpp";
   std::filesystem::path textFilterHelperTestPath = cwd / "tests" / "unit" / "test_text_filter_helpers.cpp";
   std::filesystem::path compileRunTestPath = cwd / "tests" / "unit" / "test_compile_run.cpp";
   std::filesystem::path irPipelineTestPath = cwd / "tests" / "unit" / "test_ir_pipeline.cpp";
@@ -258,7 +258,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
     parserTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "ParserHelpers.h";
     semanticsTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
     textFilterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "TextFilterHelpers.h";
-    parserHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_parser_basic_parser_helpers.h";
+    parserHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_parser_basic_parser_helpers.cpp";
     textFilterHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_text_filter_helpers.cpp";
     compileRunTestPath = cwd.parent_path() / "tests" / "unit" / "test_compile_run.cpp";
     irPipelineTestPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline.cpp";
@@ -304,11 +304,16 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
 
   const std::string irLowererTestApi = readTextFile(irLowererTestApiPath);
   CHECK(irLowererTestApi.find("namespace primec::ir_lowerer") != std::string::npos);
-  CHECK(irLowererTestApi.find("struct LocalInfo") != std::string::npos);
-  CHECK(irLowererTestApi.find("struct LowerInferenceSetupBootstrapState") != std::string::npos);
-  CHECK(irLowererTestApi.find("struct BufferInitInfo") != std::string::npos);
-  CHECK(irLowererTestApi.find("enum class StringCallEmitResult") != std::string::npos);
-  CHECK(irLowererTestApi.find("struct UninitializedStorageAccessInfo") != std::string::npos);
+  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererSharedTypes.h\"") !=
+        std::string::npos);
+  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceSetup.h\"") !=
+        std::string::npos);
+  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererFlowHelpers.h\"") !=
+        std::string::npos);
+  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererStringCallHelpers.h\"") !=
+        std::string::npos);
+  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererUninitializedTypeHelpers.h\"") !=
+        std::string::npos);
 
   const std::string parserTestApi = readTextFile(parserTestApiPath);
   CHECK(parserTestApi.find("namespace primec::parser") != std::string::npos);

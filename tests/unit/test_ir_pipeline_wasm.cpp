@@ -1,164 +1,8 @@
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
+#include "test_ir_pipeline_wasm_helpers.h"
 
-#if defined(__unix__) || defined(__APPLE__)
-#include <sys/wait.h>
-#endif
-
-#include "primec/WasmEmitter.h"
+using namespace ir_pipeline_wasm_test;
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
-
-namespace {
-std::filesystem::path irPipelineWasmPath(const std::string &relativePath) {
-  return primec::testing::testScratchPath("ir_pipeline_wasm/" + relativePath);
-}
-
-bool hasMinimalWasmHeader(const std::vector<uint8_t> &bytes) {
-  static constexpr uint8_t Expected[] = {0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
-  if (bytes.size() < sizeof(Expected)) {
-    return false;
-  }
-  for (size_t i = 0; i < sizeof(Expected); ++i) {
-    if (bytes[i] != Expected[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool readU32Leb(const std::vector<uint8_t> &bytes, size_t &offset, uint32_t &value) {
-  value = 0;
-  uint32_t shift = 0;
-  for (int i = 0; i < 5; ++i) {
-    if (offset >= bytes.size()) {
-      return false;
-    }
-    const uint8_t byte = bytes[offset++];
-    value |= static_cast<uint32_t>(byte & 0x7f) << shift;
-    if ((byte & 0x80) == 0) {
-      return true;
-    }
-    shift += 7;
-  }
-  return false;
-}
-
-bool parseSections(const std::vector<uint8_t> &bytes,
-                   std::vector<uint8_t> &sectionIds,
-                   std::vector<uint32_t> &sectionLengths,
-                   std::string &error) {
-  error.clear();
-  sectionIds.clear();
-  sectionLengths.clear();
-  if (!hasMinimalWasmHeader(bytes)) {
-    error = "missing wasm header";
-    return false;
-  }
-
-  size_t offset = 8;
-  while (offset < bytes.size()) {
-    const uint8_t sectionId = bytes[offset++];
-    uint32_t sectionLength = 0;
-    if (!readU32Leb(bytes, offset, sectionLength)) {
-      error = "failed to decode section length";
-      return false;
-    }
-    if (offset + sectionLength > bytes.size()) {
-      error = "section payload exceeds module bounds";
-      return false;
-    }
-    sectionIds.push_back(sectionId);
-    sectionLengths.push_back(sectionLength);
-    offset += sectionLength;
-  }
-  return true;
-}
-
-bool sectionPayloadIsEmptyVector(const std::vector<uint8_t> &bytes, uint8_t sectionId) {
-  size_t offset = 8;
-  while (offset < bytes.size()) {
-    const uint8_t currentSectionId = bytes[offset++];
-    uint32_t sectionLength = 0;
-    if (!readU32Leb(bytes, offset, sectionLength)) {
-      return false;
-    }
-    if (offset + sectionLength > bytes.size()) {
-      return false;
-    }
-    if (currentSectionId == sectionId) {
-      return sectionLength == 1 && bytes[offset] == 0;
-    }
-    offset += sectionLength;
-  }
-  return false;
-}
-
-bool containsByteSequence(const std::vector<uint8_t> &haystack, const std::vector<uint8_t> &needle) {
-  if (needle.empty() || needle.size() > haystack.size()) {
-    return false;
-  }
-  for (size_t start = 0; start + needle.size() <= haystack.size(); ++start) {
-    bool match = true;
-    for (size_t offset = 0; offset < needle.size(); ++offset) {
-      if (haystack[start + offset] != needle[offset]) {
-        match = false;
-        break;
-      }
-    }
-    if (match) {
-      return true;
-    }
-  }
-  return false;
-}
-
-std::string quoteShellArg(const std::string &value) {
-  std::string quoted = "'";
-  for (char c : value) {
-    if (c == '\'') {
-      quoted += "'\\''";
-    } else {
-      quoted += c;
-    }
-  }
-  quoted += "'";
-  return quoted;
-}
-
-int runCommand(const std::string &command) {
-  int code = std::system(command.c_str());
-#if defined(__unix__) || defined(__APPLE__)
-  if (code == -1) {
-    return -1;
-  }
-  if (WIFEXITED(code)) {
-    return WEXITSTATUS(code);
-  }
-  return -1;
-#else
-  return code;
-#endif
-}
-
-std::string readFileText(const std::string &path) {
-  std::ifstream file(path);
-  std::stringstream buffer;
-  buffer << file.rdbuf();
-  return buffer.str();
-}
-
-bool hasWasmtime() {
-  return runCommand("wasmtime --version > /dev/null 2>&1") == 0;
-}
-
-} // namespace
 
 TEST_CASE("wasm emitter writes deterministic empty-module section snapshots") {
   primec::WasmEmitter emitter;
@@ -301,16 +145,16 @@ TEST_CASE("wasm emitter lowers canonical backward-branch loops") {
   CHECK(error.empty());
 
   const std::vector<uint8_t> loopHeaderPattern = {
-      0x02, 0x40, // block void
-      0x03, 0x40, // loop void
+      0x02, 0x40,
+      0x03, 0x40,
   };
   const std::vector<uint8_t> breakPattern = {
-      0x45,       // i32.eqz
-      0x0d, 0x01, // br_if 1
+      0x45,
+      0x0d, 0x01,
   };
   const std::vector<uint8_t> continuePattern = {
-      0x0c, 0x00, // br 0
-      0x0b, 0x0b, // end loop + end block
+      0x0c, 0x00,
+      0x0b, 0x0b,
   };
   CHECK(containsByteSequence(bytes, loopHeaderPattern));
   CHECK(containsByteSequence(bytes, breakPattern));
@@ -379,15 +223,15 @@ TEST_CASE("wasm emitter lowers float ops and conversions to deterministic opcode
   CHECK(error.empty());
 
   const std::vector<uint8_t> opPattern = {
-      0x41, 0x02,                   // i32.const 2
-      0xb2,                         // f32.convert_i32_s
-      0x43, 0x00, 0x00, 0xc0, 0x3f, // f32.const 1.5
-      0x92,                         // f32.add
-      0xbb,                         // f64.promote_f32
-      0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f, // f64.const 1.0
-      0xa1,                                                      // f64.sub
-      0xb6,                                                      // f32.demote_f64
-      0xa8,                                                      // i32.trunc_f32_s
+      0x41, 0x02,
+      0xb2,
+      0x43, 0x00, 0x00, 0xc0, 0x3f,
+      0x92,
+      0xbb,
+      0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
+      0xa1,
+      0xb6,
+      0xa8,
   };
   CHECK(containsByteSequence(bytes, opPattern));
 }
@@ -399,7 +243,7 @@ TEST_CASE("wasm emitter lowers i64 and u64 conversion opcodes deterministically"
 
   primec::IrFunction mainFn;
   mainFn.name = "/main";
-  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x41200000u}); // 10.0f32
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x41200000u});
   mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI64, 0});
   mainFn.instructions.push_back({primec::IrOpcode::ConvertI64ToF64, 0});
   mainFn.instructions.push_back({primec::IrOpcode::ConvertF64ToU64, 0});
@@ -414,12 +258,12 @@ TEST_CASE("wasm emitter lowers i64 and u64 conversion opcodes deterministically"
   CHECK(error.empty());
 
   const std::vector<uint8_t> opPattern = {
-      0x43, 0x00, 0x00, 0x20, 0x41, // f32.const 10.0
-      0xae,                         // i64.trunc_f32_s
-      0xb9,                         // f64.convert_i64_s
-      0xb1,                         // i64.trunc_f64_u
-      0xb5,                         // f32.convert_i64_u
-      0xa8,                         // i32.trunc_f32_s
+      0x43, 0x00, 0x00, 0x20, 0x41,
+      0xae,
+      0xb9,
+      0xb1,
+      0xb5,
+      0xa8,
   };
   CHECK(containsByteSequence(bytes, opPattern));
 }
@@ -457,15 +301,15 @@ TEST_CASE("wasm emitter lowers direct call and callvoid opcodes") {
   CHECK(error.empty());
 
   const std::vector<uint8_t> callPattern = {
-      0x10, 0x01, // call value_fn
-      0x41, 0x03, // i32.const 3
-      0x6a,       // i32.add
+      0x10, 0x01,
+      0x41, 0x03,
+      0x6a,
   };
   const std::vector<uint8_t> callVoidPattern = {
-      0x10, 0x00, // call void_fn
-      0x10, 0x01, // call value_fn
-      0x1a,       // drop callvoid result
-      0x10, 0x01, // call value_fn
+      0x10, 0x00,
+      0x10, 0x01,
+      0x1a,
+      0x10, 0x01,
   };
   CHECK(containsByteSequence(bytes, callPattern));
   CHECK(containsByteSequence(bytes, callVoidPattern));
@@ -488,8 +332,10 @@ TEST_CASE("wasm emitter lowers recursive call opcode in canonical IR") {
   CHECK(error.empty());
 
   const std::vector<uint8_t> recursiveCallPattern = {
-      0x10, 0x00, // call self
-      0x0f,       // return
+      0x10, 0x00,
+      0x0f,
   };
   CHECK(containsByteSequence(bytes, recursiveCallPattern));
 }
+
+TEST_SUITE_END();

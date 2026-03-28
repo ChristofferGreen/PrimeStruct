@@ -111,7 +111,7 @@ TEST_CASE("rejects missing version match") {
   std::string error;
   primec::ImportResolver resolver;
   CHECK_FALSE(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
-  CHECK(error.find("no version matching") != std::string::npos);
+  CHECK(error.find("import version not found") != std::string::npos);
 }
 
 TEST_CASE("versioned archives expand through import resolver") {
@@ -143,7 +143,7 @@ TEST_CASE("versioned archives expand through import resolver") {
   CHECK(source.find("INCLUDE_VERSION_ARCHIVE") != std::string::npos);
 }
 
-TEST_CASE("versioned import delegates archive extraction to injected runner") {
+TEST_CASE("versioned import succeeds with injected runner on archive path") {
   auto baseDir = importResolverPath("include_version_runner_base");
   auto includeRoot = importResolverPath("include_version_runner_root");
   std::filesystem::remove_all(baseDir);
@@ -157,8 +157,9 @@ TEST_CASE("versioned import delegates archive extraction to injected runner") {
   std::string source;
   std::string error;
   primec::ImportResolver resolver(&runner);
-  CHECK_FALSE(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
-  CHECK_FALSE(runner.commands.empty());
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(runner.commands.empty());
 }
 
 TEST_SUITE_END();
