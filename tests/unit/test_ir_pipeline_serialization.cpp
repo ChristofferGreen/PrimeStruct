@@ -9,6 +9,7 @@
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "third_party/doctest.h"
 
@@ -45,3 +46,7 @@
 
 namespace {
 } // namespace
+
+#include "test_ir_pipeline_serialization_structs.h"
+#include "test_ir_pipeline_serialization_calls.h"
+#include "test_ir_pipeline_serialization_control_flow.h"
