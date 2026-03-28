@@ -1,3 +1,5 @@
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.return_inference");
 
 TEST_CASE("infers return type without transform") {
