@@ -1,3 +1,7 @@
+#include "test_compile_run_helpers.h"
+
+#include "primec/IrSerializer.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
 #include "test_compile_run_vm_outputs_core.h"

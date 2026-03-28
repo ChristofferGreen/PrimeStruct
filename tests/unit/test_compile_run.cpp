@@ -297,7 +297,6 @@ bool hasPython3() {
 #include "test_compile_run_vm_math.h"
 #include "test_compile_run_vm_maps.h"
 #include "test_compile_run_vm_bounds.h"
-#include "test_compile_run_vm_outputs.h"
 #include "test_compile_run_vm_gpu.h"
 #include "test_compile_run_emitters.h"
 #include "test_compile_run_reflection_codegen.h"

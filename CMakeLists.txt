@@ -531,6 +531,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_text_filters.cpp
     tests/unit/test_compile_run_vm_core.cpp
     tests/unit/test_compile_run_vm_maybe.cpp
+    tests/unit/test_compile_run_vm_outputs.cpp
     tests/unit/test_compile_run_vm_uninitialized.cpp
   )
   target_include_directories(PrimeStruct_backend_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
@@ -1054,13 +1055,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_helpers"
                                  SOURCE_FILE "*test_compile_run_vm_math.h")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_basics"
-                                 SOURCE_FILE "*test_compile_run_vm_outputs.h" FIRST 1 LAST 22)
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 1 LAST 22)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_emitters"
-                                 SOURCE_FILE "*test_compile_run_vm_outputs.h" FIRST 23 LAST 44)
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 23 LAST 44)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_exe_backend"
-                                 SOURCE_FILE "*test_compile_run_vm_outputs.h" FIRST 45 LAST 66)
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 45 LAST 66)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_argv_arrays"
-                                 SOURCE_FILE "*test_compile_run_vm_outputs.h" FIRST 67 LAST 88)
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 67 LAST 88)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "alias_and_basics"
                                  SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 1 LAST 60)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "templated_wrapper_parity"
