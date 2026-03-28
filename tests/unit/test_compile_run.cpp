@@ -438,6 +438,7 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
 #include "test_compile_run_vm_gpu.h"
 #include "test_compile_run_emitters.h"
 #include "test_compile_run_reflection_codegen.h"
+#include "test_compile_run_reflection_codegen_runtime.h"
 #include "test_compile_run_glsl.h"
 #include "test_compile_run_native_backend_core.h"
 #include "test_compile_run_native_backend_uninitialized.h"
