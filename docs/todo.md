@@ -189,6 +189,7 @@ Test TU sizing note: prefer many small/medium `.cpp` files over recreating giant
 - ◐ Finish converting the remaining compile-run suite wrappers into standalone `.cpp` files so `tests/unit/test_compile_run*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
   - ✓ Move the `text_filters` wrapper into `tests/unit/test_compile_run_text_filters.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` while keeping the internal split fragments as helper-only includes.
   - ✓ Move the `imports` wrapper into `tests/unit/test_compile_run_imports.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` while keeping the internal split fragments as helper-only includes.
+  - ✓ Move the `vm.maybe` wrapper into `tests/unit/test_compile_run_vm_maybe.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` so the Maybe VM slice is compiled from an explicit standalone translation unit.
   - ○ Move the remaining compile-run wrappers into standalone `.cpp` files, starting with the broad VM/native/GLSL umbrellas and keeping each new translation unit comfortably below the oversized-file threshold where practical.
 - ○ Add a final cleanup pass that removes obsolete include-wrapper translation units, collapses dead helper headers, and updates CMake targets so each test suite is compiled from explicit `.cpp` sources instead of transitive header inclusion.
 
