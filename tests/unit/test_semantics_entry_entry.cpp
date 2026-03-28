@@ -1,3 +1,5 @@
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.entry");
 
 TEST_CASE("missing entry definition fails") {
@@ -115,6 +117,5 @@ log() {
   CHECK_FALSE(validateProgramWithDefaults(source, "/main", {}, {"io_out"}, error));
   CHECK(error.find("print_line requires io_out effect") != std::string::npos);
 }
-
 
 TEST_SUITE_END();

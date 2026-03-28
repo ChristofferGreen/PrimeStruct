@@ -511,6 +511,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_semantics_tests
     tests/unit/test_main.cpp
     tests/unit/test_semantics.cpp
+    tests/unit/test_semantics_entry_entry.cpp
     tests/unit/test_semantics_entry_transforms.cpp
     tests/unit/test_semantics_imports.cpp
     tests/unit/test_semantics_result_helpers.cpp
