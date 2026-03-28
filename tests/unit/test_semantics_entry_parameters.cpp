@@ -1,3 +1,5 @@
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.parameters");
 
 TEST_CASE("parameter default literal is allowed") {

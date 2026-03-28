@@ -6,7 +6,6 @@
 #include "third_party/doctest.h"
 #include "test_semantics_helpers.h"
 
-#include "test_semantics_entry_parameters.h"
 #include "test_semantics_entry_return_inference.h"
 #include "test_semantics_entry_operators.h"
 #include "test_semantics_entry_math_imports.h"
