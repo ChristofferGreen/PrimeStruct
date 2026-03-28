@@ -118,18 +118,6 @@ void compareLabeledOutputs(const std::vector<LabeledSample> &baseline, const std
 #endif
 }
 
-std::string escapeStringLiteral(const std::string &text) {
-  std::string out;
-  out.reserve(text.size());
-  for (char c : text) {
-    if (c == '\\' || c == '"') {
-      out.push_back('\\');
-    }
-    out.push_back(c);
-  }
-  return out;
-}
-
 using EmitCase = std::pair<std::string, std::string>;
 
 std::string renderEmitCases(const std::vector<EmitCase> &cases) {

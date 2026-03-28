@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 #include <cerrno>
 
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))

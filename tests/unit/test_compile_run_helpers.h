@@ -1,5 +1,7 @@
 #pragma once
 
+#include "test_compile_run_path_png_helpers.h"
+
 #include "third_party/doctest.h"
 
 #include "primec/testing/TestScratch.h"
