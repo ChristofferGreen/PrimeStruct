@@ -1,5 +1,3 @@
-#include <cstdint>
-#include <cstring>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -15,30 +13,6 @@
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
 
 namespace {
-
-primec::IrModule makeReturnI32Module(int32_t value) {
-  primec::IrModule module;
-  module.entryIndex = 0;
-  primec::IrFunction function;
-  function.name = "/main";
-  function.instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(static_cast<uint32_t>(value))});
-  function.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
-  module.functions.push_back(function);
-  return module;
-}
-
-uint64_t f32ToBits(float value) {
-  uint32_t bits = 0;
-  std::memcpy(&bits, &value, sizeof(bits));
-  return static_cast<uint64_t>(bits);
-}
-
-uint64_t f64ToBits(double value) {
-  uint64_t bits = 0;
-  std::memcpy(&bits, &value, sizeof(bits));
-  return bits;
-}
-
 } // namespace
 
 TEST_CASE("ir backend registry reports deterministic order and lookup") {

@@ -22,7 +22,10 @@
 #include "primec/Semantics.h"
 #include "primec/testing/IrLowererHelpers.h"
 
-#include "test_ir_pipeline_backends_registry.h"
+#include "test_ir_pipeline_backends_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
+
 #include "test_ir_pipeline_backends_graph_pilot_a.h"
 #include "test_ir_pipeline_backends_graph_pilot_b.h"
 #include "test_ir_pipeline_backends_graph_pilot_c.h"
@@ -32,3 +35,5 @@
 #include "test_ir_pipeline_backends_glsl_a.h"
 #include "test_ir_pipeline_backends_glsl_b.h"
 #include "test_ir_pipeline_backends_glsl_c.h"
+
+TEST_SUITE_END();
