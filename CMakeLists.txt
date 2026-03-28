@@ -511,6 +511,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_semantics_tests
     tests/unit/test_main.cpp
     tests/unit/test_semantics.cpp
+    tests/unit/test_semantics_imports.cpp
   )
   target_include_directories(PrimeStruct_semantics_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_semantics_tests PRIVATE primec_ir_lib)
