@@ -1,3 +1,7 @@
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
 #include "test_semantics_calls_and_flow_collections_chunks/test_semantics_calls_and_flow_collections_01.h"
 #include "test_semantics_calls_and_flow_collections_chunks/test_semantics_calls_and_flow_collections_02.h"
 #include "test_semantics_calls_and_flow_collections_chunks/test_semantics_calls_and_flow_collections_03.h"
