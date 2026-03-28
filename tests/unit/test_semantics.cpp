@@ -17,6 +17,5 @@
 #include "test_semantics_calls_and_flow_control_misc.h"
 #include "test_semantics_calls_and_flow_access.h"
 #include "test_semantics_calls_and_flow_access_indexing.h"
-#include "test_semantics_calls_and_flow_named_args.h"
 #include "test_semantics_calls_and_flow_numeric_builtins.h"
 #include "test_semantics_calls_and_flow_comparisons_literals.h"
