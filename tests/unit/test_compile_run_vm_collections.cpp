@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 #include "test_compile_run_collection_conformance_helpers.h"
 #include "test_compile_run_container_error_conformance_helpers.h"
 #include "test_compile_run_checked_pointer_conformance_helpers.h"

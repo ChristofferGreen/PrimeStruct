@@ -1,3 +1,5 @@
+#include "test_compile_run_collection_conformance_helpers.h"
+
 #include "test_compile_run_emitters_chunks/test_compile_run_emitters_01.h"
 #include "test_compile_run_emitters_chunks/test_compile_run_emitters_02.h"
 #include "test_compile_run_emitters_chunks/test_compile_run_emitters_03.h"

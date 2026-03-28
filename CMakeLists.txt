@@ -530,6 +530,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_native_backend_uninitialized.cpp
     tests/unit/test_compile_run_text_filters.cpp
     tests/unit/test_compile_run_vm_core.cpp
+    tests/unit/test_compile_run_vm_collections.cpp
     tests/unit/test_compile_run_vm_maybe.cpp
     tests/unit/test_compile_run_vm_outputs.cpp
     tests/unit/test_compile_run_vm_uninitialized.cpp
@@ -1063,16 +1064,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_argv_arrays"
                                  SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 67 LAST 88)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "alias_and_basics"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 1 LAST 60)
+                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 1 LAST 60)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "templated_wrapper_parity"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 61 LAST 138)
+                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 61 LAST 138)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "stdlib_collection_shims"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 139 LAST 254)
+                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 139 LAST 254)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "user_shadow_and_receiver_precedence"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 255 LAST 331)
+                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 255 LAST 331)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "growth_limits_and_syntax"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.h" FIRST 332 LAST 352)
+                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 332 LAST 352)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.core")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "01a"
                                  SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 1 LAST 10)
