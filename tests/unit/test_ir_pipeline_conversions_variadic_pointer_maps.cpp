@@ -20,8 +20,6 @@ score_ptrs([args<Pointer<array<i32>>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
 }
 
-TEST_SUITE_END();
-
 [return<int>]
 forward([args<Pointer<array<i32>>>] values) {
   return(score_ptrs([spread] values))
@@ -461,4 +459,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 60);
 }
-

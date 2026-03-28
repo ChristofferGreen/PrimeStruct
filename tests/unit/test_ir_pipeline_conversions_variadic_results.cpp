@@ -20,8 +20,6 @@ ParseError() {
   [i32] code{0i32}
 }
 
-TEST_SUITE_END();
-
 namespace ParseError {
   [return<string>]
   why([ParseError] err) {

@@ -156,7 +156,7 @@ Pair() {
 [return<int>]
 main() {
   [Pair] value{Pair([x] 1i32, [y] 2i32)}
-  return(if(/Pair/Validate(value), then() { 7i32 }, else() { 3i32 }))
+  return(if(Result.error(/Pair/Validate(value)), then() { 3i32 }, else() { 7i32 }))
 }
 )";
   const std::string srcPath = writeTemp("compile_reflection_validate_runtime.prime", source);
@@ -188,9 +188,10 @@ Pair() {
 [return<int>]
 main() {
   [Pair] source{Pair([x] 4i32, [y] 9i32)}
-  [string] encoded{/Pair/Serialize(source)}
-  [Pair] decoded{/Pair/Deserialize(encoded)}
-  return(if(/Pair/Equal(source, decoded), then() { 7i32 }, else() { 3i32 }))
+  [array<u64>] encoded{/Pair/Serialize(source)}
+  [Pair mut] decoded{Pair()}
+  [bool] decodeFailed{Result.error(/Pair/Deserialize(decoded, encoded))}
+  return(if(or(decodeFailed, not(/Pair/Equal(source, decoded))), then() { 3i32 }, else() { 7i32 }))
 }
 )";
   const std::string srcPath = writeTemp("compile_reflection_serialize_deserialize.prime", source);

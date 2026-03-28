@@ -140,25 +140,30 @@ main([array<string>] args) {
 
 TEST_CASE("compiles and runs native argv access helpers") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(io_out)]
 main([array<string>] args) {
   [string] a{args[1i32]}
   [string] b{at(args, 2i32)}
   [string] c{at_unsafe(args, 3i32)}
-  return(plus(plus(a.count(), b.count()), c.count()))
+  print_line(a)
+  print_line(b)
+  print_line(c)
+  return(args.count())
 }
 )";
   const std::string srcPath = writeTemp("compile_native_args_access_helpers.prime", source);
   const std::string exePath = (testScratchPath("") / "primec_native_args_access_helpers_exe").string();
+  const std::string outPath = (testScratchPath("") / "primec_native_args_access_helpers.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " aa bbb cccc") == 9);
+  CHECK(runCommand(exePath + " aa bbb cccc > " + outPath) == 4);
+  CHECK(readFile(outPath) == "aa\nbbb\ncccc\n");
 }
 
 TEST_CASE("compiles and runs native argv line output") {
   const std::string source = R"(
-[return<int> effects(io)]
+[return<int> effects(io_out)]
 main([array<string>] args) {
   print_line(args[2i32])
   return(0i32)
@@ -177,18 +182,21 @@ main([array<string>] args) {
 
 TEST_CASE("compiles and runs native argv inline string binding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(io_out)]
 main([array<string>] args) {
   [string] value{args[2i32]}
-  return(value.count())
+  print_line(value)
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_native_args_string_binding.prime", source);
   const std::string exePath = (testScratchPath("") / "primec_native_args_string_binding_exe").string();
+  const std::string outPath = (testScratchPath("") / "primec_native_args_string_binding.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " alpha bravo") == 5);
+  CHECK(runCommand(exePath + " alpha bravo > " + outPath) == 0);
+  CHECK(readFile(outPath) == "bravo\n");
 }
 
 TEST_CASE("native argv rejects returning entry arg string directly") {
@@ -322,9 +330,9 @@ TEST_CASE("native argv rejects echoing entry args from nested helper calls") {
   return(args[1i32])
 }
 
-[return<int>]
+[return<int> effects(io_out)]
 main([array<string>] args) {
-  echo(/pick(args))
+  print_line(/pick(args))
   return(0i32)
 }
 )";
@@ -335,7 +343,7 @@ main([array<string>] args) {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
+  CHECK(err.find("Native lowering error: native backend only supports count() on entry arguments") !=
         std::string::npos);
 }
 

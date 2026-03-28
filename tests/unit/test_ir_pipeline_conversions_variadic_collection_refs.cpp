@@ -25,8 +25,6 @@ score_vectors([args<vector<i32>>] values) {
               /std/collections/vector/count(tail)))
 }
 
-TEST_SUITE_END();
-
 [return<int>]
 forward([args<vector<i32>>] values) {
   return(score_vectors([spread] values))
@@ -592,4 +590,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 65);
 }
-

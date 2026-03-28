@@ -25,8 +25,6 @@ score_ptrs([args<Pointer<vector<i32>>>] values) {
               /std/collections/vector/count(tail)))
 }
 
-TEST_SUITE_END();
-
 [return<int>]
 forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
@@ -487,4 +485,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 39);
 }
-

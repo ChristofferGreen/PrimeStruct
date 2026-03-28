@@ -20,8 +20,6 @@ Pair() {
   [i32] value{0i32}
 }
 
-TEST_SUITE_END();
-
 [return<int>]
 /Pair/score([Pair] self) {
   return(plus(self.value, 1i32))
@@ -491,4 +489,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 60);
 }
-

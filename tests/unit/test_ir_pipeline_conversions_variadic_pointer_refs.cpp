@@ -20,8 +20,6 @@ borrow_ref([Reference<i32>] value) {
   return(value)
 }
 
-TEST_SUITE_END();
-
 [return<int>]
 score_ptrs([args<Pointer<i32>>] values) {
   return(plus(dereference(values[0i32]), dereference(values[2i32])))
@@ -644,4 +642,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 29);
 }
-
