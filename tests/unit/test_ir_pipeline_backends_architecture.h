@@ -248,7 +248,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   std::filesystem::path textFilterTestApiPath = cwd / "include" / "primec" / "testing" / "TextFilterHelpers.h";
   std::filesystem::path parserHelperTestPath = cwd / "tests" / "unit" / "test_parser_basic_parser_helpers.cpp";
   std::filesystem::path textFilterHelperTestPath = cwd / "tests" / "unit" / "test_text_filter_helpers.cpp";
-  std::filesystem::path compileRunTestPath = cwd / "tests" / "unit" / "test_compile_run.cpp";
+  std::filesystem::path compileRunTestPath = cwd / "tests" / "unit" / "test_compile_run_vm_bounds.cpp";
   std::filesystem::path irPipelineTestPath = cwd / "tests" / "unit" / "test_ir_pipeline.cpp";
   if (!std::filesystem::exists(scriptPath)) {
     scriptPath = cwd.parent_path() / "scripts" / "check_include_layers.py";
@@ -260,7 +260,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
     textFilterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "TextFilterHelpers.h";
     parserHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_parser_basic_parser_helpers.cpp";
     textFilterHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_text_filter_helpers.cpp";
-    compileRunTestPath = cwd.parent_path() / "tests" / "unit" / "test_compile_run.cpp";
+    compileRunTestPath = cwd.parent_path() / "tests" / "unit" / "test_compile_run_vm_bounds.cpp";
     irPipelineTestPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline.cpp";
   }
   REQUIRE(std::filesystem::exists(scriptPath));

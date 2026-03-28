@@ -523,7 +523,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_to_glsl.cpp
     tests/unit/test_ir_pipeline_wasm.cpp
     tests/unit/test_ir_pipeline_wasm_wasi.cpp
-    tests/unit/test_compile_run.cpp
     tests/unit/test_compile_run_benchmark_harness.cpp
     tests/unit/test_compile_run_bindings_and_examples.cpp
     tests/unit/test_compile_run_emitters.cpp
@@ -542,6 +541,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_reflection_codegen_runtime.cpp
     tests/unit/test_compile_run_smoke.cpp
     tests/unit/test_compile_run_text_filters.cpp
+    tests/unit/test_compile_run_vm_bounds.cpp
     tests/unit/test_compile_run_vm_core.cpp
     tests/unit/test_compile_run_vm_collections.cpp
     tests/unit/test_compile_run_vm_gpu.cpp
@@ -1067,7 +1067,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 71 LAST 83)
     elseif(suite STREQUAL "primestruct.compile.run.vm.collections")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "bounds_and_safety"
-                                 SOURCE_FILE "*test_compile_run_vm_bounds.h")
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "map_helpers"
                                  SOURCE_FILE "*test_compile_run_vm_maps.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_helpers"

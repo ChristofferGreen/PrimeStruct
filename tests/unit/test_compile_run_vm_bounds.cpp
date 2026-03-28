@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
 TEST_CASE("vm array access checks bounds") {
