@@ -515,6 +515,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_bindings_assignments.cpp
     tests/unit/test_semantics_bindings_core_transforms.cpp
     tests/unit/test_semantics_bindings_control_flow.cpp
+    tests/unit/test_semantics_bindings_control_flow_borrowing.cpp
     tests/unit/test_semantics_calls_and_flow_access.cpp
     tests/unit/test_semantics_calls_and_flow_collections.cpp
     tests/unit/test_semantics_calls_and_flow_comparisons_literals.cpp
