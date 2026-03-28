@@ -26,7 +26,6 @@
 #include "test_ir_pipeline_backends_graph_pilot_a.h"
 #include "test_ir_pipeline_backends_graph_pilot_b.h"
 #include "test_ir_pipeline_backends_graph_pilot_c.h"
-#include "test_ir_pipeline_backends_graph_utilities.h"
 #include "test_ir_pipeline_backends_cpp_vm_a.h"
 #include "test_ir_pipeline_backends_cpp_vm_b.h"
 #include "test_ir_pipeline_backends_cpp_vm_c.h"
