@@ -1,3 +1,6 @@
+#include "third_party/doctest.h"
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.builtins_numeric");
 
 TEST_CASE("infers return type from builtin clamp") {

@@ -512,6 +512,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/test_semantics.cpp
     tests/unit/test_semantics_condensation_dag.cpp
+    tests/unit/test_semantics_entry_builtins_numeric.cpp
     tests/unit/test_semantics_entry_entry.cpp
     tests/unit/test_semantics_entry_executions.cpp
     tests/unit/test_semantics_entry_tags.cpp

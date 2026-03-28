@@ -8,7 +8,6 @@
 
 #include "test_semantics_entry_operators.h"
 #include "test_semantics_entry_math_imports.h"
-#include "test_semantics_entry_builtins_numeric.h"
 #include "test_semantics_capabilities.h"
 #include "test_semantics_bindings_core.h"
 #include "test_semantics_bindings_core_transforms.h"
