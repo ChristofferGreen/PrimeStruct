@@ -1,5 +1,0 @@
-#include "test_parser_basic_definitions_core.h"
-#include "test_parser_basic_definition_transforms.h"
-#include "test_parser_basic_semantic_transforms_a.h"
-#include "test_parser_basic_semantic_transforms_b.h"
-#include "test_parser_basic_definition_execution.h"

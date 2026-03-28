@@ -1,4 +1,6 @@
-#pragma once
+#include "test_parser_basic_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.parser.basic");
 
 TEST_CASE(
     "parses semantic transform indexing after nested indexed template body chain indexed method-call field-access tail indexed method-call field-access index method-call field-access index method-call field-access index method-call field-access") {
@@ -593,3 +595,4 @@ main() {
   CHECK(transforms[0].arguments[0] == "value(block() { 1i32, foo(2i32) })");
 }
 
+TEST_SUITE_END();

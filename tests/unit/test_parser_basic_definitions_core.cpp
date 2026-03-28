@@ -1,5 +1,3 @@
-#pragma once
-
 #include "test_parser_basic_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.parser.basic");
@@ -622,3 +620,4 @@ main() {
   CHECK(program.definitions[0].transforms[1].name == "effects");
 }
 
+TEST_SUITE_END();

@@ -1,4 +1,6 @@
-#pragma once
+#include "test_parser_basic_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.parser.basic");
 
 TEST_CASE("parses transform-prefixed execution") {
   const std::string source = R"(
@@ -105,3 +107,5 @@ main() {
   REQUIRE(call.kind == primec::Expr::Kind::Call);
   REQUIRE(call.args.size() == 2);
 }
+
+TEST_SUITE_END();
