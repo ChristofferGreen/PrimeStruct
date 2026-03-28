@@ -241,7 +241,7 @@ Test-source note: keep `tests/unit/` and `include/primec/testing/` under the sam
 - ○ Refactor `tests/unit/test_ir_pipeline_to_cpp.h` (`835` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_import_resolver.cpp` (`815` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_ir_pipeline_wasm.h` (`801` lines) below the `700`-line target.
-- ○ Refactor `tests/unit/test_semantics_bindings_struct_defaults.h` (`796` lines) below the `700`-line target.
+- ✓ Refactor `tests/unit/test_semantics_bindings_struct_defaults.h` (`372` lines) below the `700`-line target by extracting map omitted-initializer precedence and wrapper-fallback coverage into `tests/unit/test_semantics_bindings_struct_defaults_maps.h`, leaving `test_semantics_bindings_struct_defaults.h` focused on core omitted-initializer behavior and vector-related fallback cases.
 - ○ Refactor `tests/unit/test_parser_errors_more_transforms.h` (`784` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_semantics_bindings_core.h` (`775` lines) below the `700`-line target.
 - ✓ Refactor `tests/unit/test_semantics_type_resolution_graph.h` (`511` lines) below the `700`-line target by extracting late snapshot-alignment coverage into `tests/unit/test_semantics_type_resolution_graph_snapshots.h`, leaving `test_semantics_type_resolution_graph.h` focused on graph construction, condensation DAG, dumps, and the first shared metadata alignment checks.
