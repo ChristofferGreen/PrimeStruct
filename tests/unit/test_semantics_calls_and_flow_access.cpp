@@ -1,3 +1,7 @@
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.access");
 
 TEST_CASE("count helper validates on string binding") {
@@ -473,3 +477,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+#include "test_semantics_calls_and_flow_access_indexing.h"

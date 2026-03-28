@@ -15,6 +15,4 @@
 #include "test_semantics_bindings_control_flow_borrowing.h"
 #include "test_semantics_calls_and_flow_control_core.h"
 #include "test_semantics_calls_and_flow_control_misc.h"
-#include "test_semantics_calls_and_flow_access.h"
-#include "test_semantics_calls_and_flow_access_indexing.h"
 #include "test_semantics_calls_and_flow_comparisons_literals.h"
