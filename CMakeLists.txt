@@ -501,6 +501,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_backends_graph_contexts.cpp
     tests/unit/test_ir_pipeline_backends_graph_pilot.cpp
     tests/unit/test_ir_pipeline_backends_graph_utilities.cpp
+    tests/unit/test_ir_pipeline_backends_glsl.cpp
     tests/unit/test_ir_pipeline_backends_registry.cpp
     tests/unit/test_vm_debug_session.cpp
     tests/unit/test_ir_pipeline_external_tooling.cpp
