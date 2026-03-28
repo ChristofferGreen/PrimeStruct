@@ -105,6 +105,7 @@ Minimal vector substrate note: the remaining items below are only worth keeping 
 TemplateMonomorph next-slice note: the remaining file mass is now concentrated in the pre-include core plus the top-level orchestration around helper-overload, import-alias, and template-root setup. Split further work along those seams instead of keeping one generic size-reduction epic.
   - ✓ Extract collection compatibility-path, receiver normalization, and call-shape helpers into `src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h`, leaving `TemplateMonomorph.cpp` focused on the remaining pre-include core and top-level orchestration.
   - ✓ Extract path-specialization, binding-type, and implicit-auto setup helpers into `src/semantics/TemplateMonomorphSetupUtilities.h`, leaving `TemplateMonomorph.cpp` focused on the remaining experimental constructor/type core plus the top-level orchestration seams.
+  - ✓ Extract experimental collection constructor-path and vector value-type helpers into `src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h`, leaving `TemplateMonomorph.cpp` focused on the remaining struct/core utilities plus top-level orchestration seams.
 
 
 **Group 10 - Remaining oversized-file queue**
