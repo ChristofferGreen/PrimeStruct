@@ -1,3 +1,7 @@
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.type_resolution_return_solver");
 
 TEST_CASE("graph type resolver infers acyclic helper return kinds") {
