@@ -148,6 +148,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp
   src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp
   src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp
+  src/semantics/SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp
+  src/semantics/SemanticsValidatorInferCollectionStringResolver.cpp
   src/semantics/SemanticsValidatorInferCollectionCountCapacity.cpp
   src/semantics/SemanticsValidatorInferCollectionDirectCountCapacity.cpp
   src/semantics/SemanticsValidatorInferCollectionDispatch.cpp
