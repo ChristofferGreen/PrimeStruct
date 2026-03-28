@@ -1,3 +1,11 @@
+#include <string>
+#include <vector>
+
+#include "third_party/doctest.h"
+
+#include "primec/CompilePipeline.h"
+#include "test_ir_pipeline_type_resolution_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.type_resolution_parity");
 
 TEST_CASE("default type resolver keeps vm pipeline behavior stable across graph corpus") {
