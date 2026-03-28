@@ -291,7 +291,6 @@ void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
 
 #include "test_compile_run_smoke.h"
 #include "test_compile_run_vm_math.h"
-#include "test_compile_run_vm_maps.h"
 #include "test_compile_run_vm_bounds.h"
 #include "test_compile_run_vm_gpu.h"
 #include "test_compile_run_emitters.h"

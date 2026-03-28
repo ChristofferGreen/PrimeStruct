@@ -538,6 +538,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_text_filters.cpp
     tests/unit/test_compile_run_vm_core.cpp
     tests/unit/test_compile_run_vm_collections.cpp
+    tests/unit/test_compile_run_vm_maps.cpp
     tests/unit/test_compile_run_math_conformance.cpp
     tests/unit/test_compile_run_vm_maybe.cpp
     tests/unit/test_compile_run_vm_outputs.cpp
@@ -1060,7 +1061,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "bounds_and_safety"
                                  SOURCE_FILE "*test_compile_run_vm_bounds.h")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "map_helpers"
-                                 SOURCE_FILE "*test_compile_run_vm_maps.h")
+                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_helpers"
                                  SOURCE_FILE "*test_compile_run_vm_math.h")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_basics"
