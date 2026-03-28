@@ -10790,8 +10790,6 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool inferCallTargetBinding(const Expr &bindingExpr,") ==
         std::string::npos);
-  CHECK(templateMonomorphSource.find("bool resolveFieldBindingTarget(const Expr &target,") ==
-        std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolveDereferenceBindingTarget(const Expr &target,") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolveAssignmentTargetBinding(const Expr &target,") ==

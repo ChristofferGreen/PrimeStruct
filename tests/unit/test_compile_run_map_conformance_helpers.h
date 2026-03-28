@@ -2023,12 +2023,10 @@ inline void expectExperimentalMapMethodReceiverConformance(const std::string &em
 }
 
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
-  expectMapConformanceFailure(makeExperimentalMapFieldAssignConformanceSource(),
-                              "map_experimental_field_assign",
-                              emitMode,
-                              3,
-                              "map key not found",
-                              false);
+  expectMapConformanceProgramRuns(makeExperimentalMapFieldAssignConformanceSource(),
+                                  "map_experimental_field_assign",
+                                  emitMode,
+                                  13);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {
