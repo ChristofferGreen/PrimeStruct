@@ -350,8 +350,6 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   std::filesystem::path validatorPrivateStatementsHeaderPath =
       cwd / "src" / "semantics" / "SemanticsValidatorPrivateStatements.h";
   std::filesystem::path validatorCorePath = cwd / "src" / "semantics" / "SemanticsValidator.cpp";
-  std::filesystem::path validatorResultHelpersPath =
-      cwd / "src" / "semantics" / "SemanticsValidatorResultHelpers.cpp";
   std::filesystem::path validatorBuildPath = cwd / "src" / "semantics" / "SemanticsValidatorBuild.cpp";
   std::filesystem::path validatorBuildUtilityPath =
       cwd / "src" / "semantics" / "SemanticsValidatorBuildUtility.cpp";
@@ -360,18 +358,6 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   std::filesystem::path validatorBuildDirectCallBindingPath =
       cwd / "src" / "semantics" / "SemanticsValidatorBuildDirectCallBinding.cpp";
   std::filesystem::path validatorCollectionsPath = cwd / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
-  std::filesystem::path validatorCollectionCompatibilityPath =
-      cwd / "src" / "semantics" / "SemanticsValidatorInferCollectionCompatibility.cpp";
-  std::filesystem::path validatorCollectionCompatibilityInternalPath =
-      cwd / "src" / "semantics" / "SemanticsValidatorInferCollectionCompatibilityInternal.h";
-  std::filesystem::path validatorCollectionReturnInferencePath =
-      cwd / "src" / "semantics" / "SemanticsValidatorInferCollectionReturnInference.cpp";
-  std::filesystem::path validatorCollectionCallResolutionPath =
-      cwd / "src" / "semantics" / "SemanticsValidatorInferCollectionCallResolution.cpp";
-  std::filesystem::path validatorCollectionBufferAndMapResolversPath =
-      cwd / "src" / "semantics" / "SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp";
-  std::filesystem::path validatorCollectionStringResolverPath =
-      cwd / "src" / "semantics" / "SemanticsValidatorInferCollectionStringResolver.cpp";
   std::filesystem::path validatorExprPath = cwd / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
   std::filesystem::path validatorExprDispatchBootstrapPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprDispatchBootstrap.cpp";
@@ -447,8 +433,6 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
     validatorPrivateStatementsHeaderPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorPrivateStatements.h";
     validatorCorePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.cpp";
-    validatorResultHelpersPath =
-        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorResultHelpers.cpp";
     validatorBuildPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuild.cpp";
     validatorBuildUtilityPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuildUtility.cpp";
     validatorBuildStructFieldsPath =
@@ -456,18 +440,6 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
     validatorBuildDirectCallBindingPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuildDirectCallBinding.cpp";
     validatorCollectionsPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
-    validatorCollectionCompatibilityPath =
-        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollectionCompatibility.cpp";
-    validatorCollectionCompatibilityInternalPath =
-        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollectionCompatibilityInternal.h";
-    validatorCollectionReturnInferencePath =
-        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollectionReturnInference.cpp";
-    validatorCollectionCallResolutionPath =
-        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollectionCallResolution.cpp";
-    validatorCollectionBufferAndMapResolversPath =
-        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp";
-    validatorCollectionStringResolverPath =
-        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferCollectionStringResolver.cpp";
     validatorExprPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
     validatorExprDispatchBootstrapPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprDispatchBootstrap.cpp";
@@ -539,18 +511,11 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorPrivateExprInferenceHeaderPath));
   REQUIRE(std::filesystem::exists(validatorPrivateStatementsHeaderPath));
   REQUIRE(std::filesystem::exists(validatorCorePath));
-  REQUIRE(std::filesystem::exists(validatorResultHelpersPath));
   REQUIRE(std::filesystem::exists(validatorBuildPath));
   REQUIRE(std::filesystem::exists(validatorBuildUtilityPath));
   REQUIRE(std::filesystem::exists(validatorBuildStructFieldsPath));
   REQUIRE(std::filesystem::exists(validatorBuildDirectCallBindingPath));
   REQUIRE(std::filesystem::exists(validatorCollectionsPath));
-  REQUIRE(std::filesystem::exists(validatorCollectionCompatibilityPath));
-  REQUIRE(std::filesystem::exists(validatorCollectionCompatibilityInternalPath));
-  REQUIRE(std::filesystem::exists(validatorCollectionReturnInferencePath));
-  REQUIRE(std::filesystem::exists(validatorCollectionCallResolutionPath));
-  REQUIRE(std::filesystem::exists(validatorCollectionBufferAndMapResolversPath));
-  REQUIRE(std::filesystem::exists(validatorCollectionStringResolverPath));
   REQUIRE(std::filesystem::exists(validatorExprPath));
   REQUIRE(std::filesystem::exists(validatorExprDispatchBootstrapPath));
   REQUIRE(std::filesystem::exists(validatorExprPreDispatchDirectCallsPath));
@@ -596,25 +561,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       validatorPrivateExprInferenceHeaderPath,
       validatorPrivateStatementsHeaderPath,
   });
-  const std::string validatorCore = readTextFiles({
-      validatorCorePath,
-      validatorResultHelpersPath,
-  });
+  const std::string validatorCore = readTextFile(validatorCorePath);
   const std::string validatorBuild = readTextFiles({
       validatorBuildPath,
       validatorBuildUtilityPath,
       validatorBuildStructFieldsPath,
       validatorBuildDirectCallBindingPath,
   });
-  const std::string validatorCollections = readTextFiles({
-      validatorCollectionsPath,
-      validatorCollectionCompatibilityPath,
-      validatorCollectionCompatibilityInternalPath,
-      validatorCollectionReturnInferencePath,
-      validatorCollectionCallResolutionPath,
-      validatorCollectionBufferAndMapResolversPath,
-      validatorCollectionStringResolverPath,
-  });
+  const std::string validatorCollections = readTextFile(validatorCollectionsPath);
   const std::string validatorExprMain = readTextFile(validatorExprPath);
   const std::string validatorExprBodyArguments =
       readTextFile(validatorExprBodyArgumentsPath);
