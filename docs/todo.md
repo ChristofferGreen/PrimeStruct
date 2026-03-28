@@ -138,6 +138,7 @@ Test TU sizing note: prefer many small/medium `.cpp` files over recreating giant
   - ✓ Migrate the condensation-DAG semantics suite into `tests/unit/test_semantics_condensation_dag.cpp`, removing its include-body form from `tests/unit/test_semantics.cpp` while reusing `tests/unit/test_semantics_helpers.h`.
   - ✓ Migrate the struct-helper semantics suite into `tests/unit/test_semantics_struct_helpers.cpp`, removing its include-body form from `tests/unit/test_semantics.cpp` while reusing `tests/unit/test_semantics_helpers.h`.
   - ✓ Migrate the entry-executions semantics suite into `tests/unit/test_semantics_entry_executions.cpp`, removing its include-body form from `tests/unit/test_semantics.cpp` while reusing `tests/unit/test_semantics_helpers.h`.
+  - ✓ Migrate the entry-tags semantics suite into `tests/unit/test_semantics_entry_tags.cpp`, removing its include-body form from `tests/unit/test_semantics.cpp` while reusing `tests/unit/test_semantics_helpers.h`.
   - ○ Move the next remaining focused semantics suites out of `tests/unit/test_semantics.cpp` before tackling the larger collection/control umbrella headers.
 - ○ Finish converting the remaining parser suite wrappers into standalone `.cpp` files so `tests/unit/test_parser_*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
 - ○ Finish converting the remaining IR/backend suite wrappers into standalone `.cpp` files so `tests/unit/test_ir_pipeline*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
