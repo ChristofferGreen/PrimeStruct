@@ -102,6 +102,23 @@
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const BuiltinCollectionDispatchResolverAdapters &adapters = {});
+  void populateBuiltinCollectionDispatchBufferAndMapResolvers(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::shared_ptr<BuiltinCollectionDispatchResolvers> &state,
+      const std::function<bool(const Expr &, BindingInfo &)> &resolveBindingTarget,
+      const std::function<bool(const Expr &, BindingInfo &)> &inferCallBinding,
+      const std::function<bool(const BindingInfo &, std::string &, std::string &)> &resolveMapBinding,
+      const std::function<bool(const BindingInfo &, std::string &, std::string &)>
+          &extractExperimentalMapFieldTypes,
+      const std::function<bool(const Expr &)> &isDirectMapConstructorCall);
+  void populateBuiltinCollectionDispatchStringResolver(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::shared_ptr<BuiltinCollectionDispatchResolvers> &state,
+      const std::function<bool(const Expr &, BindingInfo &)> &resolveBindingTarget,
+      const std::function<bool(const Expr &, size_t &)>
+          &isDirectCanonicalVectorAccessCallOnBuiltinReceiver);
   size_t mapHelperReceiverIndex(const Expr &candidate,
                                 const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
   bool bareMapHelperOperandIndices(const Expr &candidate,
