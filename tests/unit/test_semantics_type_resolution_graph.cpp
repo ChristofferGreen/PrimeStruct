@@ -1,3 +1,11 @@
+#include <algorithm>
+#include <cstdint>
+
+#include "primec/testing/SemanticsValidationHelpers.h"
+
+#include "third_party/doctest.h"
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.type_resolution_graph");
 
 #include "test_semantics_type_resolution_graph_helpers.h"
