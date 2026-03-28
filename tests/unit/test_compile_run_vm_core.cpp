@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 #include <cerrno>
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");

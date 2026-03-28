@@ -417,7 +417,6 @@ bool hasPython3() {
 } // namespace
 
 #include "test_compile_run_smoke.h"
-#include "test_compile_run_vm_core.h"
 #include "test_compile_run_vm_collections.h"
 #include "test_compile_run_vm_math.h"
 #include "test_compile_run_vm_maps.h"
