@@ -489,6 +489,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/test_ir_pipeline.cpp
     tests/unit/test_ir_pipeline_serialization.cpp
+    tests/unit/test_ir_pipeline_serialization_calls.cpp
     tests/unit/test_ir_pipeline_serialization_structs.cpp
     tests/unit/test_ir_pipeline_validation.cpp
     tests/unit/test_ir_pipeline_conversions.cpp
