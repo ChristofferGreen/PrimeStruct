@@ -26,8 +26,8 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
 
-#include "test_ir_pipeline_backends_glsl_a.h"
-#include "test_ir_pipeline_backends_glsl_b.h"
-#include "test_ir_pipeline_backends_glsl_c.h"
+#include "test_ir_pipeline_backends_cpp_vm_a.h"
+#include "test_ir_pipeline_backends_cpp_vm_b.h"
+#include "test_ir_pipeline_backends_cpp_vm_c.h"
 
 TEST_SUITE_END();
