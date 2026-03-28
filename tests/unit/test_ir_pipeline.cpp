@@ -228,5 +228,4 @@ TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::string &
 #include "test_ir_pipeline_entry_args.h"
 #include "test_ir_pipeline_validation.h"
 #include "test_ir_pipeline_gpu.h"
-#include "test_ir_pipeline_backends.h"
 #include "test_ir_pipeline_type_resolution_parity.h"
