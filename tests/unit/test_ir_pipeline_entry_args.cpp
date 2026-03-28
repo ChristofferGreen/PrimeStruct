@@ -1,3 +1,13 @@
+#include <string>
+#include <vector>
+
+#include "third_party/doctest.h"
+
+#include "primec/IrLowerer.h"
+#include "primec/IrSerializer.h"
+#include "primec/Vm.h"
+#include "test_ir_pipeline_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.entry_args");
 
 TEST_CASE("ir lowerer supports entry args print u64 index") {
