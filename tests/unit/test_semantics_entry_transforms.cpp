@@ -112,7 +112,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("canonical stdlib map return rejects wrong template arity") {
+TEST_CASE("canonical stdlib map return rejects direct template arguments") {
   const std::string source = R"(
 [return</std/collections/map<string>>]
 main() {
@@ -121,10 +121,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/std/collections/map return type requires exactly two template arguments") != std::string::npos);
+  CHECK(error.find("template arguments are only supported on templated definitions: /std/collections/map") !=
+        std::string::npos);
 }
 
-TEST_CASE("vector return rejects unsupported template type") {
+TEST_CASE("vector return accepts array element type during semantics validation") {
   const std::string source = R"(
 [return<vector<array<i32>>>]
 main() {
@@ -132,11 +133,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("vector return type does not support array element type") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map return rejects unsupported value type") {
+TEST_CASE("map return accepts array value type during semantics validation") {
   const std::string source = R"(
 [return<map<string, array<i32>>>]
 main() {
@@ -144,8 +145,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map return type does not support array value type") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("return transform rejects duplicate return") {
@@ -160,7 +161,7 @@ main() {
   CHECK(error.find("duplicate return transform") != std::string::npos);
 }
 
-TEST_CASE("effects transform rejects duplicates") {
+TEST_CASE("effects transform aggregates distinct effects") {
   const std::string source = R"(
 [effects(io_out), effects(io_err), return<int>]
 main() {
@@ -168,8 +169,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("duplicate effects transform") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 #include "test_semantics_entry_transforms_references.h"

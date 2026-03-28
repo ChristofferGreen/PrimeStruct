@@ -1,34 +1,38 @@
 TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path irPipelinePath = cwd / "tests" / "unit" / "test_ir_pipeline.cpp";
-  std::filesystem::path parityHeaderPath = cwd / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.h";
-  if (!std::filesystem::exists(irPipelinePath)) {
-    irPipelinePath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline.cpp";
-    parityHeaderPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.h";
+  std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
+  std::filesystem::path paritySourcePath = cwd / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.cpp";
+  std::filesystem::path parityHelperPath = cwd / "tests" / "unit" / "test_ir_pipeline_type_resolution_helpers.h";
+  if (!std::filesystem::exists(cmakePath)) {
+    cmakePath = cwd.parent_path() / "CMakeLists.txt";
+    paritySourcePath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.cpp";
+    parityHelperPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_type_resolution_helpers.h";
   }
-  REQUIRE(std::filesystem::exists(irPipelinePath));
-  REQUIRE(std::filesystem::exists(parityHeaderPath));
+  REQUIRE(std::filesystem::exists(cmakePath));
+  REQUIRE(std::filesystem::exists(paritySourcePath));
+  REQUIRE(std::filesystem::exists(parityHelperPath));
 
-  const std::string irPipeline = readTextFile(irPipelinePath);
-  const std::string parityHeader = readTextFile(parityHeaderPath);
-  CHECK(irPipeline.find("TypeResolverPipelineSnapshot") != std::string::npos);
-  CHECK(irPipeline.find("runTypeResolverPipelineSnapshot") != std::string::npos);
-  CHECK(irPipeline.find("#include \"test_ir_pipeline_type_resolution_parity.h\"") != std::string::npos);
-  CHECK(parityHeader.find("default type resolver keeps vm pipeline behavior stable across graph corpus") !=
+  const std::string cmake = readTextFile(cmakePath);
+  const std::string paritySource = readTextFile(paritySourcePath);
+  const std::string parityHelper = readTextFile(parityHelperPath);
+  CHECK(cmake.find("tests/unit/test_ir_pipeline_type_resolution_parity.cpp") != std::string::npos);
+  CHECK(parityHelper.find("struct TypeResolverPipelineSnapshot") != std::string::npos);
+  CHECK(parityHelper.find("runTypeResolverPipelineSnapshot") != std::string::npos);
+  CHECK(paritySource.find("default type resolver keeps vm pipeline behavior stable across graph corpus") !=
         std::string::npos);
-  CHECK(parityHeader.find("direct_call_local_auto_struct") != std::string::npos);
-  CHECK(parityHeader.find("direct_call_local_auto_collection") != std::string::npos);
-  CHECK(parityHeader.find("block_local_auto_struct") != std::string::npos);
-  CHECK(parityHeader.find("if_local_auto_collection") != std::string::npos);
-  CHECK(parityHeader.find("ambiguous_omitted_field_envelope") != std::string::npos);
-  CHECK(parityHeader.find("query_collection_return_binding") != std::string::npos);
-  CHECK(parityHeader.find("query_result_return_binding") != std::string::npos);
-  CHECK(parityHeader.find("query_map_receiver_type_text") != std::string::npos);
-  CHECK(parityHeader.find("infer_map_value_return_kind") != std::string::npos);
-  CHECK(parityHeader.find("shared_collection_receiver_classifiers") != std::string::npos);
-  CHECK(parityHeader.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
+  CHECK(paritySource.find("direct_call_local_auto_struct") != std::string::npos);
+  CHECK(paritySource.find("direct_call_local_auto_collection") != std::string::npos);
+  CHECK(paritySource.find("block_local_auto_struct") != std::string::npos);
+  CHECK(paritySource.find("if_local_auto_collection") != std::string::npos);
+  CHECK(paritySource.find("ambiguous_omitted_field_envelope") != std::string::npos);
+  CHECK(paritySource.find("query_collection_return_binding") != std::string::npos);
+  CHECK(paritySource.find("query_result_return_binding") != std::string::npos);
+  CHECK(paritySource.find("query_map_receiver_type_text") != std::string::npos);
+  CHECK(paritySource.find("infer_map_value_return_kind") != std::string::npos);
+  CHECK(paritySource.find("shared_collection_receiver_classifiers") != std::string::npos);
+  CHECK(paritySource.find("graph type resolver intentionally upgrades recursive cycle diagnostics") !=
         std::string::npos);
-  CHECK(parityHeader.find("graph type resolver still surfaces vm recursive-call lowering limits") !=
+  CHECK(paritySource.find("graph type resolver still surfaces vm recursive-call lowering limits") !=
         std::string::npos);
 }
 
@@ -106,4 +110,3 @@ TEST_CASE("condensation dag utility is wired through semantics testing api") {
   CHECK(dagSource.find("std::priority_queue<uint32_t, std::vector<uint32_t>, std::greater<uint32_t>>") !=
         std::string::npos);
 }
-
