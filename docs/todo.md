@@ -227,7 +227,7 @@ Test-source note: keep `tests/unit/` and `include/primec/testing/` under the sam
 - ○ Refactor `tests/unit/test_semantics_result_helpers.h` (`1685` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_compile_run_glsl.h` (`1534` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_vm_debug_session.h` (`1396` lines) below the `700`-line target.
-- ○ Refactor `tests/unit/test_parser_basic_literals.h` (`1348` lines) below the `700`-line target.
+- ✓ Refactor `tests/unit/test_parser_basic_literals.h` by moving expression-form parsing coverage into `tests/unit/test_parser_basic_expr_forms.h`; the root header is now `675` lines.
 - ○ Refactor `tests/unit/test_semantics_imports.h` (`1287` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_semantics_entry_transforms.h` (`1273` lines) below the `700`-line target.
 - ✓ Refactor `tests/unit/test_semantics_bindings_pointers.h` (`664` lines) below the `700`-line target by extracting binding type-resolution, struct-constructor/binding-initializer, and pointer-operator validation coverage into `tests/unit/test_semantics_bindings_pointer_types.h`, leaving `test_semantics_bindings_pointers.h` focused on pointer helper validation, memory intrinsics, top-level uninitialized storage, pointer/reference target binding rules, and parameter-location behavior.
