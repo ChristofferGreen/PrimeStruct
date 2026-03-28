@@ -1,3 +1,7 @@
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.bindings.struct_defaults");
 
 TEST_CASE("struct binding omits initializer when effect-free") {
@@ -370,3 +374,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK_FALSE(error.empty());
 }
+
+#include "test_semantics_bindings_struct_defaults_maps.h"
