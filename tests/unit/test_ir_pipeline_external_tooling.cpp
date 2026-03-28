@@ -1,3 +1,5 @@
+#include "third_party/doctest.h"
+
 #include "primec/ExternalTooling.h"
 #include "primec/ProcessRunner.h"
 
