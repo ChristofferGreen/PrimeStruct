@@ -3,3 +3,4 @@
 #include "test_parser_errors_more_literals.h"
 #include "test_parser_errors_more_named_args.h"
 #include "test_parser_errors_more_transforms.h"
+#include "test_parser_errors_more_transforms_canonical.h"
