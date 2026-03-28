@@ -231,6 +231,7 @@ TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::string &
 #include "test_ir_pipeline_gpu.h"
 #include "test_ir_pipeline_external_tooling.h"
 #include "test_ir_pipeline_wasm.h"
+#include "test_ir_pipeline_wasm_wasi.h"
 #include "test_ir_pipeline_backends.h"
 #include "test_ir_pipeline_to_cpp.h"
 #include "test_ir_pipeline_to_glsl.h"
