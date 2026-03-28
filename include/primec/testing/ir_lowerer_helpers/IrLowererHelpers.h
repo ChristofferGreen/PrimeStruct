@@ -1,0 +1,74 @@
+
+
+
+
+constexpr const char *kGpuGlobalIdXName = "__gpu_global_id_x";
+constexpr const char *kGpuGlobalIdYName = "__gpu_global_id_y";
+constexpr const char *kGpuGlobalIdZName = "__gpu_global_id_z";
+constexpr int32_t kVectorLocalDynamicCapacityLimit = 256;
+std::string vectorLocalCapacityLimitExceededMessage();
+std::string vectorReserveExceedsLocalCapacityLimitMessage();
+std::string vectorLiteralExceedsLocalCapacityLimitMessage();
+std::string vectorPushAllocationFailedMessage();
+std::string vectorReserveAllocationFailedMessage();
+
+bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
+bool isReturnCall(const Expr &expr);
+bool isIfCall(const Expr &expr);
+bool isMatchCall(const Expr &expr);
+bool isLoopCall(const Expr &expr);
+bool isWhileCall(const Expr &expr);
+bool isForCall(const Expr &expr);
+bool isRepeatCall(const Expr &expr);
+bool isBlockCall(const Expr &expr);
+
+bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames);
+
+bool lowerMatchToIf(const Expr &expr, Expr &out, std::string &error);
+
+enum class PrintTarget { Out, Err };
+
+struct PrintBuiltin {
+  PrintTarget target = PrintTarget::Out;
+  bool newline = false;
+  std::string name;
+};
+
+struct PathSpaceBuiltin {
+  std::string name;
+  size_t argumentCount = 0;
+};
+
+bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out);
+bool getPathSpaceBuiltin(const Expr &expr, PathSpaceBuiltin &out);
+
+bool getBuiltinOperatorName(const Expr &expr, std::string &out);
+bool getBuiltinComparisonName(const Expr &expr, std::string &out);
+bool getBuiltinClampName(const Expr &expr, bool allowBare);
+bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinLerpName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinFmaName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinHypotName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinCopysignName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinAngleName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinTrigName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinTrig2Name(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinArcTrigName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinHyperbolicName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinArcHyperbolicName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinExpName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinLogName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinPowName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinMathPredicateName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinRoundingName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinRootName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinConvertName(const Expr &expr);
+bool getBuiltinMemoryName(const Expr &expr, std::string &out);
+bool getBuiltinGpuName(const Expr &expr, std::string &out);
+bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
+bool getBuiltinPointerName(const Expr &expr, std::string &out);
+bool getBuiltinCollectionName(const Expr &expr, std::string &out);
+bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);
+
