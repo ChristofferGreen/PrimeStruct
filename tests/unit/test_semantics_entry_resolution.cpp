@@ -1,3 +1,5 @@
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.resolution");
 
 TEST_CASE("unknown identifier fails with parameter scope") {
