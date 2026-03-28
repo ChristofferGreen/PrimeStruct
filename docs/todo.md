@@ -235,7 +235,7 @@ Test-source note: keep `tests/unit/` and `include/primec/testing/` under the sam
 - ○ Refactor `tests/unit/test_ir_pipeline_pointers.h` (`1135` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_compile_run_native_backend_math_numeric.h` (`1059` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_semantics_calls_and_flow_control_core.h` (`976` lines) below the `700`-line target.
-- ○ Refactor `tests/unit/test_ast_ir_dump.cpp` (`904` lines) below the `700`-line target.
+- ✓ Refactor `tests/unit/test_ast_ir_dump.cpp` (`424` lines) below the `700`-line target by extracting return-type inference, execution-dump, and local-binding/control-flow dump coverage into `tests/unit/test_ast_ir_dump_inference.h`, leaving `test_ast_ir_dump.cpp` focused on core AST/IR literal, signature, struct, and named-argument formatting coverage.
 - ✓ Refactor `tests/unit/test_compile_run_imports_versions.h` (`580` lines) below the `700`-line target by extracting archive-import and versioned-import conformance coverage into `tests/unit/test_compile_run_imports_versions_archive.h`, leaving `test_compile_run_imports_versions.h` focused on direct version-selection, quoting, comment, and mismatch validation coverage.
 - ○ Refactor `tests/unit/test_ir_pipeline_serialization_structs.h` (`839` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_ir_pipeline_to_cpp.h` (`835` lines) below the `700`-line target.
