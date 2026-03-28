@@ -211,6 +211,71 @@ bool inferMapContainsResultKind(const Expr &expr,
   return true;
 }
 
+bool runLowerInferenceExprKindBaseSetup(const LowerInferenceExprKindBaseSetupInput &input,
+                                        LowerInferenceSetupBootstrapState &stateInOut,
+                                        std::string &errorOut) {
+  if (!input.getMathConstantName) {
+    errorOut = "native backend missing inference expr-kind base setup dependency: getMathConstantName";
+    return false;
+  }
+
+  const auto getMathConstantName = input.getMathConstantName;
+  stateInOut.inferLiteralOrNameExprKind =
+      [getMathConstantName](const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
+        return inferLiteralOrNameExprKindImpl(expr, localsIn, getMathConstantName, kindOut);
+      };
+  return true;
+}
+
+bool runLowerInferenceExprKindCallBaseSetup(const LowerInferenceExprKindCallBaseSetupInput &input,
+                                            LowerInferenceSetupBootstrapState &stateInOut,
+                                            std::string &errorOut) {
+  if (!input.inferStructExprPath) {
+    errorOut = "native backend missing inference expr-kind call-base setup dependency: inferStructExprPath";
+    return false;
+  }
+  if (!input.resolveStructFieldSlot) {
+    errorOut = "native backend missing inference expr-kind call-base setup dependency: resolveStructFieldSlot";
+    return false;
+  }
+  if (!input.resolveUninitializedStorage) {
+    errorOut = "native backend missing inference expr-kind call-base setup dependency: resolveUninitializedStorage";
+    return false;
+  }
+
+  const auto inferStructExprPath = input.inferStructExprPath;
+  const auto resolveStructFieldSlot = input.resolveStructFieldSlot;
+  const auto resolveUninitializedStorage = input.resolveUninitializedStorage;
+  stateInOut.inferCallExprBaseKind =
+      [inferStructExprPath, resolveStructFieldSlot, resolveUninitializedStorage, &stateInOut](
+          const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
+        const ResolveMethodCallWithLocalsFn resolveMethodCall =
+            [&stateInOut](const Expr &candidate, const LocalMap &candidateLocals) -> const Definition * {
+          return stateInOut.resolveMethodCallDefinition != nullptr
+                     ? stateInOut.resolveMethodCallDefinition(candidate, candidateLocals)
+                     : nullptr;
+        };
+        const ResolveCallDefinitionFn resolveDefinitionCall = [&stateInOut](const Expr &candidate) -> const Definition * {
+          return stateInOut.resolveDefinitionCall != nullptr ? stateInOut.resolveDefinitionCall(candidate) : nullptr;
+        };
+        const LookupReturnInfoFn lookupReturnInfo = [&stateInOut](const std::string &path, ReturnInfo &returnInfoOut) {
+          return stateInOut.getReturnInfo != nullptr ? stateInOut.getReturnInfo(path, returnInfoOut) : false;
+        };
+        return inferCallExprBaseKindImpl(
+            expr,
+            localsIn,
+            inferStructExprPath,
+            resolveStructFieldSlot,
+            resolveUninitializedStorage,
+            &resolveMethodCall,
+            &resolveDefinitionCall,
+            &lookupReturnInfo,
+            &stateInOut.inferExprKind,
+            kindOut);
+      };
+  return true;
+}
+
 bool inferLiteralOrNameExprKindImpl(const Expr &expr,
                                     const LocalMap &localsIn,
                                     const GetSetupMathConstantNameFn &getMathConstantName,

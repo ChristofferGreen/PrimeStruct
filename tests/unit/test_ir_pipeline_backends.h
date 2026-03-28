@@ -341,6 +341,14 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   std::filesystem::path semanticsHeaderPath = cwd / "include" / "primec" / "Semantics.h";
   std::filesystem::path semanticsValidatePath = cwd / "src" / "semantics" / "SemanticsValidate.cpp";
   std::filesystem::path validatorHeaderPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
+  std::filesystem::path validatorPrivateCoreHeaderPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorPrivateCore.h";
+  std::filesystem::path validatorPrivateExprValidationHeaderPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorPrivateExprValidation.h";
+  std::filesystem::path validatorPrivateExprInferenceHeaderPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorPrivateExprInference.h";
+  std::filesystem::path validatorPrivateStatementsHeaderPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorPrivateStatements.h";
   std::filesystem::path validatorCorePath = cwd / "src" / "semantics" / "SemanticsValidator.cpp";
   std::filesystem::path validatorBuildPath = cwd / "src" / "semantics" / "SemanticsValidatorBuild.cpp";
   std::filesystem::path validatorBuildUtilityPath =
@@ -417,6 +425,13 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
     semanticsHeaderPath = cwd.parent_path() / "include" / "primec" / "Semantics.h";
     semanticsValidatePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidate.cpp";
     validatorHeaderPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.h";
+    validatorPrivateCoreHeaderPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorPrivateCore.h";
+    validatorPrivateExprValidationHeaderPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorPrivateExprValidation.h";
+    validatorPrivateExprInferenceHeaderPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorPrivateExprInference.h";
+    validatorPrivateStatementsHeaderPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorPrivateStatements.h";
     validatorCorePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.cpp";
     validatorBuildPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuild.cpp";
     validatorBuildUtilityPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuildUtility.cpp";
@@ -491,6 +506,10 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(semanticsHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
   REQUIRE(std::filesystem::exists(validatorHeaderPath));
+  REQUIRE(std::filesystem::exists(validatorPrivateCoreHeaderPath));
+  REQUIRE(std::filesystem::exists(validatorPrivateExprValidationHeaderPath));
+  REQUIRE(std::filesystem::exists(validatorPrivateExprInferenceHeaderPath));
+  REQUIRE(std::filesystem::exists(validatorPrivateStatementsHeaderPath));
   REQUIRE(std::filesystem::exists(validatorCorePath));
   REQUIRE(std::filesystem::exists(validatorBuildPath));
   REQUIRE(std::filesystem::exists(validatorBuildUtilityPath));
@@ -535,7 +554,13 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   const std::string optionsParser = readTextFile(optionsParserPath);
   const std::string semanticsHeader = readTextFile(semanticsHeaderPath);
   const std::string semanticsValidate = readTextFile(semanticsValidatePath);
-  const std::string validatorHeader = readTextFile(validatorHeaderPath);
+  const std::string validatorHeader = readTextFiles({
+      validatorHeaderPath,
+      validatorPrivateCoreHeaderPath,
+      validatorPrivateExprValidationHeaderPath,
+      validatorPrivateExprInferenceHeaderPath,
+      validatorPrivateStatementsHeaderPath,
+  });
   const std::string validatorCore = readTextFile(validatorCorePath);
   const std::string validatorBuild = readTextFiles({
       validatorBuildPath,
