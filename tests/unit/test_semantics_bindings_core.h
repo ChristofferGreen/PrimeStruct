@@ -627,3 +627,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
+
+TEST_SUITE_END();

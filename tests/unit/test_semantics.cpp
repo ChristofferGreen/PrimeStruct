@@ -7,7 +7,6 @@
 #include "test_semantics_helpers.h"
 
 #include "test_semantics_bindings_core.h"
-#include "test_semantics_bindings_core_transforms.h"
 #include "test_semantics_bindings_struct_defaults.h"
 #include "test_semantics_bindings_struct_defaults_maps.h"
 #include "test_semantics_bindings_pointers.h"
