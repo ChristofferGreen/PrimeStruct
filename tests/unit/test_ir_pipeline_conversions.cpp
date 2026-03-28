@@ -1,3 +1,16 @@
+#include <cstring>
+#include <string>
+#include <vector>
+
+#include "third_party/doctest.h"
+
+#include "primec/Ast.h"
+#include "primec/Ir.h"
+#include "primec/IrLowerer.h"
+#include "primec/IrSerializer.h"
+#include "primec/Vm.h"
+#include "test_ir_pipeline_helpers.h"
+
 #include "test_ir_pipeline_conversions_core.h"
 #include "test_ir_pipeline_conversions_numbers.h"
 #include "test_ir_pipeline_conversions_variadic_basics.h"

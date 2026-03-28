@@ -488,6 +488,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_backend_tests
     tests/unit/test_main.cpp
     tests/unit/test_ir_pipeline.cpp
+    tests/unit/test_ir_pipeline_conversions.cpp
     tests/unit/test_ir_pipeline_entry_args.cpp
     tests/unit/test_ir_pipeline_gpu.cpp
     tests/unit/test_ir_pipeline_pointers.cpp
