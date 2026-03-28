@@ -520,6 +520,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_calls_and_flow_access.cpp
     tests/unit/test_semantics_calls_and_flow_collections.cpp
     tests/unit/test_semantics_calls_and_flow_comparisons_literals.cpp
+    tests/unit/test_semantics_calls_and_flow_control_core.cpp
     tests/unit/test_semantics_calls_and_flow_control_misc.cpp
     tests/unit/test_semantics_calls_and_flow_named_args.cpp
     tests/unit/test_semantics_calls_and_flow_numeric_builtins.cpp
