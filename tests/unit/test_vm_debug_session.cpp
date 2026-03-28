@@ -1,3 +1,19 @@
+#include <cstdint>
+#include <cstring>
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "third_party/doctest.h"
+
+#include "primec/Vm.h"
+#include "primec/VmDebugAdapter.h"
+#include "primec/testing/TestScratch.h"
+
 TEST_SUITE_BEGIN("primestruct.vm.debug.session");
 
 namespace {
