@@ -269,7 +269,10 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.cpp
   src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp
   src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp
+  src/ir_lowerer/IrLowererResultMetadataHelpers.cpp
   src/ir_lowerer/IrLowererResultHelpers.cpp
+  src/ir_lowerer/IrLowererPackedResultHelpers.cpp
+  src/ir_lowerer/IrLowererResultWhyHelpers.cpp
   src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp
   src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp
   src/ir_lowerer/IrLowererSetupInferenceReturnKinds.cpp
