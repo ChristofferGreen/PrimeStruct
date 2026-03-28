@@ -1,3 +1,7 @@
+#include "primec/testing/SemanticsValidationHelpers.h"
+
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.scc");
 
 TEST_CASE("strongly connected components keep acyclic nodes separate in node order") {
