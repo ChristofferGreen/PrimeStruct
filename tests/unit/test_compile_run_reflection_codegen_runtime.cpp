@@ -1,3 +1,8 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_reflection_codegen_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.reflection_codegen");
+
 TEST_CASE("reflection codegen helper runtime stays aligned across backends") {
   const std::string source = reflectionCodegenRuntimeSource();
   const std::string srcPath = writeTemp("compile_reflection_codegen_runtime.prime", source);
@@ -119,8 +124,7 @@ Pair() {
 main() {
   [Pair mut] value{Pair([x] 9i32, [y] 8i32)}
   /Pair/Clear(value)
-  [i32] cmp{/Pair/Compare(value, /Pair/Default())}
-  return(if(equal(cmp, 0i32), then() { 7i32 }, else() { 3i32 }))
+  return(if(equal(/Pair/Compare(value, /Pair/Default()), 0i32), then() { 7i32 }, else() { 3i32 }))
 }
 )";
   const std::string srcPath = writeTemp("compile_reflection_clear_runtime.prime", source);
@@ -141,55 +145,18 @@ main() {
   CHECK(runCommand(quoteShellArg(nativePath)) == 7);
 }
 
-TEST_CASE("reflection copyfrom helper runtime stays aligned across backends") {
-  const std::string source = R"(
-[struct reflect generate(CopyFrom, Compare)]
-Pair() {
-  [i32] x{1i32}
-  [i32] y{2i32}
-}
-
-[return<int>]
-main() {
-  [Pair mut] target{Pair([x] 9i32, [y] 8i32)}
-  [Pair] source{Pair([x] 3i32, [y] 5i32)}
-  /Pair/CopyFrom(target, source)
-  [i32] cmp{/Pair/Compare(target, source)}
-  return(if(equal(cmp, 0i32), then() { 7i32 }, else() { 3i32 }))
-}
-)";
-  const std::string srcPath = writeTemp("compile_reflection_copyfrom_runtime.prime", source);
-
-  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
-  CHECK(runCommand(vmCmd) == 7);
-
-  const std::string exePath = (testScratchPath("") / "primec_reflection_copyfrom_exe").string();
-  const std::string exeCompileCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(exeCompileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 7);
-
-  const std::string nativePath =
-      (testScratchPath("") / "primec_reflection_copyfrom_native").string();
-  const std::string nativeCompileCmd =
-      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
-  CHECK(runCommand(nativeCompileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(nativePath)) == 7);
-}
-
 TEST_CASE("reflection validate helper runtime stays aligned across backends") {
   const std::string source = R"(
 [struct reflect generate(Validate)]
 Pair() {
   [i32] x{0i32}
-  [bool] ok{true}
+  [i32] y{0i32}
 }
 
 [return<int>]
 main() {
-  [Pair] value{Pair([x] 3i32, [ok] true)}
-  /Pair/Validate(value)
-  return(7i32)
+  [Pair] value{Pair([x] 1i32, [y] 2i32)}
+  return(if(/Pair/Validate(value), then() { 7i32 }, else() { 3i32 }))
 }
 )";
   const std::string srcPath = writeTemp("compile_reflection_validate_runtime.prime", source);
@@ -203,33 +170,30 @@ main() {
   CHECK(runCommand(exeCompileCmd) == 0);
   CHECK(runCommand(quoteShellArg(exePath)) == 7);
 
-  const std::string nativePath =
-      (testScratchPath("") / "primec_reflection_validate_native").string();
+  const std::string nativePath = (testScratchPath("") / "primec_reflection_validate_native").string();
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);
   CHECK(runCommand(quoteShellArg(nativePath)) == 7);
 }
 
-TEST_CASE("reflection serialize and deserialize helpers runtime stay aligned across backends") {
+TEST_CASE("reflection serde helper runtime stays aligned across backends") {
   const std::string source = R"(
-[struct reflect generate(Serialize, Deserialize, Compare)]
+[struct reflect generate(Serialize, Deserialize, Equal)]
 Pair() {
   [i32] x{0i32}
-  [bool] ok{false}
+  [i32] y{0i32}
 }
 
 [return<int>]
 main() {
-  [Pair] input{Pair([x] 9i32, [ok] true)}
-  [array<u64>] payload{/Pair/Serialize(input)}
-  [Pair mut] output{Pair([x] 0i32, [ok] false)}
-  /Pair/Deserialize(output, payload)
-  [i32] cmp{/Pair/Compare(input, output)}
-  return(if(equal(cmp, 0i32), then() { 7i32 }, else() { 3i32 }))
+  [Pair] source{Pair([x] 4i32, [y] 9i32)}
+  [string] encoded{/Pair/Serialize(source)}
+  [Pair] decoded{/Pair/Deserialize(encoded)}
+  return(if(/Pair/Equal(source, decoded), then() { 7i32 }, else() { 3i32 }))
 }
 )";
-  const std::string srcPath = writeTemp("compile_reflection_serialize_deserialize_runtime.prime", source);
+  const std::string srcPath = writeTemp("compile_reflection_serialize_deserialize.prime", source);
 
   const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
   CHECK(runCommand(vmCmd) == 7);

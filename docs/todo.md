@@ -202,6 +202,7 @@ Test TU sizing note: prefer many small/medium `.cpp` files over recreating giant
     - ✓ Move the `math_conformance` wrapper into `tests/unit/test_compile_run_math_conformance.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` and retargeting the managed math-conformance shard metadata to the standalone source.
     - ✓ Move the `native_backend.collections` wrapper into `tests/unit/test_compile_run_native_backend_collections.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` and retargeting the managed native-collections shard metadata to the standalone source.
     - ✓ Move the `native_backend.argv` wrapper into `tests/unit/test_compile_run_native_backend_argv.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` so the native argv suite is compiled from an explicit standalone translation unit.
+    - ✓ Move the `reflection_codegen_runtime` wrapper into `tests/unit/test_compile_run_reflection_codegen_runtime.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` and splitting the shared reflection source helpers into a helper header so both reflection suites compile cleanly as standalone translation units.
 - ○ Add a final cleanup pass that removes obsolete include-wrapper translation units, collapses dead helper headers, and updates CMake targets so each test suite is compiled from explicit `.cpp` sources instead of transitive header inclusion.
 
 

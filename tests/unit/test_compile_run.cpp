@@ -296,7 +296,6 @@ void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
 #include "test_compile_run_vm_gpu.h"
 #include "test_compile_run_emitters.h"
 #include "test_compile_run_reflection_codegen.h"
-#include "test_compile_run_reflection_codegen_runtime.h"
 #include "test_compile_run_glsl.h"
 #include "test_compile_run_native_backend_control.h"
 #include "test_compile_run_native_backend_pointers.h"
