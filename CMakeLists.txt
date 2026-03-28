@@ -524,6 +524,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_wasm.cpp
     tests/unit/test_ir_pipeline_wasm_wasi.cpp
     tests/unit/test_compile_run.cpp
+    tests/unit/test_compile_run_text_filters.cpp
   )
   target_include_directories(PrimeStruct_backend_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_ir_lib primec_backend_registry_lib)
