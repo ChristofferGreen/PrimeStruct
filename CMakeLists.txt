@@ -78,6 +78,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidator.cpp
   src/semantics/SemanticsValidatorSnapshots.cpp
   src/semantics/SemanticsValidatorSnapshotLocals.cpp
+  src/semantics/SemanticsValidatorValidationContext.cpp
+  src/semantics/SemanticsValidatorDiagnostics.cpp
   src/semantics/SemanticsValidatorBuild.cpp
   src/semantics/SemanticsValidatorBuildTransforms.cpp
   src/semantics/SemanticsValidatorBuildImports.cpp
