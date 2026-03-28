@@ -220,7 +220,7 @@ Test-source note: keep `tests/unit/` and `include/primec/testing/` under the sam
 - ○ Refactor `tests/unit/test_semantics_manual.cpp` (`2377` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_parser_basic_definitions.h` (`2304` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_compile_run_map_conformance_helpers.h` (`2282` lines) below the `700`-line target.
-- ○ Refactor `tests/unit/test_ir_pipeline_conversions_numbers.h` (`1972` lines) below the `700`-line target.
+- ✓ Refactor `tests/unit/test_ir_pipeline_conversions_numbers.h` by extracting `Result.map` coverage into `tests/unit/test_ir_pipeline_conversions_result_map.h`, `Result.and_then` coverage into `tests/unit/test_ir_pipeline_conversions_result_and_then.h`, and `Result.map2` / direct Result consumer coverage into `tests/unit/test_ir_pipeline_conversions_result_map2.h`; the root header is now `647` lines.
 - ○ Refactor `tests/unit/test_compile_run_vector_conformance_helpers.h` (`1847` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_semantics_calls_and_flow_effects.h` (`1819` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_compile_run_text_filters_core.h` (`1795` lines) below the `700`-line target.

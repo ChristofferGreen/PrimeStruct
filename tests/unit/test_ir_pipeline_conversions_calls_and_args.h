@@ -1,6 +1,3 @@
-  CHECK(result == 3);
-}
-
 TEST_CASE("ir lowerer supports entry args count helper") {
   const std::string source = R"(
 [return<int>]
