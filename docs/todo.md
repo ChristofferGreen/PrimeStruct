@@ -226,7 +226,7 @@ Test-source note: keep `tests/unit/` and `include/primec/testing/` under the sam
 - ○ Refactor `tests/unit/test_compile_run_text_filters_core.h` (`1795` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_semantics_result_helpers.h` (`1685` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_compile_run_glsl.h` (`1534` lines) below the `700`-line target.
-- ○ Refactor `tests/unit/test_vm_debug_session.h` (`1396` lines) below the `700`-line target.
+- ✓ Refactor `tests/unit/test_vm_debug_session.h` by extracting adapter/protocol coverage into `tests/unit/test_vm_debug_session_protocol.h` and breakpoint/opcode-matrix coverage into `tests/unit/test_vm_debug_session_breakpoints.h`; the root header is now `625` lines.
 - ✓ Refactor `tests/unit/test_parser_basic_literals.h` by moving expression-form parsing coverage into `tests/unit/test_parser_basic_expr_forms.h`; the root header is now `675` lines.
 - ✓ Refactor `tests/unit/test_semantics_imports.h` by extracting std-gfx and experimental-map import coverage into `tests/unit/test_semantics_imports_gfx.h`; the root header is now `638` lines.
 - ○ Refactor `tests/unit/test_semantics_entry_transforms.h` (`1273` lines) below the `700`-line target.
