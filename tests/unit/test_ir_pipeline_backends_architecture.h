@@ -1,0 +1,354 @@
+TEST_CASE("main routes glsl and spirv through ir backends without legacy fallback branches") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path mainPath = cwd / "src" / "main.cpp";
+  if (!std::filesystem::exists(mainPath)) {
+    mainPath = cwd.parent_path() / "src" / "main.cpp";
+  }
+  REQUIRE(std::filesystem::exists(mainPath));
+
+  const std::string source = readTextFile(mainPath);
+  CHECK(source.find("resolveIrBackendEmitKind(options.emitKind)") != std::string::npos);
+  CHECK(source.find("findIrBackend(options.emitKind)") == std::string::npos);
+  CHECK(source.find("if (options.emitKind == \"glsl\")") == std::string::npos);
+  CHECK(source.find("if (options.emitKind == \"spirv\")") == std::string::npos);
+  CHECK(source.find("if (irBackend == nullptr && options.emitKind == \"glsl\")") == std::string::npos);
+  CHECK(source.find("if (irBackend == nullptr && options.emitKind == \"spirv\")") == std::string::npos);
+  CHECK(source.find("if (irFailure.stage != IrBackendRunFailureStage::Emit)") == std::string::npos);
+}
+
+TEST_CASE("backend boundary ADR is present and referenced from design doc") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path adrPath = cwd / "docs" / "adr" / "0001-backend-ir-boundary.md";
+  std::filesystem::path designPath = cwd / "docs" / "PrimeStruct.md";
+  if (!std::filesystem::exists(adrPath)) {
+    adrPath = cwd.parent_path() / "docs" / "adr" / "0001-backend-ir-boundary.md";
+    designPath = cwd.parent_path() / "docs" / "PrimeStruct.md";
+  }
+
+  REQUIRE(std::filesystem::exists(adrPath));
+  REQUIRE(std::filesystem::exists(designPath));
+
+  const std::string adr = readTextFile(adrPath);
+  CHECK(adr.find("All code generation backends must consume canonical `IrModule` only.") != std::string::npos);
+  CHECK(adr.find("AST-direct backend emission paths are not allowed") != std::string::npos);
+  CHECK(adr.find("Follow-up status (2026-03-11)") != std::string::npos);
+  CHECK(adr.find("production `primec --emit` aliases") != std::string::npos);
+
+  const std::string design = readTextFile(designPath);
+  CHECK(design.find("docs/adr/0001-backend-ir-boundary.md") != std::string::npos);
+  CHECK(design.find("including production aliases (`cpp`, `exe`, `glsl`, `spirv`)") != std::string::npos);
+}
+
+TEST_CASE("cmake splits primec library into subsystem targets") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
+  if (!std::filesystem::exists(cmakePath)) {
+    cmakePath = cwd.parent_path() / "CMakeLists.txt";
+  }
+  REQUIRE(std::filesystem::exists(cmakePath));
+
+  const std::string cmake = readTextFile(cmakePath);
+  CHECK(cmake.find("set(PRIMESTRUCT_SUPPORT_SOURCES") != std::string::npos);
+  CHECK(cmake.find("set(PRIMESTRUCT_FRONTEND_SOURCES") != std::string::npos);
+  CHECK(cmake.find("set(PRIMESTRUCT_IR_SOURCES") != std::string::npos);
+  CHECK(cmake.find("set(PRIMESTRUCT_CODEGEN_SOURCES") != std::string::npos);
+  CHECK(cmake.find("set(PRIMESTRUCT_RUNTIME_SOURCES") != std::string::npos);
+  CHECK(cmake.find("set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES") != std::string::npos);
+  CHECK(cmake.find("src/IrBackendProfiles.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateConvertConstructors.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpersCloneDebug.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpersCompare.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpersSerialization.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpersState.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateReflectionGeneratedHelpersValidate.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateReflectionMetadata.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidateTransforms.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprBodyArguments.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprBlock.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprDispatchBootstrap.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprPreDispatchDirectCalls.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprMethodCompatibilitySetup.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionAccess.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionAccessSetup.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprDirectCollectionFallbacks.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprPostAccessPrechecks.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprBuiltinContextSetup.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateCollectionAccessFallbacks.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateFallbackBuiltins.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionPredicates.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprCollectionLiterals.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprControlFlow.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprFieldResolution.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprGpuBuffer.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateBuiltins.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateCallCompatibility.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateMapAccessBuiltins.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateMapSoaBuiltins.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLambda.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprMethodResolution.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprMutationBorrows.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprNumeric.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprPointerLike.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprResolvedCallSetup.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprReferenceEscapes.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprResultFile.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprScalarPointerMemory.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprStructConstructors.cpp") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprTry.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprVectorHelpers.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferCollectionCountCapacity.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferCollectionDirectCountCapacity.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferCollectionDispatch.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferCollectionDispatchSetup.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferCollections.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferControlFlow.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferDefinition.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferResolvedCalls.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorInferScalarBuiltins.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorPassesEffects.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorPassesDiagnostics.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorStatementBindings.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorStatementBuiltins.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorStatementControlFlow.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidatorStatementVectorHelpers.cpp") != std::string::npos);
+  CHECK(cmake.find("src/ir_lowerer/IrLowererAccessTargetResolution.cpp") != std::string::npos);
+  CHECK(cmake.find("src/ir_lowerer/IrLowererAccessLoadHelpers.cpp") != std::string::npos);
+  CHECK(cmake.find("src/ir_lowerer/IrLowererIndexedAccessEmit.cpp") != std::string::npos);
+  CHECK(cmake.find("src/ir_lowerer/IrLowererCallResolution.cpp") != std::string::npos);
+  CHECK(cmake.find("src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp") != std::string::npos);
+  CHECK(cmake.find("src/ir_lowerer/IrLowererNativeTailDispatch.cpp") != std::string::npos);
+  CHECK(cmake.find("src/VmHeapHelpers.cpp") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_support_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_frontend_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_ir_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_backend_emitters_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_codegen_lib INTERFACE)") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_runtime_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_backend_registry_lib") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_backend_lib INTERFACE)") != std::string::npos);
+  CHECK(cmake.find("add_library(primec_lib INTERFACE)") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_frontend_lib PUBLIC primec_support_lib)") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_runtime_lib PUBLIC primec_frontend_lib primec_support_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_backend_emitters_lib PUBLIC primec_frontend_lib primec_support_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_codegen_lib INTERFACE primec_backend_emitters_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_ir_lib PUBLIC primec_frontend_lib primec_support_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PRIVATE primec_backend_emitters_lib primec_runtime_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PUBLIC primec_backend_emitters_lib primec_runtime_lib)") ==
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PRIVATE primec_codegen_lib primec_runtime_lib)") ==
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_backend_registry_lib PUBLIC primec_codegen_lib primec_runtime_lib)") ==
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_backend_lib INTERFACE primec_ir_lib primec_backend_registry_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec PRIVATE primec_backend_lib)") == std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primec PRIVATE primec_lib)") == std::string::npos);
+  CHECK(cmake.find("target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib)") != std::string::npos);
+  CHECK(cmake.find("add_executable(PrimeStruct_misc_tests") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_misc_tests PRIVATE primec_ir_lib)") != std::string::npos);
+  CHECK(cmake.find("set(PrimeStructMiscTestSuites") != std::string::npos);
+  CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_misc_tests> \"--test-suite=${suite}\"") !=
+        std::string::npos);
+  CHECK(cmake.find("add_executable(PrimeStruct_backend_tests") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_backend_lib)") ==
+        std::string::npos);
+  CHECK(cmake.find("set(PrimeStructBackendTestSuites") != std::string::npos);
+  CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> \"--test-suite=${suite}\"") !=
+        std::string::npos);
+  CHECK(cmake.find("add_executable(PrimeStruct_semantics_tests") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_semantics_tests PRIVATE primec_ir_lib)") != std::string::npos);
+  CHECK(cmake.find("set(PrimeStructSemanticsTestSuites") != std::string::npos);
+  CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests> \"--test-suite=${suite}\"") !=
+        std::string::npos);
+  CHECK(cmake.find("add_executable(PrimeStruct_text_filter_tests") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_text_filter_tests PRIVATE primec_frontend_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("set(PrimeStructTextFilterTestSuites") != std::string::npos);
+  CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_text_filter_tests> \"--test-suite=${suite}\"") !=
+        std::string::npos);
+  CHECK(cmake.find("add_executable(PrimeStruct_parser_tests") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_parser_tests PRIVATE primec_frontend_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("set(PrimeStructParserTestSuites") != std::string::npos);
+  CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_parser_tests> \"--test-suite=${suite}\"") !=
+        std::string::npos);
+  CHECK(cmake.find("find_package(Python3 REQUIRED COMPONENTS Interpreter)") != std::string::npos);
+  CHECK(cmake.find("NAME PrimeStruct_include_layers") != std::string::npos);
+  CHECK(cmake.find("scripts/check_include_layers.py") != std::string::npos);
+  CHECK(cmake.find("scripts/include_layer_allowlist.txt") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_misc_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_backend_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_parser_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_text_filter_suite_registration") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)") == std::string::npos);
+}
+
+TEST_CASE("include layer guardrail baseline tracks existing private test headers") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path scriptPath = cwd / "scripts" / "check_include_layers.py";
+  std::filesystem::path allowlistPath = cwd / "scripts" / "include_layer_allowlist.txt";
+  std::filesystem::path emitterTestApiPath = cwd / "include" / "primec" / "testing" / "EmitterHelpers.h";
+  std::filesystem::path irLowererTestApiPath = cwd / "include" / "primec" / "testing" / "IrLowererHelpers.h";
+  std::filesystem::path parserTestApiPath = cwd / "include" / "primec" / "testing" / "ParserHelpers.h";
+  std::filesystem::path semanticsTestApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+  std::filesystem::path textFilterTestApiPath = cwd / "include" / "primec" / "testing" / "TextFilterHelpers.h";
+  std::filesystem::path parserHelperTestPath = cwd / "tests" / "unit" / "test_parser_basic_parser_helpers.h";
+  std::filesystem::path textFilterHelperTestPath = cwd / "tests" / "unit" / "test_text_filter_helpers.cpp";
+  std::filesystem::path compileRunTestPath = cwd / "tests" / "unit" / "test_compile_run.cpp";
+  std::filesystem::path irPipelineTestPath = cwd / "tests" / "unit" / "test_ir_pipeline.cpp";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = cwd.parent_path() / "scripts" / "check_include_layers.py";
+    allowlistPath = cwd.parent_path() / "scripts" / "include_layer_allowlist.txt";
+    emitterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "EmitterHelpers.h";
+    irLowererTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererHelpers.h";
+    parserTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "ParserHelpers.h";
+    semanticsTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+    textFilterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "TextFilterHelpers.h";
+    parserHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_parser_basic_parser_helpers.h";
+    textFilterHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_text_filter_helpers.cpp";
+    compileRunTestPath = cwd.parent_path() / "tests" / "unit" / "test_compile_run.cpp";
+    irPipelineTestPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline.cpp";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+  REQUIRE(std::filesystem::exists(allowlistPath));
+  REQUIRE(std::filesystem::exists(emitterTestApiPath));
+  REQUIRE(std::filesystem::exists(irLowererTestApiPath));
+  REQUIRE(std::filesystem::exists(parserTestApiPath));
+  REQUIRE(std::filesystem::exists(semanticsTestApiPath));
+  REQUIRE(std::filesystem::exists(textFilterTestApiPath));
+  REQUIRE(std::filesystem::exists(parserHelperTestPath));
+  REQUIRE(std::filesystem::exists(textFilterHelperTestPath));
+  REQUIRE(std::filesystem::exists(compileRunTestPath));
+  REQUIRE(std::filesystem::exists(irPipelineTestPath));
+
+  const std::string script = readTextFile(scriptPath);
+  CHECK(script.find("public headers must not include private src headers") != std::string::npos);
+  CHECK(script.find("production sources must not include test headers") != std::string::npos);
+  CHECK(script.find("direct tests -> src include is not allowlisted") != std::string::npos);
+  CHECK(script.find("stale allowlist entry should be removed") != std::string::npos);
+
+  const std::string allowlist = readTextFile(allowlistPath);
+  CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/emitter/") == std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/") == std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorExprCaptureSplitStep.h") ==
+        std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorStatementLoopCountStep.h") ==
+        std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_compile_run.cpp -> src/emitter/EmitterHelpers.h") == std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_parser_basic_parser_helpers.h -> src/parser/ParserHelpers.h") ==
+        std::string::npos);
+  CHECK(allowlist.find("tests/unit/test_text_filter_helpers.cpp -> src/text_filter/TextFilterHelpers.h") ==
+        std::string::npos);
+
+  const std::string emitterTestApi = readTextFile(emitterTestApiPath);
+  CHECK(emitterTestApi.find("namespace primec::emitter") != std::string::npos);
+  CHECK(emitterTestApi.find("bool runEmitterEmitSetupMathImport(const Program &program);") != std::string::npos);
+  CHECK(emitterTestApi.find("std::optional<EmitterLifecycleHelperMatch> runEmitterEmitSetupLifecycleHelperMatchStep") !=
+        std::string::npos);
+  CHECK(emitterTestApi.find("EmitterExprControlIfBranchBodyEmitResult") != std::string::npos);
+  CHECK(emitterTestApi.find("EmitterExprControlIfTernaryFallbackStepResult") != std::string::npos);
+
+  const std::string irLowererTestApi = readTextFile(irLowererTestApiPath);
+  CHECK(irLowererTestApi.find("namespace primec::ir_lowerer") != std::string::npos);
+  CHECK(irLowererTestApi.find("struct LocalInfo") != std::string::npos);
+  CHECK(irLowererTestApi.find("struct LowerInferenceSetupBootstrapState") != std::string::npos);
+  CHECK(irLowererTestApi.find("struct BufferInitInfo") != std::string::npos);
+  CHECK(irLowererTestApi.find("enum class StringCallEmitResult") != std::string::npos);
+  CHECK(irLowererTestApi.find("struct UninitializedStorageAccessInfo") != std::string::npos);
+
+  const std::string parserTestApi = readTextFile(parserTestApiPath);
+  CHECK(parserTestApi.find("namespace primec::parser") != std::string::npos);
+  CHECK(parserTestApi.find("bool isBuiltinName(const std::string &name, bool allowMathBare);") !=
+        std::string::npos);
+
+  const std::string textFilterTestApi = readTextFile(textFilterTestApiPath);
+  CHECK(textFilterTestApi.find("namespace primec::text_filter") != std::string::npos);
+  CHECK(textFilterTestApi.find("bool isSeparator(char c);") != std::string::npos);
+  CHECK(textFilterTestApi.find("std::string maybeAppendUtf8(const std::string &token);") != std::string::npos);
+
+  const std::string semanticsTestApi = readTextFile(semanticsTestApiPath);
+  CHECK(semanticsTestApi.find("namespace primec::semantics") != std::string::npos);
+  CHECK(semanticsTestApi.find("std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep") !=
+        std::string::npos);
+  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementKnownIterationCountStep") != std::string::npos);
+  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementCanIterateMoreThanOnceStep") != std::string::npos);
+  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementIsNegativeIntegerLiteralStep") != std::string::npos);
+
+  const std::string parserHelperTest = readTextFile(parserHelperTestPath);
+  CHECK(parserHelperTest.find("#include \"primec/testing/ParserHelpers.h\"") != std::string::npos);
+  CHECK(parserHelperTest.find("#include \"src/parser/ParserHelpers.h\"") == std::string::npos);
+
+  const std::string textFilterHelperTest = readTextFile(textFilterHelperTestPath);
+  CHECK(textFilterHelperTest.find("#include \"primec/testing/TextFilterHelpers.h\"") != std::string::npos);
+  CHECK(textFilterHelperTest.find("#include \"src/text_filter/TextFilterHelpers.h\"") == std::string::npos);
+
+  const std::string compileRunTest = readTextFile(compileRunTestPath);
+  CHECK(compileRunTest.find("#include \"src/emitter/EmitterHelpers.h\"") == std::string::npos);
+
+  const std::string irPipelineTest = readTextFile(irPipelineTestPath);
+  CHECK(irPipelineTest.find("#include \"primec/testing/EmitterHelpers.h\"") != std::string::npos);
+  CHECK(irPipelineTest.find("#include \"primec/testing/IrLowererHelpers.h\"") != std::string::npos);
+  CHECK(irPipelineTest.find("#include \"primec/testing/SemanticsValidationHelpers.h\"") != std::string::npos);
+  CHECK(irPipelineTest.find("#include \"src/emitter/") == std::string::npos);
+  CHECK(irPipelineTest.find("#include \"src/ir_lowerer/") == std::string::npos);
+  CHECK(irPipelineTest.find("#include \"src/semantics/SemanticsValidatorExprCaptureSplitStep.h\"") ==
+        std::string::npos);
+  CHECK(irPipelineTest.find("#include \"src/semantics/SemanticsValidatorStatementLoopCountStep.h\"") ==
+        std::string::npos);
+}
+
+TEST_CASE("glsl and spirv ir backends use glsl ir validation target") {
