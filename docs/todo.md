@@ -225,7 +225,7 @@ Test-source note: keep `tests/unit/` and `include/primec/testing/` under the sam
 - ○ Refactor `tests/unit/test_semantics_calls_and_flow_effects.h` (`1819` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_compile_run_text_filters_core.h` (`1795` lines) below the `700`-line target.
 - ✓ Refactor `tests/unit/test_semantics_result_helpers.h` by extracting file helper coverage into `tests/unit/test_semantics_result_helpers_file.h`, image/container helper coverage into `tests/unit/test_semantics_result_helpers_errors.h`, and gfx helper coverage into `tests/unit/test_semantics_result_helpers_gfx.h`; the root header is now `300` lines.
-- ○ Refactor `tests/unit/test_compile_run_glsl.h` (`1534` lines) below the `700`-line target.
+- ✓ Refactor `tests/unit/test_compile_run_glsl.h` by extracting backend-selection and SPIR-V coverage into `tests/unit/test_compile_run_glsl_backends.h` and nominal math/value-lowering coverage into `tests/unit/test_compile_run_glsl_nominal_math.h`; the root header is now `482` lines.
 - ✓ Refactor `tests/unit/test_vm_debug_session.h` by extracting adapter/protocol coverage into `tests/unit/test_vm_debug_session_protocol.h` and breakpoint/opcode-matrix coverage into `tests/unit/test_vm_debug_session_breakpoints.h`; the root header is now `625` lines.
 - ✓ Refactor `tests/unit/test_parser_basic_literals.h` by moving expression-form parsing coverage into `tests/unit/test_parser_basic_expr_forms.h`; the root header is now `675` lines.
 - ✓ Refactor `tests/unit/test_semantics_imports.h` by extracting std-gfx and experimental-map import coverage into `tests/unit/test_semantics_imports_gfx.h`; the root header is now `638` lines.
