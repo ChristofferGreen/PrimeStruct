@@ -1,4 +1,4 @@
-#pragma once
+#include "test_parser_basic_helpers.h"
 
 TEST_CASE("parses if with block arguments") {
   const std::string source = R"(

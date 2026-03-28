@@ -518,7 +518,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   add_executable(PrimeStruct_parser_tests
     tests/unit/test_main.cpp
-    tests/unit/test_parser_basic.cpp
+    tests/unit/test_parser_basic_definitions.cpp
+    tests/unit/test_parser_basic_block_control_flow.cpp
+    tests/unit/test_parser_basic_control_flow.cpp
+    tests/unit/test_parser_basic_literals.cpp
+    tests/unit/test_parser_basic_parser_helpers.cpp
+    tests/unit/test_parser_basic_sugar.cpp
     tests/unit/test_parser_errors.cpp
     tests/unit/test_parser_errors_more_identifiers.cpp
     tests/unit/test_parser_errors_more_punctuation.cpp

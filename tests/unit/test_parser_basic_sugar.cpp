@@ -1,5 +1,3 @@
-#pragma once
-
 #include "test_parser_basic_helpers.h"
 
 #include "primec/AstPrinter.h"

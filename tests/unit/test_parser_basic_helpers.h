@@ -6,7 +6,7 @@
 #include "third_party/doctest.h"
 
 namespace {
-primec::Program parseProgram(const std::string &source) {
+[[maybe_unused]] primec::Program parseProgram(const std::string &source) {
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
