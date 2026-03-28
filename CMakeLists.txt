@@ -531,6 +531,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_native_backend_argv.cpp
     tests/unit/test_compile_run_native_backend_core.cpp
     tests/unit/test_compile_run_native_backend_collections.cpp
+    tests/unit/test_compile_run_native_backend_control.cpp
     tests/unit/test_compile_run_native_backend_imports.cpp
     tests/unit/test_compile_run_native_backend_maybe.cpp
     tests/unit/test_compile_run_native_backend_pointers.cpp
