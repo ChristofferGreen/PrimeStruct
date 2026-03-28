@@ -1,0 +1,551 @@
+TEST_CASE("emitter expr control if branch emit step composes value and handlers") {
+  primec::Expr nonEnvelope;
+  nonEnvelope.kind = primec::Expr::Kind::Name;
+  nonEnvelope.name = "direct";
+
+  std::unordered_map<std::string, primec::Emitter::BindingInfo> branchTypes;
+  std::unordered_map<std::string, primec::Emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+
+  int directEmitCalls = 0;
+  const auto directResult = primec::emitter::runEmitterExprControlIfBranchEmitStep(
+      nonEnvelope,
+      branchTypes,
+      returnKinds,
+      false,
+      importAliases,
+      structTypeMap,
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return primec::Emitter::BindingInfo{};
+      },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &, const auto &, const auto &, bool) {
+        CHECK_FALSE(true);
+        return primec::Emitter::ReturnKind::Unknown;
+      },
+      [&](primec::Emitter::ReturnKind) {
+        CHECK_FALSE(true);
+        return std::string{};
+      },
+      [&](const primec::Emitter::BindingInfo &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &candidate) {
+        ++directEmitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        CHECK(candidate.name == "direct");
+        return std::string("emit_direct");
+      });
+  CHECK(directResult.handled);
+  CHECK(directResult.emittedExpr == "emit_direct");
+  CHECK(directEmitCalls == 1);
+
+  primec::Expr returnArg;
+  returnArg.kind = primec::Expr::Kind::Name;
+  returnArg.name = "value";
+
+  primec::Expr returnStmt;
+  returnStmt.kind = primec::Expr::Kind::Call;
+  returnStmt.name = "return";
+  returnStmt.args = {returnArg};
+
+  primec::Expr envelope;
+  envelope.kind = primec::Expr::Kind::Call;
+  envelope.bodyArguments = {returnStmt};
+
+  int returnValueEmitCalls = 0;
+  const auto wrapped = primec::emitter::runEmitterExprControlIfBranchEmitStep(
+      envelope,
+      branchTypes,
+      returnKinds,
+      false,
+      importAliases,
+      structTypeMap,
+      [&](const primec::Expr &) { return true; },
+      [&](const primec::Expr &candidate) {
+        return candidate.kind == primec::Expr::Kind::Call && candidate.name == "return";
+      },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return primec::Emitter::BindingInfo{};
+      },
+      [&](const primec::Expr &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &, const auto &, const auto &, bool) {
+        CHECK_FALSE(true);
+        return primec::Emitter::ReturnKind::Unknown;
+      },
+      [&](primec::Emitter::ReturnKind) {
+        CHECK_FALSE(true);
+        return std::string{};
+      },
+      [&](const primec::Emitter::BindingInfo &) {
+        CHECK_FALSE(true);
+        return false;
+      },
+      [&](const primec::Expr &candidate) {
+        ++returnValueEmitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        CHECK(candidate.name == "value");
+        return std::string("emit_value");
+      });
+  CHECK(wrapped.handled);
+  CHECK(wrapped.emittedExpr == "([&]() { return emit_value; }())");
+  CHECK(returnValueEmitCalls == 1);
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlIfBranchEmitStep(
+      nonEnvelope,
+      branchTypes,
+      returnKinds,
+      false,
+      importAliases,
+      structTypeMap,
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &) { return primec::Emitter::BindingInfo{}; },
+      [&](const primec::Expr &) { return false; },
+      [&](const primec::Expr &, const auto &, const auto &, bool) {
+        return primec::Emitter::ReturnKind::Unknown;
+      },
+      [&](primec::Emitter::ReturnKind) { return std::string{}; },
+      [&](const primec::Emitter::BindingInfo &) { return false; },
+      {});
+  CHECK_FALSE(missingEmit.handled);
+  CHECK(missingEmit.emittedExpr.empty());
+}
+
+TEST_CASE("emitter expr control if branch body statement step dispatches statements") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Name;
+  stmt.name = "value";
+
+  int emitCalls = 0;
+  const auto emitted = primec::emitter::runEmitterExprControlIfBranchBodyStatementStep(
+      stmt,
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        CHECK(candidate.name == "value");
+        return std::string("emit_value");
+      });
+  CHECK(emitted.handled);
+  CHECK(emitted.emitted.handled);
+  CHECK(emitCalls == 1);
+  CHECK(emitted.emitted.emittedStatement == "(void)emit_value; ");
+  CHECK_FALSE(emitted.emitted.shouldBreak);
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlIfBranchBodyStatementStep(
+      stmt,
+      {});
+  CHECK_FALSE(missingEmit.handled);
+  CHECK_FALSE(missingEmit.emitted.handled);
+  CHECK(missingEmit.emitted.emittedStatement.empty());
+  CHECK_FALSE(missingEmit.emitted.shouldBreak);
+}
+
+TEST_CASE("emitter expr control if-block statement step emits void statements") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Name;
+  stmt.name = "value";
+
+  int emitCalls = 0;
+  const auto emitted = primec::emitter::runEmitterExprControlIfBlockStatementStep(
+      stmt,
+      [&](const primec::Expr &candidate) {
+        ++emitCalls;
+        CHECK(candidate.kind == primec::Expr::Kind::Name);
+        CHECK(candidate.name == "value");
+        return std::string("emit_value");
+      });
+  CHECK(emitted.handled);
+  CHECK(emitCalls == 1);
+  CHECK(emitted.emittedStatement == "(void)emit_value; ");
+
+  const auto missingEmit = primec::emitter::runEmitterExprControlIfBlockStatementStep(
+      stmt,
+      {});
+  CHECK_FALSE(missingEmit.handled);
+  CHECK(missingEmit.emittedStatement.empty());
+}
+
+TEST_CASE("emitter expr control if ternary step emits conditional expression") {
+  int conditionCalls = 0;
+  int thenCalls = 0;
+  int elseCalls = 0;
+  const auto emitted = primec::emitter::runEmitterExprControlIfTernaryStep(
+      [&]() {
+        ++conditionCalls;
+        return std::string("cond_expr");
+      },
+      [&]() {
+        ++thenCalls;
+        return std::string("then_expr");
+      },
+      [&]() {
+        ++elseCalls;
+        return std::string("else_expr");
+      });
+  CHECK(emitted.handled);
+  CHECK(conditionCalls == 1);
+  CHECK(thenCalls == 1);
+  CHECK(elseCalls == 1);
+  CHECK(emitted.emittedExpr == "(cond_expr ? then_expr : else_expr)");
+
+  const auto missingCondition =
+      primec::emitter::runEmitterExprControlIfTernaryStep({}, [] { return std::string("then"); }, [] {
+        return std::string("else");
+      });
+  CHECK_FALSE(missingCondition.handled);
+  CHECK(missingCondition.emittedExpr.empty());
+
+  const auto missingThen =
+      primec::emitter::runEmitterExprControlIfTernaryStep([] { return std::string("cond"); }, {}, [] {
+        return std::string("else");
+      });
+  CHECK_FALSE(missingThen.handled);
+  CHECK(missingThen.emittedExpr.empty());
+
+  const auto missingElse =
+      primec::emitter::runEmitterExprControlIfTernaryStep([] { return std::string("cond"); }, [] {
+        return std::string("then");
+      }, {});
+  CHECK_FALSE(missingElse.handled);
+  CHECK(missingElse.emittedExpr.empty());
+}
+
+TEST_CASE("emitter expr control if ternary fallback step emits conditional expression") {
+  int conditionCalls = 0;
+  int thenCalls = 0;
+  int elseCalls = 0;
+  const auto emitted = primec::emitter::runEmitterExprControlIfTernaryFallbackStep(
+      [&]() {
+        ++conditionCalls;
+        return std::string("cond_expr");
+      },
+      [&]() {
+        ++thenCalls;
+        return std::string("then_expr");
+      },
+      [&]() {
+        ++elseCalls;
+        return std::string("else_expr");
+      });
+  CHECK(emitted.handled);
+  CHECK(conditionCalls == 1);
+  CHECK(thenCalls == 1);
+  CHECK(elseCalls == 1);
+  CHECK(emitted.emittedExpr == "(cond_expr ? then_expr : else_expr)");
+
+  const auto missingCondition =
+      primec::emitter::runEmitterExprControlIfTernaryFallbackStep({}, [] { return std::string("then"); }, [] {
+        return std::string("else");
+      });
+  CHECK_FALSE(missingCondition.handled);
+  CHECK(missingCondition.emittedExpr.empty());
+
+  const auto missingThen =
+      primec::emitter::runEmitterExprControlIfTernaryFallbackStep([] { return std::string("cond"); }, {}, [] {
+        return std::string("else");
+      });
+  CHECK_FALSE(missingThen.handled);
+  CHECK(missingThen.emittedExpr.empty());
+
+  const auto missingElse =
+      primec::emitter::runEmitterExprControlIfTernaryFallbackStep([] { return std::string("cond"); }, [] {
+        return std::string("then");
+      }, {});
+  CHECK_FALSE(missingElse.handled);
+  CHECK(missingElse.emittedExpr.empty());
+}
+
+TEST_CASE("semantics validator expr capture split step tokenizes captures") {
+  CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep("").empty());
+  CHECK(primec::semantics::runSemanticsValidatorExprCaptureSplitStep(" \t \n").empty());
+
+  const auto single =
+      primec::semantics::runSemanticsValidatorExprCaptureSplitStep("value");
+  REQUIRE(single.size() == 1);
+  CHECK(single[0] == "value");
+
+  const auto pair =
+      primec::semantics::runSemanticsValidatorExprCaptureSplitStep("ref   item");
+  REQUIRE(pair.size() == 2);
+  CHECK(pair[0] == "ref");
+  CHECK(pair[1] == "item");
+
+  const auto mixed =
+      primec::semantics::runSemanticsValidatorExprCaptureSplitStep("  =   ref\tname  ");
+  REQUIRE(mixed.size() == 3);
+  CHECK(mixed[0] == "=");
+  CHECK(mixed[1] == "ref");
+  CHECK(mixed[2] == "name");
+}
+
+TEST_CASE("semantics validator statement loop-count step resolves iteration bounds") {
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "count";
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(nameExpr, false).has_value());
+
+  primec::Expr boolTrue;
+  boolTrue.kind = primec::Expr::Kind::BoolLiteral;
+  boolTrue.boolValue = true;
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(boolTrue, false).has_value());
+  const auto boolTrueKnown = primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(boolTrue, true);
+  REQUIRE(boolTrueKnown.has_value());
+  CHECK(*boolTrueKnown == 1u);
+
+  primec::Expr boolFalse;
+  boolFalse.kind = primec::Expr::Kind::BoolLiteral;
+  boolFalse.boolValue = false;
+  const auto boolFalseKnown = primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(boolFalse, true);
+  REQUIRE(boolFalseKnown.has_value());
+  CHECK(*boolFalseKnown == 0u);
+
+  primec::Expr unsignedLiteral;
+  unsignedLiteral.kind = primec::Expr::Kind::Literal;
+  unsignedLiteral.isUnsigned = true;
+  unsignedLiteral.literalValue = 7;
+  const auto unsignedKnown =
+      primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(unsignedLiteral, false);
+  REQUIRE(unsignedKnown.has_value());
+  CHECK(*unsignedKnown == 7u);
+
+  primec::Expr negativeLiteral;
+  negativeLiteral.kind = primec::Expr::Kind::Literal;
+  negativeLiteral.isUnsigned = false;
+  negativeLiteral.intWidth = 32;
+  negativeLiteral.literalValue = static_cast<uint64_t>(static_cast<int32_t>(-1));
+  CHECK(primec::semantics::runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(negativeLiteral));
+  const auto negativeKnown =
+      primec::semantics::runSemanticsValidatorStatementKnownIterationCountStep(negativeLiteral, false);
+  REQUIRE(negativeKnown.has_value());
+  CHECK(*negativeKnown == 0u);
+
+  primec::Expr positiveLiteral = negativeLiteral;
+  positiveLiteral.literalValue = 1;
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(positiveLiteral));
+
+  primec::Expr unsignedLiteralForNegative = unsignedLiteral;
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(unsignedLiteralForNegative));
+
+  primec::Expr oneLiteral;
+  oneLiteral.kind = primec::Expr::Kind::Literal;
+  oneLiteral.isUnsigned = false;
+  oneLiteral.intWidth = 32;
+  oneLiteral.literalValue = 1;
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(oneLiteral, false));
+
+  primec::Expr twoLiteral = oneLiteral;
+  twoLiteral.literalValue = 2;
+  CHECK(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(twoLiteral, false));
+
+  CHECK(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(nameExpr, false));
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(boolTrue, true));
+  CHECK_FALSE(primec::semantics::runSemanticsValidatorStatementCanIterateMoreThanOnceStep(boolFalse, true));
+}
+
+TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path lowererPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLower.cpp";
+  REQUIRE(std::filesystem::exists(lowererPath));
+  const std::string lowererSource = readText(lowererPath);
+
+  const std::vector<std::string> stageIncludes = {
+      "#include \"IrLowererLowerSetupEntryEffects.h\"",
+      "#include \"IrLowererLowerSetupImportsStructs.h\"",
+      "#include \"IrLowererLowerSetupLocals.h\"",
+      "#include \"IrLowererLowerSetupInference.h\"",
+      "#include \"IrLowererLowerReturnAndCalls.h\"",
+      "#include \"IrLowererLowerOperators.h\"",
+      "#include \"IrLowererLowerStatementsExpr.h\"",
+      "#include \"IrLowererLowerStatementsBindings.h\"",
+      "#include \"IrLowererLowerStatementsLoops.h\"",
+      "#include \"IrLowererLowerStatementsCalls.h\"",
+  };
+
+  size_t cursor = 0;
+  for (const auto &stageInclude : stageIncludes) {
+    const size_t pos = lowererSource.find(stageInclude);
+    CAPTURE(stageInclude);
+    CHECK(pos != std::string::npos);
+    CHECK(pos >= cursor);
+    if (pos != std::string::npos) {
+      cursor = pos;
+    }
+  }
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCallsStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryExecutionStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryStatementStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsFunctionTableStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsSourceMapStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallActiveContextStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallCleanupStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallContextSetupStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallGpuLocalsStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallReturnValueStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallStatementStep.h\"") != std::string::npos);
+
+  const std::filesystem::path setupHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
+  REQUIRE(std::filesystem::exists(setupHeaderPath));
+  const std::string setupHeaderSource = readText(setupHeaderPath);
+  CHECK(setupHeaderSource.find("runLowerEntrySetup(") != std::string::npos);
+
+  const std::filesystem::path importsHeaderPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerSetupImportsStructs.h";
+  REQUIRE(std::filesystem::exists(importsHeaderPath));
+  const std::string importsHeaderSource = readText(importsHeaderPath);
+  CHECK(importsHeaderSource.find("runLowerImportsStructsSetup(") != std::string::npos);
+
+  const std::filesystem::path localsHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerSetupLocals.h";
+  REQUIRE(std::filesystem::exists(localsHeaderPath));
+  const std::string localsHeaderSource = readText(localsHeaderPath);
+  CHECK(localsHeaderSource.find("runLowerLocalsSetup(") != std::string::npos);
+
+  const std::filesystem::path inferenceHeaderPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
+  REQUIRE(std::filesystem::exists(inferenceHeaderPath));
+  const std::string inferenceHeaderSource = readText(inferenceHeaderPath);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceSetup(") != std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceSetupBootstrap(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceArrayKindSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindBaseSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallBaseSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallReturnSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallFallbackSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallOperatorFallbackSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallControlFlowFallbackSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallPointerFallbackSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindDispatchSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceReturnInfoSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceGetReturnInfoSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceGetReturnInfoCallbackSetup(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("runLowerInferenceGetReturnInfoStep(") == std::string::npos);
+  CHECK(inferenceHeaderSource.find("inferCallExprControlFlowFallbackKind(expr, localsIn, error, controlFlowKind)") ==
+        std::string::npos);
+  CHECK(inferenceHeaderSource.find("returnInfoCache.find(path)") == std::string::npos);
+
+  const std::filesystem::path returnInfoHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerReturnInfo.h";
+  REQUIRE(std::filesystem::exists(returnInfoHeaderPath));
+  const std::string returnInfoHeaderSource = readText(returnInfoHeaderPath);
+  CHECK(returnInfoHeaderSource.find("analyzeDeclaredReturnTransforms(") == std::string::npos);
+  CHECK(returnInfoHeaderSource.find("inferDefinitionReturnType(") == std::string::npos);
+
+  const std::filesystem::path emitExprHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
+  REQUIRE(std::filesystem::exists(emitExprHeaderPath));
+  const std::string emitExprHeaderSource = readText(emitExprHeaderPath);
+  CHECK(emitExprHeaderSource.find("runLowerReturnCallsSetup(") != std::string::npos);
+  CHECK(emitExprHeaderSource.find("runLowerExprEmitSetup(") != std::string::npos);
+  CHECK(emitExprHeaderSource.find("runLowerExprEmitMovePassthroughStep(") != std::string::npos);
+  CHECK(emitExprHeaderSource.find("runLowerExprEmitUploadReadbackPassthroughStep(") != std::string::npos);
+
+  const std::filesystem::path statementsCallsHeaderPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCalls.h";
+  REQUIRE(std::filesystem::exists(statementsCallsHeaderPath));
+  const std::string statementsCallsHeaderSource = readText(statementsCallsHeaderPath);
+  CHECK(statementsCallsHeaderSource.find("runLowerStatementsCallsStep(") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("runLowerStatementsEntryStatementStep(") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("runLowerStatementsEntryExecutionStep(") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("runLowerStatementsFunctionTableStep(") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("runLowerStatementsSourceMapStep(") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("const size_t startInstructionIndex = function.instructions.size();") ==
+        std::string::npos);
+  CHECK(statementsCallsHeaderSource.find(
+            "appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());") ==
+        std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("tryEmitBufferStoreStatement(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("tryEmitDispatchStatement(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("tryEmitDirectCallStatement(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("emitAssignOrExprStatementWithPop(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("emitEntryCallableExecutionWithCleanup(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("finalizeEntryFunctionTableAndLowerCallables(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("instruction.debugId = static_cast<uint32_t>(nextInstructionDebugId)") ==
+        std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("out.instructionSourceMap.push_back(") == std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("out.stringTable = std::move(stringTable);") == std::string::npos);
+
+  const std::filesystem::path inlineCallsHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
+  REQUIRE(std::filesystem::exists(inlineCallsHeaderPath));
+  const std::string inlineCallsHeaderSource = readText(inlineCallsHeaderPath);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallActiveContextStep(") != std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallCleanupStep(") != std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallContextSetupStep(") != std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallGpuLocalsStep(") != std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallReturnValueStep(") != std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("runLowerInlineCallStatementStep(") != std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("const size_t startInstructionIndex = function.instructions.size();") ==
+        std::string::npos);
+  CHECK(inlineCallsHeaderSource.find(
+            "appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());") ==
+        std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("auto inheritGpuLocal =") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("inheritGpuLocal(kGpuGlobalIdXName);") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("size_t cleanupIndex = function.instructions.size();") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("function.instructions[jumpIndex].imm = static_cast<int32_t>(cleanupIndex);") ==
+        std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("for (size_t jumpIndex : context.returnJumps)") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find(
+            "function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(context.returnLocal)});") ==
+        std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("if (structDef && requireValue && context.returnsVoid)") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("context.returnsVoid = returnInfo.returnsVoid;") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("context.returnLocal = allocTempLocal();") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("IrOpcode zeroOp = IrOpcode::PushI32;") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find(
+            "function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});") ==
+        std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("if (!structDef) {") == std::string::npos);
+  CHECK(inlineCallsHeaderSource.find("for (const auto &stmt : callee.statements)") == std::string::npos);
+}
+
+TEST_CASE("emitter emit setup source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path emitterSetupHeaderPath = repoRoot / "src" / "emitter" / "EmitterEmitSetup.h";
+  REQUIRE(std::filesystem::exists(emitterSetupHeaderPath));
+  const std::string emitterSetupHeaderSource = readText(emitterSetupHeaderPath);
+  CHECK(emitterSetupHeaderSource.find("runEmitterEmitSetupMathImport(program)") != std::string::npos);
+  CHECK(emitterSetupHeaderSource.find("runEmitterEmitSetupLifecycleHelperMatchStep(def.fullPath)") !=
+        std::string::npos);
+
+  const std::filesystem::path emitterEmitPath = repoRoot / "src" / "emitter" / "EmitterEmit.cpp";
+  REQUIRE(std::filesystem::exists(emitterEmitPath));
+  const std::string emitterEmitSource = readText(emitterEmitPath);
+  CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupMathImport.h\"") != std::string::npos);
+  CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupLifecycleHelperStep.h\"") != std::string::npos);
+}
+
