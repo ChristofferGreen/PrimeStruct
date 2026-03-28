@@ -215,7 +215,8 @@ Test TU sizing note: prefer many small/medium `.cpp` files over recreating giant
   - ✓ All remaining real compile-run wrapper owners have been migrated to standalone `.cpp` sources; only legacy cleanup slices remain for `tests/unit/test_compile_run.cpp`.
 - ○ Add a final cleanup pass that removes obsolete include-wrapper translation units, collapses dead helper headers, and updates CMake targets so each test suite is compiled from explicit `.cpp` sources instead of transitive header inclusion.
   - ✓ Move the chunked `emitters` umbrella into `tests/unit/test_compile_run_emitters.cpp`, remove the obsolete `tests/unit/test_compile_run_emitters.h` wrapper, and retarget the managed doctest shard metadata to the standalone source.
-  - ○ Move the remaining small `smoke`, `vm_math`, and `vm_bounds` include-owned suites into explicit standalone `.cpp` sources so `tests/unit/test_compile_run.cpp` no longer owns any transitive test bodies.
+  - ✓ Move `vm_math` into `tests/unit/test_compile_run_vm_math.cpp`, remove its include-body usage from `tests/unit/test_compile_run.cpp`, and retarget the managed VM collection shard metadata to the standalone source.
+  - ○ Move the remaining small `smoke` and `vm_bounds` include-owned suites into explicit standalone `.cpp` sources so `tests/unit/test_compile_run.cpp` no longer owns any transitive test bodies.
 
 
 **Architecture / Type-resolution graph**

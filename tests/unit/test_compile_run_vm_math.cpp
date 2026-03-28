@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
 static bool runVmCommandOrExpectUnsupported(const std::string &runCmd,
