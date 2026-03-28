@@ -76,6 +76,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateTransformsEnums.cpp
   src/semantics/SemanticsValidateTransforms.cpp
   src/semantics/SemanticsValidator.cpp
+  src/semantics/SemanticsValidatorSnapshots.cpp
+  src/semantics/SemanticsValidatorSnapshotLocals.cpp
   src/semantics/SemanticsValidatorBuild.cpp
   src/semantics/SemanticsValidatorBuildTransforms.cpp
   src/semantics/SemanticsValidatorBuildImports.cpp
