@@ -517,6 +517,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_entry_resolution.cpp
     tests/unit/test_semantics_entry_transforms.cpp
     tests/unit/test_semantics_imports.cpp
+    tests/unit/test_semantics_maybe.cpp
     tests/unit/test_semantics_result_helpers.cpp
   )
   target_include_directories(PrimeStruct_semantics_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
