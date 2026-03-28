@@ -513,6 +513,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics.cpp
     tests/unit/test_semantics_entry_entry.cpp
     tests/unit/test_semantics_enum.cpp
+    tests/unit/test_semantics_traits.cpp
     tests/unit/test_semantics_entry_parameters.cpp
     tests/unit/test_semantics_entry_return_inference.cpp
     tests/unit/test_semantics_entry_resolution.cpp
