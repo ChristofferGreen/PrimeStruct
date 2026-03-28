@@ -23,7 +23,6 @@
 #include "primec/testing/IrLowererHelpers.h"
 
 #include "test_ir_pipeline_backends_registry.h"
-#include "test_ir_pipeline_backends_graph_contexts.h"
 #include "test_ir_pipeline_backends_graph_pilot_a.h"
 #include "test_ir_pipeline_backends_graph_pilot_b.h"
 #include "test_ir_pipeline_backends_graph_pilot_c.h"
