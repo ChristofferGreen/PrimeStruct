@@ -1,5 +1,4 @@
-#pragma once
-
+#include "test_compile_run_helpers.h"
 #include "test_compile_run_math_conformance_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.math_conformance");

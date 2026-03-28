@@ -287,9 +287,6 @@ void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
   CHECK(readFile(outPath) == expectedStdout);
 }
 
-bool hasPython3() {
-  return runCommand("python3 --version > /dev/null 2>&1") == 0;
-}
 } // namespace
 
 #include "test_compile_run_smoke.h"
@@ -307,6 +304,4 @@ bool hasPython3() {
 #include "test_compile_run_native_backend_math_numeric.h"
 #include "test_compile_run_native_backend_collections.h"
 #include "test_compile_run_native_backend_imports.h"
-#include "test_compile_run_benchmark_harness.h"
 #include "test_compile_run_bindings_and_examples.h"
-#include "test_compile_run_math_conformance.h"

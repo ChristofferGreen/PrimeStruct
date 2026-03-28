@@ -524,6 +524,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_wasm.cpp
     tests/unit/test_ir_pipeline_wasm_wasi.cpp
     tests/unit/test_compile_run.cpp
+    tests/unit/test_compile_run_benchmark_harness.cpp
     tests/unit/test_compile_run_imports.cpp
     tests/unit/test_compile_run_native_backend_core.cpp
     tests/unit/test_compile_run_native_backend_maybe.cpp
@@ -531,6 +532,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_text_filters.cpp
     tests/unit/test_compile_run_vm_core.cpp
     tests/unit/test_compile_run_vm_collections.cpp
+    tests/unit/test_compile_run_math_conformance.cpp
     tests/unit/test_compile_run_vm_maybe.cpp
     tests/unit/test_compile_run_vm_outputs.cpp
     tests/unit/test_compile_run_vm_uninitialized.cpp
@@ -1125,100 +1127,100 @@ if(PRIMESTRUCT_BUILD_TESTS)
     elseif(suite STREQUAL "primestruct.compile.run.math_conformance")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "harness_and_docs"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 1 LAST 4)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 1 LAST 4)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "scalar_basics"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 5 LAST 8)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 5 LAST 8)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "trig_quadrant_axes"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 9 LAST 9)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 9 LAST 9)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "trig_quadrant_symmetries"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 10 LAST 10)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 10 LAST 10)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "trig_quadrant_range_reduction"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 11 LAST 11)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 11 LAST 11)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float_parser_helpers"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 12 LAST 13)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 12 LAST 13)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "trig_basics"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 14 LAST 14)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 14 LAST 14)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "inverse_trig_and_atan2"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 15 LAST 15)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 15 LAST 15)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "hyperbolic"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 16 LAST 16)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 16 LAST 16)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "inverse_hyperbolic"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 17 LAST 17)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 17 LAST 17)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "exp_and_log"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 18 LAST 18)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 18 LAST 18)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "exp_log_domains"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 19 LAST 19)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 19 LAST 19)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float64_basics"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 20 LAST 20)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 20 LAST 20)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float64_inverse_trig_logs"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 21 LAST 21)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 21 LAST 21)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float64_hyperbolic"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 22 LAST 22)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 22 LAST 22)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float64_grids"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 23 LAST 23)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 23 LAST 23)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float64_rounding"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 24 LAST 24)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 24 LAST 24)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "roots_rounding_and_misc"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 25 LAST 27)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 25 LAST 27)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "stress_grid"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 28 LAST 28)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 28 LAST 28)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float_baseline_trigonometric"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 29 LAST 29)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 29 LAST 29)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float_baseline_transcendental"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 30 LAST 30)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 30 LAST 30)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float_baseline_composition"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 31 LAST 31)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 31 LAST 31)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float_grid_sin"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 32 LAST 32)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 32 LAST 32)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float_grid_cos"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 33 LAST 33)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 33 LAST 33)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float_grid_exp_log"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 34 LAST 34)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 34 LAST 34)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "float_grid_hypot"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 35 LAST 35)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 35 LAST 35)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "native_approximation_limits"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 36 LAST 36)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 36 LAST 36)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "heavy_trig_workload"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 37 LAST 37)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 37 LAST 37)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "heavy_exp_log_workload"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 38 LAST 38)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 38 LAST 38)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "array_dense_and_deterministic"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 39 LAST 41)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 39 LAST 41)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "deterministic_and_conversions"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 42 LAST 44)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 42 LAST 44)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "policy_and_edge_cases"
-                                 SOURCE_FILE "*test_compile_run_math_conformance.h" FIRST 45 LAST 49)
+                                 SOURCE_FILE "*test_compile_run_math_conformance.cpp" FIRST 45 LAST 49)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.collections")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_aliases_and_wrappers"
                                  SOURCE_FILE "*test_compile_run_native_backend_collections.h"

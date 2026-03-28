@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.benchmark_harness");
 
 TEST_CASE("benchmark baseline artifact includes native allocator coverage") {
