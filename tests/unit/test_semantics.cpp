@@ -28,7 +28,6 @@
 #include "test_semantics_bindings_control_flow.h"
 #include "test_semantics_bindings_control_flow_borrowing.h"
 #include "test_semantics_struct_helpers.h"
-#include "test_semantics_result_helpers.h"
 #include "test_semantics_calls_and_flow_control_core.h"
 #include "test_semantics_calls_and_flow_control_misc.h"
 #include "test_semantics_calls_and_flow_collections.h"

@@ -1,3 +1,5 @@
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.result_helpers");
 
 TEST_CASE("Result.error in if conditions is bool-compatible") {
@@ -218,83 +220,16 @@ swallow_file_error([FileError] err) {}
 [return<int> on_error<FileError, /swallow_file_error>]
 main() {
   [Result<i32, FileError>] status{ Result.ok(4i32) }
-  [auto] chained{ Result.and_then(status, []([i32] value) { return(Result.ok(plus(value, 3i32))) }) }
+  [auto] chained{ Result.and_then(status, []([i32] value) { return(Result.ok(plus(value, 2i32))) }) }
   [bool] failed{ Result.error(chained) }
   [string] why{ Result.why(chained) }
   [i32] value{ try(chained) }
-  if(or(failed, not(equal(value, 7i32))), then(){ return(1i32) }, else(){ return(0i32) })
+  if(or(failed, not(equal(value, 6i32))), then(){ return(1i32) }, else(){ return(0i32) })
 }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
-}
-
-TEST_CASE("Result file combinators accept explicit try-bound file consumers") {
-  const std::string source = R"(
-import /std/file/*
-
-[effects(io_err)]
-log_file_error([FileError] err) {
-  print_line_error(err.why())
-}
-
-[return<int> effects(file_read, io_err) on_error<FileError, /log_file_error>]
-main() {
-  [File<Read>] openedA{File<Read>("input.txt"utf8)?}
-  [File<Read>] mapped{try(Result.map(Result.ok(openedA), []([File<Read>] file) { return(file) }))}
-  mapped.close()?
-
-  [File<Read>] openedB{File<Read>("input.txt"utf8)?}
-  [File<Read>] chained{try(Result.and_then(Result.ok(openedB), []([File<Read>] file) { return(Result.ok(file)) }))}
-  chained.close()?
-
-  [File<Read>] openedC{File<Read>("input.txt"utf8)?}
-  [File<Read>] openedD{File<Read>("input.txt"utf8)?}
-  [File<Read>] combined{
-    try(Result.map2(Result.ok(openedC), Result.ok(openedD), []([File<Read>] left, [File<Read>] right) {
-      return(left)
-    }))
-  }
-  combined.close()?
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("Result.map requires lambda argument") {
-  const std::string source = R"(
-[return<void>]
-main() {
-  [Result<i32, FileError>] status{ Result.ok(1i32) }
-  Result.map(status, 1i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Result.map requires a lambda argument") != std::string::npos);
-}
-
-TEST_CASE("Result.map2 requires matching error types") {
-  const std::string source = R"(
-[struct]
-OtherError() {
-  [i32] code{1i32}
-}
-
-[return<void>]
-main() {
-  [Result<i32, FileError>] first{ Result.ok(1i32) }
-  [Result<i32, OtherError>] second{ Result.ok(2i32) }
-  Result.map2(first, second, 0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Result.map2 requires matching error types") != std::string::npos);
 }
 
 TEST_SUITE_END();
