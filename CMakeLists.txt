@@ -488,8 +488,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_backend_tests
     tests/unit/test_main.cpp
     tests/unit/test_ir_pipeline.cpp
-    tests/unit/test_ir_pipeline_serialization.cpp
     tests/unit/test_ir_pipeline_serialization_calls.cpp
+    tests/unit/test_ir_pipeline_serialization_control_flow.cpp
     tests/unit/test_ir_pipeline_serialization_structs.cpp
     tests/unit/test_ir_pipeline_validation.cpp
     tests/unit/test_ir_pipeline_conversions.cpp
