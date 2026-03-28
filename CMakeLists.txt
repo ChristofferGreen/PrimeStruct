@@ -500,6 +500,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_conversions_variadic_file_errors.cpp
     tests/unit/test_ir_pipeline_conversions_variadic_file_handles.cpp
     tests/unit/test_ir_pipeline_conversions_variadic_borrowed_vectors.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_collection_refs.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_pointer_refs.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_field_refs_and_maps.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_pointer_maps.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_pointer_vectors.cpp
     tests/unit/test_ir_pipeline_entry_args.cpp
     tests/unit/test_ir_pipeline_gpu.cpp
     tests/unit/test_ir_pipeline_pointers.cpp

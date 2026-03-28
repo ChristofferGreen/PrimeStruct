@@ -1,4 +1,17 @@
-#pragma once
+#include <cstring>
+#include <string>
+#include <vector>
+
+#include "third_party/doctest.h"
+
+#include "primec/Ast.h"
+#include "primec/Ir.h"
+#include "primec/IrLowerer.h"
+#include "primec/IrSerializer.h"
+#include "primec/Vm.h"
+#include "test_ir_pipeline_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed count methods") {
   const std::string source = R"(
@@ -11,6 +24,8 @@ score_vectors([args<vector<i32>>] values) {
   return(plus(/std/collections/vector/count(head),
               /std/collections/vector/count(tail)))
 }
+
+TEST_SUITE_END();
 
 [return<int>]
 forward([args<vector<i32>>] values) {
@@ -577,5 +592,4 @@ main() {
   CHECK(error.empty());
   CHECK(result == 65);
 }
-
 
