@@ -180,6 +180,7 @@ bool validateProgramCollectingDiagnostics(const std::string &source,
 #include "test_semantics_enum.h"
 #include "test_semantics_capabilities.h"
 #include "test_semantics_bindings_core.h"
+#include "test_semantics_bindings_core_transforms.h"
 #include "test_semantics_bindings_struct_defaults.h"
 #include "test_semantics_bindings_struct_defaults_maps.h"
 #include "test_semantics_bindings_pointers.h"
