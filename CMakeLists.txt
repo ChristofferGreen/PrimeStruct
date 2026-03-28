@@ -538,6 +538,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_text_filters.cpp
     tests/unit/test_compile_run_vm_core.cpp
     tests/unit/test_compile_run_vm_collections.cpp
+    tests/unit/test_compile_run_vm_gpu.cpp
     tests/unit/test_compile_run_vm_maps.cpp
     tests/unit/test_compile_run_math_conformance.cpp
     tests/unit/test_compile_run_vm_maybe.cpp
