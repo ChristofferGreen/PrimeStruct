@@ -1,4 +1,104 @@
+        auto rewriteCanonicalMapHelperForExperimentalReceiverExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
+            return false;
+          }
+
+          std::string helperName;
+          if (getBuiltinArrayAccessName(callExpr, helperName) && callExpr.args.size() == 2) {
+            // Use the normalized builtin access name below.
+          } else if ((callExpr.name == "/map/count" || callExpr.name == "/std/collections/map/count" ||
+                      callExpr.name == "count") &&
+                     callExpr.args.size() == 1) {
+            helperName = "count";
+          } else if ((callExpr.name == "/map/contains" || callExpr.name == "/std/collections/map/contains" ||
+                      callExpr.name == "contains") &&
+                     callExpr.args.size() == 2) {
+            helperName = "contains";
+          } else if ((callExpr.name == "/map/tryAt" || callExpr.name == "/std/collections/map/tryAt" ||
+                      callExpr.name == "tryAt") &&
+                     callExpr.args.size() == 2) {
+            helperName = "tryAt";
+          } else {
+            return false;
+          }
+
+          auto inferExperimentalMapStructPath = [&](const Expr &receiverExpr) {
+            if (receiverExpr.kind == Expr::Kind::Name) {
+              auto it = localsIn.find(receiverExpr.name);
+              if (it != localsIn.end() &&
+                  it->second.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+                return it->second.structTypeName;
+              }
+            }
+            const std::string inferredStruct = inferStructExprPath(receiverExpr, localsIn);
+            if (inferredStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+              return inferredStruct;
+            }
+            return std::string{};
+          };
+          auto buildExperimentalMapHelperPath = [&](const std::string &structPath) {
+            if (structPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
+              return std::string{};
+            }
+            const size_t suffixStart = structPath.find("__");
+            if (suffixStart == std::string::npos) {
+              return std::string{};
+            }
+            std::string helperStem;
+            if (helperName == "count") {
+              helperStem = "mapCount";
+            } else if (helperName == "contains") {
+              helperStem = "mapContains";
+            } else if (helperName == "tryAt") {
+              helperStem = "mapTryAt";
+            } else if (helperName == "at") {
+              helperStem = "mapAt";
+            } else if (helperName == "at_unsafe") {
+              helperStem = "mapAtUnsafe";
+            } else {
+              return std::string{};
+            }
+            return "/std/collections/experimental_map/" + helperStem + structPath.substr(suffixStart);
+          };
+
+          const std::string receiverStructPath = inferExperimentalMapStructPath(callExpr.args.front());
+          const std::string directExperimentalHelperPath = buildExperimentalMapHelperPath(receiverStructPath);
+          if (!directExperimentalHelperPath.empty() && defMap.find(directExperimentalHelperPath) != defMap.end()) {
+            rewrittenExpr = callExpr;
+            rewrittenExpr.name = directExperimentalHelperPath;
+            rewrittenExpr.namespacePrefix.clear();
+            rewrittenExpr.isMethodCall = false;
+            rewrittenExpr.templateArgs.clear();
+            return true;
+          }
+
+          Expr methodExpr = callExpr;
+          methodExpr.isMethodCall = true;
+          methodExpr.name = helperName;
+          methodExpr.namespacePrefix.clear();
+          const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
+          if (callee == nullptr) {
+            return false;
+          }
+          const bool isExperimentalMapHelper =
+              callee->fullPath.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+              callee->fullPath.rfind("/std/collections/experimental_map/map", 0) == 0;
+          if (!isExperimentalMapHelper) {
+            return false;
+          }
+
+          rewrittenExpr = callExpr;
+          rewrittenExpr.name = callee->fullPath;
+          rewrittenExpr.namespacePrefix.clear();
+          rewrittenExpr.isMethodCall = false;
+          rewrittenExpr.templateArgs.clear();
+          return true;
+        };
         Expr inlineDispatchExpr = expr;
+        Expr rewrittenCanonicalExperimentalMapHelperExpr;
+        if (rewriteCanonicalMapHelperForExperimentalReceiverExpr(expr, rewrittenCanonicalExperimentalMapHelperExpr)) {
+          inlineDispatchExpr = rewrittenCanonicalExperimentalMapHelperExpr;
+        }
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             inlineDispatchExpr,
             localsIn,
@@ -150,15 +250,54 @@
               }
               std::string collectionName;
               std::vector<std::string> collectionArgs;
-              if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
+              if (ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) &&
+                  collectionName == "map" && collectionArgs.size() == 2) {
+                targetInfoOut.isMapTarget = true;
+                targetInfoOut.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs[0]);
+                targetInfoOut.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs[1]);
+                return true;
+              }
+              auto extractParameterTypeName = [&](const Expr &paramExpr) {
+                for (const auto &transform : paramExpr.transforms) {
+                  if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+                      transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
+                      transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
+                      transform.name == "effects" || transform.name == "capabilities") {
+                    continue;
+                  }
+                  if (!transform.arguments.empty()) {
+                    continue;
+                  }
+                  std::string typeName = transform.name;
+                  if (!transform.templateArgs.empty()) {
+                    typeName += "<";
+                    for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
+                      if (index != 0) {
+                        typeName += ", ";
+                      }
+                      typeName += trimTemplateTypeText(transform.templateArgs[index]);
+                    }
+                    typeName += ">";
+                  }
+                  return typeName;
+                }
+                return std::string{};
+              };
+              if (callee->parameters.size() < 2) {
                 return false;
               }
-              if (collectionName != "map" || collectionArgs.size() != 2) {
+              const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
+              const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
+              if (keyTypeName.empty() || valueTypeName.empty()) {
                 return false;
               }
               targetInfoOut.isMapTarget = true;
-              targetInfoOut.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs[0]);
-              targetInfoOut.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs[1]);
+              targetInfoOut.mapKeyKind = ir_lowerer::valueKindFromTypeName(keyTypeName);
+              targetInfoOut.mapValueKind = ir_lowerer::valueKindFromTypeName(valueTypeName);
+              if (targetInfoOut.mapKeyKind == ir_lowerer::LocalInfo::ValueKind::Unknown ||
+                  targetInfoOut.mapValueKind == ir_lowerer::LocalInfo::ValueKind::Unknown) {
+                return false;
+              }
               return true;
             },
             [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
