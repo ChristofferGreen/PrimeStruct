@@ -1,3 +1,4 @@
+#include "test_compile_run_helpers.h"
 #include "test_compile_run_reflection_codegen_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.reflection_codegen");
