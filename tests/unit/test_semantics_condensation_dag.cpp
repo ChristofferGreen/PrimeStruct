@@ -1,3 +1,7 @@
+#include "primec/testing/SemanticsValidationHelpers.h"
+
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.condensation_dag");
 
 TEST_CASE("condensation dag preserves acyclic chain order") {
