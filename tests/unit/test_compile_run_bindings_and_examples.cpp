@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.bindings");
 
 #include "test_compile_run_bindings_basic.h"

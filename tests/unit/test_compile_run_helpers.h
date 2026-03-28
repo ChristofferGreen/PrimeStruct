@@ -93,6 +93,10 @@ inline bool hasPython3() {
   return runCommand("python3 --version > /dev/null 2>&1") == 0;
 }
 
+inline bool hasWasmtime() {
+  return runCommand("wasmtime --version > /dev/null 2>&1") == 0;
+}
+
 inline bool createZip(const std::filesystem::path &zipPath,
                       const std::filesystem::path &sourceDir) {
   const std::string command = "cd " + quoteShellArg(sourceDir.string()) +

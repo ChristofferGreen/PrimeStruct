@@ -525,6 +525,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_wasm_wasi.cpp
     tests/unit/test_compile_run.cpp
     tests/unit/test_compile_run_benchmark_harness.cpp
+    tests/unit/test_compile_run_bindings_and_examples.cpp
     tests/unit/test_compile_run_imports.cpp
     tests/unit/test_compile_run_native_backend_argv.cpp
     tests/unit/test_compile_run_native_backend_core.cpp
@@ -1290,19 +1291,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
     elseif(suite STREQUAL "primestruct.compile.run.examples")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "spinning_cube_pipeline_and_scripts"
-                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
+                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
                                  FIRST 1 LAST 23)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "spinning_cube_argument_validation"
-                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
+                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
                                  FIRST 24 LAST 47)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "native_window_launcher_and_preflight"
-                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
+                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
                                  FIRST 48 LAST 62)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "metal_pipeline_and_borrow_checker"
-                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.h"
+                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
                                  FIRST 63 LAST 68)
     else()
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900)
