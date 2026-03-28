@@ -381,10 +381,6 @@ std::vector<std::string> parseDapFrames(const std::string &raw, bool &ok) {
   return payloads;
 }
 
-bool hasZipTools() {
-  return runCommand("zip -v > /dev/null 2>&1") == 0 && runCommand("unzip -v > /dev/null 2>&1") == 0;
-}
-
 bool hasSpirvTools() {
   return runCommand("glslangValidator -v > /dev/null 2>&1") == 0 ||
          runCommand("glslc --version > /dev/null 2>&1") == 0;
@@ -418,12 +414,6 @@ void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
 bool hasPython3() {
   return runCommand("python3 --version > /dev/null 2>&1") == 0;
 }
-
-bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path &sourceDir) {
-  const std::string command = "cd " + quoteShellArg(sourceDir.string()) + " && zip -q -r " +
-                              quoteShellArg(zipPath.string()) + " .";
-  return runCommand(command) == 0;
-}
 } // namespace
 
 #include "test_compile_run_smoke.h"
@@ -451,5 +441,4 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
 #include "test_compile_run_native_backend_imports.h"
 #include "test_compile_run_benchmark_harness.h"
 #include "test_compile_run_bindings_and_examples.h"
-#include "test_compile_run_imports.h"
 #include "test_compile_run_math_conformance.h"

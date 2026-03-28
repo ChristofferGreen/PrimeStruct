@@ -81,3 +81,16 @@ inline std::string quoteShellArg(const std::string &value) {
   quoted += "'";
   return quoted;
 }
+
+inline bool hasZipTools() {
+  return runCommand("zip -v > /dev/null 2>&1") == 0 &&
+         runCommand("unzip -v > /dev/null 2>&1") == 0;
+}
+
+inline bool createZip(const std::filesystem::path &zipPath,
+                      const std::filesystem::path &sourceDir) {
+  const std::string command = "cd " + quoteShellArg(sourceDir.string()) +
+                              " && zip -q -r " + quoteShellArg(zipPath.string()) +
+                              " .";
+  return runCommand(command) == 0;
+}
