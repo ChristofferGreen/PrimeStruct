@@ -496,6 +496,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_pointers.cpp
     tests/unit/test_ir_pipeline_type_resolution_parity.cpp
     tests/unit/test_ir_pipeline_backends.cpp
+    tests/unit/test_ir_pipeline_backends_architecture.cpp
     tests/unit/test_vm_debug_session.cpp
     tests/unit/test_ir_pipeline_external_tooling.cpp
     tests/unit/test_ir_pipeline_to_cpp.cpp

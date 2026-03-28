@@ -357,3 +357,13 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
 }
 
 TEST_CASE("glsl and spirv ir backends use glsl ir validation target") {
+  primec::Options options;
+
+  const primec::IrBackend *glslBackend = primec::findIrBackend("glsl-ir");
+  REQUIRE(glslBackend != nullptr);
+  CHECK(glslBackend->validationTarget(options) == primec::IrValidationTarget::Glsl);
+
+  const primec::IrBackend *spirvBackend = primec::findIrBackend("spirv-ir");
+  REQUIRE(spirvBackend != nullptr);
+  CHECK(spirvBackend->validationTarget(options) == primec::IrValidationTarget::Glsl);
+}

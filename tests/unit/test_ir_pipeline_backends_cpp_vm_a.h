@@ -1,14 +1,3 @@
-  primec::Options options;
-
-  const primec::IrBackend *glslBackend = primec::findIrBackend("glsl-ir");
-  REQUIRE(glslBackend != nullptr);
-  CHECK(glslBackend->validationTarget(options) == primec::IrValidationTarget::Glsl);
-
-  const primec::IrBackend *spirvBackend = primec::findIrBackend("spirv-ir");
-  REQUIRE(spirvBackend != nullptr);
-  CHECK(spirvBackend->validationTarget(options) == primec::IrValidationTarget::Glsl);
-}
-
 TEST_CASE("vm ir backend executes module and returns exit code") {
   const primec::IrBackend *backend = primec::findIrBackend("vm");
   REQUIRE(backend != nullptr);

@@ -1,8 +1,5 @@
 #include <cstdint>
 #include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <iterator>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -12,6 +9,8 @@
 #include "primec/IrBackends.h"
 #include "primec/IrBackendProfiles.h"
 #include "primec/IrPreparation.h"
+
+#include "test_ir_pipeline_backends_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
 
@@ -38,25 +37,6 @@ uint64_t f64ToBits(double value) {
   uint64_t bits = 0;
   std::memcpy(&bits, &value, sizeof(bits));
   return bits;
-}
-
-std::vector<uint8_t> readBinaryFile(const std::filesystem::path &path) {
-  std::ifstream input(path, std::ios::binary);
-  return std::vector<uint8_t>(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
-}
-
-std::string readTextFile(const std::filesystem::path &path) {
-  std::ifstream input(path);
-  return std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
-}
-
-std::string readTextFiles(const std::vector<std::filesystem::path> &paths) {
-  std::string combined;
-  for (const auto &path : paths) {
-    combined += readTextFile(path);
-    combined.push_back('\n');
-  }
-  return combined;
 }
 
 } // namespace
@@ -237,4 +217,3 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   CHECK(source.find("inlineIrModuleCalls(ir, error)") == std::string::npos);
   CHECK(source.find("validateIrModule(ir, primec::IrValidationTarget::Vm, error)") == std::string::npos);
 }
-
