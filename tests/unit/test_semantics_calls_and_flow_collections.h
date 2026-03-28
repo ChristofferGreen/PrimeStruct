@@ -6318,7 +6318,6 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
-#if 0  // TODO: re-enable after experimental map wrapper routing is validated end-to-end.
 TEST_CASE("helper-wrapped map constructors accept explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
@@ -9285,7 +9284,6 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
-#endif
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*
