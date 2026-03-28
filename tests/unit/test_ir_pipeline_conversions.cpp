@@ -22,4 +22,5 @@
 #include "test_ir_pipeline_conversions_variadic_pointer_maps.h"
 #include "test_ir_pipeline_conversions_variadic_pointer_vectors.h"
 #include "test_ir_pipeline_conversions_variadic_borrowed_vectors.h"
-#include "test_ir_pipeline_conversions_method_calls_and_argv.h"
+
+TEST_SUITE_END();

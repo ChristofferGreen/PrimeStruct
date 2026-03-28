@@ -1,4 +1,17 @@
-#pragma once
+#include <cstring>
+#include <string>
+#include <vector>
+
+#include "third_party/doctest.h"
+
+#include "primec/Ast.h"
+#include "primec/Ir.h"
+#include "primec/IrLowerer.h"
+#include "primec/IrSerializer.h"
+#include "primec/Vm.h"
+#include "test_ir_pipeline_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 
 TEST_CASE("ir lowerer forwards count to method calls") {
   const std::string source = R"(
@@ -278,7 +291,6 @@ main([array<string>] args) {
   CHECK(sawPrintArgvUnsafe);
 }
 
-
 TEST_CASE("ir lowerer supports entry args print_error unsafe") {
   const std::string source = R"(
 [return<int> effects(io_err)]
@@ -311,4 +323,3 @@ main([array<string>] args) {
 }
 
 TEST_SUITE_END();
-

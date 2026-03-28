@@ -182,7 +182,8 @@ Test TU sizing note: prefer many small/medium `.cpp` files over recreating giant
       - ✓ Move the remaining `serialization.control_flow` suite into `tests/unit/test_ir_pipeline_serialization_control_flow.cpp`, removing its include-body form from the shared serialization umbrella so serialization coverage is compiled only from explicit `.cpp` sources.
     - ◐ Move the remaining `conversions` umbrella suite bodies into standalone `.cpp` files or smaller themed grouped TUs, preserving explicit suite boundaries while shrinking the umbrella source.
       - ✓ Move the numeric and `Result.*` combinator conversion coverage into `tests/unit/test_ir_pipeline_conversions_numbers.cpp`, deleting the old header-owned test bodies so that entire numeric slice now compiles only from explicit `.cpp` sources.
-      - ○ Move the remaining variadic and method-call conversion slices out of `tests/unit/test_ir_pipeline_conversions.cpp` into standalone `.cpp` files or smaller grouped TUs.
+      - ✓ Move the `method_calls_and_argv` conversion slice into `tests/unit/test_ir_pipeline_conversions_method_calls_and_argv.cpp`, deleting the old header-owned test body and moving the remaining umbrella suite boundary back into `tests/unit/test_ir_pipeline_conversions.cpp`.
+      - ○ Move the remaining variadic conversion slices out of `tests/unit/test_ir_pipeline_conversions.cpp` into standalone `.cpp` files or smaller grouped TUs.
 - ○ Finish converting the remaining compile-run suite wrappers into standalone `.cpp` files so `tests/unit/test_compile_run*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
 - ○ Add a final cleanup pass that removes obsolete include-wrapper translation units, collapses dead helper headers, and updates CMake targets so each test suite is compiled from explicit `.cpp` sources instead of transitive header inclusion.
 

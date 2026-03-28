@@ -493,6 +493,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_serialization_structs.cpp
     tests/unit/test_ir_pipeline_validation.cpp
     tests/unit/test_ir_pipeline_conversions.cpp
+    tests/unit/test_ir_pipeline_conversions_method_calls_and_argv.cpp
     tests/unit/test_ir_pipeline_conversions_numbers.cpp
     tests/unit/test_ir_pipeline_entry_args.cpp
     tests/unit/test_ir_pipeline_gpu.cpp
