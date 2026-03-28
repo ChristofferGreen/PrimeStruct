@@ -8126,8 +8126,6 @@ main() {
 }
 
 TEST_CASE("stdlib map constructors accept inferred experimental map struct fields") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
