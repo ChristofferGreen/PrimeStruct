@@ -239,7 +239,7 @@ Test-source note: keep `tests/unit/` and `include/primec/testing/` under the sam
 - ○ Refactor `tests/unit/test_compile_run_imports_versions.h` (`864` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_ir_pipeline_serialization_structs.h` (`839` lines) below the `700`-line target.
 - ○ Refactor `tests/unit/test_ir_pipeline_to_cpp.h` (`835` lines) below the `700`-line target.
-- ○ Refactor `tests/unit/test_import_resolver.cpp` (`815` lines) below the `700`-line target.
+- ✓ Refactor `tests/unit/test_import_resolver.cpp` (`422` lines) below the `700`-line target by extracting versioned import, archive, directory, and injected-runner coverage into `tests/unit/test_import_resolver_versions.h`, leaving `test_import_resolver.cpp` focused on basic import expansion, duplicate suppression, and simple path resolution.
 - ○ Refactor `tests/unit/test_ir_pipeline_wasm.h` (`801` lines) below the `700`-line target.
 - ✓ Refactor `tests/unit/test_semantics_bindings_struct_defaults.h` (`372` lines) below the `700`-line target by extracting map omitted-initializer precedence and wrapper-fallback coverage into `tests/unit/test_semantics_bindings_struct_defaults_maps.h`, leaving `test_semantics_bindings_struct_defaults.h` focused on core omitted-initializer behavior and vector-related fallback cases.
 - ✓ Refactor `tests/unit/test_parser_errors_more_transforms.h` (`641` lines) below the `700`-line target by extracting transform-prefixed execution and canonical-mode body-sugar diagnostics into `tests/unit/test_parser_errors_more_transforms_canonical.h`, leaving `test_parser_errors_more_transforms.h` focused on transform syntax, binding-shape, and general parser error coverage.
