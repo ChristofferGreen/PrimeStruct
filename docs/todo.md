@@ -122,6 +122,16 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
   - ✓ Extract temporary collection receiver materialization and stdlib vector/map helper rewrites into `src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h`, leaving `IrLowererLowerEmitExpr.h` focused on direct field access, result/file/buffer helpers, and final call dispatch.
   - ✓ Extract inline/native tail dispatch orchestration into `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`, leaving `IrLowererLowerEmitExpr.h` focused on the earlier expression/builtin emission branches.
 
+**Group 10B - Test translation unit migration**
+Test TU migration note: Group 10A finished the oversized test/support splits. The next maintainability step is to eliminate include-only test bodies by moving test suites into standalone `.cpp` translation units while keeping each resulting `.cpp` at a reasonable size so host compiler memory use and parse time stay bounded.
+Test TU sizing note: prefer many small/medium `.cpp` files over recreating giant aggregate translation units. When a suite is still too large after the first move out of `.h`, split it into multiple themed `.cpp` files that share only narrow helper headers.
+- ○ Migrate the remaining `tests/unit/test_compile_run.cpp` include-driven suites into standalone `.cpp` translation units, starting with the largest headers first and keeping each new translation unit comfortably below the old `700`-line oversized-file target where practical.
+- ○ Migrate the remaining `tests/unit/test_semantics.cpp` include-driven suites into standalone `.cpp` translation units, using `tests/unit/test_semantics_helpers.h` only for shared parser/validator setup and not as a new place to hide test bodies.
+- ○ Finish converting the remaining parser suite wrappers into standalone `.cpp` files so `tests/unit/test_parser_*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
+- ○ Finish converting the remaining IR/backend suite wrappers into standalone `.cpp` files so `tests/unit/test_ir_pipeline*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
+- ○ Finish converting the remaining compile-run suite wrappers into standalone `.cpp` files so `tests/unit/test_compile_run*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
+- ○ Add a final cleanup pass that removes obsolete include-wrapper translation units, collapses dead helper headers, and updates CMake targets so each test suite is compiled from explicit `.cpp` sources instead of transitive header inclusion.
+
 
 **Architecture / Type-resolution graph**
 **Group 11 - Near-term graph queue**
