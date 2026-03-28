@@ -1,3 +1,7 @@
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.bindings.core");
 
 TEST_CASE("local binding requires initializer") {
