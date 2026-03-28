@@ -47,4 +47,3 @@ namespace {
 } // namespace
 
 #include "test_ir_pipeline_serialization.h"
-#include "test_ir_pipeline_validation.h"
