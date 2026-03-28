@@ -526,6 +526,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run.cpp
     tests/unit/test_compile_run_benchmark_harness.cpp
     tests/unit/test_compile_run_bindings_and_examples.cpp
+    tests/unit/test_compile_run_emitters.cpp
     tests/unit/test_compile_run_glsl.cpp
     tests/unit/test_compile_run_imports.cpp
     tests/unit/test_compile_run_native_backend_argv.cpp
@@ -1125,17 +1126,17 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 152 LAST 154)
     elseif(suite STREQUAL "primestruct.compile.run.emitters.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "lambda_and_mutator_resolution"
-                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 1 LAST 45)
+                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 1 LAST 45)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "collection_access_and_alias_forwarding"
-                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 46 LAST 100)
+                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 46 LAST 100)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "map_wrapper_and_fallback_inference"
-                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 101 LAST 160)
+                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 101 LAST 160)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "numeric_math_and_control_flow_core"
-                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 161 LAST 176)
+                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 161 LAST 176)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "numeric_math_and_control_flow_loops"
-                                 SOURCE_FILE "*test_compile_run_emitters.h" FIRST 177 LAST 192)
+                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 177 LAST 192)
     elseif(suite STREQUAL "primestruct.compile.run.math_conformance")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "harness_and_docs"

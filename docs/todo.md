@@ -212,8 +212,10 @@ Test TU sizing note: prefer many small/medium `.cpp` files over recreating giant
     - ✓ Move the `bindings_and_examples` wrapper into `tests/unit/test_compile_run_bindings_and_examples.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` and retargeting the managed example shard metadata to the standalone source.
     - ✓ Move the `reflection_codegen` wrapper into `tests/unit/test_compile_run_reflection_codegen.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` so the main reflection codegen suite is compiled from an explicit standalone translation unit.
     - ✓ Move the `reflection_codegen_runtime` wrapper into `tests/unit/test_compile_run_reflection_codegen_runtime.cpp`, removing its include-body usage from `tests/unit/test_compile_run.cpp` and splitting the shared reflection source helpers into a helper header so both reflection suites compile cleanly as standalone translation units.
-  - ✓ All remaining real compile-run wrapper owners have been migrated to standalone `.cpp` sources; the only compile-run umbrella include still left in `tests/unit/test_compile_run.cpp` is the chunked `emitters` umbrella, which is tracked under the final cleanup pass below.
+  - ✓ All remaining real compile-run wrapper owners have been migrated to standalone `.cpp` sources; only legacy cleanup slices remain for `tests/unit/test_compile_run.cpp`.
 - ○ Add a final cleanup pass that removes obsolete include-wrapper translation units, collapses dead helper headers, and updates CMake targets so each test suite is compiled from explicit `.cpp` sources instead of transitive header inclusion.
+  - ✓ Move the chunked `emitters` umbrella into `tests/unit/test_compile_run_emitters.cpp`, remove the obsolete `tests/unit/test_compile_run_emitters.h` wrapper, and retarget the managed doctest shard metadata to the standalone source.
+  - ○ Move the remaining small `smoke`, `vm_math`, and `vm_bounds` include-owned suites into explicit standalone `.cpp` sources so `tests/unit/test_compile_run.cpp` no longer owns any transitive test bodies.
 
 
 **Architecture / Type-resolution graph**
