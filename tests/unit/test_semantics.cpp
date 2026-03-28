@@ -34,4 +34,3 @@
 #include "test_semantics_type_resolution_graph.h"
 #include "test_semantics_type_resolution_graph_snapshots.h"
 #include "test_semantics_type_resolution_return_solver.h"
-#include "test_semantics_uninitialized_fields.h"
