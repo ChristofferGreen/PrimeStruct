@@ -488,6 +488,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_backend_tests
     tests/unit/test_main.cpp
     tests/unit/test_ir_pipeline.cpp
+    tests/unit/test_ir_pipeline_to_cpp.cpp
+    tests/unit/test_ir_pipeline_to_glsl.cpp
     tests/unit/test_compile_run.cpp
   )
   target_include_directories(PrimeStruct_backend_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})

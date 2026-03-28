@@ -1,6 +1,11 @@
 #include <cstdint>
 #include <string>
 
+#include "third_party/doctest.h"
+
+#include "primec/Ir.h"
+#include "primec/IrToGlslEmitter.h"
+
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.to_glsl");
 
 namespace {

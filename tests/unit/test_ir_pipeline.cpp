@@ -233,6 +233,4 @@ TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::string &
 #include "test_ir_pipeline_wasm.h"
 #include "test_ir_pipeline_wasm_wasi.h"
 #include "test_ir_pipeline_backends.h"
-#include "test_ir_pipeline_to_cpp.h"
-#include "test_ir_pipeline_to_glsl.h"
 #include "test_ir_pipeline_type_resolution_parity.h"
