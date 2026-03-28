@@ -1,3 +1,7 @@
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.numeric_builtins");
 
 TEST_CASE("convert builtin validates") {
