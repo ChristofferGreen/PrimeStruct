@@ -495,6 +495,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_conversions.cpp
     tests/unit/test_ir_pipeline_conversions_method_calls_and_argv.cpp
     tests/unit/test_ir_pipeline_conversions_numbers.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_basics.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_results.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_file_errors.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_file_handles.cpp
+    tests/unit/test_ir_pipeline_conversions_variadic_borrowed_vectors.cpp
     tests/unit/test_ir_pipeline_entry_args.cpp
     tests/unit/test_ir_pipeline_gpu.cpp
     tests/unit/test_ir_pipeline_pointers.cpp
@@ -896,38 +901,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endif()
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    if (suite STREQUAL "primestruct.ir.pipeline.conversions")
-      add_test(NAME "${testName}_core"
-               COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
-                       "--test-suite=${suite}"
-                       "--source-file=*test_ir_pipeline_conversions_core.h")
-      add_test(NAME "${testName}_numbers"
-               COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
-                       "--test-suite=${suite}"
-                       "--source-file=*test_ir_pipeline_conversions_numbers.cpp")
-      add_test(NAME "${testName}_calls_and_args_first_half"
-               COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
-                       "--test-suite=${suite}"
-                       "--source-file=*test_ir_pipeline_conversions_calls_and_args.h"
-                       "--order-by=file"
-                       "--first=1"
-                       "--last=38")
-      add_test(NAME "${testName}_calls_and_args_second_half"
-               COMMAND $<TARGET_FILE:PrimeStruct_backend_tests>
-                       "--test-suite=${suite}"
-                       "--source-file=*test_ir_pipeline_conversions_calls_and_args.h"
-                       "--order-by=file"
-                       "--first=39"
-                       "--last=76")
-      # These unit-style shards are scheduler-safe and benefit from CTest parallelism.
-      set_tests_properties("${testName}_core" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-      set_tests_properties("${testName}_numbers" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-      set_tests_properties("${testName}_calls_and_args_first_half" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-      set_tests_properties("${testName}_calls_and_args_second_half" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-    else()
-      add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> "--test-suite=${suite}")
-      set_tests_properties("${testName}" PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
-    endif()
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> "--test-suite=${suite}")
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   endforeach()
 
   foreach(suite IN LISTS PrimeStructSemanticsTestSuites)

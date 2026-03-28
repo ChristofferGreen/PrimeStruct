@@ -1,4 +1,17 @@
-#pragma once
+#include <cstring>
+#include <string>
+#include <vector>
+
+#include "third_party/doctest.h"
+
+#include "primec/Ast.h"
+#include "primec/Ir.h"
+#include "primec/IrLowerer.h"
+#include "primec/IrSerializer.h"
+#include "primec/Vm.h"
+#include "test_ir_pipeline_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 
 TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference statement mutators") {
   const std::string source = R"(
@@ -412,4 +425,4 @@ main() {
   CHECK(result == 11);
 }
 
-
+TEST_SUITE_END();
