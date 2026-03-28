@@ -210,7 +210,6 @@ main() {
   CHECK(error.find("invalid integer literal") != std::string::npos);
 }
 
-#include "test_parser_basic_expr_forms.h"
 
 TEST_CASE("rejects hex integer literals without digits") {
   const std::string source = R"(

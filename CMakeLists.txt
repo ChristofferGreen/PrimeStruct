@@ -578,6 +578,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_parser_basic_definitions_core.cpp
     tests/unit/test_parser_basic_definition_execution.cpp
     tests/unit/test_parser_basic_definition_transforms.cpp
+    tests/unit/test_parser_basic_expr_forms.cpp
     tests/unit/test_parser_basic_literals.cpp
     tests/unit/test_parser_basic_parser_helpers.cpp
     tests/unit/test_parser_basic_semantic_transforms_a.cpp
