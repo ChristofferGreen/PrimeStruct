@@ -431,7 +431,6 @@ bool hasPython3() {
 #include "test_compile_run_glsl.h"
 #include "test_compile_run_native_backend_core.h"
 #include "test_compile_run_native_backend_uninitialized.h"
-#include "test_compile_run_native_backend_maybe.h"
 #include "test_compile_run_native_backend_argv.h"
 #include "test_compile_run_native_backend_control.h"
 #include "test_compile_run_native_backend_pointers.h"
