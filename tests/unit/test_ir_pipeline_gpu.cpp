@@ -1,3 +1,8 @@
+#include "third_party/doctest.h"
+
+#include "primec/IrLowerer.h"
+#include "test_ir_pipeline_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.gpu");
 
 TEST_CASE("lowers gpu dispatch fallback") {

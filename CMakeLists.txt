@@ -489,6 +489,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/test_ir_pipeline.cpp
     tests/unit/test_ir_pipeline_entry_args.cpp
+    tests/unit/test_ir_pipeline_gpu.cpp
     tests/unit/test_ir_pipeline_backends.cpp
     tests/unit/test_vm_debug_session.cpp
     tests/unit/test_ir_pipeline_external_tooling.cpp
