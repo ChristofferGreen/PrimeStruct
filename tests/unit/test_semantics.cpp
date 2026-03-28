@@ -16,7 +16,6 @@
 #include "test_semantics_entry_builtins_numeric.h"
 #include "test_semantics_numeric_software.h"
 #include "test_semantics_entry_executions.h"
-#include "test_semantics_entry_transforms.h"
 #include "test_semantics_enum.h"
 #include "test_semantics_capabilities.h"
 #include "test_semantics_bindings_core.h"
