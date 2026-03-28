@@ -130,7 +130,8 @@ Test TU sizing note: prefer many small/medium `.cpp` files over recreating giant
   - ✓ Migrate the `Maybe` semantics suite into `tests/unit/test_semantics_maybe.cpp`, removing its include-body form from `tests/unit/test_semantics.cpp` while reusing `tests/unit/test_semantics_helpers.h`.
   - ✓ Migrate the `enum` semantics suite into `tests/unit/test_semantics_enum.cpp`, removing its include-body form from `tests/unit/test_semantics.cpp` while reusing `tests/unit/test_semantics_helpers.h`.
   - ✓ Migrate the `traits` semantics suite into `tests/unit/test_semantics_traits.cpp`, removing its include-body form from `tests/unit/test_semantics.cpp` while reusing `tests/unit/test_semantics_helpers.h`.
-  - ○ Continue with the remaining medium-sized standalone semantics suites (`lambdas`, `move`, and related focused files) before tackling the larger collection/control umbrella headers.
+  - ✓ Migrate the `move` semantics suite into `tests/unit/test_semantics_move.cpp`, removing its include-body form from `tests/unit/test_semantics.cpp` while reusing `tests/unit/test_semantics_helpers.h`.
+  - ○ Continue with the remaining medium-sized standalone semantics suites (`lambdas` and related focused files) before tackling the larger collection/control umbrella headers.
 - ○ Finish converting the remaining parser suite wrappers into standalone `.cpp` files so `tests/unit/test_parser_*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
 - ○ Finish converting the remaining IR/backend suite wrappers into standalone `.cpp` files so `tests/unit/test_ir_pipeline*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
 - ○ Finish converting the remaining compile-run suite wrappers into standalone `.cpp` files so `tests/unit/test_compile_run*.h` files are helpers/fragments only where a `.cpp` genuinely still owns the suite entrypoint.
