@@ -249,7 +249,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map unnamespaced count call resolves through explicit same-path alias helper") {
+TEST_CASE("map unnamespaced count call rejects explicit same-path alias helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values) {
