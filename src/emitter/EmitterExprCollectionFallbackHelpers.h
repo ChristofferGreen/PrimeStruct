@@ -213,6 +213,9 @@
     if (nameMap.count(canonicalPath) > 0) {
       return canonicalPath;
     }
+    if (std::string_view(helperName) == "contains" || std::string_view(helperName) == "tryAt") {
+      return std::string{};
+    }
     const std::string compatibilityPath = std::string("/map/") + helperName;
     if (nameMap.count(compatibilityPath) > 0) {
       return compatibilityPath;

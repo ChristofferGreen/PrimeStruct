@@ -364,7 +364,7 @@ main() {
   CHECK(readFile(errPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
-TEST_CASE("rejects map unnamespaced tryAt through compatibility helper in C++ emitter without on_error") {
+TEST_CASE("rejects map unnamespaced tryAt through compatibility helper in C++ emitter with unknown-target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<Result<i32, ContainerError>>]
 /map/tryAt([map<i32, i32>] values, [i32] key) {
@@ -386,7 +386,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("missing on_error for ? usage") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("rejects map unnamespaced tryAt preferring canonical helper over compatibility alias in C++ emitter without on_error") {
