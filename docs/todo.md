@@ -106,6 +106,7 @@ TemplateMonomorph next-slice note: the remaining file mass is now concentrated i
   - ✓ Extract collection compatibility-path, receiver normalization, and call-shape helpers into `src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h`, leaving `TemplateMonomorph.cpp` focused on the remaining pre-include core and top-level orchestration.
   - ✓ Extract path-specialization, binding-type, and implicit-auto setup helpers into `src/semantics/TemplateMonomorphSetupUtilities.h`, leaving `TemplateMonomorph.cpp` focused on the remaining experimental constructor/type core plus the top-level orchestration seams.
   - ✓ Extract experimental collection constructor-path and vector value-type helpers into `src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h`, leaving `TemplateMonomorph.cpp` focused on the remaining struct/core utilities plus top-level orchestration seams.
+  - ✓ Extract implicit template argument inference and binding-type fallback helpers into `src/semantics/TemplateMonomorphImplicitTemplateInference.h`, leaving `TemplateMonomorph.cpp` focused on the remaining rewrite/instantiation orchestration and core struct utilities.
 
 
 **Group 10 - Remaining oversized-file queue**
