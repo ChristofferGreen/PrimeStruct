@@ -353,6 +353,21 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
     literal.literalValue = value;
     return literal;
   };
+  auto makeI64Literal = [](int64_t value) {
+    primec::Expr literal;
+    literal.kind = primec::Expr::Kind::Literal;
+    literal.intWidth = 64;
+    literal.literalValue = static_cast<uint64_t>(value);
+    return literal;
+  };
+  auto makeU64Literal = [](uint64_t value) {
+    primec::Expr literal;
+    literal.kind = primec::Expr::Kind::Literal;
+    literal.intWidth = 64;
+    literal.isUnsigned = true;
+    literal.literalValue = value;
+    return literal;
+  };
   auto makeCall = [&](const std::string &name, const std::vector<primec::Expr> &args) {
     primec::Expr call;
     call.kind = primec::Expr::Kind::Call;
@@ -369,14 +384,45 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   vectorInfo.index = 6;
   locals.emplace("v", vectorInfo);
 
-  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+  auto inferExprKindForExpr = [&](const auto &self, const primec::Expr &expr) -> ValueKind {
     if (expr.kind == primec::Expr::Kind::Literal) {
-      if (expr.isUnsigned || expr.intWidth == 64) {
+      if (expr.isUnsigned) {
         return ValueKind::UInt64;
+      }
+      if (expr.intWidth == 64) {
+        return ValueKind::Int64;
+      }
+      return ValueKind::Int32;
+    }
+    if (expr.kind == primec::Expr::Kind::Call &&
+        (expr.name == "plus" || expr.name == "minus" || expr.name == "negate")) {
+      if (expr.args.empty()) {
+        return ValueKind::Unknown;
+      }
+      if (expr.name == "negate") {
+        return self(self, expr.args.front());
+      }
+      if (expr.args.size() < 2) {
+        return ValueKind::Unknown;
+      }
+      const ValueKind lhs = self(self, expr.args[0]);
+      const ValueKind rhs = self(self, expr.args[1]);
+      if (lhs == ValueKind::Unknown || rhs == ValueKind::Unknown) {
+        return ValueKind::Unknown;
+      }
+      if (lhs == ValueKind::UInt64 || rhs == ValueKind::UInt64) {
+        return ValueKind::UInt64;
+      }
+      if (lhs == ValueKind::Int64 || rhs == ValueKind::Int64) {
+        return ValueKind::Int64;
       }
       return ValueKind::Int32;
     }
     return ValueKind::Unknown;
+  };
+
+  auto inferExprKind = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+    return inferExprKindForExpr(inferExprKindForExpr, expr);
   };
 
   auto runHelper = [&](const primec::Expr &stmt,
@@ -528,6 +574,72 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   CHECK(reserveHasHeapAlloc);
   CHECK(reserveHasAllocFailureCheck);
 
+  const int reserveNegativeBaseline = reserveNegativeCalls;
+  const int reserveExceededBaseline = reserveExceededCalls;
+
+  error.clear();
+  CHECK(runHelper(
+            makeCall("reserve",
+                     {makeTarget(), makeCall("plus", {makeI32Literal(200), makeI32Literal(57)})}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            nullptr,
+            error) == EmitResult::Error);
+  CHECK(error == "vector reserve exceeds local capacity limit (256)");
+  CHECK(reserveNegativeCalls == reserveNegativeBaseline);
+  CHECK(reserveExceededCalls == reserveExceededBaseline);
+
+  error.clear();
+  CHECK(runHelper(
+            makeCall("reserve",
+                     {makeTarget(), makeCall("minus", {makeI32Literal(1), makeI32Literal(2)})}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            nullptr,
+            error) == EmitResult::Error);
+  CHECK(error == "vector reserve expects non-negative capacity");
+  CHECK(reserveNegativeCalls == reserveNegativeBaseline);
+  CHECK(reserveExceededCalls == reserveExceededBaseline);
+
+  error.clear();
+  CHECK(runHelper(
+            makeCall("reserve",
+                     {makeTarget(),
+                      makeCall("plus",
+                               {makeU64Literal(std::numeric_limits<uint64_t>::max()), makeU64Literal(1)})}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            nullptr,
+            error) == EmitResult::Error);
+  CHECK(error == "vector reserve literal expression overflow");
+  CHECK(reserveNegativeCalls == reserveNegativeBaseline);
+  CHECK(reserveExceededCalls == reserveExceededBaseline);
+
+  error.clear();
+  CHECK(runHelper(
+            makeCall("reserve",
+                     {makeTarget(),
+                      makeCall("negate", {makeI64Literal(std::numeric_limits<int64_t>::min())})}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            nullptr,
+            error) == EmitResult::Error);
+  CHECK(error == "vector reserve literal expression overflow");
+  CHECK(reserveNegativeCalls == reserveNegativeBaseline);
+  CHECK(reserveExceededCalls == reserveExceededBaseline);
+
   CHECK(runHelper(
             makeCall("remove_at", {makeTarget(), makeI32Literal(1)}),
             capacityExceededCalls,
@@ -575,4 +687,3 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   CHECK(pushHasHeapAlloc);
   CHECK(pushHasAllocFailureCheck);
 }
-
