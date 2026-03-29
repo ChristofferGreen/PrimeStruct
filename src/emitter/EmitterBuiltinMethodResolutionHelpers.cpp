@@ -443,6 +443,11 @@ bool resolveMethodCallPath(const Expr &call,
   if (resolvedType == "/map" || resolvedType == "map") {
     const std::string aliasPath = "/map/" + normalizedMethodName;
     const std::string canonicalPath = "/std/collections/map/" + normalizedMethodName;
+    const bool isMapHelperMethod = normalizedMethodName == "count" ||
+                                   normalizedMethodName == "contains" ||
+                                   normalizedMethodName == "tryAt" ||
+                                   normalizedMethodName == "at" ||
+                                   normalizedMethodName == "at_unsafe";
     if (isExplicitMapAliasMethod) {
       if (!hasDefinitionOrMetadata(metadataView, aliasPath)) {
         return false;
@@ -456,6 +461,11 @@ bool resolveMethodCallPath(const Expr &call,
       }
       resolvedOut = canonicalPath;
       return true;
+    }
+    if (isMapHelperMethod &&
+        !hasDefinitionOrMetadata(metadataView, aliasPath) &&
+        !hasDefinitionOrMetadata(metadataView, canonicalPath)) {
+      return false;
     }
   }
   resolvedOut =
