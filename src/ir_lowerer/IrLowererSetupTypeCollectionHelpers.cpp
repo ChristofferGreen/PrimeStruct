@@ -511,6 +511,21 @@ bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr) {
          normalizedPath == "/std/collections/vector/capacity";
 }
 
+void pruneRemovedMapCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,
+                                                      const std::string &path) {
+  const std::string normalizedPath = normalizeCollectionHelperPath(path);
+  if (normalizedPath.rfind("/map/", 0) != 0) {
+    return;
+  }
+  if (isExplicitVectorAccessHelperExpr(expr)) {
+    return true;
+  }
+  const std::string normalizedPath = normalizeCollectionHelperPath(expr.name);
+  return normalizedPath == "/vector/count" || normalizedPath == "/vector/capacity" ||
+         normalizedPath == "/std/collections/vector/count" ||
+         normalizedPath == "/std/collections/vector/capacity";
+}
+
 bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
   if (!isExplicitMapMethodAliasPath(callPath)) {
     return true;

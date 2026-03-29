@@ -360,11 +360,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           isBareMapAccessReceiverProbeExpr(*receiver);
       const bool blocksBareMapTryAtReceiverProbeKindFallback =
           isBareMapTryAtReceiverProbeExpr(*receiver);
-      const bool blocksExplicitVectorAccessKindFallback = isExplicitVectorAccessHelperExpr(*receiver);
+      const bool blocksExplicitVectorReceiverProbeKindFallback =
+          isExplicitVectorReceiverProbeHelperExpr(*receiver);
       if (!blocksExplicitMapReceiverProbeKindFallback &&
           !blocksBareMapAccessReceiverProbeKindFallback &&
           !blocksBareMapTryAtReceiverProbeKindFallback &&
-          !blocksExplicitVectorAccessKindFallback) {
+          !blocksExplicitVectorReceiverProbeKindFallback) {
         if (!inferBuiltinAccessReceiverResultKind(
                 *receiver, localsIn, inferExprKind, resolveExprPath, getReturnInfo, defMap, inferredReceiverKind) &&
             inferExprKind) {

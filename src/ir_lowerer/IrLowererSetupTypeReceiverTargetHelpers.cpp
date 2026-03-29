@@ -633,19 +633,20 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         isBareMapAccessReceiverProbeExpr(receiverExpr);
     const bool blocksBareMapTryAtReceiverProbeKindFallback =
         isBareMapTryAtReceiverProbeExpr(receiverExpr);
-    const bool blocksExplicitVectorAccessKindFallback = isExplicitVectorAccessHelperExpr(receiverExpr);
+    const bool blocksExplicitVectorReceiverProbeKindFallback =
+        isExplicitVectorReceiverProbeHelperExpr(receiverExpr);
     const LocalInfo::ValueKind inferredKind =
         (inferExprKind && !blocksExplicitMapReceiverProbeKindFallback &&
          !blocksBareMapAccessReceiverProbeKindFallback &&
          !blocksBareMapTryAtReceiverProbeKindFallback &&
-         !blocksExplicitVectorAccessKindFallback)
+         !blocksExplicitVectorReceiverProbeKindFallback)
             ? inferExprKind(receiverExpr, localsIn)
             : LocalInfo::ValueKind::Unknown;
     typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind);
     if (typeNameOut.empty() && !blocksExplicitMapReceiverProbeKindFallback &&
         !blocksBareMapAccessReceiverProbeKindFallback &&
         !blocksBareMapTryAtReceiverProbeKindFallback &&
-        !blocksExplicitVectorAccessKindFallback && receiverExpr.isMethodCall &&
+        !blocksExplicitVectorReceiverProbeKindFallback && receiverExpr.isMethodCall &&
         receiverExpr.args.size() == 2) {
       std::string accessName;
       if (getBuiltinArrayAccessName(receiverExpr, accessName) &&

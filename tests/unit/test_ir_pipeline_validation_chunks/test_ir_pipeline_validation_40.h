@@ -359,6 +359,180 @@ TEST_CASE("ir lowerer setup type helper rejects array compatibility slash-method
   CHECK(error == "unknown method target for tag");
 }
 
+TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper vector slash-method count receivers") {
+  primec::Definition wrapVectorDef;
+  wrapVectorDef.fullPath = "/wrapVector";
+  primec::Transform returnVector;
+  returnVector.name = "return";
+  returnVector.templateArgs = {"vector<i32>"};
+  wrapVectorDef.transforms.push_back(returnVector);
+
+  primec::Definition i32TagDef;
+  i32TagDef.fullPath = "/i32/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {wrapVectorDef.fullPath, &wrapVectorDef},
+      {i32TagDef.fullPath, &i32TagDef},
+  };
+
+  primec::Expr wrapVectorCall;
+  wrapVectorCall.kind = primec::Expr::Kind::Call;
+  wrapVectorCall.name = "wrapVector";
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/vector/count";
+  receiverCall.isMethodCall = true;
+  receiverCall.args = {wrapVectorCall};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "wrapVector") {
+      return std::string("/wrapVector");
+    }
+    return expr.name;
+  };
+
+  auto inferExprKind = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+    primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    if (primec::ir_lowerer::resolveMethodCallReturnKind(
+            expr,
+            localsIn,
+            [&](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &candidateLocals) {
+              std::string nestedError;
+              return primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+                  candidate,
+                  candidateLocals,
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  {},
+                  {},
+                  {},
+                  resolveExprPath,
+                  {},
+                  defMap,
+                  nestedError);
+            },
+            {},
+            {},
+            false,
+            kindOut,
+            nullptr)) {
+      return kindOut;
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      inferExprKind,
+      resolveExprPath,
+      {},
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method: /std/collections/vector/count");
+}
+
+TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper vector slash-method capacity receivers") {
+  primec::Definition wrapVectorDef;
+  wrapVectorDef.fullPath = "/wrapVector";
+  primec::Transform returnVector;
+  returnVector.name = "return";
+  returnVector.templateArgs = {"vector<i32>"};
+  wrapVectorDef.transforms.push_back(returnVector);
+
+  primec::Definition i32TagDef;
+  i32TagDef.fullPath = "/i32/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {wrapVectorDef.fullPath, &wrapVectorDef},
+      {i32TagDef.fullPath, &i32TagDef},
+  };
+
+  primec::Expr wrapVectorCall;
+  wrapVectorCall.kind = primec::Expr::Kind::Call;
+  wrapVectorCall.name = "wrapVector";
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/vector/capacity";
+  receiverCall.isMethodCall = true;
+  receiverCall.args = {wrapVectorCall};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "wrapVector") {
+      return std::string("/wrapVector");
+    }
+    return expr.name;
+  };
+
+  auto inferExprKind = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+    primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    if (primec::ir_lowerer::resolveMethodCallReturnKind(
+            expr,
+            localsIn,
+            [&](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &candidateLocals) {
+              std::string nestedError;
+              return primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+                  candidate,
+                  candidateLocals,
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  {},
+                  {},
+                  {},
+                  resolveExprPath,
+                  {},
+                  defMap,
+                  nestedError);
+            },
+            {},
+            {},
+            false,
+            kindOut,
+            nullptr)) {
+      return kindOut;
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      inferExprKind,
+      resolveExprPath,
+      {},
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method: /std/collections/vector/capacity");
+}
+
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper-returned explicit slash-method map access") {
   primec::Definition wrapMapDef;
   wrapMapDef.fullPath = "/wrapMap";
