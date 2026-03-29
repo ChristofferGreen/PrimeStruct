@@ -435,6 +435,8 @@ TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata preceden
     CHECK(resolved == expectedPath);
   };
 
+  expectResolved("/map/count", false, "/i32/tag");
+  expectResolved("/std/collections/map/count", false, "/i32/tag");
   expectResolved("/map/contains", true, "/AliasContainsMarker/tag");
   expectResolved("/std/collections/map/contains", true, "/CanonicalContainsMarker/tag");
   expectResolved("/map/tryAt", true, "/AliasTryAtMarker/tag");
