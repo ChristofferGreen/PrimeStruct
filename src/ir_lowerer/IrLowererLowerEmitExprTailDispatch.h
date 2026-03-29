@@ -130,11 +130,11 @@
             return false;
           }
           std::string helperName;
-          if (callExpr.name == "/map/count" || callExpr.name == "/std/collections/map/count") {
+          if (callExpr.name == "/std/collections/map/count") {
             helperName = "count";
-          } else if (callExpr.name == "/map/at" || callExpr.name == "/std/collections/map/at") {
+          } else if (callExpr.name == "/std/collections/map/at") {
             helperName = "at";
-          } else if (callExpr.name == "/map/at_unsafe" || callExpr.name == "/std/collections/map/at_unsafe") {
+          } else if (callExpr.name == "/std/collections/map/at_unsafe") {
             helperName = "at_unsafe";
           } else {
             return false;

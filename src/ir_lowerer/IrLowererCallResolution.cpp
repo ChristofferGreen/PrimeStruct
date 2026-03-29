@@ -16,11 +16,10 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
   if (!expr.isMethodCall) {
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/map/at") || matchesResolvedPath("/map/at") ||
+      return matchesResolvedPath("/std/collections/map/at") ||
              matchesResolvedPath("/std/collections/mapAt") ||
              matchesResolvedPath("/std/collections/experimental_map/mapAt") ||
              matchesResolvedPath("/std/collections/map/at_unsafe") ||
-             matchesResolvedPath("/map/at_unsafe") ||
              matchesResolvedPath("/std/collections/mapAtUnsafe") ||
              matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafe");
     }
@@ -32,7 +31,6 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
       return matchesResolvedPath("/std/collections/map/contains") ||
-             matchesResolvedPath("/map/contains") ||
              matchesResolvedPath("/std/collections/mapContains") ||
              matchesResolvedPath("/std/collections/experimental_map/mapContains");
     }
@@ -40,7 +38,6 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
       return matchesResolvedPath("/std/collections/map/tryAt") ||
-             matchesResolvedPath("/map/tryAt") ||
              matchesResolvedPath("/std/collections/mapTryAt") ||
              matchesResolvedPath("/std/collections/experimental_map/mapTryAt");
     }
@@ -48,7 +45,6 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
          normalizedName == "std/collections/map/count") &&
         expr.args.size() == 1) {
       return matchesResolvedPath("/std/collections/map/count") ||
-             matchesResolvedPath("/map/count") ||
              matchesResolvedPath("/std/collections/mapCount") ||
              matchesResolvedPath("/std/collections/experimental_map/mapCount");
     }

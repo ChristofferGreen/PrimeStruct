@@ -266,38 +266,66 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native map compatibility count call with canonical templated helper currently fails at runtime") {
+TEST_CASE("compiles and runs native explicit map helper calls through same-path aliases") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 /map/count([map<i32, i32>] values) {
-  return(96i32)
+  return(70i32)
 }
 
 [return<bool>]
-/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
 
+[return<Result<i32, ContainerError>>]
+/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(80i32))
+}
+
 [return<int>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(60i32)
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(30i32)
+}
+
+[effects(io_err)]
+unexpectedDirectMapAliasTryAt([ContainerError] err) {}
+
+[return<int> on_error<ContainerError, /unexpectedDirectMapAliasTryAt>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(/map/count(values))
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [i32] countValue{/map/count(values)}
+  [bool] containsValue{/map/contains(values, 2i32)}
+  [i32] tryValue{try(/map/tryAt(values, 2i32))}
+  [i32] atValue{/map/at(values, 1i32)}
+  [i32] unsafeValue{/map/at_unsafe(values, 2i32)}
+  [i32] containsScore{if(containsValue, then(){ 1i32 }, else(){ 3i32 })}
+  return(plus(plus(countValue, tryValue),
+              plus(atValue, plus(unsafeValue, containsScore))))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_map_count_call_alias_precedence_with_canonical_templated_helper.prime", source);
+      writeTemp("compile_native_direct_map_alias_helper_same_path_precedence.prime", source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_native_map_count_call_alias_precedence_with_canonical_templated_helper_out.txt")
+       "primec_native_direct_map_alias_helper_same_path_precedence_out.txt")
           .string();
   const std::string exePath = (testScratchPath("") /
-                               "primec_native_map_count_call_alias_precedence_with_canonical_templated_helper_exe")
+                               "primec_native_direct_map_alias_helper_same_path_precedence_exe")
                                   .string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(exePath) == 243);
 }
 
 TEST_CASE("rejects native map compatibility count call mismatch with canonical templated helper present") {
@@ -696,4 +724,3 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK_FALSE(readFile(outPath).empty());
 }
-

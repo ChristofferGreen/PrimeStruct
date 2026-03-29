@@ -22,31 +22,31 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
     }
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
-      return matchesHelper("/std/collections/map/at") || matchesHelper("/map/at") ||
+      return matchesHelper("/std/collections/map/at") ||
              matchesHelper("/std/collections/mapAt") ||
              matchesHelper("/std/collections/experimental_map/mapAt") ||
-             matchesHelper("/std/collections/map/at_unsafe") || matchesHelper("/map/at_unsafe") ||
+             matchesHelper("/std/collections/map/at_unsafe") ||
              matchesHelper("/std/collections/mapAtUnsafe") ||
              matchesHelper("/std/collections/experimental_map/mapAtUnsafe");
     }
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
-      return matchesHelper("/std/collections/map/contains") || matchesHelper("/map/contains") ||
+      return matchesHelper("/std/collections/map/contains") ||
              matchesHelper("/std/collections/mapContains") ||
              matchesHelper("/std/collections/experimental_map/mapContains");
     }
     if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
-      return matchesHelper("/std/collections/map/tryAt") || matchesHelper("/map/tryAt") ||
+      return matchesHelper("/std/collections/map/tryAt") ||
              matchesHelper("/std/collections/mapTryAt") ||
              matchesHelper("/std/collections/experimental_map/mapTryAt");
     }
     if ((normalizedName == "count" || normalizedName == "map/count" ||
          normalizedName == "std/collections/map/count") &&
         expr.args.size() == 1) {
-      return matchesHelper("/std/collections/map/count") || matchesHelper("/map/count") ||
+      return matchesHelper("/std/collections/map/count") ||
              matchesHelper("/std/collections/mapCount") ||
              matchesHelper("/std/collections/experimental_map/mapCount");
     }
