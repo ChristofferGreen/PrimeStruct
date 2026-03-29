@@ -328,6 +328,43 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
+TEST_CASE("rejects vm wrapper-returned canonical map slash-method struct receiver fallback") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(2i32, 7i32))
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapMap()./std/collections/map/at(2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_wrapper_map_method_alias_struct_receiver_forwarding.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_map_method_alias_struct_receiver_forwarding.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+}
+
 TEST_CASE("vm keeps wrapper-returned map method alias primitive argument diagnostics") {
   const std::string source = R"(
 Marker {
@@ -642,4 +679,3 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 1);
 }
-

@@ -183,7 +183,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("keeps canonical native map method access field expression forwarding") {
@@ -350,10 +350,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native wrapper-returned map method alias primitive receiver fallback") {
+TEST_CASE("rejects native wrapper-returned map method alias primitive receiver fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
@@ -372,12 +372,52 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_map_method_alias_primitive_receiver_fallback.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_wrapper_map_method_alias_primitive_receiver_fallback_exe")
+       "primec_native_wrapper_map_method_alias_primitive_receiver_fallback.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+}
+
+TEST_CASE("rejects native wrapper-returned canonical map slash-method struct receiver fallback") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(2i32, 7i32))
+}
+
+[return<Marker>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return(Marker(key))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapMap()./std/collections/map/at(2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wrapper_map_method_alias_struct_receiver_forwarding.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_wrapper_map_method_alias_struct_receiver_forwarding.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
 TEST_CASE("native keeps wrapper-returned map method alias primitive argument diagnostics") {
@@ -420,6 +460,5 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
-
