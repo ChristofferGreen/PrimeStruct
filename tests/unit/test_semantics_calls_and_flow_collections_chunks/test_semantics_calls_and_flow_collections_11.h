@@ -461,8 +461,6 @@ main() {
 }
 
 TEST_CASE("helper-wrapped map constructors accept experimental map uninitialized storage") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
