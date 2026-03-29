@@ -41,6 +41,17 @@ bool isExplicitArrayCountName(const Expr &expr) {
   return normalized == "array/count";
 }
 
+bool isExplicitMapCountNameLocal(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "map/count" || normalized == "std/collections/map/count";
+}
+
 bool isVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
@@ -115,6 +126,9 @@ bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, Bi
 
 bool isMapCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (!isSimpleCallName(call, "count") || call.args.size() != 1) {
+    return false;
+  }
+  if (isExplicitMapCountNameLocal(call)) {
     return false;
   }
   return isMapValue(call.args.front(), localTypes);
