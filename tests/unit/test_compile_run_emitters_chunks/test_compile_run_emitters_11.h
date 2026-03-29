@@ -694,7 +694,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("missing on_error for ? usage") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/tryAt") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects bare map access methods without imported canonical helpers") {

@@ -417,6 +417,27 @@ bool resolveMethodCallPath(const Expr &call,
                                    normalizedMethodName == "tryAt" ||
                                    normalizedMethodName == "at" ||
                                    normalizedMethodName == "at_unsafe";
+    const bool hasAliasHelperDefinition = defMap.count(aliasPath) > 0;
+    const bool hasCanonicalHelperDefinition = defMap.count(canonicalPath) > 0;
+    if (isMapHelperMethod) {
+      if (isExplicitMapAliasMethod) {
+        if (!hasAliasHelperDefinition) {
+          return false;
+        }
+        resolvedOut = aliasPath;
+        return true;
+      }
+      if (isExplicitStdlibMapMethod) {
+        if (!hasCanonicalHelperDefinition) {
+          return false;
+        }
+        resolvedOut = canonicalPath;
+        return true;
+      }
+      if (!hasAliasHelperDefinition && !hasCanonicalHelperDefinition) {
+        return false;
+      }
+    }
     if (isExplicitMapAliasMethod) {
       if (!hasDefinitionOrMetadata(metadataView, aliasPath)) {
         return false;
@@ -430,11 +451,6 @@ bool resolveMethodCallPath(const Expr &call,
       }
       resolvedOut = canonicalPath;
       return true;
-    }
-    if (isMapHelperMethod &&
-        !hasDefinitionOrMetadata(metadataView, aliasPath) &&
-        !hasDefinitionOrMetadata(metadataView, canonicalPath)) {
-      return false;
     }
   }
   resolvedOut =

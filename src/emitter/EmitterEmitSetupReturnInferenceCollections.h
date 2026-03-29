@@ -148,6 +148,21 @@
       if (isExplicitCanonicalMethod) {
         return {"/std/collections/map/" + methodName};
       }
+      const bool isMapHelperMethod =
+          methodName == "count" || methodName == "contains" || methodName == "tryAt" ||
+          methodName == "at" || methodName == "at_unsafe";
+      if (isMapHelperMethod) {
+        std::vector<std::string> candidates;
+        const std::string canonicalPath = "/std/collections/map/" + methodName;
+        const std::string aliasPath = "/map/" + methodName;
+        if (defMap.count(canonicalPath) > 0) {
+          candidates.push_back(canonicalPath);
+        }
+        if (defMap.count(aliasPath) > 0) {
+          candidates.push_back(aliasPath);
+        }
+        return candidates;
+      }
       std::vector<std::string> candidates = {
           "/std/collections/map/" + methodName,
       };
