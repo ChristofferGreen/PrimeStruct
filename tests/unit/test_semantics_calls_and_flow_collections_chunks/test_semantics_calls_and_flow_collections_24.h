@@ -831,6 +831,86 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("array namespaced at accepts same-path helper on vector target") {
+  const std::string source = R"(
+[return<int>]
+/array/at([vector<i32>] values, [i32] index, [bool] marker) {
+  return(47i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/array/at(values, 1i32, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array namespaced at accepts same-path helper on wrapper vector target") {
+  const std::string source = R"(
+[return<int>]
+/array/at([vector<i32>] values, [i32] index, [bool] marker) {
+  return(48i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/at(wrapVector(), 1i32, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array namespaced at_unsafe accepts same-path helper on vector target") {
+  const std::string source = R"(
+[return<int>]
+/array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {
+  return(49i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/array/at_unsafe(values, 1i32, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array namespaced at_unsafe accepts same-path helper on wrapper vector target") {
+  const std::string source = R"(
+[return<int>]
+/array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {
+  return(50i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/at_unsafe(wrapVector(), 1i32, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced count wrapper vector target without helper reports unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
