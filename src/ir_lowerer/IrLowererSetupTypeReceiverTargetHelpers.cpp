@@ -613,13 +613,17 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         return true;
       }
     }
+    const bool blocksExplicitMapReceiverProbeKindFallback =
+        isExplicitMapReceiverProbeHelperExpr(receiverExpr);
     const bool blocksExplicitVectorAccessKindFallback = isExplicitVectorAccessHelperExpr(receiverExpr);
     const LocalInfo::ValueKind inferredKind =
-        (inferExprKind && !blocksExplicitVectorAccessKindFallback)
+        (inferExprKind && !blocksExplicitMapReceiverProbeKindFallback &&
+         !blocksExplicitVectorAccessKindFallback)
             ? inferExprKind(receiverExpr, localsIn)
             : LocalInfo::ValueKind::Unknown;
     typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind);
-    if (typeNameOut.empty() && !blocksExplicitVectorAccessKindFallback && receiverExpr.isMethodCall &&
+    if (typeNameOut.empty() && !blocksExplicitMapReceiverProbeKindFallback &&
+        !blocksExplicitVectorAccessKindFallback && receiverExpr.isMethodCall &&
         receiverExpr.args.size() == 2) {
       std::string accessName;
       if (getBuiltinArrayAccessName(receiverExpr, accessName) &&

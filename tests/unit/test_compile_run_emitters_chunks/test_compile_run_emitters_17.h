@@ -117,7 +117,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("runs wrapper-returned map method alias primitive receiver fallback in C++ emitter") {
+TEST_CASE("rejects wrapper-returned map method alias primitive receiver fallback in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
@@ -136,17 +136,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_map_method_alias_primitive_receiver_fallback.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_wrapper_map_method_alias_primitive_receiver_fallback_exe")
+       "primec_cpp_wrapper_map_method_alias_primitive_receiver_fallback.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 42);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("keeps wrapper-returned canonical map slash-method struct method chain forwarding in C++ emitter") {
+TEST_CASE("rejects wrapper-returned canonical map slash-method struct method chain in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -178,19 +179,14 @@ main() {
       (testScratchPath("") /
        "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding.err")
           .string();
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding_exe")
-          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(errPath).empty());
-  CHECK(runCommand(quoteShellArg(exePath)) == 2);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("keeps wrapper-returned canonical map slash-method struct argument diagnostics in C++ emitter") {
+TEST_CASE("rejects wrapper-returned canonical map slash-method struct argument chain in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -211,14 +207,9 @@ wrapMap() {
   return(self.value)
 }
 
-[return<auto>]
-project() {
-  return(wrapMap()./std/collections/map/at(2i32).tag(1i32))
-}
-
 [effects(heap_alloc), return<int>]
 main() {
-  return(project())
+  return(wrapMap()./std/collections/map/at(2i32).tag(1i32))
 }
 )";
   const std::string srcPath =
@@ -231,7 +222,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps std-namespaced vector method alias access struct method forwarding") {
@@ -621,4 +612,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 94);
 }
-

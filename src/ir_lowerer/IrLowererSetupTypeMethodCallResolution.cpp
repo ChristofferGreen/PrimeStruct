@@ -336,10 +336,13 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       }
     } else {
       LocalInfo::ValueKind inferredReceiverKind = LocalInfo::ValueKind::Unknown;
+      const bool blocksExplicitMapReceiverProbeKindFallback =
+          isExplicitMapReceiverProbeHelperExpr(*receiver);
       const bool blocksExplicitVectorAccessKindFallback = isExplicitVectorAccessHelperExpr(*receiver);
       if (!inferBuiltinAccessReceiverResultKind(
               *receiver, localsIn, inferExprKind, resolveExprPath, getReturnInfo, defMap, inferredReceiverKind) &&
-          inferExprKind && !blocksExplicitVectorAccessKindFallback) {
+          inferExprKind && !blocksExplicitMapReceiverProbeKindFallback &&
+          !blocksExplicitVectorAccessKindFallback) {
         inferredReceiverKind = inferExprKind(*receiver, localsIn);
       }
       const std::string inferredReceiverTypeName = typeNameForValueKind(inferredReceiverKind);

@@ -37,6 +37,7 @@ bool isExplicitMapContainsOrTryAtCompatibilityMethodAliasPath(const std::string 
 bool isVectorBuiltinName(const Expr &expr, const char *name);
 bool isMapBuiltinName(const Expr &expr, const char *name);
 bool isExplicitMapHelperFallbackPath(const Expr &expr);
+bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr);
 bool isExplicitVectorAccessHelperPath(const std::string &path);
 bool isExplicitVectorAccessHelperExpr(const Expr &expr);
 
