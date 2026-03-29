@@ -526,7 +526,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm std-namespaced vector method alias access struct method chain with helper missing-method diagnostics") {
+TEST_CASE("rejects vm std-namespaced vector method alias access struct method chain with primitive argument diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value

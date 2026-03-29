@@ -105,6 +105,28 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
+TEST_CASE("rejects stdlib vector namespaced access slash methods without canonical helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./std/collections/vector/at(1i32),
+              values./std/collections/vector/at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_vector_access_slash_methods_no_helper_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_stdlib_vector_access_slash_methods_no_helper_exe.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
+}
+
 TEST_CASE("rejects array compatibility access slash methods on vector receiver in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
