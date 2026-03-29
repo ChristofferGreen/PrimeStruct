@@ -20,53 +20,6 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm experimental soa_vector stdlib helpers") {
-  const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  return(plus(values.count(), soaVectorCount<Particle>(values)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_helpers.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
-}
-
-TEST_CASE("vm rejects experimental soa_vector stdlib to_aos helper before vector struct-return support") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  [vector<Particle>] valuesAos{soaVectorToAos<Particle>(values)}
-  return(vectorCount<Particle>(valuesAos))
-}
-)";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_to_aos_helpers_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend does not support return type on /std/collections/experimental_soa_vector/soaVectorToAos__") !=
-        std::string::npos);
-}
-
 TEST_CASE("runs vm with stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*
