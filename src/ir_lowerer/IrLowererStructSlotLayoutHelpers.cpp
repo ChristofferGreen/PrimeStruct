@@ -3,9 +3,11 @@
 #include <memory>
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -162,6 +164,15 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.valueKind = elementKind;
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
+      } else if (normalizeCollectionBindingTypeName(binding.typeName) == "Result") {
+        std::vector<std::string> args;
+        if (!splitTemplateArgs(binding.typeTemplateArg, args) || (args.size() != 1 && args.size() != 2)) {
+          error = "Result requires one or two template arguments on " + structPath;
+          layoutStack.erase(structPath);
+          return false;
+        }
+        info.valueKind = (args.size() == 1) ? LocalInfo::ValueKind::Int32 : LocalInfo::ValueKind::Int64;
+        info.slotCount = 1;
       } else if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
         info.valueKind = LocalInfo::ValueKind::Int64;
         info.slotCount = 1;

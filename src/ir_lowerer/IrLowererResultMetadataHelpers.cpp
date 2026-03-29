@@ -239,7 +239,11 @@ void applyDeclaredResultBindingMetadata(const Expr &bindingExpr, LocalInfo &bind
 } // namespace
 
 bool usesInlineBufferResultErrorDiscriminator(const ResultExprInfo &resultInfo) {
-  return resultInfo.hasValue && resultInfo.valueCollectionKind == LocalInfo::Kind::Buffer;
+  return resultInfo.hasValue &&
+         (resultInfo.valueCollectionKind == LocalInfo::Kind::Array ||
+          resultInfo.valueCollectionKind == LocalInfo::Kind::Vector ||
+          resultInfo.valueCollectionKind == LocalInfo::Kind::Map ||
+          resultInfo.valueCollectionKind == LocalInfo::Kind::Buffer);
 }
 
 bool populateMetadataBindingInfo(const Expr &bindingExpr,
@@ -531,6 +535,107 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     return assignCollection(LocalInfo::Kind::Buffer, expr.templateArgs.front());
   }
   if (!expr.isMethodCall) {
+    auto matchesDirectMapConstructor = [&](const Expr &candidate) {
+      std::string normalizedName = candidate.name;
+      if (!normalizedName.empty() && normalizedName.front() == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      auto matchesPath = [&](std::string_view basePath) {
+        return normalizedName == basePath || normalizedName.rfind(std::string(basePath) + "__", 0) == 0;
+      };
+      return matchesPath("std/collections/map/map") ||
+             matchesPath("std/collections/mapNew") ||
+             matchesPath("std/collections/mapSingle") ||
+             matchesPath("std/collections/mapDouble") ||
+             matchesPath("std/collections/mapPair") ||
+             matchesPath("std/collections/mapTriple") ||
+             matchesPath("std/collections/mapQuad") ||
+             matchesPath("std/collections/mapQuint") ||
+             matchesPath("std/collections/mapSext") ||
+             matchesPath("std/collections/mapSept") ||
+             matchesPath("std/collections/mapOct") ||
+             matchesPath("std/collections/experimental_map/map") ||
+             matchesPath("std/collections/experimental_map/mapNew") ||
+             matchesPath("std/collections/experimental_map/mapSingle") ||
+             matchesPath("std/collections/experimental_map/mapDouble") ||
+             matchesPath("std/collections/experimental_map/mapPair") ||
+             matchesPath("std/collections/experimental_map/mapTriple") ||
+             matchesPath("std/collections/experimental_map/mapQuad") ||
+             matchesPath("std/collections/experimental_map/mapQuint") ||
+             matchesPath("std/collections/experimental_map/mapSext") ||
+             matchesPath("std/collections/experimental_map/mapSept") ||
+             matchesPath("std/collections/experimental_map/mapOct") ||
+             isSimpleCallName(candidate, "mapNew") ||
+             isSimpleCallName(candidate, "mapSingle") ||
+             isSimpleCallName(candidate, "mapDouble") ||
+             isSimpleCallName(candidate, "mapPair") ||
+             isSimpleCallName(candidate, "mapTriple") ||
+             isSimpleCallName(candidate, "mapQuad") ||
+             isSimpleCallName(candidate, "mapQuint") ||
+             isSimpleCallName(candidate, "mapSext") ||
+             isSimpleCallName(candidate, "mapSept") ||
+             isSimpleCallName(candidate, "mapOct");
+    };
+    if (matchesDirectMapConstructor(expr) && expr.templateArgs.size() == 2) {
+      return assignCollection(
+          LocalInfo::Kind::Map,
+          expr.templateArgs.back(),
+          valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.front())));
+    }
+    if (matchesDirectMapConstructor(expr) && expr.args.size() % 2 == 0) {
+      auto inferLiteralType = [&](const Expr &value, std::string &typeOut) {
+        typeOut.clear();
+        if (value.kind == Expr::Kind::Literal) {
+          typeOut = value.isUnsigned ? "u64" : (value.intWidth == 64 ? "i64" : "i32");
+          return true;
+        }
+        if (value.kind == Expr::Kind::BoolLiteral) {
+          typeOut = "bool";
+          return true;
+        }
+        if (value.kind == Expr::Kind::FloatLiteral) {
+          typeOut = value.floatWidth == 64 ? "f64" : "f32";
+          return true;
+        }
+        if (value.kind == Expr::Kind::StringLiteral) {
+          typeOut = "string";
+          return true;
+        }
+        return false;
+      };
+      std::string keyType;
+      std::string mappedValueType;
+      for (size_t i = 0; i < expr.args.size(); i += 2) {
+        std::string currentKeyType;
+        std::string currentValueType;
+        if (!inferLiteralType(expr.args[i], currentKeyType) ||
+            !inferLiteralType(expr.args[i + 1], currentValueType)) {
+          keyType.clear();
+          mappedValueType.clear();
+          break;
+        }
+        if (keyType.empty()) {
+          keyType = currentKeyType;
+        } else if (keyType != currentKeyType) {
+          keyType.clear();
+          mappedValueType.clear();
+          break;
+        }
+        if (mappedValueType.empty()) {
+          mappedValueType = currentValueType;
+        } else if (mappedValueType != currentValueType) {
+          keyType.clear();
+          mappedValueType.clear();
+          break;
+        }
+      }
+      if (!keyType.empty() && !mappedValueType.empty()) {
+        return assignCollection(
+            LocalInfo::Kind::Map,
+            mappedValueType,
+            valueKindFromTypeName(trimTemplateTypeText(keyType)));
+      }
+    }
     std::string normalized = expr.name;
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());

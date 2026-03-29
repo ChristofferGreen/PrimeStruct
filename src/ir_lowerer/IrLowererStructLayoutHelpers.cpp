@@ -8,6 +8,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -76,6 +77,20 @@ bool classifyBindingTypeLayoutInternal(const LayoutFieldBinding &binding,
   }
   if (normalized == "array" || normalized == "vector" || normalized == "map") {
     layoutOut = {8u, 8u};
+    structTypeNameOut.clear();
+    return true;
+  }
+  if (normalized == "Result") {
+    if (binding.typeTemplateArg.empty()) {
+      errorOut = "Result requires one or two template arguments";
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(binding.typeTemplateArg, args) || (args.size() != 1 && args.size() != 2)) {
+      errorOut = "Result requires one or two template arguments";
+      return false;
+    }
+    layoutOut = (args.size() == 1) ? BindingTypeLayout{4u, 4u} : BindingTypeLayout{8u, 8u};
     structTypeNameOut.clear();
     return true;
   }

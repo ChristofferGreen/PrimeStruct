@@ -12,24 +12,186 @@
             return false;
           }
           ResultExprInfo resultInfo;
-          if (!ir_lowerer::resolveResultExprInfoFromLocals(
-                  expr.args.front(),
-                  localsIn,
-                  [&](const Expr &callExpr, const LocalMap &callLocals) {
-                    return resolveMethodCallDefinition(callExpr, callLocals);
-                  },
-                  [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
-                  [&](const std::string &definitionPath, ReturnInfo &returnInfoOut) {
-                    return getReturnInfo && getReturnInfo(definitionPath, returnInfoOut);
-                  },
-                  [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-                    return inferExprKind(valueExpr, valueLocals);
-                  },
-                  resultInfo) ||
-              !resultInfo.isResult) {
+          auto resolveResultFieldInfo = [&](const Expr &valueExpr, ResultExprInfo &fieldResultOut) {
+            fieldResultOut = ResultExprInfo{};
+            if (!(valueExpr.kind == Expr::Kind::Call && valueExpr.isFieldAccess && valueExpr.args.size() == 1)) {
+              return false;
+            }
+
+            const std::string receiverStructPath = inferStructExprPath(valueExpr.args.front(), localsIn);
+            if (receiverStructPath.empty()) {
+              return false;
+            }
+
+            LayoutFieldBinding fieldBinding;
+            if (!ir_lowerer::resolveStructLayoutFieldBinding(
+                    receiverStructPath, valueExpr.name, structFieldInfoByName, defMap, fieldBinding) ||
+                normalizeCollectionBindingTypeName(fieldBinding.typeName) != "Result") {
+              return false;
+            }
+
+            std::vector<std::string> resultArgs;
+            if (fieldBinding.typeTemplateArg.empty() ||
+                !splitTemplateArgs(fieldBinding.typeTemplateArg, resultArgs) ||
+                (resultArgs.size() != 1 && resultArgs.size() != 2)) {
+              return false;
+            }
+
+            fieldResultOut.isResult = true;
+            fieldResultOut.hasValue = (resultArgs.size() == 2);
+            fieldResultOut.errorType = trimTemplateTypeText(resultArgs.back());
+            if (!fieldResultOut.hasValue) {
+              return true;
+            }
+
+            const std::string valueTypeText = trimTemplateTypeText(resultArgs.front());
+            fieldResultOut.valueCollectionKind = LocalInfo::Kind::Value;
+            fieldResultOut.valueKind = LocalInfo::ValueKind::Unknown;
+            fieldResultOut.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
+            if (!ir_lowerer::resolveSupportedResultCollectionType(
+                    valueTypeText,
+                    fieldResultOut.valueCollectionKind,
+                    fieldResultOut.valueKind,
+                    &fieldResultOut.valueMapKeyKind)) {
+              std::string valueStructType;
+              if (resolveStructTypeName(valueTypeText, valueExpr.namespacePrefix, valueStructType)) {
+                fieldResultOut.valueStructType = std::move(valueStructType);
+              } else {
+                fieldResultOut.valueKind = valueKindFromTypeName(valueTypeText);
+              }
+            }
+            return fieldResultOut.valueCollectionKind != LocalInfo::Kind::Value ||
+                   fieldResultOut.valueKind != LocalInfo::ValueKind::Unknown ||
+                   !fieldResultOut.valueStructType.empty();
+          };
+          if ((!ir_lowerer::resolveResultExprInfoFromLocals(
+                   expr.args.front(),
+                   localsIn,
+                   [&](const Expr &callExpr, const LocalMap &callLocals) {
+                     return resolveMethodCallDefinition(callExpr, callLocals);
+                   },
+                   [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                   [&](const std::string &definitionPath, ReturnInfo &returnInfoOut) {
+                     return getReturnInfo && getReturnInfo(definitionPath, returnInfoOut);
+                   },
+                   [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                     return inferExprKind(valueExpr, valueLocals);
+                   },
+                   resultInfo) ||
+               !resultInfo.isResult) &&
+              !resolveResultFieldInfo(expr.args.front(), resultInfo)) {
             error = "try requires Result argument";
             return false;
           }
+          auto normalizeSpecializedMapResultInfo = [&](ResultExprInfo &valueResultInfo) {
+            if (valueResultInfo.valueCollectionKind != LocalInfo::Kind::Value ||
+                valueResultInfo.valueKind != LocalInfo::ValueKind::Unknown ||
+                valueResultInfo.valueStructType.empty()) {
+              return;
+            }
+            auto resolveSpecializedVectorElementKind = [&](const std::string &typeText,
+                                                           LocalInfo::ValueKind &elemKindOut) {
+              elemKindOut = LocalInfo::ValueKind::Unknown;
+              std::string normalized = trimTemplateTypeText(typeText);
+              if (!normalized.empty() && normalized.front() != '/') {
+                normalized.insert(normalized.begin(), '/');
+              }
+              if (normalized.rfind("/std/collections/experimental_vector/Vector__", 0) != 0) {
+                return false;
+              }
+              Expr syntheticExpr;
+              syntheticExpr.kind = Expr::Kind::Call;
+              syntheticExpr.name = normalized;
+              const Definition *structDef = resolveDefinitionCall(syntheticExpr);
+              if (structDef == nullptr || !isStructDefinition(*structDef)) {
+                return false;
+              }
+              for (const auto &fieldExpr : structDef->statements) {
+                if (!fieldExpr.isBinding || fieldExpr.name != "data") {
+                  continue;
+                }
+                for (const auto &transform : fieldExpr.transforms) {
+                  if (transform.name == "effects" || transform.name == "capabilities" ||
+                      isLayoutQualifierName(transform.name) || !transform.arguments.empty()) {
+                    continue;
+                  }
+                  if (normalizeCollectionBindingTypeName(transform.name) != "Pointer" ||
+                      transform.templateArgs.size() != 1) {
+                    break;
+                  }
+                  std::string elementType = trimTemplateTypeText(transform.templateArgs.front());
+                  if (!extractTopLevelUninitializedTypeText(elementType, elementType)) {
+                    break;
+                  }
+                  elemKindOut = valueKindFromTypeName(elementType);
+                  return elemKindOut != LocalInfo::ValueKind::Unknown;
+                }
+              }
+              return false;
+            };
+            auto resolveSpecializedMapTypeKinds = [&](const std::string &typeText,
+                                                      LocalInfo::ValueKind &keyKindOut,
+                                                      LocalInfo::ValueKind &valueKindOut) {
+              keyKindOut = LocalInfo::ValueKind::Unknown;
+              valueKindOut = LocalInfo::ValueKind::Unknown;
+              std::string normalized = trimTemplateTypeText(typeText);
+              if (!normalized.empty() && normalized.front() != '/') {
+                normalized.insert(normalized.begin(), '/');
+              }
+              if (normalized.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
+                return false;
+              }
+              Expr syntheticExpr;
+              syntheticExpr.kind = Expr::Kind::Call;
+              syntheticExpr.name = normalized;
+              const Definition *structDef = resolveDefinitionCall(syntheticExpr);
+              if (structDef == nullptr || !isStructDefinition(*structDef)) {
+                return false;
+              }
+              for (const auto &fieldExpr : structDef->statements) {
+                if (!fieldExpr.isBinding) {
+                  continue;
+                }
+                for (const auto &transform : fieldExpr.transforms) {
+                  if (transform.name == "effects" || transform.name == "capabilities" ||
+                      isLayoutQualifierName(transform.name) || !transform.arguments.empty()) {
+                    continue;
+                  }
+                  const std::string rawTypeName = transform.name;
+                  if (normalizeCollectionBindingTypeName(rawTypeName) != "vector") {
+                    break;
+                  }
+                  LocalInfo::ValueKind fieldKind = LocalInfo::ValueKind::Unknown;
+                  if (transform.templateArgs.size() == 1) {
+                    fieldKind = valueKindFromTypeName(trimTemplateTypeText(transform.templateArgs.front()));
+                  } else if (!resolveSpecializedVectorElementKind(rawTypeName, fieldKind)) {
+                    break;
+                  }
+                  if (fieldKind == LocalInfo::ValueKind::Unknown) {
+                    break;
+                  }
+                  if (fieldExpr.name == "keys") {
+                    keyKindOut = fieldKind;
+                  } else if (fieldExpr.name == "payloads") {
+                    valueKindOut = fieldKind;
+                  }
+                  break;
+                }
+              }
+              return keyKindOut != LocalInfo::ValueKind::Unknown &&
+                     valueKindOut != LocalInfo::ValueKind::Unknown;
+            };
+            LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+            LocalInfo::ValueKind payloadKind = LocalInfo::ValueKind::Unknown;
+            if (!resolveSpecializedMapTypeKinds(valueResultInfo.valueStructType, keyKind, payloadKind)) {
+              return;
+            }
+            valueResultInfo.valueCollectionKind = LocalInfo::Kind::Map;
+            valueResultInfo.valueMapKeyKind = keyKind;
+            valueResultInfo.valueKind = payloadKind;
+            valueResultInfo.valueStructType.clear();
+          };
+          normalizeSpecializedMapResultInfo(resultInfo);
           if (!emitExpr(expr.args.front(), localsIn)) {
             return false;
           }
@@ -153,7 +315,7 @@
             function.instructions.push_back({IrOpcode::CmpEqI64, 0});
             size_t jumpError = function.instructions.size();
             function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            if (resultInfo.valueCollectionKind == LocalInfo::Kind::Buffer) {
+            if (ir_lowerer::usesInlineBufferResultErrorDiscriminator(resultInfo)) {
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
             } else {
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});

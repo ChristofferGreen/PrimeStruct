@@ -7,6 +7,207 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
+                                           LocalInfo::ValueKind fallbackKeyKind,
+                                           LocalInfo::ValueKind fallbackValueKind,
+                                           const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                           Expr &rewrittenExpr) {
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+    return false;
+  }
+  auto matchesDirectMapConstructorName = [&](const Expr &candidate) {
+    std::string normalizedName = candidate.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    auto matchesPath = [&](std::string_view basePath) {
+      return normalizedName == basePath || normalizedName.rfind(std::string(basePath) + "__", 0) == 0;
+    };
+    return matchesPath("std/collections/map/map") ||
+           matchesPath("std/collections/mapNew") ||
+           matchesPath("std/collections/mapSingle") ||
+           matchesPath("std/collections/mapDouble") ||
+           matchesPath("std/collections/mapPair") ||
+           matchesPath("std/collections/mapTriple") ||
+           matchesPath("std/collections/mapQuad") ||
+           matchesPath("std/collections/mapQuint") ||
+           matchesPath("std/collections/mapSext") ||
+           matchesPath("std/collections/mapSept") ||
+           matchesPath("std/collections/mapOct") ||
+           matchesPath("std/collections/experimental_map/map") ||
+           matchesPath("std/collections/experimental_map/mapNew") ||
+           matchesPath("std/collections/experimental_map/mapSingle") ||
+           matchesPath("std/collections/experimental_map/mapDouble") ||
+           matchesPath("std/collections/experimental_map/mapPair") ||
+           matchesPath("std/collections/experimental_map/mapTriple") ||
+           matchesPath("std/collections/experimental_map/mapQuad") ||
+           matchesPath("std/collections/experimental_map/mapQuint") ||
+           matchesPath("std/collections/experimental_map/mapSext") ||
+           matchesPath("std/collections/experimental_map/mapSept") ||
+           matchesPath("std/collections/experimental_map/mapOct") ||
+           isSimpleCallName(candidate, "mapNew") ||
+           isSimpleCallName(candidate, "mapSingle") ||
+           isSimpleCallName(candidate, "mapDouble") ||
+           isSimpleCallName(candidate, "mapPair") ||
+           isSimpleCallName(candidate, "mapTriple") ||
+           isSimpleCallName(candidate, "mapQuad") ||
+           isSimpleCallName(candidate, "mapQuint") ||
+           isSimpleCallName(candidate, "mapSext") ||
+           isSimpleCallName(candidate, "mapSept") ||
+           isSimpleCallName(candidate, "mapOct");
+  };
+  const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
+  auto matchesResolvedMapConstructor = [&](std::string_view basePath) {
+    return callee != nullptr &&
+           (callee->fullPath == basePath || callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0);
+  };
+  if (!matchesDirectMapConstructorName(callExpr) &&
+      !(matchesResolvedMapConstructor("/std/collections/map/map") ||
+        matchesResolvedMapConstructor("/std/collections/mapNew") ||
+        matchesResolvedMapConstructor("/std/collections/mapSingle") ||
+        matchesResolvedMapConstructor("/std/collections/mapDouble") ||
+        matchesResolvedMapConstructor("/std/collections/mapPair") ||
+        matchesResolvedMapConstructor("/std/collections/mapTriple") ||
+        matchesResolvedMapConstructor("/std/collections/mapQuad") ||
+        matchesResolvedMapConstructor("/std/collections/mapQuint") ||
+        matchesResolvedMapConstructor("/std/collections/mapSext") ||
+        matchesResolvedMapConstructor("/std/collections/mapSept") ||
+        matchesResolvedMapConstructor("/std/collections/mapOct") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/map") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapNew") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapSingle") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapDouble") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapPair") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapTriple") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapQuad") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapQuint") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapSext") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapSept") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapOct"))) {
+    return false;
+  }
+
+  rewrittenExpr = callExpr;
+  rewrittenExpr.name = "map";
+  rewrittenExpr.namespacePrefix.clear();
+  rewrittenExpr.isMethodCall = false;
+  if (!rewrittenExpr.templateArgs.empty()) {
+    return rewrittenExpr.templateArgs.size() == 2;
+  }
+
+  if (fallbackKeyKind != LocalInfo::ValueKind::Unknown &&
+      fallbackValueKind != LocalInfo::ValueKind::Unknown) {
+    rewrittenExpr.templateArgs = {
+        typeNameForValueKind(fallbackKeyKind),
+        typeNameForValueKind(fallbackValueKind),
+    };
+    return true;
+  }
+
+  std::string collectionName;
+  std::vector<std::string> collectionArgs;
+  if (callee != nullptr &&
+      inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) &&
+      collectionName == "map" && collectionArgs.size() == 2) {
+    collectionArgs[0] = trimTemplateTypeText(collectionArgs[0]);
+    collectionArgs[1] = trimTemplateTypeText(collectionArgs[1]);
+    rewrittenExpr.templateArgs = std::move(collectionArgs);
+    return true;
+  }
+
+  if (callee != nullptr && callee->parameters.size() >= 2) {
+    auto extractParameterTypeName = [&](const Expr &paramExpr) {
+      for (const auto &transform : paramExpr.transforms) {
+        if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+            transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
+            transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
+            transform.name == "effects" || transform.name == "capabilities") {
+          continue;
+        }
+        if (!transform.arguments.empty()) {
+          continue;
+        }
+        std::string typeName = transform.name;
+        if (!transform.templateArgs.empty()) {
+          typeName += "<";
+          for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
+            if (index != 0) {
+              typeName += ", ";
+            }
+            typeName += trimTemplateTypeText(transform.templateArgs[index]);
+          }
+          typeName += ">";
+        }
+        return typeName;
+      }
+      return std::string{};
+    };
+    const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
+    const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
+    if (!keyTypeName.empty() && !valueTypeName.empty()) {
+      rewrittenExpr.templateArgs = {keyTypeName, valueTypeName};
+      return true;
+    }
+  }
+
+  if (callExpr.args.size() % 2 == 0) {
+    auto inferLiteralKind = [&](const Expr &value) {
+      if (value.kind == Expr::Kind::Literal) {
+        return valueKindFromTypeName(value.isUnsigned ? "u64" : (value.intWidth == 64 ? "i64" : "i32"));
+      }
+      if (value.kind == Expr::Kind::BoolLiteral) {
+        return LocalInfo::ValueKind::Bool;
+      }
+      if (value.kind == Expr::Kind::FloatLiteral) {
+        return value.floatWidth == 64 ? LocalInfo::ValueKind::Float64 : LocalInfo::ValueKind::Float32;
+      }
+      if (value.kind == Expr::Kind::StringLiteral) {
+        return LocalInfo::ValueKind::String;
+      }
+      return LocalInfo::ValueKind::Unknown;
+    };
+    LocalInfo::ValueKind inferredKeyKind = LocalInfo::ValueKind::Unknown;
+    LocalInfo::ValueKind inferredValueKind = LocalInfo::ValueKind::Unknown;
+    bool validLiteralMap = true;
+    for (size_t index = 0; index < callExpr.args.size(); index += 2) {
+      const LocalInfo::ValueKind currentKeyKind = inferLiteralKind(callExpr.args[index]);
+      const LocalInfo::ValueKind currentValueKind = inferLiteralKind(callExpr.args[index + 1]);
+      if (currentKeyKind == LocalInfo::ValueKind::Unknown ||
+          currentValueKind == LocalInfo::ValueKind::Unknown) {
+        validLiteralMap = false;
+        break;
+      }
+      if (inferredKeyKind == LocalInfo::ValueKind::Unknown) {
+        inferredKeyKind = currentKeyKind;
+      } else if (inferredKeyKind != currentKeyKind) {
+        validLiteralMap = false;
+        break;
+      }
+      if (inferredValueKind == LocalInfo::ValueKind::Unknown) {
+        inferredValueKind = currentValueKind;
+      } else if (inferredValueKind != currentValueKind) {
+        validLiteralMap = false;
+        break;
+      }
+    }
+    if (validLiteralMap &&
+        inferredKeyKind != LocalInfo::ValueKind::Unknown &&
+        inferredValueKind != LocalInfo::ValueKind::Unknown) {
+      rewrittenExpr.templateArgs = {
+          typeNameForValueKind(inferredKeyKind),
+          typeNameForValueKind(inferredValueKind),
+      };
+      return true;
+    }
+  }
+
+  return false;
+}
+
+} // namespace
+
 bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
   return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool ||
          kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::String;
@@ -197,6 +398,18 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     error = "Result.ok accepts at most one argument";
     return ResultOkMethodCallEmitResult::Error;
   }
+  Expr rewrittenDirectMapExpr;
+  if (rewritePackedResultMapConstructorExpr(
+          expr.args[1],
+          LocalInfo::ValueKind::Unknown,
+          LocalInfo::ValueKind::Unknown,
+          resolveDefinitionCall,
+          rewrittenDirectMapExpr)) {
+    if (!emitExpr(rewrittenDirectMapExpr, localsIn)) {
+      return ResultOkMethodCallEmitResult::Error;
+    }
+    return ResultOkMethodCallEmitResult::Emitted;
+  }
   const LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
   if (isFileHandleExpr && argKind == LocalInfo::ValueKind::Int64 &&
       isFileHandleExpr(expr.args[1], localsIn)) {
@@ -211,7 +424,18 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
   if (inferDirectResultValueCollectionInfo(
           expr.args[1], localsIn, resolveDefinitionCall, collectionKind, collectionValueKind, collectionMapKeyKind) &&
       isSupportedPackedResultCollectionKind(collectionKind)) {
-    if (!emitExpr(expr.args[1], localsIn)) {
+    const Expr *payloadExpr = &expr.args[1];
+    Expr rewrittenMapExpr;
+    if (collectionKind == LocalInfo::Kind::Map &&
+        rewritePackedResultMapConstructorExpr(
+            expr.args[1],
+            collectionMapKeyKind,
+            collectionValueKind,
+            resolveDefinitionCall,
+            rewrittenMapExpr)) {
+      payloadExpr = &rewrittenMapExpr;
+    }
+    if (!emitExpr(*payloadExpr, localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
     }
     return ResultOkMethodCallEmitResult::Emitted;
