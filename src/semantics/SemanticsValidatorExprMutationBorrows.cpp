@@ -159,6 +159,52 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     if (!getBuiltinOperatorName(pointerExpr, opName) ||
         (opName != "plus" && opName != "minus") ||
         pointerExpr.args.size() != 2) {
+      const std::string nestedResolved = resolveCalleePath(pointerExpr);
+      if (nestedResolved.empty()) {
+        return false;
+      }
+      auto nestedIt = defMap_.find(nestedResolved);
+      if (nestedIt == defMap_.end() || nestedIt->second == nullptr) {
+        return false;
+      }
+      const Definition &nestedDef = *nestedIt->second;
+      const Expr *returnedValueExpr = nullptr;
+      for (const auto &stmt : nestedDef.statements) {
+        if (isReturnCall(stmt) && stmt.args.size() == 1) {
+          returnedValueExpr = &stmt.args.front();
+        }
+      }
+      if (nestedDef.returnExpr.has_value()) {
+        returnedValueExpr = &*nestedDef.returnExpr;
+      }
+      if (returnedValueExpr == nullptr || returnedValueExpr->kind != Expr::Kind::Name) {
+        return false;
+      }
+      const auto paramsIt = paramsByDef_.find(nestedResolved);
+      if (paramsIt == paramsByDef_.end()) {
+        return false;
+      }
+      const auto &nestedParams = paramsIt->second;
+      std::string nestedArgError;
+      std::vector<const Expr *> nestedOrderedArgs;
+      if (!buildOrderedArguments(nestedParams, pointerExpr.args, pointerExpr.argNames,
+                                 nestedOrderedArgs, nestedArgError)) {
+        return false;
+      }
+      for (size_t nestedIndex = 0;
+           nestedIndex < nestedParams.size() && nestedIndex < nestedOrderedArgs.size();
+           ++nestedIndex) {
+        const auto &nestedParam = nestedParams[nestedIndex];
+        const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
+        if (nestedArg == nullptr || nestedParam.name != returnedValueExpr->name) {
+          continue;
+        }
+        const std::string normalizedParamType = normalizeBindingTypeName(nestedParam.binding.typeName);
+        if (normalizedParamType != "Reference" && normalizedParamType != "Pointer") {
+          return false;
+        }
+        return resolveLocationRootBindingName(*nestedArg, rootNameOut);
+      }
       return false;
     }
     if (isPointerLikeExpr(pointerExpr.args[1], params, locals)) {
@@ -216,6 +262,62 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     if (!getBuiltinOperatorName(pointerExpr, opName) ||
         (opName != "plus" && opName != "minus") ||
         pointerExpr.args.size() != 2) {
+      const std::string nestedResolved = resolveCalleePath(pointerExpr);
+      if (nestedResolved.empty()) {
+        return false;
+      }
+      auto nestedIt = defMap_.find(nestedResolved);
+      if (nestedIt == defMap_.end() || nestedIt->second == nullptr) {
+        return false;
+      }
+      const Definition &nestedDef = *nestedIt->second;
+      const Expr *returnedValueExpr = nullptr;
+      for (const auto &stmt : nestedDef.statements) {
+        if (isReturnCall(stmt) && stmt.args.size() == 1) {
+          returnedValueExpr = &stmt.args.front();
+        }
+      }
+      if (nestedDef.returnExpr.has_value()) {
+        returnedValueExpr = &*nestedDef.returnExpr;
+      }
+      if (returnedValueExpr == nullptr || returnedValueExpr->kind != Expr::Kind::Name) {
+        return false;
+      }
+      const auto paramsIt = paramsByDef_.find(nestedResolved);
+      if (paramsIt == paramsByDef_.end()) {
+        return false;
+      }
+      const auto &nestedParams = paramsIt->second;
+      std::string nestedArgError;
+      std::vector<const Expr *> nestedOrderedArgs;
+      if (!buildOrderedArguments(nestedParams, pointerExpr.args, pointerExpr.argNames,
+                                 nestedOrderedArgs, nestedArgError)) {
+        return false;
+      }
+      for (size_t nestedIndex = 0;
+           nestedIndex < nestedParams.size() && nestedIndex < nestedOrderedArgs.size();
+           ++nestedIndex) {
+        const auto &nestedParam = nestedParams[nestedIndex];
+        const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
+        if (nestedArg == nullptr || nestedParam.name != returnedValueExpr->name) {
+          continue;
+        }
+        const std::string normalizedParamType = normalizeBindingTypeName(nestedParam.binding.typeName);
+        if (normalizedParamType != "Reference" && normalizedParamType != "Pointer") {
+          return false;
+        }
+        if (resolveMutablePointerWriteTarget(*nestedArg, borrowRootOut, ignoreBorrowNameOut)) {
+          return true;
+        }
+        std::string locationRootName;
+        if (resolveLocationRootBindingName(*nestedArg, locationRootName) &&
+            isMutableBinding(locationRootName)) {
+          borrowRootOut = std::move(locationRootName);
+          ignoreBorrowNameOut.clear();
+          return true;
+        }
+        return false;
+      }
       return false;
     }
     if (isPointerLikeExpr(pointerExpr.args[1], params, locals)) {
