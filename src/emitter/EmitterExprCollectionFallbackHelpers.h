@@ -9,17 +9,6 @@
     return normalized == "vector/count" || normalized == "std/collections/vector/count" ||
            normalized == "vector/capacity" || normalized == "std/collections/vector/capacity";
   };
-  auto isExplicitVectorAccessAliasDirectCall = [&](const Expr &candidate) {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-      return false;
-    }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    return normalized == std::string("vector/") + helper ||
-           normalized == std::string("std/collections/vector/") + helper;
-  };
   auto isExplicitStdlibVectorHelper = [&](const std::string &name, const char *helper) {
     if (name.empty()) {
       return false;
