@@ -697,7 +697,7 @@ main() {
   CHECK(readFile(errPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter runs bare map access methods without imported canonical helpers") {
+TEST_CASE("C++ emitter rejects bare map access methods without imported canonical helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -706,12 +706,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_map_access_methods_without_import.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_bare_map_access_methods_without_import_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_bare_map_access_methods_without_import.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 9);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects map namespaced at method compatibility alias in C++ emitter") {
