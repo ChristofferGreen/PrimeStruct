@@ -349,33 +349,3 @@
           << ")";
       return out.str();
     }
-    if (!expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
-        isResolvedMapTarget(expr.args.front())) {
-      std::ostringstream out;
-      out << "ps_map_contains("
-          << emitExpr(expr.args.front(),
-                      nameMap,
-                      paramMap,
-                      defMap,
-                      structTypeMap,
-                      importAliases,
-                      localTypes,
-                      returnKinds,
-                      resultInfos,
-                      returnStructs,
-                      allowMathBare)
-          << ", "
-          << emitExpr(expr.args[1],
-                      nameMap,
-                      paramMap,
-                      defMap,
-                      structTypeMap,
-                      importAliases,
-                      localTypes,
-                      returnKinds,
-                      resultInfos,
-                      returnStructs,
-                      allowMathBare)
-          << ")";
-      return out.str();
-    }

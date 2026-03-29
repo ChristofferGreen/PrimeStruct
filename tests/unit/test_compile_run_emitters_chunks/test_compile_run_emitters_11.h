@@ -661,7 +661,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter runs bare map contains method without imported canonical helper") {
+TEST_CASE("C++ emitter rejects bare map contains method without imported canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 main() {
@@ -670,12 +670,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_map_contains_method_without_import.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_bare_map_contains_method_without_import_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_bare_map_contains_method_without_import.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 1);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects bare map tryAt method without imported canonical helper") {

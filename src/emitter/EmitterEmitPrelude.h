@@ -305,10 +305,6 @@
   out << "  return static_cast<int>(value.size());\n";
   out << "}\n";
   out << "template <typename Key, typename Value, typename K>\n";
-  out << "static inline bool ps_map_contains(const std::unordered_map<Key, Value> &value, const K &key) {\n";
-  out << "  return value.find(key) != value.end();\n";
-  out << "}\n";
-  out << "template <typename Key, typename Value, typename K>\n";
   out << "static inline const Value &ps_map_at(const std::unordered_map<Key, Value> &value, const K &key) {\n";
   out << "  auto it = value.find(key);\n";
   out << "  if (it == value.end()) {\n";
