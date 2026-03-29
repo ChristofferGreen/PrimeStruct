@@ -476,8 +476,11 @@ bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr) {
     return false;
   }
   const std::string normalizedPath = normalizeCollectionHelperPath(expr.name);
-  return normalizedPath == "/map/at" || normalizedPath == "/map/at_unsafe" ||
+  return normalizedPath == "/map/count" || normalizedPath == "/map/contains" ||
+         normalizedPath == "/map/at" || normalizedPath == "/map/at_unsafe" ||
          normalizedPath == "/map/tryAt" ||
+         normalizedPath == "/std/collections/map/count" ||
+         normalizedPath == "/std/collections/map/contains" ||
          normalizedPath == "/std/collections/map/at" ||
          normalizedPath == "/std/collections/map/at_unsafe" ||
          normalizedPath == "/std/collections/map/tryAt";
