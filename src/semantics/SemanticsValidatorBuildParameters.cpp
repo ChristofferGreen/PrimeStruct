@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <array>
+#include <functional>
 #include <string_view>
 
 #include "MapConstructorHelpers.h"
@@ -151,7 +152,7 @@ bool SemanticsValidator::buildParameters() {
       }
       return isResolvedMapConstructorPath(normalizedPath);
     };
-    auto isAllowedExperimentalMapDefaultExpr = [&](const Expr &candidate) {
+    std::function<bool(const Expr &)> isAllowedExperimentalMapDefaultExpr = [&](const Expr &candidate) {
       if (isDefaultExprAllowed(candidate, defaultResolvesToDefinition)) {
         return true;
       }
@@ -161,12 +162,29 @@ bool SemanticsValidator::buildParameters() {
       if (hasNamedArguments(candidate.argNames) || candidate.hasBodyArguments || !candidate.bodyArguments.empty()) {
         return false;
       }
-      if (!isResolvedExperimentalMapConstructorPath(resolveCalleePath(candidate))) {
-        return false;
+      const std::string resolvedPath = resolveCalleePath(candidate);
+      const bool isDirectExperimentalMapConstructor = isResolvedExperimentalMapConstructorPath(resolvedPath);
+      if (!isDirectExperimentalMapConstructor) {
+        for (const auto &arg : candidate.args) {
+          if (!isAllowedExperimentalMapDefaultExpr(arg)) {
+            return false;
+          }
+        }
       }
       BindingInfo inferredBinding;
       if (!inferBindingTypeFromInitializer(candidate, {}, {}, inferredBinding) ||
           !bindingCarriesExperimentalMapValue(inferredBinding)) {
+        BindingInfo fallbackBinding;
+        if (!tryInferBindingTypeFromInitializer(candidate, {}, {}, fallbackBinding, hasAnyMathImport()) ||
+            !bindingCarriesExperimentalMapValue(fallbackBinding)) {
+          return false;
+        }
+        inferredBinding = std::move(fallbackBinding);
+      }
+      if (defMap_.find(resolvedPath) != defMap_.end()) {
+        return true;
+      }
+      if (!isDirectExperimentalMapConstructor) {
         return false;
       }
       return true;

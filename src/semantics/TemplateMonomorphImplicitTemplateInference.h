@@ -91,6 +91,22 @@ bool inferImplicitTemplateArgs(const Definition &def,
   size_t packedParamIndex = callParams.size();
   size_t callArgStart = 0;
   size_t paramIndexOffset = 0;
+  auto assignBindingFromTypeText = [](const std::string &typeText, BindingInfo &bindingOut) -> bool {
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    if (normalizedType.empty()) {
+      return false;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+      bindingOut.typeName = base;
+      bindingOut.typeTemplateArg = argText;
+      return true;
+    }
+    bindingOut.typeName = normalizedType;
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  };
   const bool hasLeadingReceiverParam = [&]() {
     if (callParams.empty()) {
       return false;
@@ -106,7 +122,24 @@ bool inferImplicitTemplateArgs(const Definition &def,
     return normalizeBindingTypeName(callParams.front().binding.typeName) ==
            def.fullPath.substr(ownerSlash + 1, lastSlash - ownerSlash - 1);
   }();
-  if (hasLeadingReceiverParam && callExpr.args.size() + 1 == callParams.size()) {
+  auto receiverArgMatchesLeadingParam = [&]() -> bool {
+    if (!hasLeadingReceiverParam || callExpr.args.empty() || callParams.empty()) {
+      return false;
+    }
+    BindingInfo receiverArgInfo;
+    if (!inferBindingTypeForMonomorph(callExpr.args.front(), params, locals, allowMathBare, ctx, receiverArgInfo)) {
+      if (!assignBindingFromTypeText(
+              inferExprTypeTextForTemplatedVectorFallback(
+                  callExpr.args.front(), locals, namespacePrefix, ctx, allowMathBare),
+              receiverArgInfo)) {
+        return false;
+      }
+    }
+    return normalizeBindingTypeName(bindingTypeToString(receiverArgInfo)) ==
+           normalizeBindingTypeName(bindingTypeToString(callParams.front().binding));
+  };
+  if (hasLeadingReceiverParam && callExpr.args.size() + 1 == callParams.size() &&
+      !receiverArgMatchesLeadingParam()) {
     // Some member-helper monomorphization paths have already stripped the
     // receiver value from the call arguments, so align the parameter view to
     // the post-receiver shape before argument ordering.
@@ -231,11 +264,30 @@ bool inferImplicitTemplateArgs(const Definition &def,
           argInfo.typeTemplateArg = spreadArgs;
         }
       } else if (!inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
-        if (isStdlibCollectionHelper) {
+        Expr rewrittenArg = *argExpr;
+        std::string rewriteError;
+        const bool inferredFromRewrittenArg =
+            rewriteExpr(rewrittenArg,
+                        mapping,
+                        allowedParams,
+                        namespacePrefix,
+                        ctx,
+                        rewriteError,
+                        locals,
+                        params,
+                        allowMathBare) &&
+            inferBindingTypeForMonomorph(rewrittenArg, params, locals, allowMathBare, ctx, argInfo);
+        const std::string fallbackTypeText =
+            inferredFromRewrittenArg
+                ? std::string{}
+                : inferExprTypeTextForTemplatedVectorFallback(*argExpr, locals, namespacePrefix, ctx, allowMathBare);
+        if (!inferredFromRewrittenArg && !assignBindingFromTypeText(fallbackTypeText, argInfo)) {
+          if (isStdlibCollectionHelper) {
+            return false;
+          }
+          error = "unable to infer implicit template arguments for " + def.fullPath;
           return false;
         }
-        error = "unable to infer implicit template arguments for " + def.fullPath;
-        return false;
       }
       if (inferFromWrappedTemplateArgs) {
         if (normalizeBindingTypeName(argInfo.typeName) != normalizeBindingTypeName(paramInfo.typeName)) {

@@ -174,6 +174,54 @@ inline std::string makeInferredExperimentalMapDefaultParameterConformanceSource(
   return source;
 }
 
+inline std::string makeWrappedInferredExperimentalMapDefaultParameterConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "Holder() {}\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[return<int> effects(io_out, heap_alloc)]\n";
+  source += "scoreValues([auto mut] values{wrapValues(mapNew<string, i32>())}) {\n";
+  source += "  mapInsert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
+  source += "  mapInsert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
+  source += "  [i32] count{/std/collections/map/count<string, i32>(values)}\n";
+  source += "  [i32] left{/std/collections/map/at<string, i32>(values, \"left\"raw_utf8)}\n";
+  source += "  print_line(count)\n";
+  source += "  print_line(left)\n";
+  source += "  return(plus(count, left))\n";
+  source += "}\n\n";
+  source += "[return<int> effects(io_out, heap_alloc)]\n";
+  source += "/Holder/score([Holder] self, [auto mut] values{wrapValues(mapNew<string, i32>())}) {\n";
+  source += "  mapInsert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
+  source += "  mapInsert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
+  source += "  [i32] count{/std/collections/map/count<string, i32>(values)}\n";
+  source += "  [i32] extra{/std/collections/map/at<string, i32>(values, \"extra\"raw_utf8)}\n";
+  source += "  print_line(count)\n";
+  source += "  print_line(extra)\n";
+  source += "  return(plus(count, extra))\n";
+  source += "}\n\n";
+  source += "[effects(io_out, heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Holder] holder{Holder()}\n";
+  source +=
+      "  [i32] explicitValues{scoreValues(wrapValues(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))}\n";
+  source +=
+      "  [i32] explicitMethod{holder.score(wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 2i32, \"other\"raw_utf8, 7i32)))}\n";
+  source += "  [i32] defaultValues{scoreValues()}\n";
+  source += "  [i32] defaultMethod{holder.score()}\n";
+  source += "  print_line(explicitValues)\n";
+  source += "  print_line(explicitMethod)\n";
+  source += "  print_line(defaultValues)\n";
+  source += "  print_line(defaultMethod)\n";
+  source +=
+      "  return(plus(plus(explicitValues, explicitMethod), plus(defaultValues, defaultMethod)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapHelperReceiverConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
