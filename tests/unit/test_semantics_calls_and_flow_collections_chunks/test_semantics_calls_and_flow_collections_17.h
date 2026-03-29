@@ -564,6 +564,108 @@ main() {
   CHECK(error.find("unknown method: /map/at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("map namespaced contains method keeps slash-path rejection diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(true)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values./map/contains(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/contains") != std::string::npos);
+}
+
+TEST_CASE("map stdlib namespaced contains method keeps slash-path rejection diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(true)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values./std/collections/map/contains(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/contains") != std::string::npos);
+}
+
+TEST_CASE("map namespaced tryAt method keeps slash-path rejection diagnostics") {
+  const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+namespace ContainerError {
+  [return<string>]
+  why([ContainerError] err) {
+    return("container error"utf8)
+  }
+}
+
+[return<Result<int, ContainerError>>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(17i32))
+}
+
+[effects(io_out)]
+panic([ContainerError] err) {}
+
+[return<int> effects(heap_alloc, io_out) on_error<ContainerError, /panic>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(try(values./map/tryAt(1i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/tryAt") != std::string::npos);
+}
+
+TEST_CASE("map stdlib namespaced tryAt method keeps slash-path rejection diagnostics") {
+  const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+namespace ContainerError {
+  [return<string>]
+  why([ContainerError] err) {
+    return("container error"utf8)
+  }
+}
+
+[return<Result<int, ContainerError>>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(17i32))
+}
+
+[effects(io_out)]
+panic([ContainerError] err) {}
+
+[return<int> effects(heap_alloc, io_out) on_error<ContainerError, /panic>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(try(values./std/collections/map/tryAt(1i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/tryAt") != std::string::npos);
+}
+
 TEST_CASE("map stdlib namespaced at_unsafe method keeps slash-path rejection diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
