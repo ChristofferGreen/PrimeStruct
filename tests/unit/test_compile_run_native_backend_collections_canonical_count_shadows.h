@@ -346,7 +346,7 @@ main() {
   CHECK(runCommand(exePath) == 182);
 }
 
-TEST_CASE("native keeps wrapper-returned slash-method map access primitive count diagnostics") {
+TEST_CASE("native rejects wrapper-returned slash-method map access count with same-path diagnostics") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -383,7 +383,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native slash-method vector access string count fallback") {

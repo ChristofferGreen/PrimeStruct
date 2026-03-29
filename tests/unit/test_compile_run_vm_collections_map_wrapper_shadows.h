@@ -88,7 +88,7 @@ main() {
   CHECK(runCommand(runCmd) == 182);
 }
 
-TEST_CASE("vm keeps wrapper-returned slash-method map access primitive count diagnostics") {
+TEST_CASE("vm rejects wrapper-returned slash-method map access count with same-path diagnostics") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
