@@ -1,13 +1,24 @@
-  auto isExplicitVectorCountCapacityDirectCall = [&](const Expr &candidate) {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+  auto pickExplicitVectorAccessReceiverIndex = [&](const Expr &candidate) -> size_t {
+    if (candidate.args.size() != 2) {
+      return 0;
+    }
+    if (hasNamedArguments(candidate.argNames)) {
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          return i;
+        }
+      }
+    }
+    return 0;
+  };
+  auto isNoHelperExplicitVectorAccessCallFallback = [&](const Expr &candidate) {
+    if (!isExplicitVectorAccessDirectCall(candidate) || !explicitVectorAccessResolvedTypePath(candidate).empty() ||
+        candidate.args.size() != 2) {
       return false;
     }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    return normalized == "vector/count" || normalized == "std/collections/vector/count" ||
-           normalized == "vector/capacity" || normalized == "std/collections/vector/capacity";
+    const size_t receiverIndex = pickExplicitVectorAccessReceiverIndex(candidate);
+    return receiverIndex < candidate.args.size() && isResolvedVectorTarget(candidate.args[receiverIndex]);
   };
   auto isExplicitVectorAccessSlashMethod = [&](const Expr &candidate, const char *helper) {
     if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty()) {
@@ -20,43 +31,16 @@
     return normalized == std::string("vector/") + helper ||
            normalized == std::string("std/collections/vector/") + helper;
   };
-  auto pickExplicitVectorCountCapacityReceiverIndex = [&](const Expr &candidate) -> size_t {
-    if (candidate.args.size() != 1) {
-      return 0;
-    }
-    if (hasNamedArguments(candidate.argNames) && !candidate.argNames.empty() && candidate.argNames.front().has_value() &&
-        *candidate.argNames.front() == "values") {
-      return 0;
-    }
-    return 0;
-  };
-  auto isNoHelperExplicitVectorCountCapacityCallFallback = [&](const Expr &candidate) {
-    if (!isExplicitVectorCountCapacityDirectCall(candidate) || candidate.args.size() != 1) {
+  auto isExplicitVectorCountCapacityDirectCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    const size_t receiverIndex = pickExplicitVectorCountCapacityReceiverIndex(candidate);
-    return receiverIndex < candidate.args.size() && isResolvedVectorTarget(candidate.args[receiverIndex]);
-  };
-  auto emitMissingExplicitVectorCountCapacityCall = [&](const Expr &candidate) {
-    const size_t receiverIndex = pickExplicitVectorCountCapacityReceiverIndex(candidate);
-    const std::string resolvedPath = resolveExprPath(candidate);
-    const bool isCapacity = resolvedPath == "/vector/capacity" ||
-                            resolvedPath == "/std/collections/vector/capacity";
-    std::ostringstream out;
-    out << "ps_missing_vector_" << (isCapacity ? "capacity" : "count") << "_call_helper("
-        << emitExpr(candidate.args[receiverIndex],
-                    nameMap,
-                    paramMap,
-                    defMap,
-                    structTypeMap,
-                    importAliases,
-                    localTypes,
-                    returnKinds,
-                    resultInfos,
-                    returnStructs,
-                    allowMathBare)
-        << ")";
-    return out.str();
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == "vector/count" || normalized == "std/collections/vector/count" ||
+           normalized == "vector/capacity" || normalized == "std/collections/vector/capacity";
   };
   auto emitMissingExplicitVectorAccessCall = [&](const Expr &candidate) {
     const size_t receiverIndex = pickExplicitVectorAccessReceiverIndex(candidate);
