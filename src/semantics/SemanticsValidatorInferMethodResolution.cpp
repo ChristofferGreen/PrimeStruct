@@ -45,7 +45,28 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
+  const std::string explicitRemovedMethodPath =
+      explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
+    if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
+      if (normalizedMethodName == "count" &&
+          (collectionTypePath == "/vector" || collectionTypePath == "/array" ||
+           collectionTypePath == "/soa_vector" || collectionTypePath == "/string")) {
+        resolvedOut = explicitRemovedMethodPath;
+        return true;
+      }
+      if (normalizedMethodName == "capacity" &&
+          (collectionTypePath == "/vector" || collectionTypePath == "/soa_vector")) {
+        resolvedOut = explicitRemovedMethodPath;
+        return true;
+      }
+      if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
+          (collectionTypePath == "/vector" || collectionTypePath == "/array" ||
+           collectionTypePath == "/string")) {
+        resolvedOut = explicitRemovedMethodPath;
+        return true;
+      }
+    }
     if (normalizedMethodName == "count") {
       if (collectionTypePath == "/array") {
         resolvedOut = preferVectorStdlibHelperPath("/array/count");

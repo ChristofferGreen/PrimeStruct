@@ -102,6 +102,11 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       (context.namespacedHelper == "at" || context.namespacedHelper == "at_unsafe") &&
       !prefersExplicitDirectMapAccessAliasDefinition &&
       defMap_.find(resolved) == defMap_.end();
+  const std::string explicitRemovedMethodPath =
+      explicitRemovedCollectionMethodPath(expr.name, expr.namespacePrefix);
+  const bool preservesExplicitRemovedArrayAccessMethod =
+      explicitRemovedMethodPath.rfind("/array/", 0) == 0 &&
+      hasDefinitionPath(explicitRemovedMethodPath);
 
   if (isBuiltinAccessName &&
       !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames)) &&
@@ -174,7 +179,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       bool isBuiltinMethod = false;
       std::string methodResolved;
       bool resolvedVectorAccessMethod = false;
-      if ((accessHelperName == "at" || accessHelperName == "at_unsafe") &&
+      if (!preservesExplicitRemovedArrayAccessMethod &&
+          (accessHelperName == "at" || accessHelperName == "at_unsafe") &&
           resolveVectorHelperMethodTarget(params, locals, receiverCandidate,
                                           accessHelperName, methodResolved)) {
         if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
@@ -250,7 +256,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       bool isBuiltinMethod = false;
       std::string methodResolved;
       bool resolvedVectorAccessMethod = false;
-      if ((accessHelperName == "at" || accessHelperName == "at_unsafe") &&
+      if (!preservesExplicitRemovedArrayAccessMethod &&
+          (accessHelperName == "at" || accessHelperName == "at_unsafe") &&
           resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                           accessHelperName, methodResolved)) {
         if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&

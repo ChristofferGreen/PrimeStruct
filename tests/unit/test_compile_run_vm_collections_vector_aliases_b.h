@@ -310,6 +310,55 @@ main() {
   CHECK(runCommand(runCmd) == 50);
 }
 
+TEST_CASE("compiles and runs vm array alias slash-method helpers through same-path helpers") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<int>]
+/array/count([vector<i32>] values) {
+  return(77i32)
+}
+
+[return<int>]
+/array/capacity([vector<i32>] values) {
+  return(78i32)
+}
+
+[return<Marker>]
+/array/at([vector<i32>] values, [i32] index) {
+  return(Marker(plus(index, 10i32)))
+}
+
+[return<Marker>]
+/array/at_unsafe([vector<i32>] values, [i32] index) {
+  return(Marker(plus(index, 20i32)))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32, 3i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(plus(plus(values./array/count(), values./array/capacity()),
+              plus(plus(values./array/at(1i32).tag(), values./array/at_unsafe(2i32).tag()),
+                   plus(wrapVector()./array/at(0i32).tag(), wrapVector()./array/at_unsafe(1i32).tag()))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_alias_method_helpers_same_path_vector_receivers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 219);
+}
+
 TEST_CASE("rejects vm vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
 [return<int>]

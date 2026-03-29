@@ -242,26 +242,46 @@ std::string SemanticsValidator::inferStructReturnPath(
           !namespacedHelper.empty()) {
         methodName = namespacedHelper;
       }
+      const std::string explicitRemovedMethodPath =
+          explicitRemovedCollectionMethodPath(rawMethodName, expr.namespacePrefix);
+      const bool preservesExplicitRemovedMethodPath =
+          !explicitRemovedMethodPath.empty() &&
+          hasDefinitionPath(explicitRemovedMethodPath) &&
+          (receiverStruct == "/vector" || receiverStruct == "/array");
       const bool blocksBuiltinVectorAccessStructReturnForwarding =
           methodName == "at" || methodName == "at_unsafe";
       const bool isExplicitRemovedMapAliasStructReturnMethod =
           rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
           rawMethodName == "std/collections/map/at" || rawMethodName == "std/collections/map/at_unsafe";
       std::vector<std::string> methodCandidates;
+      auto appendMethodCandidate = [&](const std::string &candidate) {
+        if (candidate.empty()) {
+          return;
+        }
+        for (const auto &existing : methodCandidates) {
+          if (existing == candidate) {
+            return;
+          }
+        }
+        methodCandidates.push_back(candidate);
+      };
+      if (preservesExplicitRemovedMethodPath) {
+        appendMethodCandidate(explicitRemovedMethodPath);
+      }
       if (receiverStruct == "/vector") {
-        methodCandidates = {"/vector/" + methodName};
+        appendMethodCandidate("/vector/" + methodName);
         if (!blocksBuiltinVectorAccessStructReturnForwarding) {
-          methodCandidates.push_back("/std/collections/vector/" + methodName);
+          appendMethodCandidate("/std/collections/vector/" + methodName);
         }
         if (methodName != "count" && !blocksBuiltinVectorAccessStructReturnForwarding) {
-          methodCandidates.push_back("/array/" + methodName);
+          appendMethodCandidate("/array/" + methodName);
         }
       } else if (receiverStruct == "/array") {
-        methodCandidates = {"/array/" + methodName};
+        appendMethodCandidate("/array/" + methodName);
         if (methodName != "count") {
-          methodCandidates.push_back("/vector/" + methodName);
+          appendMethodCandidate("/vector/" + methodName);
           if (!blocksBuiltinVectorAccessStructReturnForwarding) {
-            methodCandidates.push_back("/std/collections/vector/" + methodName);
+            appendMethodCandidate("/std/collections/vector/" + methodName);
           }
         }
       } else if (receiverStruct == "/map") {
@@ -351,6 +371,11 @@ std::string SemanticsValidator::inferStructReturnPath(
     if (expr.kind == Expr::Kind::Call) {
       std::string accessHelperName;
       if (getBuiltinArrayAccessName(expr, accessHelperName) && !expr.args.empty()) {
+        const std::string explicitRemovedMethodPath =
+            explicitRemovedCollectionMethodPath(expr.name, expr.namespacePrefix);
+        const bool preservesExplicitRemovedArrayAccessMethod =
+            explicitRemovedMethodPath.rfind("/array/", 0) == 0 &&
+            hasDefinitionPath(explicitRemovedMethodPath);
         size_t receiverIndex = expr.isMethodCall ? 0 : 0;
         if (!expr.isMethodCall && hasNamedArguments(expr.argNames)) {
           bool foundValues = false;
@@ -372,7 +397,9 @@ std::string SemanticsValidator::inferStructReturnPath(
               builtinCollectionDispatchResolvers.resolveVectorTarget(expr.args[receiverIndex], elemType) ||
               builtinCollectionDispatchResolvers.resolveArrayTarget(expr.args[receiverIndex], elemType) ||
               builtinCollectionDispatchResolvers.resolveStringTarget(expr.args[receiverIndex])) {
-            return "";
+            if (!preservesExplicitRemovedArrayAccessMethod) {
+              return "";
+            }
           }
         }
       }
