@@ -1232,6 +1232,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                resolveStringTarget(receiver);
       }
       if (normalizedMethodName == "capacity") {
+        if (isExplicitArrayCompatibilityPath) {
+          return false;
+        }
         if (isCanonicalStdVectorPath) {
           return resolveVectorTarget(receiver, ignoredElemType) ||
                  resolveSoaVectorTarget(receiver, ignoredElemType);
