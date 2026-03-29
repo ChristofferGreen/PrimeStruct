@@ -876,3 +876,20 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_CASE("array namespaced capacity wrapper vector target without helper reports unknown target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/capacity(wrapVector()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /array/capacity") != std::string::npos);
+}

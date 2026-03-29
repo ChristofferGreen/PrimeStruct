@@ -21,6 +21,33 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
 }
 
+TEST_CASE("rejects native array namespaced wrapper vector capacity alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(4i32, 5i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/capacity(wrapVector()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_array_namespaced_wrapper_vector_capacity_alias.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_array_namespaced_wrapper_vector_capacity_alias_out.txt")
+          .string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_array_namespaced_wrapper_vector_capacity_alias_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
+}
+
 TEST_CASE("rejects native array namespaced vector mutator alias") {
   const std::string source = R"(
 import /std/collections/*
@@ -633,4 +660,3 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
-

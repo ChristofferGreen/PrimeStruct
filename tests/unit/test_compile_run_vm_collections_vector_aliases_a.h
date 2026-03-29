@@ -223,6 +223,28 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
 }
 
+TEST_CASE("rejects vm array namespaced wrapper vector capacity alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(4i32, 5i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/capacity(wrapVector()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_namespaced_wrapper_vector_capacity_alias.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_array_namespaced_wrapper_vector_capacity_alias_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
+}
+
 TEST_CASE("rejects vm array namespaced vector mutator alias") {
   const std::string source = R"(
 import /std/collections/*
