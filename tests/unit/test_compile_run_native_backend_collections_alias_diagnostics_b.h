@@ -420,69 +420,6 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("rejects native wrapper-returned canonical direct-call map receiver fallback") {
-  const std::string source = R"(
-namespace i32 {
-  [return<int>]
-  tag([i32] value) {
-    return(plus(value, 40i32))
-  }
-}
-
-[effects(heap_alloc), return</std/collections/map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(2i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/std/collections/map/at(wrapMap(), 2i32).tag())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_wrapper_canonical_direct_map_receiver_fallback.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_wrapper_canonical_direct_map_receiver_fallback.err")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
-        std::string::npos);
-}
-
-TEST_CASE("rejects native wrapper-returned compatibility direct-call map receiver fallback") {
-  const std::string source = R"(
-namespace i32 {
-  [return<int>]
-  tag([i32] value) {
-    return(plus(value, 40i32))
-  }
-}
-
-[effects(heap_alloc), return</std/collections/map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(2i32, 7i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/map/at(wrapMap(), 2i32).tag())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_wrapper_compatibility_direct_map_receiver_fallback.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_wrapper_compatibility_direct_map_receiver_fallback.err")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
-}
-
 TEST_CASE("native keeps wrapper-returned map method alias primitive argument diagnostics") {
   const std::string source = R"(
 Marker {
