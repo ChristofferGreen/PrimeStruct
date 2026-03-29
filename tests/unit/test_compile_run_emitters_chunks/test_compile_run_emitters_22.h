@@ -558,6 +558,35 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
+TEST_CASE("rejects bare map method access receiver fallback without helper in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 40i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 5i32, 2i32, 6i32)}
+  return(values.at(1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_method_access_receiver_fallback_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_bare_map_method_access_receiver_fallback_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
+}
+
 TEST_CASE("rejects wrapper bare vector unsafe method access receiver fallback in C++ emitter") {
   const std::string source = R"(
 namespace i32 {

@@ -321,8 +321,8 @@ TEST_CASE("C++ emitter helper falls back to canonical map receiver metadata when
   CHECK(resolved == "/CanonicalMarker/tag");
 }
 
-TEST_CASE("C++ emitter helper keeps bare map access canonical struct forwarding") {
-  auto expectResolved = [&](const char *accessName, const char *metadataPath) {
+TEST_CASE("C++ emitter helper rejects bare map access metadata-only struct forwarding") {
+  auto expectRejected = [&](const char *accessName, const char *metadataPath) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
@@ -362,14 +362,14 @@ TEST_CASE("C++ emitter helper keeps bare map access canonical struct forwarding"
     std::unordered_map<std::string, std::string> returnStructs;
     returnStructs.emplace(metadataPath, "/CanonicalMarker");
 
-    std::string resolved;
-    CHECK(primec::emitter::resolveMethodCallPath(
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved == "/CanonicalMarker/tag");
+    CHECK(resolved.empty());
   };
 
-  expectResolved("at", "/std/collections/map/at");
-  expectResolved("at_unsafe", "/std/collections/map/at_unsafe");
+  expectRejected("at", "/std/collections/map/at");
+  expectRejected("at_unsafe", "/std/collections/map/at_unsafe");
 }
 
 TEST_CASE("C++ emitter helper rejects direct map access compatibility metadata fallback") {

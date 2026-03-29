@@ -138,11 +138,11 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return "";
     }
     const std::string canonicalPath = "/std/collections/map/" + candidate.name;
-    if (hasDefinitionOrMetadata(view, canonicalPath)) {
+    if (view.defMap.count(canonicalPath) > 0) {
       return canonicalPath;
     }
     const std::string aliasPath = "/map/" + candidate.name;
-    if (hasDefinitionOrMetadata(view, aliasPath)) {
+    if (view.defMap.count(aliasPath) > 0) {
       return aliasPath;
     }
     return "";
@@ -256,6 +256,15 @@ std::string inferMethodResolutionPrimitiveTypeName(
   };
   auto inferExplicitMapAccessResolvedTypeName = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+      return "";
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    if (normalized != "map/at" && normalized != "map/at_unsafe" &&
+        normalized != "std/collections/map/at" &&
+        normalized != "std/collections/map/at_unsafe") {
       return "";
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
@@ -435,6 +444,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
               !inferredType.empty()) {
             return inferredType;
           }
+        } else if (isBareMapAccessMethod(candidateExpr)) {
+          return "";
         }
         const std::string accessTypeName = inferAccessCallTypeName(
             candidateExpr,
