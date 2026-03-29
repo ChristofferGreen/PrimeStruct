@@ -602,7 +602,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers canonical slash-method map access without helper to deleted stubs") {
+TEST_CASE("C++ emitter rejects canonical slash-method map access before deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {

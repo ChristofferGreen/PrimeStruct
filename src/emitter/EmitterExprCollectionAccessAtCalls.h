@@ -92,9 +92,6 @@
             << ")";
         return out.str();
       }
-      if (expr.isMethodCall && isNoHelperExplicitMapAccessMethodFallback(expr)) {
-        return emitMissingExplicitMapAccessMethod(expr);
-      }
       if (isResolvedStringTarget(target)) {
         out << "ps_string_at("
             << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
@@ -255,9 +252,6 @@
                         allowMathBare)
             << ")";
         return out.str();
-      }
-      if (expr.isMethodCall && isNoHelperExplicitMapAccessMethodFallback(expr)) {
-        return emitMissingExplicitMapAccessMethod(expr);
       }
       if (isResolvedStringTarget(target)) {
         out << "ps_string_at_unsafe("
