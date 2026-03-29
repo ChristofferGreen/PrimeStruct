@@ -179,6 +179,15 @@ inline void expectInferredExperimentalMapDefaultParameterConformance(const std::
       "2\n4\n1\n4\n3\n5\n6\n5\n8\n");
 }
 
+inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(
+      makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
+      "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
+      emitMode,
+      37,
+      "3\n4\n4\n9\n2\n4\n2\n9\n7\n13\n6\n11\n");
+}
+
 inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(
       makeExperimentalMapHelperReceiverConformanceSource(),
