@@ -1,6 +1,3 @@
-    if (isNoHelperExplicitVectorAccessCallFallback(expr)) {
-      return emitMissingExplicitVectorAccessCall(expr);
-    }
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 && isResolvedArrayLikeTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_array_count("

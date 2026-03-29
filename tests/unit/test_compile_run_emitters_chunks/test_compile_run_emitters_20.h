@@ -270,7 +270,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers wrapper bare vector at calls without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects wrapper bare vector at calls before deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -283,15 +283,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_wrapper_bare_vector_at_call_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_call_deleted_stub.cpp")
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_call_deleted_stub_cpp.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_at_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_call_helper(wrapVector(), 1)") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects wrapper bare vector at calls without helper in C++ emitter") {
@@ -313,11 +313,12 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_at_call_helper") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers wrapper bare vector at_unsafe calls without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects wrapper bare vector at_unsafe calls before deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -331,18 +332,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub.cpp")
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_wrapper_bare_vector_at_unsafe_call_deleted_stub_cpp.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper(wrapVector(), 1)") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") !=
+        std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers wrapper explicit vector access calls without helper to deleted stubs") {
+TEST_CASE("C++ emitter rejects wrapper explicit vector access calls before deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -357,17 +358,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_explicit_vector_access_call_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub.cpp")
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_wrapper_explicit_vector_access_call_deleted_stub_cpp.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_at_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_call_helper(wrapVector(), 1)") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper(wrapVector(), 2)") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper bare vector at_unsafe calls without helper in C++ emitter") {
@@ -390,8 +388,9 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects wrapper explicit vector access calls without helper in C++ emitter") {
@@ -414,8 +413,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_at_call_helper") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers bare vector mutator statements without helper to deleted stubs") {
