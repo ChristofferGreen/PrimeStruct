@@ -298,6 +298,183 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit ma
   CHECK(error == "unknown method target for tag");
 }
 
+TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit map count and contains receivers") {
+  primec::Definition intTagDef;
+  intTagDef.fullPath = "/i32/tag";
+  primec::Definition boolTagDef;
+  boolTagDef.fullPath = "/bool/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {intTagDef.fullPath, &intTagDef},
+      {boolTagDef.fullPath, &boolTagDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  auto expectReject = [&](const char *receiverName, primec::ir_lowerer::LocalInfo::ValueKind inferredKind) {
+    const std::string receiverNameStr = receiverName;
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.name = receiverName;
+    receiverCall.args = {valuesExpr};
+    if (receiverNameStr.find("contains") != std::string::npos) {
+      receiverCall.args.push_back(keyExpr);
+    }
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = "tag";
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverCall};
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+          return expr.kind == primec::Expr::Kind::Call && expr.name == receiverName
+                     ? inferredKind
+                     : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &expr) { return expr.name; },
+        {},
+        defMap,
+        error);
+    CHECK(resolved == nullptr);
+    CHECK(error == "unknown method target for tag");
+  };
+
+  expectReject("/map/count", primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  expectReject("/std/collections/map/count", primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  expectReject("/map/contains", primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  expectReject("/std/collections/map/contains", primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
+TEST_CASE("ir lowerer setup type helper keeps explicit map count and contains receiver same-path precedence") {
+  primec::Definition aliasCountDef;
+  aliasCountDef.fullPath = "/map/count";
+  aliasCountDef.namespacePrefix = "/map";
+  primec::Transform returnAliasCount;
+  returnAliasCount.name = "return";
+  returnAliasCount.templateArgs = {"/pkg/AliasCountResult"};
+  aliasCountDef.transforms.push_back(returnAliasCount);
+
+  primec::Definition canonicalCountDef;
+  canonicalCountDef.fullPath = "/std/collections/map/count";
+  canonicalCountDef.namespacePrefix = "/std/collections/map";
+  primec::Transform returnCanonicalCount;
+  returnCanonicalCount.name = "return";
+  returnCanonicalCount.templateArgs = {"/pkg/CanonicalCountResult"};
+  canonicalCountDef.transforms.push_back(returnCanonicalCount);
+
+  primec::Definition aliasContainsDef;
+  aliasContainsDef.fullPath = "/map/contains";
+  aliasContainsDef.namespacePrefix = "/map";
+  primec::Transform returnAliasContains;
+  returnAliasContains.name = "return";
+  returnAliasContains.templateArgs = {"/pkg/AliasContainsResult"};
+  aliasContainsDef.transforms.push_back(returnAliasContains);
+
+  primec::Definition canonicalContainsDef;
+  canonicalContainsDef.fullPath = "/std/collections/map/contains";
+  canonicalContainsDef.namespacePrefix = "/std/collections/map";
+  primec::Transform returnCanonicalContains;
+  returnCanonicalContains.name = "return";
+  returnCanonicalContains.templateArgs = {"/pkg/CanonicalContainsResult"};
+  canonicalContainsDef.transforms.push_back(returnCanonicalContains);
+
+  primec::Definition aliasCountTagDef;
+  aliasCountTagDef.fullPath = "/pkg/AliasCountResult/tag";
+  primec::Definition canonicalCountTagDef;
+  canonicalCountTagDef.fullPath = "/pkg/CanonicalCountResult/tag";
+  primec::Definition aliasContainsTagDef;
+  aliasContainsTagDef.fullPath = "/pkg/AliasContainsResult/tag";
+  primec::Definition canonicalContainsTagDef;
+  canonicalContainsTagDef.fullPath = "/pkg/CanonicalContainsResult/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasCountDef.fullPath, &aliasCountDef},
+      {canonicalCountDef.fullPath, &canonicalCountDef},
+      {aliasContainsDef.fullPath, &aliasContainsDef},
+      {canonicalContainsDef.fullPath, &canonicalContainsDef},
+      {aliasCountTagDef.fullPath, &aliasCountTagDef},
+      {canonicalCountTagDef.fullPath, &canonicalCountTagDef},
+      {aliasContainsTagDef.fullPath, &aliasContainsTagDef},
+      {canonicalContainsTagDef.fullPath, &canonicalContainsTagDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  locals.emplace("values", valuesLocal);
+
+  auto expectResolvedTag = [&](const char *receiverName, const primec::Definition *expectedTagDef) {
+    const std::string receiverNameStr = receiverName;
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.name = receiverName;
+    receiverCall.args = {valuesExpr};
+    if (receiverNameStr.find("contains") != std::string::npos) {
+      receiverCall.args.push_back(keyExpr);
+    }
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = "tag";
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverCall};
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &expr) { return expr.name; },
+        {},
+        defMap,
+        error);
+    CHECK(resolved == expectedTagDef);
+    CHECK(error.empty());
+  };
+
+  expectResolvedTag("/map/count", &aliasCountTagDef);
+  expectResolvedTag("/std/collections/map/count", &canonicalCountTagDef);
+  expectResolvedTag("/map/contains", &aliasContainsTagDef);
+  expectResolvedTag("/std/collections/map/contains", &canonicalContainsTagDef);
+}
+
 TEST_CASE("ir lowerer setup type helper keeps explicit map tryAt receiver alias precedence") {
   primec::Definition aliasTryAtDef;
   aliasTryAtDef.fullPath = "/map/tryAt";
@@ -568,4 +745,3 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
             resolveWrapMapKind) == Resolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
-
