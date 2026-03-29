@@ -395,6 +395,28 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     error_ = "unknown method: " + missingSamePathHelper;
     return false;
   }
+  auto bareVectorAccessMethodMissingSamePathHelper = [&]() -> std::string {
+    if (!expr.isMethodCall || !expr.namespacePrefix.empty() || expr.args.empty()) {
+      return "";
+    }
+    if (expr.name != "at" && expr.name != "at_unsafe") {
+      return "";
+    }
+    std::string elemType;
+    if (!resolveVectorTarget(expr.args.front(), elemType)) {
+      return "";
+    }
+    const std::string methodPath = preferredBareVectorHelperTarget(expr.name);
+    return hasDeclaredDefinitionPath(methodPath) || hasImportedDefinitionPath(methodPath)
+               ? ""
+               : methodPath;
+  };
+  if (const std::string missingSamePathHelper =
+          bareVectorAccessMethodMissingSamePathHelper();
+      !missingSamePathHelper.empty()) {
+    error_ = "unknown method: " + missingSamePathHelper;
+    return false;
+  }
   auto isStdlibFileWriteFacadeResolvedPath = [&](const std::string &path) {
     return path == "/File/write" || path == "/File/write_line" ||
            path == "/std/file/File/write" || path == "/std/file/File/write_line";

@@ -512,6 +512,38 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
+TEST_CASE("bare vector access method vector target without helper reports unknown method") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values.at(1i32),
+              values.at_unsafe(2i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+}
+
+TEST_CASE("bare vector access method wrapper target without helper reports unknown method") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(wrapVector().at(1i32),
+              wrapVector().at_unsafe(2i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+}
+
 TEST_CASE("array compatibility access slash method vector target without helper reports unknown method") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

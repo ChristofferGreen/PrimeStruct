@@ -188,7 +188,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/at") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers bare vector at methods without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects bare vector at methods without helper before deleted stub") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -201,10 +201,10 @@ main() {
       (testScratchPath("") / "primec_cpp_bare_vector_at_method_deleted_stub.cpp").string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_at_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_method_helper(values, 1)") != std::string::npos);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_bare_vector_at_method_deleted_stub_cpp.err").string();
+  CHECK(runCommand(compileCmd + " 2> " + errPath) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects bare vector at methods without helper in C++ emitter") {
@@ -221,11 +221,11 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_at_method_helper") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers bare vector at_unsafe methods without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects bare vector at_unsafe methods without helper before deleted stub") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -239,10 +239,11 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_at_unsafe_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_method_helper(values, 1)") != std::string::npos);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_bare_vector_at_unsafe_method_deleted_stub_cpp.err")
+          .string();
+  CHECK(runCommand(compileCmd + " 2> " + errPath) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper vector at_unsafe methods without helper in C++ emitter") {
@@ -265,8 +266,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_at_unsafe_method_helper") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers wrapper bare vector at calls without helper to deleted stub") {
