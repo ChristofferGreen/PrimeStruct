@@ -259,6 +259,42 @@ inline std::string makeWrappedExperimentalMapResultFieldAssignConformanceSource(
   return source;
 }
 
+inline std::string makeWrappedExperimentalMapResultDerefFieldAssignConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapStatus<T>([T] status) {\n";
+  source += "  return(status)\n";
+  source += "}\n\n";
+  source += "Holder() {\n";
+  source += "  [Result<Map<string, i32>, ContainerError> mut] status{Result.ok(mapNew<string, i32>())}\n";
+  source += "}\n\n";
+  source += "[return<Reference<Holder>>]\n";
+  source += "borrowHolder([Reference<Holder>] holder) {\n";
+  source += "  return(holder)\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedWrappedExperimentalMapResultDerefFieldAssignError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] current{err.code}\n";
+  source += "  print_line_error(Result.why(current))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapResultDerefFieldAssignError>]\n";
+  source += "main() {\n";
+  source += "  [Holder mut] holder{Holder()}\n";
+  source +=
+      "  assign(dereference(borrowHolder(location(holder))).status, wrapStatus(Result.ok(/std/collections/mapPair(\"left\"raw_utf8, 2i32, \"extra\"raw_utf8, 9i32))))\n";
+  source += "  [Map<string, i32>] values{try(holder.status)}\n";
+  source += "  [i32] count{/std/collections/map/count(values)}\n";
+  source += "  [i32] extra{/std/collections/map/at(values, \"extra\"raw_utf8)}\n";
+  source += "  print_line(count)\n";
+  source += "  print_line(extra)\n";
+  source += "  return(Result.ok(plus(count, extra)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeWrapperMapHelperExperimentalValueConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
