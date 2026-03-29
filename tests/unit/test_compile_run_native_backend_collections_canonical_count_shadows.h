@@ -37,6 +37,37 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("native keeps non-imported wrapper-returned canonical map reference access primitive receiver diagnostics") {
+  const std::string source = R"(
+[return<Reference</std/collections/map<i32, i32>>>]
+borrowMap([Reference</std/collections/map<i32, i32>>] values) {
+  return(values)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/at(borrowMap(location(values)), 1i32).count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_nonimport_direct_wrapper_map_reference_string_receiver_diag.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_nonimport_direct_wrapper_map_reference_string_receiver_diag.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("native keeps map method sugar on wrapper-returned canonical map references") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
