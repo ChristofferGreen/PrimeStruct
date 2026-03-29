@@ -57,6 +57,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       cwd / "src" / "semantics" / "SemanticsValidatorExprResolvedCallSetup.cpp";
   std::filesystem::path validatorExprMethodResolutionPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
+  std::filesystem::path validatorExprMethodTargetResolutionPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorExprMethodTargetResolution.cpp";
   std::filesystem::path validatorExprLateUnknownTargetFallbacksPath =
       cwd / "src" / "semantics" / "SemanticsValidatorExprLateUnknownTargetFallbacks.cpp";
   std::filesystem::path validatorExprBodyArgumentsPath =
@@ -153,6 +155,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprResolvedCallSetup.cpp";
     validatorExprMethodResolutionPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
+    validatorExprMethodTargetResolutionPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprMethodTargetResolution.cpp";
     validatorExprLateUnknownTargetFallbacksPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprLateUnknownTargetFallbacks.cpp";
     validatorExprBodyArgumentsPath =
@@ -226,6 +230,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(validatorExprBuiltinContextSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprResolvedCallSetupPath));
   REQUIRE(std::filesystem::exists(validatorExprMethodResolutionPath));
+  REQUIRE(std::filesystem::exists(validatorExprMethodTargetResolutionPath));
   REQUIRE(std::filesystem::exists(validatorExprLateUnknownTargetFallbacksPath));
   REQUIRE(std::filesystem::exists(validatorExprBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(validatorCollectionHelperRewritesPath));
@@ -294,6 +299,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
       validatorExprBuiltinContextSetupPath,
       validatorExprResolvedCallSetupPath,
       validatorExprMethodResolutionPath,
+      validatorExprMethodTargetResolutionPath,
       validatorExprLateUnknownTargetFallbacksPath,
       validatorCollectionHelperRewritesPath,
   });
