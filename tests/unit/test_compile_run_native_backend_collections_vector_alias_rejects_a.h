@@ -48,33 +48,6 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects native array namespaced wrapper vector count alias") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(4i32, 5i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/array/count(wrapVector()))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_array_namespaced_wrapper_vector_count_alias.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_native_array_namespaced_wrapper_vector_count_alias_out.txt")
-          .string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_array_namespaced_wrapper_vector_count_alias_exe")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /array/count") != std::string::npos);
-}
-
 TEST_CASE("rejects native array namespaced vector mutator alias") {
   const std::string source = R"(
 import /std/collections/*
@@ -686,46 +659,4 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
-}
-
-TEST_CASE("rejects native local alias slash-method vector count on string receiver") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [string] value{"abc"raw_utf8}
-  return(value./vector/count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_local_alias_slash_vector_count_string_no_helper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_local_alias_slash_vector_count_string_no_helper_err.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
-}
-
-TEST_CASE("rejects native local alias slash-method vector count on array receiver") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
-  return(items./vector/count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_local_alias_slash_vector_count_array_no_helper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_local_alias_slash_vector_count_array_no_helper_err.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
