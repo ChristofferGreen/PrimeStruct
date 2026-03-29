@@ -27,7 +27,7 @@ Stdlib container substrate note: the items below are the hard prerequisites for 
 - ◐ Validate helper-wrapped experimental map wrapper routing end-to-end. Progress: the live coverage now sits in `tests/unit/test_semantics_calls_and_flow_collections.cpp` plus chunk files `test_semantics_calls_and_flow_collections_11.h` through `15.h`, and active cases already cover helper-wrapped canonical map constructor routing across explicit `Map<K, V>` parameters, result payloads, assignment targets, uninitialized storage, field-bound wrapper helper receivers, and the direct inferred experimental-map struct-field constructor route. Remaining work is the still-disabled helper-wrapped experimental-map constructor cases grouped below.
   - ✓ Audit the stale helper-wrapped experimental-map umbrella and split the remaining disabled constructor-routing cases by target shape now that the suite lives in `test_semantics_calls_and_flow_collections.cpp` plus chunk files `11` through `15`.
   - ✓ Re-enable the helper-wrapped experimental-map dereference-assignment, uninitialized-storage, and result-storage target cases still hard-disabled in collection chunks `11` and `12`.
-  - ○ Re-enable the helper-wrapped inferred experimental `Map<K, V>` and `Result<Map<K, V>, Error>` struct-field/default-parameter constructor cases still hard-disabled in collection chunks `13` and `14`.
+  - ✓ Re-enable the helper-wrapped inferred experimental `Map<K, V>` and `Result<Map<K, V>, Error>` struct-field/default-parameter constructor cases still hard-disabled in collection chunks `13` and `14`.
   - ○ Re-enable the helper-wrapped explicit, inferred, and dereferenced experimental-map struct-field assignment cases still hard-disabled in collection chunk `15`.
 
 
