@@ -103,46 +103,115 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     return boundedLoopCount(countExpr);
   };
 
+  std::function<bool(const Expr &, std::string &)> resolveLocationRootBindingName;
+  resolveLocationRootBindingName = [&](const Expr &pointerExpr, std::string &rootNameOut) -> bool {
+    rootNameOut.clear();
+    if (pointerExpr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string pointerBuiltinName;
+    if (getBuiltinPointerName(pointerExpr, pointerBuiltinName) && pointerBuiltinName == "location" &&
+        pointerExpr.args.size() == 1) {
+      if (pointerExpr.args.front().kind != Expr::Kind::Name) {
+        return false;
+      }
+      rootNameOut = pointerExpr.args.front().name;
+      return true;
+    }
+    const std::string resolvedPath = resolveCalleePath(pointerExpr);
+    if (resolvedPath.empty()) {
+      return false;
+    }
+    auto defIt = defMap_.find(resolvedPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    const Definition &helperDef = *defIt->second;
+    const Expr *returnedValueExpr = nullptr;
+    for (const auto &stmt : helperDef.statements) {
+      if (isReturnCall(stmt) && stmt.args.size() == 1) {
+        returnedValueExpr = &stmt.args.front();
+      }
+    }
+    if (helperDef.returnExpr.has_value()) {
+      returnedValueExpr = &*helperDef.returnExpr;
+    }
+    if (returnedValueExpr == nullptr || returnedValueExpr->kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto paramsIt = paramsByDef_.find(resolvedPath);
+    if (paramsIt == paramsByDef_.end()) {
+      return false;
+    }
+    std::string orderedArgError;
+    std::vector<const Expr *> orderedArgs;
+    if (!buildOrderedArguments(paramsIt->second, pointerExpr.args, pointerExpr.argNames, orderedArgs, orderedArgError)) {
+      return false;
+    }
+    for (size_t index = 0; index < paramsIt->second.size() && index < orderedArgs.size(); ++index) {
+      const ParameterInfo &param = paramsIt->second[index];
+      const Expr *arg = orderedArgs[index];
+      if (arg == nullptr || param.name != returnedValueExpr->name) {
+        continue;
+      }
+      const std::string normalizedParamType = normalizeBindingTypeName(param.binding.typeName);
+      if (normalizedParamType != "Reference" && normalizedParamType != "Pointer") {
+        return false;
+      }
+      return resolveLocationRootBindingName(*arg, rootNameOut);
+    }
+    return false;
+  };
+
   auto applyStorageCall = [&](const std::string &callName,
                               const Expr &target,
                               std::unordered_map<std::string, BindingInfo> &localsIn,
                               StateMap &statesIn,
                               bool consumeBorrow) -> std::optional<std::string> {
-    if (target.kind != Expr::Kind::Name) {
+    std::string targetName;
+    if (target.kind == Expr::Kind::Name) {
+      targetName = target.name;
+    } else if (target.kind == Expr::Kind::Call) {
+      std::string pointerBuiltinName;
+      if (!getBuiltinPointerName(target, pointerBuiltinName) || pointerBuiltinName != "dereference" ||
+          target.args.size() != 1 || !resolveLocationRootBindingName(target.args.front(), targetName)) {
+        return std::nullopt;
+      }
+    } else {
       return std::nullopt;
     }
-    auto bindingIt = localsIn.find(target.name);
+    auto bindingIt = localsIn.find(targetName);
     if (bindingIt == localsIn.end() || !isUninitializedBinding(bindingIt->second)) {
       return std::nullopt;
     }
-    auto stateIt = statesIn.find(target.name);
+    auto stateIt = statesIn.find(targetName);
     UninitState current = stateIt == statesIn.end() ? UninitState::Unknown : stateIt->second;
     if (callName == "init") {
       if (current != UninitState::Uninitialized) {
-        return "init requires uninitialized storage: " + target.name;
+        return "init requires uninitialized storage: " + targetName;
       }
-      statesIn[target.name] = UninitState::Initialized;
+      statesIn[targetName] = UninitState::Initialized;
       return std::nullopt;
     }
     if (callName == "drop") {
       if (current != UninitState::Initialized) {
-        return "drop requires initialized storage: " + target.name;
+        return "drop requires initialized storage: " + targetName;
       }
-      statesIn[target.name] = UninitState::Uninitialized;
+      statesIn[targetName] = UninitState::Uninitialized;
       return std::nullopt;
     }
     if (callName == "take") {
       if (current != UninitState::Initialized) {
-        return "take requires initialized storage: " + target.name;
+        return "take requires initialized storage: " + targetName;
       }
-      statesIn[target.name] = UninitState::Uninitialized;
+      statesIn[targetName] = UninitState::Uninitialized;
       return std::nullopt;
     }
     if (callName == "borrow") {
       if (current != UninitState::Initialized) {
-        return "borrow requires initialized storage: " + target.name;
+        return "borrow requires initialized storage: " + targetName;
       }
-      statesIn[target.name] = consumeBorrow ? UninitState::Uninitialized : UninitState::Initialized;
+      statesIn[targetName] = consumeBorrow ? UninitState::Uninitialized : UninitState::Initialized;
       return std::nullopt;
     }
     return std::nullopt;

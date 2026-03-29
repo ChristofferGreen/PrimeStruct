@@ -142,6 +142,35 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       typesMatch = [&](const std::string &expected, const std::string &actual) -> bool {
         std::string expectedTrim = trimType(expected);
         std::string actualTrim = trimType(actual);
+        auto extractMapArgsFromAnyType = [&](const std::string &typeText,
+                                             std::string &keyTypeOut,
+                                             std::string &valueTypeOut) -> bool {
+          keyTypeOut.clear();
+          valueTypeOut.clear();
+          const std::string normalizedType = normalizeBindingTypeName(typeText);
+          if (extractMapKeyValueTypesFromTypeText(normalizedType, keyTypeOut, valueTypeOut)) {
+            return true;
+          }
+          std::string structPath = resolveStructTypePath(normalizedType, namespacePrefix, structNames_);
+          if (structPath.empty() && normalizedType.rfind("std/collections/experimental_map/Map__", 0) == 0) {
+            structPath = "/" + normalizedType;
+          } else if (structPath.empty() &&
+                     normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+            structPath = normalizedType;
+          }
+          return !structPath.empty() && extractExperimentalMapFieldTypesFromStructPath(structPath,
+                                                                                       keyTypeOut,
+                                                                                       valueTypeOut);
+        };
+        std::string expectedMapKeyType;
+        std::string expectedMapValueType;
+        std::string actualMapKeyType;
+        std::string actualMapValueType;
+        if (extractMapArgsFromAnyType(expectedTrim, expectedMapKeyType, expectedMapValueType) &&
+            extractMapArgsFromAnyType(actualTrim, actualMapKeyType, actualMapValueType)) {
+          return typesMatch(expectedMapKeyType, actualMapKeyType) &&
+                 typesMatch(expectedMapValueType, actualMapValueType);
+        }
         std::string expectedBase;
         std::string expectedArg;
         std::string actualBase;
@@ -176,6 +205,18 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           }
           if (expectedArgs.size() != actualArgs.size()) {
             return false;
+          }
+          if (expectedNorm == "Result") {
+            if (expectedArgs.empty()) {
+              return true;
+            }
+            if (expectedArgs.size() == 1) {
+              return trimType(expectedArgs.front()) == "_" || trimType(actualArgs.front()) == "_" ||
+                     typesMatch(expectedArgs.front(), actualArgs.front());
+            }
+            return typesMatch(expectedArgs[0], actualArgs[0]) &&
+                   (trimType(expectedArgs[1]) == "_" || trimType(actualArgs[1]) == "_" ||
+                    typesMatch(expectedArgs[1], actualArgs[1]));
           }
           for (size_t i = 0; i < expectedArgs.size(); ++i) {
             if (!typesMatch(expectedArgs[i], actualArgs[i])) {
