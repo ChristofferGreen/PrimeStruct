@@ -622,10 +622,17 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
           return resolvedType;
         }
       }
-      if (receiver.kind == Expr::Kind::Call && !receiver.isMethodCall) {
-        const std::string resolvedReceiverPath = resolveCalleePath(receiver);
-        if (!resolvedReceiverPath.empty()) {
-          return resolvedReceiverPath;
+      if (receiver.kind == Expr::Kind::Call) {
+        std::string inferredReceiverType;
+        if (inferQueryExprTypeText(receiver, params, locals, inferredReceiverType) &&
+            !inferredReceiverType.empty()) {
+          return inferredReceiverType;
+        }
+        if (!receiver.isMethodCall) {
+          const std::string resolvedReceiverPath = resolveCalleePath(receiver);
+          if (!resolvedReceiverPath.empty()) {
+            return resolvedReceiverPath;
+          }
         }
       }
       return std::string();

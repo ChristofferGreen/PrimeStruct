@@ -227,6 +227,13 @@ inline void expectExperimentalMapMethodReceiverConformance(const std::string &em
                                   15);
 }
 
+inline void expectWrappedExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(makeWrappedExperimentalMapMethodReceiverConformanceSource(),
+                                  "map_wrapped_experimental_method_receiver_" + emitMode,
+                                  emitMode,
+                                  16);
+}
+
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
   expectMapConformanceProgramRuns(makeExperimentalMapFieldAssignConformanceSource(),
                                   "map_experimental_field_assign",
