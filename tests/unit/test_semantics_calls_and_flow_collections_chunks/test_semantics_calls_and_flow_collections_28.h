@@ -620,6 +620,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("imported wrapper-returned canonical map reference access count keeps string receiver typing") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<Reference</std/collections/map<i32, string>>>]
+borrowMap([Reference</std/collections/map<i32, string>>] values) {
+  return(values)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  return(/std/collections/map/at(borrowMap(location(values)), 1i32).count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*

@@ -468,8 +468,10 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter treats direct-call wrapper-returned canonical map reference access as string receiver") {
+TEST_CASE("C++ emitter keeps imported wrapper-returned canonical map reference access lowering diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<Reference</std/collections/map<i32, string>>>]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
@@ -500,7 +502,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports entry argument indexing") != std::string::npos);
+  CHECK(readFile(errPath).find("native backend does not support string array return types on /borrowMap") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps non-string diagnostics on wrapper-returned canonical map access receivers") {

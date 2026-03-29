@@ -540,8 +540,10 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("vm rejects user string count shadow on direct-call wrapper-returned canonical map reference access") {
+TEST_CASE("vm keeps imported wrapper-returned canonical map reference access lowering diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 /string/count([string] values) {
   return(91i32)
@@ -560,8 +562,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_user_string_count_method_shadow_direct_wrapper_map_reference_access.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_user_string_count_method_shadow_direct_wrapper_map_reference_access.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend does not support string array return types on /borrowMap") !=
+        std::string::npos);
 }
 
 TEST_CASE("vm rejects user map method sugar on wrapper-returned canonical map references") {
@@ -633,4 +641,3 @@ main() {
   CHECK(readFile(errPath).find("Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
-

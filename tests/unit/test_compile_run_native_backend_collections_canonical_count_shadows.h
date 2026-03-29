@@ -1,5 +1,7 @@
-TEST_CASE("compiles and runs native user string count method shadow on direct-call wrapper-returned canonical map reference access") {
+TEST_CASE("native keeps imported wrapper-returned canonical map reference access lowering diagnostics") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 /string/count([string] values) {
   return(91i32)
@@ -23,15 +25,16 @@ main() {
       (testScratchPath("") /
        "primec_native_user_string_count_method_shadow_direct_wrapper_map_reference_access_exe")
           .string();
-  const std::string outPath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_user_string_count_method_shadow_direct_wrapper_map_reference_access_out.txt")
+       "primec_native_user_string_count_method_shadow_direct_wrapper_map_reference_access.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(outPath).empty());
+  CHECK(readFile(errPath).find("native backend does not support string array return types on /borrowMap") !=
+        std::string::npos);
 }
 
 TEST_CASE("native keeps map method sugar on wrapper-returned canonical map references") {
