@@ -127,6 +127,9 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       return "";
     }
     if (exprIn.kind == Expr::Kind::Call) {
+      if (!exprIn.isMethodCall && isSimpleCallName(exprIn, "location") && exprIn.args.size() == 1) {
+        return inferStructExprPath(exprIn.args.front(), localsInExpr);
+      }
       if (!exprIn.isMethodCall && isSimpleCallName(exprIn, "dereference") && exprIn.args.size() == 1) {
         return inferStructExprPath(exprIn.args.front(), localsInExpr);
       }

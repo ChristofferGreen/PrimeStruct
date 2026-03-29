@@ -272,6 +272,10 @@ TEST_CASE("runs vm experimental map field assignments") {
   expectExperimentalMapFieldAssignConformance("vm");
 }
 
+TEST_CASE("runs vm helper-wrapped Result.ok experimental map result struct fields") {
+  expectWrappedExperimentalMapResultFieldAssignConformance("vm");
+}
+
 TEST_CASE("rejects vm canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("vm");
 }

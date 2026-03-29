@@ -63,7 +63,9 @@ Map constructor-routing checkpoint: canonical and wrapper constructor spellings 
   - ✓ Re-enable helper-wrapped `Result.ok(...)` explicit struct-field and dereferenced struct-field assignment coverage in the semantics chunks.
   - ✓ Fix IR `Result.ok(...)` and `try(...)` payload classification for explicit specialized experimental-map `Result<Map<K, V>, Error>` returns and parameters.
   - ✓ Extend IR lowering so explicit specialized experimental-map `Result<Map<K, V>, Error>` locals and direct struct-field reads no longer reject during `try(...)` lowering.
-  - ○ Add shared compile-run coverage and runtime parity for helper-wrapped `Result.ok(...)` result struct-field assignment targets.
+  - ◐ Add shared compile-run coverage and runtime parity for helper-wrapped `Result.ok(...)` result struct-field assignment targets.
+    - ✓ Add shared compile-run coverage and runtime parity for direct helper-wrapped `Result.ok(...)` result struct-field assignment targets.
+    - ○ Add shared compile-run coverage and runtime parity for dereferenced helper-wrapped `Result.ok(...)` result struct-field assignment targets.
 - ◐ Canonical `map` constructor storage/dereference-target slice: finish constructor rewriting for `init(uninitialized<T>, value)` storage targets, dereference-based assignment/init targets, dereferenced struct-field targets, and struct-field storage targets that should produce experimental `Map<K, V>` values.
   - ✓ Re-enable the direct experimental-map struct-field assignment compile-run coverage across the shared C++/native/VM suites.
 Map constructor migration note: do not keep another catch-all "remaining non-return destination" umbrella here. Add new constructor-routing TODOs only for concrete unreduced destination shapes with a reproducer; otherwise prefer the wrapper-bridge deletion and compiler-path removal milestones below.

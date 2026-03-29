@@ -229,6 +229,36 @@ inline std::string makeWrappedExperimentalMapAssignConformanceSource() {
   return source;
 }
 
+inline std::string makeWrappedExperimentalMapResultFieldAssignConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapStatus<T>([T] status) {\n";
+  source += "  return(status)\n";
+  source += "}\n\n";
+  source += "Holder() {\n";
+  source += "  [Result<Map<string, i32>, ContainerError> mut] status{Result.ok(mapNew<string, i32>())}\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedWrappedExperimentalMapResultFieldAssignError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] current{err.code}\n";
+  source += "  print_line_error(Result.why(current))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapResultFieldAssignError>]\n";
+  source += "main() {\n";
+  source += "  [Holder mut] holder{Holder()}\n";
+  source +=
+      "  assign(holder.status, wrapStatus(Result.ok(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))))\n";
+  source += "  [Map<string, i32>] values{try(holder.status)}\n";
+  source += "  [i32] score{plus(/std/collections/map/count(values), /std/collections/map/at(values, \"left\"raw_utf8))}\n";
+  source += "  print_line(score)\n";
+  source += "  return(Result.ok(score))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeWrapperMapHelperExperimentalValueConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";

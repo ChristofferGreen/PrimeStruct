@@ -589,6 +589,19 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
             return true;
           }
         }
+        if (receiverExpr.kind == Expr::Kind::Call && !receiverExpr.isMethodCall &&
+            isSimpleCallName(receiverExpr, "dereference") && receiverExpr.args.size() == 1) {
+          const Expr &pointerExpr = receiverExpr.args.front();
+          if (pointerExpr.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(pointerExpr.name);
+            if (it != localsIn.end() &&
+                (it->second.kind == LocalInfo::Kind::Reference || it->second.kind == LocalInfo::Kind::Pointer)) {
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+              return true;
+            }
+          }
+          return emitExpr(pointerExpr, localsIn);
+        }
         return emitExpr(receiverExpr, localsIn);
       };
       if (!emitReceiverPointer()) {
