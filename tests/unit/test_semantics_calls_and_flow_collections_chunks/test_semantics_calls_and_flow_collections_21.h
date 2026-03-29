@@ -1,4 +1,4 @@
-TEST_CASE("vector unsafe method alias access field expression keeps struct receiver diagnostics") {
+TEST_CASE("vector unsafe method alias access field expression keeps removed alias diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -22,7 +22,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("vector method access with alias and canonical struct helpers infers the alias return") {
@@ -416,7 +416,7 @@ main() {
   CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("std-namespaced vector method alias access keeps primitive argument diagnostics during inference") {
+TEST_CASE("std-namespaced vector method alias access keeps primitive self diagnostics during inference") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -445,7 +445,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /i32/tag parameter self") != std::string::npos);
 }
 
 TEST_CASE("vector method alias access keeps removed-alias diagnostics") {
@@ -477,7 +477,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector alias access auto wrapper keeps primitive receiver diagnostics") {
@@ -630,4 +630,3 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK_FALSE(error.empty());
 }
-

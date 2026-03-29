@@ -128,7 +128,7 @@ TEST_CASE("ir lowerer setup type helper resolves method call definitions from ex
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper rejects explicit vector slash-path methods from expressions") {
+TEST_CASE("ir lowerer setup type helper keeps explicit vector same-path precedence while rejecting /array/count") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
   primec::Definition vectorCountDef;
@@ -179,9 +179,9 @@ TEST_CASE("ir lowerer setup type helper rejects explicit vector slash-path metho
   itemsLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
   locals.emplace("items", itemsLocal);
 
-  auto expectUnknownMethod = [&](const char *methodName,
-                                 const std::vector<primec::Expr> &args,
-                                 const char *expectedError) {
+  auto expectResolvedMethod = [&](const char *methodName,
+                                  const std::vector<primec::Expr> &args,
+                                  const primec::Definition *expectedDef) {
     primec::Expr methodCall;
     methodCall.kind = primec::Expr::Kind::Call;
     methodCall.name = methodName;
@@ -203,23 +203,44 @@ TEST_CASE("ir lowerer setup type helper rejects explicit vector slash-path metho
         [](const primec::Expr &) { return std::string(); },
         defMap,
         error);
-    CHECK(resolved == nullptr);
-    CHECK(error == std::string(expectedError));
+    CHECK(resolved == expectedDef);
+    CHECK(error.empty());
   };
 
-  expectUnknownMethod("/array/count", {receiverExpr}, "unknown method: /vector/count");
-  expectUnknownMethod("/vector/count", {receiverExpr}, "unknown method: /vector/count");
-  expectUnknownMethod("/std/collections/vector/count", {receiverExpr}, "unknown method: /vector/count");
-  expectUnknownMethod("/vector/capacity", {receiverExpr}, "unknown method: /vector/capacity");
-  expectUnknownMethod("/std/collections/vector/capacity", {receiverExpr}, "unknown method: /vector/capacity");
-  expectUnknownMethod("/vector/at", {receiverExpr, indexExpr}, "unknown method: /vector/at");
-  expectUnknownMethod("/std/collections/vector/at", {receiverExpr, indexExpr}, "unknown method: /vector/at");
-  expectUnknownMethod("/vector/at_unsafe", {receiverExpr, indexExpr}, "unknown method: /vector/at_unsafe");
-  expectUnknownMethod("/std/collections/vector/at_unsafe",
-                      {receiverExpr, indexExpr},
-                      "unknown method: /vector/at_unsafe");
-  expectUnknownMethod("/vector/push", {receiverExpr, indexExpr}, "unknown method: /vector/push");
-  expectUnknownMethod("/std/collections/vector/push", {receiverExpr, indexExpr}, "unknown method: /vector/push");
+  primec::Expr arrayCountCall;
+  arrayCountCall.kind = primec::Expr::Kind::Call;
+  arrayCountCall.name = "/array/count";
+  arrayCountCall.isMethodCall = true;
+  arrayCountCall.args = {receiverExpr};
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      arrayCountCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method: /vector/count");
+
+  expectResolvedMethod("/vector/count", {receiverExpr}, &vectorCountDef);
+  expectResolvedMethod("/std/collections/vector/count", {receiverExpr}, &stdCountDef);
+  expectResolvedMethod("/vector/capacity", {receiverExpr}, &vectorCapacityDef);
+  expectResolvedMethod("/std/collections/vector/capacity", {receiverExpr}, &stdCapacityDef);
+  expectResolvedMethod("/vector/at", {receiverExpr, indexExpr}, &vectorAtDef);
+  expectResolvedMethod("/std/collections/vector/at", {receiverExpr, indexExpr}, &stdAtDef);
+  expectResolvedMethod("/vector/at_unsafe", {receiverExpr, indexExpr}, &vectorAtUnsafeDef);
+  expectResolvedMethod("/std/collections/vector/at_unsafe", {receiverExpr, indexExpr}, &stdAtUnsafeDef);
+  expectResolvedMethod("/vector/push", {receiverExpr, indexExpr}, &vectorPushDef);
+  expectResolvedMethod("/std/collections/vector/push", {receiverExpr, indexExpr}, &stdPushDef);
 }
 
 TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expressions") {

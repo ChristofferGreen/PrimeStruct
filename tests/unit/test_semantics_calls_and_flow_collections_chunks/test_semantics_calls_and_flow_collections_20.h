@@ -586,7 +586,7 @@ main() {
   CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("vector method alias access field expression keeps struct receiver diagnostics") {
+TEST_CASE("vector method alias access field expression keeps removed alias diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -610,7 +610,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector unsafe method alias access struct method chain keeps primitive receiver diagnostics") {

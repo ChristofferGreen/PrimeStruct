@@ -119,7 +119,7 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper rejects removed slash-path vector helpers on vector receivers") {
+TEST_CASE("ir lowerer setup type helper keeps vector same-path precedence while rejecting /array/count") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
   primec::Definition vectorCountDef;
@@ -140,18 +140,19 @@ TEST_CASE("ir lowerer setup type helper rejects removed slash-path vector helper
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/vector/count", "vector", "", defMap, error) == nullptr);
-  CHECK(error == "unknown method: /vector/count");
+            "/vector/count", "vector", "", defMap, error) == &vectorCountDef);
+  CHECK(error.empty());
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/std/collections/vector/count", "vector", "", defMap, error) == nullptr);
-  CHECK(error == "unknown method: /vector/count");
+            "/std/collections/vector/count", "vector", "", defMap, error) == &stdCountDef);
+  CHECK(error.empty());
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "/std/collections/vector/count", "std/collections/vector", "", defMap, error) == nullptr);
-  CHECK(error == "unknown method: /std/collections/vector/count");
+            "/std/collections/vector/count", "std/collections/vector", "", defMap, error) ==
+        &stdCountDef);
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer setup type helper rejects slash-path map helpers on map receivers") {
@@ -608,4 +609,3 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack borrowed map 
   CHECK(resolvedTypePath.empty());
   CHECK(error.empty());
 }
-

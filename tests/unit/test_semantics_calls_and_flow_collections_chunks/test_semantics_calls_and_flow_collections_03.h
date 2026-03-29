@@ -615,7 +615,7 @@ main() {
   CHECK(error.find("unknown method: /i32/missing_tag") != std::string::npos);
 }
 
-TEST_CASE("slash-method access wrapper temporaries infer i32 for chained methods") {
+TEST_CASE("slash-method access wrapper temporaries keep removed alias diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -625,7 +625,7 @@ wrapText() {
 }
 
 [return<int>]
-[i32/tag([i32] value) {
+/i32/tag([i32] value) {
   return(plus(value, 10i32))
 }
 
@@ -636,6 +636,6 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }

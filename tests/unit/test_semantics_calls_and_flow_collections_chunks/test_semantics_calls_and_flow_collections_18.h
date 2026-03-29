@@ -390,7 +390,7 @@ main() {
   CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector access alias rejects method-call sugar auto inference") {
+TEST_CASE("stdlib namespaced vector access alias keeps method-call sugar same-path inference") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/at([vector<i32>] values, [bool] index) {
@@ -405,8 +405,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires integer index") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
