@@ -424,6 +424,24 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       return false;
     }
   }
+  if (isBuiltinMethod && resolved == "/vector/capacity" &&
+      defMap_.find(resolved) == defMap_.end() &&
+      !hasImportedDefinitionPath(resolved) &&
+      !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
+      !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
+      !hasDeclaredDefinitionPath("/std/collections/vectorCapacity") &&
+      !hasImportedDefinitionPath("/std/collections/vectorCapacity") &&
+      !hasNamedArguments(expr.argNames) &&
+      (expr.args.front().kind == Expr::Kind::Name ||
+       (expr.args.front().kind == Expr::Kind::Call &&
+        getBuiltinCollectionName(expr.args.front(), builtinVectorReceiverCollection) &&
+        builtinVectorReceiverCollection == "vector"))) {
+    std::string elemType;
+    if (resolveVectorTarget(expr.args.front(), elemType)) {
+      error_ = "unknown method: /vector/capacity";
+      return false;
+    }
+  }
   if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
       isVectorBuiltinName(expr, "capacity")) {
     context.promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);

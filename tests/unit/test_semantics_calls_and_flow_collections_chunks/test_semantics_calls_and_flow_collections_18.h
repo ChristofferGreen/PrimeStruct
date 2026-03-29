@@ -560,6 +560,19 @@ main() {
   CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("bare vector capacity method on builtin vector receiver requires same-path helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector capacity method local same-path overload set rejects duplicate definitions") {
   const std::string source = R"(
 [return<int>]

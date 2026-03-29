@@ -360,7 +360,7 @@ main() {
   CHECK(runCommand(exePath) == 15);
 }
 
-TEST_CASE("C++ emitter rejects bare vector count methods without helper before emission") {
+TEST_CASE("C++ emitter rejects bare vector count methods before emitter fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -394,6 +394,42 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects bare vector capacity methods before emitter fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.capacity())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_same_path_reject.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_same_path_reject.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("rejects bare vector capacity methods without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.capacity())
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_same_path_reject_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_same_path_reject.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper vector count methods without helper in C++ emitter") {

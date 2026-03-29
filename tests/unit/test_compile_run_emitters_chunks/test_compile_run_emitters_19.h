@@ -160,7 +160,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers bare vector capacity methods without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects bare vector capacity methods without helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -170,13 +170,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_deleted_stub.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_deleted_stub.cpp").string();
+      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_same_path_reject.txt").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_capacity_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_capacity_method_helper(values)") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects bare vector capacity methods without helper in C++ emitter") {
@@ -194,7 +193,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("ps_missing_vector_capacity_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper vector capacity methods without helper in C++ emitter") {
