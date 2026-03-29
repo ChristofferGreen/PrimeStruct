@@ -63,8 +63,7 @@ std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view he
   if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
     return canonical;
   }
-  if (helperName == "contains" || helperName == "tryAt" ||
-      helperName == "at" || helperName == "at_unsafe") {
+  if (helperName == "contains") {
     return canonical;
   }
   const std::string alias = "/map/" + std::string(helperName);
