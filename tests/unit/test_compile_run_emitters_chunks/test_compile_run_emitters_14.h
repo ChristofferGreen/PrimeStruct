@@ -199,6 +199,32 @@ main() {
   CHECK(runCommand(exePath) == 87);
 }
 
+TEST_CASE("rejects wrapper-returned canonical vector capacity slash-method on map receiver in C++ emitter") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./std/collections/vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_slash_vector_capacity_map_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_canonical_slash_vector_capacity_map_no_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
+        std::string::npos);
+}
+
 TEST_CASE("C++ emitter rejects alias slash-method vector count on map receiver before emission") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -305,6 +331,32 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 88);
+}
+
+TEST_CASE("rejects wrapper-returned canonical vector capacity slash-method on array receiver in C++ emitter") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(wrapArray()./std/collections/vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_slash_vector_capacity_array_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_canonical_slash_vector_capacity_array_no_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects alias slash-method vector count on array receiver before emission") {
