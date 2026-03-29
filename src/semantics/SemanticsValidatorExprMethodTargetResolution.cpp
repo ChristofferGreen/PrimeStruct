@@ -15,7 +15,7 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-         helperName == "at" || helperName == "at_unsafe" || helperName == "insert";
+         helperName == "at" || helperName == "at_unsafe";
 }
 
 bool isFileMethodName(std::string_view methodName) {
