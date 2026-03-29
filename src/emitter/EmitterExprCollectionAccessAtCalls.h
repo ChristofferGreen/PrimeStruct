@@ -109,7 +109,7 @@
                         allowMathBare)
             << ")";
       } else if (isResolvedMapTarget(target)) {
-        out << "ps_map_at("
+        out << "ps_missing_map_at_builtin_helper("
             << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
             << emitExpr(expr.args[indexIndex],
@@ -270,7 +270,7 @@
                         allowMathBare)
             << ")";
       } else if (isResolvedMapTarget(target)) {
-        out << "ps_map_at_unsafe("
+        out << "ps_missing_map_at_unsafe_builtin_helper("
             << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
             << emitExpr(expr.args[indexIndex],
