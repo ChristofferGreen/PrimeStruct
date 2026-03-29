@@ -88,6 +88,14 @@ inline void expectWrappedExperimentalMapResultFieldAssignConformance(const std::
                                             "6\n");
 }
 
+inline void expectWrappedExperimentalMapResultDerefFieldAssignConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapResultDerefFieldAssignConformanceSource(),
+                                            "map_wrapped_experimental_result_deref_field_assign_" + emitMode,
+                                            emitMode,
+                                            11,
+                                            "2\n9\n");
+}
+
 inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(makeWrapperMapHelperExperimentalValueConformanceSource(),
                                             "map_wrapper_helper_experimental_value",

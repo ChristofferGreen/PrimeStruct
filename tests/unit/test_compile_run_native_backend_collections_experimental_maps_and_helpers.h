@@ -192,6 +192,10 @@ TEST_CASE("compiles and runs native helper-wrapped Result.ok experimental map re
   expectWrappedExperimentalMapResultFieldAssignConformance("native");
 }
 
+TEST_CASE("compiles and runs native helper-wrapped dereferenced Result.ok experimental map result struct fields") {
+  expectWrappedExperimentalMapResultDerefFieldAssignConformance("native");
+}
+
 TEST_CASE("rejects native canonical namespaced map helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("native");
 }

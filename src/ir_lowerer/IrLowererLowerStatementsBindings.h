@@ -127,12 +127,12 @@
       }
       return std::string{};
     };
-    auto declaredReturnIsReferenceHandle = [&]() {
+    auto declaredReturnBase = [&]() {
       const std::string &definitionPath =
           activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
       auto defIt = defMap.find(definitionPath);
       if (defIt == defMap.end() || defIt->second == nullptr) {
-        return false;
+        return std::string{};
       }
       for (const auto &transform : defIt->second->transforms) {
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
@@ -141,12 +141,15 @@
         std::string base;
         std::string arg;
         if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, arg)) {
-          return false;
+          return std::string{};
         }
-        return normalizeDeclaredCollectionTypeBase(base) == "Reference";
+        return normalizeDeclaredCollectionTypeBase(base);
       }
-      return false;
+      return std::string{};
     }();
+    const bool declaredReturnIsReferenceHandle = declaredReturnBase == "Reference";
+    const bool declaredReturnIsPointerLikeHandle =
+        declaredReturnBase == "Reference" || declaredReturnBase == "Pointer";
     if (!stmt.isBinding && stmt.kind == Expr::Kind::StringLiteral) {
       error = "native backend does not support string literal statements";
       return false;
@@ -606,6 +609,7 @@
       }
       const bool shouldStabilizeAggregateReturn =
           !aggregateStructPath.empty() &&
+          !declaredReturnIsPointerLikeHandle &&
           (returnValueExpr.kind == Expr::Kind::Call || returnValueExpr.kind == Expr::Kind::Name);
       if (shouldStabilizeAggregateReturn) {
         const int32_t baseLocal = nextLocal;
