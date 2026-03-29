@@ -223,7 +223,11 @@ TEST_CASE("ir lowerer call helpers keep local vector count capacity calls out of
   expectDispatch("/std/collections/vector/count", {valuesName}, Result::NotHandled, "stale", false);
   expectDispatch("/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
   expectDispatch("/std/collections/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
-  expectDispatch("/vector/at", {valuesName, indexName}, Result::NotHandled, "stale", false);
+  expectDispatch("/vector/at",
+                 {valuesName, indexName},
+                 Result::Error,
+                 "native backend requires integer indices for at",
+                 false);
   expectDispatch("/std/collections/vector/at",
                  {valuesName, indexName},
                  Result::NotHandled,

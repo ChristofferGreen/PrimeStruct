@@ -316,6 +316,25 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
+  const bool blocksBareVectorCountCall =
+      expr.kind == Expr::Kind::Call && expr.name == "count" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
+      (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn) &&
+       !isVectorCountTarget(expr.args.front(), localsIn));
+  const bool blocksLocalVectorCountCall =
+      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.args.size() == 1 &&
+      isVectorBuiltinName(expr, "count") && isVectorCountTarget(expr.args.front(), localsIn);
+  const bool blocksBareVectorCapacityCall =
+      expr.kind == Expr::Kind::Call && expr.name == "capacity" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
+      (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn) &&
+       !(isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)));
+  const bool blocksLocalVectorCapacityCall =
+      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.args.size() == 1 &&
+      isVectorBuiltinName(expr, "capacity") && isVectorCountTarget(expr.args.front(), localsIn);
+  if (blocksBareVectorCountCall || blocksLocalVectorCountCall ||
+      blocksBareVectorCapacityCall || blocksLocalVectorCapacityCall) {
+    return CountAccessCallEmitResult::NotHandled;
+  }
+
   if (isArrayCountCallFn(expr, localsIn)) {
     if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Name) {
