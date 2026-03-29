@@ -14,6 +14,15 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isSpecializedExperimentalStructTypeName(const std::string &name) {
+  std::string normalized = trimTemplateTypeText(name);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+         normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
 std::string normalizeLayoutTypeName(const std::string &name) {
   const std::string normalizedCollectionName = normalizeCollectionBindingTypeName(name);
   if (normalizedCollectionName != name) {
@@ -32,6 +41,13 @@ bool classifyBindingTypeLayoutInternal(const LayoutFieldBinding &binding,
                                        BindingTypeLayout &layoutOut,
                                        std::string &structTypeNameOut,
                                        std::string &errorOut) {
+  if (binding.typeTemplateArg.empty() && isSpecializedExperimentalStructTypeName(binding.typeName)) {
+    structTypeNameOut = trimTemplateTypeText(binding.typeName);
+    if (!structTypeNameOut.empty() && structTypeNameOut.front() != '/') {
+      structTypeNameOut.insert(structTypeNameOut.begin(), '/');
+    }
+    return true;
+  }
   const std::string normalized = normalizeLayoutTypeName(binding.typeName);
   if (normalized == "i32" || normalized == "f32") {
     layoutOut = {4u, 4u};

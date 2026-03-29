@@ -14,16 +14,17 @@
       auto matchesExperimentalMapConstructor = [&](std::string_view basePath) {
         return callee->fullPath == basePath || callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
       };
-      if (!(matchesExperimentalMapConstructor("/std/collections/experimental_map/mapNew") ||
-            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapSingle") ||
-            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapDouble") ||
-            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapPair") ||
-            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapTriple") ||
-            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapQuad") ||
-            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapQuint") ||
-            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapSext") ||
-            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapSept") ||
-            matchesExperimentalMapConstructor("/std/collections/experimental_map/mapOct"))) {
+      if (!(matchesExperimentalMapConstructor("/std/collections/map/map") ||
+            matchesExperimentalMapConstructor("/std/collections/mapNew") ||
+            matchesExperimentalMapConstructor("/std/collections/mapSingle") ||
+            matchesExperimentalMapConstructor("/std/collections/mapDouble") ||
+            matchesExperimentalMapConstructor("/std/collections/mapPair") ||
+            matchesExperimentalMapConstructor("/std/collections/mapTriple") ||
+            matchesExperimentalMapConstructor("/std/collections/mapQuad") ||
+            matchesExperimentalMapConstructor("/std/collections/mapQuint") ||
+            matchesExperimentalMapConstructor("/std/collections/mapSext") ||
+            matchesExperimentalMapConstructor("/std/collections/mapSept") ||
+            matchesExperimentalMapConstructor("/std/collections/mapOct"))) {
         return false;
       }
       rewrittenExpr = callExpr;
@@ -206,7 +207,14 @@
         return true;
       }
       const StatementBindingTypeInfo bindingTypeInfo = inferStatementBindingTypeInfo(
-          stmt, init, localsIn, hasExplicitBindingTypeTransform, bindingKind, bindingValueKind, inferExprKind);
+          stmt,
+          init,
+          localsIn,
+          hasExplicitBindingTypeTransform,
+          bindingKind,
+          bindingValueKind,
+          inferExprKind,
+          [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); });
       LocalInfo::Kind kind = bindingTypeInfo.kind;
       LocalInfo::ValueKind valueKind = bindingTypeInfo.valueKind;
       LocalInfo::ValueKind mapKeyKind = bindingTypeInfo.mapKeyKind;

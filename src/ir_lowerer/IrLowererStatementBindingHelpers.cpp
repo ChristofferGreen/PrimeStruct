@@ -125,6 +125,24 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind) {
+  return inferStatementBindingTypeInfo(stmt,
+                                       init,
+                                       localsIn,
+                                       hasExplicitBindingTypeTransform,
+                                       bindingKind,
+                                       bindingValueKind,
+                                       inferExprKind,
+                                       {});
+}
+
+StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
+                                                       const Expr &init,
+                                                       const LocalMap &localsIn,
+                                                       const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                                       const BindingKindFn &bindingKind,
+                                                       const BindingValueKindFn &bindingValueKind,
+                                                       const InferBindingExprKindFn &inferExprKind,
+                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall) {
   StatementBindingTypeInfo info;
   info.kind = bindingKind(stmt);
   const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
@@ -173,6 +191,11 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         if (normalizedName == "map" && transform.templateArgs.size() == 2) {
           info.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
           info.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
+          break;
+        }
+        if (normalizedName == "map" && transform.templateArgs.empty() &&
+            resolveSpecializedExperimentalMapTypeKinds(
+                transform.name, resolveDefinitionCall, info.mapKeyKind, info.mapValueKind)) {
           break;
         }
       }

@@ -11,6 +11,17 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
+  return typeName.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+         typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+} // namespace
+
 const Expr *getEnvelopeValueExpr(const Expr &candidate, bool allowAnyName) {
   if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
     return nullptr;
@@ -46,7 +57,11 @@ bool extractExplicitLayoutFieldBinding(const Expr &expr, LayoutFieldBinding &bin
     if (!transform.arguments.empty()) {
       continue;
     }
-    bindingOut.typeName = normalizeCollectionBindingTypeName(transform.name);
+    if (transform.templateArgs.empty() && isSpecializedExperimentalCollectionTypeName(transform.name)) {
+      bindingOut.typeName = transform.name;
+    } else {
+      bindingOut.typeName = normalizeCollectionBindingTypeName(transform.name);
+    }
     if (!transform.templateArgs.empty()) {
       bindingOut.typeTemplateArg = joinTemplateArgsText(transform.templateArgs);
     } else {

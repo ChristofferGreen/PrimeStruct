@@ -1,6 +1,7 @@
 #include "IrLowererStructTypeHelpers.h"
 
 #include <memory>
+#include <sstream>
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
@@ -29,6 +30,22 @@ bool isVectorTypeName(const std::string &typeName) {
   return isBuiltinVectorTypeName(typeName) || isExperimentalVectorTypeName(typeName);
 }
 
+bool isBuiltinMapTypeName(const std::string &typeName) {
+  return typeName == "map" || typeName == "/map" || typeName == "std/collections/map" ||
+         typeName == "/std/collections/map";
+}
+
+bool isExperimentalMapTypeName(const std::string &typeName) {
+  return typeName == "Map" || typeName == "std/collections/experimental_map/Map" ||
+         typeName == "/std/collections/experimental_map/Map" ||
+         typeName.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+}
+
+bool isMapTypeName(const std::string &typeName) {
+  return isBuiltinMapTypeName(typeName) || isExperimentalMapTypeName(typeName);
+}
+
 std::string normalizeVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
     return "/vector";
@@ -41,6 +58,51 @@ std::string normalizeVectorStructPath(const std::string &typeName) {
     return "/" + typeName;
   }
   return typeName;
+}
+
+std::string buildTemplatedTypeName(const std::string &typeName, const std::string &typeTemplateArg) {
+  if (typeTemplateArg.empty()) {
+    return trimTemplateTypeText(typeName);
+  }
+  return trimTemplateTypeText(typeName) + "<" + typeTemplateArg + ">";
+}
+
+bool resolveSpecializedExperimentalMapStructPath(const std::string &typeName,
+                                                 const std::string &typeTemplateArg,
+                                                 std::string &structPathOut) {
+  structPathOut.clear();
+  std::string normalizedType = trimTemplateTypeText(typeName);
+  if (!normalizedType.empty() && normalizedType.front() != '/') {
+    normalizedType.insert(normalizedType.begin(), '/');
+  }
+  if (normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+    structPathOut = std::move(normalizedType);
+    return true;
+  }
+  if (!isMapTypeName(typeName) || typeTemplateArg.empty()) {
+    return false;
+  }
+  std::vector<std::string> templateArgs;
+  if (!splitTemplateArgs(typeTemplateArg, templateArgs) || templateArgs.size() != 2) {
+    return false;
+  }
+  std::string canonicalArgs = joinTemplateArgsText(templateArgs);
+  canonicalArgs.erase(
+      std::remove_if(canonicalArgs.begin(), canonicalArgs.end(), [](unsigned char ch) {
+        return std::isspace(ch) != 0;
+      }),
+      canonicalArgs.end());
+
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : canonicalArgs) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+
+  std::ostringstream specializedPath;
+  specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
+  structPathOut = specializedPath.str();
+  return true;
 }
 
 } // namespace
@@ -173,6 +235,31 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         }
         info.valueKind = (args.size() == 1) ? LocalInfo::ValueKind::Int32 : LocalInfo::ValueKind::Int64;
         info.slotCount = 1;
+      } else if (isMapTypeName(binding.typeName)) {
+        std::string nestedStruct;
+        if (!resolveSpecializedExperimentalMapStructPath(binding.typeName, binding.typeTemplateArg, nestedStruct) &&
+            !resolveStructTypeName(buildTemplatedTypeName(binding.typeName, binding.typeTemplateArg),
+                                   namespacePrefix,
+                                   nestedStruct)) {
+          error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
+          layoutStack.erase(structPath);
+          return false;
+        }
+        StructSlotLayoutInfo nestedLayout;
+        if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
+                                                         collectStructLayoutFields,
+                                                         resolveDefinitionNamespacePrefix,
+                                                         resolveStructTypeName,
+                                                         valueKindFromTypeName,
+                                                         layoutCache,
+                                                         layoutStack,
+                                                         nestedLayout,
+                                                         error)) {
+          layoutStack.erase(structPath);
+          return false;
+        }
+        info.structPath = nestedStruct;
+        info.slotCount = nestedLayout.totalSlots;
       } else if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
         info.valueKind = LocalInfo::ValueKind::Int64;
         info.slotCount = 1;
@@ -193,9 +280,64 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         offset += info.slotCount;
         continue;
       }
+      if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
+          isMapTypeName(inlineTemplateBase)) {
+        std::string nestedStruct;
+        if (!resolveSpecializedExperimentalMapStructPath(inlineTemplateBase, inlineTemplateArg, nestedStruct) &&
+            !resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
+          error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
+          layoutStack.erase(structPath);
+          return false;
+        }
+        StructSlotLayoutInfo nestedLayout;
+        if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
+                                                         collectStructLayoutFields,
+                                                         resolveDefinitionNamespacePrefix,
+                                                         resolveStructTypeName,
+                                                         valueKindFromTypeName,
+                                                         layoutCache,
+                                                         layoutStack,
+                                                         nestedLayout,
+                                                         error)) {
+          layoutStack.erase(structPath);
+          return false;
+        }
+        info.structPath = nestedStruct;
+        info.slotCount = nestedLayout.totalSlots;
+        layout.fields.push_back(info);
+        offset += info.slotCount;
+        continue;
+      }
       if (isVectorTypeName(binding.typeName)) {
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
+        layout.fields.push_back(info);
+        offset += info.slotCount;
+        continue;
+      }
+      if (isMapTypeName(binding.typeName)) {
+        std::string nestedStruct;
+        if (!resolveSpecializedExperimentalMapStructPath(binding.typeName, "", nestedStruct) &&
+            !resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
+          error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
+          layoutStack.erase(structPath);
+          return false;
+        }
+        StructSlotLayoutInfo nestedLayout;
+        if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
+                                                         collectStructLayoutFields,
+                                                         resolveDefinitionNamespacePrefix,
+                                                         resolveStructTypeName,
+                                                         valueKindFromTypeName,
+                                                         layoutCache,
+                                                         layoutStack,
+                                                         nestedLayout,
+                                                         error)) {
+          layoutStack.erase(structPath);
+          return false;
+        }
+        info.structPath = nestedStruct;
+        info.slotCount = nestedLayout.totalSlots;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;
@@ -207,8 +349,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       } else {
         std::string nestedStruct;
         if (!resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
-          error = "native backend does not support struct field type: " + binding.typeName + " on " +
-                  structPath;
+          error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
           layoutStack.erase(structPath);
           return false;
         }
@@ -682,6 +823,60 @@ std::string inferStructPathFromCallTarget(
   if (getBuiltinCollectionName(expr, collectionName) && collectionName == "vector" &&
       expr.templateArgs.size() == 1) {
     return "/vector";
+  }
+
+  std::string normalizedName = expr.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  auto resolveExperimentalMapConstructorStructPath = [&](const std::string &path) -> std::string {
+    constexpr std::string_view prefix = "std/collections/experimental_map/";
+    if (path.rfind(prefix, 0) != 0) {
+      return "";
+    }
+    const std::string suffix = path.substr(prefix.size());
+    auto remap = [&](std::string_view helperStem) -> std::string {
+      const std::string helperPrefix = std::string(helperStem) + "__";
+      if (suffix.rfind(helperPrefix, 0) != 0) {
+        return "";
+      }
+      return "/std/collections/experimental_map/Map__" + suffix.substr(helperPrefix.size());
+    };
+    if (std::string structPath = remap("mapNew"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapSingle"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapDouble"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapPair"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapTriple"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapQuad"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapQuint"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapSext"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapSept"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapOct"); !structPath.empty()) {
+      return structPath;
+    }
+    return "";
+  };
+  if (const std::string experimentalStructPath = resolveExperimentalMapConstructorStructPath(normalizedName);
+      !experimentalStructPath.empty() && isKnownStructPath(experimentalStructPath)) {
+    return experimentalStructPath;
   }
 
   const std::string resolved = resolveExprPath(expr);

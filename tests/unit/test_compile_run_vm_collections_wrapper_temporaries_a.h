@@ -269,8 +269,6 @@ TEST_CASE("runs vm helper-wrapped experimental map method receivers") {
 }
 
 TEST_CASE("runs vm experimental map field assignments") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   expectExperimentalMapFieldAssignConformance("vm");
 }
 
