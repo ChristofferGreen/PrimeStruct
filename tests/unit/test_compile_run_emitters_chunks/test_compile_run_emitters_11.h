@@ -148,6 +148,29 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
+TEST_CASE("rejects bare map at through compatibility alias in C++ emitter with unknown-target diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(at(values, 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_at_through_compatibility_alias_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_bare_map_at_through_compatibility_alias_reject.err").string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
+}
+
 TEST_CASE("rejects bare map at_unsafe call without helper in C++ emitter with unknown-target diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -160,6 +183,31 @@ main() {
       writeTemp("compile_cpp_bare_map_at_unsafe_without_helper_reject.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_cpp_bare_map_at_unsafe_without_helper_reject.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("rejects bare map at_unsafe through compatibility alias in C++ emitter with unknown-target diagnostics") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_at_unsafe_through_compatibility_alias_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_bare_map_at_unsafe_through_compatibility_alias_reject.err")
           .string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
