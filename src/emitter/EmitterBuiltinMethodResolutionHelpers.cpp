@@ -76,6 +76,9 @@ bool resolveMethodCallPath(const Expr &call,
   const bool isExplicitVectorAliasMethod = normalizedMethodName.rfind("vector/", 0) == 0;
   const bool isExplicitStdlibVectorMethod =
       normalizedMethodName.rfind("std/collections/vector/", 0) == 0;
+  const bool isExplicitMapAliasMethod = normalizedMethodName.rfind("map/", 0) == 0;
+  const bool isExplicitStdlibMapMethod =
+      normalizedMethodName.rfind("std/collections/map/", 0) == 0;
   if (normalizedMethodName.rfind("vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
   } else if (normalizedMethodName.rfind("array/", 0) == 0) {
@@ -404,6 +407,24 @@ bool resolveMethodCallPath(const Expr &call,
           !hasDefinitionOrMetadata(metadataView, canonicalPath)) {
         return false;
       }
+    }
+  }
+  if (resolvedType == "/map" || resolvedType == "map") {
+    const std::string aliasPath = "/map/" + normalizedMethodName;
+    const std::string canonicalPath = "/std/collections/map/" + normalizedMethodName;
+    if (isExplicitMapAliasMethod) {
+      if (!hasDefinitionOrMetadata(metadataView, aliasPath)) {
+        return false;
+      }
+      resolvedOut = aliasPath;
+      return true;
+    }
+    if (isExplicitStdlibMapMethod) {
+      if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
+        return false;
+      }
+      resolvedOut = canonicalPath;
+      return true;
     }
   }
   resolvedOut =

@@ -267,7 +267,7 @@ TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibil
   expectResolved("tryAt", "/map/tryAt", true);
 }
 
-TEST_CASE("C++ emitter helper resolves canonical metadata fallback for explicit map slash methods") {
+TEST_CASE("C++ emitter helper rejects canonical metadata fallback for explicit map slash methods") {
   primec::Expr receiverName;
   receiverName.kind = primec::Expr::Kind::Name;
   receiverName.name = "values";
@@ -293,7 +293,7 @@ TEST_CASE("C++ emitter helper resolves canonical metadata fallback for explicit 
       {"/std/collections/map/tryAt", "/CanonicalTryAtMarker"},
   };
 
-  auto expectResolved = [&](const char *receiverMethodName, bool includeKeyArg, std::string expectedPath) {
+  auto expectUnresolved = [&](const char *receiverMethodName, bool includeKeyArg) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
@@ -312,18 +312,17 @@ TEST_CASE("C++ emitter helper resolves canonical metadata fallback for explicit 
     methodCall.args = {receiverCall};
     methodCall.argNames = {std::nullopt};
 
-    std::string resolved;
-    CHECK(primec::emitter::resolveMethodCallPath(
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved == expectedPath);
+    CHECK(resolved.empty());
   };
 
-  expectResolved("/map/count", false, "/i32/tag");
-  expectResolved("/map/contains", true, "/CanonicalContainsMarker/tag");
-  expectResolved("/map/tryAt", true, "/CanonicalTryAtMarker/tag");
+  expectUnresolved("/map/contains", true);
+  expectUnresolved("/map/tryAt", true);
 }
 
-TEST_CASE("C++ emitter helper resolves compatibility metadata fallback for canonical map slash methods") {
+TEST_CASE("C++ emitter helper rejects compatibility metadata fallback for canonical map slash methods") {
   primec::Expr receiverName;
   receiverName.kind = primec::Expr::Kind::Name;
   receiverName.name = "values";
@@ -349,7 +348,7 @@ TEST_CASE("C++ emitter helper resolves compatibility metadata fallback for canon
       {"/map/tryAt", "/AliasTryAtMarker"},
   };
 
-  auto expectResolved = [&](const char *receiverMethodName, bool includeKeyArg, std::string expectedPath) {
+  auto expectUnresolved = [&](const char *receiverMethodName, bool includeKeyArg) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
@@ -368,15 +367,14 @@ TEST_CASE("C++ emitter helper resolves compatibility metadata fallback for canon
     methodCall.args = {receiverCall};
     methodCall.argNames = {std::nullopt};
 
-    std::string resolved;
-    CHECK(primec::emitter::resolveMethodCallPath(
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved == expectedPath);
+    CHECK(resolved.empty());
   };
 
-  expectResolved("/std/collections/map/count", false, "/i32/tag");
-  expectResolved("/std/collections/map/contains", true, "/AliasContainsMarker/tag");
-  expectResolved("/std/collections/map/tryAt", true, "/AliasTryAtMarker/tag");
+  expectUnresolved("/std/collections/map/contains", true);
+  expectUnresolved("/std/collections/map/tryAt", true);
 }
 
 TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata precedence") {
@@ -439,9 +437,9 @@ TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata preceden
 
   expectResolved("/map/count", false, "/i32/tag");
   expectResolved("/std/collections/map/count", false, "/i32/tag");
-  expectResolved("/map/contains", true, "/CanonicalContainsMarker/tag");
+  expectResolved("/map/contains", true, "/AliasContainsMarker/tag");
   expectResolved("/std/collections/map/contains", true, "/CanonicalContainsMarker/tag");
-  expectResolved("/map/tryAt", true, "/CanonicalTryAtMarker/tag");
+  expectResolved("/map/tryAt", true, "/AliasTryAtMarker/tag");
   expectResolved("/std/collections/map/tryAt", true, "/CanonicalTryAtMarker/tag");
   expectResolved("/map/at", true, "/AliasAtMarker/tag");
   expectResolved("/std/collections/map/at", true, "/CanonicalAtMarker/tag");
@@ -641,4 +639,3 @@ TEST_CASE("C++ emitter helper rejects cross-path vector alias access struct-retu
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
   CHECK(resolved.empty());
 }
-
