@@ -506,12 +506,11 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
-TEST_CASE("C++ emitter rejects direct builtin contains on canonical map access without helper before lowering") {
+TEST_CASE("C++ emitter rejects direct builtin contains on canonical map access before deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [map<i32, map<i32, i32>>] values{map<i32, map<i32, i32>>(1i32, map<i32, i32>(2i32, 7i32),
-                                                            2i32, map<i32, i32>(3i32, 8i32))}
+  [map<i32, map<i32, i32>>] values{map<i32, map<i32, i32>>()}
   return(plus(contains(/std/collections/map/at(values, 1i32), 2i32),
               contains(/std/collections/map/at_unsafe(values, 2i32), 3i32)))
 }
@@ -526,7 +525,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
 TEST_CASE("rejects direct builtin contains on canonical map access without helper in C++ emitter") {
@@ -548,10 +547,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects wrapper-returned slash-method map access contains receivers without helper") {
+TEST_CASE("C++ emitter rejects wrapper-returned map access contains receivers before deleted stubs") {
   const std::string source = R"(
 [return</std/collections/map<i32, map<i32, i32>>>]
 wrapMap() {
@@ -574,7 +573,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper-returned slash-method map access contains without helper in C++ emitter") {
@@ -600,7 +599,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers canonical slash-method map access without helper to deleted stubs") {
@@ -628,4 +627,3 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
-
