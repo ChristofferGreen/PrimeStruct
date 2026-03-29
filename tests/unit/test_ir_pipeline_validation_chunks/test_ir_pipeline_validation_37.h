@@ -128,7 +128,7 @@ TEST_CASE("ir lowerer setup type helper resolves method call definitions from ex
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper keeps explicit vector same-path precedence while honoring /array/count") {
+TEST_CASE("ir lowerer setup type helper keeps explicit vector same-path precedence while rejecting /array/count") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
   primec::Definition vectorCountDef;
@@ -228,8 +228,8 @@ TEST_CASE("ir lowerer setup type helper keeps explicit vector same-path preceden
       [](const primec::Expr &) { return std::string(); },
       defMap,
       error);
-  CHECK(resolved == &arrayCountDef);
-  CHECK(error.empty());
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method: /vector/count");
 
   expectResolvedMethod("/vector/count", {receiverExpr}, &vectorCountDef);
   expectResolvedMethod("/std/collections/vector/count", {receiverExpr}, &stdCountDef);

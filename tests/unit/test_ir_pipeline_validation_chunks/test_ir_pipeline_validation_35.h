@@ -119,7 +119,7 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper keeps vector same-path precedence while honoring /array/count") {
+TEST_CASE("ir lowerer setup type helper keeps vector same-path precedence while rejecting /array/count") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
   primec::Definition vectorCountDef;

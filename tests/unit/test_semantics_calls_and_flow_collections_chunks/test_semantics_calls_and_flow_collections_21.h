@@ -416,7 +416,7 @@ main() {
   CHECK(error.find("argument type mismatch for /Marker/tag parameter self") != std::string::npos);
 }
 
-TEST_CASE("std-namespaced vector method alias access keeps helper missing-method diagnostics during inference") {
+TEST_CASE("std-namespaced vector method alias access keeps primitive self diagnostics during inference") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -445,7 +445,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Marker/tag") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /i32/tag parameter self") != std::string::npos);
 }
 
 TEST_CASE("vector method alias access keeps removed-alias diagnostics") {
