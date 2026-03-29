@@ -424,6 +424,55 @@ inline void expectCanonicalVectorReserveVmImportRequirement() {
                                        "/std/collections/vector/reserve");
 }
 
+inline void expectCanonicalVectorMutatorBoolReject(const std::string &emitMode,
+                                                   const std::string &nameStem,
+                                                   const std::string &statementText,
+                                                   const std::string &expectedFragment) {
+  expectVectorConformanceCompileReject(makeCanonicalVectorMutatorBoolRejectSource(statementText),
+                                       nameStem + "_" + emitMode,
+                                       emitMode,
+                                       expectedFragment);
+}
+
+inline void expectCanonicalVectorMutatorNumericRejects(const std::string &emitMode) {
+  expectCanonicalVectorMutatorBoolReject(emitMode,
+                                         "vector_reserve_bool_call_reject",
+                                         "/std/collections/vector/reserve(values, true)",
+                                         "reserve requires integer capacity");
+  expectCanonicalVectorMutatorBoolReject(emitMode,
+                                         "vector_reserve_bool_method_reject",
+                                         "values.reserve(true)",
+                                         "reserve requires integer capacity");
+  expectCanonicalVectorMutatorBoolReject(emitMode,
+                                         "vector_remove_at_bool_call_reject",
+                                         "/std/collections/vector/remove_at(values, true)",
+                                         "remove_at requires integer index");
+  expectCanonicalVectorMutatorBoolReject(emitMode,
+                                         "vector_remove_at_bool_method_reject",
+                                         "values.remove_at(true)",
+                                         "remove_at requires integer index");
+  expectCanonicalVectorMutatorBoolReject(emitMode,
+                                         "vector_remove_swap_bool_call_reject",
+                                         "/std/collections/vector/remove_swap(values, true)",
+                                         "remove_swap requires integer index");
+  expectCanonicalVectorMutatorBoolReject(emitMode,
+                                         "vector_remove_swap_bool_method_reject",
+                                         "values.remove_swap(true)",
+                                         "remove_swap requires integer index");
+}
+
+inline void expectCanonicalVectorReserveReceiverRejects(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(makeCanonicalVectorReserveReceiverRejectSource("reserve(values, 8i32)"),
+                                       "vector_reserve_array_call_receiver_reject_" + emitMode,
+                                       emitMode,
+                                       "reserve requires vector binding");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorReserveReceiverRejectSource("values.reserve(8i32)"),
+      "vector_reserve_array_method_receiver_reject_" + emitMode,
+      emitMode,
+      "reserve requires vector binding");
+}
+
 inline void expectCanonicalVectorMutatorImportRequirement(const std::string &emitMode,
                                                           const std::string &helperName,
                                                           const std::string &callArgs) {

@@ -291,6 +291,32 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
   reserveCall.kind = primec::Expr::Kind::Call;
   reserveCall.name = "reserve";
   reserveCall.args = {makeName("v"), makeName("cap")};
+  primec::ir_lowerer::LocalInfo arrayInfo;
+  arrayInfo.kind = Kind::Array;
+  arrayInfo.valueKind = ValueKind::Int32;
+  arrayInfo.isMutable = true;
+  arrayInfo.index = 10;
+  locals.emplace("a", arrayInfo);
+
+  primec::Expr reserveArrayCall = reserveCall;
+  reserveArrayCall.args = {makeName("a"), makeName("cap")};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            reserveArrayCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "reserve requires vector binding");
+
   error.clear();
   CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
             reserveCall,
@@ -307,5 +333,46 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             error) == EmitResult::Error);
   CHECK(error == "reserve requires integer capacity");
-}
 
+  primec::Expr removeAtCall;
+  removeAtCall.kind = primec::Expr::Kind::Call;
+  removeAtCall.name = "remove_at";
+  removeAtCall.args = {makeName("v"), makeName("index")};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            removeAtCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Float32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "remove_at requires integer index");
+
+  primec::Expr removeSwapCall;
+  removeSwapCall.kind = primec::Expr::Kind::Call;
+  removeSwapCall.name = "remove_swap";
+  removeSwapCall.args = {makeName("v"), makeName("index")};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            removeSwapCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Float32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "remove_swap requires integer index");
+}
