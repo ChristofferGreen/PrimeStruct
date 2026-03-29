@@ -461,6 +461,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced access slash method vector target without alias helper reports unknown method") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./vector/at(1i32),
+              values./vector/at_unsafe(2i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced access slash method vector target without canonical helper reports unknown method") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./std/collections/vector/at(1i32),
+              values./std/collections/vector/at_unsafe(2i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/at") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
 [return<int>]
@@ -642,4 +670,3 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-

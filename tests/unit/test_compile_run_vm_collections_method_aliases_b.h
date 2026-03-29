@@ -506,6 +506,26 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
+TEST_CASE("rejects vm std-namespaced vector access slash methods without canonical helper on vector receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./std/collections/vector/at(1i32),
+              values./std/collections/vector/at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_std_namespaced_vector_access_slash_methods_no_helper.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_std_namespaced_vector_access_slash_methods_no_helper.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
+}
+
 TEST_CASE("rejects vm std-namespaced vector method alias access struct method chain with primitive argument diagnostics") {
   const std::string source = R"(
 Marker {

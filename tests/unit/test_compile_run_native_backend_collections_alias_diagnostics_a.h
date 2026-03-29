@@ -450,3 +450,23 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
+TEST_CASE("rejects native vector namespaced access slash methods without alias helper on vector receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./vector/at(1i32),
+              values./vector/at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_vector_access_slash_methods_alias_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_vector_access_slash_methods_alias_no_helper.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+}

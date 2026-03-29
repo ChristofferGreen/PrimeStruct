@@ -434,6 +434,10 @@ std::string SemanticsValidator::methodRemovedCollectionCompatibilityPath(
   }
 
   std::string elemType;
+  if ((helperName == "at" || helperName == "at_unsafe") &&
+      dispatchResolvers.resolveVectorTarget(candidate.args.front(), elemType)) {
+    return "";
+  }
   if (!dispatchResolvers.resolveVectorTarget(candidate.args.front(), elemType) &&
       !dispatchResolvers.resolveArrayTarget(candidate.args.front(), elemType) &&
       !dispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {

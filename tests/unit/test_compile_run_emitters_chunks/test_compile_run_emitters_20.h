@@ -39,7 +39,7 @@ main() {
   CHECK(runCommand(exePath) == 93);
 }
 
-TEST_CASE("C++ emitter lowers vector namespaced access slash methods without helper to deleted stubs") {
+TEST_CASE("C++ emitter rejects vector namespaced access slash methods without alias helper before lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -49,43 +49,60 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_vector_access_slash_methods_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_vector_access_slash_methods_deleted_stub.cpp")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_at_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_method_helper(values, 1)") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_method_helper(values, 2)") != std::string::npos);
-}
-
-TEST_CASE("rejects vector namespaced access slash methods without helper in C++ emitter") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(plus(values./vector/at(1i32),
-              values./vector/at_unsafe(2i32)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_vector_access_slash_methods_deleted_stub_exe.prime", source);
+      writeTemp("compile_cpp_vector_access_slash_methods_alias_no_helper.prime", source);
   const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_vector_access_slash_methods_deleted_stub.err")
+       "primec_cpp_vector_access_slash_methods_alias_no_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+}
+
+TEST_CASE("rejects vector namespaced access slash methods without alias helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./vector/at(1i32),
+              values./vector/at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_vector_access_slash_methods_alias_no_helper_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_vector_access_slash_methods_alias_no_helper_exe.err")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  const std::string errors = readFile(errPath);
-  CHECK(errors.find("ps_missing_vector_at_method_helper") != std::string::npos);
-  CHECK(errors.find("ps_missing_vector_at_unsafe_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+}
+
+TEST_CASE("rejects stdlib vector namespaced access slash methods without canonical helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./std/collections/vector/at(1i32),
+              values./std/collections/vector/at_unsafe(2i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_stdlib_vector_access_slash_methods_no_helper_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_stdlib_vector_access_slash_methods_no_helper_exe.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers bare vector at methods without helper to deleted stub") {
@@ -635,4 +652,3 @@ main() {
   const std::string output = readFile(outPath);
   CHECK(output.find("ps_missing_vector_push_method_helper(values, 3)") != std::string::npos);
 }
-

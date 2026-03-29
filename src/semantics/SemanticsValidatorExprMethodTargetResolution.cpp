@@ -1235,11 +1235,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                resolveSoaVectorTarget(receiver, ignoredElemType);
       }
       if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+        const bool isVectorReceiver = resolveVectorTarget(receiver, ignoredElemType);
+        if (isVectorReceiver) {
+          return false;
+        }
         if (isCanonicalStdVectorPath) {
-          return resolveVectorTarget(receiver, ignoredElemType);
+          return false;
         }
         return resolveArgsPackAccessTarget(receiver, ignoredElemType) ||
-               resolveVectorTarget(receiver, ignoredElemType) ||
                resolveArrayTarget(receiver, ignoredElemType) ||
                resolveStringTarget(receiver);
       }
