@@ -101,8 +101,6 @@ main() {
 }
 
 TEST_CASE("helper-wrapped map constructors accept inferred experimental map default parameters") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -168,8 +166,6 @@ main() {
 }
 
 TEST_CASE("helper-wrapped inferred experimental map default parameters rewrite constructors") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -282,8 +278,6 @@ main() {
 }
 
 TEST_CASE("helper-wrapped inferred experimental result map default parameters rewrite constructors") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
