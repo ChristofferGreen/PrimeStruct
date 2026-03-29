@@ -283,6 +283,20 @@ bool SemanticsValidator::validateStructLayouts() {
       layoutOut = {8u, 8u};
       return true;
     }
+    if (normalized == "Result") {
+      if (binding.typeTemplateArg.empty()) {
+        error_ = "Result requires one or two template arguments";
+        return false;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(binding.typeTemplateArg, args) ||
+          (args.size() != 1 && args.size() != 2)) {
+        error_ = "Result requires one or two template arguments";
+        return false;
+      }
+      layoutOut = (args.size() == 1) ? LayoutInfo{4u, 4u} : LayoutInfo{8u, 8u};
+      return true;
+    }
     if (normalized == "uninitialized") {
       if (binding.typeTemplateArg.empty()) {
         error_ = "uninitialized requires exactly one template argument";
