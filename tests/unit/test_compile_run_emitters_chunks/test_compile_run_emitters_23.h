@@ -1,4 +1,4 @@
-TEST_CASE("C++ emitter keeps wrapper canonical direct-call struct method chain forwarding") {
+TEST_CASE("rejects wrapper canonical direct-call struct method chain forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -26,14 +26,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_wrapper_canonical_direct_struct_method_chain_forwarding_exe")
+       "primec_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper canonical direct-call method receiver fallback without helper in C++ emitter") {
@@ -66,6 +67,39 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
+}
+
+TEST_CASE("rejects wrapper canonical direct-call map method receiver fallback without helper in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 40i32))
+  }
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 5i32, 2i32, 6i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/at(wrapMap(), 1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_canonical_direct_map_method_receiver_fallback_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_wrapper_canonical_direct_map_method_receiver_fallback_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
         std::string::npos);
 }
 
@@ -616,4 +650,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
 }
-
