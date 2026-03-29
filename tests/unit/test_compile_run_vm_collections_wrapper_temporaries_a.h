@@ -224,6 +224,10 @@ TEST_CASE("runs vm inferred experimental map struct fields") {
   expectInferredExperimentalMapStructFieldConformance("vm");
 }
 
+TEST_CASE("runs vm helper-wrapped inferred experimental map struct fields") {
+  expectWrappedInferredExperimentalMapStructFieldConformance("vm");
+}
+
 TEST_CASE("runs vm experimental map method parameters") {
   expectExperimentalMapMethodParameterConformance("vm");
 }

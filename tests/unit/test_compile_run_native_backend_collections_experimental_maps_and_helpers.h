@@ -140,6 +140,10 @@ TEST_CASE("compiles and runs native inferred experimental map struct fields") {
   expectInferredExperimentalMapStructFieldConformance("native");
 }
 
+TEST_CASE("compiles and runs native helper-wrapped inferred experimental map struct fields") {
+  expectWrappedInferredExperimentalMapStructFieldConformance("native");
+}
+
 TEST_CASE("compiles and runs native experimental map method parameters") {
   expectExperimentalMapMethodParameterConformance("native");
 }
