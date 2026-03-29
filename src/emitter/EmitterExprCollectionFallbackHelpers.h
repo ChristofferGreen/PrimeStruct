@@ -76,17 +76,6 @@
         << ")";
     return out.str();
   };
-  auto isNoHelperExplicitVectorAccessCountReceiver = [&](const Expr &candidate) {
-    if (isExplicitVectorAccessDirectCall(candidate)) {
-      return explicitVectorAccessResolvedTypePath(candidate).empty();
-    }
-    if ((isExplicitVectorAccessSlashMethod(candidate, "at") ||
-         isExplicitVectorAccessSlashMethod(candidate, "at_unsafe")) &&
-        candidate.isMethodCall) {
-      return probedTypePathForTarget(candidate).empty();
-    }
-    return false;
-  };
   auto pickAccessReceiverIndex = [&]() -> size_t {
     if (expr.args.size() != 2) {
       return 0;
