@@ -30,15 +30,13 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/map/contains") ||
-             matchesResolvedPath("/std/collections/mapContains") ||
+      return matchesResolvedPath("/std/collections/mapContains") ||
              matchesResolvedPath("/std/collections/experimental_map/mapContains");
     }
     if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/map/tryAt") ||
-             matchesResolvedPath("/std/collections/mapTryAt") ||
+      return matchesResolvedPath("/std/collections/mapTryAt") ||
              matchesResolvedPath("/std/collections/experimental_map/mapTryAt");
     }
     if ((normalizedName == "count" || normalizedName == "map/count" ||

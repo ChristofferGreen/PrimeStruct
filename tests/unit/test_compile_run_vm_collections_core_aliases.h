@@ -482,6 +482,68 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("runs vm explicit canonical map helper calls through same-path helpers") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(io_err)]
+unexpectedCanonicalMapTryAt([i32] err) {}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(70i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<Result<i32, i32>>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(80i32))
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/at([map<i32, i32>] values, [i32] index) {
+  return(60i32)
+}
+
+[effects(heap_alloc), return<Marker>]
+/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(Marker(30i32))
+}
+
+[effects(heap_alloc), return<int> on_error<i32, /unexpectedCanonicalMapTryAt>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [i32] countValue{/std/collections/map/count(values)}
+  [bool] containsValue{/std/collections/map/contains(values, 2i32)}
+  [i32] tryValue{try(/std/collections/map/tryAt(values, 2i32))}
+  [i32] atValue{/std/collections/map/at(values, 1i32)}
+  [i32] unsafeValue{/std/collections/map/at_unsafe(values, 2i32).tag()}
+  [i32] containsScore{if(containsValue, then(){ 1i32 }, else(){ 3i32 })}
+  return(plus(plus(countValue, tryValue),
+              plus(atValue, plus(unsafeValue, containsScore))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_direct_canonical_map_helper_same_path_precedence.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_direct_canonical_map_helper_same_path_precedence_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 243);
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("runs vm stdlib namespaced map helpers on canonical map references") {
   const std::string source = R"(
 import /std/collections/*
