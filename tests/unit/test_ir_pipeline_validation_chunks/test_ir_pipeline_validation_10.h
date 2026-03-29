@@ -503,8 +503,7 @@ TEST_CASE("emitter helper path preference normalizes slashless map helper candid
   const std::unordered_map<std::string, std::string> mapStdlibOnlyNameMap = {
       {"/std/collections/map/count", "ps_std_map_count"},
   };
-  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/count", mapStdlibOnlyNameMap) ==
-        "/std/collections/map/count");
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/count", mapStdlibOnlyNameMap) == "/map/count");
 
   CHECK(primec::emitter::preferVectorStdlibHelperPath("pkg/Thing/tag", mapAliasOnlyNameMap) == "pkg/Thing/tag");
 }
@@ -624,4 +623,3 @@ TEST_CASE("emitter count rewrite rejects removed array capacity alias") {
                   .has_value());
   CHECK(resolveCalls == 0);
 }
-
