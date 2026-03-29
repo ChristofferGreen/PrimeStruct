@@ -113,44 +113,6 @@
         << ")";
     return out.str();
   };
-  auto emitMissingExplicitMapAccessMethod = [&](const Expr &candidate) {
-    const std::string resolvedPath = resolveExprPath(candidate);
-    const bool isUnsafe =
-        resolvedPath == "/map/at_unsafe" || resolvedPath == "/std/collections/map/at_unsafe";
-    std::ostringstream out;
-    out << "ps_missing_map_" << (isUnsafe ? "at_unsafe" : "at") << "_method_helper("
-        << emitExpr(candidate.args[0],
-                    nameMap,
-                    paramMap,
-                    defMap,
-                    structTypeMap,
-                    importAliases,
-                    localTypes,
-                    returnKinds,
-                    resultInfos,
-                    returnStructs,
-                    allowMathBare)
-        << ", "
-        << emitExpr(candidate.args[1],
-                    nameMap,
-                    paramMap,
-                    defMap,
-                    structTypeMap,
-                    importAliases,
-                    localTypes,
-                    returnKinds,
-                    resultInfos,
-                    returnStructs,
-                    allowMathBare)
-        << ")";
-    return out.str();
-  };
-  auto isNoHelperExplicitMapAccessMethodFallback = [&](const Expr &candidate) {
-    if (!candidate.isMethodCall || !isExplicitMapAccessMethod(candidate) || candidate.args.size() != 2) {
-      return false;
-    }
-    return nameMap.count(resolveExprPath(candidate)) == 0;
-  };
   auto isNoHelperExplicitVectorAccessCountReceiver = [&](const Expr &candidate) {
     if (isExplicitVectorAccessDirectCall(candidate)) {
       return explicitVectorAccessResolvedTypePath(candidate).empty();
