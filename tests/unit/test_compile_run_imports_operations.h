@@ -75,6 +75,14 @@ TEST_CASE("compiles and runs helper-wrapped experimental map parameters in C++ e
   expectWrappedExperimentalMapParameterConformance("exe");
 }
 
+TEST_CASE("compiles and runs helper-wrapped experimental map bindings in C++ emitter") {
+  expectWrappedExperimentalMapBindingConformance("exe");
+}
+
+TEST_CASE("compiles and runs helper-wrapped experimental map assignment RHS values in C++ emitter") {
+  expectWrappedExperimentalMapAssignConformance("exe");
+}
+
 TEST_CASE("compiles and runs canonical namespaced map constructors on explicit experimental map bindings in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalConstructorConformance("exe");
 }
@@ -153,6 +161,10 @@ TEST_CASE("compiles and runs helper-wrapped inferred experimental map default pa
 
 TEST_CASE("compiles and runs experimental map helper receivers in C++ emitter") {
   expectExperimentalMapHelperReceiverConformance("exe");
+}
+
+TEST_CASE("compiles and runs helper-wrapped experimental map helper receivers in C++ emitter") {
+  expectWrappedExperimentalMapHelperReceiverConformance("exe");
 }
 
 TEST_CASE("runs direct-constructor experimental map method receivers in C++ emitter") {

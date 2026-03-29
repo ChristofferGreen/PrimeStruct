@@ -283,6 +283,37 @@ inline std::string makeExperimentalMapMethodReceiverConformanceSource() {
   return source;
 }
 
+inline std::string makeWrappedExperimentalMapHelperReceiverConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedWrappedExperimentalMapHelperReceiverError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapHelperReceiverError>]\n";
+  source += "main() {\n";
+  source +=
+      "  [i32] found{try(/std/collections/map/tryAt(wrapValues(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)), \"left\"raw_utf8))}\n";
+  source +=
+      "  [i32 mut] total{plus(/std/collections/map/count(wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))), found)}\n";
+  source +=
+      "  assign(total, plus(total, /std/collections/map/at(wrapValues(/std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32)), \"extra\"raw_utf8)))\n";
+  source +=
+      "  if(/std/collections/map/contains(wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)), \"right\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapFieldAssignConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";

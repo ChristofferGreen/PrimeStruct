@@ -76,6 +76,14 @@ TEST_CASE("compiles and runs native helper-wrapped experimental map parameters")
   expectWrappedExperimentalMapParameterConformance("native");
 }
 
+TEST_CASE("compiles and runs native helper-wrapped experimental map bindings") {
+  expectWrappedExperimentalMapBindingConformance("native");
+}
+
+TEST_CASE("compiles and runs native helper-wrapped experimental map assignment RHS values") {
+  expectWrappedExperimentalMapAssignConformance("native");
+}
+
 TEST_CASE("compiles and runs native canonical namespaced map constructors on explicit experimental map bindings") {
   expectCanonicalMapNamespaceExperimentalConstructorConformance("native");
 }
@@ -162,6 +170,10 @@ TEST_CASE("compiles and runs native helper-wrapped inferred experimental map def
 
 TEST_CASE("compiles and runs native experimental map helper receivers") {
   expectExperimentalMapHelperReceiverConformance("native");
+}
+
+TEST_CASE("compiles and runs native helper-wrapped experimental map helper receivers") {
+  expectWrappedExperimentalMapHelperReceiverConformance("native");
 }
 
 TEST_CASE("compiles and runs native experimental map method receivers") {

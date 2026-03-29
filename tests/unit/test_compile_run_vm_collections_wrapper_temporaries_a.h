@@ -160,6 +160,14 @@ TEST_CASE("runs vm helper-wrapped experimental map parameters") {
   expectWrappedExperimentalMapParameterConformance("vm");
 }
 
+TEST_CASE("runs vm helper-wrapped experimental map bindings") {
+  expectWrappedExperimentalMapBindingConformance("vm");
+}
+
+TEST_CASE("runs vm helper-wrapped experimental map assignment RHS values") {
+  expectWrappedExperimentalMapAssignConformance("vm");
+}
+
 TEST_CASE("runs vm canonical namespaced map constructors on explicit experimental map bindings") {
   expectCanonicalMapNamespaceExperimentalConstructorConformance("vm");
 }
@@ -246,6 +254,10 @@ TEST_CASE("runs vm helper-wrapped inferred experimental map default parameters")
 
 TEST_CASE("runs vm experimental map helper receivers") {
   expectExperimentalMapHelperReceiverConformance("vm");
+}
+
+TEST_CASE("runs vm helper-wrapped experimental map helper receivers") {
+  expectWrappedExperimentalMapHelperReceiverConformance("vm");
 }
 
 TEST_CASE("runs vm experimental map method receivers") {

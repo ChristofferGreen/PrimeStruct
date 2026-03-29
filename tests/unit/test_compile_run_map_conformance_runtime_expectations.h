@@ -64,6 +64,22 @@ inline void expectWrappedExperimentalMapParameterConformance(const std::string &
                                             "3\n4\n3\n9\n");
 }
 
+inline void expectWrappedExperimentalMapBindingConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapBindingConformanceSource(),
+                                            "map_wrapped_experimental_binding_" + emitMode,
+                                            emitMode,
+                                            13,
+                                            "4\n9\n");
+}
+
+inline void expectWrappedExperimentalMapAssignConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapAssignConformanceSource(),
+                                            "map_wrapped_experimental_assign_" + emitMode,
+                                            emitMode,
+                                            13,
+                                            "4\n9\n");
+}
+
 inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(makeWrapperMapHelperExperimentalValueConformanceSource(),
                                             "map_wrapper_helper_experimental_value",
@@ -195,6 +211,13 @@ inline void expectExperimentalMapHelperReceiverConformance(const std::string &em
       emitMode,
       21,
       "2\n4\n9\n5\n1\n");
+}
+
+inline void expectWrappedExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(makeWrappedExperimentalMapHelperReceiverConformanceSource(),
+                                  "map_wrapped_experimental_helper_receiver_" + emitMode,
+                                  emitMode,
+                                  16);
 }
 
 inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
