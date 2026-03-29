@@ -322,6 +322,18 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
 
   std::string accessName;
   if (getBuiltinArrayAccessName(expr, accessName)) {
+    const auto arrayVectorTargetInfo = !expr.args.empty()
+                                           ? resolveArrayVectorAccessTargetInfo(
+                                                 expr.args.front(), localsIn, resolveCallArrayVectorAccessTargetInfo)
+                                           : ArrayVectorAccessTargetInfo{};
+    const bool isExplicitVectorAccessCall =
+        !expr.isMethodCall &&
+        (expr.name == "/vector/at" || expr.name == "/vector/at_unsafe" ||
+         expr.name == "/std/collections/vector/at" ||
+         expr.name == "/std/collections/vector/at_unsafe");
+    if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     if (expr.args.size() != 2) {
       error = accessName + " requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
