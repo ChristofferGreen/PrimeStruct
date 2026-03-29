@@ -17,12 +17,54 @@ bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
+  auto matchesDirectMapConstructorName = [&](const Expr &candidate) {
+    std::string normalizedName = candidate.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    auto matchesPath = [&](std::string_view basePath) {
+      return normalizedName == basePath || normalizedName.rfind(std::string(basePath) + "__", 0) == 0;
+    };
+    return matchesPath("std/collections/map/map") ||
+           matchesPath("std/collections/mapNew") ||
+           matchesPath("std/collections/mapSingle") ||
+           matchesPath("std/collections/mapDouble") ||
+           matchesPath("std/collections/mapPair") ||
+           matchesPath("std/collections/mapTriple") ||
+           matchesPath("std/collections/mapQuad") ||
+           matchesPath("std/collections/mapQuint") ||
+           matchesPath("std/collections/mapSext") ||
+           matchesPath("std/collections/mapSept") ||
+           matchesPath("std/collections/mapOct") ||
+           matchesPath("std/collections/experimental_map/map") ||
+           matchesPath("std/collections/experimental_map/mapNew") ||
+           matchesPath("std/collections/experimental_map/mapSingle") ||
+           matchesPath("std/collections/experimental_map/mapDouble") ||
+           matchesPath("std/collections/experimental_map/mapPair") ||
+           matchesPath("std/collections/experimental_map/mapTriple") ||
+           matchesPath("std/collections/experimental_map/mapQuad") ||
+           matchesPath("std/collections/experimental_map/mapQuint") ||
+           matchesPath("std/collections/experimental_map/mapSext") ||
+           matchesPath("std/collections/experimental_map/mapSept") ||
+           matchesPath("std/collections/experimental_map/mapOct") ||
+           isSimpleCallName(candidate, "mapNew") ||
+           isSimpleCallName(candidate, "mapSingle") ||
+           isSimpleCallName(candidate, "mapDouble") ||
+           isSimpleCallName(candidate, "mapPair") ||
+           isSimpleCallName(candidate, "mapTriple") ||
+           isSimpleCallName(candidate, "mapQuad") ||
+           isSimpleCallName(candidate, "mapQuint") ||
+           isSimpleCallName(candidate, "mapSext") ||
+           isSimpleCallName(candidate, "mapSept") ||
+           isSimpleCallName(candidate, "mapOct");
+  };
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
   auto matchesResolvedMapConstructor = [&](std::string_view basePath) {
     return callee != nullptr &&
            (callee->fullPath == basePath || callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0);
   };
-  if (!(matchesResolvedMapConstructor("/std/collections/map/map") ||
+  if (!matchesDirectMapConstructorName(callExpr) &&
+      !(matchesResolvedMapConstructor("/std/collections/map/map") ||
         matchesResolvedMapConstructor("/std/collections/mapNew") ||
         matchesResolvedMapConstructor("/std/collections/mapSingle") ||
         matchesResolvedMapConstructor("/std/collections/mapDouble") ||
@@ -32,12 +74,23 @@ bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
         matchesResolvedMapConstructor("/std/collections/mapQuint") ||
         matchesResolvedMapConstructor("/std/collections/mapSext") ||
         matchesResolvedMapConstructor("/std/collections/mapSept") ||
-        matchesResolvedMapConstructor("/std/collections/mapOct"))) {
+        matchesResolvedMapConstructor("/std/collections/mapOct") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/map") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapNew") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapSingle") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapDouble") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapPair") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapTriple") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapQuad") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapQuint") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapSext") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapSept") ||
+        matchesResolvedMapConstructor("/std/collections/experimental_map/mapOct"))) {
     return false;
   }
 
   rewrittenExpr = callExpr;
-  rewrittenExpr.name = "/map/map";
+  rewrittenExpr.name = "map";
   rewrittenExpr.namespacePrefix.clear();
   rewrittenExpr.isMethodCall = false;
   if (!rewrittenExpr.templateArgs.empty()) {

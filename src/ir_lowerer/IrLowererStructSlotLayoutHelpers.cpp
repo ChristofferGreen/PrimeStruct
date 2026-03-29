@@ -257,9 +257,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.valueKind = elementKind;
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
-      } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
-        info.structPath = normalizeVectorStructPath(binding.typeName);
-        info.slotCount = 3;
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "Result") {
         std::vector<std::string> args;
         if (!splitTemplateArgs(binding.typeTemplateArg, args) || (args.size() != 1 && args.size() != 2)) {
@@ -269,31 +266,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         }
         info.valueKind = (args.size() == 1) ? LocalInfo::ValueKind::Int32 : LocalInfo::ValueKind::Int64;
         info.slotCount = 1;
-      } else if (isMapTypeName(binding.typeName)) {
-        std::string nestedStruct;
-        if (!resolveSpecializedExperimentalMapStructPath(binding.typeName, binding.typeTemplateArg, nestedStruct) &&
-            !resolveStructTypeName(buildTemplatedTypeName(binding.typeName, binding.typeTemplateArg),
-                                   namespacePrefix,
-                                   nestedStruct)) {
-          error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
-          layoutStack.erase(structPath);
-          return false;
-        }
-        StructSlotLayoutInfo nestedLayout;
-        if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
-                                                         collectStructLayoutFields,
-                                                         resolveDefinitionNamespacePrefix,
-                                                         resolveStructTypeName,
-                                                         valueKindFromTypeName,
-                                                         layoutCache,
-                                                         layoutStack,
-                                                         nestedLayout,
-                                                         error)) {
-          layoutStack.erase(structPath);
-          return false;
-        }
-        info.structPath = nestedStruct;
-        info.slotCount = nestedLayout.totalSlots;
       } else if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
         info.valueKind = LocalInfo::ValueKind::Int64;
         info.slotCount = 1;
