@@ -244,3 +244,141 @@
           << ")";
       return out.str();
     }
+    if (expr.isMethodCall &&
+        (isSimpleCallName(expr, "capacity") ||
+         isExplicitVectorCountCapacitySlashMethod(expr, "capacity")) &&
+        expr.args.size() == 1 &&
+        isResolvedVectorTarget(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_missing_vector_capacity_method_helper("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
+    if (expr.isMethodCall && isExplicitStdlibVectorHelper(expr.name, "capacity") && expr.args.size() == 1) {
+      std::ostringstream out;
+      out << "ps_missing_vector_capacity_method_helper("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
+    if (expr.isMethodCall && resolveExprPath(expr) == "/vector/capacity" && expr.args.size() == 1 &&
+        isResolvedMapTarget(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_missing_vector_capacity_method_helper("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
+    if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+        isResolvedVectorTarget(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_missing_vector_capacity_call_helper("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
+    if (!expr.isMethodCall && isExplicitStdlibVectorHelper(expr.name, "capacity") && expr.args.size() == 1) {
+      std::ostringstream out;
+      out << "ps_missing_vector_capacity_call_helper("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
+    if (isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 && isResolvedVectorTarget(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_vector_capacity("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
+        isResolvedMapTarget(expr.args.front())) {
+      std::ostringstream out;
+      out << "ps_map_contains("
+          << emitExpr(expr.args.front(),
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ", "
+          << emitExpr(expr.args[1],
+                      nameMap,
+                      paramMap,
+                      defMap,
+                      structTypeMap,
+                      importAliases,
+                      localTypes,
+                      returnKinds,
+                      resultInfos,
+                      returnStructs,
+                      allowMathBare)
+          << ")";
+      return out.str();
+    }

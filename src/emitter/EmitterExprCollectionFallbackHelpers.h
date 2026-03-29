@@ -203,15 +203,6 @@
         << ")";
     return out.str();
   };
-  auto isNoHelperExplicitMapAccessContainsReceiver = [&](const Expr &candidate) {
-    return isNoHelperExplicitMapAccessCallFallback(candidate);
-  };
-  auto isNoHelperExplicitMapAccessMethodContainsReceiver = [&](const Expr &candidate) {
-    if (!candidate.isMethodCall || !isExplicitMapAccessMethod(candidate) || candidate.args.size() != 2) {
-      return false;
-    }
-    return nameMap.count(resolveExprPath(candidate)) == 0;
-  };
   auto isNoHelperExplicitMapAccessMethodFallback = [&](const Expr &candidate) {
     if (!candidate.isMethodCall || !isExplicitMapAccessMethod(candidate) || candidate.args.size() != 2) {
       return false;
