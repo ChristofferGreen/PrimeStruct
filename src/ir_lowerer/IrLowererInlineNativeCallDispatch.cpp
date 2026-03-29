@@ -32,15 +32,13 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
-      return matchesHelper("/std/collections/map/contains") ||
-             matchesHelper("/std/collections/mapContains") ||
+      return matchesHelper("/std/collections/mapContains") ||
              matchesHelper("/std/collections/experimental_map/mapContains");
     }
     if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
-      return matchesHelper("/std/collections/map/tryAt") ||
-             matchesHelper("/std/collections/mapTryAt") ||
+      return matchesHelper("/std/collections/mapTryAt") ||
              matchesHelper("/std/collections/experimental_map/mapTryAt");
     }
     if ((normalizedName == "count" || normalizedName == "map/count" ||
@@ -103,11 +101,11 @@ Expr makeInlineEmitDirectTypeNamespaceCall(const Expr &callExpr, const Definitio
 } // namespace
 
 bool isMapContainsHelperName(const Expr &expr) {
-  return isMapBuiltinName(expr, "contains");
+  return isSimpleCallName(expr, "contains");
 }
 
 bool isMapTryAtHelperName(const Expr &expr) {
-  return isMapBuiltinName(expr, "tryAt");
+  return isSimpleCallName(expr, "tryAt");
 }
 
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
