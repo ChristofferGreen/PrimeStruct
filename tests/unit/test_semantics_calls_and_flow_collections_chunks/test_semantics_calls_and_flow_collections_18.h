@@ -518,6 +518,24 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced count method on builtin vector receiver requires same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(31i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count slash method wrapper vector chain stops before receiver typing") {
   const std::string source = R"(
 namespace i32 {
@@ -606,6 +624,24 @@ TEST_CASE("stdlib namespaced vector capacity method rejects string receiver with
 main() {
   [string] value{"abc"raw_utf8}
   return(value./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method on builtin vector receiver requires same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./std/collections/vector/capacity())
 }
 )";
   std::string error;

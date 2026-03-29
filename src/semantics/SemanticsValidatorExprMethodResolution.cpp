@@ -350,6 +350,51 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       !keepBuiltinIndexedArgsPackMapMethod) {
     isBuiltinMethod = false;
   }
+  auto explicitVectorCountCapacityMethodMissingSamePathHelper = [&]() -> std::string {
+    if (!expr.isMethodCall || expr.args.empty()) {
+      return "";
+    }
+    auto explicitVectorCountCapacityMethodPath = [&]() -> std::string {
+      if (expr.name.empty()) {
+        return "";
+      }
+      std::string normalizedName = expr.name;
+      if (!normalizedName.empty() && normalizedName.front() == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      std::string normalizedNamespace = expr.namespacePrefix;
+      if (!normalizedNamespace.empty() && normalizedNamespace.front() == '/') {
+        normalizedNamespace.erase(normalizedNamespace.begin());
+      }
+      if ((normalizedName == "vector/count" || normalizedName == "vector/capacity" ||
+           normalizedName == "std/collections/vector/count" ||
+           normalizedName == "std/collections/vector/capacity")) {
+        return "/" + normalizedName;
+      }
+      if ((normalizedNamespace == "vector" || normalizedNamespace == "std/collections/vector") &&
+          (normalizedName == "count" || normalizedName == "capacity")) {
+        return "/" + normalizedNamespace + "/" + normalizedName;
+      }
+      return "";
+    }();
+    if (explicitVectorCountCapacityMethodPath.empty()) {
+      return "";
+    }
+    std::string elemType;
+    if (!resolveVectorTarget(expr.args.front(), elemType)) {
+      return "";
+    }
+    return hasDeclaredDefinitionPath(explicitVectorCountCapacityMethodPath) ||
+                   hasImportedDefinitionPath(explicitVectorCountCapacityMethodPath)
+               ? ""
+               : explicitVectorCountCapacityMethodPath;
+  };
+  if (const std::string missingSamePathHelper =
+          explicitVectorCountCapacityMethodMissingSamePathHelper();
+      !missingSamePathHelper.empty()) {
+    error_ = "unknown method: " + missingSamePathHelper;
+    return false;
+  }
   auto isStdlibFileWriteFacadeResolvedPath = [&](const std::string &path) {
     return path == "/File/write" || path == "/File/write_line" ||
            path == "/std/file/File/write" || path == "/std/file/File/write_line";
