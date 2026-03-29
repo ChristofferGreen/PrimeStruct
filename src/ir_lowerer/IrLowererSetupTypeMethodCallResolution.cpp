@@ -349,13 +349,21 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return getBuiltinArrayAccessName(candidateExpr, accessName) &&
                resolveMapAccessTargetInfo(candidateExpr.args.front(), localsIn).isMapTarget;
       };
+      auto isBareMapTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
+        return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
+               isSimpleCallName(candidateExpr, "tryAt") &&
+               resolveMapAccessTargetInfo(candidateExpr.args.front(), localsIn).isMapTarget;
+      };
       const bool blocksExplicitMapReceiverProbeKindFallback =
           isExplicitMapReceiverProbeHelperExpr(*receiver);
       const bool blocksBareMapAccessReceiverProbeKindFallback =
           isBareMapAccessReceiverProbeExpr(*receiver);
+      const bool blocksBareMapTryAtReceiverProbeKindFallback =
+          isBareMapTryAtReceiverProbeExpr(*receiver);
       const bool blocksExplicitVectorAccessKindFallback = isExplicitVectorAccessHelperExpr(*receiver);
       if (!blocksExplicitMapReceiverProbeKindFallback &&
           !blocksBareMapAccessReceiverProbeKindFallback &&
+          !blocksBareMapTryAtReceiverProbeKindFallback &&
           !blocksExplicitVectorAccessKindFallback) {
         if (!inferBuiltinAccessReceiverResultKind(
                 *receiver, localsIn, inferExprKind, resolveExprPath, getReturnInfo, defMap, inferredReceiverKind) &&
