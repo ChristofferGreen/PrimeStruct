@@ -396,6 +396,36 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("rejects vm wrapper-returned compatibility direct-call map receiver fallback") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 40i32))
+  }
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(2i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/map/at(wrapMap(), 2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_wrapper_compatibility_direct_map_receiver_fallback.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_compatibility_direct_map_receiver_fallback.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
+}
+
 TEST_CASE("vm keeps wrapper-returned map method alias primitive argument diagnostics") {
   const std::string source = R"(
 Marker {
