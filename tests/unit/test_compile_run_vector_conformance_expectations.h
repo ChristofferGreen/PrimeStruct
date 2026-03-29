@@ -484,6 +484,72 @@ inline void expectCanonicalVectorPushReceiverRejects(const std::string &emitMode
                                        "push requires vector binding");
 }
 
+inline void expectCanonicalVectorMutatorNamedArgExpressionRejects(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgExpressionRejectSource("push([value] 8i32, [values] values)"),
+      "vector_push_named_arg_expression_reject_" + emitMode,
+      emitMode,
+      "push is only supported as a statement");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgExpressionRejectSource("reserve([capacity] 8i32, [values] values)"),
+      "vector_reserve_named_arg_expression_reject_" + emitMode,
+      emitMode,
+      "reserve is only supported as a statement");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgExpressionRejectSource("remove_at([index] 0i32, [values] values)"),
+      "vector_remove_at_named_arg_expression_reject_" + emitMode,
+      emitMode,
+      "remove_at is only supported as a statement");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgExpressionRejectSource("remove_swap([index] 0i32, [values] values)"),
+      "vector_remove_swap_named_arg_expression_reject_" + emitMode,
+      emitMode,
+      "remove_swap is only supported as a statement");
+}
+
+inline void expectCanonicalVectorMutatorNamedArgReceiverRejects(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgReceiverRejectSource("push([value] 8i32, [values] values)"),
+      "vector_push_named_arg_array_call_reject_" + emitMode,
+      emitMode,
+      "push requires vector binding");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgReceiverRejectSource("reserve([capacity] 8i32, [values] values)"),
+      "vector_reserve_named_arg_array_call_reject_" + emitMode,
+      emitMode,
+      "reserve requires vector binding");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgReceiverRejectSource("remove_at([index] 0i32, [values] values)"),
+      "vector_remove_at_named_arg_array_call_reject_" + emitMode,
+      emitMode,
+      "remove_at requires vector binding");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgReceiverRejectSource("remove_swap([index] 0i32, [values] values)"),
+      "vector_remove_swap_named_arg_array_call_reject_" + emitMode,
+      emitMode,
+      "remove_swap requires vector binding");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgReceiverRejectSource("values.push([value] 8i32)"),
+      "vector_push_named_arg_array_method_reject_" + emitMode,
+      emitMode,
+      "push requires vector binding");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgReceiverRejectSource("values.reserve([capacity] 8i32)"),
+      "vector_reserve_named_arg_array_method_reject_" + emitMode,
+      emitMode,
+      "reserve requires vector binding");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgReceiverRejectSource("values.remove_at([index] 0i32)"),
+      "vector_remove_at_named_arg_array_method_reject_" + emitMode,
+      emitMode,
+      "remove_at requires vector binding");
+  expectVectorConformanceCompileReject(
+      makeCanonicalVectorMutatorNamedArgReceiverRejectSource("values.remove_swap([index] 0i32)"),
+      "vector_remove_swap_named_arg_array_method_reject_" + emitMode,
+      emitMode,
+      "remove_swap requires vector binding");
+}
+
 inline void expectCanonicalVectorMutatorImportRequirement(const std::string &emitMode,
                                                           const std::string &helperName,
                                                           const std::string &callArgs) {

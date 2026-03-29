@@ -236,6 +236,27 @@ inline std::string makeCanonicalVectorPushReceiverRejectSource(const std::string
   return source;
 }
 
+inline std::string makeCanonicalVectorMutatorNamedArgExpressionRejectSource(const std::string &exprText) {
+  std::string source;
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [vector<i32> mut] values{vector<i32>(4i32, 5i32)}\n";
+  source += "  return(" + exprText + ")\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeCanonicalVectorMutatorNamedArgReceiverRejectSource(const std::string &statementText) {
+  std::string source;
+  source += "[return<int>]\n";
+  source += "main() {\n";
+  source += "  [array<i32> mut] values{array<i32>(4i32, 5i32)}\n";
+  source += "  " + statementText + "\n";
+  source += "  return(0i32)\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorMutatorImportRequirementSource(const std::string &helperName,
                                                                      const std::string &callArgs) {
   std::string source;
