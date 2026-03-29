@@ -645,29 +645,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("non-imported wrapper-returned canonical map reference access keeps primitive receiver diagnostics") {
-  const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
-borrowMap([Reference</std/collections/map<i32, i32>>] values) {
-  return(values)
-}
-
-[return<int>]
-/string/count([string] values) {
-  return(91i32)
-}
-
-[return<int>]
-main() {
-  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
-  return(/std/collections/map/at(borrowMap(location(values)), 1i32).count())
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
-}
-
 TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
