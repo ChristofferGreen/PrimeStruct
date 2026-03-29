@@ -105,6 +105,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprMethodCompatibilitySetup.cpp
   src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp
   src/semantics/SemanticsValidatorExprCollectionAccessSetup.cpp
+  src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp
   src/semantics/SemanticsValidatorExprDirectCollectionFallbacks.cpp
   src/semantics/SemanticsValidatorExprPostAccessPrechecks.cpp
   src/semantics/SemanticsValidatorExprBuiltinContextSetup.cpp
