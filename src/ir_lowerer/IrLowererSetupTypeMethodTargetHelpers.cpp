@@ -41,6 +41,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       normalizedOriginalMethodName.rfind("vector/", 0) == 0;
   const bool isExplicitCanonicalVectorMethod =
       normalizedOriginalMethodName.rfind("std/collections/vector/", 0) == 0;
+  const bool isExplicitArrayVectorMethod =
+      normalizedOriginalMethodName.rfind("array/", 0) == 0;
   std::string normalizedTypeName = typeName;
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
@@ -206,6 +208,13 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         std::string("/") +
         (isExplicitCanonicalVectorMethod ? "std/collections/vector/" : "vector/") +
         normalizedMethodName;
+    if (const Definition *resolved = findMethodDefinitionByPath(explicitPath)) {
+      errorOut.clear();
+      return resolved;
+    }
+  }
+  if (isExplicitRemovedVectorMethodAlias && isExplicitArrayVectorMethod) {
+    const std::string explicitPath = "/array/" + normalizedMethodName;
     if (const Definition *resolved = findMethodDefinitionByPath(explicitPath)) {
       errorOut.clear();
       return resolved;
