@@ -250,6 +250,15 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
         return true;
       }
     }
+    if (expectedBase == "map") {
+      std::string keyType;
+      std::string valueType;
+      if (extractMapKeyValueTypes(binding, keyType, valueType) ||
+          extractInferExperimentalMapFieldTypes(binding, keyType, valueType)) {
+        argsOut = {keyType, valueType};
+        return true;
+      }
+    }
     const std::string typeText = binding.typeTemplateArg.empty()
                                      ? binding.typeName
                                      : binding.typeName + "<" + binding.typeTemplateArg + ">";

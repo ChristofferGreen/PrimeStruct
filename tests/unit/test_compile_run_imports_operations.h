@@ -127,7 +127,7 @@ TEST_CASE("rejects explicit experimental map struct field constructors in C++ em
   expectExperimentalMapStructFieldConformance("exe");
 }
 
-TEST_CASE("inferred experimental map struct fields keep missing-key runtime in C++ emitter") {
+TEST_CASE("compiles and runs inferred experimental map struct fields in C++ emitter") {
   expectInferredExperimentalMapStructFieldConformance("exe");
 }
 

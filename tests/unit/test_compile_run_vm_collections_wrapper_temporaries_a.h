@@ -221,8 +221,6 @@ TEST_CASE("runs vm experimental map struct fields") {
 }
 
 TEST_CASE("runs vm inferred experimental map struct fields") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   expectInferredExperimentalMapStructFieldConformance("vm");
 }
 
@@ -629,4 +627,3 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > /dev/null";
   CHECK(runCommand(runCmd) == 6);
 }
-

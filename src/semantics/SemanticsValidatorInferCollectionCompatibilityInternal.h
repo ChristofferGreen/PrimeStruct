@@ -114,16 +114,27 @@ bool resolveRemovedCollectionHelperReference(std::string_view rawMethodName,
   auto matchesDirectMapConstructorPath = [&](std::string_view basePath) {
     return resolvedCandidate == basePath || resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
   };
-  return matchesDirectMapConstructorPath("/std/collections/map/map") ||
+  return matchesDirectMapConstructorPath("/map") ||
+         matchesDirectMapConstructorPath("/std/collections/map/map") ||
+         matchesDirectMapConstructorPath("/mapNew") ||
          matchesDirectMapConstructorPath("/std/collections/mapNew") ||
+         matchesDirectMapConstructorPath("/mapSingle") ||
          matchesDirectMapConstructorPath("/std/collections/mapSingle") ||
+         matchesDirectMapConstructorPath("/mapDouble") ||
          matchesDirectMapConstructorPath("/std/collections/mapDouble") ||
+         matchesDirectMapConstructorPath("/mapPair") ||
          matchesDirectMapConstructorPath("/std/collections/mapPair") ||
+         matchesDirectMapConstructorPath("/mapTriple") ||
          matchesDirectMapConstructorPath("/std/collections/mapTriple") ||
+         matchesDirectMapConstructorPath("/mapQuad") ||
          matchesDirectMapConstructorPath("/std/collections/mapQuad") ||
+         matchesDirectMapConstructorPath("/mapQuint") ||
          matchesDirectMapConstructorPath("/std/collections/mapQuint") ||
+         matchesDirectMapConstructorPath("/mapSext") ||
          matchesDirectMapConstructorPath("/std/collections/mapSext") ||
+         matchesDirectMapConstructorPath("/mapSept") ||
          matchesDirectMapConstructorPath("/std/collections/mapSept") ||
+         matchesDirectMapConstructorPath("/mapOct") ||
          matchesDirectMapConstructorPath("/std/collections/mapOct") ||
          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapNew") ||
          matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSingle") ||
