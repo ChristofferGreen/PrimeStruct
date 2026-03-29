@@ -187,6 +187,32 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
+TEST_CASE("rejects alias slash-method vector access on array receiver in C++ emitter") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(plus(wrapArray()./vector/at(1i32),
+              wrapArray()./vector/at_unsafe(0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_slash_vector_access_array_no_helper_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_alias_slash_vector_access_array_no_helper_exe.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+}
+
 TEST_CASE("rejects vector alias access struct method chain without same-path helper in C++ emitter") {
   const std::string source = R"(
 Marker {

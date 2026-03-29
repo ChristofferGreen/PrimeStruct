@@ -858,7 +858,7 @@ wrapText() {
 }
 
 [return<int>]
-/i32/tag([i32] value) {
+[i32/tag([i32] value) {
   return(plus(value, 10i32))
 }
 

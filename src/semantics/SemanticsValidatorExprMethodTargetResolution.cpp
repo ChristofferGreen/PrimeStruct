@@ -1282,9 +1282,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         if (isCanonicalStdVectorPath) {
           return false;
         }
-        return resolveArgsPackAccessTarget(receiver, ignoredElemType) ||
-               resolveArrayTarget(receiver, ignoredElemType) ||
-               resolveStringTarget(receiver);
+        return resolveArgsPackAccessTarget(receiver, ignoredElemType);
       }
       return false;
     };
