@@ -440,6 +440,37 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter rejects wrapper vector count slash-method chains before receiver typing") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector()./vector/count().tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_vector_count_slash_chain_unknown_method.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_cpp_wrapper_vector_count_slash_chain_unknown_method.txt")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs wrapper bare vector count through imported stdlib helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
@@ -623,4 +654,3 @@ main() {
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
-

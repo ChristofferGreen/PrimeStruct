@@ -697,6 +697,67 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("rejects native wrapper vector count slash-method chains before receiver typing") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32, 3i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector()./vector/count().tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wrapper_vector_count_slash_chain_unknown_method.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_wrapper_vector_count_slash_chain_unknown_method_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("rejects native wrapper vector capacity slash-method chains before receiver typing") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32, 3i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector()./vector/capacity().tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wrapper_vector_capacity_slash_chain_unknown_method.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_wrapper_vector_capacity_slash_chain_unknown_method_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*

@@ -1773,6 +1773,26 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
+    const std::string removedVectorMethodCompatibilityPath =
+        receiver.isMethodCall
+            ? this->explicitRemovedCollectionMethodPath(receiver.name, receiver.namespacePrefix)
+            : std::string();
+    const bool hasSamePathRemovedVectorMethodHelper =
+        !removedVectorMethodCompatibilityPath.empty() &&
+        (hasDefinitionPath(removedVectorMethodCompatibilityPath) ||
+         hasImportedDefinitionPath(removedVectorMethodCompatibilityPath));
+    if ((removedVectorMethodCompatibilityPath == "/vector/count" ||
+         removedVectorMethodCompatibilityPath == "/vector/capacity" ||
+         removedVectorMethodCompatibilityPath == "/std/collections/vector/count" ||
+         removedVectorMethodCompatibilityPath == "/std/collections/vector/capacity") &&
+        !hasSamePathRemovedVectorMethodHelper &&
+        !receiver.args.empty()) {
+      std::string vectorElemType;
+      if (resolveVectorTarget(receiver.args.front(), vectorElemType)) {
+        error_ = "unknown method: " + removedVectorMethodCompatibilityPath;
+        return false;
+      }
+    }
     std::string accessHelperName;
     if (getBuiltinArrayAccessName(receiver, accessHelperName) && !receiver.args.empty()) {
       const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(receiver);
@@ -1801,9 +1821,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             receiver.isMethodCall
                 ? this->explicitRemovedCollectionMethodPath(receiver.name, receiver.namespacePrefix)
                 : std::string();
+        const bool hasSamePathRemovedVectorAccessHelper =
+            !removedVectorAccessCompatibilityPath.empty() &&
+            (hasDefinitionPath(removedVectorAccessCompatibilityPath) ||
+             hasImportedDefinitionPath(removedVectorAccessCompatibilityPath));
         if ((removedVectorAccessCompatibilityPath == "/array/at" ||
              removedVectorAccessCompatibilityPath == "/array/at_unsafe") &&
-            !hasDefinitionPath(removedVectorAccessCompatibilityPath)) {
+            !hasSamePathRemovedVectorAccessHelper) {
           std::string vectorElemType;
           if (resolveVectorTarget(accessReceiver, vectorElemType)) {
             error_ = "unknown method: " + removedVectorAccessCompatibilityPath;
