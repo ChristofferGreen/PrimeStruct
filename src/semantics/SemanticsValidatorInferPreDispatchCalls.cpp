@@ -322,17 +322,6 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
                               builtinCollectionDispatchResolverAdapters)
                         : "";
   if (!removedCollectionMethodCompatibilityPath.empty()) {
-    if (removedCollectionMethodCompatibilityPath == "/vector/at" ||
-        removedCollectionMethodCompatibilityPath == "/vector/at_unsafe") {
-      ReturnKind builtinMethodKind = ReturnKind::Unknown;
-      if (resolveBuiltinCollectionMethodReturnKind(
-              removedCollectionMethodCompatibilityPath,
-              expr.args.front(),
-              builtinCollectionDispatchResolvers,
-              builtinMethodKind)) {
-        return finish(builtinMethodKind);
-      }
-    }
     return finish(ReturnKind::Unknown);
   }
 

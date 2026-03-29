@@ -1,4 +1,4 @@
-TEST_CASE("C++ emitter lowers direct-call string vector access helpers to deleted stubs") {
+TEST_CASE("C++ emitter rejects direct-call string vector access helpers before lowering") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -12,21 +12,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_direct_string_vector_access_deleted_stub.prime", source);
-  const std::string outPath =
+      writeTemp("compile_cpp_direct_string_vector_access_no_helper.prime", source);
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_direct_string_vector_access_deleted_stub.cpp")
+       "primec_cpp_direct_string_vector_access_no_helper_cpp.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_at_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_call_helper(wrapText(), 1)") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_call_helper(wrapText(), 0)") != std::string::npos);
-  CHECK(output.find("ps_string_at(") == std::string::npos);
-  CHECK(output.find("ps_string_at_unsafe(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects direct-call string vector access builtin fallback in C++ emitter") {
@@ -43,18 +38,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_direct_string_vector_access_deleted_stub_exe.prime", source);
+      writeTemp("compile_cpp_direct_string_vector_access_no_helper_exe.prime", source);
   const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_direct_string_vector_access_deleted_stub.err")
+       "primec_cpp_direct_string_vector_access_no_helper_exe.err")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  const std::string errors = readFile(errPath);
-  CHECK(errors.find("ps_missing_vector_at_call_helper") != std::string::npos);
-  CHECK(errors.find("ps_missing_vector_at_unsafe_call_helper") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects slash-method wrapper string access method chain compatibility fallback in C++ emitter") {
@@ -88,7 +81,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("ps_missing_vector_at_method_helper") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects slash-method wrapper string access method chain i32 diagnostics in C++ emitter") {
@@ -116,7 +109,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/missing_tag") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers slash-method string vector access helpers to deleted stubs") {
+TEST_CASE("C++ emitter rejects slash-method string vector access helpers before lowering") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -130,21 +123,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_slash_method_string_vector_access_deleted_stub.prime", source);
-  const std::string outPath =
+      writeTemp("compile_cpp_slash_method_string_vector_access_no_helper.prime", source);
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_slash_method_string_vector_access_deleted_stub.cpp")
+       "primec_cpp_slash_method_string_vector_access_no_helper_cpp.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_missing_vector_at_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_method_helper(wrapText(), 1)") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_method_helper") != std::string::npos);
-  CHECK(output.find("ps_missing_vector_at_unsafe_method_helper(wrapText(), 0)") != std::string::npos);
-  CHECK(output.find("ps_string_at(") == std::string::npos);
-  CHECK(output.find("ps_string_at_unsafe(") == std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects slash-method string vector access builtin fallback in C++ emitter") {
@@ -161,18 +149,42 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_slash_method_string_vector_access_deleted_stub_exe.prime", source);
+      writeTemp("compile_cpp_slash_method_string_vector_access_no_helper_exe.prime", source);
   const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_slash_method_string_vector_access_deleted_stub.err")
+       "primec_cpp_slash_method_string_vector_access_no_helper_exe.err")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  const std::string errors = readFile(errPath);
-  CHECK(errors.find("ps_missing_vector_at_method_helper") != std::string::npos);
-  CHECK(errors.find("ps_missing_vector_at_unsafe_method_helper") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
+}
+
+TEST_CASE("rejects alias slash-method vector access on array receiver in C++ emitter") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(plus(wrapArray()./vector/at(1i32),
+              wrapArray()./vector/at_unsafe(0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_alias_slash_vector_access_array_no_helper_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_alias_slash_vector_access_array_no_helper_exe.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps vector alias access struct method chain canonical forwarding") {
@@ -618,4 +630,3 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
 }
-

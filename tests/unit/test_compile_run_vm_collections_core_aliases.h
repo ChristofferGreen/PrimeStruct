@@ -118,7 +118,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("VM lowering error: unknown method target for tag") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("vm keeps slash-method wrapper string access i32 diagnostics") {

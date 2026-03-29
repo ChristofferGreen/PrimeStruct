@@ -1242,12 +1242,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         if (isCanonicalStdVectorPath) {
           return false;
         }
-        return resolveArgsPackAccessTarget(receiver, ignoredElemType) ||
-               resolveArrayTarget(receiver, ignoredElemType) ||
-               resolveStringTarget(receiver);
+        return resolveArgsPackAccessTarget(receiver, ignoredElemType);
       }
       return false;
     };
+    if (!explicitRemovedMethodPath.empty() &&
+        path.rfind("/string/", 0) == 0 &&
+        (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
+      resolvedOut = explicitRemovedMethodPath;
+      isBuiltinOut = false;
+      return true;
+    }
     if (!explicitRemovedMethodPath.empty() && path.rfind("/string/", 0) != 0) {
       if (shouldPreserveBuiltinCompatibilityForExplicitRemovedMethod()) {
         resolvedOut = explicitRemovedMethodPath;

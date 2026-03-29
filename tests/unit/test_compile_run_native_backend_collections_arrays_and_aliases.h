@@ -237,7 +237,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native slash-method wrapper string access method chain compatibility fallback") {
+TEST_CASE("rejects native slash-method wrapper string access method chain compatibility fallback") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -260,13 +260,15 @@ main() {
   const std::string srcPath =
       writeTemp("compile_native_slash_method_wrapper_string_access_method_chain_compatibility_fallback.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_slash_method_wrapper_string_access_method_chain_compatibility_fallback_exe")
+       "primec_native_slash_method_wrapper_string_access_method_chain_compatibility_fallback.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("native keeps slash-method wrapper string access i32 diagnostics") {
@@ -292,6 +294,32 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /i32/missing_tag") != std::string::npos);
+}
+
+TEST_CASE("rejects native alias slash-method vector access on array receiver") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(plus(wrapArray()./vector/at(1i32),
+              wrapArray()./vector/at_unsafe(0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_alias_slash_vector_access_array_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_alias_slash_vector_access_array_no_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native unchecked pointer conformance harness for imported .prime helpers") {
@@ -537,4 +565,3 @@ main() {
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(outPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
-

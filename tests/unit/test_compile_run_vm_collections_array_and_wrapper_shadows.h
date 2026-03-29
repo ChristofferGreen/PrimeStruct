@@ -63,6 +63,30 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("rejects vm alias slash-method vector access on array receiver") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(plus(wrapArray()./vector/at(1i32),
+              wrapArray()./vector/at_unsafe(0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_alias_slash_vector_access_array_no_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_alias_slash_vector_access_array_no_helper.out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown method: /vector/at") != std::string::npos);
+}
+
 TEST_CASE("runs vm with user map count call shadow") {
   const std::string source = R"(
 [return<int>]
