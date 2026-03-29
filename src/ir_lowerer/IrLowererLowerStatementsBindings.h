@@ -165,7 +165,14 @@
       }
       const Expr &init = stmt.args.front();
       std::string uninitializedType;
-      if (extractUninitializedTemplateArg(stmt, uninitializedType)) {
+      if (!extractUninitializedTemplateArg(stmt, uninitializedType) &&
+          init.kind == Expr::Kind::Call &&
+          !init.isMethodCall &&
+          isSimpleCallName(init, "uninitialized") &&
+          init.templateArgs.size() == 1) {
+        uninitializedType = trimTemplateTypeText(init.templateArgs.front());
+      }
+      if (!uninitializedType.empty()) {
         UninitializedTypeInfo uninitInfo;
         if (!resolveUninitializedTypeInfo(uninitializedType, stmt.namespacePrefix, uninitInfo)) {
           if (error.empty()) {

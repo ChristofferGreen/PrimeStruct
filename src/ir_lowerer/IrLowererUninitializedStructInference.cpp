@@ -1,11 +1,102 @@
 #include "IrLowererUninitializedTypeHelpers.h"
 
+#include <algorithm>
+#include <cctype>
 #include <functional>
+#include <sstream>
 #include <unordered_set>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+bool isSpecializedExperimentalMapStructPath(const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+}
+
+bool isBuiltinVectorTypeName(const std::string &typeName) {
+  return typeName == "vector" || typeName == "/vector" || typeName == "std/collections/vector" ||
+         typeName == "/std/collections/vector";
+}
+
+std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
+  if (isBuiltinVectorTypeName(typeName)) {
+    return "/vector";
+  }
+  if (typeName == "Vector") {
+    return "/std/collections/experimental_vector/Vector";
+  }
+  if (typeName == "std/collections/experimental_vector/Vector" ||
+      typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+    return "/" + typeName;
+  }
+  return typeName;
+}
+
+std::string inferUninitializedTargetStructPath(const std::string &typeText,
+                                               const std::string &namespacePrefix,
+                                               const ResolveStructTypeNameFn &resolveStructTypeName) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (normalized.empty()) {
+    return "";
+  }
+
+  if (isSpecializedExperimentalMapStructPath(normalized)) {
+    if (normalized.front() != '/') {
+      normalized.insert(normalized.begin(), '/');
+    }
+    return normalized;
+  }
+
+  std::string resolvedStructPath;
+  if (resolveStructTypeName(normalized, namespacePrefix, resolvedStructPath)) {
+    return resolvedStructPath;
+  }
+
+  std::string base;
+  std::string argList;
+  if (!splitTemplateTypeName(normalized, base, argList)) {
+    return "";
+  }
+
+  const std::string normalizedBase = normalizeCollectionBindingTypeName(base);
+  if (normalizedBase == "vector") {
+    return normalizeUninitializedVectorStructPath(base);
+  }
+  if (normalizedBase != "map") {
+    return "";
+  }
+
+  std::vector<std::string> templateArgs;
+  if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
+    return "";
+  }
+  std::string canonicalArgs = joinTemplateArgsText(templateArgs);
+  canonicalArgs.erase(
+      std::remove_if(canonicalArgs.begin(), canonicalArgs.end(), [](unsigned char ch) {
+        return std::isspace(ch) != 0;
+      }),
+      canonicalArgs.end());
+
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : canonicalArgs) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+
+  std::ostringstream specializedPath;
+  specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
+  return specializedPath.str();
+}
+
+} // namespace
 
 std::string inferStructPathFromCallTargetWithFieldBindingIndex(
     const Expr &expr,
@@ -127,6 +218,11 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       return "";
     }
     if (exprIn.kind == Expr::Kind::Call) {
+      if (!exprIn.isMethodCall && exprIn.name == "uninitialized" && exprIn.args.empty() &&
+          exprIn.templateArgs.size() == 1) {
+        return inferUninitializedTargetStructPath(
+            exprIn.templateArgs.front(), exprIn.namespacePrefix, resolveStructTypeName);
+      }
       if (!exprIn.isMethodCall && isSimpleCallName(exprIn, "location") && exprIn.args.size() == 1) {
         return inferStructExprPath(exprIn.args.front(), localsInExpr);
       }

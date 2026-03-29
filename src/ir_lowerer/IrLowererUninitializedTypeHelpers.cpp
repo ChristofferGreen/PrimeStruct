@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
@@ -286,40 +287,143 @@ bool findUninitializedFieldTemplateArg(const std::vector<UninitializedFieldBindi
   return false;
 }
 
-bool resolveUninitializedFieldStorageCandidate(const Expr &storage,
-                                               const LocalMap &localsIn,
-                                               const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
-                                               const LocalInfo *&receiverOut,
-                                               std::string &structPathOut,
-                                               std::string &typeTemplateArgOut) {
+const Definition *resolveUninitializedReceiverHelperDefinition(
+    const Expr &expr,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty()) {
+    return nullptr;
+  }
+
+  std::vector<std::string> candidates;
+  if (expr.name.front() == '/') {
+    candidates.push_back(expr.name);
+  } else {
+    if (!expr.namespacePrefix.empty()) {
+      candidates.push_back(expr.namespacePrefix + "/" + expr.name);
+    }
+    candidates.push_back("/" + expr.name);
+    if (expr.name.find('/') != std::string::npos) {
+      candidates.push_back(expr.name);
+    }
+  }
+
+  for (const auto &candidate : candidates) {
+    auto it = defMap.find(candidate);
+    if (it != defMap.end() && it->second != nullptr) {
+      return it->second;
+    }
+  }
+  return nullptr;
+}
+
+bool resolveUninitializedFieldReceiverInfo(const Expr &receiverExpr,
+                                           const LocalMap &localsIn,
+                                           const std::unordered_map<std::string, const Definition *> &defMap,
+                                           const LocalInfo *&receiverOut,
+                                           std::string &structPathOut) {
+  receiverOut = nullptr;
+  structPathOut.clear();
+
+  if (receiverExpr.kind == Expr::Kind::Name) {
+    auto recvIt = localsIn.find(receiverExpr.name);
+    if (recvIt == localsIn.end() || recvIt->second.structTypeName.empty()) {
+      return false;
+    }
+    receiverOut = &recvIt->second;
+    structPathOut = recvIt->second.structTypeName;
+    return true;
+  }
+
+  if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isMethodCall) {
+    return false;
+  }
+
+  if ((isSimpleCallName(receiverExpr, "location") || isSimpleCallName(receiverExpr, "dereference")) &&
+      receiverExpr.args.size() == 1) {
+    return resolveUninitializedFieldReceiverInfo(receiverExpr.args.front(),
+                                                 localsIn,
+                                                 defMap,
+                                                 receiverOut,
+                                                 structPathOut);
+  }
+
+  const Definition *helperDef = resolveUninitializedReceiverHelperDefinition(receiverExpr, defMap);
+  if (helperDef == nullptr) {
+    return false;
+  }
+
+  const Expr *returnedValueExpr = nullptr;
+  for (const auto &stmt : helperDef->statements) {
+    if (isReturnCall(stmt) && stmt.args.size() == 1) {
+      returnedValueExpr = &stmt.args.front();
+    }
+  }
+  if (helperDef->returnExpr.has_value()) {
+    returnedValueExpr = &*helperDef->returnExpr;
+  }
+  if (returnedValueExpr == nullptr || returnedValueExpr->kind != Expr::Kind::Name) {
+    return false;
+  }
+
+  std::vector<const Expr *> orderedArgs;
+  std::string argError;
+  if (!buildOrderedCallArguments(receiverExpr, helperDef->parameters, orderedArgs, argError)) {
+    return false;
+  }
+
+  for (size_t index = 0; index < helperDef->parameters.size() && index < orderedArgs.size(); ++index) {
+    const auto &param = helperDef->parameters[index];
+    const Expr *argExpr = orderedArgs[index];
+    if (argExpr == nullptr || param.name != returnedValueExpr->name) {
+      continue;
+    }
+    std::string paramTypeName;
+    std::vector<std::string> paramTemplateArgs;
+    if (!extractFirstBindingTypeTransform(param, paramTypeName, paramTemplateArgs)) {
+      return false;
+    }
+    const std::string normalizedParamType = normalizeCollectionBindingTypeName(paramTypeName);
+    if (normalizedParamType != "Reference" && normalizedParamType != "Pointer") {
+      return false;
+    }
+    return resolveUninitializedFieldReceiverInfo(*argExpr, localsIn, defMap, receiverOut, structPathOut);
+  }
+
+  return false;
+}
+
+namespace {
+
+bool resolveUninitializedFieldStorageCandidateWithDefinitions(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const LocalInfo *&receiverOut,
+    std::string &structPathOut,
+    std::string &typeTemplateArgOut) {
   receiverOut = nullptr;
   structPathOut.clear();
   typeTemplateArgOut.clear();
   if (!storage.isFieldAccess || storage.args.size() != 1) {
     return false;
   }
-  const Expr &receiverExpr = storage.args.front();
-  if (receiverExpr.kind != Expr::Kind::Name) {
-    return false;
-  }
-  auto recvIt = localsIn.find(receiverExpr.name);
-  if (recvIt == localsIn.end() || recvIt->second.structTypeName.empty()) {
+  if (!resolveUninitializedFieldReceiverInfo(storage.args.front(), localsIn, defMap, receiverOut, structPathOut)) {
     return false;
   }
   std::string typeTemplateArg;
-  if (!findFieldTemplateArg(recvIt->second.structTypeName, storage.name, typeTemplateArg)) {
+  if (!findFieldTemplateArg(structPathOut, storage.name, typeTemplateArg)) {
     return false;
   }
-  receiverOut = &recvIt->second;
-  structPathOut = recvIt->second.structTypeName;
   typeTemplateArgOut = std::move(typeTemplateArg);
   return true;
 }
 
-bool resolveUninitializedFieldStorageTypeInfo(
+bool resolveUninitializedFieldStorageTypeInfoWithDefinitions(
     const Expr &storage,
     const LocalMap &localsIn,
     const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
     const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
     UninitializedFieldStorageTypeInfo &out,
@@ -331,8 +435,8 @@ bool resolveUninitializedFieldStorageTypeInfo(
   const LocalInfo *receiver = nullptr;
   std::string structPath;
   std::string typeTemplateArg;
-  if (!resolveUninitializedFieldStorageCandidate(
-          storage, localsIn, findFieldTemplateArg, receiver, structPath, typeTemplateArg)) {
+  if (!resolveUninitializedFieldStorageCandidateWithDefinitions(
+          storage, localsIn, findFieldTemplateArg, defMap, receiver, structPath, typeTemplateArg)) {
     return true;
   }
 
@@ -352,10 +456,11 @@ bool resolveUninitializedFieldStorageTypeInfo(
   return true;
 }
 
-bool resolveUninitializedFieldStorageAccess(
+bool resolveUninitializedFieldStorageAccessWithDefinitions(
     const Expr &storage,
     const LocalMap &localsIn,
     const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
     const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
@@ -366,14 +471,15 @@ bool resolveUninitializedFieldStorageAccess(
   resolvedOut = false;
 
   UninitializedFieldStorageTypeInfo typeInfo;
-  if (!resolveUninitializedFieldStorageTypeInfo(storage,
-                                                localsIn,
-                                                findFieldTemplateArg,
-                                                resolveDefinitionNamespacePrefix,
-                                                resolveUninitializedTypeInfo,
-                                                typeInfo,
-                                                resolvedOut,
-                                                error)) {
+  if (!resolveUninitializedFieldStorageTypeInfoWithDefinitions(storage,
+                                                               localsIn,
+                                                               findFieldTemplateArg,
+                                                               defMap,
+                                                               resolveDefinitionNamespacePrefix,
+                                                               resolveUninitializedTypeInfo,
+                                                               typeInfo,
+                                                               resolvedOut,
+                                                               error)) {
     return false;
   }
   if (!resolvedOut) {
@@ -391,15 +497,17 @@ bool resolveUninitializedFieldStorageAccess(
   return true;
 }
 
-bool resolveUninitializedStorageAccess(const Expr &storage,
-                                       const LocalMap &localsIn,
-                                       const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
-                                       const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
-                                       const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
-                                       const ResolveStructFieldSlotFn &resolveStructFieldSlot,
-                                       UninitializedStorageAccessInfo &out,
-                                       bool &resolvedOut,
-                                       std::string &error) {
+bool resolveUninitializedStorageAccessWithDefinitions(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error) {
   out = UninitializedStorageAccessInfo{};
   resolvedOut = false;
 
@@ -407,15 +515,16 @@ bool resolveUninitializedStorageAccess(const Expr &storage,
     const Expr &pointerExpr = storage.args.front();
     if (pointerExpr.kind == Expr::Kind::Call && isSimpleCallName(pointerExpr, "location") &&
         pointerExpr.args.size() == 1) {
-      return resolveUninitializedStorageAccess(pointerExpr.args.front(),
-                                               localsIn,
-                                               findFieldTemplateArg,
-                                               resolveDefinitionNamespacePrefix,
-                                               resolveUninitializedTypeInfo,
-                                               resolveStructFieldSlot,
-                                               out,
-                                               resolvedOut,
-                                               error);
+      return resolveUninitializedStorageAccessWithDefinitions(pointerExpr.args.front(),
+                                                              localsIn,
+                                                              findFieldTemplateArg,
+                                                              defMap,
+                                                              resolveDefinitionNamespacePrefix,
+                                                              resolveUninitializedTypeInfo,
+                                                              resolveStructFieldSlot,
+                                                              out,
+                                                              resolvedOut,
+                                                              error);
     }
     if (pointerExpr.kind == Expr::Kind::Name) {
       auto pointerIt = localsIn.find(pointerExpr.name);
@@ -460,15 +569,16 @@ bool resolveUninitializedStorageAccess(const Expr &storage,
   }
 
   UninitializedFieldStorageAccessInfo fieldStorage;
-  if (!resolveUninitializedFieldStorageAccess(storage,
-                                              localsIn,
-                                              findFieldTemplateArg,
-                                              resolveDefinitionNamespacePrefix,
-                                              resolveUninitializedTypeInfo,
-                                              resolveStructFieldSlot,
-                                              fieldStorage,
-                                              resolvedOut,
-                                              error)) {
+  if (!resolveUninitializedFieldStorageAccessWithDefinitions(storage,
+                                                             localsIn,
+                                                             findFieldTemplateArg,
+                                                             defMap,
+                                                             resolveDefinitionNamespacePrefix,
+                                                             resolveUninitializedTypeInfo,
+                                                             resolveStructFieldSlot,
+                                                             fieldStorage,
+                                                             resolvedOut,
+                                                             error)) {
     return false;
   }
   if (!resolvedOut) {
@@ -483,6 +593,111 @@ bool resolveUninitializedStorageAccess(const Expr &storage,
   return true;
 }
 
+bool resolveUninitializedStorageAccessWithFieldBindingsAndDefinitions(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const CollectUninitializedFieldBindingsFn &collectFieldBindings,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error) {
+  return resolveUninitializedStorageAccessWithDefinitions(
+      storage,
+      localsIn,
+      [&](const std::string &structPath, const std::string &fieldName, std::string &typeTemplateArgOut) {
+        return resolveUninitializedFieldTemplateArg(structPath, fieldName, collectFieldBindings, typeTemplateArgOut);
+      },
+      defMap,
+      resolveDefinitionNamespacePrefix,
+      resolveUninitializedTypeInfo,
+      resolveStructFieldSlot,
+      out,
+      resolvedOut,
+      error);
+}
+
+} // namespace
+
+bool resolveUninitializedFieldStorageCandidate(const Expr &storage,
+                                               const LocalMap &localsIn,
+                                               const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+                                               const LocalInfo *&receiverOut,
+                                               std::string &structPathOut,
+                                               std::string &typeTemplateArgOut) {
+  static const std::unordered_map<std::string, const Definition *> kEmptyDefMap;
+  return resolveUninitializedFieldStorageCandidateWithDefinitions(
+      storage, localsIn, findFieldTemplateArg, kEmptyDefMap, receiverOut, structPathOut, typeTemplateArgOut);
+}
+
+bool resolveUninitializedFieldStorageTypeInfo(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    UninitializedFieldStorageTypeInfo &out,
+    bool &resolvedOut,
+    std::string &error) {
+  static const std::unordered_map<std::string, const Definition *> kEmptyDefMap;
+  return resolveUninitializedFieldStorageTypeInfoWithDefinitions(storage,
+                                                                 localsIn,
+                                                                 findFieldTemplateArg,
+                                                                 kEmptyDefMap,
+                                                                 resolveDefinitionNamespacePrefix,
+                                                                 resolveUninitializedTypeInfo,
+                                                                 out,
+                                                                 resolvedOut,
+                                                                 error);
+}
+
+bool resolveUninitializedFieldStorageAccess(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedFieldStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error) {
+  static const std::unordered_map<std::string, const Definition *> kEmptyDefMap;
+  return resolveUninitializedFieldStorageAccessWithDefinitions(storage,
+                                                               localsIn,
+                                                               findFieldTemplateArg,
+                                                               kEmptyDefMap,
+                                                               resolveDefinitionNamespacePrefix,
+                                                               resolveUninitializedTypeInfo,
+                                                               resolveStructFieldSlot,
+                                                               out,
+                                                               resolvedOut,
+                                                               error);
+}
+
+bool resolveUninitializedStorageAccess(const Expr &storage,
+                                       const LocalMap &localsIn,
+                                       const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+                                       const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+                                       const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+                                       const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+                                       UninitializedStorageAccessInfo &out,
+                                       bool &resolvedOut,
+                                       std::string &error) {
+  static const std::unordered_map<std::string, const Definition *> kEmptyDefMap;
+  return resolveUninitializedStorageAccessWithDefinitions(storage,
+                                                          localsIn,
+                                                          findFieldTemplateArg,
+                                                          kEmptyDefMap,
+                                                          resolveDefinitionNamespacePrefix,
+                                                          resolveUninitializedTypeInfo,
+                                                          resolveStructFieldSlot,
+                                                          out,
+                                                          resolvedOut,
+                                                          error);
+}
+
 bool resolveUninitializedStorageAccessWithFieldBindings(
     const Expr &storage,
     const LocalMap &localsIn,
@@ -493,18 +708,17 @@ bool resolveUninitializedStorageAccessWithFieldBindings(
     UninitializedStorageAccessInfo &out,
     bool &resolvedOut,
     std::string &error) {
-  return resolveUninitializedStorageAccess(
-      storage,
-      localsIn,
-      [&](const std::string &structPath, const std::string &fieldName, std::string &typeTemplateArgOut) {
-        return resolveUninitializedFieldTemplateArg(structPath, fieldName, collectFieldBindings, typeTemplateArgOut);
-      },
-      resolveDefinitionNamespacePrefix,
-      resolveUninitializedTypeInfo,
-      resolveStructFieldSlot,
-      out,
-      resolvedOut,
-      error);
+  static const std::unordered_map<std::string, const Definition *> kEmptyDefMap;
+  return resolveUninitializedStorageAccessWithFieldBindingsAndDefinitions(storage,
+                                                                          localsIn,
+                                                                          collectFieldBindings,
+                                                                          kEmptyDefMap,
+                                                                          resolveDefinitionNamespacePrefix,
+                                                                          resolveUninitializedTypeInfo,
+                                                                          resolveStructFieldSlot,
+                                                                          out,
+                                                                          resolvedOut,
+                                                                          error);
 }
 
 bool resolveUninitializedStorageAccessFromDefinitions(
@@ -517,10 +731,11 @@ bool resolveUninitializedStorageAccessFromDefinitions(
     UninitializedStorageAccessInfo &out,
     bool &resolvedOut,
     std::string &error) {
-  return resolveUninitializedStorageAccessWithFieldBindings(
+  return resolveUninitializedStorageAccessWithFieldBindingsAndDefinitions(
       storage,
       localsIn,
       collectFieldBindings,
+      defMap,
       [&](const std::string &structPath) { return resolveDefinitionNamespacePrefix(defMap, structPath); },
       resolveUninitializedTypeInfo,
       resolveStructFieldSlot,

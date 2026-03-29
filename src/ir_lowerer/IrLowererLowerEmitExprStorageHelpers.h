@@ -8,9 +8,16 @@
             return false;
           }
           if (resolved) {
-            auto emitFieldPointer = [&](const Expr &receiver, const StructSlotFieldInfo &field, int32_t ptrLocal) -> bool {
-              if (!emitExpr(receiver, localsIn)) {
-                return false;
+            auto emitFieldPointer = [&](const Expr &receiver,
+                                        const LocalInfo *receiverLocal,
+                                        const StructSlotFieldInfo &field,
+                                        int32_t ptrLocal) -> bool {
+              if (receiverLocal != nullptr) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverLocal->index)});
+              } else {
+                if (!emitExpr(receiver, localsIn)) {
+                  return false;
+                }
               }
               function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
@@ -68,7 +75,7 @@
               const Expr &receiver = storage.args.front();
               const StructSlotFieldInfo &field = access.fieldSlot;
               const int32_t ptrLocal = allocTempLocal();
-              if (!emitFieldPointer(receiver, field, ptrLocal)) {
+              if (!emitFieldPointer(receiver, access.receiver, field, ptrLocal)) {
                 return false;
               }
               if (!field.structPath.empty()) {

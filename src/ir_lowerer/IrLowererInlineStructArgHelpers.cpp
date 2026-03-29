@@ -112,6 +112,24 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
       error = "struct field type mismatch";
       return false;
     }
+    const bool isUninitializedStructStorage =
+        arg->kind == Expr::Kind::Call &&
+        !arg->isMethodCall &&
+        !arg->isFieldAccess &&
+        arg->name == "uninitialized" &&
+        arg->args.empty() &&
+        arg->templateArgs.size() == 1;
+    if (isUninitializedStructStorage) {
+      emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(field.slotCount - 1)));
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + field.slotOffset));
+      LocalInfo fieldInfo;
+      if (!inferFieldLocalInfo(param, structLocals, fieldInfo, error)) {
+        return false;
+      }
+      materializeInlineStructFieldLocal(field, baseLocal, nextLocal, fieldInfo, emitInstruction);
+      structLocals[param.name] = std::move(fieldInfo);
+      continue;
+    }
     if (!emitExpr(*arg, argLocals)) {
       return false;
     }
