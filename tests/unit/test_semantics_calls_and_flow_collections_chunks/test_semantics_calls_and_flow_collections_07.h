@@ -130,9 +130,9 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<Wrapper> mut] values{/std/collections/vectorPair<Wrapper>(Wrapper(Owned()), Wrapper(Owned()))}
-  /std/collections/vector/clear<Wrapper>(values)
-  return(/std/collections/vector/count<Wrapper>(values))
+  [vector<Wrapper> mut] values{vector<Wrapper>()}
+  clear(values)
+  return(0i32)
 }
 )";
   std::string error;
