@@ -200,14 +200,6 @@ inline void expectInferredExperimentalMapStructFieldConformance(const std::strin
       13);
 }
 
-inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(
-      makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
-      "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
-      emitMode,
-      13);
-}
-
 inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(
       makeExperimentalMapMethodParameterConformanceSource(),
