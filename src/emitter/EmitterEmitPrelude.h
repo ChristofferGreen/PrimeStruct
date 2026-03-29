@@ -300,10 +300,6 @@
   out << "  prefix.insert(prefix.end(), suffix.begin(), suffix.end());\n";
   out << "  return prefix;\n";
   out << "}\n";
-  out << "template <typename Key, typename Value>\n";
-  out << "static inline int ps_map_count(const std::unordered_map<Key, Value> &value) {\n";
-  out << "  return static_cast<int>(value.size());\n";
-  out << "}\n";
   out << "template <typename Key, typename Value, typename K>\n";
   out << "static inline const Value &ps_map_at(const std::unordered_map<Key, Value> &value, const K &key) {\n";
   out << "  auto it = value.find(key);\n";
