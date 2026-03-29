@@ -473,6 +473,24 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
+TEST_CASE("canonical map count call does not inherit alias-only helper definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+}
+
 TEST_CASE("bare map contains method requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
