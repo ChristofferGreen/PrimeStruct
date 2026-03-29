@@ -204,6 +204,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
+    if (!expr.isMethodCall &&
+        expr.args.size() == 1 &&
+        expr.args.front().kind == Expr::Kind::Name &&
+        methodResolved == "/map/count" &&
+        !hasImportedDefinitionPath("/count") &&
+        !hasDeclaredDefinitionPath("/count") &&
+        !hasImportedDefinitionPath("/std/collections/map/count") &&
+        !hasDeclaredDefinitionPath("/std/collections/map/count")) {
+      error_ = "unknown call target: /std/collections/map/count";
+      return false;
+    }
     if (isBuiltinMethod && methodResolved == "/std/collections/map/count" &&
         !hasImportedDefinitionPath("/std/collections/map/count") &&
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&

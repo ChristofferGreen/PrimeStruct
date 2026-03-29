@@ -70,7 +70,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count call keeps user-defined map helper precedence") {
+TEST_CASE("count call rejects user-defined map alias helper precedence") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -84,8 +84,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("count method requires canonical map helper even when alias helper exists") {
