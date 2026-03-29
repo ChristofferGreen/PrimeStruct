@@ -1933,9 +1933,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             receiver.isMethodCall
                 ? this->explicitRemovedCollectionMethodPath(receiver.name, receiver.namespacePrefix)
                 : std::string();
+        const bool hasSamePathRemovedVectorAccessHelper =
+            !removedVectorAccessCompatibilityPath.empty() &&
+            (hasDefinitionPath(removedVectorAccessCompatibilityPath) ||
+             hasImportedDefinitionPath(removedVectorAccessCompatibilityPath));
         if ((removedVectorAccessCompatibilityPath == "/array/at" ||
              removedVectorAccessCompatibilityPath == "/array/at_unsafe") &&
-            !hasDefinitionPath(removedVectorAccessCompatibilityPath)) {
+            !hasSamePathRemovedVectorAccessHelper) {
           std::string vectorElemType;
           if (resolveVectorTarget(accessReceiver, vectorElemType)) {
             error_ = "unknown method: " + removedVectorAccessCompatibilityPath;

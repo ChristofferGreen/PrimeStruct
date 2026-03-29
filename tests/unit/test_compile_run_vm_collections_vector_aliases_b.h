@@ -773,3 +773,62 @@ main() {
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
+
+TEST_CASE("rejects vm wrapper vector count slash-method chains before receiver typing") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32, 3i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector()./vector/count().tag())
+}
+)";
+  const std::string srcPath = writeTemp("vm_wrapper_vector_count_slash_chain_unknown_method.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_vector_count_slash_chain_unknown_method_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("rejects vm wrapper vector capacity slash-method chains before receiver typing") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32, 3i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(wrapVector()./vector/capacity().tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_wrapper_vector_capacity_slash_chain_unknown_method.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_vector_capacity_slash_chain_unknown_method_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
