@@ -188,7 +188,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/at") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lowers bare vector at methods without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects bare vector at methods without helper before deleted stub") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -225,7 +225,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects bare vector at_unsafe methods without helper before emission") {
+TEST_CASE("C++ emitter rejects bare vector at_unsafe methods without helper before deleted stub") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
