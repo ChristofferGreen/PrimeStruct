@@ -290,10 +290,6 @@
   out << "  return static_cast<int>(value.size());\n";
   out << "}\n";
   out << "template <typename T>\n";
-  out << "static inline int ps_missing_vector_count_call_helper(const T &) = delete;\n";
-  out << "template <typename T>\n";
-  out << "static inline int ps_missing_vector_count_method_helper(const T &) = delete;\n";
-  out << "template <typename T>\n";
   out << "static inline int ps_missing_vector_access_count_receiver_helper(const T &) = delete;\n";
   out << "template <typename T>\n";
   out << "static inline std::vector<T> ps_args_concat(std::vector<T> prefix, const std::vector<T> &suffix) {\n";
@@ -340,10 +336,6 @@
   out << "static inline int ps_vector_capacity(const std::vector<T> &value) {\n";
   out << "  return static_cast<int>(value.capacity());\n";
   out << "}\n";
-  out << "template <typename T>\n";
-  out << "static inline int ps_missing_vector_capacity_call_helper(const T &) = delete;\n";
-  out << "template <typename T>\n";
-  out << "static inline int ps_missing_vector_capacity_method_helper(const T &) = delete;\n";
   out << "template <typename T, typename Value>\n";
   out << "static inline void ps_vector_push(std::vector<T> &value, Value element) {\n";
   out << "  value.push_back(static_cast<T>(element));\n";
