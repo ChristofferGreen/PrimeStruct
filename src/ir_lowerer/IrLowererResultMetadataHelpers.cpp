@@ -45,6 +45,116 @@ bool extractResultValueTypeText(const std::string &typeText, std::string &valueT
   return true;
 }
 
+bool isSpecializedExperimentalMapTypeText(const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+}
+
+bool isSpecializedExperimentalVectorTypeText(const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  return normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+bool resolveSpecializedExperimentalVectorElementKind(const std::string &typeText,
+                                                     const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                                     LocalInfo::ValueKind &elemKindOut) {
+  elemKindOut = LocalInfo::ValueKind::Unknown;
+  if (!isSpecializedExperimentalVectorTypeText(typeText) || !resolveDefinitionCall) {
+    return false;
+  }
+  Expr syntheticExpr;
+  syntheticExpr.kind = Expr::Kind::Call;
+  syntheticExpr.name = trimTemplateTypeText(typeText);
+  if (!syntheticExpr.name.empty() && syntheticExpr.name.front() != '/') {
+    syntheticExpr.name.insert(syntheticExpr.name.begin(), '/');
+  }
+  const Definition *structDef = resolveDefinitionCall(syntheticExpr);
+  if (structDef == nullptr || !isStructDefinition(*structDef)) {
+    return false;
+  }
+  for (const auto &fieldExpr : structDef->statements) {
+    if (!fieldExpr.isBinding || fieldExpr.name != "data") {
+      continue;
+    }
+    std::string typeName;
+    std::vector<std::string> templateArgs;
+    if (!extractFirstBindingTypeTransform(fieldExpr, typeName, templateArgs) ||
+        normalizeCollectionBindingTypeName(typeName) != "Pointer" || templateArgs.size() != 1) {
+      continue;
+    }
+    std::string elementType = trimTemplateTypeText(templateArgs.front());
+    if (!extractTopLevelUninitializedTypeText(elementType, elementType)) {
+      continue;
+    }
+    elemKindOut = valueKindFromTypeName(elementType);
+    return elemKindOut != LocalInfo::ValueKind::Unknown;
+  }
+  return false;
+}
+
+bool resolveSpecializedExperimentalMapFieldKinds(const Definition &structDef,
+                                                 const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                                 LocalInfo::ValueKind &keyKindOut,
+                                                 LocalInfo::ValueKind &valueKindOut) {
+  keyKindOut = LocalInfo::ValueKind::Unknown;
+  valueKindOut = LocalInfo::ValueKind::Unknown;
+  for (const auto &fieldExpr : structDef.statements) {
+    if (!fieldExpr.isBinding) {
+      continue;
+    }
+    std::string typeName;
+    std::vector<std::string> templateArgs;
+    if (!extractFirstBindingTypeTransform(fieldExpr, typeName, templateArgs) ||
+        normalizeCollectionBindingTypeName(typeName) != "vector") {
+      continue;
+    }
+    LocalInfo::ValueKind fieldKind = LocalInfo::ValueKind::Unknown;
+    if (templateArgs.size() == 1) {
+      fieldKind = valueKindFromTypeName(trimTemplateTypeText(templateArgs.front()));
+    } else if (!resolveSpecializedExperimentalVectorElementKind(typeName, resolveDefinitionCall, fieldKind)) {
+      continue;
+    }
+    if (fieldKind == LocalInfo::ValueKind::Unknown) {
+      continue;
+    }
+    if (fieldExpr.name == "keys") {
+      keyKindOut = fieldKind;
+    } else if (fieldExpr.name == "payloads") {
+      valueKindOut = fieldKind;
+    }
+  }
+  return keyKindOut != LocalInfo::ValueKind::Unknown &&
+         valueKindOut != LocalInfo::ValueKind::Unknown;
+}
+
+bool resolveSpecializedExperimentalMapTypeKinds(const std::string &typeText,
+                                                const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                                LocalInfo::ValueKind &keyKindOut,
+                                                LocalInfo::ValueKind &valueKindOut) {
+  keyKindOut = LocalInfo::ValueKind::Unknown;
+  valueKindOut = LocalInfo::ValueKind::Unknown;
+  if (!isSpecializedExperimentalMapTypeText(typeText) || !resolveDefinitionCall) {
+    return false;
+  }
+  Expr syntheticExpr;
+  syntheticExpr.kind = Expr::Kind::Call;
+  syntheticExpr.name = trimTemplateTypeText(typeText);
+  if (!syntheticExpr.name.empty() && syntheticExpr.name.front() != '/') {
+    syntheticExpr.name.insert(syntheticExpr.name.begin(), '/');
+  }
+  const Definition *structDef = resolveDefinitionCall(syntheticExpr);
+  if (structDef == nullptr || !isStructDefinition(*structDef)) {
+    return false;
+  }
+  return resolveSpecializedExperimentalMapFieldKinds(*structDef, resolveDefinitionCall, keyKindOut, valueKindOut);
+}
+
 void assignDeclaredResultCollectionInfo(const std::string &typeText,
                                         LocalInfo::Kind &collectionKindOut,
                                         LocalInfo::ValueKind &valueKindOut,
@@ -373,6 +483,12 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     if (localIt == localsIn.end()) {
       return false;
     }
+    if (!isSupportedPackedResultCollectionKind(localIt->second.kind) &&
+        resolveSpecializedExperimentalMapTypeKinds(
+            localIt->second.structTypeName, resolveDefinitionCall, mapKeyKindOut, valueKindOut)) {
+      collectionKindOut = LocalInfo::Kind::Map;
+      return true;
+    }
     if (!isSupportedPackedResultCollectionKind(localIt->second.kind)) {
       return false;
     }
@@ -463,6 +579,16 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
   if (callee == nullptr) {
     return false;
   }
+  for (const auto &transform : callee->transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    if (resolveSpecializedExperimentalMapTypeKinds(
+            transform.templateArgs.front(), resolveDefinitionCall, mapKeyKindOut, valueKindOut)) {
+      collectionKindOut = LocalInfo::Kind::Map;
+      return true;
+    }
+  }
   std::string declaredCollection;
   std::vector<std::string> declaredCollectionArgs;
   if (!inferDeclaredReturnCollection(*callee, declaredCollection, declaredCollectionArgs)) {
@@ -494,7 +620,14 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
   }
   valueKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
   if (collectionKindOut == LocalInfo::Kind::Map) {
+    mapKeyKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
     valueKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.back()));
+    if ((mapKeyKindOut == LocalInfo::ValueKind::Unknown ||
+         valueKindOut == LocalInfo::ValueKind::Unknown) &&
+        expr.templateArgs.size() == 2) {
+      mapKeyKindOut = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.front()));
+      valueKindOut = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.back()));
+    }
   } else if (valueKindOut == LocalInfo::ValueKind::Unknown && expr.templateArgs.size() == 1) {
     valueKindOut = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.front()));
   }

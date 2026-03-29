@@ -701,6 +701,12 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
   if (expr.kind != Expr::Kind::Call) {
     return false;
   }
+  if (expr.isFieldAccess && expr.args.size() == 1) {
+    BindingInfo fieldBinding;
+    if (resolveStructFieldBinding(params, locals, expr.args.front(), expr.name, fieldBinding)) {
+      return resolveResultTypeFromTypeName(bindingTypeText(fieldBinding), out);
+    }
+  }
   if (resolveDirectResultOkType(expr, params, locals, "", out)) {
     return true;
   }

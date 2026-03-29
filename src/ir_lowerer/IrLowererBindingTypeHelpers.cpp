@@ -15,7 +15,11 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
       name.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
     return "vector";
   }
-  if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
+  if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map" ||
+      name == "Map" || name == "std/collections/experimental_map/Map" ||
+      name == "/std/collections/experimental_map/Map" ||
+      name.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
+      name.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
     return "map";
   }
   if (name == "Buffer" || name == "std/gfx/Buffer" || name == "/std/gfx/Buffer" ||

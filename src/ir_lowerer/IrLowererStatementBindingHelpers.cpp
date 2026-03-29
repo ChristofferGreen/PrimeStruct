@@ -2,6 +2,7 @@
 
 #include "IrLowererStatementBindingInternal.h"
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
@@ -9,6 +10,113 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+bool isSpecializedExperimentalMapTypeText(const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+}
+
+bool isSpecializedExperimentalVectorTypeText(const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  return normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+bool resolveSpecializedExperimentalVectorElementKind(const std::string &typeText,
+                                                     const std::function<const Definition *(const Expr &)>
+                                                         &resolveDefinitionCall,
+                                                     LocalInfo::ValueKind &elemKindOut) {
+  elemKindOut = LocalInfo::ValueKind::Unknown;
+  if (!isSpecializedExperimentalVectorTypeText(typeText) || !resolveDefinitionCall) {
+    return false;
+  }
+  Expr syntheticExpr;
+  syntheticExpr.kind = Expr::Kind::Call;
+  syntheticExpr.name = trimTemplateTypeText(typeText);
+  if (!syntheticExpr.name.empty() && syntheticExpr.name.front() != '/') {
+    syntheticExpr.name.insert(syntheticExpr.name.begin(), '/');
+  }
+  const Definition *structDef = resolveDefinitionCall(syntheticExpr);
+  if (structDef == nullptr || !isStructDefinition(*structDef)) {
+    return false;
+  }
+  for (const auto &fieldExpr : structDef->statements) {
+    if (!fieldExpr.isBinding || fieldExpr.name != "data") {
+      continue;
+    }
+    std::string typeName;
+    std::vector<std::string> templateArgs;
+    if (!extractFirstBindingTypeTransform(fieldExpr, typeName, templateArgs) ||
+        normalizeCollectionBindingTypeName(typeName) != "Pointer" || templateArgs.size() != 1) {
+      continue;
+    }
+    std::string elementType = trimTemplateTypeText(templateArgs.front());
+    if (!extractTopLevelUninitializedTypeText(elementType, elementType)) {
+      continue;
+    }
+    elemKindOut = valueKindFromTypeName(elementType);
+    return elemKindOut != LocalInfo::ValueKind::Unknown;
+  }
+  return false;
+}
+
+bool resolveSpecializedExperimentalMapTypeKinds(const std::string &typeText,
+                                                const std::function<const Definition *(const Expr &)>
+                                                    &resolveDefinitionCall,
+                                                LocalInfo::ValueKind &keyKindOut,
+                                                LocalInfo::ValueKind &valueKindOut) {
+  keyKindOut = LocalInfo::ValueKind::Unknown;
+  valueKindOut = LocalInfo::ValueKind::Unknown;
+  if (!isSpecializedExperimentalMapTypeText(typeText) || !resolveDefinitionCall) {
+    return false;
+  }
+  Expr syntheticExpr;
+  syntheticExpr.kind = Expr::Kind::Call;
+  syntheticExpr.name = trimTemplateTypeText(typeText);
+  if (!syntheticExpr.name.empty() && syntheticExpr.name.front() != '/') {
+    syntheticExpr.name.insert(syntheticExpr.name.begin(), '/');
+  }
+  const Definition *structDef = resolveDefinitionCall(syntheticExpr);
+  if (structDef == nullptr || !isStructDefinition(*structDef)) {
+    return false;
+  }
+  for (const auto &fieldExpr : structDef->statements) {
+    if (!fieldExpr.isBinding) {
+      continue;
+    }
+    std::string typeName;
+    std::vector<std::string> templateArgs;
+    if (!extractFirstBindingTypeTransform(fieldExpr, typeName, templateArgs) ||
+        normalizeCollectionBindingTypeName(typeName) != "vector") {
+      continue;
+    }
+    LocalInfo::ValueKind fieldKind = LocalInfo::ValueKind::Unknown;
+    if (templateArgs.size() == 1) {
+      fieldKind = valueKindFromTypeName(trimTemplateTypeText(templateArgs.front()));
+    } else if (!resolveSpecializedExperimentalVectorElementKind(typeName, resolveDefinitionCall, fieldKind)) {
+      continue;
+    }
+    if (fieldKind == LocalInfo::ValueKind::Unknown) {
+      continue;
+    }
+    if (fieldExpr.name == "keys") {
+      keyKindOut = fieldKind;
+    } else if (fieldExpr.name == "payloads") {
+      valueKindOut = fieldKind;
+    }
+  }
+  return keyKindOut != LocalInfo::ValueKind::Unknown &&
+         valueKindOut != LocalInfo::ValueKind::Unknown;
+}
+
+} // namespace
 
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const Expr &init,
@@ -223,7 +331,15 @@ bool inferCallParameterLocalInfo(const Expr &param,
             infoOut.resultValueCollectionKind,
             infoOut.resultValueKind,
             &infoOut.resultValueMapKeyKind);
-        if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
+        if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value &&
+            infoOut.resultValueKind == LocalInfo::ValueKind::Unknown &&
+            resolveSpecializedExperimentalMapTypeKinds(
+                transform.templateArgs.front(),
+                resolveDefinitionCall,
+                infoOut.resultValueMapKeyKind,
+                infoOut.resultValueKind)) {
+          infoOut.resultValueCollectionKind = LocalInfo::Kind::Map;
+        } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
           infoOut.resultValueKind = valueKindFromTypeName(transform.templateArgs.front());
         }
       }

@@ -136,8 +136,6 @@ main() {
 }
 
 TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit experimental map result struct fields") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -278,8 +276,6 @@ main() {
 }
 
 TEST_CASE("helper-wrapped Result.ok assignments accept dereferenced experimental result map struct fields") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
