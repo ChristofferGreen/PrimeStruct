@@ -155,6 +155,39 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("rejects wrapper-returned array compatibility access slash method chains before receiver typing in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(wrapVector()./array/at(1i32).tag(),
+              wrapVector()./array/at_unsafe(2i32).tag()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_wrapper_array_access_slash_method_chain_vector_no_helper_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_wrapper_array_access_slash_method_chain_vector_no_helper_exe.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /array/at") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter lowers bare vector at methods without helper to deleted stub") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

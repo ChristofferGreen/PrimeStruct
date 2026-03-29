@@ -717,6 +717,31 @@ main() {
   CHECK(error.find("unknown method: /array/at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("array compatibility access slash method wrapper vector chain stops before receiver typing") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(wrapVector()./array/at(1i32).tag(),
+              wrapVector()./array/at_unsafe(2i32).tag()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/at") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced access slash method array target without alias helper reports unknown method") {
   const std::string source = R"(
 [return<array<i32>>]

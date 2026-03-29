@@ -1933,32 +1933,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             receiver.isMethodCall
                 ? this->explicitRemovedCollectionMethodPath(receiver.name, receiver.namespacePrefix)
                 : std::string();
-        const bool hasSamePathRemovedVectorAccessHelper =
-            !removedVectorAccessCompatibilityPath.empty() &&
-            (hasDefinitionPath(removedVectorAccessCompatibilityPath) ||
-             hasImportedDefinitionPath(removedVectorAccessCompatibilityPath));
         if ((removedVectorAccessCompatibilityPath == "/array/at" ||
              removedVectorAccessCompatibilityPath == "/array/at_unsafe") &&
-            !hasSamePathRemovedVectorAccessHelper) {
+            !hasDefinitionPath(removedVectorAccessCompatibilityPath)) {
           std::string vectorElemType;
           if (resolveVectorTarget(accessReceiver, vectorElemType)) {
             error_ = "unknown method: " + removedVectorAccessCompatibilityPath;
             return false;
-          }
-        }
-        auto accessDefIt = defMap_.find(resolveCalleePath(receiver));
-        if (accessDefIt != defMap_.end() && accessDefIt->second != nullptr) {
-          BindingInfo inferredReturn;
-          if (inferDefinitionReturnBinding(*accessDefIt->second, inferredReturn)) {
-            const std::string inferredTypeText =
-                inferredReturn.typeTemplateArg.empty()
-                    ? inferredReturn.typeName
-                    : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
-            if (setMethodTargetFromTypeText(
-                    inferredTypeText,
-                    accessDefIt->second->namespacePrefix)) {
-              return true;
-            }
           }
         }
         std::string accessElemType;
