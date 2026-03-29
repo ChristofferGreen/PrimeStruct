@@ -734,6 +734,23 @@ main() {
   CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("array namespaced count wrapper vector target without helper reports unknown target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/count(wrapVector()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /array/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count rejects named arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

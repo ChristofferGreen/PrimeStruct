@@ -252,7 +252,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps array namespaced wrapper count builtin fallback") {
+TEST_CASE("C++ emitter rejects array namespaced wrapper count alias") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -272,12 +272,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_array_namespaced_wrapper_count_capacity_builtin_fallback.prime", source);
-  const std::string outPath = (testScratchPath("") /
-                               "primec_cpp_array_namespaced_wrapper_count_capacity_builtin_fallback.cpp")
-                                  .string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_array_namespaced_wrapper_count_capacity_builtin_fallback_err.txt")
+          .string();
+  const std::string cppOutPath =
+      (testScratchPath("") / "primec_cpp_array_namespaced_wrapper_count_capacity_builtin_fallback.cpp")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + cppOutPath + " --entry /main > " + errPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /array/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on map receiver") {
@@ -638,4 +643,3 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") !=
         std::string::npos);
 }
-
