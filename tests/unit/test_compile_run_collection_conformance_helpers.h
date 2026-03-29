@@ -72,6 +72,7 @@ inline void expectSharedMapConformanceHarness(const std::string &emitMode) {
 
 inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
   expectCanonicalVectorMutatorNumericRejects(emitMode);
+  expectCanonicalVectorPushReceiverRejects(emitMode);
   expectCanonicalVectorReserveReceiverRejects(emitMode);
   if (emitMode != "vm") {
     return;

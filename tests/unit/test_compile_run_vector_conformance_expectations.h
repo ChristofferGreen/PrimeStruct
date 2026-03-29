@@ -473,6 +473,17 @@ inline void expectCanonicalVectorReserveReceiverRejects(const std::string &emitM
       "reserve requires vector binding");
 }
 
+inline void expectCanonicalVectorPushReceiverRejects(const std::string &emitMode) {
+  expectVectorConformanceCompileReject(makeCanonicalVectorPushReceiverRejectSource("push(values, 8i32)"),
+                                       "vector_push_array_call_receiver_reject_" + emitMode,
+                                       emitMode,
+                                       "push requires vector binding");
+  expectVectorConformanceCompileReject(makeCanonicalVectorPushReceiverRejectSource("values.push(8i32)"),
+                                       "vector_push_array_method_receiver_reject_" + emitMode,
+                                       emitMode,
+                                       "push requires vector binding");
+}
+
 inline void expectCanonicalVectorMutatorImportRequirement(const std::string &emitMode,
                                                           const std::string &helperName,
                                                           const std::string &callArgs) {

@@ -225,6 +225,17 @@ inline std::string makeCanonicalVectorReserveReceiverRejectSource(const std::str
   return source;
 }
 
+inline std::string makeCanonicalVectorPushReceiverRejectSource(const std::string &statementText) {
+  std::string source;
+  source += "[return<int>]\n";
+  source += "main() {\n";
+  source += "  [array<i32> mut] values{array<i32>(4i32, 5i32)}\n";
+  source += "  " + statementText + "\n";
+  source += "  return(0i32)\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeCanonicalVectorMutatorImportRequirementSource(const std::string &helperName,
                                                                      const std::string &callArgs) {
   std::string source;
