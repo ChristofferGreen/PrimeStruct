@@ -1655,8 +1655,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (!explicitVectorHelperPath.empty() &&
       explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
-      (normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
-      explicitVectorReceiverFamily == "map") {
+      ((normalizedMethodName == "count" &&
+        (explicitVectorReceiverFamily == "string" ||
+         explicitVectorReceiverFamily == "array")) ||
+       ((normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
+        explicitVectorReceiverFamily == "map"))) {
     if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
       error_ = "unknown method: " + explicitVectorHelperPath;
       return false;

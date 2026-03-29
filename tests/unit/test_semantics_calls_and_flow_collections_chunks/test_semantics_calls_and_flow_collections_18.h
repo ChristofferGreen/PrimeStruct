@@ -518,6 +518,32 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced count method rejects local string receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count method rejects local array receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  return(items./vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count method on builtin vector receiver requires same-path helper") {
   const std::string source = R"(
 [return<int>]
