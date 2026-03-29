@@ -339,7 +339,6 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
-            !hasDeclaredDefinitionPath("/map/contains") &&
             !hasImportedDefinitionPath("/std/collections/map/contains") &&
             !hasDeclaredDefinitionPath("/std/collections/map/contains")) {
           error_ = "unknown call target: /std/collections/map/contains";
@@ -349,7 +348,6 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
-            !hasDeclaredDefinitionPath("/map/tryAt") &&
             !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
             !hasDeclaredDefinitionPath("/std/collections/map/tryAt")) {
           error_ = "unknown call target: /std/collections/map/tryAt";
@@ -362,7 +360,6 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
-            !hasDeclaredDefinitionPath("/map/" + builtinAccessName) &&
             !hasImportedDefinitionPath("/std/collections/map/" +
                                        builtinAccessName) &&
             !hasDeclaredDefinitionPath("/std/collections/map/" +

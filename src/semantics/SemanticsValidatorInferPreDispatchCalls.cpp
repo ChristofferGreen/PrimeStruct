@@ -442,9 +442,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       context.resolved =
           hasDefinitionPath("/std/collections/map/count")
               ? "/std/collections/map/count"
-              : (hasDefinitionPath("/map/count")
-                     ? "/map/count"
-                     : "/std/collections/map/count");
+              : "/std/collections/map/count";
       hasResolvedPath = true;
     }
   }
@@ -510,24 +508,14 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       std::string builtinMapKeyType;
       std::string builtinMapValueType;
       if (((logicalMethodResolved == "/std/collections/map/count" &&
-            !hasDeclaredDefinitionPath("/map/count") &&
-            !hasDefinitionPath("/map/count") &&
             !hasImportedDefinitionPath("/std/collections/map/count")) ||
            (logicalMethodResolved == "/std/collections/map/contains" &&
-            !hasDeclaredDefinitionPath("/map/contains") &&
-            !hasDefinitionPath("/map/contains") &&
             !hasImportedDefinitionPath("/std/collections/map/contains")) ||
            (logicalMethodResolved == "/std/collections/map/tryAt" &&
-            !hasDeclaredDefinitionPath("/map/tryAt") &&
-            !hasDefinitionPath("/map/tryAt") &&
             !hasImportedDefinitionPath("/std/collections/map/tryAt")) ||
            (logicalMethodResolved == "/std/collections/map/at" &&
-            !hasDeclaredDefinitionPath("/map/at") &&
-            !hasDefinitionPath("/map/at") &&
             !hasImportedDefinitionPath("/std/collections/map/at")) ||
            (logicalMethodResolved == "/std/collections/map/at_unsafe" &&
-            !hasDeclaredDefinitionPath("/map/at_unsafe") &&
-            !hasDefinitionPath("/map/at_unsafe") &&
             !hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) &&
           !hasDeclaredDefinitionPath(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&

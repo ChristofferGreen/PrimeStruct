@@ -601,8 +601,45 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced map at does not inherit alias-only helper definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at([map<i32, i32>] values, [i32] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(/std/collections/map/at(values, 1i32))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map at_unsafe requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/map/at_unsafe(values, 1i32)}
+  return(inferred)
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced map at_unsafe does not inherit alias-only helper definition") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/map/at_unsafe([map<i32, i32>] values, [i32] index) {
+  return(19i32)
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
@@ -643,4 +680,3 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-

@@ -152,6 +152,24 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return "";
   };
   const std::string explicitVectorHelperPath = explicitVectorMethodPath(methodName);
+  auto explicitMapMethodPath = [&](const std::string &rawMethodName) -> std::string {
+    std::string candidate = rawMethodName;
+    if (!candidate.empty() && candidate.front() == '/') {
+      candidate.erase(candidate.begin());
+    }
+    std::string normalizedPrefix = callNamespacePrefix;
+    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+      normalizedPrefix.erase(normalizedPrefix.begin());
+    }
+    if (normalizedPrefix == "map" || normalizedPrefix == "std/collections/map") {
+      return "/" + normalizedPrefix + "/" + candidate;
+    }
+    if (candidate.rfind("map/", 0) == 0 || candidate.rfind("std/collections/map/", 0) == 0) {
+      return "/" + candidate;
+    }
+    return "";
+  };
+  const std::string explicitMapHelperPath = explicitMapMethodPath(methodName);
   std::string normalizedMethodName = methodName;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
@@ -1271,15 +1289,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto preferredMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
     std::string keyType;
     std::string valueType;
+    const std::string canonical = "/std/collections/map/" + helperName;
+    const std::string alias = "/map/" + helperName;
     if (resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
-      const std::string canonical = "/std/collections/map/" + helperName;
       if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
         return canonical;
       }
       return preferredCanonicalExperimentalMapHelperTarget(helperName);
     }
-    const std::string canonical = "/std/collections/map/" + helperName;
-    const std::string alias = "/map/" + helperName;
+    if (explicitMapHelperPath.rfind("/std/collections/map/", 0) == 0) {
+      return canonical;
+    }
+    if (explicitMapHelperPath.rfind("/map/", 0) == 0) {
+      return alias;
+    }
     if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
       return canonical;
     }

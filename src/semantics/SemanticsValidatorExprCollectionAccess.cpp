@@ -493,14 +493,11 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       }
       if (isBuiltinMethod) {
         if (((methodResolved == "/std/collections/map/contains" &&
-              (hasDeclaredDefinitionPath("/map/contains") ||
-               hasDeclaredDefinitionPath("/std/collections/map/contains"))) ||
+              hasDeclaredDefinitionPath("/std/collections/map/contains")) ||
              (methodResolved == "/std/collections/map/at" &&
-              (hasDeclaredDefinitionPath("/map/at") ||
-               hasDeclaredDefinitionPath("/std/collections/map/at"))) ||
+              hasDeclaredDefinitionPath("/std/collections/map/at")) ||
              (methodResolved == "/std/collections/map/at_unsafe" &&
-              (hasDeclaredDefinitionPath("/map/at_unsafe") ||
-               hasDeclaredDefinitionPath("/std/collections/map/at_unsafe")))) &&
+              hasDeclaredDefinitionPath("/std/collections/map/at_unsafe"))) &&
             !(methodResolved == "/std/collections/map/contains" &&
               context.shouldBuiltinValidateBareMapContainsCall) &&
             !((methodResolved == "/std/collections/map/at" ||
@@ -514,7 +511,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         if (methodResolved == "/std/collections/map/contains" &&
             !context.shouldBuiltinValidateBareMapContainsCall &&
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
-            !hasDeclaredDefinitionPath("/map/contains") &&
             !hasImportedDefinitionPath("/std/collections/map/contains") &&
             !hasDeclaredDefinitionPath("/std/collections/map/contains")) {
           error_ = "unknown call target: /std/collections/map/contains";
@@ -525,9 +521,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
              methodResolved == "/std/collections/map/at_unsafe") &&
             !context.shouldBuiltinValidateBareMapAccessCall &&
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
-            !hasDeclaredDefinitionPath("/map/" +
-                                       std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe"
-                                                                                                       : "at")) &&
             !hasImportedDefinitionPath("/std/collections/map/" +
                                        std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe"
                                                                                                        : "at")) &&

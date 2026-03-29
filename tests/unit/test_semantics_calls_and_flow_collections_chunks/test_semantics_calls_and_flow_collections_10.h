@@ -263,6 +263,30 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced map tryAt does not inherit alias-only helper definition") {
+  const std::string source = R"(
+[struct]
+ContainerError() {
+  [i32] code{0i32}
+}
+
+[effects(heap_alloc), return<Result<int, ContainerError>>]
+/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Result.ok(17i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [auto] inferred{/std/collections/map/tryAt(values, 1i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced map access helpers accept imported stdlib wrappers") {
   const std::string source = R"(
 import /std/collections/*
@@ -641,4 +665,3 @@ main() {
   INFO(error);
   CHECK(error.empty());
 }
-

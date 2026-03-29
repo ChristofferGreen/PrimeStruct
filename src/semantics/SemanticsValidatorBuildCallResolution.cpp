@@ -21,11 +21,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return false;
   };
   auto rewriteCanonicalCollectionHelperPath = [&](const std::string &resolvedPath) -> std::string {
-    auto canonicalMapHelperAliasPath = [&](std::string_view helperName) -> std::string {
-      if (helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-          helperName == "at" || helperName == "at_unsafe") {
-        return "/map/" + std::string(helperName);
-      }
+    auto canonicalMapHelperAliasPath = [&](std::string_view) -> std::string {
       return {};
     };
     auto rewriteCanonicalHelper = [&](std::string_view prefix,

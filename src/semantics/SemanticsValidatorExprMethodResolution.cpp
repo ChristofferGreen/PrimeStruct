@@ -334,19 +334,14 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   }
   if (((resolved == "/std/collections/map/count" &&
-        !hasDeclaredDefinitionPath("/map/count") &&
         !hasImportedDefinitionPath("/std/collections/map/count")) ||
        (resolved == "/std/collections/map/contains" &&
-        !hasDeclaredDefinitionPath("/map/contains") &&
         !hasImportedDefinitionPath("/std/collections/map/contains")) ||
        (resolved == "/std/collections/map/tryAt" &&
-        !hasDeclaredDefinitionPath("/map/tryAt") &&
         !hasImportedDefinitionPath("/std/collections/map/tryAt")) ||
        (resolved == "/std/collections/map/at" &&
-        !hasDeclaredDefinitionPath("/map/at") &&
         !hasImportedDefinitionPath("/std/collections/map/at")) ||
        (resolved == "/std/collections/map/at_unsafe" &&
-        !hasDeclaredDefinitionPath("/map/at_unsafe") &&
         !hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) &&
       !hasDeclaredDefinitionPath(resolved) &&
       !keepBuiltinIndexedArgsPackMapMethod) {

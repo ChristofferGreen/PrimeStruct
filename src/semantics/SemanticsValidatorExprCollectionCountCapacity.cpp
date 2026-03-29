@@ -140,8 +140,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       if (context.resolveMapTarget != nullptr && context.resolveMapTarget(receiver)) {
         if (defMap_.count("/std/collections/map/count") > 0) {
           methodResolved = "/std/collections/map/count";
-        } else if (defMap_.count("/map/count") > 0) {
-          methodResolved = "/map/count";
         } else {
           methodResolved = "/std/collections/map/count";
         }
@@ -202,19 +200,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       error_.clear();
       isBuiltinMethod = false;
     }
-    if (!expr.isMethodCall && context.isNamespacedMapCountCall &&
-        context.resolveMapTarget != nullptr &&
-        context.resolveMapTarget(expr.args.front()) &&
-        hasDeclaredDefinitionPath("/map/count")) {
-      methodResolved = "/map/count";
-      isBuiltinMethod = false;
-    }
     if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
     if (isBuiltinMethod && methodResolved == "/std/collections/map/count" &&
-        !hasDeclaredDefinitionPath("/map/count") &&
         !hasImportedDefinitionPath("/std/collections/map/count") &&
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
         !context.shouldBuiltinValidateBareMapCountCall) {

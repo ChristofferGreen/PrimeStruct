@@ -50,7 +50,6 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                           rewrittenMapHelperCall)) {
       if (rewrittenMapHelperCall.name == "/std/collections/map/tryAt" &&
           !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
-          !hasDeclaredDefinitionPath("/map/tryAt") &&
           !hasDeclaredDefinitionPath("/tryAt")) {
         error_ = "unknown call target: /std/collections/map/tryAt";
         return false;
@@ -163,6 +162,12 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
         hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+    if (!expr.isMethodCall && resolved == "/std/collections/map/tryAt" &&
+        !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
+        !hasDeclaredDefinitionPath("/std/collections/map/tryAt")) {
+      error_ = "unknown call target: /std/collections/map/tryAt";
+      return false;
+    }
     std::string mapKeyType;
     if (!resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
       if (!validateExpr(params, locals, receiverExpr)) {
@@ -236,6 +241,12 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
         hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+    if (expr.name.rfind("/std/collections/map/", 0) == 0 &&
+        !hasImportedDefinitionPath("/std/collections/map/" + builtinName) &&
+        !hasDeclaredDefinitionPath("/std/collections/map/" + builtinName)) {
+      error_ = "unknown call target: /std/collections/map/" + builtinName;
+      return false;
+    }
     std::string mapKeyType;
     if (resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
       if (!mapKeyType.empty()) {

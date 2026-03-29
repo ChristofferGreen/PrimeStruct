@@ -39,7 +39,6 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
   methodResolved = context.preferVectorStdlibHelperPath(methodResolved);
   if (context.isCountLike && methodResolved == "/std/collections/map/count" &&
       context.hasDeclaredDefinitionPath != nullptr &&
-      !context.hasDeclaredDefinitionPath("/map/count") &&
       !hasImportedDefinitionPath("/std/collections/map/count") &&
       !context.hasDeclaredDefinitionPath("/std/collections/map/count") &&
       !context.shouldInferBuiltinBareMapCountCall) {

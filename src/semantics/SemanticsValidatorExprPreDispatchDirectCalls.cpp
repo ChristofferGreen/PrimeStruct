@@ -106,6 +106,37 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     return false;
   }
 
+  if (!expr.isMethodCall &&
+      (resolvedOut == "/std/collections/map/count" ||
+       resolvedOut == "/std/collections/map/contains" ||
+       resolvedOut == "/std/collections/map/tryAt" ||
+       resolvedOut == "/std/collections/map/at" ||
+       resolvedOut == "/std/collections/map/at_unsafe") &&
+      !hasImportedDefinitionPath(resolvedOut) &&
+      !hasDeclaredDefinitionPath(resolvedOut)) {
+    const size_t receiverIndex =
+        this->mapHelperReceiverIndex(expr, dispatchBootstrap.dispatchResolvers);
+    if (receiverIndex < expr.args.size()) {
+      const Expr &receiverExpr = expr.args[receiverIndex];
+      std::string keyType;
+      std::string valueType;
+      const bool isExperimentalMapTarget =
+          dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
+          dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget(
+              receiverExpr, keyType, valueType);
+      keyType.clear();
+      valueType.clear();
+      const bool isBuiltinMapTarget =
+          dispatchBootstrap.dispatchResolvers.resolveMapTarget != nullptr &&
+          dispatchBootstrap.dispatchResolvers.resolveMapTarget(
+              receiverExpr, keyType, valueType);
+      if (isBuiltinMapTarget && !isExperimentalMapTarget) {
+        error_ = "unknown call target: " + resolvedOut;
+        return false;
+      }
+    }
+  }
+
   if (expr.isMethodCall && expr.args.size() == 1 &&
       (expr.name == "count" || expr.name == "capacity")) {
     std::string receiverCollectionTypePath;

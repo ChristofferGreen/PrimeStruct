@@ -30,7 +30,6 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
     methodResolved = context.preferVectorStdlibHelperPath(methodResolved);
     if (helperName == "count" && methodResolved == "/std/collections/map/count" &&
         context.hasDeclaredDefinitionPath != nullptr &&
-        !context.hasDeclaredDefinitionPath("/map/count") &&
         !hasImportedDefinitionPath("/std/collections/map/count") &&
         !context.hasDeclaredDefinitionPath("/std/collections/map/count") &&
         !context.shouldInferBuiltinBareMapCountCall) {

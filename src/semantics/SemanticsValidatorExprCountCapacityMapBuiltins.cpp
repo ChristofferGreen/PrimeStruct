@@ -146,6 +146,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       logicalResolvedMethod = canonicalExperimentalMapHelperResolved;
     }
   }
+  const bool isExplicitCanonicalMapCountCall =
+      !expr.isMethodCall &&
+      (expr.name.rfind("/std/collections/map/count", 0) == 0 ||
+       expr.namespacePrefix == "/std/collections/map" ||
+       expr.namespacePrefix == "std/collections/map");
 
   if (resolvedMethod && (logicalResolvedMethod == "/array/count" ||
                          logicalResolvedMethod == "/vector/count" ||
@@ -155,6 +160,13 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
                          logicalResolvedMethod == "/map/count" ||
                          logicalResolvedMethod == "/std/collections/map/count")) {
     handledOut = true;
+    if (logicalResolvedMethod == "/std/collections/map/count" &&
+        isExplicitCanonicalMapCountCall &&
+        !hasImportedDefinitionPath("/std/collections/map/count") &&
+        !hasDeclaredDefinitionPath("/std/collections/map/count")) {
+      error_ = "unknown call target: /std/collections/map/count";
+      return false;
+    }
     if (!expr.templateArgs.empty()) {
       error_ = "count does not accept template arguments";
       return false;
@@ -187,6 +199,12 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
                                                  *dispatchResolverAdapters));
   if (shouldBuiltinValidateMapCountCall && it == defMap_.end()) {
     handledOut = true;
+    if (isExplicitCanonicalMapCountCall &&
+        !hasImportedDefinitionPath("/std/collections/map/count") &&
+        !hasDeclaredDefinitionPath("/std/collections/map/count")) {
+      error_ = "unknown call target: /std/collections/map/count";
+      return false;
+    }
     if (!expr.templateArgs.empty()) {
       error_ = "count does not accept template arguments";
       return false;
