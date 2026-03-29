@@ -133,7 +133,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map contains call resolves through compatibility alias when canonical helper is absent") {
+TEST_CASE("bare map contains call rejects compatibility alias when canonical helper is absent") {
   const std::string source = R"(
 [return<bool>]
 /map/contains([map<i32, i32>] values, [i32] key) {
@@ -147,8 +147,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
 TEST_CASE("bare map contains call keeps explicit root helper precedence") {

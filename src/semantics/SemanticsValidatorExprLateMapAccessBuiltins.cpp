@@ -92,6 +92,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
            params, locals, *context.dispatchResolvers) ||
        this->isIndexedArgsPackMapReceiverTarget(
            expr.args.front(), *context.dispatchResolvers))) {
+    if (!hasImportedDefinitionPath("/std/collections/map/contains") &&
+        !hasDeclaredDefinitionPath("/std/collections/map/contains") &&
+        !hasImportedDefinitionPath("/contains") &&
+        !hasDeclaredDefinitionPath("/contains")) {
+      error_ = "unknown call target: /std/collections/map/contains";
+      return false;
+    }
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands =

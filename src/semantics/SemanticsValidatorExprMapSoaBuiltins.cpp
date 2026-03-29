@@ -148,6 +148,13 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, "contains") &&
       context.shouldBuiltinValidateBareMapContainsCall && resolvedMissing) {
     handledOut = true;
+    if (!hasImportedDefinitionPath("/std/collections/map/contains") &&
+        !hasDeclaredDefinitionPath("/std/collections/map/contains") &&
+        !hasImportedDefinitionPath("/contains") &&
+        !hasDeclaredDefinitionPath("/contains")) {
+      error_ = "unknown call target: /std/collections/map/contains";
+      return false;
+    }
     return validateContainsBuiltin("contains");
   }
 

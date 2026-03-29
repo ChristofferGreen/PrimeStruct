@@ -491,6 +491,13 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         (void)validateExpr(params, locals, receiverCandidate);
         return false;
       }
+      if (expr.name == "contains" &&
+          methodResolved == "/map/contains" &&
+          !hasImportedDefinitionPath("/contains") &&
+          !hasDeclaredDefinitionPath("/contains")) {
+        error_ = "unknown call target: /std/collections/map/contains";
+        return false;
+      }
       if (isBuiltinMethod) {
         if (((methodResolved == "/std/collections/map/contains" &&
               hasDeclaredDefinitionPath("/std/collections/map/contains")) ||
