@@ -37,6 +37,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       normalizedOriginalMethodName.rfind("std/collections/map/", 0) == 0;
   const bool isExplicitCompatibilityMapMethodAlias =
       isExplicitMapMethodAlias && !isExplicitCanonicalMapMethodAlias;
+  const bool isExplicitVectorAliasMethod =
+      normalizedOriginalMethodName.rfind("vector/", 0) == 0;
+  const bool isExplicitCanonicalVectorMethod =
+      normalizedOriginalMethodName.rfind("std/collections/vector/", 0) == 0;
   std::string normalizedTypeName = typeName;
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
@@ -175,6 +179,16 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     return nullptr;
   };
+  if (isExplicitVectorAliasMethod || isExplicitCanonicalVectorMethod) {
+    const std::string explicitPath =
+        std::string("/") +
+        (isExplicitCanonicalVectorMethod ? "std/collections/vector/" : "vector/") +
+        normalizedMethodName;
+    if (const Definition *resolved = findMethodDefinitionByPath(explicitPath)) {
+      errorOut.clear();
+      return resolved;
+    }
+  }
   if (!resolvedTypePath.empty()) {
     std::string normalizedResolvedTypePath = resolvedTypePath;
     if (!normalizedResolvedTypePath.empty() && normalizedResolvedTypePath.front() != '/') {

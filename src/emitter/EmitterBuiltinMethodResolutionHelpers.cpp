@@ -92,6 +92,16 @@ bool resolveMethodCallPath(const Expr &call,
     normalizedMethodName =
         normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
+  if (isExplicitVectorAliasMethod || isExplicitStdlibVectorMethod) {
+    const std::string explicitPath =
+        std::string("/") +
+        (isExplicitStdlibVectorMethod ? "std/collections/vector/" : "vector/") +
+        normalizedMethodName;
+    if (hasDefinitionOrMetadata(metadataView, explicitPath)) {
+      resolvedOut = explicitPath;
+      return true;
+    }
+  }
 
   const Expr &receiver = call.args.front();
   auto preferredFileErrorHelperTarget = [&](std::string_view helperName) -> std::string {

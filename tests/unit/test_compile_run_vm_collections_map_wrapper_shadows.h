@@ -402,6 +402,29 @@ main() {
   CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
+TEST_CASE("runs vm with canonical slash vector count same-path helper on map receiver") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+/std/collections/vector/count([map<i32, i32>] values) {
+  return(87i32)
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./std/collections/vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_canonical_slash_vector_count_map_same_path_helper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 87);
+}
+
 TEST_CASE("runs vm with user vector capacity method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

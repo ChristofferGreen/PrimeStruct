@@ -128,6 +128,35 @@ main() {
   CHECK(runCommand(exePath) == 97);
 }
 
+TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on map receiver") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+/std/collections/vector/count([map<i32, i32>] values) {
+  return(87i32)
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./std/collections/vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_slash_vector_count_map_same_path_helper.prime", source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_cpp_canonical_slash_vector_count_map_same_path_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 87);
+}
+
 TEST_CASE("C++ emitter rejects alias slash-method vector count on map receiver before emission") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -205,6 +234,35 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 98);
+}
+
+TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on array receiver") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+/std/collections/vector/count([array<i32>] values) {
+  return(88i32)
+}
+
+[return<int>]
+main() {
+  return(wrapArray()./std/collections/vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_slash_vector_count_array_same_path_helper.prime", source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_cpp_canonical_slash_vector_count_array_same_path_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 88);
 }
 
 TEST_CASE("C++ emitter rejects alias slash-method vector count on array receiver before emission") {
@@ -639,4 +697,3 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
-

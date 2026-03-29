@@ -16,6 +16,29 @@ main() {
   CHECK(runCommand(runCmd) == 98);
 }
 
+TEST_CASE("runs vm with canonical slash vector count same-path helper on array receiver") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+/std/collections/vector/count([array<i32>] values) {
+  return(88i32)
+}
+
+[return<int>]
+main() {
+  return(wrapArray()./std/collections/vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_canonical_slash_vector_count_array_same_path_helper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 88);
+}
+
 TEST_CASE("runs vm with user map count call shadow") {
   const std::string source = R"(
 [return<int>]
