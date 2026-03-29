@@ -832,3 +832,41 @@ main() {
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
+
+TEST_CASE("rejects vm local alias slash-method vector capacity on string receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_local_alias_slash_vector_capacity_string_no_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_local_alias_slash_vector_capacity_string_no_helper_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("rejects vm local alias slash-method vector capacity on array receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  return(items./vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_local_alias_slash_vector_capacity_array_no_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_local_alias_slash_vector_capacity_array_no_helper_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
