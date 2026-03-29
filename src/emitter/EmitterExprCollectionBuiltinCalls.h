@@ -8,22 +8,6 @@
       return emitMissingExplicitMapAccessCall(expr);
     }
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-        isNoHelperExplicitMapAccessCountReceiver(expr.args.front())) {
-      std::ostringstream out;
-      out << "ps_missing_map_access_count_receiver_helper("
-          << emitMissingExplicitMapAccessCall(expr.args.front())
-          << ")";
-      return out.str();
-    }
-    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-        isNoHelperExplicitMapAccessMethodCountReceiver(expr.args.front())) {
-      std::ostringstream out;
-      out << "ps_missing_map_access_count_receiver_helper("
-          << emitMissingExplicitMapAccessMethod(expr.args.front())
-          << ")";
-      return out.str();
-    }
-    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         isNoHelperExplicitVectorAccessCountReceiver(expr.args.front())) {
       std::ostringstream out;
       out << "ps_missing_vector_access_count_receiver_helper("
