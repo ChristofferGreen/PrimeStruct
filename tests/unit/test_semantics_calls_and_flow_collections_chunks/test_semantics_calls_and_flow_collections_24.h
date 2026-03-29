@@ -597,6 +597,46 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("array namespaced count accepts same-path helper on vector target") {
+  const std::string source = R"(
+[return<int>]
+/array/count([vector<i32>] values, [bool] marker) {
+  return(45i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/array/count(values, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array namespaced count accepts same-path helper on wrapper vector target") {
+  const std::string source = R"(
+[return<int>]
+/array/count([vector<i32>] values, [bool] marker) {
+  return(46i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/count(wrapVector(), true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced count wrapper vector target without helper reports unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]

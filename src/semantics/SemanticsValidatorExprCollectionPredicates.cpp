@@ -181,6 +181,9 @@ bool SemanticsValidator::isArrayNamespacedVectorCountCompatibilityCall(
   if (!spellsArrayCount && !resolvesArrayCount) {
     return false;
   }
+  if (hasDeclaredDefinitionPath("/array/count") || hasImportedDefinitionPath("/array/count")) {
+    return false;
+  }
   if (dispatchResolvers.resolveVectorTarget == nullptr) {
     return false;
   }

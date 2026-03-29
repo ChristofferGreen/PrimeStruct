@@ -244,6 +244,28 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("compiles and runs vm array alias count through same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/array/count([vector<i32>] values, [bool] marker) {
+  return(46i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/count(wrapVector(), true))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_alias_count_same_path_wrapper_vector.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 46);
+}
+
 TEST_CASE("rejects vm vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
 [return<int>]
@@ -642,4 +664,3 @@ main() {
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
-
