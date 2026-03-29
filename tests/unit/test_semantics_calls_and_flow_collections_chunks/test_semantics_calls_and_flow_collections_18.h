@@ -295,7 +295,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("array namespaced vector helper alias rejects method-call sugar auto inference") {
+TEST_CASE("array namespaced vector helper alias keeps unknown-method diagnostics for auto inference") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -311,10 +311,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
+TEST_CASE("array namespaced vector helper alias keeps unknown-method diagnostics for typed inference") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -330,7 +330,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced helper alias rejects method-call sugar auto inference") {

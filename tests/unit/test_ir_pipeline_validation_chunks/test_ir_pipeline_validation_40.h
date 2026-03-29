@@ -231,6 +231,72 @@ TEST_CASE("ir lowerer setup type helper rejects array compatibility slash-method
   CHECK(error == "unknown method target for tag");
 }
 
+TEST_CASE("ir lowerer setup type helper rejects array compatibility slash-method vector count primitive fallback") {
+  primec::Definition i32TagDef;
+  i32TagDef.fullPath = "/i32/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {i32TagDef.fullPath, &i32TagDef},
+  };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  primec::Expr markerExpr;
+  markerExpr.kind = primec::Expr::Kind::BoolLiteral;
+  markerExpr.boolValue = true;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "/array/count";
+  receiverCall.isMethodCall = true;
+  receiverCall.args = {valuesExpr, markerExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("values", valuesLocal);
+
+  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+    primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    if (primec::ir_lowerer::resolveMethodCallReturnKind(
+            expr,
+            localsIn,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return nullptr; },
+            {},
+            {},
+            false,
+            kindOut,
+            nullptr)) {
+      return kindOut;
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      inferExprKind,
+      [](const primec::Expr &expr) { return expr.name; },
+      {},
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "unknown method target for tag");
+}
+
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper-returned explicit slash-method map access") {
   primec::Definition wrapMapDef;
   wrapMapDef.fullPath = "/wrapMap";

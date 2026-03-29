@@ -256,6 +256,33 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/count") != std::string::npos);
 }
 
+TEST_CASE("rejects array namespaced vector count method alias in C++ emitter") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(values./array/count(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_array_namespaced_vector_count_method_alias.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_count_method_alias_out.txt")
+          .string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_array_namespaced_vector_count_method_alias_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /array/count") != std::string::npos);
+}
+
 TEST_CASE("rejects array namespaced vector capacity alias in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
@@ -605,4 +632,3 @@ TEST_CASE("C++ emitter helper prefers stdlib File multi-value helpers when prese
       writeLineCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
   CHECK(resolved == "/File/write_line");
 }
-

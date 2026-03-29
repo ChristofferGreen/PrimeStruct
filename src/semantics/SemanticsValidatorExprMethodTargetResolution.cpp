@@ -1213,10 +1213,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (explicitRemovedMethodPath.empty()) {
         return false;
       }
+      const bool isExplicitArrayCompatibilityPath =
+          explicitRemovedMethodPath.rfind("/array/", 0) == 0;
       std::string ignoredElemType;
       const bool isCanonicalStdVectorPath =
           explicitRemovedMethodPath.rfind("/std/collections/vector/", 0) == 0;
       if (normalizedMethodName == "count") {
+        if (isExplicitArrayCompatibilityPath) {
+          return false;
+        }
         if (isCanonicalStdVectorPath) {
           return resolveVectorTarget(receiver, ignoredElemType);
         }
