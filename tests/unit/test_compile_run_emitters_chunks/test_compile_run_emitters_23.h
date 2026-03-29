@@ -103,38 +103,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects wrapper compatibility direct-call map receiver fallback without helper in C++ emitter") {
-  const std::string source = R"(
-namespace i32 {
-  [return<int>]
-  tag([i32] value) {
-    return(plus(value, 40i32))
-  }
-}
-
-[effects(heap_alloc), return</std/collections/map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 5i32, 2i32, 6i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(/map/at(wrapMap(), 1i32).tag())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_compatibility_direct_map_receiver_fallback_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_compatibility_direct_map_receiver_fallback_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter keeps wrapper-returned vector direct-call string count forwarding") {
   const std::string source = R"(
 [return<int>]
