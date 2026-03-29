@@ -1,4 +1,4 @@
-TEST_CASE("runs vm wrapper temporary vector count method without helper") {
+TEST_CASE("rejects vm wrapper temporary vector count method without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -16,8 +16,8 @@ main() {
        "primec_vm_wrapper_vector_count_method_import_requirement_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim helpers") {

@@ -487,7 +487,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native wrapper temporary vector capacity method without helper") {
+TEST_CASE("rejects native wrapper temporary vector capacity method without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -501,13 +501,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_vector_capacity_method_import_requirement.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_wrapper_vector_capacity_method_import_requirement_exe")
+       "primec_native_wrapper_vector_capacity_method_import_requirement_err.txt")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native bare vector capacity after pop through imported stdlib helper") {
@@ -538,4 +539,3 @@ TEST_CASE("native bare vector mutators compile without imported helpers") {
   expectBareVectorMutatorImportRequirement("native", "remove_at", "values, 1i32");
   expectBareVectorMutatorImportRequirement("native", "remove_swap", "values, 1i32");
 }
-

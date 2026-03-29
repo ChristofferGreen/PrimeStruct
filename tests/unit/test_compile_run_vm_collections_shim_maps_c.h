@@ -582,9 +582,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("runs vm with bare vector capacity after pop through imported stdlib helper") {
@@ -641,4 +639,3 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 99);
 }
-

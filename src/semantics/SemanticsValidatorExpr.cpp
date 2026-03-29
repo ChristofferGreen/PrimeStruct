@@ -215,6 +215,56 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "return not allowed in expression context";
       return false;
     }
+    auto isNonCtorWrapperReturnedBareVectorMethodWithoutHelper = [&]() {
+      if (!expr.isMethodCall || expr.args.empty() ||
+          (expr.name != "count" && expr.name != "capacity")) {
+        return false;
+      }
+      const Expr &receiver = expr.args.front();
+      if (receiver.kind != Expr::Kind::Call || receiver.isBinding || receiver.isMethodCall) {
+        return false;
+      }
+      std::string receiverTypeText;
+      if (!inferQueryExprTypeText(receiver, params, locals, receiverTypeText)) {
+        return false;
+      }
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(normalizeBindingTypeName(receiverTypeText), base, argText) ||
+          normalizeBindingTypeName(base) != "vector") {
+        return false;
+      }
+      const std::string resolvedReceiver = resolveCalleePath(receiver);
+      auto matchesCtorPath = [&](std::string_view ctorPath) {
+        return resolvedReceiver == ctorPath ||
+               resolvedReceiver.rfind(std::string(ctorPath) + "__t", 0) == 0;
+      };
+      if (matchesCtorPath("/std/collections/vector/vector") ||
+          matchesCtorPath("/std/collections/experimental_vector/vector") ||
+          matchesCtorPath("/std/collections/experimental_vector/vectorNew") ||
+          matchesCtorPath("/std/collections/experimental_vector/vectorSingle") ||
+          matchesCtorPath("/std/collections/experimental_vector/vectorPair") ||
+          matchesCtorPath("/std/collections/experimental_vector/vectorTriple") ||
+          matchesCtorPath("/std/collections/experimental_vector/vectorQuad") ||
+          matchesCtorPath("/std/collections/experimental_vector/vectorQuint") ||
+          matchesCtorPath("/std/collections/experimental_vector/vectorSext") ||
+          matchesCtorPath("/std/collections/experimental_vector/vectorSept") ||
+          matchesCtorPath("/std/collections/experimental_vector/vectorOct")) {
+        return false;
+      }
+      std::string builtinCollectionName;
+      if (getBuiltinCollectionName(receiver, builtinCollectionName) &&
+          builtinCollectionName == "vector") {
+        return false;
+      }
+      const std::string methodPath = preferredBareVectorHelperTarget(expr.name);
+      return !hasDeclaredDefinitionPath(methodPath) &&
+             !hasImportedDefinitionPath(methodPath);
+    };
+    if (isNonCtorWrapperReturnedBareVectorMethodWithoutHelper()) {
+      error_ = "unknown method: /vector/" + expr.name;
+      return false;
+    }
     ExprDispatchBootstrap dispatchBootstrap;
     prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
     const bool shouldBuiltinValidateBareMapCountCall =
