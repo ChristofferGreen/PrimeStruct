@@ -40,6 +40,7 @@ bool isExplicitMapHelperFallbackPath(const Expr &expr);
 bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr);
 bool isExplicitVectorAccessHelperPath(const std::string &path);
 bool isExplicitVectorAccessHelperExpr(const Expr &expr);
+bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr);
 
 void pruneRemovedMapCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,
                                                       const std::string &path);

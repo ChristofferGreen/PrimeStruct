@@ -503,6 +503,19 @@ bool isExplicitVectorAccessHelperExpr(const Expr &expr) {
          isExplicitVectorAccessHelperPath(expr.name);
 }
 
+bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (isExplicitVectorAccessHelperExpr(expr)) {
+    return true;
+  }
+  const std::string normalizedPath = normalizeCollectionHelperPath(expr.name);
+  return normalizedPath == "/vector/count" || normalizedPath == "/vector/capacity" ||
+         normalizedPath == "/std/collections/vector/count" ||
+         normalizedPath == "/std/collections/vector/capacity";
+}
+
 void pruneRemovedMapCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,
                                                       const std::string &path) {
   const std::string normalizedPath = normalizeCollectionHelperPath(path);
