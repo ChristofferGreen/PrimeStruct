@@ -433,6 +433,48 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("rejects local alias slash-method vector capacity on string receiver in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_alias_slash_vector_capacity_string_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_local_alias_slash_vector_capacity_string_no_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("rejects local alias slash-method vector capacity on array receiver in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  return(items./vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_alias_slash_vector_capacity_array_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_local_alias_slash_vector_capacity_array_no_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs vector namespaced count capacity slash methods through explicit alias helpers in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

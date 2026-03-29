@@ -758,6 +758,46 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
+TEST_CASE("rejects native local alias slash-method vector capacity on string receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_local_alias_slash_vector_capacity_string_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_local_alias_slash_vector_capacity_string_no_helper_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("rejects native local alias slash-method vector capacity on array receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  return(items./vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_local_alias_slash_vector_capacity_array_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_local_alias_slash_vector_capacity_array_no_helper_err.txt")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*
