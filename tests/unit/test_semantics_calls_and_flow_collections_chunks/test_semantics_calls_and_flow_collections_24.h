@@ -683,6 +683,40 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
+TEST_CASE("array compatibility access slash method vector target without helper reports unknown method") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./array/at(1i32),
+              values./array/at_unsafe(2i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/at") != std::string::npos);
+}
+
+TEST_CASE("array compatibility access slash method vector chain stops before receiver typing") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./array/at_unsafe(2i32).tag())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/at_unsafe") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced access slash method array target without alias helper reports unknown method") {
   const std::string source = R"(
 [return<array<i32>>]
