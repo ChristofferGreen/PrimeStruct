@@ -578,6 +578,28 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       continue;
     }
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
+    if (isAccessCall) {
+      const auto arrayVectorTargetInfo =
+          resolveArrayVectorAccessTargetInfo(methodExpr.args.front(), localsIn);
+      if (arrayVectorTargetInfo.isArrayOrVectorTarget &&
+          arrayVectorTargetInfo.elemKind != LocalInfo::ValueKind::Unknown) {
+        if (methodResolvedOut != nullptr) {
+          *methodResolvedOut = true;
+        }
+        kindOut = arrayVectorTargetInfo.elemKind;
+        return true;
+      }
+
+      const auto mapTargetInfo = resolveMapAccessTargetInfo(methodExpr.args.front(), localsIn);
+      if (mapTargetInfo.isMapTarget &&
+          mapTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+        if (methodResolvedOut != nullptr) {
+          *methodResolvedOut = true;
+        }
+        kindOut = mapTargetInfo.mapValueKind;
+        return true;
+      }
+    }
     if (isContainsCall && isKnownMapReceiverExpr(methodExpr.args.front())) {
       if (methodResolvedOut != nullptr) {
         *methodResolvedOut = true;

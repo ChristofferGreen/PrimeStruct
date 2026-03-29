@@ -135,11 +135,15 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     info.mapValueKind = localInfo.mapValueKind;
     return true;
   };
-  auto populateFromArgsPackLocal = [&](const LocalInfo &localInfo) {
-    if (!localInfo.isArgsPack ||
-        (localInfo.argsPackElementKind != LocalInfo::Kind::Map &&
-         !(localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToMap) &&
-         !(localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap))) {
+  auto populateFromArgsPackElement = [&](const LocalInfo &localInfo) {
+    if (!localInfo.isArgsPack) {
+      return false;
+    }
+    const bool isDirectMap = localInfo.argsPackElementKind == LocalInfo::Kind::Map;
+    const bool isWrappedMap =
+        (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
+        (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap);
+    if (!isDirectMap && !isWrappedMap) {
       return false;
     }
     info.isMapTarget = true;
@@ -166,8 +170,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       std::string derefAccessName;
       if (derefTarget.kind == Expr::Kind::Call && getBuiltinArrayAccessName(derefTarget, derefAccessName) &&
           derefTarget.args.size() == 2 && derefTarget.args.front().kind == Expr::Kind::Name) {
-        auto localIt = localsIn.find(derefTarget.args.front().name);
-        if (localIt != localsIn.end() && populateFromArgsPackLocal(localIt->second)) {
+        auto it = localsIn.find(derefTarget.args.front().name);
+        if (it != localsIn.end() && populateFromArgsPackElement(it->second)) {
           return info;
         }
       }
@@ -176,8 +180,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
       const Expr &accessReceiver = target.args.front();
       if (accessReceiver.kind == Expr::Kind::Name) {
-        auto localIt = localsIn.find(accessReceiver.name);
-        if (localIt != localsIn.end() && populateFromArgsPackLocal(localIt->second)) {
+        auto it = localsIn.find(accessReceiver.name);
+        if (it != localsIn.end() && populateFromArgsPackElement(it->second)) {
           return info;
         }
       }
@@ -269,15 +273,64 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
   const auto elementSlotCountForLocal = [](const LocalInfo &localInfo) {
     if (localInfo.isArgsPack) {
       const bool isInlineStructPack =
-          localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
+          (localInfo.argsPackElementKind == LocalInfo::Kind::Value ||
+           localInfo.argsPackElementKind == LocalInfo::Kind::Map) &&
           !localInfo.structTypeName.empty() &&
           localInfo.structSlotCount > 0;
       return isInlineStructPack ? localInfo.structSlotCount : 1;
     }
     return localInfo.structSlotCount;
   };
+  const auto populateFromArgsPackLocal = [&](const LocalInfo &localInfo, bool dereferenced) {
+    if (!localInfo.isArgsPack) {
+      return false;
+    }
+
+    info.elemKind = localInfo.valueKind;
+    info.isSoaVector = localInfo.isSoaVector;
+    info.isArgsPackTarget = !dereferenced;
+    info.argsPackElementKind = localInfo.argsPackElementKind;
+    info.elemSlotCount = elementSlotCountForLocal(localInfo);
+    info.structTypeName = localInfo.structTypeName;
+    info.isMapTarget = false;
+    info.isWrappedMapTarget = false;
+
+    if (!localInfo.structTypeName.empty() &&
+        (localInfo.argsPackElementKind == LocalInfo::Kind::Value ||
+         localInfo.argsPackElementKind == LocalInfo::Kind::Map)) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = false;
+      return true;
+    }
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Map) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = false;
+      info.isMapTarget = true;
+      return true;
+    }
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
+        (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToBuffer ||
+         localInfo.referenceToMap || !localInfo.structTypeName.empty())) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = localInfo.referenceToVector;
+      info.isWrappedMapTarget = localInfo.referenceToMap;
+      return true;
+    }
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
+        (localInfo.pointerToArray || localInfo.pointerToVector || localInfo.pointerToBuffer ||
+         localInfo.pointerToMap || !localInfo.structTypeName.empty())) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = localInfo.pointerToVector;
+      info.isWrappedMapTarget = localInfo.pointerToMap;
+      return true;
+    }
+    return false;
+  };
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
+    if (it != localsIn.end() && populateFromArgsPackLocal(it->second, false)) {
+      return info;
+    }
     if (it != localsIn.end() &&
         (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
          it->second.kind == LocalInfo::Kind::Buffer)) {
@@ -345,6 +398,9 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       }
 
       const LocalInfo &localInfo = localIt->second;
+      if (populateFromArgsPackLocal(localInfo, true)) {
+        return true;
+      }
       if (localInfo.argsPackElementKind == LocalInfo::Kind::Array) {
         info.isArrayOrVectorTarget = true;
         info.elemKind = localInfo.valueKind;
@@ -408,6 +464,9 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       const Expr &accessReceiver = target.args.front();
       if (accessReceiver.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(accessReceiver.name);
+        if (localIt != localsIn.end() && populateFromArgsPackLocal(localIt->second, false)) {
+          return info;
+        }
         if (localIt != localsIn.end() && localIt->second.isArgsPack) {
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Vector) {
             info.isArrayOrVectorTarget = true;

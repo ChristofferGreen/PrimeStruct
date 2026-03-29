@@ -300,13 +300,15 @@ inline std::string makeWrappedExperimentalMapMethodReceiverConformanceSource() {
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrappedExperimentalMapMethodReceiverError>]\n";
   source += "main() {\n";
   source +=
-      "  [i32] found{try(wrapValues(/std/collections/map/map(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)).tryAt(\"left\"raw_utf8))}\n";
+      "  [auto] values{wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32))}\n";
   source +=
-      "  [i32 mut] total{plus(wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)).count(), found)}\n";
+      "  [auto] extraValues{wrapValues(/std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32))}\n";
   source +=
-      "  assign(total, plus(total, wrapValues(/std/collections/mapPair(\"extra\"raw_utf8, 9i32, \"other\"raw_utf8, 2i32)).at(\"extra\"raw_utf8)))\n";
+      "  [i32] found{try(/std/collections/map/tryAt(values, \"left\"raw_utf8))}\n";
+  source += "  [i32 mut] total{plus(values.count(), found)}\n";
+  source += "  assign(total, plus(total, extraValues.at(\"extra\"raw_utf8)))\n";
   source +=
-      "  if(wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)).contains(\"right\"raw_utf8),\n";
+      "  if(values.contains(\"right\"raw_utf8),\n";
   source += "     then() { assign(total, plus(total, 1i32)) },\n";
   source += "     else() { })\n";
   source += "  return(Result.ok(total))\n";

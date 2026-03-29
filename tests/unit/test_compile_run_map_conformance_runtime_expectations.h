@@ -124,8 +124,8 @@ inline void expectExperimentalMapAssignConformance(const std::string &emitMode) 
   expectMapConformanceProgramRunsWithOutput(makeExperimentalMapAssignConformanceSource(),
                                             "map_experimental_assign",
                                             emitMode,
-                                            0,
-                                            "2\n4\n4\n7\n1\n");
+                                            36,
+                                            "2\n4\n4\n7\n1\n2\n4\n4\n7\n1\n");
 }
 
 inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMode) {

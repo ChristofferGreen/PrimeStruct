@@ -1,4 +1,4 @@
-TEST_CASE("map wrapper temporary tryAt auto inference keeps builtin map result fallback without helper") {
+TEST_CASE("map wrapper temporary tryAt auto inference requires canonical helper definition") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -27,8 +27,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("map wrapper temporary contains call validates canonical target classification") {
@@ -249,7 +249,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map unnamespaced count call resolves through compatibility alias when canonical helper is absent") {
+TEST_CASE("map unnamespaced count call resolves through explicit same-path alias helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values) {
@@ -351,7 +351,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("bare map at call resolves through compatibility helper when canonical helper is absent") {
+TEST_CASE("bare map at call ignores compatibility helper when canonical helper is absent") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/at([map<i32, i32>] values, [i32] index) {
@@ -365,8 +365,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("bare map at call prefers canonical helper over compatibility alias") {
@@ -411,7 +411,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map at_unsafe auto inference resolves through compatibility helper when canonical helper is absent") {
+TEST_CASE("bare map at_unsafe auto inference ignores compatibility helper when canonical helper is absent") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -426,8 +426,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("bare map at_unsafe auto inference prefers canonical helper over compatibility alias") {

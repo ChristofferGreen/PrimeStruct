@@ -197,7 +197,7 @@ main() {
   CHECK(error.find("mismatch") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced map count validates without imported stdlib helper") {
+TEST_CASE("stdlib namespaced map count requires an explicit canonical helper definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -206,8 +206,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced map count builtin rejects template args without imported helper") {

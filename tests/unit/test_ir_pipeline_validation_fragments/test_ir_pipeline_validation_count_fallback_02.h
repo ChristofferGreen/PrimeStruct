@@ -74,7 +74,7 @@
               return receiverExpr.kind == primec::Expr::Kind::Name && receiverExpr.name == "items";
             }) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(reorderedAtNameResolveCalls == 2);
+  CHECK(reorderedAtNameResolveCalls == 1);
   CHECK(reorderedAtNameEmitCalls == 1);
 
   primec::Expr noReorderAtNameCall = atCall;

@@ -437,7 +437,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("bare map helper statement body arguments still validate") {
+TEST_CASE("bare map helper statement body arguments require canonical helper resolution") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -452,8 +452,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("bare map helper statement body arguments fall back to canonical helper target") {
@@ -644,4 +644,3 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-

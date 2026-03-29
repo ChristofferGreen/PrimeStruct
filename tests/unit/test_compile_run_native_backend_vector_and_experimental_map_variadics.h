@@ -525,6 +525,8 @@ main() {
 
 TEST_CASE("native materializes variadic map packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_maps([args<map<i32, i32>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
@@ -563,6 +565,8 @@ main() {
 
 TEST_CASE("native materializes variadic map packs with indexed tryAt inference") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_maps([args<map<i32, i32>>] values) {
   [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
@@ -646,4 +650,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 11);
 }
-

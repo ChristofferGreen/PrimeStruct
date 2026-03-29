@@ -161,6 +161,19 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     out = layout;
     return true;
   }
+  if (isExperimentalMapTypeName(structPath)) {
+    StructSlotLayoutInfo layout;
+    layout.structPath = structPath;
+    layout.totalSlots = 8;
+    layout.fields.push_back({"keys", 0, 4, LocalInfo::ValueKind::Unknown, "/std/collections/experimental_vector/Vector"});
+    layout.fields.push_back({"payloads",
+                             4,
+                             4,
+                             LocalInfo::ValueKind::Unknown,
+                             "/std/collections/experimental_vector/Vector"});
+    out = layout;
+    return true;
+  }
 
   auto cached = layoutCache.find(structPath);
   if (cached != layoutCache.end()) {
@@ -666,6 +679,12 @@ void applyStructValueInfoFromBinding(const Expr &expr,
   }
 
   std::string resolved;
+  const std::string fullTypeName = buildTemplatedTypeName(typeName, typeTemplateArg);
+  if (!typeTemplateArg.empty() &&
+      resolveStructTypeName(fullTypeName, expr.namespacePrefix, resolved)) {
+    info.structTypeName = resolved;
+    return;
+  }
   if (resolveStructTypeName(typeName, expr.namespacePrefix, resolved)) {
     info.structTypeName = resolved;
   }

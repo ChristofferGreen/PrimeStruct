@@ -38,5 +38,26 @@ bool emitInlineDefinitionCallParameters(
     const EmitInlineParameterInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {});
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo);
 
+bool emitInlineDefinitionCallParameters(
+    const std::vector<Expr> &callParams,
+    const std::vector<const Expr *> &orderedArgs,
+    const std::vector<const Expr *> &packedArgs,
+    size_t packedParamIndex,
+    const LocalMap &callerLocals,
+    int32_t &nextLocal,
+    LocalMap &calleeLocals,
+    const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
+    const IsInlineParameterStringBindingFn &isStringBinding,
+    const EmitInlineParameterStringValueFn &emitStringValueForCall,
+    const InferInlineParameterStructExprPathFn &inferStructExprPath,
+    const InferInlineParameterExprKindFn &inferExprKind,
+    const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
+    const EmitInlineParameterExprFn &emitExpr,
+    const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
+    const AllocInlineParameterTempLocalFn &allocTempLocal,
+    const EmitInlineParameterInstructionFn &emitInstruction,
+    const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
+    std::string &error,
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {});

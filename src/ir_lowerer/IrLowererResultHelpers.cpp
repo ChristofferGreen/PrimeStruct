@@ -4,6 +4,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererLowerInferenceBaseKindHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -23,6 +24,45 @@ bool resolveResultExprInfo(const Expr &expr,
                            const LookupDefinitionResultInfoFn &lookupDefinitionResult,
                            ResultExprInfo &out) {
   out = ResultExprInfo{};
+  auto applyDeclaredResultFromDefinition = [&](const Definition &definition) {
+    for (const auto &transform : definition.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string declaredType = trimTemplateTypeText(transform.templateArgs.front());
+      bool hasValue = false;
+      LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+      std::string errorType;
+      if (!parseResultTypeName(declaredType, hasValue, valueKind, errorType)) {
+        continue;
+      }
+      out.isResult = true;
+      out.hasValue = hasValue;
+      out.valueKind = valueKind;
+      out.errorType = errorType;
+      if (!hasValue || valueKind != LocalInfo::ValueKind::Unknown) {
+        return true;
+      }
+
+      std::string base;
+      std::string argText;
+      std::vector<std::string> resultArgs;
+      if (!splitTemplateTypeName(declaredType, base, argText) ||
+          !splitTemplateArgs(argText, resultArgs) || resultArgs.size() != 2) {
+        return true;
+      }
+
+      out.valueCollectionKind = LocalInfo::Kind::Value;
+      out.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
+      const std::string valueTypeText = trimTemplateTypeText(resultArgs.front());
+      if (!resolveSupportedResultCollectionType(
+              valueTypeText, out.valueCollectionKind, out.valueKind, &out.valueMapKeyKind)) {
+        out.valueStructType = valueTypeText;
+      }
+      return true;
+    }
+    return false;
+  };
   if (expr.kind == Expr::Kind::Name) {
     const LocalResultInfo local = lookupLocal(expr.name);
     if (local.found && local.isResult) {
@@ -83,6 +123,9 @@ bool resolveResultExprInfo(const Expr &expr,
         out = std::move(calleeInfo);
         return true;
       }
+      if (applyDeclaredResultFromDefinition(*callee)) {
+        return true;
+      }
     }
     return false;
   }
@@ -97,7 +140,7 @@ bool resolveResultExprInfo(const Expr &expr,
     out = std::move(calleeInfo);
     return true;
   }
-  return false;
+  return applyDeclaredResultFromDefinition(*callee);
 }
 
 bool resolveResultExprInfoFromLocals(const Expr &expr,
@@ -429,25 +472,47 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     return true;
   }
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && expr.name == "tryAt") {
-    const Definition *methodCallee = resolveMethod(expr);
-    if (methodCallee == nullptr) {
-      LocalInfo::ValueKind builtinTryAtKind = LocalInfo::ValueKind::Unknown;
-      bool methodResolved = false;
-      if (resolveMethodCallReturnKind(expr,
-                                      localsIn,
-                                      resolveMethodCall,
-                                      resolveDefinitionCall,
-                                      lookupReturnInfo,
-                                      false,
-                                      builtinTryAtKind,
-                                      &methodResolved) &&
-          methodResolved && builtinTryAtKind != LocalInfo::ValueKind::Unknown) {
-        out.isResult = true;
-        out.hasValue = true;
-        out.valueKind = builtinTryAtKind;
-        out.errorType = "ContainerError";
-        return true;
+    auto assignTryAtMapResultInfo = [&](LocalInfo::ValueKind valueKind) {
+      if (valueKind == LocalInfo::ValueKind::Unknown) {
+        return false;
       }
+      out.isResult = true;
+      out.hasValue = true;
+      out.valueKind = valueKind;
+      out.errorType = "ContainerError";
+      return true;
+    };
+    const auto methodTargetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo);
+    if (methodTargetInfo.isMapTarget && assignTryAtMapResultInfo(methodTargetInfo.mapValueKind)) {
+      return true;
+    }
+    if (expr.args.front().kind == Expr::Kind::Call) {
+      const Expr &receiverExpr = expr.args.front();
+      const Definition *receiverDef = receiverExpr.isMethodCall ? resolveMethod(receiverExpr)
+                                                                : resolveDefinitionCall(receiverExpr);
+      if (receiverDef != nullptr) {
+        std::string collectionName;
+        std::vector<std::string> collectionArgs;
+        if (inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs) &&
+            collectionName == "map" && collectionArgs.size() == 2 &&
+            assignTryAtMapResultInfo(valueKindFromTypeName(collectionArgs.back()))) {
+          return true;
+        }
+      }
+    }
+
+    LocalInfo::ValueKind builtinTryAtKind = LocalInfo::ValueKind::Unknown;
+    bool methodResolved = false;
+    if (resolveMethodCallReturnKind(expr,
+                                    localsIn,
+                                    resolveMethodCall,
+                                    resolveDefinitionCall,
+                                    lookupReturnInfo,
+                                    false,
+                                    builtinTryAtKind,
+                                    &methodResolved) &&
+        methodResolved && assignTryAtMapResultInfo(builtinTryAtKind)) {
+      return true;
     }
   }
   if (expr.kind == Expr::Kind::Call && !expr.args.empty() && isMapTryAtCallName(expr)) {

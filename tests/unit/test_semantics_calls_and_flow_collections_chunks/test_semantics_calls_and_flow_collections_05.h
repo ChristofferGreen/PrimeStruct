@@ -88,7 +88,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count method keeps user-defined map helper precedence") {
+TEST_CASE("count method requires canonical map helper even when alias helper exists") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -102,8 +102,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("count call keeps user-defined string helper precedence") {
@@ -292,7 +292,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("at_unsafe call keeps user-defined map helper precedence") {
+TEST_CASE("at_unsafe call requires canonical map helper even when alias helper exists") {
   const std::string source = R"(
 [return<int>]
 /map/at_unsafe([map<i32, i32>] values, [i32] key) {
@@ -306,8 +306,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("at method keeps user-defined array helper precedence") {
@@ -364,7 +364,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("at_unsafe method keeps user-defined map helper precedence") {
+TEST_CASE("at_unsafe method requires canonical map helper even when alias helper exists") {
   const std::string source = R"(
 [return<int>]
 /map/at_unsafe([map<i32, i32>] values, [i32] key) {
@@ -378,11 +378,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("at call keeps user-defined map helper precedence") {
+TEST_CASE("at call requires canonical map helper even when alias helper exists") {
   const std::string source = R"(
 [return<int>]
 /map/at([map<i32, i32>] values, [i32] key) {
@@ -396,11 +396,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("at method keeps user-defined map helper precedence") {
+TEST_CASE("at method requires canonical map helper even when alias helper exists") {
   const std::string source = R"(
 [return<int>]
 /map/at([map<i32, i32>] values, [i32] key) {
@@ -414,8 +414,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("at call keeps user-defined vector helper precedence") {
@@ -625,4 +625,3 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-

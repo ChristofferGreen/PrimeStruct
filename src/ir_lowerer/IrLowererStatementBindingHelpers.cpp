@@ -332,6 +332,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
       if (normalizedName == "map" && transform.templateArgs.size() == 2) {
         infoOut.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
         infoOut.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
+        infoOut.valueKind = infoOut.mapValueKind;
         break;
       }
     }

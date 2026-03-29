@@ -1,5 +1,9 @@
 #include "IrLowererStatementBindingInternal.h"
 
+#include <algorithm>
+#include <cctype>
+#include <sstream>
+
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
@@ -43,6 +47,65 @@ bool inferPointerMemoryIntrinsicTargetsUninitializedStorageImpl(const Expr &expr
     return it != localsIn.end() && it->second.targetsUninitializedStorage;
   }
   return false;
+}
+
+bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, std::string &structPathOut) {
+  structPathOut.clear();
+  std::string normalizedType = trimTemplateTypeText(typeText);
+  if (!normalizedType.empty() && normalizedType.front() != '/') {
+    normalizedType.insert(normalizedType.begin(), '/');
+  }
+  if (normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+    structPathOut = normalizedType;
+    return true;
+  }
+
+  std::string base;
+  std::string argList;
+  if (!splitTemplateTypeName(typeText, base, argList) ||
+      normalizeCollectionBindingTypeName(base) != "map" ||
+      argList.empty()) {
+    return false;
+  }
+
+  std::vector<std::string> templateArgs;
+  if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
+    return false;
+  }
+
+  std::string canonicalArgs = joinTemplateArgsText(templateArgs);
+  canonicalArgs.erase(
+      std::remove_if(canonicalArgs.begin(),
+                     canonicalArgs.end(),
+                     [](unsigned char ch) { return std::isspace(ch) != 0; }),
+      canonicalArgs.end());
+
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : canonicalArgs) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+
+  std::ostringstream specializedPath;
+  specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
+  structPathOut = specializedPath.str();
+  return true;
+}
+
+bool namesExperimentalMapType(const std::string &typeText) {
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(typeText, base, arg)) {
+    base = trimTemplateTypeText(base);
+  } else {
+    base = trimTemplateTypeText(typeText);
+  }
+  if (!base.empty() && base.front() == '/') {
+    base.erase(base.begin());
+  }
+  return base == "Map" ||
+         base == "std/collections/experimental_map/Map" ||
+         base.rfind("std/collections/experimental_map/Map__", 0) == 0;
 }
 
 } // namespace
@@ -451,6 +514,15 @@ void applyArgsPackElementStructMetadata(const Expr &param,
   applyStructValueInfo(syntheticBinding, elementInfo);
   if (!elementInfo.structTypeName.empty()) {
     infoOut.structTypeName = elementInfo.structTypeName;
+    infoOut.structFieldCount = elementInfo.structFieldCount;
+    infoOut.structSlotCount = elementInfo.structSlotCount;
+    return;
+  }
+
+  std::string specializedExperimentalMapStruct;
+  if (namesExperimentalMapType(elementTypeText) &&
+      resolveSpecializedExperimentalMapStructPath(elementTypeText, specializedExperimentalMapStruct)) {
+    infoOut.structTypeName = specializedExperimentalMapStruct;
   }
 }
 

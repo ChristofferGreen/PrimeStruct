@@ -1,5 +1,7 @@
 TEST_CASE("native materializes variadic borrowed map packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
@@ -54,6 +56,8 @@ main() {
 
 TEST_CASE("native materializes variadic borrowed map packs with indexed dereference count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
   return(plus(dereference(at(values, 0i32)).count(),
@@ -109,6 +113,8 @@ main() {
 
 TEST_CASE("native materializes variadic borrowed map packs with indexed dereference lookup helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
   [auto] head{dereference(at(values, 0i32)).at_unsafe(3i32)}
@@ -166,6 +172,8 @@ main() {
 
 TEST_CASE("native materializes variadic borrowed map packs with indexed tryAt inference") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
   [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
@@ -225,6 +233,8 @@ main() {
 
 TEST_CASE("native materializes variadic pointer map packs with indexed count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
   return(plus(values[0i32].count(), values[2i32].count()))
@@ -279,6 +289,8 @@ main() {
 
 TEST_CASE("native materializes variadic pointer map packs with indexed dereference count methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
   return(plus(dereference(at(values, 0i32)).count(),
@@ -334,9 +346,11 @@ main() {
 
 TEST_CASE("native materializes variadic pointer map packs with indexed lookup helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
-  [auto] head{/std/collections/map/at_unsafe(at(values, 0i32), 3i32)}
+  [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
   if(at(values, 2i32).contains(11i32),
      then(){ return(plus(head, at(values, 2i32).at(11i32))) },
      else(){ return(0i32) })
@@ -391,6 +405,8 @@ main() {
 
 TEST_CASE("native materializes variadic pointer map packs with indexed dereference lookup helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
   [auto] head{dereference(at(values, 0i32)).at_unsafe(3i32)}
@@ -448,6 +464,8 @@ main() {
 
 TEST_CASE("native materializes variadic pointer map packs with indexed tryAt inference") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
   [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
@@ -622,4 +640,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 16);
 }
-

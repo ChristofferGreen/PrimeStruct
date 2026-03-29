@@ -394,7 +394,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count method validates on map binding with explicit alias helper") {
+TEST_CASE("count method on map binding ignores explicit alias helper without canonical definition") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -408,8 +408,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("count method validates on string binding") {
@@ -551,6 +551,8 @@ main() {
 
 TEST_CASE("reordered access wrapper temporaries infer i32 for chained methods") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<map<string, i32>>]
 wrapMapText() {
   [map<string, i32>] values{map<string, i32>("only"raw_utf8, 21i32)}
@@ -559,7 +561,7 @@ wrapMapText() {
 
 [return<int>]
 /map/at_unsafe([map<string, i32>] values, [string] key) {
-  return(values.at_unsafe(key))
+  return(/std/collections/map/at_unsafe(values, key))
 }
 
 [return<int>]
@@ -637,4 +639,3 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-

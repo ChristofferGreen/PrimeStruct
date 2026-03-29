@@ -1,5 +1,5 @@
         auto rewriteCanonicalMapHelperForExperimentalReceiverExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
-          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
             return false;
           }
 
@@ -7,15 +7,15 @@
           if (getBuiltinArrayAccessName(callExpr, helperName) && callExpr.args.size() == 2) {
             // Use the normalized builtin access name below.
           } else if ((callExpr.name == "/map/count" || callExpr.name == "/std/collections/map/count" ||
-                      callExpr.name == "count") &&
+                      isSimpleCallName(callExpr, "count")) &&
                      callExpr.args.size() == 1) {
             helperName = "count";
           } else if ((callExpr.name == "/map/contains" || callExpr.name == "/std/collections/map/contains" ||
-                      callExpr.name == "contains") &&
+                      isSimpleCallName(callExpr, "contains")) &&
                      callExpr.args.size() == 2) {
             helperName = "contains";
           } else if ((callExpr.name == "/map/tryAt" || callExpr.name == "/std/collections/map/tryAt" ||
-                      callExpr.name == "tryAt") &&
+                      isSimpleCallName(callExpr, "tryAt")) &&
                      callExpr.args.size() == 2) {
             helperName = "tryAt";
           } else {
@@ -26,6 +26,7 @@
             if (receiverExpr.kind == Expr::Kind::Name) {
               auto it = localsIn.find(receiverExpr.name);
               if (it != localsIn.end() &&
+                  !it->second.isArgsPack &&
                   it->second.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
                 return it->second.structTypeName;
               }

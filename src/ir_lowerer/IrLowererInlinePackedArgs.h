@@ -14,6 +14,7 @@ bool emitInlinePackedCallParameter(
     const EmitInlineParameterStringValueFn &emitStringValueForCall,
     const InferInlineParameterStructExprPathFn &inferStructExprPath,
     const InferInlineParameterExprKindFn &inferExprKind,
+    const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
     const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
     const EmitInlineParameterExprFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,

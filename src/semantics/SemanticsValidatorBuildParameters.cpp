@@ -137,8 +137,17 @@ bool SemanticsValidator::buildParameters() {
       return normalizedType == "Map" || normalizedType == "std/collections/experimental_map/Map" ||
              normalizedType.rfind("std/collections/experimental_map/Map__", 0) == 0;
     };
+    auto typeTextCarriesExperimentalMapValue = [&](const std::string &typeText) {
+      if (typeTextIsExperimentalMapValue(typeText)) {
+        return true;
+      }
+      ResultTypeInfo resultInfo;
+      return resolveResultTypeFromTypeName(typeText, resultInfo) &&
+             resultInfo.hasValue &&
+             typeTextIsExperimentalMapValue(resultInfo.valueType);
+    };
     auto bindingCarriesExperimentalMapValue = [&](const BindingInfo &binding) {
-      return typeTextIsExperimentalMapValue(bindingTypeText(binding));
+      return typeTextCarriesExperimentalMapValue(bindingTypeText(binding));
     };
     auto isResolvedExperimentalMapConstructorPath = [](const std::string &resolvedPath) {
       std::string normalizedPath = resolvedPath;
@@ -152,6 +161,14 @@ bool SemanticsValidator::buildParameters() {
       }
       return isResolvedMapConstructorPath(normalizedPath);
     };
+    auto isBuiltinResultOkPayloadCall = [](const Expr &candidate) {
+      if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name != "ok" ||
+          candidate.args.size() != 2) {
+        return false;
+      }
+      const Expr &receiver = candidate.args.front();
+      return receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "Result";
+    };
     std::function<bool(const Expr &)> isAllowedExperimentalMapDefaultExpr = [&](const Expr &candidate) {
       if (isDefaultExprAllowed(candidate, defaultResolvesToDefinition)) {
         return true;
@@ -161,6 +178,9 @@ bool SemanticsValidator::buildParameters() {
       }
       if (hasNamedArguments(candidate.argNames) || candidate.hasBodyArguments || !candidate.bodyArguments.empty()) {
         return false;
+      }
+      if (isBuiltinResultOkPayloadCall(candidate)) {
+        return isAllowedExperimentalMapDefaultExpr(candidate.args.back());
       }
       const std::string resolvedPath = resolveCalleePath(candidate);
       const bool isDirectExperimentalMapConstructor = isResolvedExperimentalMapConstructorPath(resolvedPath);

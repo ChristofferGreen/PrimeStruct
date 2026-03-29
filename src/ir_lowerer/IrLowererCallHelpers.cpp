@@ -175,6 +175,9 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     receiverIndices.push_back(index);
   };
   const bool hasNamedArgsValue = hasNamedArgs();
+  const bool primaryReceiverIsFallbackCandidate =
+      expr.args.empty() || !isCollectionAccessReceiverExpr ||
+      isCollectionAccessReceiverExpr(expr.args.front());
   if (hasNamedArgsValue) {
     bool hasValuesNamedReceiver = false;
     if (isVectorMutatorCall || isAccessCall) {
@@ -187,13 +190,17 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       }
     }
     if (!hasValuesNamedReceiver) {
-      appendReceiverIndex(0);
+      if (primaryReceiverIsFallbackCandidate) {
+        appendReceiverIndex(0);
+      }
       for (size_t i = 1; i < expr.args.size(); ++i) {
         appendReceiverIndex(i);
       }
     }
   } else {
-    appendReceiverIndex(0);
+    if (primaryReceiverIsFallbackCandidate) {
+      appendReceiverIndex(0);
+    }
   }
   const bool probePositionalReorderedVectorMutatorReceiver =
       isVectorMutatorCall && !hasNamedArgsValue && expr.args.size() > 1 &&

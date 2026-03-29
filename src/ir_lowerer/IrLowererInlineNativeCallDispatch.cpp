@@ -297,6 +297,15 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     return emitInlineDefinitionCallFn(callExpr, callee, localsIn);
   };
+  if (!expr.isMethodCall) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
+      const auto targetInfo = resolveArrayVectorAccessTargetInfo(expr.args.front(), localsIn);
+      if (targetInfo.isArgsPackTarget) {
+        return InlineCallDispatchResult::NotHandled;
+      }
+    }
+  }
   auto tryEmitVectorMutatorCallFormExpr = [&]() {
     const bool isVectorMutatorCall =
         isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "pop") ||
@@ -448,6 +457,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             return false;
           }
           const LocalInfo &info = it->second;
+          if (info.isArgsPack) {
+            return false;
+          }
           if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
               info.kind == LocalInfo::Kind::Map) {
             return true;
@@ -460,6 +472,12 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         }
         if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {
           return false;
+        }
+        if (resolveMapAccessTargetInfo(receiverExpr, localsIn).isMapTarget) {
+          return true;
+        }
+        if (resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn).isArrayOrVectorTarget) {
+          return true;
         }
         std::string collectionName;
         if (getBuiltinCollectionName(receiverExpr, collectionName)) {

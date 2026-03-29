@@ -281,6 +281,10 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
       targetInfo.isArgsPackTarget && !targetInfo.isVectorTarget && !targetInfo.structTypeName.empty() &&
       (targetInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
        targetInfo.argsPackElementKind == LocalInfo::Kind::Reference);
+  const bool isMapArgsPackTarget =
+      targetInfo.isArgsPackTarget && targetInfo.isMapTarget && !targetInfo.isWrappedMapTarget;
+  const bool isWrappedMapArgsPackTarget =
+      targetInfo.isArgsPackTarget && targetInfo.isWrappedMapTarget;
   const bool isVectorArgsPackTarget =
       targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Vector;
   const bool isPointerVectorArgsPackTarget =
@@ -294,10 +298,15 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
       targetInfo.isSoaVector;
   if (!targetInfo.isArrayOrVectorTarget ||
       (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget &&
-       !isWrappedStructArgsPackTarget && !isVectorArgsPackTarget && !isPointerVectorArgsPackTarget &&
-       !isPointerSoaVectorArgsPackTarget && !isBorrowedSoaVectorArgsPackTarget)) {
+       !isWrappedStructArgsPackTarget && !isMapArgsPackTarget && !isWrappedMapArgsPackTarget &&
+       !isVectorArgsPackTarget && !isPointerVectorArgsPackTarget && !isPointerSoaVectorArgsPackTarget &&
+       !isBorrowedSoaVectorArgsPackTarget)) {
     error =
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Pointer<Struct>>/args<Reference<Struct>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs";
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus "
+        "args<Struct>/args<map<K, V>>/args<Pointer<Struct>>/args<Reference<Struct>>/"
+        "args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/"
+        "args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/"
+        "args<Reference<soa_vector<T>>> packs";
     return false;
   }
   return true;
@@ -348,6 +357,8 @@ bool emitArrayVectorIndexedAccess(
       arrayVectorTargetInfo.isVectorTarget && !arrayVectorTargetInfo.isArgsPackTarget;
   const bool loadElementValue =
       arrayVectorTargetInfo.structTypeName.empty() ||
+      arrayVectorTargetInfo.isMapTarget ||
+      arrayVectorTargetInfo.isWrappedMapTarget ||
       usesBuiltinVectorValueStorage(arrayVectorTargetInfo) ||
       isWrappedStructArgsPackTarget;
 
@@ -436,6 +447,25 @@ bool emitBuiltinArrayAccess(
   }
   if (stringTableAccessResult == StringTableAccessEmitResult::Emitted) {
     return true;
+  }
+
+  const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(
+      targetExpr, localsIn, resolveCallArrayVectorAccessTargetInfo);
+  if (arrayVectorTargetInfo.isArgsPackTarget) {
+    return emitArrayVectorIndexedAccess(
+        accessName,
+        targetExpr,
+        indexExpr,
+        localsIn,
+        resolveCallArrayVectorAccessTargetInfo,
+        inferExprKind,
+        allocTempLocal,
+        emitExpr,
+        emitArrayIndexOutOfBounds,
+        instructionCount,
+        emitInstruction,
+        patchInstructionImm,
+        error);
   }
 
   const auto mapLookupResult = tryEmitMapAccessLookup(

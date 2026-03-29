@@ -418,7 +418,7 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
       [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
       error));
   CHECK(error ==
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<Pointer<Struct>>/args<Reference<Struct>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs");
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<map<K, V>>/args<Pointer<Struct>>/args<Reference<Struct>>/args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs");
   CHECK(inferCalls == 0);
   CHECK(allocCalls == 0);
   CHECK(emitExprCalls == 0);
@@ -583,4 +583,3 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
   CHECK(instructions[4].imm == 60u);
   CHECK(instructions.back().op == primec::IrOpcode::AddI64);
 }
-

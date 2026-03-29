@@ -76,6 +76,8 @@ struct ArrayVectorAccessTargetInfo {
   bool isVectorTarget = false;
   bool isSoaVector = false;
   bool isArgsPackTarget = false;
+  bool isMapTarget = false;
+  bool isWrappedMapTarget = false;
   LocalInfo::Kind argsPackElementKind = LocalInfo::Kind::Value;
   int32_t elemSlotCount = 0;
   std::string structTypeName;

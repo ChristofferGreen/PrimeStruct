@@ -147,6 +147,7 @@
             },
             [&](const Expr &argExpr, const LocalMap &locals) { return inferStructExprPath(argExpr, locals); },
             [&](const Expr &argExpr, const LocalMap &locals) { return inferExprKind(argExpr, locals); },
+            [&](const Expr &argExpr) { return resolveDefinitionCall(argExpr); },
             [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
               return resolveStructSlotLayout(structPath, layoutOut);
             },

@@ -1,10 +1,148 @@
 #include "IrLowererInlineParamHelpers.h"
 #include "IrLowererInlinePackedArgs.h"
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+bool isBuiltinMapConstructorExpr(const Expr &callExpr) {
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+    return false;
+  }
+  std::string collectionName;
+  if (getBuiltinCollectionName(callExpr, collectionName) && collectionName == "map") {
+    return true;
+  }
+
+  std::string normalizedName = callExpr.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  auto matchesPath = [&](std::string_view basePath) {
+    return normalizedName == basePath || normalizedName.rfind(std::string(basePath) + "__", 0) == 0;
+  };
+  return matchesPath("std/collections/mapNew") ||
+         matchesPath("std/collections/mapSingle") ||
+         matchesPath("std/collections/mapDouble") ||
+         matchesPath("std/collections/mapPair") ||
+         matchesPath("std/collections/mapTriple") ||
+         matchesPath("std/collections/mapQuad") ||
+         matchesPath("std/collections/mapQuint") ||
+         matchesPath("std/collections/mapSext") ||
+         matchesPath("std/collections/mapSept") ||
+         matchesPath("std/collections/mapOct") ||
+         matchesPath("std/collections/experimental_map/mapNew") ||
+         matchesPath("std/collections/experimental_map/mapSingle") ||
+         matchesPath("std/collections/experimental_map/mapDouble") ||
+         matchesPath("std/collections/experimental_map/mapPair") ||
+         matchesPath("std/collections/experimental_map/mapTriple") ||
+         matchesPath("std/collections/experimental_map/mapQuad") ||
+         matchesPath("std/collections/experimental_map/mapQuint") ||
+         matchesPath("std/collections/experimental_map/mapSext") ||
+         matchesPath("std/collections/experimental_map/mapSept") ||
+         matchesPath("std/collections/experimental_map/mapOct") ||
+         isSimpleCallName(callExpr, "mapNew") ||
+         isSimpleCallName(callExpr, "mapSingle") ||
+         isSimpleCallName(callExpr, "mapDouble") ||
+         isSimpleCallName(callExpr, "mapPair") ||
+         isSimpleCallName(callExpr, "mapTriple") ||
+         isSimpleCallName(callExpr, "mapQuad") ||
+         isSimpleCallName(callExpr, "mapQuint") ||
+         isSimpleCallName(callExpr, "mapSext") ||
+         isSimpleCallName(callExpr, "mapSept") ||
+         isSimpleCallName(callExpr, "mapOct");
+}
+
+std::string extractParameterTypeName(const Expr &paramExpr) {
+  for (const auto &transform : paramExpr.transforms) {
+    if (transform.name == "mut" || transform.name == "public" ||
+        transform.name == "private" || transform.name == "static" ||
+        transform.name == "shared" || transform.name == "placement" ||
+        transform.name == "align" || transform.name == "packed" ||
+        transform.name == "reflection" || transform.name == "effects" ||
+        transform.name == "capabilities") {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    std::string typeName = transform.name;
+    if (!transform.templateArgs.empty()) {
+      typeName += "<";
+      for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
+        if (index != 0) {
+          typeName += ", ";
+        }
+        typeName += trimTemplateTypeText(transform.templateArgs[index]);
+      }
+      typeName += ">";
+    }
+    return typeName;
+  }
+  return {};
+}
+
+bool rewriteBuiltinMapConstructorExpr(const Expr &callExpr,
+                                      LocalInfo::ValueKind fallbackKeyKind,
+                                      LocalInfo::ValueKind fallbackValueKind,
+                                      const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
+                                      Expr &rewrittenExpr) {
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+    return false;
+  }
+  const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
+  const bool isResolvedExperimentalConstructor = [&]() {
+    if (callee == nullptr) {
+      return false;
+    }
+    auto matchesExperimentalMapConstructor = [&](std::string_view basePath) {
+      return callee->fullPath == basePath ||
+             callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
+    };
+    return matchesExperimentalMapConstructor("/std/collections/map/map") ||
+           matchesExperimentalMapConstructor("/std/collections/mapNew") ||
+           matchesExperimentalMapConstructor("/std/collections/mapSingle") ||
+           matchesExperimentalMapConstructor("/std/collections/mapDouble") ||
+           matchesExperimentalMapConstructor("/std/collections/mapPair") ||
+           matchesExperimentalMapConstructor("/std/collections/mapTriple") ||
+           matchesExperimentalMapConstructor("/std/collections/mapQuad") ||
+           matchesExperimentalMapConstructor("/std/collections/mapQuint") ||
+           matchesExperimentalMapConstructor("/std/collections/mapSext") ||
+           matchesExperimentalMapConstructor("/std/collections/mapSept") ||
+           matchesExperimentalMapConstructor("/std/collections/mapOct");
+  }();
+  if (!isBuiltinMapConstructorExpr(callExpr) && !isResolvedExperimentalConstructor) {
+    return false;
+  }
+  rewrittenExpr = callExpr;
+  rewrittenExpr.name = "/map/map";
+  rewrittenExpr.namespacePrefix.clear();
+  rewrittenExpr.isMethodCall = false;
+  if (rewrittenExpr.templateArgs.empty() &&
+      fallbackKeyKind != LocalInfo::ValueKind::Unknown &&
+      fallbackValueKind != LocalInfo::ValueKind::Unknown) {
+    rewrittenExpr.templateArgs = {
+        typeNameForValueKind(fallbackKeyKind),
+        typeNameForValueKind(fallbackValueKind),
+    };
+  } else if (rewrittenExpr.templateArgs.empty() && callee != nullptr &&
+             callee->parameters.size() >= 2) {
+    const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
+    const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
+    if (!keyTypeName.empty() && !valueTypeName.empty()) {
+      rewrittenExpr.templateArgs = {keyTypeName, valueTypeName};
+    }
+  }
+  return true;
+}
+
+} // namespace
 
 bool emitInlineDefinitionCallParameters(
     const std::vector<Expr> &callParams,
@@ -27,13 +165,66 @@ bool emitInlineDefinitionCallParameters(
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
+  return emitInlineDefinitionCallParameters(callParams,
+                                            orderedArgs,
+                                            packedArgs,
+                                            packedParamIndex,
+                                            callerLocals,
+                                            nextLocal,
+                                            calleeLocals,
+                                            inferCallParameterLocalInfo,
+                                            isStringBinding,
+                                            emitStringValueForCall,
+                                            inferStructExprPath,
+                                            inferExprKind,
+                                            {},
+                                            resolveStructSlotLayout,
+                                            emitExpr,
+                                            emitStructCopySlots,
+                                            allocTempLocal,
+                                            emitInstruction,
+                                            trackFileHandleLocal,
+                                            error,
+                                            inferExprLocalInfo);
+}
+
+bool emitInlineDefinitionCallParameters(
+    const std::vector<Expr> &callParams,
+    const std::vector<const Expr *> &orderedArgs,
+    const std::vector<const Expr *> &packedArgs,
+    size_t packedParamIndex,
+    const LocalMap &callerLocals,
+    int32_t &nextLocal,
+    LocalMap &calleeLocals,
+    const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
+    const IsInlineParameterStringBindingFn &isStringBinding,
+    const EmitInlineParameterStringValueFn &emitStringValueForCall,
+    const InferInlineParameterStructExprPathFn &inferStructExprPath,
+    const InferInlineParameterExprKindFn &inferExprKind,
+    const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
+    const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
+    const EmitInlineParameterExprFn &emitExpr,
+    const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
+    const AllocInlineParameterTempLocalFn &allocTempLocal,
+    const EmitInlineParameterInstructionFn &emitInstruction,
+    const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
+    std::string &error,
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
   for (size_t i = 0; i < callParams.size(); ++i) {
     const Expr &param = callParams[i];
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;
     LocalInfo paramInfo;
-    paramInfo.index = nextLocal++;
     if (!inferCallParameterLocalInfo(param, paramInfo, error)) {
       return false;
+    }
+    const bool reserveIndexEarly =
+        i == packedParamIndex ||
+        paramInfo.kind != LocalInfo::Kind::Map ||
+        !paramInfo.structTypeName.empty();
+    if (reserveIndexEarly) {
+      paramInfo.index = nextLocal++;
+    } else {
+      paramInfo.index = -1;
     }
 
     if (i == packedParamIndex) {
@@ -46,6 +237,7 @@ bool emitInlineDefinitionCallParameters(
                                          emitStringValueForCall,
                                          inferStructExprPath,
                                          inferExprKind,
+                                         resolveDefinitionCall,
                                          resolveStructSlotLayout,
                                          emitExpr,
                                          emitStructCopySlots,
@@ -325,8 +517,20 @@ bool emitInlineDefinitionCallParameters(
       error = "argument count mismatch";
       return false;
     }
-    if (!emitExpr(*orderedArg, callerLocals)) {
+    Expr rewrittenMapArgExpr;
+    const Expr *emittedArgExpr = orderedArg;
+    if (paramInfo.kind == LocalInfo::Kind::Map &&
+        paramInfo.structTypeName.empty() &&
+        orderedArg->kind == Expr::Kind::Call &&
+        rewriteBuiltinMapConstructorExpr(
+            *orderedArg, paramInfo.mapKeyKind, paramInfo.mapValueKind, resolveDefinitionCall, rewrittenMapArgExpr)) {
+      emittedArgExpr = &rewrittenMapArgExpr;
+    }
+    if (!emitExpr(*emittedArgExpr, callerLocals)) {
       return false;
+    }
+    if (paramInfo.index < 0) {
+      paramInfo.index = nextLocal++;
     }
     calleeLocals.emplace(param.name, paramInfo);
     emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));

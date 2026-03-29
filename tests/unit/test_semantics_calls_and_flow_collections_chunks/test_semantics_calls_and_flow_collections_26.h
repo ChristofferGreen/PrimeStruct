@@ -502,7 +502,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map stdlib namespaced count expression falls back to map alias helper") {
+TEST_CASE("map stdlib namespaced count expression does not fall back to map alias helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -516,11 +516,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("map stdlib namespaced count expression fallback keeps map alias diagnostics") {
+TEST_CASE("map stdlib namespaced count expression keeps canonical diagnostics when alias helper exists") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values) {
@@ -535,7 +535,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /map/count") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("map compatibility count call keeps explicit alias precedence with canonical templated helper present") {
@@ -584,7 +584,7 @@ main() {
   CHECK(error.find("argument count mismatch for /map/count") != std::string::npos);
 }
 
-TEST_CASE("map stdlib namespaced count expression infers templated alias helper fallback") {
+TEST_CASE("map stdlib namespaced count expression ignores templated alias helper fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -599,7 +599,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("map compatibility count call does not inherit canonical templated helper") {
@@ -642,4 +642,3 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-

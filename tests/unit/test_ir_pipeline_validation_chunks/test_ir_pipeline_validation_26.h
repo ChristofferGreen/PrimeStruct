@@ -388,7 +388,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             },
             [&](const primec::Expr &) -> const primec::Definition * {
               ++explicitVectorCountLocalResolveDefinitionCalls;
-              return nullptr;
+              return &callee;
             },
             [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
               ++explicitVectorCountLocalEmitCalls;
@@ -396,8 +396,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             },
             error) == Result::Emitted);
   CHECK(error == "stale");
-  CHECK(explicitVectorCountLocalResolveMethodCalls == 1);
-  CHECK(explicitVectorCountLocalResolveDefinitionCalls == 0);
+  CHECK(explicitVectorCountLocalResolveMethodCalls == 0);
+  CHECK(explicitVectorCountLocalResolveDefinitionCalls == 1);
   CHECK(explicitVectorCountLocalEmitCalls == 1);
 
   primec::Expr canonicalPushCall;
@@ -560,4 +560,3 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
             [](const primec::Expr &, std::string &) { return false; },
             error) == Result::NotHandled);
 }
-

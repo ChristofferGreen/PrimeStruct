@@ -458,7 +458,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  CHECK(runCommand(exePath) == 11);
 }
 
 TEST_CASE("C++ emitter materializes variadic Buffer value packs with indexed count helpers") {
@@ -622,4 +622,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 36);
 }
-

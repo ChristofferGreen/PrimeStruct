@@ -25,7 +25,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map count call validates without imported canonical helper") {
+TEST_CASE("bare map count call requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -34,8 +34,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("bare map count call resolves through canonical helper definition") {
@@ -627,4 +627,3 @@ main() {
   CHECK(error.find("Comparable") != std::string::npos);
   CHECK(error.find("builtin Comparable key type") != std::string::npos);
 }
-
