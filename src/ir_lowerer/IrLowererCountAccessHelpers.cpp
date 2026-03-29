@@ -95,6 +95,16 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     return false;
   }
   const Expr &target = expr.args.front();
+  const bool isBareVectorCountCall =
+      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.name == "count" &&
+      expr.namespacePrefix.empty();
+  if ((isBareVectorCountCall || isExplicitVectorCompatibilityName(expr, "count") ||
+       (expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.name == "count" &&
+        (expr.namespacePrefix == "/std/collections/vector" ||
+         expr.namespacePrefix == "std/collections/vector"))) &&
+      isVectorCountTarget(target, localsIn)) {
+    return false;
+  }
   if (isExplicitArrayCountName(expr) && isVectorCountTarget(target, localsIn)) {
     return false;
   }
@@ -185,6 +195,19 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
     return false;
   }
   const Expr &target = expr.args.front();
+  const bool isBareVectorCapacityCall =
+      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.name == "capacity" &&
+      expr.namespacePrefix.empty();
+  const bool isExplicitVectorCapacityCall =
+      expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
+      ((expr.name == "/vector/capacity" || expr.name == "/std/collections/vector/capacity") ||
+       (expr.name == "capacity" &&
+        (expr.namespacePrefix == "/std/collections/vector" ||
+         expr.namespacePrefix == "std/collections/vector")));
+  if ((isBareVectorCapacityCall || isExplicitVectorCapacityCall) &&
+      isVectorCountTarget(target, localsIn)) {
+    return false;
+  }
   auto isSupportedVectorTarget = [&](const LocalInfo &info, bool fromArgsPack) {
     const LocalInfo::Kind kind = fromArgsPack ? info.argsPackElementKind : info.kind;
     if (info.isSoaVector) {
@@ -293,62 +316,23 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
-  auto isExplicitStdVectorHelperCall = [&](std::string_view helperName) {
-    if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name != helperName) {
-      return false;
-    }
-    return expr.namespacePrefix == "/std/collections/vector" ||
-           expr.namespacePrefix == "std/collections/vector";
-  };
-  const bool isExplicitStdVectorCountCall =
-      isExplicitStdVectorHelperCall("count") &&
-      expr.args.size() == 1 && isVectorCountTarget(expr.args.front(), localsIn);
-  const bool isExplicitStdVectorCapacityCall =
-      isExplicitStdVectorHelperCall("capacity") &&
-      expr.args.size() == 1 &&
-      ((expr.args.front().kind == Expr::Kind::Name &&
-        [&]() {
-          auto it = localsIn.find(expr.args.front().name);
-          return it != localsIn.end() &&
-                 (it->second.kind == LocalInfo::Kind::Vector ||
-                  (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
-                  (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector));
-        }()) ||
-       (expr.args.front().kind == Expr::Kind::Call &&
-        [&]() {
-          std::string collection;
-          return getBuiltinCollectionName(expr.args.front(), collection) &&
-                 collection == "vector" && expr.args.front().templateArgs.size() == 1;
-        }()));
-
   const bool blocksBareVectorCountCall =
       expr.kind == Expr::Kind::Call && expr.name == "count" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
       (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn) &&
        !isVectorCountTarget(expr.args.front(), localsIn));
+  const bool blocksLocalVectorCountCall =
+      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.args.size() == 1 &&
+      isVectorBuiltinName(expr, "count") && isVectorCountTarget(expr.args.front(), localsIn);
   const bool blocksBareVectorCapacityCall =
       expr.kind == Expr::Kind::Call && expr.name == "capacity" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
       (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn) &&
        !(isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)));
-  if (blocksBareVectorCountCall || blocksBareVectorCapacityCall) {
+  const bool blocksLocalVectorCapacityCall =
+      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.args.size() == 1 &&
+      isVectorBuiltinName(expr, "capacity") && isVectorCountTarget(expr.args.front(), localsIn);
+  if (blocksBareVectorCountCall || blocksLocalVectorCountCall ||
+      blocksBareVectorCapacityCall || blocksLocalVectorCapacityCall) {
     return CountAccessCallEmitResult::NotHandled;
-  }
-
-  if (isExplicitStdVectorCountCall) {
-    if (!emitExpr(expr.args.front(), localsIn)) {
-      return CountAccessCallEmitResult::Error;
-    }
-    emitInstruction(IrOpcode::LoadIndirect, 0);
-    return CountAccessCallEmitResult::Emitted;
-  }
-
-  if (isExplicitStdVectorCapacityCall) {
-    if (!emitExpr(expr.args.front(), localsIn)) {
-      return CountAccessCallEmitResult::Error;
-    }
-    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::LoadIndirect, 0);
-    return CountAccessCallEmitResult::Emitted;
   }
 
   if (isArrayCountCallFn(expr, localsIn)) {

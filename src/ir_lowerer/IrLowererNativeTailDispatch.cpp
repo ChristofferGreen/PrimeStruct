@@ -73,9 +73,26 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     std::string &error) {
+  static const LocalMap emptyLocals;
+  return emitUnsupportedNativeCallDiagnostic(expr, emptyLocals, tryGetPrintBuiltinName, error);
+}
+
+UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    std::string &error) {
+  if (!expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+      isVectorTarget(expr.args.front(), localsIn)) {
+    return UnsupportedNativeCallResult::NotHandled;
+  }
   if (!expr.isMethodCall && (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count"))) {
     error = "count requires array, vector, map, or string target";
     return UnsupportedNativeCallResult::Error;
+  }
+  if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+      isVectorTarget(expr.args.front(), localsIn)) {
+    return UnsupportedNativeCallResult::NotHandled;
   }
   if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity")) {
     error = "capacity requires vector target";
@@ -298,7 +315,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(
-      expr, tryGetPrintBuiltinName, error);
+      expr, localsIn, tryGetPrintBuiltinName, error);
   if (unsupportedCallResult == UnsupportedNativeCallResult::Error) {
     return NativeCallTailDispatchResult::Error;
   }

@@ -120,7 +120,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                  "native backend requires map lookup key type to match map key type");
 }
 
-TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out of native builtin emission") {
+TEST_CASE("ir lowerer call helpers keep local vector count capacity calls out of native builtin emission") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;
@@ -219,10 +219,10 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
     CHECK(instructions.empty() != expectInstructions);
   };
 
-  expectDispatch("/vector/count", {valuesName}, Result::Emitted, "stale", true);
-  expectDispatch("/std/collections/vector/count", {valuesName}, Result::Emitted, "stale", true);
-  expectDispatch("/vector/capacity", {valuesName}, Result::Emitted, "stale", true);
-  expectDispatch("/std/collections/vector/capacity", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/vector/count", {valuesName}, Result::NotHandled, "stale", false);
+  expectDispatch("/std/collections/vector/count", {valuesName}, Result::NotHandled, "stale", false);
+  expectDispatch("/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
+  expectDispatch("/std/collections/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
   expectDispatch("/vector/at",
                  {valuesName, indexName},
                  Result::Error,
@@ -278,9 +278,9 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCountError) == Result::Emitted);
+            bareCountError) == Result::NotHandled);
   CHECK(bareCountError == "stale");
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
 
   primec::Expr bareCapacityCall;
   bareCapacityCall.kind = primec::Expr::Kind::Call;
@@ -316,8 +316,7 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count access helpers out
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCapacityError) == Result::Emitted);
+            bareCapacityError) == Result::NotHandled);
   CHECK(bareCapacityError == "stale");
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
 }
-
