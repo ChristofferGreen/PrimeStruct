@@ -161,14 +161,6 @@ bool SemanticsValidator::buildParameters() {
       }
       return isResolvedMapConstructorPath(normalizedPath);
     };
-    auto isBuiltinResultOkPayloadCall = [](const Expr &candidate) {
-      if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name != "ok" ||
-          candidate.args.size() != 2) {
-        return false;
-      }
-      const Expr &receiver = candidate.args.front();
-      return receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "Result";
-    };
     std::function<bool(const Expr &)> isAllowedExperimentalMapDefaultExpr = [&](const Expr &candidate) {
       if (isDefaultExprAllowed(candidate, defaultResolvesToDefinition)) {
         return true;
@@ -178,9 +170,6 @@ bool SemanticsValidator::buildParameters() {
       }
       if (hasNamedArguments(candidate.argNames) || candidate.hasBodyArguments || !candidate.bodyArguments.empty()) {
         return false;
-      }
-      if (isBuiltinResultOkPayloadCall(candidate)) {
-        return isAllowedExperimentalMapDefaultExpr(candidate.args.back());
       }
       const std::string resolvedPath = resolveCalleePath(candidate);
       const bool isDirectExperimentalMapConstructor = isResolvedExperimentalMapConstructorPath(resolvedPath);
