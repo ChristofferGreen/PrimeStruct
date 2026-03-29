@@ -440,7 +440,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects canonical direct map access without helper before C++ lowering") {
+TEST_CASE("C++ emitter rejects canonical direct map access before deleted stubs") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -459,7 +459,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects canonical direct map access without helper in C++ emitter") {

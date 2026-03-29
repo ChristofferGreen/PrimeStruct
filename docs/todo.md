@@ -91,6 +91,7 @@ Map IR checkpoint: direct `/map/count|contains|tryAt|at|at_unsafe` compatibility
 - ◐ Map emitter deleted-helper stub cleanup slice: finish replacing the remaining builtin `ps_map_*` fallback emission paths with deleted-helper stubs or same-path rejects for missing canonical map helpers.
   - ✓ Remove the dead C++ emitter deleted-helper fallback for explicit map-access count receivers. Progress: `count(/std/collections/map/at(...))` missing-helper cases now rely only on the existing semantic-stage same-path rejects, and the unused `ps_missing_map_access_count_receiver_helper` emitter/prelude path is gone.
   - ✓ Remove the dead C++ emitter deleted-helper fallback for explicit map-access contains receivers. Progress: bare `contains(/std/collections/map/at(...), key)` and wrapper-returned slash-method receiver variants now rely only on the existing semantic-stage `unknown call target: contains` reject contract, and the unused `ps_missing_map_access_contains_receiver_helper` emitter/prelude path is gone.
+  - ✓ Remove the dead C++ emitter deleted-helper fallback for explicit direct map-access calls. Progress: explicit `/std/collections/map/at(...)`, `/std/collections/map/at_unsafe(...)`, `/map/at(...)`, and `/map/at_unsafe(...)` direct calls now rely only on the existing semantic-stage same-path `unknown call target` rejects, and the unused `ps_missing_map_at_call_helper` / `ps_missing_map_at_unsafe_call_helper` emitter/prelude paths are gone.
 
 
 **Group 7 - Compatibility cleanup and vector runtime substrate**

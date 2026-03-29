@@ -4,9 +4,6 @@
     if (isNoHelperExplicitVectorAccessCallFallback(expr)) {
       return emitMissingExplicitVectorAccessCall(expr);
     }
-    if (isNoHelperExplicitMapAccessCallFallback(expr)) {
-      return emitMissingExplicitMapAccessCall(expr);
-    }
     if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
         isNoHelperExplicitVectorAccessCountReceiver(expr.args.front())) {
       std::ostringstream out;

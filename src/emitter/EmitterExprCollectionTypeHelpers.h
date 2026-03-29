@@ -405,18 +405,6 @@
            normalized == "std/collections/map/at" ||
            normalized == "std/collections/map/at_unsafe";
   };
-  auto isExplicitMapAccessDirectCall = [&](const Expr &candidate) {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-      return false;
-    }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    return normalized == "map/at" || normalized == "map/at_unsafe" ||
-           normalized == "std/collections/map/at" ||
-           normalized == "std/collections/map/at_unsafe";
-  };
   auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
     if (isStringValue(targetExpr, localTypes)) {
       return "/string";
