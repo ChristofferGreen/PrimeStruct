@@ -408,7 +408,7 @@ main() {
   CHECK(readFile(errPath).find("ps_missing_map_access_count_receiver_helper") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter runs builtin count on wrapper-returned canonical map string access") {
+TEST_CASE("C++ emitter rejects bare builtin count on wrapper-returned canonical map access before lowering") {
   const std::string source = R"(
 [return</std/collections/map<i32, string>>]
 wrapMap() {
@@ -434,7 +434,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend does not support string array return types on /wrapMap") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
         std::string::npos);
 }
 

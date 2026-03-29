@@ -732,7 +732,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native builtin count on wrapper-returned canonical map string access") {
+TEST_CASE("native rejects bare builtin count on wrapper-returned canonical map access before lowering") {
   const std::string source = R"(
 [return</std/collections/map<i32, string>>]
 wrapMap() {
@@ -750,15 +750,16 @@ main() {
       (testScratchPath("") /
        "primec_native_builtin_count_wrapper_canonical_map_string_access_exe")
           .string();
-  const std::string outPath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_builtin_count_wrapper_canonical_map_string_access_out.txt")
+       "primec_native_builtin_count_wrapper_canonical_map_string_access.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(outPath).empty());
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user string count method shadow on wrapper-returned canonical map access") {

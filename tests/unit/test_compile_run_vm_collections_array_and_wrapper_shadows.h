@@ -500,7 +500,7 @@ main() {
   CHECK(readFile(errPath).find("VM error: invalid string index in IR") != std::string::npos);
 }
 
-TEST_CASE("vm rejects builtin count on wrapper-returned canonical map string access") {
+TEST_CASE("vm rejects bare builtin count on wrapper-returned canonical map access before lowering") {
   const std::string source = R"(
 [return</std/collections/map<i32, string>>]
 wrapMap() {
@@ -513,8 +513,14 @@ main() {
 }
   )";
   const std::string srcPath = writeTemp("vm_builtin_count_wrapper_canonical_map_string_access.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_builtin_count_wrapper_canonical_map_string_access.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("vm rejects user string count method shadow on wrapper-returned canonical map access") {
