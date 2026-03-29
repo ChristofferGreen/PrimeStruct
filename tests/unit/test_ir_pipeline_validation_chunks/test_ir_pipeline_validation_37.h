@@ -594,4 +594,3 @@ TEST_CASE("ir lowerer setup type helper resolves struct receiver method definiti
   CHECK(resolved == &structMethodDef);
   CHECK(error.empty());
 }
-
