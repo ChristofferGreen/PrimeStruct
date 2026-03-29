@@ -28,7 +28,9 @@ Stdlib container substrate note: the items below are the hard prerequisites for 
   - ◐ Re-enable the remaining helper-wrapped experimental-map dereference-assignment, uninitialized-storage, and result-storage target cases still hard-disabled in collection chunks `11` and `12`.
     - ✓ Re-enable the helper-wrapped experimental-map dereference-assignment targets in collection chunk `11`.
     - ✓ Re-enable the helper-wrapped experimental-map uninitialized-storage targets in collection chunk `11`.
-    - ○ Re-enable the helper-wrapped experimental result-storage targets in collection chunks `11` and `12`.
+    - ◐ Re-enable the helper-wrapped experimental result-storage targets in collection chunks `11` and `12`.
+      - ✓ Re-enable the helper-wrapped experimental result uninitialized-storage targets in collection chunks `11` and `12`.
+      - ○ Re-enable the helper-wrapped experimental result struct-field storage targets in collection chunk `12`.
   - ✓ Re-enable the helper-wrapped explicit, inferred, and dereferenced experimental-map struct-field assignment cases still hard-disabled in collection chunk `15`.
 
 
