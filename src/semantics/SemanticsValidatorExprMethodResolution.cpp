@@ -138,6 +138,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     if (receiverExpr.kind != Expr::Kind::Call || !receiverExpr.isMethodCall) {
       return false;
     }
+    if (inferExprReturnKind(receiverExpr, params, locals) == ReturnKind::String) {
+      return false;
+    }
     std::string accessHelperName;
     if (!getBuiltinArrayAccessName(receiverExpr, accessHelperName) ||
         (accessHelperName != "at" && accessHelperName != "at_unsafe")) {

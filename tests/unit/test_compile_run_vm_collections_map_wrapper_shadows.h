@@ -26,7 +26,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("vm keeps direct wrapper-returned canonical map access count diagnostics") {
+TEST_CASE("vm keeps direct wrapper-returned canonical map access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -50,18 +50,11 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_direct_wrapper_canonical_map_access_count_diag.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_direct_wrapper_canonical_map_access_count_diag.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("vm keeps wrapper-returned canonical map method access count diagnostics") {
+TEST_CASE("vm keeps wrapper-returned canonical map method access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -91,14 +84,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_wrapper_canonical_map_method_access_count_diag.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_wrapper_canonical_map_method_access_count_diag.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values: expected string") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 182);
 }
 
 TEST_CASE("vm keeps wrapper-returned slash-method map access primitive count diagnostics") {
@@ -639,4 +626,3 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
-

@@ -528,7 +528,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps direct wrapper-returned canonical map access count diagnostics") {
+TEST_CASE("C++ emitter keeps direct wrapper-returned canonical map access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -552,18 +552,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_wrapper_canonical_map_access_count_diag.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_direct_wrapper_canonical_map_access_count_diag.err")
+       "primec_cpp_direct_wrapper_canonical_map_access_count_diag_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("C++ emitter keeps wrapper-returned canonical map method access count diagnostics") {
+TEST_CASE("C++ emitter keeps wrapper-returned canonical map method access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -593,15 +593,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_map_method_access_count_diag.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_wrapper_canonical_map_method_access_count_diag.err")
+       "primec_cpp_wrapper_canonical_map_method_access_count_diag_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 182);
 }
 
 TEST_CASE("C++ emitter keeps non-string diagnostics on direct-call wrapper-returned canonical map reference access") {
@@ -634,4 +634,3 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
-

@@ -331,6 +331,24 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       const Expr &receiver =
           candidate.isMethodCall ? candidate.args.front()
                                  : (candidate.args.empty() ? candidate : candidate.args.front());
+      if (candidate.isMethodCall && !isExplicitAccessAlias) {
+        std::string resolvedMethodTarget;
+        bool isBuiltinMethod = false;
+        if (resolveMethodTarget(params, locals, candidate.namespacePrefix, receiver, candidate.name,
+                                resolvedMethodTarget, isBuiltinMethod)) {
+          auto resolvedMethodIt = defMap_.find(resolvedMethodTarget);
+          if (resolvedMethodIt != defMap_.end() && resolvedMethodIt->second != nullptr) {
+            for (const auto &transform : resolvedMethodIt->second->transforms) {
+              if (transform.name != "return" || transform.templateArgs.size() != 1 ||
+                  transform.templateArgs.front() == "auto") {
+                continue;
+              }
+              currentTypeTextOut = transform.templateArgs.front();
+              return !currentTypeTextOut.empty();
+            }
+          }
+        }
+      }
       std::string elemType;
       std::string keyType;
       std::string valueType;

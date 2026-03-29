@@ -270,7 +270,7 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
-TEST_CASE("native keeps direct wrapper-returned canonical map access count diagnostics") {
+TEST_CASE("native keeps direct wrapper-returned canonical map access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -294,18 +294,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_direct_wrapper_canonical_map_access_count_diag.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_native_direct_wrapper_canonical_map_access_count_diag.err")
+       "primec_native_direct_wrapper_canonical_map_access_count_diag_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("native keeps wrapper-returned canonical map method access count diagnostics") {
+TEST_CASE("native keeps wrapper-returned canonical map method access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -335,15 +335,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_canonical_map_method_access_count_diag.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_native_wrapper_canonical_map_method_access_count_diag.err")
+       "primec_native_wrapper_canonical_map_method_access_count_diag_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 182);
 }
 
 TEST_CASE("native keeps wrapper-returned slash-method map access primitive count diagnostics") {
@@ -692,4 +692,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 61);
 }
-

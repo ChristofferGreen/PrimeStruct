@@ -314,7 +314,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("wrapper-returned canonical map method access count keeps primitive diagnostics") {
+TEST_CASE("wrapper-returned canonical map method access count keeps string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -343,9 +343,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /string/count parameter values: expected string") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical vector access count call keeps builtin string helper shadow") {
@@ -647,4 +646,3 @@ main() {
   CHECK(error.find("return type mismatch") != std::string::npos);
   CHECK(error.find("expected i32") != std::string::npos);
 }
-
