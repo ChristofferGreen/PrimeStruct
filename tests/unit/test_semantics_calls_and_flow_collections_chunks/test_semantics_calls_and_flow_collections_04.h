@@ -312,7 +312,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("capacity method on vector binding validates without imported stdlib helper") {
+TEST_CASE("capacity method on vector binding requires imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -321,8 +321,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("capacity wrapper temporaries infer i32 for chained methods") {
@@ -398,7 +398,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin capacity") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("capacity rejects non-vector target") {

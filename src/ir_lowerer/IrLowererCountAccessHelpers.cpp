@@ -316,6 +316,26 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
+  if (isArrayCountCallFn(expr, localsIn)) {
+    if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
+        expr.args.front().kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.args.front().name);
+      if (it != localsIn.end() && it->second.isArgsPack && it->second.argsPackElementCount >= 0) {
+        emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(it->second.argsPackElementCount));
+        return CountAccessCallEmitResult::Emitted;
+      }
+    }
+    if (isEntryArgsNameFn(expr.args.front(), localsIn)) {
+      emitInstruction(IrOpcode::PushArgc, 0);
+      return CountAccessCallEmitResult::Emitted;
+    }
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+
   const bool blocksBareVectorCountCall =
       expr.kind == Expr::Kind::Call && expr.name == "count" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
       (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn) &&
@@ -333,18 +353,6 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   if (blocksBareVectorCountCall || blocksLocalVectorCountCall ||
       blocksBareVectorCapacityCall || blocksLocalVectorCapacityCall) {
     return CountAccessCallEmitResult::NotHandled;
-  }
-
-  if (isArrayCountCallFn(expr, localsIn)) {
-    if (isEntryArgsNameFn(expr.args.front(), localsIn)) {
-      emitInstruction(IrOpcode::PushArgc, 0);
-      return CountAccessCallEmitResult::Emitted;
-    }
-    if (!emitExpr(expr.args.front(), localsIn)) {
-      return CountAccessCallEmitResult::Error;
-    }
-    emitInstruction(IrOpcode::LoadIndirect, 0);
-    return CountAccessCallEmitResult::Emitted;
   }
 
   if (isVectorCapacityCallFn(expr, localsIn)) {

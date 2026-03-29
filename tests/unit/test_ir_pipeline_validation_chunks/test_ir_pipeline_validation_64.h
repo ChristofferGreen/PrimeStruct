@@ -92,7 +92,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode, uint64_t) {},
-            error) == Result::Error);
+            error) == Result::NotHandled);
   CHECK(error == "stale");
   CHECK(instructions.empty());
 
@@ -116,10 +116,10 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(capacityEmitExprCalls == 1);
+            error) == Result::NotHandled);
+  CHECK(capacityEmitExprCalls == 0);
   CHECK(error.empty());
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();
@@ -135,7 +135,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Error);
+            error) == Result::NotHandled);
   CHECK(instructions.empty());
 
   instructions.clear();
@@ -269,9 +269,9 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
-  CHECK(isVectorCapacityCall(capacityCall, locals));
+  CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
   capacityCall.name = "/std/collections/vector/capacity";
-  CHECK(isVectorCapacityCall(capacityCall, locals));
+  CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
 
   primec::Expr stringCount;
   stringCount.kind = primec::Expr::Kind::Call;
@@ -312,9 +312,9 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
-  CHECK(classifiers.isVectorCapacityCall(capacityCall, locals));
+  CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
   capacityCall.name = "/vector/capacity";
-  CHECK(classifiers.isVectorCapacityCall(capacityCall, locals));
+  CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
   CHECK_FALSE(classifiers.isStringCountCall(capacityCall, locals));
 }
 
@@ -645,4 +645,3 @@ TEST_CASE("ir lowerer runtime error helpers emit file-error why dispatch sequenc
                     function.instructions.end(),
                     [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::Jump; }));
 }
-

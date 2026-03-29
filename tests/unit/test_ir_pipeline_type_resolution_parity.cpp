@@ -320,7 +320,7 @@ main() {
 }
 )",
           false,
-          "unknown call target: /std/collections/map/at",
+          "unknown method: /vector/at",
       },
       {
           "auto_collection_receiver_classifiers",

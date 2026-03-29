@@ -129,7 +129,7 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper())}
+  [vector<Wrapper> mut] values{vector<Wrapper>()}
   clear(values)
   return(0i32)
 }
@@ -298,7 +298,7 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned())}
+  [vector<Owned> mut] values{vector<Owned>()}
   remove_at(values, 0i32)
   return(0i32)
 }
@@ -331,7 +331,7 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(), Wrapper())}
+  [vector<Wrapper> mut] values{vector<Wrapper>()}
   remove_at(values, 0i32)
   return(0i32)
 }
@@ -473,7 +473,7 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned())}
+  [vector<Owned> mut] values{vector<Owned>()}
   remove_swap(values, 0i32)
   return(0i32)
 }
@@ -506,7 +506,7 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(), Wrapper())}
+  [vector<Wrapper> mut] values{vector<Wrapper>()}
   remove_swap(values, 0i32)
   return(0i32)
 }
@@ -624,4 +624,3 @@ TEST_CASE("vector helper named args on array targets report vector binding") {
   checkInvalidStatement("values.remove_at([index] 0i32)");
   checkInvalidStatement("values.remove_swap([index] 0i32)");
 }
-

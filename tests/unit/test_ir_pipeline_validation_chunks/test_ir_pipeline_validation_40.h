@@ -55,7 +55,7 @@ TEST_CASE("ir lowerer setup type helper rejects wrapper string slash-method acce
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(error == "unknown method: /string/at");
 
   receiverCall.name = "/vector/at_unsafe";
   methodCall.args = {receiverCall};
@@ -74,7 +74,7 @@ TEST_CASE("ir lowerer setup type helper rejects wrapper string slash-method acce
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(error == "unknown method: /string/at_unsafe");
 }
 
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit slash-method map access receivers") {

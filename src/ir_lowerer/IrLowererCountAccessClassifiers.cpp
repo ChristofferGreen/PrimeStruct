@@ -51,15 +51,14 @@ bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
     auto it = localsIn.find(target.name);
     return it != localsIn.end() &&
            (it->second.kind == LocalInfo::Kind::Vector ||
-            (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
-            it->second.isSoaVector);
+            (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector));
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
     if (!getBuiltinCollectionName(target, collection)) {
       return false;
     }
-    return (collection == "vector" || collection == "soa_vector") && target.templateArgs.size() == 1;
+    return collection == "vector" && target.templateArgs.size() == 1;
   }
   return false;
 }

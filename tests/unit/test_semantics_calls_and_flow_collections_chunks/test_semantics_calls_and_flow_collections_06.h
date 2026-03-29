@@ -14,7 +14,7 @@ Mover() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Mover> mut] values{vector<Mover>(Mover())}
+  [vector<Mover> mut] values{vector<Mover>()}
   push(values, Mover())
   return(0i32)
 }
@@ -476,7 +476,7 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper())}
+  [vector<Wrapper> mut] values{vector<Wrapper>()}
   reserve(values, 4i32)
   return(0i32)
 }
@@ -638,7 +638,7 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Owned> mut] values{vector<Owned>(Owned())}
+  [vector<Owned> mut] values{vector<Owned>()}
   pop(values)
   return(0i32)
 }

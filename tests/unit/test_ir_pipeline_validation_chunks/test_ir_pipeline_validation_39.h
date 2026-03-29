@@ -707,7 +707,7 @@ TEST_CASE("ir lowerer setup type helper rejects slash-method vector alias primit
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(error == "unknown method: /vector/at");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects wrapper string access primitive receiver fallback") {
