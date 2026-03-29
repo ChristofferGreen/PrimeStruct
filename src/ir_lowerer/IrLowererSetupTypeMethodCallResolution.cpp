@@ -341,14 +341,27 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       }
     } else {
       LocalInfo::ValueKind inferredReceiverKind = LocalInfo::ValueKind::Unknown;
+      auto isBareMapAccessReceiverProbeExpr = [&](const Expr &candidateExpr) {
+        if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.args.size() != 2) {
+          return false;
+        }
+        std::string accessName;
+        return getBuiltinArrayAccessName(candidateExpr, accessName) &&
+               resolveMapAccessTargetInfo(candidateExpr.args.front(), localsIn).isMapTarget;
+      };
       const bool blocksExplicitMapReceiverProbeKindFallback =
           isExplicitMapReceiverProbeHelperExpr(*receiver);
+      const bool blocksBareMapAccessReceiverProbeKindFallback =
+          isBareMapAccessReceiverProbeExpr(*receiver);
       const bool blocksExplicitVectorAccessKindFallback = isExplicitVectorAccessHelperExpr(*receiver);
-      if (!inferBuiltinAccessReceiverResultKind(
-              *receiver, localsIn, inferExprKind, resolveExprPath, getReturnInfo, defMap, inferredReceiverKind) &&
-          inferExprKind && !blocksExplicitMapReceiverProbeKindFallback &&
+      if (!blocksExplicitMapReceiverProbeKindFallback &&
+          !blocksBareMapAccessReceiverProbeKindFallback &&
           !blocksExplicitVectorAccessKindFallback) {
-        inferredReceiverKind = inferExprKind(*receiver, localsIn);
+        if (!inferBuiltinAccessReceiverResultKind(
+                *receiver, localsIn, inferExprKind, resolveExprPath, getReturnInfo, defMap, inferredReceiverKind) &&
+            inferExprKind) {
+          inferredReceiverKind = inferExprKind(*receiver, localsIn);
+        }
       }
       const std::string inferredReceiverTypeName = typeNameForValueKind(inferredReceiverKind);
       if (!inferredReceiverTypeName.empty()) {
