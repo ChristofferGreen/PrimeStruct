@@ -80,9 +80,13 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
            context.resolveVectorTarget(expr.args.front(), elemType)) ||
           (context.resolveArrayTarget != nullptr &&
            context.resolveArrayTarget(expr.args.front(), elemType)) ||
-          (context.resolveStringTarget != nullptr && context.resolveStringTarget(expr.args.front())) ||
-          (context.resolveMapTarget != nullptr &&
-           context.resolveMapTarget(expr.args.front(), keyType, valueType))) {
+          (context.resolveStringTarget != nullptr &&
+           context.resolveStringTarget(expr.args.front()))) {
+        return ReturnKind::Int;
+      }
+      if (context.shouldInferBuiltinBareMapCountCall &&
+          context.resolveMapTarget != nullptr &&
+          context.resolveMapTarget(expr.args.front(), keyType, valueType)) {
         return ReturnKind::Int;
       }
     }

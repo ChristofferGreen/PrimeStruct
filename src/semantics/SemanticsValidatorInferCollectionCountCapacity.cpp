@@ -17,6 +17,7 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
   std::string mapKeyType;
   std::string mapValueType;
   if (context.isUnnamespacedMapCountFallbackCall &&
+      context.shouldInferBuiltinBareMapCountCall &&
       context.hasDeclaredDefinitionPath != nullptr &&
       !context.hasDeclaredDefinitionPath("/std/collections/map/count") &&
       !context.hasDeclaredDefinitionPath("/map/count") &&

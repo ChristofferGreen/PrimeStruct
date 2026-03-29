@@ -89,8 +89,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_count_method_without_import_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 1);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs vm bare map contains through canonical helper") {
@@ -630,4 +630,3 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   expectVmVectorCountCompatibilityTypeMismatchReject(runCmd);
 }
-

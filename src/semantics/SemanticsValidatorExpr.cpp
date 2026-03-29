@@ -217,7 +217,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     ExprDispatchBootstrap dispatchBootstrap;
     prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
-    const bool shouldBuiltinValidateBareMapCountCall = true;
+    const bool shouldBuiltinValidateBareMapCountCall =
+        shouldBuiltinValidateCurrentMapWrapperHelper("count");
     const bool shouldBuiltinValidateBareMapContainsCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("contains");
     const bool shouldBuiltinValidateBareMapTryAtCall =

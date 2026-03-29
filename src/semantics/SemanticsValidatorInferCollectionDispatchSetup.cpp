@@ -133,7 +133,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
             extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
   };
 
-  const bool shouldInferBuiltinBareMapCountCall = true;
+  const bool shouldInferBuiltinBareMapCountCall =
+      shouldBuiltinValidateCurrentMapWrapperHelper("count");
   auto preferVectorStdlibHelperPathForDispatch =
       [&](const std::string &path) {
         return preferVectorStdlibHelperPath(path);

@@ -217,9 +217,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         !hasDeclaredDefinitionPath("/map/count") &&
         !hasImportedDefinitionPath("/std/collections/map/count") &&
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-        !context.shouldBuiltinValidateBareMapCountCall &&
-        !(context.resolveMapTarget != nullptr &&
-          context.resolveMapTarget(expr.args.front()))) {
+        !context.shouldBuiltinValidateBareMapCountCall) {
       error_ = "unknown call target: /std/collections/map/count";
       return false;
     }

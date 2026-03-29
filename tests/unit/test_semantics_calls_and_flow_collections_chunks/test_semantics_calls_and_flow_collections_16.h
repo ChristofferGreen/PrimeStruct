@@ -267,7 +267,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map unnamespaced count call validates without imported canonical helper") {
+TEST_CASE("map unnamespaced count call requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -276,11 +276,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("map unnamespaced count auto inference stays stable") {
+TEST_CASE("map unnamespaced count auto inference requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -290,8 +290,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("bare map at call resolves through canonical helper") {
@@ -601,4 +601,3 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
 }
-

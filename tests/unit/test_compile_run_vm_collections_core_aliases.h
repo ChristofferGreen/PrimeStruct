@@ -603,8 +603,8 @@ main() {
        "primec_vm_map_unnamespaced_count_builtin_fallback_no_canonical_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 1);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm bare map at through canonical helper") {
@@ -628,4 +628,3 @@ main() {
   CHECK(runCommand(runCmd) == 17);
   CHECK(readFile(outPath).empty());
 }
-

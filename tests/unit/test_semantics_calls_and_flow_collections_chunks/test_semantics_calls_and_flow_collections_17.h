@@ -446,7 +446,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("bare map count method validates without imported canonical helper") {
+TEST_CASE("bare map count method requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -455,11 +455,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("bare map count method auto inference stays stable") {
+TEST_CASE("bare map count method auto inference requires imported canonical helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -469,8 +469,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("bare map contains method requires imported canonical helper or explicit definition") {
@@ -637,4 +637,3 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-
