@@ -284,6 +284,29 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /array/count") != std::string::npos);
 }
 
+TEST_CASE("rejects vm array namespaced vector capacity method alias") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(values./array/capacity(true))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_namespaced_vector_capacity_method_alias.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_array_namespaced_vector_capacity_method_alias_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /array/capacity") != std::string::npos);
+}
+
 TEST_CASE("rejects vm map namespaced count compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

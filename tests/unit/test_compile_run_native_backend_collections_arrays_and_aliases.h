@@ -499,6 +499,34 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /array/count") != std::string::npos);
 }
 
+TEST_CASE("rejects native array namespaced vector capacity method alias") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(values./array/capacity(true))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_array_namespaced_vector_capacity_method_alias.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_array_namespaced_vector_capacity_method_alias_out.txt")
+          .string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_array_namespaced_vector_capacity_method_alias_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown method: /array/capacity") != std::string::npos);
+}
+
 TEST_CASE("rejects native map namespaced count compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
