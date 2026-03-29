@@ -518,3 +518,35 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /array/at_unsafe") != std::string::npos);
 }
+
+TEST_CASE("rejects native wrapper-returned array compatibility access slash method chains before receiver typing") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(wrapVector()./array/at(1i32).tag(),
+              wrapVector()./array/at_unsafe(2i32).tag()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wrapper_array_access_slash_method_chain_vector_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_wrapper_array_access_slash_method_chain_vector_no_helper.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /array/at") != std::string::npos);
+}

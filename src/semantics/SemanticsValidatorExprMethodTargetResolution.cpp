@@ -1797,6 +1797,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       if (accessReceiverIndex < receiver.args.size()) {
         const Expr &accessReceiver = receiver.args[accessReceiverIndex];
+        const std::string removedVectorAccessCompatibilityPath =
+            receiver.isMethodCall
+                ? this->explicitRemovedCollectionMethodPath(receiver.name, receiver.namespacePrefix)
+                : std::string();
+        if ((removedVectorAccessCompatibilityPath == "/array/at" ||
+             removedVectorAccessCompatibilityPath == "/array/at_unsafe") &&
+            !hasDefinitionPath(removedVectorAccessCompatibilityPath)) {
+          std::string vectorElemType;
+          if (resolveVectorTarget(accessReceiver, vectorElemType)) {
+            error_ = "unknown method: " + removedVectorAccessCompatibilityPath;
+            return false;
+          }
+        }
         std::string accessElemType;
         std::string accessValueType;
         if (resolveArgsPackAccessTarget(accessReceiver, accessElemType) ||
