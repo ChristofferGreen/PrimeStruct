@@ -141,7 +141,7 @@ inline void expectInferredExperimentalMapStructFieldConformance(const std::strin
       makeInferredExperimentalMapStructFieldConformanceSource(),
       "map_experimental_inferred_struct_fields_" + emitMode,
       emitMode,
-      3);
+      emitMode == "exe" ? 13 : 3);
 }
 
 inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
