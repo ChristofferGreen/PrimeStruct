@@ -266,6 +266,31 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         }
         info.valueKind = (args.size() == 1) ? LocalInfo::ValueKind::Int32 : LocalInfo::ValueKind::Int64;
         info.slotCount = 1;
+      } else if (isMapTypeName(binding.typeName)) {
+        std::string nestedStruct;
+        if (!resolveSpecializedExperimentalMapStructPath(binding.typeName, binding.typeTemplateArg, nestedStruct) &&
+            !resolveStructTypeName(buildTemplatedTypeName(binding.typeName, binding.typeTemplateArg),
+                                   namespacePrefix,
+                                   nestedStruct)) {
+          error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
+          layoutStack.erase(structPath);
+          return false;
+        }
+        StructSlotLayoutInfo nestedLayout;
+        if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
+                                                         collectStructLayoutFields,
+                                                         resolveDefinitionNamespacePrefix,
+                                                         resolveStructTypeName,
+                                                         valueKindFromTypeName,
+                                                         layoutCache,
+                                                         layoutStack,
+                                                         nestedLayout,
+                                                         error)) {
+          layoutStack.erase(structPath);
+          return false;
+        }
+        info.structPath = nestedStruct;
+        info.slotCount = nestedLayout.totalSlots;
       } else if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
         info.valueKind = LocalInfo::ValueKind::Int64;
         info.slotCount = 1;
@@ -282,14 +307,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.valueKind = valueKindFromTypeName(inlineTemplateArg);
         info.structPath = normalizeVectorStructPath(inlineTemplateBase);
         info.slotCount = isExperimentalVectorTypeName(inlineTemplateBase) ? 4 : 3;
-        layout.fields.push_back(info);
-        offset += info.slotCount;
-        continue;
-      }
-      if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
-          normalizeCollectionBindingTypeName(inlineTemplateBase) == "soa_vector") {
-        info.structPath = normalizeVectorStructPath(inlineTemplateBase);
-        info.slotCount = 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;
@@ -325,13 +342,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       if (isVectorTypeName(binding.typeName)) {
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
-        layout.fields.push_back(info);
-        offset += info.slotCount;
-        continue;
-      }
-      if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
-        info.structPath = normalizeVectorStructPath(binding.typeName);
-        info.slotCount = 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;
@@ -854,6 +864,60 @@ std::string inferStructPathFromCallTarget(
     if (collectionName == "soa_vector") {
       return "/soa_vector";
     }
+  }
+
+  std::string normalizedName = expr.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  auto resolveExperimentalMapConstructorStructPath = [&](const std::string &path) -> std::string {
+    constexpr std::string_view prefix = "std/collections/experimental_map/";
+    if (path.rfind(prefix, 0) != 0) {
+      return "";
+    }
+    const std::string suffix = path.substr(prefix.size());
+    auto remap = [&](std::string_view helperStem) -> std::string {
+      const std::string helperPrefix = std::string(helperStem) + "__";
+      if (suffix.rfind(helperPrefix, 0) != 0) {
+        return "";
+      }
+      return "/std/collections/experimental_map/Map__" + suffix.substr(helperPrefix.size());
+    };
+    if (std::string structPath = remap("mapNew"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapSingle"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapDouble"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapPair"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapTriple"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapQuad"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapQuint"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapSext"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapSept"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapOct"); !structPath.empty()) {
+      return structPath;
+    }
+    return "";
+  };
+  if (const std::string experimentalStructPath = resolveExperimentalMapConstructorStructPath(normalizedName);
+      !experimentalStructPath.empty() && isKnownStructPath(experimentalStructPath)) {
+    return experimentalStructPath;
   }
 
   std::string normalizedName = expr.name;
