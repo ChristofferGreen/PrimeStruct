@@ -68,6 +68,38 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter rejects explicit canonical map count slash-method receiver fallback") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[return<int>]
+/i32/tag([i32] self) {
+  return(plus(self, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values./std/collections/map/count().tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_explicit_canonical_map_count_slash_method_receiver_fallback.prime",
+                source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_explicit_canonical_map_count_slash_method_receiver_fallback.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter keeps stdlib namespaced vector string access count fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

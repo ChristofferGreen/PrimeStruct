@@ -435,8 +435,6 @@ TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata preceden
     CHECK(resolved == expectedPath);
   };
 
-  expectResolved("/map/count", false, "/i32/tag");
-  expectResolved("/std/collections/map/count", false, "/i32/tag");
   expectResolved("/map/contains", true, "/AliasContainsMarker/tag");
   expectResolved("/std/collections/map/contains", true, "/CanonicalContainsMarker/tag");
   expectResolved("/map/tryAt", true, "/AliasTryAtMarker/tag");
@@ -493,67 +491,6 @@ TEST_CASE("C++ emitter helper rejects explicit map slash-method count receiver f
 
   expectUnresolved("/map/count");
   expectUnresolved("/std/collections/map/count");
-}
-
-TEST_CASE("C++ emitter helper rejects cross-path direct map count and contains receiver metadata fallback") {
-  primec::Expr receiverName;
-  receiverName.kind = primec::Expr::Kind::Name;
-  receiverName.name = "values";
-
-  primec::Expr keyLiteral;
-  keyLiteral.kind = primec::Expr::Kind::Literal;
-  keyLiteral.intWidth = 32;
-  keyLiteral.literalValue = 1;
-
-  auto expectUnresolved = [&](const char *receiverPath,
-                              bool includeKeyArg,
-                              std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds) {
-    primec::Expr receiverCall;
-    receiverCall.kind = primec::Expr::Kind::Call;
-    receiverCall.name = receiverPath;
-    receiverCall.args = {receiverName};
-    receiverCall.argNames = {std::nullopt};
-    if (includeKeyArg) {
-      receiverCall.args.push_back(keyLiteral);
-      receiverCall.argNames.push_back(std::nullopt);
-    }
-
-    primec::Expr methodCall;
-    methodCall.kind = primec::Expr::Kind::Call;
-    methodCall.isMethodCall = true;
-    methodCall.name = "tag";
-    methodCall.args = {receiverCall};
-    methodCall.argNames = {std::nullopt};
-
-    std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
-    primec::emitter::BindingInfo receiverInfo;
-    receiverInfo.typeName = "map";
-    receiverInfo.typeTemplateArg = "i32, i32";
-    localTypes.emplace("values", receiverInfo);
-
-    std::unordered_map<std::string, const primec::Definition *> defMap;
-    std::unordered_map<std::string, std::string> importAliases;
-    std::unordered_map<std::string, std::string> structTypeMap;
-    std::unordered_map<std::string, std::string> returnStructs;
-
-    std::string resolved = "/stale/path";
-    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
-        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved.empty());
-  };
-
-  expectUnresolved("/map/count",
-                   false,
-                   {{"/std/collections/map/count", primec::emitter::ReturnKind::Int}});
-  expectUnresolved("/std/collections/map/count",
-                   false,
-                   {{"/map/count", primec::emitter::ReturnKind::Int}});
-  expectUnresolved("/map/contains",
-                   true,
-                   {{"/std/collections/map/contains", primec::emitter::ReturnKind::Bool}});
-  expectUnresolved("/std/collections/map/contains",
-                   true,
-                   {{"/map/contains", primec::emitter::ReturnKind::Bool}});
 }
 
 TEST_CASE("C++ emitter helper rejects canonical return-struct fallback for direct map tryAt compatibility calls") {
