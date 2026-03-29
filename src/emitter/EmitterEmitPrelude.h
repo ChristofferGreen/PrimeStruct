@@ -319,9 +319,13 @@
   out << "  return value[static_cast<size_t>(i)];\n";
   out << "}\n";
   out << "template <typename T, typename Index>\n";
+  out << "static inline int ps_missing_vector_at_method_helper(const T &, Index) = delete;\n";
+  out << "template <typename T, typename Index>\n";
   out << "static inline const T &ps_array_at_unsafe(const std::vector<T> &value, Index index) {\n";
   out << "  return value[static_cast<size_t>(index)];\n";
   out << "}\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline int ps_missing_vector_at_unsafe_method_helper(const T &, Index) = delete;\n";
   out << "template <typename T>\n";
   out << "static inline int ps_vector_capacity(const std::vector<T> &value) {\n";
   out << "  return static_cast<int>(value.capacity());\n";
