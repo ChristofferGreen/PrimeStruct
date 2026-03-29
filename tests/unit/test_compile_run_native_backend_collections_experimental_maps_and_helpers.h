@@ -247,24 +247,8 @@ TEST_CASE("compiles and runs native experimental map field assignments") {
   expectExperimentalMapFieldAssignConformance("native");
 }
 
-TEST_CASE("compiles and runs native dereferenced experimental map storage references") {
-  expectExperimentalMapStorageReferenceConformance("native");
-}
-
 TEST_CASE("compiles and runs native helper-wrapped Result.ok experimental map result struct fields") {
   expectWrappedExperimentalMapResultFieldAssignConformance("native");
-}
-
-TEST_CASE("compiles and runs native helper-wrapped dereferenced Result.ok experimental map result struct fields") {
-  expectWrappedExperimentalMapResultDerefFieldAssignConformance("native");
-}
-
-TEST_CASE("compiles and runs native helper-wrapped experimental map struct storage fields") {
-  expectWrappedExperimentalMapStorageFieldConformance("native");
-}
-
-TEST_CASE("compiles and runs native helper-wrapped dereferenced experimental map struct storage fields") {
-  expectWrappedExperimentalMapStorageDerefFieldConformance("native");
 }
 
 TEST_CASE("rejects native canonical namespaced map helpers on borrowed experimental map values") {

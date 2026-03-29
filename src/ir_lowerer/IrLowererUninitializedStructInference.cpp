@@ -218,11 +218,6 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       return "";
     }
     if (exprIn.kind == Expr::Kind::Call) {
-      if (!exprIn.isMethodCall && exprIn.name == "uninitialized" && exprIn.args.empty() &&
-          exprIn.templateArgs.size() == 1) {
-        return inferUninitializedTargetStructPath(
-            exprIn.templateArgs.front(), exprIn.namespacePrefix, resolveStructTypeName);
-      }
       if (!exprIn.isMethodCall && isSimpleCallName(exprIn, "location") && exprIn.args.size() == 1) {
         return inferStructExprPath(exprIn.args.front(), localsInExpr);
       }
