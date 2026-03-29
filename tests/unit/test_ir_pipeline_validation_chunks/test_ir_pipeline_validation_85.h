@@ -640,6 +640,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   CHECK(reserveNegativeCalls == reserveNegativeBaseline);
   CHECK(reserveExceededCalls == reserveExceededBaseline);
 
+  error.clear();
   CHECK(runHelper(
             makeCall("remove_at", {makeTarget(), makeI32Literal(1)}),
             capacityExceededCalls,
@@ -651,6 +652,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             error) == EmitResult::Emitted);
   CHECK(error.empty());
 
+  error.clear();
   CHECK(runHelper(
             makeCall("remove_swap", {makeTarget(), makeI32Literal(1)}),
             capacityExceededCalls,
@@ -664,6 +666,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   CHECK(indexOutOfBoundsCalls == 4);
 
   std::vector<primec::IrInstruction> pushInstructions;
+  error.clear();
   CHECK(runHelper(
             makeCall("push", {makeTarget(), makeI32Literal(7)}),
             capacityExceededCalls,

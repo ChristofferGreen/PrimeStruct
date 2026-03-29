@@ -438,7 +438,7 @@ inline void expectCanonicalVectorMutatorNumericRejects(const std::string &emitMo
   expectCanonicalVectorMutatorBoolReject(emitMode,
                                          "vector_reserve_bool_call_reject",
                                          "/std/collections/vector/reserve(values, true)",
-                                         "reserve requires integer capacity");
+                                         "parameter capacity: expected i32 got bool");
   expectCanonicalVectorMutatorBoolReject(emitMode,
                                          "vector_reserve_bool_method_reject",
                                          "values.reserve(true)",
@@ -446,7 +446,7 @@ inline void expectCanonicalVectorMutatorNumericRejects(const std::string &emitMo
   expectCanonicalVectorMutatorBoolReject(emitMode,
                                          "vector_remove_at_bool_call_reject",
                                          "/std/collections/vector/remove_at(values, true)",
-                                         "remove_at requires integer index");
+                                         "parameter index: expected i32 got bool");
   expectCanonicalVectorMutatorBoolReject(emitMode,
                                          "vector_remove_at_bool_method_reject",
                                          "values.remove_at(true)",
@@ -454,7 +454,7 @@ inline void expectCanonicalVectorMutatorNumericRejects(const std::string &emitMo
   expectCanonicalVectorMutatorBoolReject(emitMode,
                                          "vector_remove_swap_bool_call_reject",
                                          "/std/collections/vector/remove_swap(values, true)",
-                                         "remove_swap requires integer index");
+                                         "parameter index: expected i32 got bool");
   expectCanonicalVectorMutatorBoolReject(emitMode,
                                          "vector_remove_swap_bool_method_reject",
                                          "values.remove_swap(true)",

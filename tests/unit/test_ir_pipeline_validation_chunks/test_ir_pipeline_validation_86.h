@@ -227,7 +227,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             error) == EmitResult::Error);
-  CHECK(error == "push requires vector binding");
+  CHECK(error == "push requires mutable vector binding");
 
   CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
             pushCall,
@@ -333,7 +333,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             error) == EmitResult::Error);
-  CHECK(error == "reserve requires vector binding");
+  CHECK(error == "reserve requires mutable vector binding");
 
   error.clear();
   CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
