@@ -244,6 +244,14 @@ TEST_CASE("compiles and runs helper-wrapped dereferenced Result.ok experimental 
   expectWrappedExperimentalMapResultDerefFieldAssignConformance("exe");
 }
 
+TEST_CASE("compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter") {
+  expectWrappedExperimentalMapStorageFieldConformance("exe");
+}
+
+TEST_CASE("compiles and runs helper-wrapped dereferenced experimental map struct storage fields in C++ emitter") {
+  expectWrappedExperimentalMapStorageDerefFieldConformance("exe");
+}
+
 TEST_CASE("rejects canonical namespaced map helpers on borrowed experimental map values in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalReferenceConformance("exe");
 }

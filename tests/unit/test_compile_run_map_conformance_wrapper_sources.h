@@ -295,6 +295,62 @@ inline std::string makeWrappedExperimentalMapResultDerefFieldAssignConformanceSo
   return source;
 }
 
+inline std::string makeWrappedExperimentalMapStorageFieldConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "Holder() {\n";
+  source += "  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}\n";
+  source += "}\n\n";
+  source += "[effects(io_out, heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Holder mut] holder{Holder()}\n";
+  source +=
+      "  init(holder.storage, wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
+  source += "  [Map<string, i32>] values{take(holder.storage)}\n";
+  source += "  [i32] score{plus(/std/collections/map/count(values),\n";
+  source += "                   /std/collections/map/at(values, \"right\"raw_utf8))}\n";
+  source += "  print_line(score)\n";
+  source += "  return(score)\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeWrappedExperimentalMapStorageDerefFieldConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[return<T> effects(heap_alloc)]\n";
+  source += "wrapValues<T>([T] values) {\n";
+  source += "  return(values)\n";
+  source += "}\n\n";
+  source += "Holder() {\n";
+  source += "  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}\n";
+  source += "}\n\n";
+  source += "[return<Reference<Holder>>]\n";
+  source += "borrowHolder([Reference<Holder>] holder) {\n";
+  source += "  return(holder)\n";
+  source += "}\n\n";
+  source += "[effects(io_out, heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Holder mut] holder{Holder()}\n";
+  source +=
+      "  init(dereference(borrowHolder(location(holder))).storage,\n";
+  source +=
+      "       wrapValues(/std/collections/mapPair(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)))\n";
+  source += "  [Map<string, i32>] values{take(holder.storage)}\n";
+  source += "  [i32] score{plus(/std/collections/map/count(values),\n";
+  source += "                   /std/collections/map/at(values, \"right\"raw_utf8))}\n";
+  source += "  print_line(score)\n";
+  source += "  return(score)\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeWrapperMapHelperExperimentalValueConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
