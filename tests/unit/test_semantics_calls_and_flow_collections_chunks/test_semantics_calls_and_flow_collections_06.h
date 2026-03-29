@@ -26,6 +26,33 @@ main() {
             "implemented: Mover") != std::string::npos);
 }
 
+TEST_CASE("vector constructor rejects non-relocation-trivial vector element types") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Mover>] values{vector<Mover>(Mover(), Mover())}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find(
+            "vector literal requires relocation-trivial vector element type until container move/reallocation "
+            "semantics are implemented: Mover") != std::string::npos);
+}
+
 TEST_CASE("push allows relocation-trivial string vector elements") {
   const std::string source = R"(
 import /std/collections/*
@@ -637,4 +664,3 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-

@@ -119,13 +119,14 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
        builtinName == "soa_vector") &&
       !expr.templateArgs.empty()) {
     const std::string &elemType = expr.templateArgs.front();
-    const bool isCanonicalVectorWrapperContext =
-        currentValidationContext_.definitionPath.rfind("/std/collections/", 0) == 0;
+    const std::vector<std::string> *definitionTemplateArgs = nullptr;
+    std::string definitionNamespacePrefix;
+    resolveOwnershipContext(definitionNamespacePrefix, definitionTemplateArgs);
+    const bool isExperimentalVectorContext =
+        currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+        definitionNamespacePrefix.rfind("/std/collections/experimental_vector", 0) == 0;
     if (builtinName == "vector" && !expr.args.empty() &&
-        isCanonicalVectorWrapperContext) {
-      const std::vector<std::string> *definitionTemplateArgs = nullptr;
-      std::string definitionNamespacePrefix;
-      resolveOwnershipContext(definitionNamespacePrefix, definitionTemplateArgs);
+        !isExperimentalVectorContext) {
       std::unordered_set<std::string> visitingStructs;
       if (!isRelocationTrivialContainerElementType(
               elemType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {

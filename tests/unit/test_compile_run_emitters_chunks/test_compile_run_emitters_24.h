@@ -631,7 +631,43 @@ main() {
             "implemented: Mover") != std::string::npos);
 }
 
+TEST_CASE("rejects vector constructor with non-relocation-trivial elements in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Mover>] values{vector<Mover>(Mover(), Mover())}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_exe_vector_constructor_non_relocation_trivial_reject.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_exe_vector_constructor_non_relocation_trivial_reject_out.txt")
+          .string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_exe_vector_constructor_non_relocation_trivial_reject_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find(
+            "vector literal requires relocation-trivial vector element type until container move/reallocation "
+            "semantics are implemented: Mover") != std::string::npos);
+}
+
 TEST_CASE("rejects indexed vector removals with unsupported ownership semantics in C++ emitter") {
   expectVectorIndexedRemovalOwnershipRejects("exe");
 }
-
