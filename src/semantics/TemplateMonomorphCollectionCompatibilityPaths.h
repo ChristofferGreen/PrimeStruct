@@ -296,7 +296,8 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
   if (value == "Map" || value.rfind("Map__", 0) == 0) {
     return "map";
   }
-  if (value == "std/collections/experimental_map/Map") {
+  if (value == "std/collections/experimental_map/Map" ||
+      value.rfind("std/collections/experimental_map/Map__", 0) == 0) {
     return "map";
   }
   return value;

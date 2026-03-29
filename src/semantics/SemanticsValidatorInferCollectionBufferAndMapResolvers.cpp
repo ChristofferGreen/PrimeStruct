@@ -302,7 +302,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
            extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
   state->resolveExperimentalMapValueTarget =
-      [=](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+      [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     auto extractValueBinding = [&](const BindingInfo &binding) {
       const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
       if (normalizedType == "Reference" || normalizedType == "Pointer") {
@@ -310,11 +310,30 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       }
       return extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
     };
+    auto assignBindingFromTypeText = [](const std::string &typeText, BindingInfo &bindingOut) {
+      const std::string normalizedType = normalizeBindingTypeName(typeText);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+        bindingOut.typeName = normalizeBindingTypeName(base);
+        bindingOut.typeTemplateArg = argText;
+      } else {
+        bindingOut.typeName = normalizedType;
+        bindingOut.typeTemplateArg.clear();
+      }
+    };
     keyTypeOut.clear();
     valueTypeOut.clear();
     BindingInfo binding;
     if (resolveBindingTarget(target, binding)) {
       return extractValueBinding(binding);
+    }
+    std::string inferredTypeText;
+    if (inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
+      assignBindingFromTypeText(inferredTypeText, binding);
+      if (extractValueBinding(binding)) {
+        return true;
+      }
     }
     return target.kind == Expr::Kind::Call &&
            inferCallBinding(target, binding) &&

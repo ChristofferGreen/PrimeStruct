@@ -39,8 +39,6 @@ main() {
 }
 
 TEST_CASE("stdlib map constructor assignments accept explicit experimental map struct fields") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -86,8 +84,6 @@ main() {
 }
 
 TEST_CASE("helper-wrapped map constructor assignments accept inferred experimental map struct fields") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -214,8 +210,6 @@ main() {
 }
 
 TEST_CASE("helper-wrapped map constructor assignments accept dereferenced experimental map struct fields") {
-  // TODO: re-enable when experimental map struct-field wrapper coverage is implemented.
-  return;
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -636,4 +630,3 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
-

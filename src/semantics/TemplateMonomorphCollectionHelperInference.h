@@ -105,6 +105,19 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
         std::string base;
         std::string argText;
         if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
+          std::vector<std::string> receiverArgs;
+          if (family == HelperFamily::Vector &&
+              extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(receiverTypeText, ctx, receiverArgs) &&
+              receiverArgs.size() == 1) {
+            outArgs = std::move(receiverArgs);
+            return true;
+          }
+          if (family == HelperFamily::Map &&
+              extractExperimentalMapValueReceiverTemplateArgsFromTypeText(receiverTypeText, ctx, receiverArgs) &&
+              receiverArgs.size() == 2) {
+            outArgs = std::move(receiverArgs);
+            return true;
+          }
           const std::string normalizedType = normalizeCollectionReceiverTypeName(receiverTypeText);
           if (family == HelperFamily::Vector && normalizedType == "string" &&
               (helperName == "at" || helperName == "at_unsafe")) {

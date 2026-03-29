@@ -294,6 +294,14 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     if (candidate.kind != Expr::Kind::Call) {
       return false;
     }
+    if (candidate.isFieldAccess && candidate.args.size() == 1) {
+      BindingInfo fieldBinding;
+      if (!resolveStructFieldBinding(params, locals, candidate.args.front(), candidate.name, fieldBinding)) {
+        return false;
+      }
+      currentTypeTextOut = bindingTypeText(fieldBinding);
+      return !currentTypeTextOut.empty();
+    }
     if (isSimpleCallName(candidate, "move") && candidate.args.size() == 1) {
       return inferExprTypeText(candidate.args.front(), currentTypeTextOut);
     }

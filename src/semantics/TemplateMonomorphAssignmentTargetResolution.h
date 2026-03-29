@@ -13,7 +13,22 @@ bool inferCallTargetBinding(const Expr &bindingExpr,
   }
   BindingInfo inferredBinding;
   if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), {}, {}, allowMathBare, ctx, inferredBinding)) {
-    return hasExplicitBinding;
+    Expr rewrittenInitializer = bindingExpr.args.front();
+    std::string rewriteError;
+    LocalTypeMap emptyLocals;
+    std::vector<ParameterInfo> emptyParams;
+    if (!rewriteExpr(rewrittenInitializer,
+                     SubstMap{},
+                     {},
+                     bindingExpr.namespacePrefix,
+                     ctx,
+                     rewriteError,
+                     emptyLocals,
+                     emptyParams,
+                     allowMathBare) ||
+        !inferBindingTypeForMonomorph(rewrittenInitializer, {}, {}, allowMathBare, ctx, inferredBinding)) {
+      return hasExplicitBinding;
+    }
   }
   bindingOut = inferredBinding;
   return true;
