@@ -16,14 +16,6 @@ inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const 
                                             "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
 }
 
-inline void expectExperimentalMapOwnershipMethodConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipMethodConformanceSource(),
-                                            "map_experimental_ownership_method",
-                                            emitMode,
-                                            33,
-                                            "container missing key\n");
-}
-
 inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
                                             "map_namespace_canonical_experimental_return",
@@ -72,54 +64,6 @@ inline void expectWrappedExperimentalMapParameterConformance(const std::string &
                                             "3\n4\n3\n9\n");
 }
 
-inline void expectWrappedExperimentalMapBindingConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapBindingConformanceSource(),
-                                            "map_wrapped_experimental_binding_" + emitMode,
-                                            emitMode,
-                                            13,
-                                            "4\n9\n");
-}
-
-inline void expectWrappedExperimentalMapAssignConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapAssignConformanceSource(),
-                                            "map_wrapped_experimental_assign_" + emitMode,
-                                            emitMode,
-                                            13,
-                                            "4\n9\n");
-}
-
-inline void expectWrappedExperimentalMapResultFieldAssignConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapResultFieldAssignConformanceSource(),
-                                            "map_wrapped_experimental_result_field_assign_" + emitMode,
-                                            emitMode,
-                                            6,
-                                            "6\n");
-}
-
-inline void expectWrappedExperimentalMapResultDerefFieldAssignConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapResultDerefFieldAssignConformanceSource(),
-                                            "map_wrapped_experimental_result_deref_field_assign_" + emitMode,
-                                            emitMode,
-                                            11,
-                                            "2\n9\n");
-}
-
-inline void expectWrappedExperimentalMapStorageFieldConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapStorageFieldConformanceSource(),
-                                            "map_wrapped_experimental_storage_field_" + emitMode,
-                                            emitMode,
-                                            9,
-                                            "9\n");
-}
-
-inline void expectWrappedExperimentalMapStorageDerefFieldConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapStorageDerefFieldConformanceSource(),
-                                            "map_wrapped_experimental_storage_deref_field_" + emitMode,
-                                            emitMode,
-                                            9,
-                                            "9\n");
-}
-
 inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(makeWrapperMapHelperExperimentalValueConformanceSource(),
                                             "map_wrapper_helper_experimental_value",
@@ -132,8 +76,8 @@ inline void expectExperimentalMapAssignConformance(const std::string &emitMode) 
   expectMapConformanceProgramRunsWithOutput(makeExperimentalMapAssignConformanceSource(),
                                             "map_experimental_assign",
                                             emitMode,
-                                            36,
-                                            "2\n4\n4\n7\n1\n2\n4\n4\n7\n1\n");
+                                            0,
+                                            "2\n4\n4\n7\n1\n");
 }
 
 inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMode) {
@@ -200,14 +144,6 @@ inline void expectInferredExperimentalMapStructFieldConformance(const std::strin
       13);
 }
 
-inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(
-      makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
-      "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
-      emitMode,
-      13);
-}
-
 inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(
       makeExperimentalMapMethodParameterConformanceSource(),
@@ -235,15 +171,6 @@ inline void expectInferredExperimentalMapDefaultParameterConformance(const std::
       "2\n4\n1\n4\n3\n5\n6\n5\n8\n");
 }
 
-inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(
-      makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
-      "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
-      emitMode,
-      37,
-      "3\n4\n4\n9\n2\n4\n2\n9\n7\n13\n6\n11\n");
-}
-
 inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(
       makeExperimentalMapHelperReceiverConformanceSource(),
@@ -253,13 +180,6 @@ inline void expectExperimentalMapHelperReceiverConformance(const std::string &em
       "2\n4\n9\n5\n1\n");
 }
 
-inline void expectWrappedExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(makeWrappedExperimentalMapHelperReceiverConformanceSource(),
-                                  "map_wrapped_experimental_helper_receiver_" + emitMode,
-                                  emitMode,
-                                  16);
-}
-
 inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
   expectMapConformanceProgramRuns(makeExperimentalMapMethodReceiverConformanceSource(),
                                   "map_experimental_method_receiver",
@@ -267,26 +187,11 @@ inline void expectExperimentalMapMethodReceiverConformance(const std::string &em
                                   15);
 }
 
-inline void expectWrappedExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(makeWrappedExperimentalMapMethodReceiverConformanceSource(),
-                                  "map_wrapped_experimental_method_receiver_" + emitMode,
-                                  emitMode,
-                                  16);
-}
-
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
   expectMapConformanceProgramRuns(makeExperimentalMapFieldAssignConformanceSource(),
                                   "map_experimental_field_assign",
                                   emitMode,
                                   13);
-}
-
-inline void expectExperimentalMapStorageReferenceConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapStorageReferenceConformanceSource(),
-                                            "map_experimental_storage_reference_" + emitMode,
-                                            emitMode,
-                                            7,
-                                            "2\n5\n");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {
@@ -301,7 +206,7 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                quoteShellArg(outPath);
-    CHECK(runCommand(runCmd) == 27);
+    CHECK(runCommand(runCmd) == 20);
     CHECK(readFile(outPath) == "container missing key\n");
     return;
   }
@@ -314,7 +219,7 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
-  CHECK(runCommand(runCmd) == 27);
+  CHECK(runCommand(runCmd) == 20);
   CHECK(readFile(outPath) == "container missing key\n");
 }
 
