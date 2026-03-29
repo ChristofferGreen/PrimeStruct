@@ -58,6 +58,81 @@ main() {
   CHECK(runCommand(exePath) == 37);
 }
 
+TEST_CASE("compiles and runs local explicit vector count capacity calls through same-path helpers in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(14i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity([vector<i32>] values) {
+  return(15i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values),
+              /std/collections/vector/capacity(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_explicit_vector_count_capacity_same_path.prime", source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_cpp_local_explicit_vector_count_capacity_same_path_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 29);
+}
+
+TEST_CASE("C++ emitter rejects local explicit vector count capacity calls without helper before emission") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values),
+              /std/collections/vector/capacity(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_explicit_vector_count_capacity_same_path_reject.prime", source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_cpp_local_explicit_vector_count_capacity_same_path_reject.txt")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("rejects local explicit vector count capacity calls without helper in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(/vector/count(values),
+              /std/collections/vector/capacity(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_explicit_vector_count_capacity_same_path_reject_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_local_explicit_vector_count_capacity_same_path_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("rejects namespaced wrapper vector capacity vector target without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]

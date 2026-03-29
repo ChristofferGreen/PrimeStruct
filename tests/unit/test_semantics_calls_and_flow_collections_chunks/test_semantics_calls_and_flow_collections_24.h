@@ -114,6 +114,29 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced count and stdlib namespaced capacity accept same-path helpers on builtin vector target") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(14i32)
+}
+
+[return<int>]
+/std/collections/vector/capacity([vector<i32>] values) {
+  return(15i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(plus(/vector/count(values), /std/collections/vector/capacity(values)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector count map target without helper reports unknown target") {
   const std::string source = R"(
 [return<map<i32, i32>>]
