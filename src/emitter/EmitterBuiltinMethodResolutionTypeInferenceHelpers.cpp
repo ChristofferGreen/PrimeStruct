@@ -199,24 +199,6 @@ std::string inferMethodResolutionPrimitiveTypeName(
            normalized == "std/collections/vector/count" ||
            normalized == "std/collections/vector/capacity";
   };
-  auto inferExplicitMapAccessCompatibilityTypeName = [&](const Expr &candidate) -> std::string {
-    if (!isExplicitMapAccessCompatibilityCall(candidate)) {
-      return "";
-    }
-    const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
-    if (receiverIndex >= candidate.args.size()) {
-      return "";
-    }
-    std::string elementType;
-    if (inferCollectionElementTypeNameFromExpr(
-            candidate.args[receiverIndex],
-            localTypes,
-            resolveCollectionElementTypeFromCall,
-            elementType)) {
-      return normalizeBindingTypeName(elementType);
-    }
-    return "";
-  };
   auto inferExplicitVectorAccessCompatibilityTypeName = [&](const Expr &candidate) -> std::string {
     if (!isExplicitVectorAccessCompatibilityCall(candidate)) {
       return "";
@@ -403,10 +385,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
               !explicitVectorAccessType.empty()) {
             return explicitVectorAccessType;
           }
-          if (const std::string explicitMapAccessType =
-                  inferExplicitMapAccessCompatibilityTypeName(candidateExpr);
-              !explicitMapAccessType.empty()) {
-            return explicitMapAccessType;
+          if (isExplicitMapAccessCompatibilityCall(candidateExpr)) {
+            return "";
           }
           if (const std::string canonicalMapAccessType =
                   inferCanonicalMapAccessTypeName(candidateExpr);

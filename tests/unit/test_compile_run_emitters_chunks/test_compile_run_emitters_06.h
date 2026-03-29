@@ -372,7 +372,7 @@ TEST_CASE("C++ emitter helper keeps bare map access canonical struct forwarding"
   expectResolved("at_unsafe", "/std/collections/map/at_unsafe");
 }
 
-TEST_CASE("C++ emitter helper keeps direct map access compatibility call primitive fallback") {
+TEST_CASE("C++ emitter helper rejects direct map access compatibility metadata fallback") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "/map/at";
@@ -411,10 +411,10 @@ TEST_CASE("C++ emitter helper keeps direct map access compatibility call primiti
   std::unordered_map<std::string, std::string> returnStructs;
   returnStructs.emplace("/std/collections/map/at", "/CanonicalMarker");
 
-  std::string resolved;
-  CHECK(primec::emitter::resolveMethodCallPath(
+  std::string resolved = "/stale/path";
+  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/i32/tag");
+  CHECK(resolved.empty());
 }
 
 TEST_CASE("C++ emitter helper keeps slash-path map access struct forwarding") {
@@ -646,4 +646,3 @@ TEST_CASE("C++ emitter helper resolves direct slashless canonical map receiver m
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
   CHECK(resolved == "/std/collections/map/at/tag");
 }
-
