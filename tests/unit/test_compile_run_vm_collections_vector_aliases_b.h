@@ -266,6 +266,50 @@ main() {
   CHECK(runCommand(runCmd) == 46);
 }
 
+TEST_CASE("compiles and runs vm array alias at through same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/array/at([vector<i32>] values, [i32] index, [bool] marker) {
+  return(48i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/at(wrapVector(), 1i32, true))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_alias_at_same_path_wrapper_vector.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 48);
+}
+
+TEST_CASE("compiles and runs vm array alias at_unsafe through same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {
+  return(50i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/at_unsafe(wrapVector(), 1i32, true))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_alias_at_unsafe_same_path_wrapper_vector.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 50);
+}
+
 TEST_CASE("rejects vm vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
 [return<int>]

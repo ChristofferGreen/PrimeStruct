@@ -214,6 +214,12 @@ bool SemanticsValidator::isArrayNamespacedVectorAccessCompatibilityCall(
   if (!spellsArrayAccess && !resolvesArrayAccess) {
     return false;
   }
+  const std::string helperPath =
+      resolvedPath == "/array/at" || normalized == "array/at" ? "/array/at"
+                                                                : "/array/at_unsafe";
+  if (hasDeclaredDefinitionPath(helperPath) || hasImportedDefinitionPath(helperPath)) {
+    return false;
+  }
   if (dispatchResolvers.resolveVectorTarget == nullptr) {
     return false;
   }
