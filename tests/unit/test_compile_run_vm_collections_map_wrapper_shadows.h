@@ -422,6 +422,30 @@ main() {
   CHECK(runCommand(runCmd) == 87);
 }
 
+TEST_CASE("rejects vm wrapper-returned canonical vector count slash-method on map receiver") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./std/collections/vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_canonical_slash_vector_count_map_no_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_canonical_slash_vector_count_map_no_helper.out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") !=
+        std::string::npos);
+}
+
 TEST_CASE("rejects vm wrapper-returned canonical vector capacity slash-method on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
