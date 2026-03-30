@@ -16,6 +16,12 @@ namespace std {
       soaVectorValidateType<T>()
       return(this.countValue)
     }
+
+    [public effects(heap_alloc), return<vector<T>>]
+    to_aos() {
+      soaVectorValidateType<T>()
+      return(soaVectorToAos<T>(this))
+    }
   }
 
   [public effects(heap_alloc), return<SoaVector<T>>]

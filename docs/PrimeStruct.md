@@ -2354,11 +2354,11 @@ bad_use_after_take() {
     currently requires `T` to be a reflect-enabled struct via `meta.field_count<T>()` so non-SoA-safe element types
     fail early. Today `soaVectorSingle<T>()` validates semantically but still hits the deterministic backend boundary
     `* backend does not support non-empty soa_vector literals`, `soaVectorFromAos<T>()` validates semantically but
-    still hits `* backend requires typed bindings`, and `soaVectorToAos<T>()` still hits
-    `* backend does not support return type on /std/collections/experimental_soa_vector/soaVectorToAos__...` until
-    real column storage, vector<Struct> helper returns, and borrowed-view substrate are in place. Method-sugar
-    `to_aos()`, `get`, borrowed `ref`, and richer non-empty conversion/access remain pending behind that same broader
-    substrate work.
+    still hits `* backend requires typed bindings`, and both `soaVectorToAos<T>()` plus wrapper method-sugar
+    `values.to_aos()` still hit `* backend does not support return type on
+    /std/collections/experimental_soa_vector/...` until real column storage, vector<Struct> helper returns, and
+    borrowed-view substrate are in place. `get`, borrowed `ref`, and richer non-empty conversion/access remain
+    pending behind that same broader substrate work.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of

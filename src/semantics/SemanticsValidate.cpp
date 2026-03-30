@@ -428,10 +428,6 @@ void rewriteBuiltinSoaConversionMethodExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace) {
-  (void)bindings;
-  (void)vectorReturnDefinitions;
-  (void)soaVectorReturnDefinitions;
-  (void)definitionNamespace;
   for (Expr &arg : expr.args) {
     rewriteBuiltinSoaConversionMethodExpr(
         arg, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
@@ -442,6 +438,50 @@ void rewriteBuiltinSoaConversionMethodExpr(
   }
   const std::string helperName = builtinSoaConversionMethodName(expr.name);
   if (helperName.empty()) {
+    return;
+  }
+  auto matchesBuiltinReceiverBinding = [&](const semantics::BindingInfo &binding) {
+    if (helperName == "to_soa") {
+      return isBuiltinVectorBinding(binding);
+    }
+    if (helperName == "to_aos") {
+      return isBuiltinSoaVectorBinding(binding);
+    }
+    return false;
+  };
+  const auto &returnDefinitions =
+      helperName == "to_soa" ? vectorReturnDefinitions : soaVectorReturnDefinitions;
+  std::optional<semantics::BindingInfo> receiverBinding;
+  const Expr &receiver = expr.args.front();
+  if (receiver.kind == Expr::Kind::Name) {
+    auto bindingIt = bindings.find(receiver.name);
+    if (bindingIt != bindings.end() && matchesBuiltinReceiverBinding(bindingIt->second)) {
+      receiverBinding = bindingIt->second;
+    }
+  } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
+    std::vector<std::string> candidatePaths;
+    if (!receiver.name.empty() && receiver.name.front() == '/') {
+      candidatePaths.push_back(receiver.name);
+    } else {
+      if (!receiver.namespacePrefix.empty()) {
+        candidatePaths.push_back(receiver.namespacePrefix + "/" + receiver.name);
+      }
+      if (!definitionNamespace.empty()) {
+        candidatePaths.push_back(definitionNamespace + "/" + receiver.name);
+      }
+      candidatePaths.push_back("/" + receiver.name);
+      candidatePaths.push_back(receiver.name);
+    }
+    for (const std::string &candidatePath : candidatePaths) {
+      auto returnIt = returnDefinitions.find(candidatePath);
+      if (returnIt != returnDefinitions.end() &&
+          matchesBuiltinReceiverBinding(returnIt->second)) {
+        receiverBinding = returnIt->second;
+        break;
+      }
+    }
+  }
+  if (!receiverBinding.has_value()) {
     return;
   }
 

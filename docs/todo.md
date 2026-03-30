@@ -38,11 +38,12 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   - ○ Add the first real column-storage-backed `.prime` path that exercises the new substrate beyond header-only wrapper state.
 - ◐ Extend experimental stdlib `/std/collections/experimental_soa_vector/*` beyond empty-state count/conversion footholds to non-empty literal construction, `push`, `reserve`, `get`, `ref`, and the remaining explicit conversion surfaces, adding only the next substrate pieces that the `.prime` implementation proves it needs.
   - ✓ Add the first empty-state `.prime` AoS conversion helper (`soaVectorToAos`) on the wrapper-owned runtime path.
+  - ✓ Add wrapper method-sugar `.to_aos()` on top of the `.prime` AoS conversion helper and lock the current deterministic backend reject contract.
   - ✓ Add the first non-empty `.prime` construction helper foothold with a deterministic backend reject contract.
   - ✓ Add the first `.prime` AoS-to-SoA wrapper conversion foothold (`soaVectorFromAos`) and lock the current deterministic backend reject contract while typed-binding/lowering support is still missing.
   - ○ Add `.prime` `get` / `ref` helper surfaces once the borrowed-view substrate exists.
   - ○ Add `.prime` `push` / `reserve` helper surfaces once column allocation/grow/free substrate exists.
-  - ○ Add the remaining explicit conversion and access surface (method-sugar `to_aos`, `get`, `ref`, and richer non-empty `to_aos`) once real column storage, borrowed views, and struct-return support exist.
+  - ○ Add the remaining explicit conversion and access surface (`get`, `ref`, and richer non-empty `to_aos`) once real column storage, borrowed views, and struct-return support exist.
 - ○ Extend experimental stdlib `/std/collections/experimental_soa_vector/*` to field-view indexing (`value.field()[i]`) once the experimental `.prime` implementation reaches that boundary and the next minimal substrate slice is clear.
 - ○ Route canonical `/std/collections/soa_vector/*` names through the real experimental `.prime` implementation once parity is proven.
 - ○ Delete compiler-owned `soa_vector` helper routing and backend special cases from semantics, IR lowering, emitters, and runtime code until no C++ source mentions `soa_vector`.
