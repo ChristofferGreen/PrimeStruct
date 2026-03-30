@@ -360,6 +360,10 @@ TEST_CASE("runs vm builtin canonical map sept-growth inserts") {
   expectBuiltinCanonicalMapInsertSeptGrowthConformance("vm");
 }
 
+TEST_CASE("runs vm builtin canonical map oct-growth inserts") {
+  expectBuiltinCanonicalMapInsertOctGrowthConformance("vm");
+}
+
 TEST_CASE("runs vm builtin canonical map insert overwrites") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("vm");
 }
