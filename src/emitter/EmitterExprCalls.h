@@ -4,20 +4,6 @@
   std::string resolvedFull = preferExplicitVectorCountCapacityHelperPath(expr, full);
   auto it = nameMap.find(resolvedFull);
   if (it == nameMap.end()) {
-    const std::string preferredBareMapContainsPath = preferBareMapHelperPath(expr, "contains");
-    if (!preferredBareMapContainsPath.empty()) {
-      resolvedFull = preferredBareMapContainsPath;
-      it = nameMap.find(resolvedFull);
-    }
-  }
-  if (it == nameMap.end()) {
-    const std::string preferredBareMapTryAtPath = preferBareMapHelperPath(expr, "tryAt");
-    if (!preferredBareMapTryAtPath.empty()) {
-      resolvedFull = preferredBareMapTryAtPath;
-      it = nameMap.find(resolvedFull);
-    }
-  }
-  if (it == nameMap.end()) {
     #include "EmitterExprCollectionBuiltinCalls.h"
     #include "EmitterExprFileAccessCalls.h"
     #include "EmitterExprCollectionAccessAtCalls.h"
