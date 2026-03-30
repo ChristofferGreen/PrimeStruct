@@ -5,6 +5,55 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (March 30, 2026)**
+
+**Types & Semantics**
+**Group 1 - Roadmap framing**
+- ✓ Validate helper-wrapped experimental map wrapper routing end-to-end. Progress: the live coverage now sits in `tests/unit/test_semantics_calls_and_flow_collections.cpp` plus chunk files `test_semantics_calls_and_flow_collections_11.h` through `15.h`, and active cases now cover helper-wrapped canonical map constructor routing across explicit `Map<K, V>` parameters, result payloads, assignment targets, uninitialized storage, result storage, field-bound wrapper helper receivers, and the direct inferred experimental-map struct-field constructor route.
+
+**Group 4 - Ownership and lifetime substrate**
+- ✓ Ownership/drop reallocation slice: extend the same non-trivial move semantics to the remaining canonical wrapper-backed vector/map growth paths now that experimental `Vector<T>` and experimental `.prime` `Map<K, V>` storage no longer depend on builtin relocation gates. Progress: canonical wrapper-backed builtin `map` constructor growth now rejects non-relocation-trivial key/value element types, and canonical wrapper-backed builtin `vector` constructor growth now rejects non-relocation-trivial element types, with deterministic semantics diagnostics and focused ownership regression coverage so unsupported ownership paths fail before lowering while experimental `.prime` map/vector ownership-sensitive growth remains available.
+- ✓ Reuse the experimental-vector drop/free steps inside experimental `.prime` `Map<K, V>::Destroy()` so map-owned key/payload storage cleans up on destroy.
+- ✓ Allow canonical `/std/collections/vector/*` `pop` / `clear` helpers to reuse the experimental `.prime` drop path for non-drop-trivial element types on explicit experimental `Vector<T>` bindings.
+- ✓ Allow canonical `/std/collections/vector/*` `remove_at` / `remove_swap` helpers to reuse the experimental `.prime` indexed-removal path for ownership-sensitive element types on explicit experimental `Vector<T>` bindings.
+- ✓ Allow canonical `/std/collections/map/insert` helpers to reuse the experimental `.prime` overwrite/growth drop path for ownership-sensitive element types on explicit experimental `Map<K, V>` bindings.
+- ✓ Allow canonical `/std/collections/map/insert_ref` helpers to reuse the experimental `.prime` overwrite/growth drop path for ownership-sensitive element types on borrowed `Reference<Map<K, V>>` bindings.
+- ✓ Route builtin canonical `map<K, V>` `.insert(...)` method sugar through `/std/collections/map/insert` during semantics so canonical map update surfaces share the same helper path before the remaining builtin-map runtime work.
+- ✓ Replace the builtin canonical `map<K, V>` insert layout-mismatch runtime bug with an explicit temporary failure path so numeric C++/native/VM coverage no longer depends on accidental experimental-map layout aliasing.
+- ✓ Replace the generic array-bounds trap inside the builtin canonical `map<K, V>` insert pending helper with a dedicated deterministic pending runtime diagnostic in numeric C++/native/VM coverage.
+- ✓ Land builtin canonical `map<K, V>` insert overwrite parity for existing numeric keys in end-to-end C++/native/VM coverage.
+- ✓ Land builtin canonical `map<K, V>` first-growth parity for empty numeric maps in end-to-end C++/native/VM coverage.
+- ✓ Allow explicit experimental `Map<K, V>` value method sugar (`.count()`, `.contains()`, `.tryAt()`, `.at()`, `.at_unsafe()`, `.insert()`) to resolve through the `.prime` `/Map/*` method path so ownership-sensitive read/update flows stay on the same runtime drop/overwrite implementation.
+- ✓ Allow borrowed experimental `Reference<Map<K, V>>` method sugar (`.count()`, `.contains()`, `.tryAt()`, `.at()`, `.at_unsafe()`, `.insert()`) to resolve through the `.prime` borrowed `*Ref` helper path so ownership-sensitive explicit experimental map references can update and read through the same runtime drop/overwrite path.
+
+**Group 5 - Container bring-up and de-builtinization**
+- ✓ Experimental stdlib `vector` storage/runtime slice: land a read-only `.prime`-owned storage/runtime path for `/std/collections/experimental_vector/*` with constructors/count/capacity/access backed by heap pointers. Progress: `/std/collections/experimental_vector/*` now returns a real experimental `Vector<T>` record backed by pointer-based `.prime` storage, and that storage now uses `Pointer<uninitialized<T>>` slots plus stdlib-owned `borrow(...)` access so shared C++/VM/native conformance covers constructors through `vectorOct`, `vectorCount`, `vectorCapacity`, `vectorAt`, and `vectorAtUnsafe` even for non-trivial experimental element flows.
+
+**Group 6 - Map migration and compiler-path deletion**
+- ✓ Canonical `map` constructor broader inferred-destination slice: finish moving helper-wrapped and control-flow-driven inferred returns, inferred struct fields, and default-parameter targets off `collections.prime` and onto the experimental `.prime` `Map<K, V>` constructor path.
+- ✓ Canonical `map` constructor wrapped binding/assignment/helper-receiver slice: finish moving helper-wrapped explicit and inferred local bindings, assignment RHS values, and direct helper receiver expressions onto the experimental `.prime` constructor path.
+- ✓ Canonical `map` constructor wrapped method-receiver `tryAt` slice: finish helper-wrapped direct method receiver expressions, including `tryAt(...)` Result classification, on the experimental `.prime` constructor path.
+- ✓ Canonical `map` constructor `Result.ok(...)` destination slice: finish constructor rewriting through helper-wrapped `Result.ok(...)` payloads for explicit and inferred `Result<Map<K, V>, Error>` bindings, parameters, assignments, and field targets.
+- ✓ Canonical `map` constructor storage/dereference-target slice: finish constructor rewriting for `init(uninitialized<T>, value)` storage targets, dereference-based assignment/init targets, dereferenced struct-field targets, and struct-field storage targets that should produce experimental `Map<K, V>` values.
+- ✓ Canonical `map` wrapper-bridge deletion slice: delete the wrapper-only `collections.prime` bridge for canonical `map<K, V>` construction and any remaining constructor-surface fallback once the experimental `.prime` constructor path has full parity.
+- ✓ Map semantics bare-root helper cleanup slice: remove the remaining compiler-owned bare `count` / `contains` / `tryAt` / `at` / `at_unsafe` call classification paths on builtin `map<K, V>` targets once canonical stdlib parity is proven.
+- ✓ Bare map compatibility-alias follow-up: bare `count(values)` and `contains(values, key)` on builtin `map<K, V>` targets now rewrite only through canonical `/std/collections/map/*` or explicit root helpers, so alias-only `/map/*` definitions no longer satisfy bare-call fallback after the main semantics cleanup.
+- ✓ Map semantics compatibility-path cleanup slice: direct `/map/count|contains|tryAt|at|at_unsafe` compatibility spellings now resolve only through explicit same-path definitions, and slash-method forms keep deterministic `unknown method: /map/...` diagnostics instead of inheriting canonical `/std/collections/map/*` helper resolution.
+- ✓ Map IR direct-helper fallback cleanup slice: finish removing direct-call builtin fallback and return-kind inheritance for explicit `/map/*` and `/std/collections/map/*` helper spellings.
+- ✓ Map IR receiver-probe and slash-method cleanup slice: finish removing cross-path receiver metadata fallback for explicit helper receivers, direct `tryAt(...).method()` / `at(...).method()` probes, and slash-method forms so missing same-path helpers stay unresolved.
+- ✓ Map IR reject-contract slice: lock the direct-definition, native-dispatch `NotHandled`, slash-method reject, receiver-kind reject, and compatibility-receiver reject contracts once the remaining fallback paths are gone.
+- ✓ Map emitter bare-call and bare-method fallback cleanup slice: finish removing backend fallback for bare `count|contains|tryAt|at|at_unsafe` calls and method chains so emitters prefer canonical same-path helper metadata or reject cleanly instead of falling back to compiler-owned map behavior.
+- ✓ Map emitter explicit slash-method and receiver-metadata cleanup slice: finish removing backend cross-path metadata fallback for explicit `/map/*` and `/std/collections/map/*` slash-method and receiver-probe forms.
+- ✓ Map emitter deleted-helper stub cleanup slice: finish replacing the remaining builtin `ps_map_*` fallback emission paths with deleted-helper stubs or same-path rejects for missing canonical map helpers.
+
+**Group 7 - Compatibility cleanup and vector runtime substrate**
+- ✓ Remove the remaining compiler-owned `vector` explicit helper/method routing from emitters/backends, including broader expression builtin helper emission fallback.
+- ✓ Vector/map compatibility-alias cleanup slice: finish helper alias classification cleanup so removed compatibility spellings never re-enter builtin fallback.
+- ✓ Vector/map bridge reject-coverage slice: lock mutator/count/access direct-call rejects plus canonical-vs-alias precedence across semantics, IR validation, and VM/native/C++ suites.
+- ✓ Vector/map bridge reject-coverage slice: lock method and slash-method reject coverage, including wrapper-returned receiver typing, across semantics, IR validation, and VM/native/C++ suites.
+- ✓ Vector/map bridge reject-coverage slice: lock map value-result fallback rejects and downstream receiver-typing coverage so removed helper spellings cannot re-enter builtin paths indirectly.
+- ✓ Dynamic vector-runtime substrate slice: VM/native vector locals now lower through heap-backed `count/capacity/data_ptr` records instead of fixed-capacity frame layouts.
+
 **Todo Cleanup (March 29, 2026)**
 
 **Types & Semantics**
