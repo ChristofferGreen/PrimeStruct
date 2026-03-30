@@ -381,6 +381,8 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   bool hasNinthGrowJump = false;
   size_t jumpAfterTenthGrow = 0;
   bool hasTenthGrowJump = false;
+  size_t jumpAfterEleventhGrow = 0;
+  bool hasEleventhGrowJump = false;
   if (valuesLocal >= 0) {
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
     emitInstruction(IrOpcode::PushI32, 0);
@@ -934,6 +936,82 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     hasTenthGrowJump = true;
 
     patchInstructionImm(jumpPendingAfterTenth, static_cast<uint64_t>(instructionCount()));
+
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
+    emitInstruction(IrOpcode::PushI32, 11);
+    emitInstruction(IrOpcode::CmpEqI32, 0);
+    const size_t jumpPendingAfterEleventh = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+
+    const int32_t eleventhGrownBaseLocal = allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    emitInstruction(IrOpcode::PushI32, 12);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(eleventhGrownBaseLocal));
+
+    auto emitCopyEleventhExistingSlot = [&](int32_t sourceSlotIndex, int32_t destSlotIndex) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+      emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(sourceSlotIndex * IrSlotBytesI32));
+      emitInstruction(IrOpcode::AddI64, 0);
+      emitInstruction(IrOpcode::LoadIndirect, 0);
+      emitInstruction(IrOpcode::StoreLocal,
+                      static_cast<uint64_t>(eleventhGrownBaseLocal + destSlotIndex));
+    };
+    emitCopyEleventhExistingSlot(1, 1);
+    emitCopyEleventhExistingSlot(2, 2);
+    emitCopyEleventhExistingSlot(3, 3);
+    emitCopyEleventhExistingSlot(4, 4);
+    emitCopyEleventhExistingSlot(5, 5);
+    emitCopyEleventhExistingSlot(6, 6);
+    emitCopyEleventhExistingSlot(7, 7);
+    emitCopyEleventhExistingSlot(8, 8);
+    emitCopyEleventhExistingSlot(9, 9);
+    emitCopyEleventhExistingSlot(10, 10);
+    emitCopyEleventhExistingSlot(11, 11);
+    emitCopyEleventhExistingSlot(12, 12);
+    emitCopyEleventhExistingSlot(13, 13);
+    emitCopyEleventhExistingSlot(14, 14);
+    emitCopyEleventhExistingSlot(15, 15);
+    emitCopyEleventhExistingSlot(16, 16);
+    emitCopyEleventhExistingSlot(17, 17);
+    emitCopyEleventhExistingSlot(18, 18);
+    emitCopyEleventhExistingSlot(19, 19);
+    emitCopyEleventhExistingSlot(20, 20);
+    emitCopyEleventhExistingSlot(21, 21);
+    emitCopyEleventhExistingSlot(22, 22);
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(eleventhGrownBaseLocal + 23));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(eleventhGrownBaseLocal + 24));
+    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(eleventhGrownBaseLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+    jumpAfterEleventhGrow = instructionCount();
+    emitInstruction(IrOpcode::Jump, 0);
+    hasEleventhGrowJump = true;
+
+    patchInstructionImm(jumpPendingAfterEleventh, static_cast<uint64_t>(instructionCount()));
   }
   emitPending();
 
@@ -984,6 +1062,9 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   }
   if (hasTenthGrowJump) {
     patchInstructionImm(jumpAfterTenthGrow, static_cast<uint64_t>(instructionCount()));
+  }
+  if (hasEleventhGrowJump) {
+    patchInstructionImm(jumpAfterEleventhGrow, static_cast<uint64_t>(instructionCount()));
   }
   return true;
 }
