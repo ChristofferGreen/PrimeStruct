@@ -171,6 +171,29 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return "/std/collections/vector/" + std::string(helperName);
   }();
+  auto explicitAliasVectorMutatorMethodPath = [&]() -> std::string {
+    if (!stmt.isMethodCall) {
+      return "";
+    }
+    auto isAliasMutatorName = [](std::string_view helperName) {
+      return helperName == "push" || helperName == "pop" || helperName == "reserve" ||
+             helperName == "clear" || helperName == "remove_at" || helperName == "remove_swap";
+    };
+    const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
+    const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
+    if (normalizedPrefix == "vector" && isAliasMutatorName(normalizedName)) {
+      return "/vector/" + normalizedName;
+    }
+    constexpr std::string_view kAliasPrefix = "vector/";
+    if (normalizedName.rfind(kAliasPrefix, 0) != 0) {
+      return "";
+    }
+    const std::string_view helperName = std::string_view(normalizedName).substr(kAliasPrefix.size());
+    if (!isAliasMutatorName(helperName)) {
+      return "";
+    }
+    return "/vector/" + std::string(helperName);
+  }();
   const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback =
       isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
       hasVisibleDefinitionPath("/vector/" + namespacedHelper);
@@ -184,6 +207,12 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       !hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorMethodPath) &&
       !hasImportedDefinitionPath(explicitCanonicalStdVectorMutatorMethodPath)) {
     error_ = "unknown method: " + explicitCanonicalStdVectorMutatorMethodPath;
+    return false;
+  }
+  if (!explicitAliasVectorMutatorMethodPath.empty() &&
+      !hasDeclaredDefinitionPath(explicitAliasVectorMutatorMethodPath) &&
+      !hasImportedDefinitionPath(explicitAliasVectorMutatorMethodPath)) {
+    error_ = "unknown method: " + explicitAliasVectorMutatorMethodPath;
     return false;
   }
   bool hasResolvedReceiverIndex = false;
