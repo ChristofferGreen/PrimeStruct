@@ -148,17 +148,17 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
        namespacedHelper == "at_unsafe" || namespacedHelper == "push" || namespacedHelper == "pop" ||
        namespacedHelper == "reserve" || namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
        namespacedHelper == "remove_swap");
-  auto explicitCanonicalStdVectorMutatorMethodPath = [&]() -> std::string {
-    if (!stmt.isMethodCall) {
+  auto isVectorMutatorName = [](std::string_view helperName) {
+    return helperName == "push" || helperName == "pop" || helperName == "reserve" ||
+           helperName == "clear" || helperName == "remove_at" || helperName == "remove_swap";
+  };
+  auto explicitCanonicalStdVectorMutatorCallPath = [&]() -> std::string {
+    if (stmt.isMethodCall) {
       return "";
     }
-    auto isCanonicalMutatorName = [](std::string_view helperName) {
-      return helperName == "push" || helperName == "pop" || helperName == "reserve" ||
-             helperName == "clear" || helperName == "remove_at" || helperName == "remove_swap";
-    };
     const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
     const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
-    if (normalizedPrefix == "std/collections/vector" && isCanonicalMutatorName(normalizedName)) {
+    if (normalizedPrefix == "std/collections/vector" && isVectorMutatorName(normalizedName)) {
       return "/std/collections/vector/" + normalizedName;
     }
     constexpr std::string_view kCanonicalPrefix = "std/collections/vector/";
@@ -166,7 +166,45 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return "";
     }
     const std::string_view helperName = std::string_view(normalizedName).substr(kCanonicalPrefix.size());
-    if (!isCanonicalMutatorName(helperName)) {
+    if (!isVectorMutatorName(helperName)) {
+      return "";
+    }
+    return "/std/collections/vector/" + std::string(helperName);
+  }();
+  auto explicitAliasVectorMutatorCallPath = [&]() -> std::string {
+    if (stmt.isMethodCall) {
+      return "";
+    }
+    const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
+    const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
+    if (normalizedPrefix == "vector" && isVectorMutatorName(normalizedName)) {
+      return "/vector/" + normalizedName;
+    }
+    constexpr std::string_view kAliasPrefix = "vector/";
+    if (normalizedName.rfind(kAliasPrefix, 0) != 0) {
+      return "";
+    }
+    const std::string_view helperName = std::string_view(normalizedName).substr(kAliasPrefix.size());
+    if (!isVectorMutatorName(helperName)) {
+      return "";
+    }
+    return "/vector/" + std::string(helperName);
+  }();
+  auto explicitCanonicalStdVectorMutatorMethodPath = [&]() -> std::string {
+    if (!stmt.isMethodCall) {
+      return "";
+    }
+    const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
+    const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
+    if (normalizedPrefix == "std/collections/vector" && isVectorMutatorName(normalizedName)) {
+      return "/std/collections/vector/" + normalizedName;
+    }
+    constexpr std::string_view kCanonicalPrefix = "std/collections/vector/";
+    if (normalizedName.rfind(kCanonicalPrefix, 0) != 0) {
+      return "";
+    }
+    const std::string_view helperName = std::string_view(normalizedName).substr(kCanonicalPrefix.size());
+    if (!isVectorMutatorName(helperName)) {
       return "";
     }
     return "/std/collections/vector/" + std::string(helperName);
@@ -175,13 +213,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!stmt.isMethodCall) {
       return "";
     }
-    auto isAliasMutatorName = [](std::string_view helperName) {
-      return helperName == "push" || helperName == "pop" || helperName == "reserve" ||
-             helperName == "clear" || helperName == "remove_at" || helperName == "remove_swap";
-    };
     const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
     const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
-    if (normalizedPrefix == "vector" && isAliasMutatorName(normalizedName)) {
+    if (normalizedPrefix == "vector" && isVectorMutatorName(normalizedName)) {
       return "/vector/" + normalizedName;
     }
     constexpr std::string_view kAliasPrefix = "vector/";
@@ -189,7 +223,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return "";
     }
     const std::string_view helperName = std::string_view(normalizedName).substr(kAliasPrefix.size());
-    if (!isAliasMutatorName(helperName)) {
+    if (!isVectorMutatorName(helperName)) {
       return "";
     }
     return "/vector/" + std::string(helperName);
@@ -202,6 +236,18 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
   if (isUserMethodTarget) {
     return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
+  }
+  if (!explicitCanonicalStdVectorMutatorCallPath.empty() &&
+      !hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorCallPath) &&
+      !hasImportedDefinitionPath(explicitCanonicalStdVectorMutatorCallPath)) {
+    error_ = "unknown call target: " + explicitCanonicalStdVectorMutatorCallPath;
+    return false;
+  }
+  if (!explicitAliasVectorMutatorCallPath.empty() &&
+      !hasDeclaredDefinitionPath(explicitAliasVectorMutatorCallPath) &&
+      !hasImportedDefinitionPath(explicitAliasVectorMutatorCallPath)) {
+    error_ = "unknown call target: " + explicitAliasVectorMutatorCallPath;
+    return false;
   }
   if (!explicitCanonicalStdVectorMutatorMethodPath.empty() &&
       !hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorMethodPath) &&
