@@ -454,9 +454,22 @@ inline std::string makeBuiltinCanonicalMapInsertTemporaryFailureSource() {
   source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32)}\n";
+  source += "  /std/collections/map/insert<i32, i32>(values, 2i32, 7i32)\n";
+  source += "  return(0i32)\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
   source += "  /std/collections/map/insert<i32, i32>(values, 1i32, 4i32)\n";
-  source += "  return(0i32)\n";
+  source += "  values.insert(1i32, 7i32)\n";
+  source += "  return(plus(values.count(), values.at(1i32)))\n";
   source += "}\n";
   return source;
 }

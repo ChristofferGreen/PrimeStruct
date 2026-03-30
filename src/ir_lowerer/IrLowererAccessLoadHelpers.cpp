@@ -340,6 +340,7 @@ bool emitMapLookupTryAt(
 }
 
 bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
+    int32_t valuesLocal,
     int32_t ptrLocal,
     int32_t keyLocal,
     int32_t valueLocal,
@@ -358,6 +359,32 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   const size_t jumpFound = instructionCount();
   emitInstruction(IrOpcode::JumpIfZero, 0);
 
+  size_t jumpAfterEmptyGrow = 0;
+  bool hasEmptyGrowJump = false;
+  if (valuesLocal >= 0) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
+    emitInstruction(IrOpcode::PushI32, 0);
+    emitInstruction(IrOpcode::CmpEqI32, 0);
+    const size_t jumpPending = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+
+    const int32_t newBaseLocal = allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    emitInstruction(IrOpcode::PushI32, 1);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(newBaseLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(newBaseLocal + 1));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(newBaseLocal + 2));
+    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(newBaseLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+    jumpAfterEmptyGrow = instructionCount();
+    emitInstruction(IrOpcode::Jump, 0);
+    hasEmptyGrowJump = true;
+
+    patchInstructionImm(jumpPending, static_cast<uint64_t>(instructionCount()));
+  }
   emitPending();
 
   const size_t foundIndex = instructionCount();
@@ -375,6 +402,9 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
   emitInstruction(IrOpcode::StoreIndirect, 0);
   emitInstruction(IrOpcode::Pop, 0);
+  if (hasEmptyGrowJump) {
+    patchInstructionImm(jumpAfterEmptyGrow, static_cast<uint64_t>(instructionCount()));
+  }
   return true;
 }
 
