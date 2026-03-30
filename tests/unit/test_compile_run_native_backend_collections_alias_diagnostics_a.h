@@ -205,7 +205,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects native canonical vector access call struct method chain forwarding") {
+TEST_CASE("keeps native canonical vector access call struct method chain forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -228,15 +228,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_canonical_vector_access_struct_method_chain_forwarding_reject.prime", source);
-  const std::string errPath =
+      writeTemp("compile_native_canonical_vector_access_struct_method_chain_forwarding.prime", source);
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_native_canonical_vector_access_struct_method_chain_forwarding_reject.err")
+       "primec_native_canonical_vector_access_struct_method_chain_forwarding_exe")
           .string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 2);
 }
 
 TEST_CASE("rejects native canonical vector unsafe access field expression forwarding") {

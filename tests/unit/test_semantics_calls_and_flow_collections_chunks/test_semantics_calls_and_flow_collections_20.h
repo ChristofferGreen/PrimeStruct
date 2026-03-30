@@ -271,7 +271,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("vector canonical access call keeps primitive receiver diagnostics") {
+TEST_CASE("vector canonical access call keeps same-path struct receiver forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -294,8 +294,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector canonical unsafe access call forwards field inference") {

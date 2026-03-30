@@ -375,7 +375,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm canonical vector access call struct method chain forwarding") {
+TEST_CASE("keeps vm canonical vector access call struct method chain forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -398,14 +398,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_vector_access_struct_method_chain_forwarding_reject.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_canonical_vector_access_struct_method_chain_forwarding_reject.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+      writeTemp("vm_canonical_vector_access_struct_method_chain_forwarding.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vm canonical vector unsafe access field expression forwarding") {

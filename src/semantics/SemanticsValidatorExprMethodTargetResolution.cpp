@@ -1625,6 +1625,70 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
            matchesPath("/std/collections/experimental_map/mapSept") ||
            matchesPath("/std/collections/experimental_map/mapOct");
   };
+  auto setMethodTargetFromTypeText =
+      [&](const std::string &typeText, const std::string &typeNamespace) -> bool {
+    const std::string normalizedType =
+        normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
+    if (normalizedType.empty()) {
+      return false;
+    }
+    std::string normalizedBaseType = normalizedType;
+    if (!normalizedBaseType.empty() && normalizedBaseType.front() == '/') {
+      normalizedBaseType.erase(normalizedBaseType.begin());
+    }
+    if (normalizedType == "string" &&
+        (normalizedMethodName == "count" || normalizedMethodName == "at" ||
+         normalizedMethodName == "at_unsafe")) {
+      return setCollectionMethodTarget("/string/" + normalizedMethodName);
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      base = normalizeBindingTypeName(base);
+      if (base == "vector" &&
+          (normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
+           normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
+        return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
+      }
+      if (base == "array" &&
+          (normalizedMethodName == "count" || normalizedMethodName == "at" ||
+           normalizedMethodName == "at_unsafe")) {
+        return setCollectionMethodTarget("/array/" + normalizedMethodName);
+      }
+      if (base == "soa_vector" &&
+          (normalizedMethodName == "count" || normalizedMethodName == "get" ||
+           normalizedMethodName == "ref")) {
+        return setCollectionMethodTarget("/soa_vector/" + normalizedMethodName);
+      }
+      if (base == "Buffer" &&
+          (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
+           normalizedMethodName == "is_valid" || normalizedMethodName == "readback" ||
+           normalizedMethodName == "load" || normalizedMethodName == "store")) {
+        return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
+      }
+      if (isMapCollectionTypeName(base) &&
+          (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
+           normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
+           normalizedMethodName == "at_unsafe")) {
+        resolvedOut = "/std/collections/map/" + normalizedMethodName;
+        isBuiltinOut = false;
+        return true;
+      }
+    }
+    if (isPrimitiveBindingTypeName(normalizedBaseType)) {
+      resolvedOut = "/" + normalizedBaseType + "/" + normalizedMethodName;
+      return true;
+    }
+    std::string resolvedType = resolveStructTypePath(normalizedType, typeNamespace);
+    if (resolvedType.empty()) {
+      resolvedType = resolveTypePath(normalizedType, typeNamespace);
+    }
+    if (resolvedType.empty()) {
+      return false;
+    }
+    resolvedOut = resolvedType + "/" + normalizedMethodName;
+    return true;
+  };
 
   if ((normalizedMethodName == "count" || normalizedMethodName == "contains" ||
        normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
@@ -1835,6 +1899,21 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           if (resolveVectorTarget(accessReceiver, vectorElemType)) {
             error_ = "unknown method: " + removedVectorAccessCompatibilityPath;
             return false;
+          }
+        }
+        auto accessDefIt = defMap_.find(resolveCalleePath(receiver));
+        if (accessDefIt != defMap_.end() && accessDefIt->second != nullptr) {
+          BindingInfo inferredReturn;
+          if (inferDefinitionReturnBinding(*accessDefIt->second, inferredReturn)) {
+            const std::string inferredTypeText =
+                inferredReturn.typeTemplateArg.empty()
+                    ? inferredReturn.typeName
+                    : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
+            if (setMethodTargetFromTypeText(
+                    inferredTypeText,
+                    accessDefIt->second->namespacePrefix)) {
+              return true;
+            }
           }
         }
         std::string accessElemType;
