@@ -1338,7 +1338,8 @@ for(
     fourteen-entry builtin numeric map to fifteen entries by repointing that same owning handle, grows a
     fifteen-entry builtin numeric map to sixteen entries by repointing that same owning handle, grows a
     sixteen-entry builtin numeric map to seventeen entries by repointing that same owning handle, grows a
-    seventeen-entry builtin numeric map to eighteen entries by repointing that same owning handle, and
+    seventeen-entry builtin numeric map to eighteen entries by repointing that same owning handle, grows an
+    eighteen-entry builtin numeric map to nineteen entries by repointing that same owning handle, and
     still reports the deterministic `builtin canonical map insert pending` diagnostic for the remaining larger
     non-empty new-key growth path, borrowed
     references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit cleanup now run through

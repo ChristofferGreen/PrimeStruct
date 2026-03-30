@@ -395,6 +395,8 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   bool hasSixteenthGrowJump = false;
   size_t jumpAfterSeventeenthGrow = 0;
   bool hasSeventeenthGrowJump = false;
+  size_t jumpAfterEighteenthGrow = 0;
+  bool hasEighteenthGrowJump = false;
   if (valuesLocal >= 0) {
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
     emitInstruction(IrOpcode::PushI32, 0);
@@ -1494,6 +1496,41 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     hasSeventeenthGrowJump = true;
 
     patchInstructionImm(jumpPendingAfterSeventeenth, static_cast<uint64_t>(instructionCount()));
+
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
+    emitInstruction(IrOpcode::PushI32, 18);
+    emitInstruction(IrOpcode::CmpEqI32, 0);
+    const size_t jumpPendingAfterEighteenth = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+
+    const int32_t eighteenthGrownBaseLocal = allocTempLocal();
+    for (int i = 0; i < 38; ++i) {
+      (void)allocTempLocal();
+    }
+    emitInstruction(IrOpcode::PushI32, 19);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(eighteenthGrownBaseLocal));
+
+    auto emitCopyEighteenthExistingSlot = [&](int32_t sourceSlotIndex, int32_t destSlotIndex) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+      emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(sourceSlotIndex * IrSlotBytesI32));
+      emitInstruction(IrOpcode::AddI64, 0);
+      emitInstruction(IrOpcode::LoadIndirect, 0);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(eighteenthGrownBaseLocal + destSlotIndex));
+    };
+    for (int32_t slotIndex = 1; slotIndex <= 36; ++slotIndex) {
+      emitCopyEighteenthExistingSlot(slotIndex, slotIndex);
+    }
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(eighteenthGrownBaseLocal + 37));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(eighteenthGrownBaseLocal + 38));
+    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(eighteenthGrownBaseLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+    jumpAfterEighteenthGrow = instructionCount();
+    emitInstruction(IrOpcode::Jump, 0);
+    hasEighteenthGrowJump = true;
+
+    patchInstructionImm(jumpPendingAfterEighteenth, static_cast<uint64_t>(instructionCount()));
   }
   emitPending();
 
@@ -1565,6 +1602,9 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   }
   if (hasSeventeenthGrowJump) {
     patchInstructionImm(jumpAfterSeventeenthGrow, static_cast<uint64_t>(instructionCount()));
+  }
+  if (hasEighteenthGrowJump) {
+    patchInstructionImm(jumpAfterEighteenthGrow, static_cast<uint64_t>(instructionCount()));
   }
   return true;
 }
