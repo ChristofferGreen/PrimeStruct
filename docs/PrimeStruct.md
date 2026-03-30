@@ -2327,11 +2327,9 @@ bad_use_after_take() {
     stdlib-owned implementation. Today, explicit AoS/SoA conversion helpers validate in both call and method form
     (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`, `vector<T>.to_soa()`, `soa_vector<T>.to_aos()`), method-form/call-form field-view names emit deterministic semantic diagnostics
     (`soa_vector field views are not implemented yet: <field>`) unless a user-defined `/soa_vector/<field>` helper is
-    present, and builtin field-view results now reject call-argument/return escapes with that same diagnostic until
-    the field-view substrate exists. `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, empty
+    present, `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, empty
     `soa_vector<T>()` literals lower to header-only storage, and builtin `ref(...)` now rejects local binding
-    persistence plus call-argument/return escapes with `soa_vector borrowed views are not implemented yet: ref`
-    until the borrowed-view substrate exists.
+    persistence with `soa_vector borrowed views are not implemented yet: ref` until the borrowed-view substrate exists.
     Non-empty SoA literals and remaining draft helper paths still emit deterministic unsupported diagnostics (`native
     backend does not support non-empty soa_vector literals`, `native backend does not support soa_vector get`, `native
     backend does not support soa_vector ref`, `native backend does not support to_soa`, `native backend does not
