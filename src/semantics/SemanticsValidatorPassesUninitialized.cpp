@@ -106,6 +106,39 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
   std::function<bool(const Expr &, std::string &)> resolveLocationRootBindingName;
   resolveLocationRootBindingName = [&](const Expr &pointerExpr, std::string &rootNameOut) -> bool {
     rootNameOut.clear();
+    if (pointerExpr.kind == Expr::Kind::Name) {
+      auto resolveNamedRoot = [&](const BindingInfo &binding) -> bool {
+        const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+        if ((normalizedType == "Reference" || normalizedType == "Pointer") &&
+            !binding.referenceRoot.empty()) {
+          rootNameOut = binding.referenceRoot;
+          return true;
+        }
+        return false;
+      };
+      for (const auto &param : params) {
+        if (param.name == pointerExpr.name && resolveNamedRoot(param.binding)) {
+          return true;
+        }
+      }
+      for (const auto &stmt : statements) {
+        if (!stmt.isBinding || stmt.name != pointerExpr.name || stmt.args.size() != 1) {
+          continue;
+        }
+        BindingInfo info;
+        std::optional<std::string> restrictType;
+        std::string error;
+        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, error)) {
+          return false;
+        }
+        const std::string normalizedType = normalizeBindingTypeName(info.typeName);
+        if (normalizedType != "Reference" && normalizedType != "Pointer") {
+          return false;
+        }
+        return resolveLocationRootBindingName(stmt.args.front(), rootNameOut);
+      }
+      return false;
+    }
     if (pointerExpr.kind != Expr::Kind::Call) {
       return false;
     }
@@ -174,7 +207,23 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     } else if (target.kind == Expr::Kind::Call) {
       std::string pointerBuiltinName;
       if (!getBuiltinPointerName(target, pointerBuiltinName) || pointerBuiltinName != "dereference" ||
-          target.args.size() != 1 || !resolveLocationRootBindingName(target.args.front(), targetName)) {
+          target.args.size() != 1) {
+        return std::nullopt;
+      }
+      if (target.args.front().kind == Expr::Kind::Name) {
+        const std::string &referenceName = target.args.front().name;
+        auto localIt = localsIn.find(referenceName);
+        if (localIt != localsIn.end()) {
+          const std::string normalizedType = normalizeBindingTypeName(localIt->second.typeName);
+          if ((normalizedType == "Reference" || normalizedType == "Pointer") &&
+              !localIt->second.referenceRoot.empty()) {
+            targetName = localIt->second.referenceRoot;
+          }
+        }
+        if (targetName.empty() && !resolveLocationRootBindingName(target.args.front(), targetName)) {
+          return std::nullopt;
+        }
+      } else if (!resolveLocationRootBindingName(target.args.front(), targetName)) {
         return std::nullopt;
       }
     } else {
@@ -284,6 +333,13 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         std::string error;
         if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, error)) {
           return error;
+        }
+        const std::string normalizedType = normalizeBindingTypeName(info.typeName);
+        if ((normalizedType == "Reference" || normalizedType == "Pointer") && stmt.args.size() == 1) {
+          std::string referenceRoot;
+          if (resolveLocationRootBindingName(stmt.args.front(), referenceRoot)) {
+            info.referenceRoot = std::move(referenceRoot);
+          }
         }
         localsIn.emplace(stmt.name, info);
         if (isUninitializedBinding(info)) {
@@ -404,6 +460,13 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       std::string error;
       if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, error)) {
         return {error, false};
+      }
+      const std::string normalizedType = normalizeBindingTypeName(info.typeName);
+      if ((normalizedType == "Reference" || normalizedType == "Pointer") && stmt.args.size() == 1) {
+        std::string referenceRoot;
+        if (resolveLocationRootBindingName(stmt.args.front(), referenceRoot)) {
+          info.referenceRoot = std::move(referenceRoot);
+        }
       }
       localsIn.emplace(stmt.name, info);
       if (isUninitializedBinding(info)) {

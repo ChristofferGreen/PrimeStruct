@@ -248,6 +248,48 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
 
+TEST_CASE("map constructors accept dereferenced experimental map storage references") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  [Reference<uninitialized<Map<string, i32>>>] ref{location(storage)}
+  init(dereference(ref), /std/collections/mapPair("left"raw_utf8, 5i32,
+                                                  "right"raw_utf8, 8i32))
+  [Map<string, i32>] values{take(storage)}
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at(values, "left"raw_utf8)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("dereferenced experimental map storage references keep mismatch diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  [Reference<uninitialized<Map<string, i32>>>] ref{location(storage)}
+  init(dereference(ref), /std/collections/mapPair("left"raw_utf8, 5i32,
+                                                  "wrong"raw_utf8, false))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+}
+
 TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced result struct storage fields") {
   const std::string source = R"(
 import /std/collections/*

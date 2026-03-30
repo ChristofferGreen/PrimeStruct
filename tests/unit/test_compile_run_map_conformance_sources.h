@@ -371,6 +371,26 @@ inline std::string makeExperimentalMapInsertConformanceSource() {
   return source;
 }
 
+inline std::string makeExperimentalMapStorageReferenceConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_out, heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}\n";
+  source += "  [Reference<uninitialized<Map<string, i32>>>] ref{location(storage)}\n";
+  source +=
+      "  init(dereference(ref), /std/collections/mapPair(\"left\"raw_utf8, 5i32, \"right\"raw_utf8, 8i32))\n";
+  source += "  [Map<string, i32>] values{take(storage)}\n";
+  source += "  [i32] count{/std/collections/map/count(values)}\n";
+  source += "  [i32] left{/std/collections/map/at(values, \"left\"raw_utf8)}\n";
+  source += "  print_line(count)\n";
+  source += "  print_line(left)\n";
+  source += "  return(plus(count, left))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapOwnershipConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";

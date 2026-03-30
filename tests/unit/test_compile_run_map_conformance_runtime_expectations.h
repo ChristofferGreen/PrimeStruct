@@ -281,6 +281,14 @@ inline void expectExperimentalMapFieldAssignConformance(const std::string &emitM
                                   13);
 }
 
+inline void expectExperimentalMapStorageReferenceConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapStorageReferenceConformanceSource(),
+                                            "map_experimental_storage_reference_" + emitMode,
+                                            emitMode,
+                                            7,
+                                            "2\n5\n");
+}
+
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {
   const std::string source = makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource();
   const std::string srcPath =

@@ -76,6 +76,7 @@ Map constructor-routing checkpoint: canonical and wrapper constructor spellings 
     - ✓ Add shared compile-run coverage and runtime parity for dereferenced helper-wrapped `Result.ok(...)` result struct-field assignment targets.
 - ◐ Canonical `map` constructor storage/dereference-target slice: finish constructor rewriting for `init(uninitialized<T>, value)` storage targets, dereference-based assignment/init targets, dereferenced struct-field targets, and struct-field storage targets that should produce experimental `Map<K, V>` values.
   - ✓ Re-enable the direct experimental-map struct-field assignment compile-run coverage across the shared C++/native/VM suites.
+  - ✓ Track dereference-based `init(...)` state through named local references for direct experimental-map storage targets.
   - ✓ Add shared compile-run coverage and runtime parity for helper-wrapped experimental-map struct storage targets.
     - ✓ Add shared compile-run coverage and runtime parity for direct helper-wrapped experimental-map struct storage targets.
     - ✓ Add shared compile-run coverage and runtime parity for dereferenced helper-wrapped experimental-map struct storage targets.
