@@ -195,7 +195,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   }
   if (receiver.kind == Expr::Kind::Call &&
       (helperName == "count" || helperName == "capacity" ||
-       helperName == "at" || helperName == "at_unsafe")) {
+       helperName == "at" || helperName == "at_unsafe" || helperName == "insert")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
       if (collectionTypePath == "/vector") {
@@ -203,7 +203,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         return true;
       }
       if (collectionTypePath == "/map" &&
-          (helperName == "count" || helperName == "at" || helperName == "at_unsafe")) {
+          (helperName == "count" || helperName == "at" || helperName == "at_unsafe" ||
+           helperName == "insert")) {
         resolvedOut = preferredBareMapHelperTarget(helperName);
         return true;
       }
@@ -239,12 +240,14 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (typeName.empty() || typeName == "Pointer" || typeName == "Reference") {
       return false;
     }
+    const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
     const std::string resolvedType = resolveReceiverTypePath(typeName, receiver.namespacePrefix);
     if (resolvedType.empty()) {
       return false;
     }
-    if (resolvedType == "/map" &&
-        (helperName == "count" || helperName == "at" || helperName == "at_unsafe")) {
+    if ((resolvedType == "/map" || isMapCollectionTypeName(normalizedTypeName)) &&
+        (helperName == "count" || helperName == "at" || helperName == "at_unsafe" ||
+         helperName == "insert")) {
       resolvedOut = preferredBareMapHelperTarget(helperName);
       return true;
     }

@@ -112,6 +112,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "tryAt");
       return true;
     }
+    if (normalizedMethodName == "insert" && collectionTypePath == "/map") {
+      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "insert");
+      return true;
+    }
     if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
       if (collectionTypePath == "/array") {
         resolvedOut = preferVectorStdlibHelperPath("/array/" + normalizedMethodName);
@@ -386,7 +390,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "count");
       return true;
     }
-    if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt") &&
+    if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
+         normalizedMethodName == "insert") &&
         resolveMapTarget(receiver, keyType, valueType)) {
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;

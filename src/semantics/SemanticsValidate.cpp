@@ -515,6 +515,100 @@ bool rewriteExperimentalMapValueMethods(Program &program, std::string &error) {
   return true;
 }
 
+bool isBuiltinMapBinding(const semantics::BindingInfo &binding) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
+  if (normalizedType == "Reference" || normalizedType == "Pointer") {
+    return false;
+  }
+  std::string keyType;
+  std::string valueType;
+  return semantics::extractMapKeyValueTypesFromTypeText(
+      bindingTypeText(binding), keyType, valueType);
+}
+
+std::optional<semantics::BindingInfo> extractBuiltinMapBinding(const Expr &expr) {
+  semantics::BindingInfo binding;
+  std::optional<std::string> restrictType;
+  std::string parseError;
+  static const std::unordered_set<std::string> emptyStructTypes;
+  static const std::unordered_map<std::string, std::string> emptyImportAliases;
+  if (!semantics::parseBindingInfo(
+          expr, expr.namespacePrefix, emptyStructTypes, emptyImportAliases, binding, restrictType, parseError)) {
+    return std::nullopt;
+  }
+  return isBuiltinMapBinding(binding) ? std::optional<semantics::BindingInfo>(binding)
+                                      : std::nullopt;
+}
+
+void rewriteBuiltinMapInsertMethodExpr(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings) {
+  for (Expr &arg : expr.args) {
+    rewriteBuiltinMapInsertMethodExpr(arg, bindings);
+  }
+  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
+      expr.name != "insert") {
+    return;
+  }
+  const Expr &receiver = expr.args.front();
+  if (receiver.kind != Expr::Kind::Name) {
+    return;
+  }
+  auto bindingIt = bindings.find(receiver.name);
+  if (bindingIt == bindings.end() || !isBuiltinMapBinding(bindingIt->second)) {
+    return;
+  }
+  std::string keyType;
+  std::string valueType;
+  if (expr.templateArgs.empty() &&
+      !semantics::extractMapKeyValueTypesFromTypeText(
+          bindingTypeText(bindingIt->second), keyType, valueType)) {
+    return;
+  }
+  expr.isMethodCall = false;
+  expr.isFieldAccess = false;
+  expr.name = "/std/collections/map/insert";
+  expr.namespacePrefix.clear();
+  if (expr.templateArgs.empty()) {
+    expr.templateArgs = {keyType, valueType};
+  }
+  expr.argNames.clear();
+}
+
+void rewriteBuiltinMapInsertMethodStatements(
+    std::vector<Expr> &statements,
+    std::unordered_map<std::string, semantics::BindingInfo> bindings) {
+  for (Expr &stmt : statements) {
+    rewriteBuiltinMapInsertMethodExpr(stmt, bindings);
+    if (!stmt.bodyArguments.empty()) {
+      auto bodyBindings = bindings;
+      rewriteBuiltinMapInsertMethodStatements(stmt.bodyArguments, bodyBindings);
+    }
+    if (stmt.isBinding) {
+      if (auto binding = extractBuiltinMapBinding(stmt); binding.has_value()) {
+        bindings[stmt.name] = *binding;
+      }
+    }
+  }
+}
+
+bool rewriteBuiltinMapInsertMethods(Program &program, std::string &error) {
+  error.clear();
+  for (Definition &def : program.definitions) {
+    std::unordered_map<std::string, semantics::BindingInfo> bindings;
+    for (const Expr &param : def.parameters) {
+      if (auto binding = extractBuiltinMapBinding(param); binding.has_value()) {
+        bindings[param.name] = *binding;
+      }
+    }
+    rewriteBuiltinMapInsertMethodStatements(def.statements, bindings);
+    if (def.returnExpr.has_value()) {
+      rewriteBuiltinMapInsertMethodExpr(*def.returnExpr, bindings);
+    }
+  }
+  return true;
+}
+
 bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
   std::unordered_set<std::string> structNames;
   structNames.reserve(program.definitions.size());
@@ -748,6 +842,9 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (!rewriteExperimentalMapValueMethods(program, error)) {
+    return false;
+  }
+  if (!rewriteBuiltinMapInsertMethods(program, error)) {
     return false;
   }
   try {

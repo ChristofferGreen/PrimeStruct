@@ -312,6 +312,17 @@ std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(
       candidate.args.empty()) {
     return "";
   }
+  const std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
+  const std::string normalizedPrefix =
+      std::string(trimLeadingSlash(candidate.namespacePrefix));
+  const bool explicitlyNamespacedMapHelper =
+      normalizedPrefix == "map" ||
+      normalizedPrefix == "std/collections/map" ||
+      normalizedName.rfind("map/", 0) == 0 ||
+      normalizedName.rfind("std/collections/map/", 0) == 0;
+  if (!explicitlyNamespacedMapHelper) {
+    return "";
+  }
   const BuiltinCollectionDispatchResolvers dispatchResolvers =
       makeBuiltinCollectionDispatchResolvers(params, locals, adapters);
   auto resolveAnyMapTarget = [&](const Expr &target) {

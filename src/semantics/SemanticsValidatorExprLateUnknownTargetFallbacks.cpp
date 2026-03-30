@@ -14,7 +14,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
       (expr.name == "count" || expr.name == "contains" ||
        expr.name == "tryAt" || expr.name == "at" ||
-       expr.name == "at_unsafe") &&
+       expr.name == "at_unsafe" || expr.name == "insert") &&
       !expr.args.empty() && context.resolveMapTarget(expr.args.front())) {
     const std::string canonicalMapMethodTarget =
         "/std/collections/map/" + expr.name;

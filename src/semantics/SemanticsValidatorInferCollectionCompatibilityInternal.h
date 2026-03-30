@@ -35,6 +35,9 @@ constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = 
     {"at_unsafe", "/std/collections/map/at_unsafe", "/map/at_unsafe", "/std/collections/mapAtUnsafe",
      "/std/collections/experimental_map/mapAtUnsafe", true, false,
     {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef"}, 4},
+    {"insert", "/std/collections/map/insert", "/map/insert", "/std/collections/mapInsert",
+     "/std/collections/experimental_map/mapInsert", true, true,
+     {"/mapInsert", "", "", ""}, 1},
 };
 
 struct ExperimentalVectorHelperDescriptor {
@@ -97,6 +100,7 @@ constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[
     {RemovedCollectionHelperFamily::Map, "tryAt", "/map/tryAt", false, false},
     {RemovedCollectionHelperFamily::Map, "at", "/map/at", false, false},
     {RemovedCollectionHelperFamily::Map, "at_unsafe", "/map/at_unsafe", false, false},
+    {RemovedCollectionHelperFamily::Map, "insert", "/map/insert", false, false},
 };
 
 bool resolveRemovedCollectionHelperReference(std::string_view rawMethodName,

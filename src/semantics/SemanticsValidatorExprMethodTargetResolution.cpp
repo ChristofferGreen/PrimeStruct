@@ -15,7 +15,7 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-         helperName == "at" || helperName == "at_unsafe";
+         helperName == "at" || helperName == "at_unsafe" || helperName == "insert";
 }
 
 bool isFileMethodName(std::string_view methodName) {
@@ -536,6 +536,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (helperName == "at_unsafe") {
       return definitionPathContains("/mapAtUnsafe");
+    }
+    if (helperName == "insert") {
+      return definitionPathContains("/mapInsert");
     }
     return false;
   };
@@ -1312,7 +1315,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
          resolvedOut == "/std/collections/map/contains" ||
          resolvedOut == "/std/collections/map/tryAt" ||
          resolvedOut == "/std/collections/map/at" ||
-         resolvedOut == "/std/collections/map/at_unsafe") &&
+         resolvedOut == "/std/collections/map/at_unsafe" ||
+         resolvedOut == "/std/collections/map/insert") &&
         (shouldBuiltinValidateCurrentMapWrapperHelper(
              resolvedOut.substr(std::string("/std/collections/map/").size())) ||
          hasImportedDefinitionPath(resolvedOut))) {
@@ -1511,6 +1515,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (normalizedMethodName == "tryAt" && collectionTypePath == "/map") {
       return setPreferredMapMethodTarget(receiver, "tryAt");
     }
+    if (normalizedMethodName == "insert" && collectionTypePath == "/map") {
+      return setPreferredMapMethodTarget(receiver, "insert");
+    }
     if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
       if (collectionTypePath == "/array") {
         return setCollectionMethodTarget("/array/" + normalizedMethodName);
@@ -1690,10 +1697,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (isMapCollectionTypeName(base) &&
           (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
            normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
-           normalizedMethodName == "at_unsafe")) {
-        resolvedOut = "/std/collections/map/" + normalizedMethodName;
-        isBuiltinOut = false;
-        return true;
+           normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
+        return setPreferredMapMethodTarget(receiver, normalizedMethodName);
       }
     }
     if (isPrimitiveBindingTypeName(normalizedBaseType)) {
@@ -1713,7 +1718,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
 
   if ((normalizedMethodName == "count" || normalizedMethodName == "contains" ||
        normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
-       normalizedMethodName == "at_unsafe") &&
+       normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert") &&
       isDirectMapConstructorReceiverCall(receiver)) {
     std::string keyType;
     std::string valueType;
@@ -1790,6 +1795,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (resolveMapTarget(receiver)) {
       return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+    }
+  }
+  if (normalizedMethodName == "insert") {
+    if (resolveMapTarget(receiver)) {
+      return setPreferredMapMethodTarget(receiver, "insert");
     }
   }
   if (normalizedMethodName == "capacity") {
@@ -2298,7 +2308,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&
       (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
        normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
-       normalizedMethodName == "at_unsafe")) {
+       normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
     const std::string canonicalMapHelper = "/std/collections/map/" + normalizedMethodName;
     if (hasDeclaredDefinitionPath(canonicalMapHelper) || hasImportedDefinitionPath(canonicalMapHelper)) {
       resolvedOut = canonicalMapHelper;

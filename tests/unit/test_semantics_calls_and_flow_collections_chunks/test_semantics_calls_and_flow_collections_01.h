@@ -418,6 +418,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin canonical map insert method sugar validates before lowering ownership-sensitive values") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Owned() {
+  [i32 mut] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, other.value)
+    assign(other.value, 0i32)
+  }
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, Owned> mut] values{map<string, Owned>()}
+  values.insert("left"raw_utf8, Owned(4i32))
+  values.insert("right"raw_utf8, Owned(7i32))
+  values.insert("left"raw_utf8, Owned(9i32))
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental map value methods validate ownership-sensitive values through Map helpers") {
   const std::string source = R"(
 import /std/collections/*

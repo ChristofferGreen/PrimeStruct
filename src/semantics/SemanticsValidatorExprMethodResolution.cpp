@@ -260,7 +260,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       const std::string helperName = expr.name;
       if (!(helperName == "count" || helperName == "contains" ||
             helperName == "tryAt" || helperName == "at" ||
-            helperName == "at_unsafe") ||
+            helperName == "at_unsafe" || helperName == "insert") ||
           !resolveMapTarget(expr.args.front())) {
         return false;
       }

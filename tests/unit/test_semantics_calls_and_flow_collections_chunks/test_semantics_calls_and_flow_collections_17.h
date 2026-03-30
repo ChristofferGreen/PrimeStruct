@@ -756,6 +756,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib canonical map insert resolves in method-call sugar") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32> mut] values{map<i32, i32>()}
+  values.insert(1i32, 4i32)
+  values.insert(2i32, 7i32)
+  values.insert(1i32, 9i32)
+  return(plus(values.count(), plus(values.at(1i32), values.at_unsafe(2i32))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib canonical map helper resolves method-call sugar for slash return type") {
   const std::string source = R"(
 [return<int>]
