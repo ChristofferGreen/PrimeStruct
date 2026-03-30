@@ -139,7 +139,17 @@
         normalized != "std/collections/vector/at_unsafe") {
       return "";
     }
-    for (const auto &resolvedCandidate : collectionHelperPathCandidates(resolveExprPath(candidate))) {
+    const std::string resolvedExprPath = resolveExprPath(candidate);
+    std::vector<std::string> resolvedCandidates;
+    if (resolvedExprPath == "/vector/at" || resolvedExprPath == "/vector/at_unsafe") {
+      resolvedCandidates.push_back(resolvedExprPath);
+    } else if (resolvedExprPath == "/std/collections/vector/at" ||
+               resolvedExprPath == "/std/collections/vector/at_unsafe") {
+      resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+    } else {
+      return "";
+    }
+    for (const auto &resolvedCandidate : resolvedCandidates) {
       auto structIt = returnStructs.find(resolvedCandidate);
       if (structIt != returnStructs.end()) {
         const std::string normalizedStruct = normalizedTypePath(structIt->second);

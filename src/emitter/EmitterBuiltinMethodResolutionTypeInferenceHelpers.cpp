@@ -242,16 +242,14 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
 
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    std::vector<std::string> resolvedCandidates;
-    if (candidate.isMethodCall &&
-        (resolvedExprPath == "/vector/at" || resolvedExprPath == "/vector/at_unsafe" ||
-         resolvedExprPath == "/std/collections/vector/at" ||
-         resolvedExprPath == "/std/collections/vector/at_unsafe")) {
-      resolvedCandidates.push_back(resolvedExprPath);
-    } else {
-      resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
+    if (resolvedExprPath == "/vector/at" || resolvedExprPath == "/vector/at_unsafe") {
+      return typeNameFromResolvedCandidates(view, {resolvedExprPath});
     }
-    return typeNameFromResolvedCandidates(view, resolvedCandidates);
+    if (resolvedExprPath == "/std/collections/vector/at" ||
+        resolvedExprPath == "/std/collections/vector/at_unsafe") {
+      return typeNameFromResolvedCandidates(view, collectionHelperPathCandidates(resolvedExprPath));
+    }
+    return "";
   };
   auto inferExplicitMapAccessResolvedTypeName = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {

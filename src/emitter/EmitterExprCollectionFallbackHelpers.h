@@ -9,6 +9,16 @@
     return normalized == "vector/count" || normalized == "std/collections/vector/count" ||
            normalized == "vector/capacity" || normalized == "std/collections/vector/capacity";
   };
+  auto isExplicitVectorAccessAliasDirectCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalized = candidate.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    return normalized == "vector/at" || normalized == "vector/at_unsafe";
+  };
   auto pickAccessReceiverIndex = [&]() -> size_t {
     if (expr.args.size() != 2) {
       return 0;
