@@ -249,7 +249,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") ==
         std::string::npos);
 
-  CHECK(nativeTailDispatchSource.find("bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName)") !=
+  CHECK(nativeTailDispatchSource.find("bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName)") ==
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") !=
         std::string::npos);
@@ -640,4 +640,3 @@ TEST_CASE("ir lowerer call helpers detect tail execution candidates from stateme
   statements = {nonTail};
   CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(statements, true, isTailCandidate));
 }
-

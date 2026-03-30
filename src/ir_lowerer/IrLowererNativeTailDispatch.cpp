@@ -41,34 +41,6 @@ bool emitMapLookupTryAt(
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
 
-bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName) {
-  if (isVectorBuiltinName(expr, "push")) {
-    helperName = "push";
-    return true;
-  }
-  if (isVectorBuiltinName(expr, "pop")) {
-    helperName = "pop";
-    return true;
-  }
-  if (isVectorBuiltinName(expr, "reserve")) {
-    helperName = "reserve";
-    return true;
-  }
-  if (isVectorBuiltinName(expr, "clear")) {
-    helperName = "clear";
-    return true;
-  }
-  if (isVectorBuiltinName(expr, "remove_at")) {
-    helperName = "remove_at";
-    return true;
-  }
-  if (isVectorBuiltinName(expr, "remove_swap")) {
-    helperName = "remove_swap";
-    return true;
-  }
-  return false;
-}
-
 UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
@@ -96,12 +68,6 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
   }
   if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity")) {
     error = "capacity requires vector target";
-    return UnsupportedNativeCallResult::Error;
-  }
-
-  std::string vectorHelper;
-  if (getUnsupportedVectorHelperName(expr, vectorHelper)) {
-    error = "native backend does not support vector helper: " + vectorHelper;
     return UnsupportedNativeCallResult::Error;
   }
 

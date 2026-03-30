@@ -453,41 +453,6 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             error) == Result::NotHandled);
 }
 
-TEST_CASE("ir lowerer call helpers reject removed vector compatibility helper names") {
-  primec::Expr callExpr;
-  callExpr.kind = primec::Expr::Kind::Call;
-  std::string helperName;
-
-  callExpr.name = "push";
-  REQUIRE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
-  CHECK(helperName == "push");
-
-  callExpr.name = "remove_swap";
-  REQUIRE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
-  CHECK(helperName == "remove_swap");
-
-  callExpr.name = "/vector/push";
-  helperName.clear();
-  CHECK_FALSE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
-  CHECK(helperName.empty());
-
-  callExpr.name = "/std/collections/vector/remove_at";
-  helperName.clear();
-  REQUIRE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
-  CHECK(helperName == "remove_at");
-
-  callExpr.name = "count";
-  helperName.clear();
-  CHECK_FALSE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
-  CHECK(helperName.empty());
-
-  callExpr.name = "push";
-  callExpr.isMethodCall = true;
-  helperName.clear();
-  REQUIRE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
-  CHECK(helperName == "push");
-}
-
 TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for stdlib-only helpers") {
   using Result = primec::ir_lowerer::UnsupportedNativeCallResult;
 
@@ -531,16 +496,16 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
   CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
             callExpr,
             [](const primec::Expr &, std::string &) { return false; },
-            error) == Result::Error);
-  CHECK(error == "native backend does not support vector helper: remove_at");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   callExpr.name = "/std/collections/vector/remove_swap";
   error.clear();
   CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
             callExpr,
             [](const primec::Expr &, std::string &) { return false; },
-            error) == Result::Error);
-  CHECK(error == "native backend does not support vector helper: remove_swap");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   callExpr.name = "print";
   error.clear();
