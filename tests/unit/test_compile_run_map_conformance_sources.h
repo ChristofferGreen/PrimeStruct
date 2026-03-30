@@ -429,6 +429,53 @@ inline std::string makeCanonicalMapNamespaceExperimentalInsertConformanceSource(
   return source;
 }
 
+inline std::string makeExperimentalMapOwnershipMethodConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[struct]\n";
+  source += "Tracked() {\n";
+  source += "  [i32 mut] value{0i32}\n";
+  source += "\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this.value, other.value)\n";
+  source += "    assign(other.value, 0i32)\n";
+  source += "  }\n\n";
+  source += "  Destroy() {\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedExperimentalMapOwnershipMethodError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapOwnershipMethodError>]\n";
+  source += "main() {\n";
+  source +=
+      "  [Map<string, Tracked> mut] values{mapSingle<string, Tracked>(\"left\"raw_utf8, Tracked(4i32))}\n";
+  source += "  values.insert(\"right\"raw_utf8, Tracked(7i32))\n";
+  source += "  values.insert(\"left\"raw_utf8, Tracked(9i32))\n";
+  source += "  values.insert(\"third\"raw_utf8, Tracked(11i32))\n";
+  source += "  [Tracked] found{try(values.tryAt(\"left\"raw_utf8))}\n";
+  source +=
+      "  [Result<Tracked, ContainerError>] missing{values.tryAt(\"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(values.count(), found.value)}\n";
+  source += "  assign(total, plus(total, values.at(\"right\"raw_utf8).value))\n";
+  source += "  assign(total, plus(total, values.at_unsafe(\"third\"raw_utf8).value))\n";
+  source += "  if(values.contains(\"right\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  if(not(values.contains(\"missing\"raw_utf8)),\n";
+  source += "     then() { assign(total, plus(total, 2i32)) },\n";
+  source += "     else() { })\n";
+  source += "  print_line(Result.why(missing))\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapIndexConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";

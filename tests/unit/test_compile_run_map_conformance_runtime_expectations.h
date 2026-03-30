@@ -16,6 +16,14 @@ inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const 
                                             "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
 }
 
+inline void expectExperimentalMapOwnershipMethodConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipMethodConformanceSource(),
+                                            "map_experimental_ownership_method",
+                                            emitMode,
+                                            33,
+                                            "container missing key\n");
+}
+
 inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
                                             "map_namespace_canonical_experimental_return",

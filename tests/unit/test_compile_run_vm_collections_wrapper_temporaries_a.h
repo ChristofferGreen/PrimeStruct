@@ -152,6 +152,10 @@ TEST_CASE("runs vm wrapper map helpers on experimental map values") {
   expectWrapperMapHelperExperimentalValueConformance("vm");
 }
 
+TEST_CASE("runs vm ownership-sensitive experimental map value methods") {
+  expectExperimentalMapOwnershipMethodConformance("vm");
+}
+
 TEST_CASE("runs vm helper-wrapped inferred experimental map returns") {
   expectWrappedInferredExperimentalMapReturnConformance("vm");
 }
