@@ -454,8 +454,8 @@ inline std::string makeBuiltinCanonicalMapInsertTemporaryFailureSource() {
   source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 9i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 4i32, 11i32)\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 9i32, 4i32, 11i32)}\n";
+  source += "  /std/collections/map/insert<i32, i32>(values, 5i32, 13i32)\n";
   source += "  return(0i32)\n";
   source += "}\n";
   return source;
@@ -496,6 +496,19 @@ inline std::string makeBuiltinCanonicalMapInsertTripleGrowthConformanceSource() 
   source += "  /std/collections/map/insert<i32, i32>(values, 3i32, 11i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), values.at_unsafe(3i32)))))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeBuiltinCanonicalMapInsertQuadGrowthConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32)}\n";
+  source += "  /std/collections/map/insert<i32, i32>(values, 4i32, 13i32)\n";
+  source += "  values.insert(1i32, 9i32)\n";
+  source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), values.at_unsafe(4i32))))))\n";
   source += "}\n";
   return source;
 }
