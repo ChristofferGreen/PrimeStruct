@@ -347,6 +347,10 @@ TEST_CASE("compiles and runs native builtin canonical map eleventh-growth insert
   expectBuiltinCanonicalMapInsertEleventhGrowthConformance("native");
 }
 
+TEST_CASE("compiles and runs native builtin canonical map twelfth-growth inserts") {
+  expectBuiltinCanonicalMapInsertTwelfthGrowthConformance("native");
+}
+
 TEST_CASE("compiles and runs native builtin canonical map insert overwrites") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("native");
 }

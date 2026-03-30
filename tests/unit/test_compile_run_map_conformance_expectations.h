@@ -367,6 +367,14 @@ inline void expectBuiltinCanonicalMapInsertEleventhGrowthConformance(const std::
                                             "");
 }
 
+inline void expectBuiltinCanonicalMapInsertTwelfthGrowthConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertTwelfthGrowthConformanceSource(),
+                                            "map_builtin_canonical_insert_twelfth_growth_" + emitMode,
+                                            emitMode,
+                                            228,
+                                            "");
+}
+
 inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
                                             "map_builtin_canonical_insert_overwrite_" + emitMode,
