@@ -246,7 +246,12 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         return resolvedPath;
       }
       helperPath = vectorConstructorHelperPath();
-    } else if (resolvedPath == "/std/collections/map/map" || resolvedPath == "/map/map") {
+    } else if (resolvedPath == "/std/collections/map/map") {
+      if (hasDefinitionFamilyPath(resolvedPath) || hasImportedDefinitionPath(resolvedPath)) {
+        return resolvedPath;
+      }
+      helperPath = mapConstructorHelperPath(expr.args.size());
+    } else if (resolvedPath == "/map/map") {
       helperPath = mapConstructorHelperPath(expr.args.size());
     }
     if (!helperPath.empty()) {

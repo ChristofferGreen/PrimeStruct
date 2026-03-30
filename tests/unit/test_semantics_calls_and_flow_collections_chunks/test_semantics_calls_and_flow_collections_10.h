@@ -13,6 +13,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced map constructor keeps same-path definition before wrapper fallback") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/map/map<T, U>([T] key, [U] value) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/mapSingle<T, U>([T] key, [U] value) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/map<i32, i32>(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced map constructor requires imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

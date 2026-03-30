@@ -289,7 +289,8 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     if (expr.isMethodCall) {
       return resolvedPath;
     }
-    if (resolvedPath == "/std/collections/vector/vector" &&
+    if ((resolvedPath == "/std/collections/vector/vector" ||
+         resolvedPath == "/std/collections/map/map") &&
         (ctx.sourceDefs.count(resolvedPath) > 0 || ctx.helperOverloads.count(resolvedPath) > 0)) {
       return resolvedPath;
     }
