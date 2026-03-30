@@ -2323,16 +2323,15 @@ bad_use_after_take() {
     push`, `native backend does not support soa_vector helper: reserve`). These compiler-owned `soa_vector` paths are
     not the intended end-state and should be deleted as the generic SoA substrate and stdlib `.prime` implementation
     land.
-  - **Current implementation status:** VM/native still use fixed-capacity vector locals; `push` and dynamic `reserve`
-    values past capacity currently report runtime errors (`vector local capacity limit exceeded (256)` / `vector reserve
-    exceeds local capacity limit (256)`), while `vector<T>(...)` constructors above `256` elements and
-    out-of-range/negative folded `reserve` integer literal expressions are rejected at lowering time (`vector literal
-    exceeds local capacity limit (256)` / `vector reserve exceeds local capacity limit (256)` / `vector reserve expects
-    non-negative capacity` / `vector reserve literal expression overflow`). Folded literal support currently covers
-    `plus`/`minus`/`negate` expression trees, and both signed and unsigned fold-overflow paths now emit `vector reserve
-    literal expression overflow`. Vector locals now use a `count/capacity/data_ptr` record layout, but `data_ptr` still
-    targets frame-local storage until heap-backed dynamic allocation lands. This is an implementation gap from the
-    language contract.
+  - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
+    layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
+    allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of
+    memory)`) once the local dynamic-capacity limit (`256`) is exceeded. `vector<T>(...)` constructors above `256`
+    elements and out-of-range/negative folded `reserve` integer literal expressions are rejected at lowering time
+    (`vector literal exceeds local capacity limit (256)` / `vector reserve exceeds local capacity limit (256)` /
+    `vector reserve expects non-negative capacity` / `vector reserve literal expression overflow`). Folded literal
+    support currently covers `plus`/`minus`/`negate` expression trees, and both signed and unsigned fold-overflow paths
+    emit `vector reserve literal expression overflow`.
   - Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only.
   - Current builtin map key contract: `K` must resolve to the builtin `Comparable` subset (`i32`, `i64`, `u64`, `f32`,
     `f64`, `bool`, or `string`). Generic `map<K, V>` helpers may defer that check until monomorphisation, but concrete
