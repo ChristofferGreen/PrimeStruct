@@ -2348,11 +2348,14 @@ bad_use_after_take() {
     collection-specific reflection primitives.
   - **Experimental stdlib status:** the first stdlib namespace foothold now exists at
     `/std/collections/experimental_soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`, and
-    `soaVectorCount<T>()`. That wrapper now owns explicit `.prime` empty-runtime count state while still storing the
-    current builtin header-only `soa_vector<T>` backing, and it currently requires `T` to be a reflect-enabled struct
-    via `meta.field_count<T>()` so non-SoA-safe element types fail early. The next real `.prime` storage/runtime step
-    is column-backed storage plus borrowed-view semantics, which still depend on the pending column-storage and
-    borrowed-view substrate.
+    `soaVectorCount<T>()`, and it now also exposes the first empty-state `.prime` AoS conversion foothold through
+    `soaVectorToAos<T>()`. The wrapper owns explicit `.prime` empty-runtime count state while still storing the current
+    builtin header-only `soa_vector<T>` backing, and it currently requires `T` to be a reflect-enabled struct via
+    `meta.field_count<T>()` so non-SoA-safe element types fail early. Today that helper validates semantically but
+    still hits the deterministic backend boundary `* backend does not support return type on
+    /std/collections/experimental_soa_vector/soaVectorToAos__...` until vector<Struct> helper returns, real column
+    storage, and borrowed-view substrate are in place. Method-sugar `to_aos()` and any non-empty conversion remain
+    pending behind that same broader substrate work.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of
