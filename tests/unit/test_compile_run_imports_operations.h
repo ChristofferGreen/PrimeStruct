@@ -295,6 +295,10 @@ TEST_CASE("compiles and runs builtin canonical map fourteenth-growth inserts in 
   expectBuiltinCanonicalMapInsertFourteenthGrowthConformance("exe");
 }
 
+TEST_CASE("compiles and runs builtin canonical map fifteenth-growth inserts in C++ emitter") {
+  expectBuiltinCanonicalMapInsertFifteenthGrowthConformance("exe");
+}
+
 TEST_CASE("compiles and runs builtin canonical map insert overwrites in C++ emitter") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("exe");
 }
