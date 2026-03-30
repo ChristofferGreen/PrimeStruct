@@ -454,8 +454,8 @@ inline std::string makeBuiltinCanonicalMapInsertTemporaryFailureSource() {
   source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 8i32, 21i32)\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32)}\n";
+  source += "  /std/collections/map/insert<i32, i32>(values, 9i32, 23i32)\n";
   source += "  return(0i32)\n";
   source += "}\n";
   return source;
@@ -548,6 +548,19 @@ inline std::string makeBuiltinCanonicalMapInsertSeptGrowthConformanceSource() {
   source += "  /std/collections/map/insert<i32, i32>(values, 7i32, 19i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), plus(values.at(6i32), values.at_unsafe(7i32)))))))))\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeBuiltinCanonicalMapInsertOctGrowthConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32)}\n";
+  source += "  /std/collections/map/insert<i32, i32>(values, 8i32, 21i32)\n";
+  source += "  values.insert(1i32, 9i32)\n";
+  source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), plus(values.at(6i32), plus(values.at(7i32), values.at_unsafe(8i32))))))))))\n";
   source += "}\n";
   return source;
 }
