@@ -1,14 +1,3 @@
-  auto isExplicitVectorAccessSlashMethod = [&](const Expr &candidate, const char *helper) {
-    if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty()) {
-      return false;
-    }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    return normalized == std::string("vector/") + helper ||
-           normalized == std::string("std/collections/vector/") + helper;
-  };
   auto isExplicitVectorCountCapacityDirectCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
