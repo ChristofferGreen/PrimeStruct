@@ -1711,8 +1711,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (isMapCollectionTypeName(base) &&
           (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
            normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
-           normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
-        return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+           normalizedMethodName == "at_unsafe")) {
+        resolvedOut = "/std/collections/map/" + normalizedMethodName;
+        isBuiltinOut = false;
+        return true;
       }
     }
     if (isPrimitiveBindingTypeName(normalizedBaseType)) {
@@ -1944,6 +1946,21 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           if (resolveVectorTarget(accessReceiver, vectorElemType)) {
             error_ = "unknown method: " + removedVectorAccessCompatibilityPath;
             return false;
+          }
+        }
+        auto accessDefIt = defMap_.find(resolveCalleePath(receiver));
+        if (accessDefIt != defMap_.end() && accessDefIt->second != nullptr) {
+          BindingInfo inferredReturn;
+          if (inferDefinitionReturnBinding(*accessDefIt->second, inferredReturn)) {
+            const std::string inferredTypeText =
+                inferredReturn.typeTemplateArg.empty()
+                    ? inferredReturn.typeName
+                    : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
+            if (setMethodTargetFromTypeText(
+                    inferredTypeText,
+                    accessDefIt->second->namespacePrefix)) {
+              return true;
+            }
           }
         }
         std::string accessElemType;

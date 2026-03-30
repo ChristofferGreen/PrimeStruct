@@ -285,7 +285,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects canonical vector access call struct method chain with primitive receiver diagnostics in C++ emitter") {
+TEST_CASE("keeps canonical vector access call struct method chain forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -309,15 +309,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_access_struct_method_chain_forwarding.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_canonical_vector_access_struct_method_chain_forwarding.err")
+       "primec_cpp_canonical_vector_access_struct_method_chain_forwarding_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 2);
 }
 
 TEST_CASE("C++ emitter keeps canonical vector unsafe access field expression forwarding") {
