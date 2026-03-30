@@ -96,10 +96,6 @@
   bool isBuiltinSoaRefExpr(const Expr &expr,
                            const std::vector<ParameterInfo> &params,
                            const std::unordered_map<std::string, BindingInfo> &locals) const;
-  bool isBuiltinSoaFieldViewExpr(const Expr &expr,
-                                 const std::vector<ParameterInfo> &params,
-                                 const std::unordered_map<std::string, BindingInfo> &locals,
-                                 std::string *fieldNameOut = nullptr) const;
   bool graphBindingIsUsable(const BindingInfo &binding) const;
   bool shouldBypassGraphBindingLookup(const Expr &candidate) const;
   bool hasDirectExperimentalVectorImport() const;

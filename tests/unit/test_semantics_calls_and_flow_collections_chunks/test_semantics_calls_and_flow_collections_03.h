@@ -229,6 +229,90 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("soa_vector builtin ref rejects call argument escapes before borrowed views exist") {
+  const auto checkReject = [](const std::string &expr) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "consume<T>([T] value) {\n"
+        "  return(0i32)\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [soa_vector<Particle>] values{soa_vector<Particle>()}\n"
+        "  return(consume(" + expr + "))\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+  };
+
+  checkReject("ref(values, 0i32)");
+  checkReject("values.ref(0i32)");
+  checkReject("/soa_vector/ref(values, 0i32)");
+}
+
+TEST_CASE("soa_vector builtin ref rejects return escapes before borrowed views exist") {
+  const auto checkReject = [](const std::string &expr) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<auto>]\n"
+        "pick([soa_vector<Particle>] values) {\n"
+        "  return(" + expr + ")\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [soa_vector<Particle>] values{soa_vector<Particle>()}\n"
+        "  pick(values)\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/pick", error));
+    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+  };
+
+  checkReject("ref(values, 0i32)");
+  checkReject("values.ref(0i32)");
+  checkReject("/soa_vector/ref(values, 0i32)");
+}
+
+TEST_CASE("soa_vector ref helper still accepts call and return escapes through same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/ref([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(11i32)
+}
+
+[return<int>]
+consume<T>([T] value) {
+  return(value)
+}
+
+[return<auto>]
+pick([soa_vector<Particle>] values, [vector<i32>] idx) {
+  return(values.ref(idx))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<i32>] idx{vector<i32>(0i32)}
+  return(plus(consume(values.ref(idx)), pick(values, idx)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector get helper call-form accepts labeled named receiver") {
   const std::string source = R"(
 Particle() {

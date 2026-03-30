@@ -2329,7 +2329,8 @@ bad_use_after_take() {
     (`soa_vector field views are not implemented yet: <field>`) unless a user-defined `/soa_vector/<field>` helper is
     present, `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, empty
     `soa_vector<T>()` literals lower to header-only storage, and builtin `ref(...)` now rejects local binding
-    persistence with `soa_vector borrowed views are not implemented yet: ref` until the borrowed-view substrate exists.
+    persistence plus call-argument/return escapes with `soa_vector borrowed views are not implemented yet: ref`
+    until the borrowed-view substrate exists.
     Non-empty SoA literals and remaining draft helper paths still emit deterministic unsupported diagnostics (`native
     backend does not support non-empty soa_vector literals`, `native backend does not support soa_vector get`, `native
     backend does not support soa_vector ref`, `native backend does not support to_soa`, `native backend does not
