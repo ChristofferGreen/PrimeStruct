@@ -49,6 +49,17 @@ bool isRemovedCollectionMethodAlias(const std::string &rawMethodName) {
   return false;
 }
 
+bool removedCollectionAliasNeedsDefinition(std::string_view rawMethodName) {
+  return rawMethodName == "/map/count" ||
+         rawMethodName == "/std/collections/map/count" ||
+         rawMethodName == "/array/count" ||
+         rawMethodName == "/array/capacity" ||
+         rawMethodName == "/vector/count" ||
+         rawMethodName == "/vector/capacity" ||
+         rawMethodName == "/std/collections/vector/count" ||
+         rawMethodName == "/std/collections/vector/capacity";
+}
+
 } // namespace
 
 bool resolveMethodCallPath(const Expr &call,
@@ -63,12 +74,22 @@ bool resolveMethodCallPath(const Expr &call,
   if (!call.isMethodCall || call.args.empty()) {
     return false;
   }
-  if (isRemovedCollectionMethodAlias(call.name)) {
-    return false;
-  }
-
   MethodResolutionMetadataView metadataView{
       defMap, importAliases, structTypeMap, returnKinds, returnStructs};
+  if (isRemovedCollectionMethodAlias(call.name)) {
+    std::string explicitPath = call.name;
+    if (!explicitPath.empty() && explicitPath.front() != '/') {
+      explicitPath.insert(explicitPath.begin(), '/');
+    }
+    const bool hasSamePathHelper =
+        removedCollectionAliasNeedsDefinition(explicitPath)
+            ? defMap.count(explicitPath) > 0
+            : hasDefinitionOrMetadata(metadataView, explicitPath);
+    if (!hasSamePathHelper) {
+      return false;
+    }
+  }
+
   std::string normalizedMethodName = call.name;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
@@ -427,8 +448,10 @@ bool resolveMethodCallPath(const Expr &call,
                                    normalizedMethodName == "tryAt" ||
                                    normalizedMethodName == "at" ||
                                    normalizedMethodName == "at_unsafe";
-    const bool hasAliasHelperDefinition = defMap.count(aliasPath) > 0;
-    const bool hasCanonicalHelperDefinition = defMap.count(canonicalPath) > 0;
+    const bool hasAliasHelperDefinition =
+        hasDefinitionOrMetadata(metadataView, aliasPath);
+    const bool hasCanonicalHelperDefinition =
+        hasDefinitionOrMetadata(metadataView, canonicalPath);
     if (isMapHelperMethod) {
       if (isExplicitMapAliasMethod) {
         if (!hasAliasHelperDefinition) {
