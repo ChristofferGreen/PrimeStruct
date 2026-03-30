@@ -1322,26 +1322,8 @@ for(
     ownership-sensitive element flows, explicit experimental `Map<K, V>` bindings now also support canonical
     `/std/collections/map/insert(...)` on that same overwrite/update path, builtin canonical `map<K, V>` bindings now
     route both `.insert(...)` method sugar and direct canonical `/std/collections/map/insert(...)` calls through a
-    temporary helper that performs the real in-place overwrite path when the numeric key already exists, grows an
-    empty builtin numeric map to its first entry by repointing the owning local handle, grows a single-entry builtin
-    numeric map to a pair by repointing that same owning handle, grows a two-entry builtin numeric map to a triple by
-    repointing that same owning handle, grows a three-entry builtin numeric map to four entries by repointing that
-    same owning handle, grows a four-entry builtin numeric map to five entries by repointing that same owning handle,
-    grows a five-entry builtin numeric map to six entries by repointing that same owning handle, grows a six-entry
-    builtin numeric map to seven entries by repointing that same owning handle, grows a seven-entry builtin numeric
-    map to eight entries by repointing that same owning handle, grows an eight-entry builtin numeric map to nine
-    entries by repointing that same owning handle, grows a nine-entry builtin numeric map to ten entries by
-    repointing that same owning handle, grows a ten-entry builtin numeric map to eleven entries by repointing that
-    same owning handle, grows an eleven-entry builtin numeric map to twelve entries by repointing that same owning
-    handle, grows a twelve-entry builtin numeric map to thirteen entries by repointing that same owning handle,
-    grows a thirteen-entry builtin numeric map to fourteen entries by repointing that same owning handle, grows a
-    fourteen-entry builtin numeric map to fifteen entries by repointing that same owning handle, grows a
-    fifteen-entry builtin numeric map to sixteen entries by repointing that same owning handle, grows a
-    sixteen-entry builtin numeric map to seventeen entries by repointing that same owning handle, grows a
-    seventeen-entry builtin numeric map to eighteen entries by repointing that same owning handle, grows an
-    eighteen-entry builtin numeric map to nineteen entries by repointing that same owning handle, and
-    still reports the deterministic `builtin canonical map insert pending` diagnostic for the remaining larger
-    non-empty new-key growth path, borrowed
+    helper that performs the real in-place overwrite path when the numeric key already exists and otherwise grows
+    through one generic arbitrary-`n` grow/copy/repoint path for owning local numeric maps, borrowed
     references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit cleanup now run through
     the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly `drop(...)`ing and
     `init(...)`ing payload slots. Borrowed

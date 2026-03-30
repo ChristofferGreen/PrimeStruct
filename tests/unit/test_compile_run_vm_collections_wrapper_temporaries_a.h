@@ -328,88 +328,12 @@ TEST_CASE("runs vm canonical namespaced map inserts on explicit experimental map
   expectCanonicalMapNamespaceExperimentalInsertConformance("vm");
 }
 
-TEST_CASE("rejects vm builtin canonical map inserts with pending runtime diagnostic") {
-  expectBuiltinCanonicalMapInsertPendingDiagnostic("vm");
-}
-
 TEST_CASE("runs vm builtin canonical map first-growth inserts") {
   expectBuiltinCanonicalMapInsertFirstGrowthConformance("vm");
 }
 
-TEST_CASE("runs vm builtin canonical map pair-growth inserts") {
-  expectBuiltinCanonicalMapInsertPairGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map triple-growth inserts") {
-  expectBuiltinCanonicalMapInsertTripleGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map quad-growth inserts") {
-  expectBuiltinCanonicalMapInsertQuadGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map quint-growth inserts") {
-  expectBuiltinCanonicalMapInsertQuintGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map sext-growth inserts") {
-  expectBuiltinCanonicalMapInsertSextGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map sept-growth inserts") {
-  expectBuiltinCanonicalMapInsertSeptGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map oct-growth inserts") {
-  expectBuiltinCanonicalMapInsertOctGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map ninth-growth inserts") {
-  expectBuiltinCanonicalMapInsertNinthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map tenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertTenthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map eleventh-growth inserts") {
-  expectBuiltinCanonicalMapInsertEleventhGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map twelfth-growth inserts") {
-  expectBuiltinCanonicalMapInsertTwelfthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map thirteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertThirteenthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map fourteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertFourteenthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map fifteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertFifteenthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map sixteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertSixteenthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map seventeenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertSeventeenthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map eighteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertEighteenthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map nineteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertNineteenthGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map twentieth-growth inserts") {
-  expectBuiltinCanonicalMapInsertTwentiethGrowthConformance("vm");
+TEST_CASE("runs vm builtin canonical map repeated-growth inserts") {
+  expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("vm");
 }
 
 TEST_CASE("runs vm builtin canonical map insert overwrites") {

@@ -288,88 +288,12 @@ TEST_CASE("compiles and runs canonical namespaced map inserts on explicit experi
   expectCanonicalMapNamespaceExperimentalInsertConformance("exe");
 }
 
-TEST_CASE("rejects builtin canonical map inserts with pending runtime diagnostic in C++ emitter") {
-  expectBuiltinCanonicalMapInsertPendingDiagnostic("exe");
-}
-
 TEST_CASE("compiles and runs builtin canonical map first-growth inserts in C++ emitter") {
   expectBuiltinCanonicalMapInsertFirstGrowthConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map pair-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertPairGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map triple-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertTripleGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map quad-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertQuadGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map quint-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertQuintGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map sext-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertSextGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map sept-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertSeptGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map oct-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertOctGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map ninth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertNinthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map tenth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertTenthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map eleventh-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertEleventhGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map twelfth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertTwelfthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map thirteenth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertThirteenthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map fourteenth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertFourteenthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map fifteenth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertFifteenthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map sixteenth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertSixteenthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map seventeenth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertSeventeenthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map eighteenth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertEighteenthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map nineteenth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertNineteenthGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map twentieth-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertTwentiethGrowthConformance("exe");
+TEST_CASE("compiles and runs builtin canonical map repeated-growth inserts in C++ emitter") {
+  expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("exe");
 }
 
 TEST_CASE("compiles and runs builtin canonical map insert overwrites in C++ emitter") {
