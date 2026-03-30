@@ -19,22 +19,6 @@
                         returnStructs,
                         allowMathBare)
             << ")";
-      } else if (isResolvedMapTarget(target)) {
-        out << "ps_missing_map_at_builtin_helper("
-            << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
-            << ", "
-            << emitExpr(expr.args[indexIndex],
-                        nameMap,
-                        paramMap,
-                        defMap,
-                        structTypeMap,
-                        importAliases,
-                        localTypes,
-                        returnKinds,
-                        resultInfos,
-                        returnStructs,
-                        allowMathBare)
-            << ")";
       } else if (isResolvedVectorTarget(target)) {
         out << "ps_vector_at("
             << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
@@ -77,22 +61,6 @@
       const Expr &target = expr.args[receiverIndex];
       if (isResolvedStringTarget(target)) {
         out << "ps_string_at_unsafe("
-            << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
-            << ", "
-            << emitExpr(expr.args[indexIndex],
-                        nameMap,
-                        paramMap,
-                        defMap,
-                        structTypeMap,
-                        importAliases,
-                        localTypes,
-                        returnKinds,
-                        resultInfos,
-                        returnStructs,
-                        allowMathBare)
-            << ")";
-      } else if (isResolvedMapTarget(target)) {
-        out << "ps_missing_map_at_unsafe_builtin_helper("
             << emitExpr(target, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
             << ", "
             << emitExpr(expr.args[indexIndex],
