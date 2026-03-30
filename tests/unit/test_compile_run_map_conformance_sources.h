@@ -449,6 +449,18 @@ inline std::string makeCanonicalMapNamespaceExperimentalInsertConformanceSource(
   return source;
 }
 
+inline std::string makeBuiltinCanonicalMapInsertTemporaryFailureSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
+  source += "  /std/collections/map/insert<i32, i32>(values, 1i32, 4i32)\n";
+  source += "  return(0i32)\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapOwnershipMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
