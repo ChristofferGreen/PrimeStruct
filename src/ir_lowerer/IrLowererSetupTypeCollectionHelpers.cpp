@@ -511,28 +511,6 @@ bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr) {
          normalizedPath == "/std/collections/vector/capacity";
 }
 
-void pruneRemovedVectorCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,
-                                                         const std::string &path) {
-  const std::string normalizedPath = normalizeCollectionHelperPath(path);
-  if (normalizedPath.rfind("/vector/", 0) != 0) {
-    return;
-  }
-
-  const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
-  if (suffix != "at" && suffix != "at_unsafe") {
-    return;
-  }
-
-  const std::string canonicalCandidate = "/std/collections/vector/" + suffix;
-  for (auto it = candidates.begin(); it != candidates.end();) {
-    if (*it == canonicalCandidate) {
-      it = candidates.erase(it);
-    } else {
-      ++it;
-    }
-  }
-}
-
 bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
   if (!isExplicitMapMethodAliasPath(callPath)) {
     return true;
@@ -552,7 +530,6 @@ bool isAllowedResolvedVectorDirectCallPath(const std::string &callPath, const st
     return true;
   }
   auto allowedCandidates = collectionHelperPathCandidates(callPath);
-  pruneRemovedVectorCompatibilityCallReturnCandidates(allowedCandidates, callPath);
   const std::string normalizedResolvedPath = normalizeCollectionHelperPath(resolvedPath);
   return std::any_of(allowedCandidates.begin(), allowedCandidates.end(), [&](const std::string &candidate) {
     return candidate == normalizedResolvedPath;
