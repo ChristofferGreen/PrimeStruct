@@ -717,6 +717,46 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("array namespaced capacity accepts same-path helper on vector target") {
+  const std::string source = R"(
+[return<int>]
+/array/capacity([vector<i32>] values, [bool] marker) {
+  return(47i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/array/capacity(values, true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array namespaced capacity accepts same-path helper on wrapper vector target") {
+  const std::string source = R"(
+[return<int>]
+/array/capacity([vector<i32>] values, [bool] marker) {
+  return(48i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/capacity(wrapVector(), true))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("array namespaced at accepts same-path helper on vector target") {
   const std::string source = R"(
 [return<int>]

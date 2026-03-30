@@ -644,6 +644,32 @@ main() {
   CHECK(runCommand(exePath) == 46);
 }
 
+TEST_CASE("compiles and runs array alias capacity through same-path helper in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+/array/capacity([vector<i32>] values, [bool] marker) {
+  return(48i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/capacity(wrapVector(), true))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_array_alias_capacity_same_path_wrapper_vector.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_array_alias_capacity_same_path_wrapper_vector_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 48);
+}
+
 TEST_CASE("compiles and runs array alias at through same-path helper in C++ emitter") {
   const std::string source = R"(
 [return<int>]
