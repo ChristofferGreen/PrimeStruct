@@ -397,6 +397,56 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("rejects native wrapper array namespaced vector at alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(4i32, 5i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/at(wrapVector(), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_wrapper_array_namespaced_vector_at_alias.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_wrapper_array_namespaced_vector_at_alias_out.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_wrapper_array_namespaced_vector_at_alias_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/at") != std::string::npos);
+}
+
+TEST_CASE("rejects native wrapper array namespaced vector at_unsafe alias") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(4i32, 5i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/at_unsafe(wrapVector(), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_wrapper_array_namespaced_vector_at_unsafe_alias.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_wrapper_array_namespaced_vector_at_unsafe_alias_out.txt")
+          .string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_wrapper_array_namespaced_vector_at_unsafe_alias_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("unknown call target: /array/at_unsafe") != std::string::npos);
+}
+
 TEST_CASE("rejects native array namespaced vector count builtin alias") {
   const std::string source = R"(
 import /std/collections/*

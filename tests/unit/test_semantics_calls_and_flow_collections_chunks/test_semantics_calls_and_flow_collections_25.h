@@ -54,6 +54,40 @@ main() {
   CHECK(error.find("unknown call target: /array/capacity") != std::string::npos);
 }
 
+TEST_CASE("array namespaced vector at alias wrapper call is rejected") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(4i32, 5i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/at(wrapVector(), 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /array/at") != std::string::npos);
+}
+
+TEST_CASE("array namespaced vector at_unsafe alias wrapper call is rejected") {
+  const std::string source = R"(
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(4i32, 5i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/at_unsafe(wrapVector(), 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /array/at_unsafe") != std::string::npos);
+}
+
 TEST_CASE("namespaced vector count and capacity allow named args for user helper receiver") {
   const std::string source = R"(
 Counter {}
@@ -640,4 +674,3 @@ main() {
   CHECK(error.find("argument type mismatch for /std/collections/vector/push parameter values") !=
         std::string::npos);
 }
-
