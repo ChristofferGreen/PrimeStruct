@@ -753,6 +753,76 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs bare map contains struct method chain through canonical helper in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/contains([map<i32, i32>] values, [i32] key) {
+  return(Marker(11i32))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.contains(1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_contains_struct_method_chain_canonical_helper.prime", source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_cpp_bare_map_contains_struct_method_chain_canonical_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
+TEST_CASE("rejects bare map contains struct method chain through alias helper in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/map/contains([map<i32, i32>] values, [i32] key) {
+  return(Marker(19i32))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.contains(1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_contains_struct_method_chain_alias_helper_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_bare_map_contains_struct_method_chain_alias_helper_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") !=
+        std::string::npos);
+}
+
 TEST_CASE("C++ emitter rejects bare map tryAt method without imported canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -764,6 +834,76 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_bare_map_tryat_method_without_import.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_cpp_bare_map_tryat_method_without_import.err").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/tryAt") !=
+        std::string::npos);
+}
+
+TEST_CASE("compiles and runs bare map tryAt struct method chain through canonical helper in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Marker(13i32))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.tryAt(1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_tryat_struct_method_chain_canonical_helper.prime", source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_cpp_bare_map_tryat_struct_method_chain_canonical_helper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
+}
+
+TEST_CASE("rejects bare map tryAt struct method chain through alias helper in C++ emitter") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(Marker(21i32))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values.tryAt(1i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_bare_map_tryat_struct_method_chain_alias_helper_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_bare_map_tryat_struct_method_chain_alias_helper_reject.err")
+          .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
