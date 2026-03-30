@@ -1,10 +1,30 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace primec::semantics {
+
+namespace {
+
+bool isCanonicalMapConstructorResolvedPath(const std::string &resolvedPath) {
+  const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
+  return normalizedPath == "/std/collections/map/map" ||
+         normalizedPath == "/std/collections/mapNew" ||
+         normalizedPath == "/std/collections/mapSingle" ||
+         normalizedPath == "/std/collections/mapDouble" ||
+         normalizedPath == "/std/collections/mapPair" ||
+         normalizedPath == "/std/collections/mapTriple" ||
+         normalizedPath == "/std/collections/mapQuad" ||
+         normalizedPath == "/std/collections/mapQuint" ||
+         normalizedPath == "/std/collections/mapSext" ||
+         normalizedPath == "/std/collections/mapSept" ||
+         normalizedPath == "/std/collections/mapOct";
+}
+
+} // namespace
 
 bool SemanticsValidator::validateExprResolvedCallArguments(
     const std::vector<ParameterInfo> &params,
@@ -248,6 +268,58 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
         continue;
       }
       error_ = "unsafe reference escapes across safe boundary to " + resolved;
+      return false;
+    }
+  }
+
+  if (context.resolvedDefinition != nullptr &&
+      isCanonicalMapConstructorResolvedPath(resolved) &&
+      !orderedArgs.empty()) {
+    auto resolvedContainerType = [&](size_t templateIndex,
+                                     const ParameterInfo &param,
+                                     std::string &typeOut) {
+      typeOut.clear();
+      if (expr.templateArgs.size() == 2 && templateIndex < expr.templateArgs.size() &&
+          !expr.templateArgs[templateIndex].empty()) {
+        typeOut = expr.templateArgs[templateIndex];
+        return;
+      }
+      typeOut = expectedBindingTypeText(param.binding);
+    };
+
+    std::string keyType;
+    std::string valueType;
+    resolvedContainerType(0, calleeParams.front(), keyType);
+    if (calleeParams.size() > 1) {
+      resolvedContainerType(1, calleeParams[1], valueType);
+    }
+
+    const std::vector<std::string> *definitionTemplateArgs =
+        context.resolvedDefinition->templateArgs.empty()
+            ? nullptr
+            : &context.resolvedDefinition->templateArgs;
+    std::unordered_set<std::string> visitingStructs;
+    if (!keyType.empty() &&
+        !isRelocationTrivialContainerElementType(keyType,
+                                                 context.resolvedDefinition->namespacePrefix,
+                                                 definitionTemplateArgs,
+                                                 visitingStructs)) {
+      error_ =
+          "map literal requires relocation-trivial map key type until container move/reallocation semantics are "
+          "implemented: " +
+          keyType;
+      return false;
+    }
+    visitingStructs.clear();
+    if (!valueType.empty() &&
+        !isRelocationTrivialContainerElementType(valueType,
+                                                 context.resolvedDefinition->namespacePrefix,
+                                                 definitionTemplateArgs,
+                                                 visitingStructs)) {
+      error_ =
+          "map literal requires relocation-trivial map value type until container move/reallocation semantics are "
+          "implemented: " +
+          valueType;
       return false;
     }
   }

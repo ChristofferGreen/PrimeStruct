@@ -1,11 +1,7 @@
 #pragma once
 
 std::string canonicalizeExperimentalCollectionResolvedPath(std::string path) {
-  const size_t specializationSuffix = path.find("__t");
-  if (specializationSuffix != std::string::npos) {
-    path.erase(specializationSuffix);
-  }
-  return path;
+  return stripMapConstructorSuffixes(std::move(path));
 }
 
 bool isExperimentalMapEntryArgument(const Expr &argExpr,

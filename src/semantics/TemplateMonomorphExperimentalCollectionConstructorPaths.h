@@ -26,40 +26,41 @@ std::string experimentalMapConstructorHelperPath(size_t argumentCount) {
 }
 
 std::string experimentalMapConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount) {
-  if (resolvedPath == "/map") {
+  const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
+  if (normalizedPath == "/map") {
     return experimentalMapConstructorHelperPath(argumentCount);
   }
-  if (resolvedPath == "/std/collections/map/map") {
+  if (normalizedPath == "/std/collections/map/map") {
     return experimentalMapConstructorHelperPath(argumentCount);
   }
-  if (resolvedPath == "/std/collections/mapNew") {
+  if (normalizedPath == "/std/collections/mapNew") {
     return "/std/collections/experimental_map/mapNew";
   }
-  if (resolvedPath == "/std/collections/mapSingle") {
+  if (normalizedPath == "/std/collections/mapSingle") {
     return "/std/collections/experimental_map/mapSingle";
   }
-  if (resolvedPath == "/std/collections/mapDouble") {
+  if (normalizedPath == "/std/collections/mapDouble") {
     return "/std/collections/experimental_map/mapDouble";
   }
-  if (resolvedPath == "/std/collections/mapPair") {
+  if (normalizedPath == "/std/collections/mapPair") {
     return "/std/collections/experimental_map/mapPair";
   }
-  if (resolvedPath == "/std/collections/mapTriple") {
+  if (normalizedPath == "/std/collections/mapTriple") {
     return "/std/collections/experimental_map/mapTriple";
   }
-  if (resolvedPath == "/std/collections/mapQuad") {
+  if (normalizedPath == "/std/collections/mapQuad") {
     return "/std/collections/experimental_map/mapQuad";
   }
-  if (resolvedPath == "/std/collections/mapQuint") {
+  if (normalizedPath == "/std/collections/mapQuint") {
     return "/std/collections/experimental_map/mapQuint";
   }
-  if (resolvedPath == "/std/collections/mapSext") {
+  if (normalizedPath == "/std/collections/mapSext") {
     return "/std/collections/experimental_map/mapSext";
   }
-  if (resolvedPath == "/std/collections/mapSept") {
+  if (normalizedPath == "/std/collections/mapSept") {
     return "/std/collections/experimental_map/mapSept";
   }
-  if (resolvedPath == "/std/collections/mapOct") {
+  if (normalizedPath == "/std/collections/mapOct") {
     return "/std/collections/experimental_map/mapOct";
   }
   return {};

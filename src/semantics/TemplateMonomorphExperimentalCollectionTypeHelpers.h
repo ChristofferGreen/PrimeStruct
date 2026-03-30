@@ -1,8 +1,9 @@
 #pragma once
 
 std::string experimentalMapConstructorInferencePath(const std::string &resolvedPath) {
+  const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
   auto matchesPath = [&](std::string_view basePath) {
-    return resolvedPath == basePath || resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
+    return normalizedPath == basePath;
   };
   if (matchesPath("/std/collections/map/map") || matchesPath("/std/collections/mapNew")) {
     return "/std/collections/experimental_map/mapNew";
@@ -38,8 +39,9 @@ std::string experimentalMapConstructorInferencePath(const std::string &resolvedP
 }
 
 bool isExperimentalMapConstructorHelperPath(const std::string &resolvedPath) {
+  const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
   auto matchesPath = [&](std::string_view basePath) {
-    return resolvedPath == basePath || resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
+    return normalizedPath == basePath;
   };
   return matchesPath("/std/collections/experimental_map/mapNew") ||
          matchesPath("/std/collections/experimental_map/mapSingle") ||

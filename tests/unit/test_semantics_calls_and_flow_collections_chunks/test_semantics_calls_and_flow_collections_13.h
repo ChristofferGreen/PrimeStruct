@@ -50,7 +50,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/map/") != std::string::npos);
 }
 
 TEST_CASE("implicit map constructor auto inference keeps template conflict diagnostics") {
@@ -66,7 +66,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/map/") != std::string::npos);
 }
 
 TEST_CASE("inferred experimental map returns rewrite canonical constructors") {
@@ -117,7 +117,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/map/") != std::string::npos);
 }
 
 TEST_CASE("block-bodied inferred experimental map returns rewrite constructors") {

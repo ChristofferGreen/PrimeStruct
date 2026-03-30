@@ -1,4 +1,5 @@
 #include "SemanticsHelpers.h"
+#include "MapConstructorHelpers.h"
 #include "primec/Ast.h"
 
 #include <algorithm>

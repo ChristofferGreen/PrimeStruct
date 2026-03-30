@@ -332,10 +332,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
   std::string namespacedHelper;
   const std::string resolvedInitializer = resolveCalleePath(initializer);
   auto isResolvedMapConstructorPath = [](std::string resolvedPath) {
-    const size_t specializationSuffix = resolvedPath.find("__t");
-    if (specializationSuffix != std::string::npos) {
-      resolvedPath.erase(specializationSuffix);
-    }
+    resolvedPath = stripMapConstructorSuffixes(std::move(resolvedPath));
     return resolvedPath == "/std/collections/map/map" ||
            resolvedPath == "/std/collections/mapNew" ||
            resolvedPath == "/std/collections/mapSingle" ||
