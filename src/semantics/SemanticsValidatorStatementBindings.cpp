@@ -112,6 +112,50 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   }
 
   const Expr &initializer = stmt.args.front();
+  auto isBuiltinSoaRefInitializer = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+      return false;
+    }
+    auto isDirectSoaVectorTarget = [&](const Expr &target) {
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          return normalizeBindingTypeName(paramBinding->typeName) == "soa_vector";
+        }
+        auto localIt = locals.find(target.name);
+        return localIt != locals.end() &&
+               normalizeBindingTypeName(localIt->second.typeName) == "soa_vector";
+      }
+      std::string builtinCollection;
+      return getBuiltinCollectionName(target, builtinCollection) &&
+             builtinCollection == "soa_vector";
+    };
+    const std::string resolved = resolveCalleePath(candidate);
+    const bool hasVisibleSoaRefHelper =
+        hasImportedDefinitionPath("/soa_vector/ref") ||
+        hasDeclaredDefinitionPath("/soa_vector/ref");
+    if (hasVisibleSoaRefHelper) {
+      return false;
+    }
+    std::string normalizedName = candidate.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    std::string normalizedPrefix = candidate.namespacePrefix;
+    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+      normalizedPrefix.erase(normalizedPrefix.begin());
+    }
+    const bool isExplicitSoaRefCall =
+        (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+         normalizedName == "ref") ||
+        normalizedName == "soa_vector/ref";
+    const bool isBuiltinSoaRefMethod =
+        candidate.isMethodCall && normalizedName == "ref" &&
+        !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
+    return resolved == "/soa_vector/ref" ||
+           isExplicitSoaRefCall ||
+           isBuiltinSoaRefMethod ||
+           (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"));
+  };
   auto isEmptyBuiltinBlockInitializer = [&](const Expr &candidate) -> bool {
     if (!candidate.hasBodyArguments || !candidate.bodyArguments.empty()) {
       return false;
@@ -195,6 +239,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (error_.empty()) {
       error_ = "binding initializer validateExpr failed";
     }
+    return false;
+  }
+  if (isBuiltinSoaRefInitializer(*initializerExprForValidation)) {
+    error_ = "soa_vector borrowed views are not implemented yet: ref";
     return false;
   }
 

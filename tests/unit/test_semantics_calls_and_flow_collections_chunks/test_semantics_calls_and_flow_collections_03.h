@@ -183,6 +183,52 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("soa_vector builtin ref rejects local bindings before borrowed views exist") {
+  const auto checkReject = [](const std::string &bindingInit) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [soa_vector<Particle>] values{soa_vector<Particle>()}\n"
+        "  [auto] item{" + bindingInit + "}\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+  };
+
+  checkReject("ref(values, 0i32)");
+  checkReject("values.ref(0i32)");
+  checkReject("/soa_vector/ref(values, 0i32)");
+}
+
+TEST_CASE("soa_vector ref helper binding still accepts same-path user helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/ref([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<i32>] idx{vector<i32>(0i32)}
+  [auto] item{values.ref(idx)}
+  return(item)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector get helper call-form accepts labeled named receiver") {
   const std::string source = R"(
 Particle() {
