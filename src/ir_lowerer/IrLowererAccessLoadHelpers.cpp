@@ -375,6 +375,8 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   bool hasSextGrowJump = false;
   size_t jumpAfterSeptGrow = 0;
   bool hasSeptGrowJump = false;
+  size_t jumpAfterOctGrow = 0;
+  bool hasOctGrowJump = false;
   if (valuesLocal >= 0) {
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
     emitInstruction(IrOpcode::PushI32, 0);
@@ -727,6 +729,69 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     hasSeptGrowJump = true;
 
     patchInstructionImm(jumpPendingAfterSept, static_cast<uint64_t>(instructionCount()));
+
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
+    emitInstruction(IrOpcode::PushI32, 8);
+    emitInstruction(IrOpcode::CmpEqI32, 0);
+    const size_t jumpPendingAfterOct = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+
+    const int32_t octGrownBaseLocal = allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    emitInstruction(IrOpcode::PushI32, 9);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(octGrownBaseLocal));
+
+    auto emitCopyOctExistingSlot = [&](int32_t sourceSlotIndex, int32_t destSlotIndex) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+      emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(sourceSlotIndex * IrSlotBytesI32));
+      emitInstruction(IrOpcode::AddI64, 0);
+      emitInstruction(IrOpcode::LoadIndirect, 0);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(octGrownBaseLocal + destSlotIndex));
+    };
+    emitCopyOctExistingSlot(1, 1);
+    emitCopyOctExistingSlot(2, 2);
+    emitCopyOctExistingSlot(3, 3);
+    emitCopyOctExistingSlot(4, 4);
+    emitCopyOctExistingSlot(5, 5);
+    emitCopyOctExistingSlot(6, 6);
+    emitCopyOctExistingSlot(7, 7);
+    emitCopyOctExistingSlot(8, 8);
+    emitCopyOctExistingSlot(9, 9);
+    emitCopyOctExistingSlot(10, 10);
+    emitCopyOctExistingSlot(11, 11);
+    emitCopyOctExistingSlot(12, 12);
+    emitCopyOctExistingSlot(13, 13);
+    emitCopyOctExistingSlot(14, 14);
+    emitCopyOctExistingSlot(15, 15);
+    emitCopyOctExistingSlot(16, 16);
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(octGrownBaseLocal + 17));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(octGrownBaseLocal + 18));
+    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(octGrownBaseLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+    jumpAfterOctGrow = instructionCount();
+    emitInstruction(IrOpcode::Jump, 0);
+    hasOctGrowJump = true;
+
+    patchInstructionImm(jumpPendingAfterOct, static_cast<uint64_t>(instructionCount()));
   }
   emitPending();
 
@@ -768,6 +833,9 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   }
   if (hasSeptGrowJump) {
     patchInstructionImm(jumpAfterSeptGrow, static_cast<uint64_t>(instructionCount()));
+  }
+  if (hasOctGrowJump) {
+    patchInstructionImm(jumpAfterOctGrow, static_cast<uint64_t>(instructionCount()));
   }
   return true;
 }
