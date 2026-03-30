@@ -42,8 +42,6 @@ bool isExplicitVectorAccessHelperPath(const std::string &path);
 bool isExplicitVectorAccessHelperExpr(const Expr &expr);
 bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr);
 
-void pruneRemovedVectorCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,
-                                                         const std::string &path);
 bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::string &resolvedPath);
 bool isAllowedResolvedVectorDirectCallPath(const std::string &callPath, const std::string &resolvedPath);
 
