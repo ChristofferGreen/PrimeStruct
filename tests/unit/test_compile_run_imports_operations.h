@@ -27,6 +27,7 @@ TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitt
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
