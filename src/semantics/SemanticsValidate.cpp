@@ -540,16 +540,29 @@ std::optional<semantics::BindingInfo> extractBuiltinMapBinding(const Expr &expr)
                                       : std::nullopt;
 }
 
-void rewriteBuiltinMapInsertMethodExpr(
+constexpr std::string_view kBuiltinCanonicalMapInsertPath = "/std/collections/map/insert";
+constexpr std::string_view kBuiltinCanonicalMapInsertPendingPath =
+    "/std/collections/map/insert_builtin_pending";
+
+void rewriteBuiltinMapInsertExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings) {
   for (Expr &arg : expr.args) {
-    rewriteBuiltinMapInsertMethodExpr(arg, bindings);
+    rewriteBuiltinMapInsertExpr(arg, bindings);
   }
-  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
-      expr.name != "insert") {
+  if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
     return;
   }
+
+  const bool matchesBuiltinInsertMethod =
+      expr.isMethodCall &&
+      (expr.name == "insert" || expr.name == kBuiltinCanonicalMapInsertPath);
+  const bool matchesBuiltinInsertCall =
+      !expr.isMethodCall && expr.name == kBuiltinCanonicalMapInsertPath;
+  if (!matchesBuiltinInsertMethod && !matchesBuiltinInsertCall) {
+    return;
+  }
+
   const Expr &receiver = expr.args.front();
   if (receiver.kind != Expr::Kind::Name) {
     return;
@@ -567,7 +580,7 @@ void rewriteBuiltinMapInsertMethodExpr(
   }
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/map/insert";
+  expr.name = std::string(kBuiltinCanonicalMapInsertPendingPath);
   expr.namespacePrefix.clear();
   if (expr.templateArgs.empty()) {
     expr.templateArgs = {keyType, valueType};
@@ -575,14 +588,14 @@ void rewriteBuiltinMapInsertMethodExpr(
   expr.argNames.clear();
 }
 
-void rewriteBuiltinMapInsertMethodStatements(
+void rewriteBuiltinMapInsertStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings) {
   for (Expr &stmt : statements) {
-    rewriteBuiltinMapInsertMethodExpr(stmt, bindings);
+    rewriteBuiltinMapInsertExpr(stmt, bindings);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
-      rewriteBuiltinMapInsertMethodStatements(stmt.bodyArguments, bodyBindings);
+      rewriteBuiltinMapInsertStatements(stmt.bodyArguments, bodyBindings);
     }
     if (stmt.isBinding) {
       if (auto binding = extractBuiltinMapBinding(stmt); binding.has_value()) {
@@ -601,9 +614,9 @@ bool rewriteBuiltinMapInsertMethods(Program &program, std::string &error) {
         bindings[param.name] = *binding;
       }
     }
-    rewriteBuiltinMapInsertMethodStatements(def.statements, bindings);
+    rewriteBuiltinMapInsertStatements(def.statements, bindings);
     if (def.returnExpr.has_value()) {
-      rewriteBuiltinMapInsertMethodExpr(*def.returnExpr, bindings);
+      rewriteBuiltinMapInsertExpr(*def.returnExpr, bindings);
     }
   }
   return true;
