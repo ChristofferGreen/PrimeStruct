@@ -177,6 +177,34 @@ TEST_CASE("namespaced vector mutator statement helpers are accepted") {
   }
 }
 
+TEST_CASE("bare vector mutator statement helper on builtin vector receiver requires same-path helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  push(values, 3i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
+}
+
+TEST_CASE("bare vector mutator method on builtin vector receiver requires same-path helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  values.push(3i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/push") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced mutator statement helper on builtin vector receiver requires same-path helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
