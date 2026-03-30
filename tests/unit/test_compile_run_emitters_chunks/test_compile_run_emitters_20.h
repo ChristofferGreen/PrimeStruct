@@ -436,26 +436,6 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects bare vector mutator methods without helper before emission") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
-  values.push(5i32)
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_bare_vector_mutator_method_nohelper_cpp.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_bare_vector_mutator_method_nohelper_cpp.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter rejects explicit vector mutator alias methods without helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

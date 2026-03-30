@@ -171,51 +171,17 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return "/std/collections/vector/" + std::string(helperName);
   }();
-  auto explicitAliasVectorMutatorCallPath = [&]() -> std::string {
-    if (stmt.isMethodCall) {
-      return "";
-    }
-    const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
-    const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
-    if (normalizedPrefix == "vector" && isVectorMutatorName(normalizedName)) {
-      return "/vector/" + normalizedName;
-    }
-    constexpr std::string_view kAliasPrefix = "vector/";
-    if (normalizedName.rfind(kAliasPrefix, 0) != 0) {
-      return "";
-    }
-    const std::string_view helperName = std::string_view(normalizedName).substr(kAliasPrefix.size());
-    if (!isVectorMutatorName(helperName)) {
-      return "";
-    }
-    return "/vector/" + std::string(helperName);
-  }();
-  auto explicitCanonicalStdVectorMutatorMethodPath = [&]() -> std::string {
-    if (!stmt.isMethodCall) {
-      return "";
-    }
-    const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
-    const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
-    if (normalizedPrefix == "std/collections/vector" && isVectorMutatorName(normalizedName)) {
-      return "/std/collections/vector/" + normalizedName;
-    }
-    constexpr std::string_view kCanonicalPrefix = "std/collections/vector/";
-    if (normalizedName.rfind(kCanonicalPrefix, 0) != 0) {
-      return "";
-    }
-    const std::string_view helperName = std::string_view(normalizedName).substr(kCanonicalPrefix.size());
-    if (!isVectorMutatorName(helperName)) {
-      return "";
-    }
-    return "/std/collections/vector/" + std::string(helperName);
-  }();
   auto explicitAliasVectorMutatorMethodPath = [&]() -> std::string {
     if (!stmt.isMethodCall) {
       return "";
     }
+    auto isAliasMutatorName = [](std::string_view helperName) {
+      return helperName == "push" || helperName == "pop" || helperName == "reserve" ||
+             helperName == "clear" || helperName == "remove_at" || helperName == "remove_swap";
+    };
     const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
     const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
-    if (normalizedPrefix == "vector" && isVectorMutatorName(normalizedName)) {
+    if (normalizedPrefix == "vector" && isAliasMutatorName(normalizedName)) {
       return "/vector/" + normalizedName;
     }
     constexpr std::string_view kAliasPrefix = "vector/";
@@ -223,56 +189,10 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return "";
     }
     const std::string_view helperName = std::string_view(normalizedName).substr(kAliasPrefix.size());
-    if (!isVectorMutatorName(helperName)) {
+    if (!isAliasMutatorName(helperName)) {
       return "";
     }
     return "/vector/" + std::string(helperName);
-  }();
-  auto bareBuiltinVectorMutatorPreferredPath = [&]() -> std::string {
-    const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
-    const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
-    const bool isBareMutatorCall = !stmt.isMethodCall && normalizedPrefix.empty() && normalizedName == vectorHelper;
-    const bool isBareMutatorMethod = stmt.isMethodCall && normalizedPrefix.empty() && normalizedName == vectorHelper;
-    if ((!isBareMutatorCall && !isBareMutatorMethod) || stmt.args.empty()) {
-      return "";
-    }
-    auto isBuiltinVectorReceiver = [&](const Expr &candidate) -> bool {
-      BindingInfo binding;
-      if (!resolveVectorStatementBinding(params, locals, candidate, binding)) {
-        return false;
-      }
-      return binding.typeName == "vector";
-    };
-    std::vector<size_t> receiverIndices;
-    auto appendReceiverIndex = [&](size_t index) {
-      if (index >= stmt.args.size()) {
-        return;
-      }
-      for (size_t existing : receiverIndices) {
-        if (existing == index) {
-          return;
-        }
-      }
-      receiverIndices.push_back(index);
-    };
-    appendReceiverIndex(0);
-    const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
-    const bool probePositionalReorderedReceiver =
-        !stmt.isMethodCall && !hasNamedArgs && stmt.args.size() > 1 &&
-        (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
-         stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
-         (stmt.args.front().kind == Expr::Kind::Name && !isBuiltinVectorReceiver(stmt.args.front())));
-    if (probePositionalReorderedReceiver) {
-      for (size_t i = 1; i < stmt.args.size(); ++i) {
-        appendReceiverIndex(i);
-      }
-    }
-    for (size_t receiverIndex : receiverIndices) {
-      if (isBuiltinVectorReceiver(stmt.args[receiverIndex])) {
-        return preferredBareVectorHelperTarget(vectorHelper);
-      }
-    }
-    return "";
   }();
   const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback =
       isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
@@ -305,13 +225,6 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       !hasDeclaredDefinitionPath(explicitAliasVectorMutatorMethodPath) &&
       !hasImportedDefinitionPath(explicitAliasVectorMutatorMethodPath)) {
     error_ = "unknown method: " + explicitAliasVectorMutatorMethodPath;
-    return false;
-  }
-  if (!bareBuiltinVectorMutatorPreferredPath.empty() &&
-      !hasDeclaredDefinitionPath(bareBuiltinVectorMutatorPreferredPath) &&
-      !hasImportedDefinitionPath(bareBuiltinVectorMutatorPreferredPath)) {
-    error_ = std::string(stmt.isMethodCall ? "unknown method: " : "unknown call target: ") +
-             bareBuiltinVectorMutatorPreferredPath;
     return false;
   }
   bool hasResolvedReceiverIndex = false;
