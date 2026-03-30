@@ -303,6 +303,14 @@ inline void expectBuiltinCanonicalMapInsertTripleGrowthConformance(const std::st
                                             "");
 }
 
+inline void expectBuiltinCanonicalMapInsertQuadGrowthConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertQuadGrowthConformanceSource(),
+                                            "map_builtin_canonical_insert_quad_growth_" + emitMode,
+                                            emitMode,
+                                            44,
+                                            "");
+}
+
 inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
                                             "map_builtin_canonical_insert_overwrite_" + emitMode,
