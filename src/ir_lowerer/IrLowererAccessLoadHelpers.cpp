@@ -339,6 +339,45 @@ bool emitMapLookupTryAt(
   return true;
 }
 
+bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
+    int32_t ptrLocal,
+    int32_t keyLocal,
+    int32_t valueLocal,
+    LocalInfo::ValueKind mapKeyKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitPending,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm) {
+  const auto loopLocals = emitMapLookupLoopSearchScaffold(
+      ptrLocal, keyLocal, mapKeyKind, allocTempLocal, instructionCount, emitInstruction, patchInstructionImm);
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.indexLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
+  emitInstruction(IrOpcode::CmpEqI32, 0);
+  const size_t jumpFound = instructionCount();
+  emitInstruction(IrOpcode::JumpIfZero, 0);
+
+  emitPending();
+
+  const size_t foundIndex = instructionCount();
+  patchInstructionImm(jumpFound, static_cast<uint64_t>(foundIndex));
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.indexLocal));
+  emitInstruction(IrOpcode::PushI32, 2);
+  emitInstruction(IrOpcode::MulI32, 0);
+  emitInstruction(IrOpcode::PushI32, 2);
+  emitInstruction(IrOpcode::AddI32, 0);
+  emitInstruction(IrOpcode::PushI32, IrSlotBytesI32);
+  emitInstruction(IrOpcode::MulI32, 0);
+  emitInstruction(IrOpcode::AddI64, 0);
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+  emitInstruction(IrOpcode::StoreIndirect, 0);
+  emitInstruction(IrOpcode::Pop, 0);
+  return true;
+}
+
 void emitStringAccessLoad(
     const std::string &accessName,
     int32_t indexLocal,

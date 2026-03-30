@@ -248,6 +248,10 @@ TEST_CASE("rejects native builtin canonical map inserts with pending runtime dia
   expectBuiltinCanonicalMapInsertPendingDiagnostic("native");
 }
 
+TEST_CASE("compiles and runs native builtin canonical map insert overwrites") {
+  expectBuiltinCanonicalMapInsertOverwriteConformance("native");
+}
+
 TEST_CASE("rejects native canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("native");
 }

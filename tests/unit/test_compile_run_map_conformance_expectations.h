@@ -279,6 +279,14 @@ inline void expectBuiltinCanonicalMapInsertPendingDiagnostic(const std::string &
                               false);
 }
 
+inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
+                                            "map_builtin_canonical_insert_overwrite_" + emitMode,
+                                            emitMode,
+                                            22,
+                                            "");
+}
+
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
   expectMapConformanceCompileReject(makeExperimentalMapIndexConformanceSource(),
                                     "experimental_map_index",

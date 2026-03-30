@@ -239,6 +239,10 @@ TEST_CASE("rejects builtin canonical map inserts with pending runtime diagnostic
   expectBuiltinCanonicalMapInsertPendingDiagnostic("exe");
 }
 
+TEST_CASE("compiles and runs builtin canonical map insert overwrites in C++ emitter") {
+  expectBuiltinCanonicalMapInsertOverwriteConformance("exe");
+}
+
 TEST_CASE("rejects canonical map constructor ownership growth in C++ emitter") {
   expectCanonicalMapNamespaceOwnershipReject("exe");
 }
