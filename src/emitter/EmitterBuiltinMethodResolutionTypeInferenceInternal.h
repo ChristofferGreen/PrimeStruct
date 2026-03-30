@@ -21,9 +21,6 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 void pruneMapAccessStructReturnCompatibilityCandidates(
     const std::string &path,
     std::vector<std::string> &candidates);
-void pruneMapTryAtStructReturnCompatibilityCandidates(
-    const std::string &path,
-    std::vector<std::string> &candidates);
 std::string normalizeMapImportAliasPath(const std::string &path);
 const std::string *findStructTypeMetadata(const MethodResolutionMetadataView &view,
                                           const std::string &path);

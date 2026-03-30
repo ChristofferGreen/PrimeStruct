@@ -20,7 +20,6 @@ std::string inferMethodResolutionPrimitiveTypeName(
     std::vector<std::string> resolvedCandidates =
         collectionHelperPathCandidates(resolvedExprPath);
     pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
-    pruneMapTryAtStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
     auto importIt = view.importAliases.find(candidate.name);
     if (importIt != view.importAliases.end()) {
       for (const auto &aliasCandidate : collectionHelperPathCandidates(importIt->second)) {
@@ -406,7 +405,6 @@ std::string inferMethodResolutionPrimitiveTypeName(
           std::vector<std::string> resolvedCandidates =
               collectionHelperPathCandidates(resolvedExprPath);
           pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
-          pruneMapTryAtStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
           auto importIt = view.importAliases.find(candidateExpr.name);
           if (importIt != view.importAliases.end()) {
             for (const auto &candidatePath :
