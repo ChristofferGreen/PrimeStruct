@@ -520,6 +520,9 @@ bool isBuiltinMapBinding(const semantics::BindingInfo &binding) {
   if (normalizedType == "Reference" || normalizedType == "Pointer") {
     return false;
   }
+  if (isExperimentalMapTypeText(bindingTypeText(binding))) {
+    return false;
+  }
   std::string keyType;
   std::string valueType;
   return semantics::extractMapKeyValueTypesFromTypeText(
