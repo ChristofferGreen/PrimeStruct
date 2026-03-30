@@ -15,7 +15,7 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-         helperName == "at" || helperName == "at_unsafe";
+         helperName == "at" || helperName == "at_unsafe" || helperName == "insert";
 }
 
 bool isFileMethodName(std::string_view methodName) {
@@ -1711,10 +1711,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (isMapCollectionTypeName(base) &&
           (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
            normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
-           normalizedMethodName == "at_unsafe")) {
-        resolvedOut = "/std/collections/map/" + normalizedMethodName;
-        isBuiltinOut = false;
-        return true;
+           normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
+        return setPreferredMapMethodTarget(receiver, normalizedMethodName);
       }
     }
     if (isPrimitiveBindingTypeName(normalizedBaseType)) {
