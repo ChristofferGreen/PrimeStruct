@@ -101,6 +101,11 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (!validateExpr(params, locals, *arg)) {
       return false;
     }
+    std::string soaFieldViewName;
+    if (this->isBuiltinSoaFieldViewExpr(*arg, params, locals, &soaFieldViewName)) {
+      error_ = "soa_vector field views are not implemented yet: " + soaFieldViewName;
+      return false;
+    }
     if (this->isBuiltinSoaRefExpr(*arg, params, locals)) {
       error_ = "soa_vector borrowed views are not implemented yet: ref";
       return false;
@@ -111,6 +116,11 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       continue;
     }
     if (!validateExpr(params, locals, *arg)) {
+      return false;
+    }
+    std::string soaFieldViewName;
+    if (this->isBuiltinSoaFieldViewExpr(*arg, params, locals, &soaFieldViewName)) {
+      error_ = "soa_vector field views are not implemented yet: " + soaFieldViewName;
       return false;
     }
     if (this->isBuiltinSoaRefExpr(*arg, params, locals)) {
