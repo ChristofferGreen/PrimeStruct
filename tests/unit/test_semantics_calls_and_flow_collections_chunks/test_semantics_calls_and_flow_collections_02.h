@@ -339,6 +339,7 @@ TEST_CASE("experimental soa_vector stdlib helpers validate on builtin soa_vector
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -352,6 +353,40 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector stdlib helpers reject primitive element types") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[return<int>]
+main() {
+  [SoaVector<i32>] values{soaVectorNew<i32>()}
+  return(soaVectorCount<i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.field_count requires struct type argument: i32") != std::string::npos);
+}
+
+TEST_CASE("experimental soa_vector stdlib helpers reject non-reflect struct element types") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  return(soaVectorCount<Particle>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.field_count requires reflect-enabled struct type argument: /Particle") != std::string::npos);
 }
 
 TEST_CASE("get helper validates on soa_vector binding") {

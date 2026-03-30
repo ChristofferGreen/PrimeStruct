@@ -36,6 +36,7 @@ TEST_CASE("compiles and runs native experimental soa_vector stdlib helpers") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }

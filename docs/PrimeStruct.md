@@ -2348,9 +2348,10 @@ bad_use_after_take() {
     collection-specific reflection primitives.
   - **Experimental stdlib status:** the first stdlib namespace foothold now exists at
     `/std/collections/experimental_soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`, and
-    `soaVectorCount<T>()`. That wrapper deliberately stores the current builtin header-only `soa_vector<T>` and routes
-    `count` through the existing builtin path. This is only a namespace/bootstrap step; the real `.prime`
-    storage/runtime path still depends on the pending column-storage and borrowed-view substrate.
+    `soaVectorCount<T>()`. That wrapper deliberately stores the current builtin header-only `soa_vector<T>`, routes
+    `count` through the existing builtin path, and currently requires `T` to be a reflect-enabled struct via
+    `meta.field_count<T>()` so non-SoA-safe element types fail early. This is still only a namespace/bootstrap step;
+    the real `.prime` storage/runtime path depends on the pending column-storage and borrowed-view substrate.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of
