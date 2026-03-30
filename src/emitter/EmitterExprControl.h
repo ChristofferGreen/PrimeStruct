@@ -120,7 +120,7 @@
                    isStringValue(receiverExpr, localTypes);
           });
       countRewritePath.has_value()) {
-    full = preferVectorStdlibHelperPath(*countRewritePath, nameMap);
+    full = *countRewritePath;
   }
   if (const auto builtinBlockPrelude = emitter::runEmitterExprControlBuiltinBlockPreludeStep(
           expr,

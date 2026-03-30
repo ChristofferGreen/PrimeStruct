@@ -563,7 +563,7 @@ TEST_CASE("emitter expr control method-path step rewrites eligible method calls"
   CHECK_FALSE(primec::emitter::runEmitterExprControlMethodPathStep(methodExpr, {}, {}, {}, {}, {}).has_value());
 }
 
-TEST_CASE("emitter count rewrite keeps canonical vector capacity helpers") {
+TEST_CASE("emitter count rewrite skips explicit canonical vector capacity helpers") {
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
   receiverExpr.name = "values";
@@ -592,9 +592,8 @@ TEST_CASE("emitter count rewrite keeps canonical vector capacity helpers") {
         pathOut = "/vector/capacity";
         return true;
       });
-  REQUIRE(resolvedPath.has_value());
-  CHECK(*resolvedPath == "/vector/capacity");
-  CHECK(resolveCalls == 1);
+  CHECK_FALSE(resolvedPath.has_value());
+  CHECK(resolveCalls == 0);
 }
 
 TEST_CASE("emitter count rewrite rejects removed array capacity alias") {

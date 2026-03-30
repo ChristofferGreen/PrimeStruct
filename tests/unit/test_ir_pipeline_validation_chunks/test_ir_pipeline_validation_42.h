@@ -1,4 +1,4 @@
-TEST_CASE("ir lowerer setup type helper rejects direct definition call return kinds via removed map aliases") {
+TEST_CASE("ir lowerer setup type helper resolves direct definition call return kinds via removed map aliases") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/map/count";
@@ -53,7 +53,7 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool definitionMatched = false;
-  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       countCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -61,8 +61,8 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
       false,
       kindOut,
       &definitionMatched));
-  CHECK_FALSE(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
 
   primec::Expr containsCall;
   containsCall.kind = primec::Expr::Kind::Call;
@@ -70,7 +70,7 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   definitionMatched = false;
-  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       containsCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -78,8 +78,8 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
       false,
       kindOut,
       &definitionMatched));
-  CHECK_FALSE(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 
   primec::Expr tryAtCall;
   tryAtCall.kind = primec::Expr::Kind::Call;
@@ -87,7 +87,7 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   definitionMatched = false;
-  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       tryAtCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -95,8 +95,8 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
       false,
       kindOut,
       &definitionMatched));
-  CHECK_FALSE(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
   primec::Expr atCall;
   atCall.kind = primec::Expr::Kind::Call;
@@ -104,7 +104,7 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   definitionMatched = false;
-  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       atCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -112,8 +112,8 @@ TEST_CASE("ir lowerer setup type helper rejects direct definition call return ki
       false,
       kindOut,
       &definitionMatched));
-  CHECK_FALSE(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
 TEST_CASE("ir lowerer setup type helper rejects canonical map count fallback while keeping direct access defs") {
@@ -577,4 +577,3 @@ TEST_CASE("ir lowerer setup type helper resolves access call method return kinds
   CHECK(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
-

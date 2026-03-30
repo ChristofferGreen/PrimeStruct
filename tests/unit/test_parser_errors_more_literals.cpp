@@ -285,7 +285,7 @@ main() {
   CHECK(error.find("import /std/math is not supported") != std::string::npos);
 }
 
-TEST_CASE("named arguments rejected for vector helper") {
+TEST_CASE("named arguments on bare vector clear require helper resolution") {
   const std::string source = R"(
 [return<int> effects(heap_alloc)]
 main() {
@@ -296,7 +296,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/clear") != std::string::npos);
 }
 
 TEST_CASE("missing return fails in parser") {

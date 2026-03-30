@@ -586,25 +586,22 @@ inline void expectBareVectorMutatorImportRequirement(const std::string &emitMode
       (testScratchPath("") /
        ("primec_vector_bare_" + helperName + "_import_requirement_" + emitMode + "_out.txt"))
           .string();
-  const std::string expected = "unknown call target: /std/collections/vector/" + helperName;
+  const std::string expected = "unknown call target: /vector/" + helperName;
 
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                quoteShellArg(outPath) + " 2>&1";
-    CHECK(runCommand(runCmd) == 0);
-    CHECK(readFile(outPath).empty());
+    CHECK(runCommand(runCmd) == 2);
+    CHECK(readFile(outPath).find(expected) != std::string::npos);
     return;
   }
 
   if (emitMode == "native" || emitMode == "exe") {
-    const std::string exePath =
-        (testScratchPath("") /
-         ("primec_vector_bare_" + helperName + "_import_requirement_" + emitMode + "_exe"))
-            .string();
     const std::string compileCmd =
-        "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-        " --entry /main";
-    CHECK(runCommand(compileCmd) == 0);
+        "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o /dev/null --entry /main > " +
+        quoteShellArg(outPath) + " 2>&1";
+    CHECK(runCommand(compileCmd) == 2);
+    CHECK(readFile(outPath).find(expected) != std::string::npos);
     return;
   }
 

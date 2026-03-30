@@ -376,7 +376,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("bare vector mutators compile without imported helpers in C++ emitter") {
+TEST_CASE("bare vector mutators reject without imported helpers in C++ emitter") {
   expectBareVectorMutatorImportRequirement("exe", "push", "values, 7i32");
   expectBareVectorMutatorImportRequirement("exe", "pop", "values");
   expectBareVectorMutatorImportRequirement("exe", "reserve", "values, 8i32");

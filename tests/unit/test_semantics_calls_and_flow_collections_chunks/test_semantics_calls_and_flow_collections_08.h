@@ -24,7 +24,7 @@ TEST_CASE("bare vector mutator named args reject builtin call syntax even throug
 }
 
 TEST_CASE("bare vector mutator named args require imported stdlib helpers") {
-  const auto checkInvalidStatement = [](const std::string &stmtText) {
+  const auto checkInvalidStatement = [](const std::string &stmtText, const std::string &expected) {
     const std::string source =
         "[effects(heap_alloc), return<int>]\n"
         "main() {\n"
@@ -36,15 +36,19 @@ TEST_CASE("bare vector mutator named args require imported stdlib helpers") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkInvalidStatement("push([value] 3i32, [values] values)");
-  checkInvalidStatement("reserve([capacity] 8i32, [values] values)");
-  checkInvalidStatement("remove_at([index] 0i32, [values] values)");
-  checkInvalidStatement("remove_swap([index] 0i32, [values] values)");
-  checkInvalidStatement("pop([values] values)");
-  checkInvalidStatement("clear([values] values)");
+  checkInvalidStatement("push([value] 3i32, [values] values)",
+                        "named arguments not supported for builtin calls");
+  checkInvalidStatement("reserve([capacity] 8i32, [values] values)",
+                        "named arguments not supported for builtin calls");
+  checkInvalidStatement("remove_at([index] 0i32, [values] values)",
+                        "named arguments not supported for builtin calls");
+  checkInvalidStatement("remove_swap([index] 0i32, [values] values)",
+                        "named arguments not supported for builtin calls");
+  checkInvalidStatement("pop([values] values)", "unknown call target: /vector/pop");
+  checkInvalidStatement("clear([values] values)", "unknown call target: /vector/clear");
 }
 
 TEST_CASE("vector helper expressions with named arguments stay statement-only") {
@@ -101,7 +105,7 @@ TEST_CASE("vector helper method expressions with named arguments require helper 
   }
 }
 
-TEST_CASE("namespaced vector helper statement form is accepted") {
+TEST_CASE("namespaced vector helper statement form requires same-path helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -111,8 +115,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("namespaced vector helper expression form stays statement-only") {
@@ -699,7 +703,7 @@ main() {
   CHECK(error.find("unknown call target: /array/push") != std::string::npos);
 }
 
-TEST_CASE("vector mutator alias block args keep builtin diagnostics") {
+TEST_CASE("vector mutator alias block args require same-path helpers") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -715,7 +719,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push does not accept block arguments") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector helper duplicate named args stay statement-only in expressions") {
