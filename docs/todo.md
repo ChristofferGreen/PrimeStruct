@@ -29,18 +29,10 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
 - ✓ Land the minimum compile-time struct-field introspection/codegen needed for one `.prime` `soa_vector` implementation to derive SoA column schemas from `T`.
 - ○ Land the minimum column-storage substrate needed for one `.prime` `soa_vector` implementation: multi-column alloc/grow/free/read/write primitives with deterministic allocation-failure behavior.
 - ○ Land the minimum borrowed-view / invalidation substrate needed for one `.prime` `soa_vector` implementation so `ref(...)` and field views have language-level semantics independent of compiler-owned `soa_vector` paths.
-- ◐ Add experimental stdlib `/std/collections/experimental_soa_vector/*` early. Progress: the first namespace foothold now exists with `SoaVector<T>`, `soaVectorNew<T>()`, and `soaVectorCount<T>()`; that wrapper now owns explicit `.prime` empty-runtime count state while still storing the current builtin header-only `soa_vector<T>` backing.
+- ◐ Add experimental stdlib `/std/collections/experimental_soa_vector/*` early. Progress: the first namespace foothold now exists with `SoaVector<T>`, `soaVectorNew<T>()`, and `soaVectorCount<T>()`, which wrap the current builtin header-only empty construction and builtin count path without introducing a fake `.prime` storage runtime yet.
   - ✓ Land the first experimental stdlib empty-construction/count helper foothold (`SoaVector`, `soaVectorNew`, `soaVectorCount`) on top of the current builtin header-only surface.
-  - ✓ Add the first SoA-safe type validation gate so the helper foothold only accepts reflect-enabled struct element types.
-  - ✓ Add the smallest `.prime` runtime path by moving empty construction/count onto explicit wrapper-owned state instead of builtin `soa_vector/count`.
-  - ✓ Add the first empty-state `.prime` AoS conversion helper foothold (`soaVectorToAos`) and lock the current deterministic backend reject contract until vector<Struct> helper returns are supported.
-  - ○ Add the first real column-storage-backed `.prime` path that exercises the new substrate beyond header-only wrapper state.
-- ◐ Extend experimental stdlib `/std/collections/experimental_soa_vector/*` beyond empty-state count/conversion footholds to non-empty literal construction, `push`, `reserve`, `get`, `ref`, and the remaining explicit conversion surfaces, adding only the next substrate pieces that the `.prime` implementation proves it needs.
-  - ✓ Add the first empty-state `.prime` AoS conversion helper (`soaVectorToAos`) on the wrapper-owned runtime path.
-  - ○ Add the first non-empty `.prime` construction/storage slice.
-  - ○ Add `.prime` `get` / `ref` helper surfaces once the borrowed-view substrate exists.
-  - ○ Add `.prime` `push` / `reserve` helper surfaces once column allocation/grow/free substrate exists.
-  - ○ Add the remaining explicit conversion and access surface (`to_soa`, method-sugar `to_aos`, `get`, `ref`, and non-empty `to_aos`) once real column storage, borrowed views, and struct-return support exist.
+  - ○ Add SoA-safe type validation and the smallest `.prime` storage/runtime path that exercises the new substrate.
+- ○ Extend experimental stdlib `/std/collections/experimental_soa_vector/*` to non-empty literal construction, `push`, `reserve`, `get`, `ref`, and explicit `to_soa` / `to_aos`, adding only the next substrate pieces that the `.prime` implementation proves it needs.
 - ○ Extend experimental stdlib `/std/collections/experimental_soa_vector/*` to field-view indexing (`value.field()[i]`) once the experimental `.prime` implementation reaches that boundary and the next minimal substrate slice is clear.
 - ○ Route canonical `/std/collections/soa_vector/*` names through the real experimental `.prime` implementation once parity is proven.
 - ○ Delete compiler-owned `soa_vector` helper routing and backend special cases from semantics, IR lowering, emitters, and runtime code until no C++ source mentions `soa_vector`.

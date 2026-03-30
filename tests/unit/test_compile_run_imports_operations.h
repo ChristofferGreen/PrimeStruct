@@ -27,7 +27,6 @@ TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitt
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
-[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -35,7 +34,7 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  return(plus(values.count(), soaVectorCount<Particle>(values)))
+  return(soaVectorCount<Particle>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_helpers_exe.prime", source);
@@ -45,35 +44,6 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
-}
-
-TEST_CASE("rejects experimental soa_vector stdlib to_aos helper in C++ emitter before vector struct-return support") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  [vector<Particle>] valuesAos{soaVectorToAos<Particle>(values)}
-  return(vectorCount<Particle>(valuesAos))
-}
-)";
-  const std::string srcPath = writeTemp("compile_experimental_soa_vector_to_aos_helpers_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_helpers_exe_err.txt").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "native backend does not support return type on /std/collections/experimental_soa_vector/soaVectorToAos__") !=
-        std::string::npos);
 }
 
 TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {

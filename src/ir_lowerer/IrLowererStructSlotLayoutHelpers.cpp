@@ -257,6 +257,9 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.valueKind = elementKind;
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
+      } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
+        info.structPath = normalizeVectorStructPath(binding.typeName);
+        info.slotCount = 3;
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "Result") {
         std::vector<std::string> args;
         if (!splitTemplateArgs(binding.typeTemplateArg, args) || (args.size() != 1 && args.size() != 2)) {
@@ -312,6 +315,14 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         continue;
       }
       if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
+          normalizeCollectionBindingTypeName(inlineTemplateBase) == "soa_vector") {
+        info.structPath = normalizeVectorStructPath(inlineTemplateBase);
+        info.slotCount = 3;
+        layout.fields.push_back(info);
+        offset += info.slotCount;
+        continue;
+      }
+      if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
           isMapTypeName(inlineTemplateBase)) {
         std::string nestedStruct;
         if (!resolveSpecializedExperimentalMapStructPath(inlineTemplateBase, inlineTemplateArg, nestedStruct) &&
@@ -342,6 +353,13 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       if (isVectorTypeName(binding.typeName)) {
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
+        layout.fields.push_back(info);
+        offset += info.slotCount;
+        continue;
+      }
+      if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
+        info.structPath = normalizeVectorStructPath(binding.typeName);
+        info.slotCount = 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;
@@ -864,60 +882,6 @@ std::string inferStructPathFromCallTarget(
     if (collectionName == "soa_vector") {
       return "/soa_vector";
     }
-  }
-
-  std::string normalizedName = expr.name;
-  if (!normalizedName.empty() && normalizedName.front() == '/') {
-    normalizedName.erase(normalizedName.begin());
-  }
-  auto resolveExperimentalMapConstructorStructPath = [&](const std::string &path) -> std::string {
-    constexpr std::string_view prefix = "std/collections/experimental_map/";
-    if (path.rfind(prefix, 0) != 0) {
-      return "";
-    }
-    const std::string suffix = path.substr(prefix.size());
-    auto remap = [&](std::string_view helperStem) -> std::string {
-      const std::string helperPrefix = std::string(helperStem) + "__";
-      if (suffix.rfind(helperPrefix, 0) != 0) {
-        return "";
-      }
-      return "/std/collections/experimental_map/Map__" + suffix.substr(helperPrefix.size());
-    };
-    if (std::string structPath = remap("mapNew"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapSingle"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapDouble"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapPair"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapTriple"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapQuad"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapQuint"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapSext"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapSept"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapOct"); !structPath.empty()) {
-      return structPath;
-    }
-    return "";
-  };
-  if (const std::string experimentalStructPath = resolveExperimentalMapConstructorStructPath(normalizedName);
-      !experimentalStructPath.empty() && isKnownStructPath(experimentalStructPath)) {
-    return experimentalStructPath;
   }
 
   std::string normalizedName = expr.name;

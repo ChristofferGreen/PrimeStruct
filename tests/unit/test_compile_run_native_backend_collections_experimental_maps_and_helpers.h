@@ -36,7 +36,6 @@ TEST_CASE("compiles and runs native experimental soa_vector stdlib helpers") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
-[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -44,7 +43,7 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  return(plus(values.count(), soaVectorCount<Particle>(values)))
+  return(soaVectorCount<Particle>(values))
 }
 )";
   const std::string srcPath =
@@ -55,36 +54,6 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
-}
-
-TEST_CASE("native rejects experimental soa_vector stdlib to_aos helper before vector struct-return support") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  [vector<Particle>] valuesAos{soaVectorToAos<Particle>(values)}
-  return(vectorCount<Particle>(valuesAos))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_vector_to_aos_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_to_aos_helpers_err.txt").string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "native backend does not support return type on /std/collections/experimental_soa_vector/soaVectorToAos__") !=
-        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native templated stdlib wrapper temporary call forms") {
