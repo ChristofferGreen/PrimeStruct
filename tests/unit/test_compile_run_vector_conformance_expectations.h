@@ -402,6 +402,14 @@ inline void expectCanonicalVectorPopNamedArgsConformance(const std::string &emit
       1);
 }
 
+inline void expectCanonicalVectorDiscardOwnershipConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorDiscardOwnershipConformanceSource(),
+      "vector_discard_canonical_ownership_" + emitMode,
+      emitMode,
+      0);
+}
+
 inline void expectCanonicalVectorPopVmImportRequirement() {
   expectVectorConformanceCompileReject(makeCanonicalVectorPopImportRequirementSource(),
                                        "vector_pop_canonical_import_requirement",

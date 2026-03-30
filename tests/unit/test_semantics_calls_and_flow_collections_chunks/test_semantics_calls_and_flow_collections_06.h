@@ -624,9 +624,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("pop rejects non-drop-trivial vector element types") {
+TEST_CASE("pop allows non-drop-trivial vector element types") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/experimental_vector/*
 
 [struct]
 Owned() {
@@ -638,15 +639,14 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Owned> mut] values{vector<Owned>()}
-  pop(values)
-  return(0i32)
+  [Vector<Owned> mut] values{/std/collections/vectorSingle<Owned>(Owned())}
+  values.pop()
+  return(/std/collections/vector/count<Owned>(values))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pop requires drop-trivial vector element type until container drop semantics are implemented: Owned") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("pop allows drop-trivial string vector elements") {

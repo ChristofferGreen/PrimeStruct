@@ -561,37 +561,8 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("rejects vector pop with non-drop-trivial elements in C++ emitter") {
-  const std::string source = R"(
-import /std/collections/*
-
-[struct]
-Owned() {
-  [i32] value{1i32}
-
-  Destroy() {
-  }
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<Owned> mut] values{vector<Owned>(Owned())}
-  pop(values)
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("compile_exe_vector_pop_non_drop_trivial_reject.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_exe_vector_pop_non_drop_trivial_reject_out.txt").string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_exe_vector_pop_non_drop_trivial_reject_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find(
-            "pop requires drop-trivial vector element type until container drop semantics are implemented: Owned") !=
-        std::string::npos);
+TEST_CASE("compiles and runs canonical vector discard helpers with owned elements in C++ emitter") {
+  expectCanonicalVectorDiscardOwnershipConformance("exe");
 }
 
 TEST_CASE("rejects vector reserve with non-relocation-trivial elements in C++ emitter") {

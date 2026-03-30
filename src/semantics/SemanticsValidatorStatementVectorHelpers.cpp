@@ -740,9 +740,6 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
             params, locals, stmt.args[receiverIndex], vectorHelper.c_str(), binding)) {
       return false;
     }
-    if (!validateVectorDiscardHelperElementType(binding, vectorHelper, namespacePrefix, definitionTemplateArgs)) {
-      return false;
-    }
     return true;
   }
   return true;

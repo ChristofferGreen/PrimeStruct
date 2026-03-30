@@ -110,9 +110,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("clear rejects vector elements with nested drop requirements") {
+TEST_CASE("clear allows vector elements with nested drop requirements") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/experimental_vector/*
 
 [struct]
 Owned() {
@@ -129,15 +130,14 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>()}
-  clear(values)
-  return(0i32)
+  [Vector<Wrapper> mut] values{/std/collections/vectorPair<Wrapper>(Wrapper(Owned()), Wrapper(Owned()))}
+  /std/collections/vector/clear<Wrapper>(values)
+  return(/std/collections/vector/count<Wrapper>(values))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("clear requires drop-trivial vector element type until container drop semantics are implemented: Wrapper") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("clear call keeps user-defined vector helper precedence") {

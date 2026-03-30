@@ -76,6 +76,7 @@ inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
   expectCanonicalVectorMutatorNamedArgReceiverRejects(emitMode);
   expectCanonicalVectorPushReceiverRejects(emitMode);
   expectCanonicalVectorReserveReceiverRejects(emitMode);
+  expectCanonicalVectorDiscardOwnershipConformance(emitMode);
   if (emitMode != "vm") {
     return;
   }

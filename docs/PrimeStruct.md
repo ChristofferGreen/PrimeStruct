@@ -1303,7 +1303,9 @@ for(
     wrapper over that same experimental constructor for `auto` bindings and temporary receiver flows, and imported
     named-argument canonical constructor calls now resolve through same-path fixed-arity
     `/std/collections/vector/vector` overloads instead of helper-path rewrites for those same inferred and temporary
-    receiver cases.
+    receiver cases. Canonical `/std/collections/vector/*` `pop` / `clear` helpers now reuse that same experimental
+    discard path for ownership-sensitive element types on explicit experimental `Vector<T>` bindings, while
+    indexed-removal ownership remains part of the separate move/compaction follow-up.
   - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_map/*` (`Entry<K, V>`,
     `entry(key, value)`, `map<K, V>(entries...)`, `mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`,
     `mapQuint`, `mapSext`, `mapSept`, `mapOct`, `mapInsert`, `mapCount`, `mapContains`, `mapTryAt`, `mapAt`,

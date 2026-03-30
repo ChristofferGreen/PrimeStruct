@@ -116,6 +116,31 @@ inline std::string makeVectorShrinkRemoveConformanceSource(const std::string &im
   return source;
 }
 
+inline std::string makeCanonicalVectorDiscardOwnershipConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "[struct]\n";
+  source += "Owned() {\n";
+  source += "  [i32 mut] value{0i32}\n\n";
+  source += "  Destroy() {\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[struct]\n";
+  source += "Wrapper() {\n";
+  source += "  [Owned] value{Owned()}\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Vector<Owned> mut] popped{/std/collections/vectorSingle<Owned>(Owned(3i32))}\n";
+  source += "  popped.pop()\n";
+  source += "  [Vector<Wrapper> mut] cleared{/std/collections/vectorPair<Wrapper>(Wrapper(Owned(4i32)), Wrapper(Owned(5i32)))}\n";
+  source += "  /std/collections/vector/clear<Wrapper>(cleared)\n";
+  source += "  return(plus(/std/collections/vector/count<Owned>(popped), /std/collections/vector/count<Wrapper>(cleared)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeVectorTypeMismatchRejectSource(const std::string &importPath) {
   std::string source;
   source += "import " + importPath + "\n\n";
