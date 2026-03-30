@@ -448,8 +448,10 @@ bool resolveMethodCallPath(const Expr &call,
                                    normalizedMethodName == "tryAt" ||
                                    normalizedMethodName == "at" ||
                                    normalizedMethodName == "at_unsafe";
-    const bool hasAliasHelperDefinition = defMap.count(aliasPath) > 0;
-    const bool hasCanonicalHelperDefinition = defMap.count(canonicalPath) > 0;
+    const bool hasAliasHelperDefinition =
+        hasDefinitionOrMetadata(metadataView, aliasPath);
+    const bool hasCanonicalHelperDefinition =
+        hasDefinitionOrMetadata(metadataView, canonicalPath);
     if (isMapHelperMethod) {
       if (isExplicitMapAliasMethod) {
         if (!hasAliasHelperDefinition) {
