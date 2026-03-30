@@ -244,88 +244,12 @@ TEST_CASE("compiles and runs native canonical namespaced map inserts on explicit
   expectCanonicalMapNamespaceExperimentalInsertConformance("native");
 }
 
-TEST_CASE("rejects native builtin canonical map inserts with pending runtime diagnostic") {
-  expectBuiltinCanonicalMapInsertPendingDiagnostic("native");
-}
-
 TEST_CASE("compiles and runs native builtin canonical map first-growth inserts") {
   expectBuiltinCanonicalMapInsertFirstGrowthConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map pair-growth inserts") {
-  expectBuiltinCanonicalMapInsertPairGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map triple-growth inserts") {
-  expectBuiltinCanonicalMapInsertTripleGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map quad-growth inserts") {
-  expectBuiltinCanonicalMapInsertQuadGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map quint-growth inserts") {
-  expectBuiltinCanonicalMapInsertQuintGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map sext-growth inserts") {
-  expectBuiltinCanonicalMapInsertSextGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map sept-growth inserts") {
-  expectBuiltinCanonicalMapInsertSeptGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map oct-growth inserts") {
-  expectBuiltinCanonicalMapInsertOctGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map ninth-growth inserts") {
-  expectBuiltinCanonicalMapInsertNinthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map tenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertTenthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map eleventh-growth inserts") {
-  expectBuiltinCanonicalMapInsertEleventhGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map twelfth-growth inserts") {
-  expectBuiltinCanonicalMapInsertTwelfthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map thirteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertThirteenthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map fourteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertFourteenthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map fifteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertFifteenthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map sixteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertSixteenthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map seventeenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertSeventeenthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map eighteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertEighteenthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map nineteenth-growth inserts") {
-  expectBuiltinCanonicalMapInsertNineteenthGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map twentieth-growth inserts") {
-  expectBuiltinCanonicalMapInsertTwentiethGrowthConformance("native");
+TEST_CASE("compiles and runs native builtin canonical map repeated-growth inserts") {
+  expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("native");
 }
 
 TEST_CASE("compiles and runs native builtin canonical map insert overwrites") {
