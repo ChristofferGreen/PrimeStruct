@@ -511,6 +511,51 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa storage helpers validate on explicit column bindings") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] values{soaColumnNew<i32>()}
+  soaColumnReserve<i32>(values, 3i32)
+  soaColumnPush<i32>(values, 2i32)
+  soaColumnPush<i32>(values, 5i32)
+  soaColumnWrite<i32>(values, 1i32, 7i32)
+  soaColumnClear<i32>(values)
+  return(soaColumnCount<i32>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa storage helpers validate ownership-sensitive elements") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+Mover() {
+  [i32] value{0i32}
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<Mover> mut] values{soaColumnNew<Mover>()}
+  soaColumnPush<Mover>(values, Mover(3i32))
+  soaColumnWrite<Mover>(values, 0i32, Mover(8i32))
+  soaColumnClear<Mover>(values)
+  return(soaColumnCount<Mover>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("get helper validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {

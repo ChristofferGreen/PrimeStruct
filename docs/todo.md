@@ -27,7 +27,10 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   - ✓ Reject builtin `soa_vector ref(...)` escapes through call arguments and returns until borrowed-view substrate exists.
   - ✓ Reject builtin `soa_vector` field-view escapes through call arguments and returns until the field-view substrate exists.
 - ✓ Land the minimum compile-time struct-field introspection/codegen needed for one `.prime` `soa_vector` implementation to derive SoA column schemas from `T`.
-- ○ Land the minimum column-storage substrate needed for one `.prime` `soa_vector` implementation: multi-column alloc/grow/free/read/write primitives with deterministic allocation-failure behavior.
+- ◐ Land the minimum column-storage substrate needed for one `.prime` `soa_vector` implementation. Progress: the first reusable `.prime` single-column storage substrate now exists at `/std/collections/experimental_soa_storage/*` with `SoaColumn<T>`, `soaColumnNew`, `soaColumnCount`, `soaColumnCapacity`, `soaColumnReserve`, `soaColumnPush`, `soaColumnRead`, `soaColumnWrite`, and `soaColumnClear`, all backed by checked buffer alloc/grow/free plus explicit `init/drop/take/borrow` flows.
+  - ✓ Add the first reusable `.prime` single-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ○ Extend that substrate from one column to reflected multi-column schema allocation/grow/free.
+  - ○ Add deterministic allocation-failure and borrowed-view coverage once the wrapper starts consuming the column substrate.
 - ○ Land the minimum borrowed-view / invalidation substrate needed for one `.prime` `soa_vector` implementation so `ref(...)` and field views have language-level semantics independent of compiler-owned `soa_vector` paths.
 - ◐ Add experimental stdlib `/std/collections/experimental_soa_vector/*` early. Progress: the first namespace foothold now exists with `SoaVector<T>`, `soaVectorNew<T>()`, and `soaVectorCount<T>()`; that wrapper now owns explicit `.prime` empty-runtime count state while still storing the current builtin header-only `soa_vector<T>` backing.
   - ✓ Land the first experimental stdlib empty-construction/count helper foothold (`SoaVector`, `soaVectorNew`, `soaVectorCount`) on top of the current builtin header-only surface.
@@ -43,7 +46,7 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   - ✓ Add the first `.prime` AoS-to-SoA wrapper conversion foothold (`soaVectorFromAos`) and lock the current deterministic backend reject contract while typed-binding/lowering support is still missing.
   - ✓ Add the first `.prime` `get` helper and method-sugar foothold. It now validates semantically, while imported wrapper emission still stops at the existing deterministic `soaVectorToAos__...` backend-return boundary until real column storage and richer wrapper lowering exist.
   - ○ Add `.prime` `ref` helper surfaces once the borrowed-view substrate exists.
-  - ○ Add `.prime` `push` / `reserve` helper surfaces once column allocation/grow/free substrate exists.
+  - ○ Add `.prime` `push` / `reserve` helper surfaces once the new column allocation/grow/free substrate is threaded into the wrapper.
   - ○ Add the remaining explicit conversion and access surface (`ref` and richer non-empty `to_aos`) once real column storage, borrowed views, and struct-return support exist.
 - ○ Extend experimental stdlib `/std/collections/experimental_soa_vector/*` to field-view indexing (`value.field()[i]`) once the experimental `.prime` implementation reaches that boundary and the next minimal substrate slice is clear.
 - ○ Route canonical `/std/collections/soa_vector/*` names through the real experimental `.prime` implementation once parity is proven.

@@ -2360,6 +2360,13 @@ bad_use_after_take() {
     method-sugar `values.to_aos()` stay on that same backend-return boundary until real column storage,
     vector<Struct> helper returns, and borrowed-view substrate are in place. Borrowed `ref` and richer non-empty
     conversion/access remain pending behind that same broader substrate work.
+  - **Experimental SoA storage substrate:** the first reusable `.prime` storage layer now exists at
+    `/std/collections/experimental_soa_storage/*` with `SoaColumn<T>`, `soaColumnNew<T>()`,
+    `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`, `soaColumnPush<T>()`,
+    `soaColumnRead<T>()`, `soaColumnWrite<T>()`, and `soaColumnClear<T>()`. This is a single-column primitive backed
+    by checked buffer alloc/grow/free plus explicit `init(...)`, `drop(...)`, `take(...)`, and `borrow(...)` flows.
+    It is the intended building block for future `.prime` `SoaVector<T>` column ownership, but it is not yet threaded
+    into reflected multi-column schemas or wrapper borrowed-view/field-view surfaces.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of
