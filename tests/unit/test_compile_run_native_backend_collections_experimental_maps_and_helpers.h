@@ -272,6 +272,10 @@ TEST_CASE("compiles and runs native builtin canonical map sext-growth inserts") 
   expectBuiltinCanonicalMapInsertSextGrowthConformance("native");
 }
 
+TEST_CASE("compiles and runs native builtin canonical map sept-growth inserts") {
+  expectBuiltinCanonicalMapInsertSeptGrowthConformance("native");
+}
+
 TEST_CASE("compiles and runs native builtin canonical map insert overwrites") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("native");
 }
