@@ -292,7 +292,7 @@ Particle() {
 }
 
 [return<int>]
-consume<T>([T] value) {
+consume([int] value) {
   return(value)
 }
 
@@ -306,6 +306,87 @@ main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<i32>] idx{vector<i32>(0i32)}
   return(plus(consume(values.ref(idx)), pick(values, idx)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector builtin field views reject call argument escapes before field-view substrate exists") {
+  const auto checkReject = [](const std::string &expr) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "consume<T>([T] value) {\n"
+        "  return(0i32)\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [soa_vector<Particle>] values{soa_vector<Particle>()}\n"
+        "  return(consume(" + expr + "))\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  };
+
+  checkReject("x(values)");
+  checkReject("values.x()");
+}
+
+TEST_CASE("soa_vector builtin field views reject return escapes before field-view substrate exists") {
+  const auto checkReject = [](const std::string &expr) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<auto>]\n"
+        "pick([soa_vector<Particle>] values) {\n"
+        "  return(" + expr + ")\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [soa_vector<Particle>] values{soa_vector<Particle>()}\n"
+        "  pick(values)\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/pick", error));
+    CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  };
+
+  checkReject("x(values)");
+  checkReject("values.x()");
+}
+
+TEST_CASE("soa_vector field-view helper still accepts call and return escapes through same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/soa_vector/x([soa_vector<Particle>] values) {
+  return(13i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pick([soa_vector<Particle>] values) {
+  return(values.x())
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(plus(consume(values.x()), pick(values)))
 }
 )";
   std::string error;
