@@ -9,27 +9,14 @@
           std::string helperPath;
           bool hasUserVectorHelper = false;
           Expr helperCall = stmt;
-          Expr missingHelperCall = stmt;
-          bool hasMissingVectorHelper = false;
-          auto rememberMissingVectorHelperCall = [&](const Expr &candidate, const std::string &resolvedPath) {
-            if (resolvedPath != "/vector/" + vectorHelper &&
-                resolvedPath != "/std/collections/vector/" + vectorHelper) {
-              return;
-            }
-            missingHelperCall = candidate;
-            hasMissingVectorHelper = true;
-          };
           if (stmt.isMethodCall) {
             if (resolveMethodCallPath(
                     stmt, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, helperPath)) {
               if (!stmt.name.empty() && stmt.name.front() == '/' && !explicitRequestedVectorHelperPath.empty() &&
                   helperPath != explicitRequestedVectorHelperPath) {
-                missingHelperCall = stmt;
-                hasMissingVectorHelper = true;
                 helperPath.clear();
               } else {
                 helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
-                rememberMissingVectorHelperCall(stmt, helperPath);
                 hasUserVectorHelper = nameMap.find(helperPath) != nameMap.end();
               }
             }
@@ -101,12 +88,9 @@
               if (resolvedMethodPath) {
                 if (!explicitRequestedVectorHelperPath.empty() &&
                     helperPath != explicitRequestedVectorHelperPath) {
-                  missingHelperCall = stmt;
-                  hasMissingVectorHelper = true;
                   helperPath.clear();
                 } else {
                   helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
-                  rememberMissingVectorHelperCall(methodCandidate, helperPath);
                 }
               }
               if (resolvedMethodPath && !helperPath.empty() && nameMap.find(helperPath) != nameMap.end()) {
@@ -130,49 +114,6 @@
                             returnStructs,
                             hasMathImport)
                 << ";\n";
-            return;
-          }
-          if (hasMissingVectorHelper) {
-            out << pad << "ps_missing_vector_" << vectorHelper
-                << (stmt.isMethodCall ? "_method_helper(" : "_call_helper(");
-            for (size_t i = 0; i < missingHelperCall.args.size(); ++i) {
-              if (i > 0) {
-                out << ", ";
-              }
-              out << emitExpr(missingHelperCall.args[i],
-                              nameMap,
-                              paramMap,
-                              defMap,
-                              structTypeMap,
-                              importAliases,
-                              localTypes,
-                              returnKinds,
-                              resultInfos,
-                              returnStructs,
-                              hasMathImport);
-            }
-            out << ");\n";
-            return;
-          }
-          if (stmt.isMethodCall && !stmt.name.empty() && stmt.name.front() == '/') {
-            out << pad << "ps_missing_vector_" << vectorHelper << "_method_helper(";
-            for (size_t i = 0; i < stmt.args.size(); ++i) {
-              if (i > 0) {
-                out << ", ";
-              }
-              out << emitExpr(stmt.args[i],
-                              nameMap,
-                              paramMap,
-                              defMap,
-                              structTypeMap,
-                              importAliases,
-                              localTypes,
-                              returnKinds,
-                              resultInfos,
-                              returnStructs,
-                              hasMathImport);
-            }
-            out << ");\n";
             return;
           }
           if (vectorHelper == "push") {
