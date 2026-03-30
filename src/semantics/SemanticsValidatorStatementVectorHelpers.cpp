@@ -171,17 +171,13 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return "/std/collections/vector/" + std::string(helperName);
   }();
-  auto explicitAliasVectorMutatorMethodPath = [&]() -> std::string {
-    if (!stmt.isMethodCall) {
+  auto explicitAliasVectorMutatorCallPath = [&]() -> std::string {
+    if (stmt.isMethodCall) {
       return "";
     }
-    auto isAliasMutatorName = [](std::string_view helperName) {
-      return helperName == "push" || helperName == "pop" || helperName == "reserve" ||
-             helperName == "clear" || helperName == "remove_at" || helperName == "remove_swap";
-    };
     const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
     const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
-    if (normalizedPrefix == "vector" && isAliasMutatorName(normalizedName)) {
+    if (normalizedPrefix == "vector" && isVectorMutatorName(normalizedName)) {
       return "/vector/" + normalizedName;
     }
     constexpr std::string_view kAliasPrefix = "vector/";
@@ -189,7 +185,45 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return "";
     }
     const std::string_view helperName = std::string_view(normalizedName).substr(kAliasPrefix.size());
-    if (!isAliasMutatorName(helperName)) {
+    if (!isVectorMutatorName(helperName)) {
+      return "";
+    }
+    return "/vector/" + std::string(helperName);
+  }();
+  auto explicitCanonicalStdVectorMutatorMethodPath = [&]() -> std::string {
+    if (!stmt.isMethodCall) {
+      return "";
+    }
+    const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
+    const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
+    if (normalizedPrefix == "std/collections/vector" && isVectorMutatorName(normalizedName)) {
+      return "/std/collections/vector/" + normalizedName;
+    }
+    constexpr std::string_view kCanonicalPrefix = "std/collections/vector/";
+    if (normalizedName.rfind(kCanonicalPrefix, 0) != 0) {
+      return "";
+    }
+    const std::string_view helperName = std::string_view(normalizedName).substr(kCanonicalPrefix.size());
+    if (!isVectorMutatorName(helperName)) {
+      return "";
+    }
+    return "/std/collections/vector/" + std::string(helperName);
+  }();
+  auto explicitAliasVectorMutatorMethodPath = [&]() -> std::string {
+    if (!stmt.isMethodCall) {
+      return "";
+    }
+    const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));
+    const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));
+    if (normalizedPrefix == "vector" && isVectorMutatorName(normalizedName)) {
+      return "/vector/" + normalizedName;
+    }
+    constexpr std::string_view kAliasPrefix = "vector/";
+    if (normalizedName.rfind(kAliasPrefix, 0) != 0) {
+      return "";
+    }
+    const std::string_view helperName = std::string_view(normalizedName).substr(kAliasPrefix.size());
+    if (!isVectorMutatorName(helperName)) {
       return "";
     }
     return "/vector/" + std::string(helperName);
