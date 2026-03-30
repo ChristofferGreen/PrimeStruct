@@ -270,12 +270,12 @@ inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::
                                             "");
 }
 
-inline void expectBuiltinCanonicalMapInsertTemporaryFailure(const std::string &emitMode) {
+inline void expectBuiltinCanonicalMapInsertPendingDiagnostic(const std::string &emitMode) {
   expectMapConformanceFailure(makeBuiltinCanonicalMapInsertTemporaryFailureSource(),
-                              "map_builtin_canonical_insert_temporary_failure_" + emitMode,
+                              "map_builtin_canonical_insert_pending_" + emitMode,
                               emitMode,
                               3,
-                              "array index out of bounds",
+                              "builtin canonical map insert pending",
                               false);
 }
 

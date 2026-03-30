@@ -288,8 +288,8 @@ TEST_CASE("compiles and runs canonical namespaced map inserts on explicit experi
   expectCanonicalMapNamespaceExperimentalInsertConformance("exe");
 }
 
-TEST_CASE("rejects builtin canonical map inserts with temporary runtime failure in C++ emitter") {
-  expectBuiltinCanonicalMapInsertTemporaryFailure("exe");
+TEST_CASE("rejects builtin canonical map inserts with pending runtime diagnostic in C++ emitter") {
+  expectBuiltinCanonicalMapInsertPendingDiagnostic("exe");
 }
 
 TEST_CASE("rejects canonical map constructor ownership growth in C++ emitter") {
