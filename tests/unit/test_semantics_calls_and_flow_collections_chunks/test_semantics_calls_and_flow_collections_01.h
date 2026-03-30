@@ -384,6 +384,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical namespaced map insert validates on explicit experimental map bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[struct]
+Owned() {
+  [i32 mut] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, other.value)
+    assign(other.value, 0i32)
+  }
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned(4i32))}
+  /std/collections/map/insert<string, Owned>(values, "right"raw_utf8, Owned(7i32))
+  /std/collections/map/insert<string, Owned>(values, "left"raw_utf8, Owned(9i32))
+  return(plus(/std/collections/map/count<string, Owned>(values),
+              plus(/std/collections/map/at<string, Owned>(values, "left"raw_utf8).value,
+                   /std/collections/map/at_unsafe<string, Owned>(values, "right"raw_utf8).value)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental map borrowed methods validate ownership-sensitive values through reference helpers") {
   const std::string source = R"(
 import /std/collections/*

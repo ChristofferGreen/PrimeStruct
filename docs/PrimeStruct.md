@@ -1318,8 +1318,10 @@ for(
     reuses the canonical `map key not found` runtime contract on misses, literal-backed `Map<string, V>` helper flows
     now work across C++/VM/native, VM/native non-literal string-key constructors/lookups preserve the canonical
     string-key reject diagnostics, experimental map values now support `mapInsert(...)` plus `values.insert(...)`
-    updates, and overwrite/update plus scope-exit cleanup now run through the same pointer-backed uninitialized-slot
-    ownership flow as experimental vectors by explicitly `drop(...)`ing and `init(...)`ing payload slots. Borrowed
+    updates, explicit experimental `Map<K, V>` bindings now also support canonical
+    `/std/collections/map/insert(...)` on that same overwrite/update path, and overwrite/update plus scope-exit cleanup
+    now run through the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly
+    `drop(...)`ing and `init(...)`ing payload slots. Borrowed
     `Reference<Map<K, V>>` values now support distinct `*Ref` free-helper calls plus
     `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()`/`.insert()` method-call sugar through `.prime`
     `/Reference/*` helpers, and both value plus borrowed-reference experimental maps now participate in shared

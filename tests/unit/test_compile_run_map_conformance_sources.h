@@ -398,6 +398,37 @@ inline std::string makeExperimentalMapOwnershipConformanceSource() {
   return source;
 }
 
+inline std::string makeCanonicalMapNamespaceExperimentalInsertConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[struct]\n";
+  source += "Tracked() {\n";
+  source += "  [i32 mut] value{0i32}\n";
+  source += "\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this.value, other.value)\n";
+  source += "    assign(other.value, 0i32)\n";
+  source += "  }\n\n";
+  source += "  Destroy() {\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source +=
+      "  [Map<string, Tracked> mut] values{mapSingle<string, Tracked>(\"left\"raw_utf8, Tracked(4i32))}\n";
+  source +=
+      "  /std/collections/map/insert<string, Tracked>(values, \"right\"raw_utf8, Tracked(7i32))\n";
+  source +=
+      "  /std/collections/map/insert<string, Tracked>(values, \"left\"raw_utf8, Tracked(9i32))\n";
+  source += "  return(plus(/std/collections/map/count<string, Tracked>(values),\n";
+  source += "      plus(/std/collections/map/at<string, Tracked>(values, \"left\"raw_utf8).value,\n";
+  source += "           /std/collections/map/at_unsafe<string, Tracked>(values, \"right\"raw_utf8).value)))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapIndexConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";

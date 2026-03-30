@@ -348,3 +348,8 @@ import /std/collections/experimental_map/*
 /std/collections/map/at_unsafe<K, V>([map<K, V>] values, [K] key) {
   return(/std/collections/mapAtUnsafe<K, V>(values, key))
 }
+
+[public effects(heap_alloc), return<void> Comparable<K>]
+/std/collections/map/insert<K, V>([Map<K, V> mut] values, [K] key, [V] value) {
+  /std/collections/experimental_map/mapInsert<K, V>(values, key, value)
+}

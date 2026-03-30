@@ -316,6 +316,10 @@ TEST_CASE("runs vm experimental map ownership-sensitive values") {
   expectExperimentalMapOwnershipConformance("vm");
 }
 
+TEST_CASE("runs vm canonical namespaced map inserts on explicit experimental map bindings") {
+  expectCanonicalMapNamespaceExperimentalInsertConformance("vm");
+}
+
 TEST_CASE("rejects vm canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("vm");
 }

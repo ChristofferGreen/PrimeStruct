@@ -223,6 +223,10 @@ TEST_CASE("compiles and runs experimental map ownership-sensitive values in C++ 
   expectExperimentalMapOwnershipConformance("exe");
 }
 
+TEST_CASE("compiles and runs canonical namespaced map inserts on explicit experimental map bindings in C++ emitter") {
+  expectCanonicalMapNamespaceExperimentalInsertConformance("exe");
+}
+
 TEST_CASE("rejects canonical map constructor ownership growth in C++ emitter") {
   expectCanonicalMapNamespaceOwnershipReject("exe");
 }
