@@ -367,6 +367,8 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   bool hasPairGrowJump = false;
   size_t jumpAfterTripleGrow = 0;
   bool hasTripleGrowJump = false;
+  size_t jumpAfterQuadGrow = 0;
+  bool hasQuadGrowJump = false;
   if (valuesLocal >= 0) {
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
     emitInstruction(IrOpcode::PushI32, 0);
@@ -468,7 +470,7 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
     emitInstruction(IrOpcode::PushI32, 3);
     emitInstruction(IrOpcode::CmpEqI32, 0);
-    const size_t jumpPending = instructionCount();
+    const size_t jumpNotTriple = instructionCount();
     emitInstruction(IrOpcode::JumpIfZero, 0);
 
     const int32_t tripleGrownBaseLocal = allocTempLocal();
@@ -505,6 +507,52 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     emitInstruction(IrOpcode::Jump, 0);
     hasTripleGrowJump = true;
 
+    patchInstructionImm(jumpNotTriple, static_cast<uint64_t>(instructionCount()));
+
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
+    emitInstruction(IrOpcode::PushI32, 4);
+    emitInstruction(IrOpcode::CmpEqI32, 0);
+    const size_t jumpPending = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+
+    const int32_t quadGrownBaseLocal = allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    emitInstruction(IrOpcode::PushI32, 5);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(quadGrownBaseLocal));
+
+    auto emitCopyQuadExistingSlot = [&](int32_t sourceSlotIndex, int32_t destSlotIndex) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+      emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(sourceSlotIndex * IrSlotBytesI32));
+      emitInstruction(IrOpcode::AddI64, 0);
+      emitInstruction(IrOpcode::LoadIndirect, 0);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(quadGrownBaseLocal + destSlotIndex));
+    };
+    emitCopyQuadExistingSlot(1, 1);
+    emitCopyQuadExistingSlot(2, 2);
+    emitCopyQuadExistingSlot(3, 3);
+    emitCopyQuadExistingSlot(4, 4);
+    emitCopyQuadExistingSlot(5, 5);
+    emitCopyQuadExistingSlot(6, 6);
+    emitCopyQuadExistingSlot(7, 7);
+    emitCopyQuadExistingSlot(8, 8);
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(quadGrownBaseLocal + 9));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(quadGrownBaseLocal + 10));
+    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(quadGrownBaseLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+    jumpAfterQuadGrow = instructionCount();
+    emitInstruction(IrOpcode::Jump, 0);
+    hasQuadGrowJump = true;
+
     patchInstructionImm(jumpPending, static_cast<uint64_t>(instructionCount()));
   }
   emitPending();
@@ -535,6 +583,9 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   }
   if (hasTripleGrowJump) {
     patchInstructionImm(jumpAfterTripleGrow, static_cast<uint64_t>(instructionCount()));
+  }
+  if (hasQuadGrowJump) {
+    patchInstructionImm(jumpAfterQuadGrow, static_cast<uint64_t>(instructionCount()));
   }
   return true;
 }

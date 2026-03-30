@@ -255,6 +255,10 @@ TEST_CASE("compiles and runs builtin canonical map quad-growth inserts in C++ em
   expectBuiltinCanonicalMapInsertQuadGrowthConformance("exe");
 }
 
+TEST_CASE("compiles and runs builtin canonical map quint-growth inserts in C++ emitter") {
+  expectBuiltinCanonicalMapInsertQuintGrowthConformance("exe");
+}
+
 TEST_CASE("compiles and runs builtin canonical map insert overwrites in C++ emitter") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("exe");
 }
