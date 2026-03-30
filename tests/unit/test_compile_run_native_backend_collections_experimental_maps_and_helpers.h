@@ -171,6 +171,64 @@ main() {
   CHECK(readFile(errPath).find("native backend requires typed bindings") != std::string::npos);
 }
 
+TEST_CASE("native rejects experimental soa_vector stdlib get helper before real soa storage support") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  [Particle] value{soaVectorGet<Particle>(values, 0i32)}
+  return(value.x)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_get.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_get_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend does not support return type on "
+                               "/std/collections/experimental_soa_vector/soaVectorToAos__") !=
+        std::string::npos);
+}
+
+TEST_CASE("native rejects experimental soa_vector stdlib get method before real soa storage support") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  [Particle] value{values.get(0i32)}
+  return(value.x)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_get_method.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_get_method_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend does not support return type on "
+                               "/std/collections/experimental_soa_vector/soaVectorToAos__") !=
+        std::string::npos);
+}
+
 TEST_CASE("compiles and runs native templated stdlib wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*

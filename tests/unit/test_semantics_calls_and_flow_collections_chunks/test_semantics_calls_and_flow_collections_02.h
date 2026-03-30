@@ -471,6 +471,46 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector stdlib get helper validates on reflect-enabled struct elements") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<Particle>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  return(soaVectorGet<Particle>(values, 0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector stdlib get method validates on reflect-enabled struct elements") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<Particle>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  return(values.get(0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("get helper validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {

@@ -286,6 +286,28 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
                                                    const Expr &receiver,
                                                    const std::string &fieldName,
                                                    BindingInfo &bindingOut) {
+  auto bindingTypeText = [](const BindingInfo &binding) -> std::string {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto assignBindingTypeFromText = [](const std::string &typeText, BindingInfo &bindingOut) -> bool {
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    if (normalizedType.empty()) {
+      return false;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      bindingOut.typeName = normalizeBindingTypeName(base);
+      bindingOut.typeTemplateArg = argText;
+      return true;
+    }
+    bindingOut.typeName = normalizedType;
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  };
   auto inferStructFieldBinding = [&](const Definition &def,
                                      const std::string &bindingFieldName,
                                      BindingInfo &fieldBindingOut,
@@ -341,6 +363,20 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
   if (defIt == defMap_.end() || !defIt->second) {
     return false;
   }
+  const Definition *fieldSourceDef = defIt->second;
+  const Definition *templateSourceDef = fieldSourceDef;
+  if (templateSourceDef->templateArgs.empty()) {
+    const size_t lastSlash = structPath.find_last_of('/');
+    const size_t nameStart = lastSlash == std::string::npos ? 0 : lastSlash + 1;
+    const size_t suffix = structPath.find("__t", nameStart);
+    if (suffix != std::string::npos) {
+      const std::string basePath = structPath.substr(0, suffix);
+      auto baseIt = defMap_.find(basePath);
+      if (baseIt != defMap_.end() && baseIt->second != nullptr && !baseIt->second->templateArgs.empty()) {
+        templateSourceDef = baseIt->second;
+      }
+    }
+  }
   if (isTypeReceiver) {
     auto isStaticField = [](const Expr &stmt) {
       for (const auto &transform : stmt.transforms) {
@@ -359,8 +395,64 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
     return false;
   }
   BindingInfo inferred;
-  if (!inferStructFieldBinding(*defIt->second, fieldName, inferred, false, true)) {
+  if (!inferStructFieldBinding(*templateSourceDef, fieldName, inferred, false, true)) {
     return false;
+  }
+  BindingInfo receiverBinding;
+  if (inferBindingTypeFromInitializer(receiver, params, locals, receiverBinding) &&
+      !receiverBinding.typeTemplateArg.empty() &&
+      !templateSourceDef->templateArgs.empty()) {
+    std::string receiverTypeText = bindingTypeText(receiverBinding);
+    std::string receiverBase;
+    std::string receiverArgText;
+    if (splitTemplateTypeName(normalizeBindingTypeName(receiverTypeText), receiverBase, receiverArgText)) {
+      std::string resolvedReceiverBase = resolveStructTypePath(receiverBase, receiver.namespacePrefix, structNames_);
+      if (resolvedReceiverBase.empty()) {
+        resolvedReceiverBase = resolveTypePath(receiverBase, receiver.namespacePrefix);
+      }
+      std::vector<std::string> receiverArgs;
+      if ((resolvedReceiverBase == templateSourceDef->fullPath || resolvedReceiverBase == fieldSourceDef->fullPath ||
+           resolvedReceiverBase == structPath) &&
+          splitTopLevelTemplateArgs(receiverArgText, receiverArgs) &&
+          receiverArgs.size() == templateSourceDef->templateArgs.size()) {
+        std::unordered_map<std::string, std::string> templateArgMap;
+        for (size_t i = 0; i < receiverArgs.size(); ++i) {
+          templateArgMap.emplace(normalizeBindingTypeName(templateSourceDef->templateArgs[i]),
+                                 normalizeBindingTypeName(receiverArgs[i]));
+        }
+        std::function<std::string(const std::string &)> substituteTypeText =
+            [&](const std::string &typeText) -> std::string {
+          const std::string normalizedType = normalizeBindingTypeName(typeText);
+          if (normalizedType.empty()) {
+            return normalizedType;
+          }
+          auto directIt = templateArgMap.find(normalizedType);
+          if (directIt != templateArgMap.end()) {
+            return directIt->second;
+          }
+          std::string base;
+          std::string argText;
+          if (!splitTemplateTypeName(normalizedType, base, argText)) {
+            return normalizedType;
+          }
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(argText, args)) {
+            return normalizedType;
+          }
+          std::string substitutedBase = substituteTypeText(base);
+          for (std::string &arg : args) {
+            arg = substituteTypeText(arg);
+          }
+          return substitutedBase + "<" + joinTemplateArgs(args) + ">";
+        };
+        BindingInfo specializedFieldBinding = inferred;
+        const std::string specializedFieldTypeText =
+            substituteTypeText(bindingTypeText(inferred));
+        if (assignBindingTypeFromText(specializedFieldTypeText, specializedFieldBinding)) {
+          inferred = std::move(specializedFieldBinding);
+        }
+      }
+    }
   }
   bindingOut = std::move(inferred);
   return true;

@@ -401,6 +401,13 @@ std::string SemanticsValidator::inferStructReturnPath(
               return "";
             }
           }
+          if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(expr.args[receiverIndex], elemType)) {
+            if (std::string structPath =
+                    resolveInferStructTypePath(normalizeBindingTypeName(elemType), expr.namespacePrefix);
+                !structPath.empty()) {
+              return structPath;
+            }
+          }
         }
       }
       std::string collectionTypePath;

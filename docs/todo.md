@@ -41,9 +41,10 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   - ✓ Add wrapper method-sugar `.to_aos()` on top of the `.prime` AoS conversion helper and lock the current deterministic backend reject contract.
   - ✓ Add the first non-empty `.prime` construction helper foothold with a deterministic backend reject contract.
   - ✓ Add the first `.prime` AoS-to-SoA wrapper conversion foothold (`soaVectorFromAos`) and lock the current deterministic backend reject contract while typed-binding/lowering support is still missing.
-  - ○ Add `.prime` `get` / `ref` helper surfaces once the borrowed-view substrate exists.
+  - ✓ Add the first `.prime` `get` helper and method-sugar foothold. It now validates semantically, while imported wrapper emission still stops at the existing deterministic `soaVectorToAos__...` backend-return boundary until real column storage and richer wrapper lowering exist.
+  - ○ Add `.prime` `ref` helper surfaces once the borrowed-view substrate exists.
   - ○ Add `.prime` `push` / `reserve` helper surfaces once column allocation/grow/free substrate exists.
-  - ○ Add the remaining explicit conversion and access surface (`get`, `ref`, and richer non-empty `to_aos`) once real column storage, borrowed views, and struct-return support exist.
+  - ○ Add the remaining explicit conversion and access surface (`ref` and richer non-empty `to_aos`) once real column storage, borrowed views, and struct-return support exist.
 - ○ Extend experimental stdlib `/std/collections/experimental_soa_vector/*` to field-view indexing (`value.field()[i]`) once the experimental `.prime` implementation reaches that boundary and the next minimal substrate slice is clear.
 - ○ Route canonical `/std/collections/soa_vector/*` names through the real experimental `.prime` implementation once parity is proven.
 - ○ Delete compiler-owned `soa_vector` helper routing and backend special cases from semantics, IR lowering, emitters, and runtime code until no C++ source mentions `soa_vector`.

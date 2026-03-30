@@ -566,6 +566,18 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     return extractValueBinding(inferredBinding);
   };
   state->resolveSoaVectorTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+    auto extractBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
+      const std::string normalizedType = normalizeBindingTypeName(typeText);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        bindingOut.typeName = normalizeBindingTypeName(base);
+        bindingOut.typeTemplateArg = argText;
+      } else {
+        bindingOut.typeName = normalizedType;
+        bindingOut.typeTemplateArg.clear();
+      }
+    };
     BindingInfo binding;
     if (resolveBindingTarget(target, binding)) {
       return resolveSoaVectorBinding(binding, elemType);
@@ -599,7 +611,13 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         return state->resolveVectorTarget(target.args.front(), elemType);
       }
     }
-    return false;
+    std::string inferredTypeText;
+    if (!inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
+      return false;
+    }
+    BindingInfo inferredBinding;
+    extractBindingFromTypeText(inferredTypeText, inferredBinding);
+    return resolveSoaVectorBinding(inferredBinding, elemType);
   };
   populateBuiltinCollectionDispatchBufferAndMapResolvers(
       params,

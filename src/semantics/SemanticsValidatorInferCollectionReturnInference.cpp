@@ -316,6 +316,18 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       currentTypeTextOut = unwrapReferencePointerTypeText(wrappedTypeText);
       return !currentTypeTextOut.empty();
     }
+    const std::string resolvedCandidate = resolveCalleePath(candidate);
+    const bool isBuiltinSoaGetOrRef =
+        !candidate.isMethodCall && candidate.args.size() == 2 &&
+        (isSimpleCallName(candidate, "get") || isSimpleCallName(candidate, "ref") ||
+         resolvedCandidate == "/soa_vector/get" || resolvedCandidate == "/soa_vector/ref");
+    if (isBuiltinSoaGetOrRef) {
+      std::string elemType;
+      if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
+        currentTypeTextOut = normalizeBindingTypeName(elemType);
+        return !currentTypeTextOut.empty();
+      }
+    }
     std::string builtinAccessName;
     if (getBuiltinArrayAccessName(candidate, builtinAccessName) && candidate.args.size() == 2) {
       std::string normalizedAccessName = candidate.name;
@@ -354,7 +366,8 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       std::string valueType;
       if (builtinCollectionDispatchResolvers.resolveVectorTarget(receiver, elemType) ||
           builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget(receiver, elemType) ||
-          builtinCollectionDispatchResolvers.resolveArrayTarget(receiver, elemType)) {
+          builtinCollectionDispatchResolvers.resolveArrayTarget(receiver, elemType) ||
+          builtinCollectionDispatchResolvers.resolveSoaVectorTarget(receiver, elemType)) {
         currentTypeTextOut = normalizeBindingTypeName(elemType);
         return !currentTypeTextOut.empty();
       }
@@ -370,7 +383,6 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
     }
 
-    const std::string resolvedCandidate = resolveCalleePath(candidate);
     auto canonicalizeResolvedPath = [](std::string path) {
       const size_t suffix = path.find("__t");
       if (suffix != std::string::npos) {

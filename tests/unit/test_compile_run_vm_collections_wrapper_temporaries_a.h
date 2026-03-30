@@ -142,6 +142,58 @@ main() {
   CHECK(readFile(errPath).find("vm backend requires typed bindings") != std::string::npos);
 }
 
+TEST_CASE("vm rejects experimental soa_vector stdlib get helper before real soa storage support") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  [Particle] value{soaVectorGet<Particle>(values, 0i32)}
+  return(value.x)
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_get.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_get_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend does not support return type on "
+                               "/std/collections/experimental_soa_vector/soaVectorToAos__") !=
+        std::string::npos);
+}
+
+TEST_CASE("vm rejects experimental soa_vector stdlib get method before real soa storage support") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  [Particle] value{values.get(0i32)}
+  return(value.x)
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_get_method.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_get_method_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend does not support return type on "
+                               "/std/collections/experimental_soa_vector/soaVectorToAos__") !=
+        std::string::npos);
+}
+
 TEST_CASE("runs vm with stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*
