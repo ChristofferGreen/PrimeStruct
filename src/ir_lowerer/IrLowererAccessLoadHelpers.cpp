@@ -369,6 +369,8 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   bool hasTripleGrowJump = false;
   size_t jumpAfterQuadGrow = 0;
   bool hasQuadGrowJump = false;
+  size_t jumpAfterQuintGrow = 0;
+  bool hasQuintGrowJump = false;
   if (valuesLocal >= 0) {
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
     emitInstruction(IrOpcode::PushI32, 0);
@@ -481,6 +483,7 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     (void)allocTempLocal();
     (void)allocTempLocal();
     (void)allocTempLocal();
+    (void)allocTempLocal();
     emitInstruction(IrOpcode::PushI32, 4);
     emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(tripleGrownBaseLocal));
 
@@ -512,10 +515,11 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
     emitInstruction(IrOpcode::PushI32, 4);
     emitInstruction(IrOpcode::CmpEqI32, 0);
-    const size_t jumpPending = instructionCount();
+    const size_t jumpNotQuad = instructionCount();
     emitInstruction(IrOpcode::JumpIfZero, 0);
 
     const int32_t quadGrownBaseLocal = allocTempLocal();
+    (void)allocTempLocal();
     (void)allocTempLocal();
     (void)allocTempLocal();
     (void)allocTempLocal();
@@ -553,6 +557,57 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     emitInstruction(IrOpcode::Jump, 0);
     hasQuadGrowJump = true;
 
+    patchInstructionImm(jumpNotQuad, static_cast<uint64_t>(instructionCount()));
+
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
+    emitInstruction(IrOpcode::PushI32, 5);
+    emitInstruction(IrOpcode::CmpEqI32, 0);
+    const size_t jumpPending = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+
+    const int32_t quintGrownBaseLocal = allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    emitInstruction(IrOpcode::PushI32, 6);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(quintGrownBaseLocal));
+
+    auto emitCopyQuintExistingSlot = [&](int32_t sourceSlotIndex, int32_t destSlotIndex) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+      emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(sourceSlotIndex * IrSlotBytesI32));
+      emitInstruction(IrOpcode::AddI64, 0);
+      emitInstruction(IrOpcode::LoadIndirect, 0);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(quintGrownBaseLocal + destSlotIndex));
+    };
+    emitCopyQuintExistingSlot(1, 1);
+    emitCopyQuintExistingSlot(2, 2);
+    emitCopyQuintExistingSlot(3, 3);
+    emitCopyQuintExistingSlot(4, 4);
+    emitCopyQuintExistingSlot(5, 5);
+    emitCopyQuintExistingSlot(6, 6);
+    emitCopyQuintExistingSlot(7, 7);
+    emitCopyQuintExistingSlot(8, 8);
+    emitCopyQuintExistingSlot(9, 9);
+    emitCopyQuintExistingSlot(10, 10);
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(quintGrownBaseLocal + 11));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(quintGrownBaseLocal + 12));
+    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(quintGrownBaseLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+    jumpAfterQuintGrow = instructionCount();
+    emitInstruction(IrOpcode::Jump, 0);
+    hasQuintGrowJump = true;
+
     patchInstructionImm(jumpPending, static_cast<uint64_t>(instructionCount()));
   }
   emitPending();
@@ -586,6 +641,9 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   }
   if (hasQuadGrowJump) {
     patchInstructionImm(jumpAfterQuadGrow, static_cast<uint64_t>(instructionCount()));
+  }
+  if (hasQuintGrowJump) {
+    patchInstructionImm(jumpAfterQuintGrow, static_cast<uint64_t>(instructionCount()));
   }
   return true;
 }
