@@ -124,46 +124,6 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib to_aos helpers validate on reflect-enabled struct elements") {
-  const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<vector<Particle>>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  return(soaVectorToAos<Particle>(values))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("experimental soa_vector stdlib to_aos method validates on reflect-enabled struct elements") {
-  const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<vector<Particle>>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  return(values.to_aos())
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("bare vector count call resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -504,6 +464,52 @@ Particle() {
 main() {
   [SoaVector<Particle>] values{soaVectorNew<Particle>()}
   return(values.get(0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector stdlib push and reserve helpers validate on reflect-enabled struct elements") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  soaVectorReserve<Particle>(values, 2i32)
+  soaVectorPush<Particle>(values, Particle(4i32))
+  soaVectorPush<Particle>(values, Particle(9i32))
+  return(soaVectorGet<Particle>(values, 1i32).x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector stdlib push and reserve methods validate on reflect-enabled struct elements") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.reserve(2i32)
+  values.push(Particle(4i32))
+  values.push(Particle(9i32))
+  return(values.get(1i32).x)
 }
 )";
   std::string error;

@@ -2348,18 +2348,21 @@ bad_use_after_take() {
     collection-specific reflection primitives.
   - **Experimental stdlib status:** the first stdlib namespace foothold now exists at
     `/std/collections/experimental_soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`,
-    `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, and `soaVectorCount<T>()`, and it now also exposes the first
-    empty-state `.prime` AoS conversion foothold through `soaVectorToAos<T>()`. The wrapper owns explicit `.prime`
-    empty-runtime count state while still storing the current builtin header-only `soa_vector<T>` backing, and it
-    currently requires `T` to be a reflect-enabled struct via `meta.field_count<T>()` so non-SoA-safe element types
-    fail early. Today `soaVectorSingle<T>()` validates semantically but still hits the deterministic backend boundary
-    `* backend does not support non-empty soa_vector literals`, `soaVectorFromAos<T>()` validates semantically but
-    still hits `* backend requires typed bindings`, `soaVectorGet<T>()` plus wrapper method-sugar `values.get(i)` now
-    validate semantically but imported wrapper emission still stops at `* backend does not support return type on
-    /std/collections/experimental_soa_vector/soaVectorToAos__...`, and both `soaVectorToAos<T>()` plus wrapper
-    method-sugar `values.to_aos()` stay on that same backend-return boundary until real column storage,
-    vector<Struct> helper returns, and borrowed-view substrate are in place. Borrowed `ref` and richer non-empty
-    conversion/access remain pending behind that same broader substrate work.
+    `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, `soaVectorCount<T>()`, `soaVectorGet<T>()`,
+    `soaVectorReserve<T>()`, and `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`,
+    `.get(i)`, `.reserve(...)`, and `.push(...)`.
+    The wrapper now stores real `.prime` `SoaColumn<T>` state rather than the old builtin header-only
+    `soa_vector<T>` backing, and it currently requires `T` to be a reflect-enabled struct via
+    `meta.field_count<T>()` so non-SoA-safe element types fail early. Today the first real single-column
+    wrapper read/mutate path runs end-to-end across C++/native/VM: `soaVectorSingle<T>()` constructs a non-empty
+    wrapper, `soaVectorGet<T>()` plus wrapper method-sugar `values.get(i)` read elements back from that
+    column-backed state, and `soaVectorReserve<T>()` /
+    `soaVectorPush<T>()` plus wrapper method-sugar `values.reserve(...)` / `values.push(...)` mutate that same
+    wrapper-backed column state in place. `soaVectorFromAos<T>()` already targets the same substrate semantically,
+    but backend lowering still stops on the current `* backend requires typed bindings` boundary. Explicit AoS
+    conversion surfaces (`soaVectorToAos<T>()`, `values.to_aos()`) are still pending until they can coexist cleanly
+    with the core wrapper module and the backend return-type boundary for `vector<Struct>` helpers is resolved.
+    Borrowed `ref` and field-view surfaces remain pending behind the broader SoA substrate work.
   - **Experimental SoA storage substrate:** the first reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with `SoaColumn<T>`, `soaColumnNew<T>()`,
     `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`, `soaColumnPush<T>()`,

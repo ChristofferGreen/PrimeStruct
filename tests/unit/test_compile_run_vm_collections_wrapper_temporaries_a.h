@@ -40,60 +40,7 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib to_aos helper before vector struct-return support") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  [vector<Particle>] valuesAos{soaVectorToAos<Particle>(values)}
-  return(vectorCount<Particle>(valuesAos))
-}
-)";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_to_aos_helpers_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend does not support return type on /std/collections/experimental_soa_vector/soaVectorToAos__") !=
-        std::string::npos);
-}
-
-TEST_CASE("vm rejects experimental soa_vector stdlib to_aos method before vector struct-return support") {
-  const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  [vector<Particle>] valuesAos{values.to_aos()}
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos_method.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_to_aos_method_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend does not support return type on /std/collections/experimental_soa_vector/soaVectorToAos__") !=
-        std::string::npos);
-}
-
-TEST_CASE("vm rejects experimental soa_vector stdlib non-empty helper before real soa storage support") {
+TEST_CASE("runs vm experimental soa_vector stdlib non-empty helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -109,15 +56,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_soa_vector_single.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_single_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend does not support non-empty soa_vector literals") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib from-aos helper before typed-binding support") {
+TEST_CASE("vm rejects experimental soa_vector stdlib from-aos helper before typed bindings support") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -142,7 +85,7 @@ main() {
   CHECK(readFile(errPath).find("vm backend requires typed bindings") != std::string::npos);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib get helper before real soa storage support") {
+TEST_CASE("runs vm experimental soa_vector stdlib get helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -153,22 +96,17 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   [Particle] value{soaVectorGet<Particle>(values, 0i32)}
   return(value.x)
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_soa_vector_get.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_get_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend does not support return type on "
-                               "/std/collections/experimental_soa_vector/soaVectorToAos__") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib get method before real soa storage support") {
+TEST_CASE("runs vm experimental soa_vector stdlib get method") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -179,19 +117,62 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   [Particle] value{values.get(0i32)}
   return(value.x)
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_soa_vector_get_method.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_get_method_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend does not support return type on "
-                               "/std/collections/experimental_soa_vector/soaVectorToAos__") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
+}
+
+TEST_CASE("runs vm experimental soa_vector stdlib push and reserve helpers") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  soaVectorReserve<Particle>(values, 2i32)
+  soaVectorPush<Particle>(values, Particle(4i32))
+  soaVectorPush<Particle>(values, Particle(9i32))
+  [Particle] second{soaVectorGet<Particle>(values, 1i32)}
+  return(plus(soaVectorCount<Particle>(values), second.x))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_push_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
+}
+
+TEST_CASE("runs vm experimental soa_vector stdlib push and reserve methods") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.reserve(2i32)
+  values.push(Particle(4i32))
+  values.push(Particle(9i32))
+  [Particle] second{values.get(1i32)}
+  return(plus(values.count(), second.x))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_push_method.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
 }
 
 TEST_CASE("runs vm experimental soa storage helpers") {

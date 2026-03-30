@@ -1,3 +1,5 @@
+import /std/collections/experimental_soa_storage/*
+
 namespace std {
   namespace collections {
   namespace experimental_soa_vector {
@@ -8,25 +10,31 @@ namespace std {
 
   [public struct]
   SoaVector<T>() {
-    [i32] countValue{0i32}
-    [public soa_vector<T>] storage{soa_vector<T>()}
+    [public SoaColumn<T> mut] storage{/std/collections/experimental_soa_storage/soaColumnNew<T>()}
 
     [public return<i32>]
     count() {
       soaVectorValidateType<T>()
-      return(this.countValue)
-    }
-
-    [public effects(heap_alloc), return<vector<T>>]
-    to_aos() {
-      soaVectorValidateType<T>()
-      return(soaVectorToAos<T>(this))
+      [SoaColumn<T>] storage{this.storage}
+      return(/std/collections/experimental_soa_storage/soaColumnCount<T>(storage))
     }
 
     [public return<T>]
     get([i32] index) {
       soaVectorValidateType<T>()
       return(soaVectorGet<T>(this, index))
+    }
+
+    [public mut effects(heap_alloc), return<void>]
+    reserve([i32] capacity) {
+      soaVectorValidateType<T>()
+      soaVectorReserve<T>(this, capacity)
+    }
+
+    [public mut effects(heap_alloc), return<void>]
+    push([T] value) {
+      soaVectorValidateType<T>()
+      soaVectorPush<T>(this, value)
     }
   }
 
@@ -39,14 +47,28 @@ namespace std {
   [public effects(heap_alloc), return<SoaVector<T>>]
   soaVectorSingle<T>([T] value) {
     soaVectorValidateType<T>()
-    return(SoaVector<T>(1i32, soa_vector<T>(value)))
+    [SoaVector<T> mut] out{soaVectorNew<T>()}
+    [SoaColumn<T> mut] storage{out.storage}
+    /std/collections/experimental_soa_storage/soaColumnPush<T>(storage, value)
+    assign(out.storage, storage)
+    return(out)
   }
 
   [public effects(heap_alloc), return<SoaVector<T>>]
   soaVectorFromAos<T>([vector<T>] values) {
     soaVectorValidateType<T>()
-    [soa_vector<T>] storageValue{to_soa(values)}
-    return(SoaVector<T>(/std/collections/vector/count<T>(values), storageValue))
+    [SoaVector<T> mut] out{soaVectorNew<T>()}
+    [SoaColumn<T> mut] storage{out.storage}
+    [i32] valueCount{/std/collections/vector/count<T>(values)}
+    [i32 mut] index{0i32}
+    /std/collections/experimental_soa_storage/soaColumnReserve<T>(storage, valueCount)
+    while(less_than(index, valueCount), do() {
+      /std/collections/experimental_soa_storage/soaColumnPush<T>(
+          storage, /std/collections/vector/at<T>(values, index))
+      increment(index)
+    })
+    assign(out.storage, storage)
+    return(out)
   }
 
   [public return<i32>]
@@ -58,14 +80,26 @@ namespace std {
   [public return<T>]
   soaVectorGet<T>([SoaVector<T>] values, [i32] index) {
     soaVectorValidateType<T>()
-    return(get(values.storage, index))
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/experimental_soa_storage/soaColumnRead<T>(storage, index))
   }
 
-  [public effects(heap_alloc), return<vector<T>>]
-  soaVectorToAos<T>([SoaVector<T>] values) {
+  [public effects(heap_alloc), return<void>]
+  soaVectorReserve<T>([SoaVector<T> mut] values, [i32] capacity) {
     soaVectorValidateType<T>()
-    return(vector<T>())
+    [SoaColumn<T> mut] storage{values.storage}
+    /std/collections/experimental_soa_storage/soaColumnReserve<T>(storage, capacity)
+    assign(values.storage, storage)
   }
+
+  [public effects(heap_alloc), return<void>]
+  soaVectorPush<T>([SoaVector<T> mut] values, [T] value) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T> mut] storage{values.storage}
+    /std/collections/experimental_soa_storage/soaColumnPush<T>(storage, value)
+    assign(values.storage, storage)
+  }
+
   }
   }
 }
