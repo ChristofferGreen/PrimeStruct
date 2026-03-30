@@ -10,140 +10,25 @@ namespace primec::emitter {
 
 namespace {
 
-bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
-  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
-         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
-         helperName == "remove_at" || helperName == "remove_swap";
-}
-
-bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
-  if (expr.name.empty()) {
+bool isBareCallName(const Expr &expr, const char *name) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || name == nullptr) {
     return false;
   }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(0, 1);
-  }
-  const std::string vectorPrefix = "vector/";
-  const std::string arrayPrefix = "array/";
-  const std::string stdVectorPrefix = "std/collections/vector/";
-  if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(vectorPrefix.size());
-    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
-      return false;
-    }
-    return true;
-  }
-  if (normalized.rfind(arrayPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(arrayPrefix.size());
-    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
-      return false;
-    }
-    return true;
-  }
-  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdVectorPrefix.size());
-    return true;
-  }
-  return false;
-}
-
-bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
-  if (expr.name.empty()) {
+  if (!expr.name.empty() && expr.name.front() == '/') {
     return false;
   }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(0, 1);
+  if (expr.name.find('/') != std::string::npos) {
+    return false;
   }
-  const std::string mapPrefix = "map/";
-  const std::string stdMapPrefix = "std/collections/map/";
-  if (normalized.rfind(mapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(mapPrefix.size());
-    return true;
-  }
-  if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdMapPrefix.size());
-    return true;
-  }
-  return false;
+  return expr.name == name;
 }
 
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
-  if (isSimpleCallName(expr, name)) {
-    return true;
-  }
-  std::string aliasName;
-  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+  return isBareCallName(expr, name);
 }
 
 bool isMapBuiltinName(const Expr &expr, const char *name) {
-  if (isSimpleCallName(expr, name)) {
-    return true;
-  }
-  std::string aliasName;
-  return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
-}
-
-bool isNamespacedVectorHelperCall(const Expr &expr) {
-  if (expr.name.empty()) {
-    return false;
-  }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(0, 1);
-  }
-  if (normalized.rfind("vector/", 0) == 0 || normalized.rfind("std/collections/vector/", 0) == 0) {
-    const size_t prefixLen = normalized.rfind("vector/", 0) == 0 ? std::string("vector/").size()
-                                                                  : std::string("std/collections/vector/").size();
-    const std::string helper = normalized.substr(prefixLen);
-    return !isRemovedVectorCompatibilityHelper(helper);
-  }
-  if (normalized.rfind("array/", 0) == 0) {
-    const std::string helper = normalized.substr(std::string("array/").size());
-    return !isRemovedVectorCompatibilityHelper(helper);
-  }
-  return false;
-}
-
-bool isNamespacedMapHelperCall(const Expr &expr) {
-  if (expr.name.empty()) {
-    return false;
-  }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  return normalized.rfind("map/", 0) == 0 ||
-         normalized.rfind("std/collections/map/", 0) == 0;
-}
-
-std::string preserveExplicitCanonicalMapHelperPath(const std::string &resolvedPath,
-                                                   const std::string &candidatePath) {
-  std::string normalizedResolvedPath = resolvedPath;
-  if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() != '/' &&
-      normalizedResolvedPath.rfind("std/collections/map/", 0) == 0) {
-    normalizedResolvedPath.insert(normalizedResolvedPath.begin(), '/');
-  }
-  if (normalizedResolvedPath.rfind("/std/collections/map/", 0) != 0) {
-    return candidatePath;
-  }
-
-  const std::string suffix =
-      normalizedResolvedPath.substr(std::string("/std/collections/map/").size());
-  if (suffix != "count" && suffix != "at" && suffix != "at_unsafe") {
-    return candidatePath;
-  }
-
-  std::string normalizedCandidatePath = candidatePath;
-  if (!normalizedCandidatePath.empty() && normalizedCandidatePath.front() != '/' &&
-      normalizedCandidatePath.rfind("map/", 0) == 0) {
-    normalizedCandidatePath.insert(normalizedCandidatePath.begin(), '/');
-  }
-  if (normalizedCandidatePath == "/map/" + suffix) {
-    return normalizedResolvedPath;
-  }
-  return candidatePath;
+  return isBareCallName(expr, name);
 }
 
 } // namespace
@@ -162,10 +47,8 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
   (void)isArrayCountCall;
   (void)isMapCountCall;
   (void)isStringCountCall;
-  const bool isNamespacedCollectionHelperCall =
-      isNamespacedVectorHelperCall(expr) || isNamespacedMapHelperCall(expr);
   if (expr.isMethodCall ||
-      (!isNamespacedCollectionHelperCall && nameMap.count(resolvedPath) != 0)) {
+      nameMap.count(resolvedPath) != 0) {
     return std::nullopt;
   }
   const bool isCountLikeCall =
@@ -236,12 +119,6 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
   for (size_t receiverIndex : receiverIndices) {
     Expr methodExpr = expr;
     methodExpr.isMethodCall = true;
-    std::string normalizedHelperName;
-    if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
-      methodExpr.name = normalizedHelperName;
-    } else if (resolveMapHelperAliasName(methodExpr, normalizedHelperName)) {
-      methodExpr.name = normalizedHelperName;
-    }
     if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
       std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);
       if (methodExpr.argNames.size() < methodExpr.args.size()) {
@@ -254,9 +131,7 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
       if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
         continue;
       }
-      const std::string canonicalPreservedPath =
-          preserveExplicitCanonicalMapHelperPath(resolvedPath, methodPath);
-      const std::string preferredPath = preferVectorStdlibHelperPath(canonicalPreservedPath, nameMap);
+      const std::string preferredPath = preferVectorStdlibHelperPath(methodPath, nameMap);
       if (isVectorMutatorLikeCall && nameMap.count(preferredPath) == 0) {
         continue;
       }
