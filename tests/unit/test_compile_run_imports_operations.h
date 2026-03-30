@@ -102,6 +102,33 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("rejects experimental soa_vector stdlib from-aos helper in C++ emitter before typed-binding support") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>(Particle(7i32))}
+  [SoaVector<Particle>] packed{soaVectorFromAos<Particle>(values)}
+  return(soaVectorCount<Particle>(packed))
+}
+)";
+  const std::string srcPath = writeTemp("compile_experimental_soa_vector_from_aos_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_vector_from_aos_exe_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend requires typed bindings") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

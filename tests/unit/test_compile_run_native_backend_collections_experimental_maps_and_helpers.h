@@ -114,6 +114,34 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("native rejects experimental soa_vector stdlib from-aos helper before typed-binding support") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>(Particle(7i32))}
+  [SoaVector<Particle>] packed{soaVectorFromAos<Particle>(values)}
+  return(soaVectorCount<Particle>(packed))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_from_aos.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_from_aos_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend requires typed bindings") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native templated stdlib wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*

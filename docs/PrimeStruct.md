@@ -2348,12 +2348,13 @@ bad_use_after_take() {
     collection-specific reflection primitives.
   - **Experimental stdlib status:** the first stdlib namespace foothold now exists at
     `/std/collections/experimental_soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`,
-    `soaVectorSingle<T>()`, and `soaVectorCount<T>()`, and it now also exposes the first empty-state `.prime` AoS
-    conversion foothold through `soaVectorToAos<T>()`. The wrapper owns explicit `.prime` empty-runtime count state
-    while still storing the current builtin header-only `soa_vector<T>` backing, and it currently requires `T` to be a
-    reflect-enabled struct via `meta.field_count<T>()` so non-SoA-safe element types fail early. Today
-    `soaVectorSingle<T>()` validates semantically but still hits the deterministic backend boundary
-    `* backend does not support non-empty soa_vector literals`, while `soaVectorToAos<T>()` still hits
+    `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, and `soaVectorCount<T>()`, and it now also exposes the first
+    empty-state `.prime` AoS conversion foothold through `soaVectorToAos<T>()`. The wrapper owns explicit `.prime`
+    empty-runtime count state while still storing the current builtin header-only `soa_vector<T>` backing, and it
+    currently requires `T` to be a reflect-enabled struct via `meta.field_count<T>()` so non-SoA-safe element types
+    fail early. Today `soaVectorSingle<T>()` validates semantically but still hits the deterministic backend boundary
+    `* backend does not support non-empty soa_vector literals`, `soaVectorFromAos<T>()` validates semantically but
+    still hits `* backend requires typed bindings`, and `soaVectorToAos<T>()` still hits
     `* backend does not support return type on /std/collections/experimental_soa_vector/soaVectorToAos__...` until
     real column storage, vector<Struct> helper returns, and borrowed-view substrate are in place. Method-sugar
     `to_aos()`, `get`, borrowed `ref`, and richer non-empty conversion/access remain pending behind that same broader

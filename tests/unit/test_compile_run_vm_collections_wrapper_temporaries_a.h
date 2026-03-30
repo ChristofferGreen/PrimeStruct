@@ -91,6 +91,31 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("vm rejects experimental soa_vector stdlib from-aos helper before typed-binding support") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>(Particle(7i32))}
+  [SoaVector<Particle>] packed{soaVectorFromAos<Particle>(values)}
+  return(soaVectorCount<Particle>(packed))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_from_aos.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_from_aos_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend requires typed bindings") != std::string::npos);
+}
+
 TEST_CASE("runs vm with stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*

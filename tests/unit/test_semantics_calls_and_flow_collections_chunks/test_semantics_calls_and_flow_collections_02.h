@@ -429,6 +429,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector stdlib from-aos helper validates on reflect-enabled struct elements") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>(Particle(7i32))}
+  [SoaVector<Particle>] packed{soaVectorFromAos<Particle>(values)}
+  return(soaVectorCount<Particle>(packed))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("get helper validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {
