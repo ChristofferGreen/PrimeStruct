@@ -52,6 +52,10 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
   BindingInfo exprBinding;
   bool hasExprBinding = false;
   if (valueExpr != nullptr) {
+    if (isBuiltinSoaRefExpr(*valueExpr, defParams, activeLocals)) {
+      error_ = "soa_vector borrowed views are not implemented yet: ref";
+      return false;
+    }
     exprKind = inferExprReturnKind(*valueExpr, defParams, activeLocals);
     if (exprKind == ReturnKind::Array || exprKind == ReturnKind::Unknown) {
       exprStructPath = inferStructReturnPath(*valueExpr, defParams, activeLocals);

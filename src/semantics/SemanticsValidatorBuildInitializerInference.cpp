@@ -97,6 +97,57 @@ bool SemanticsValidator::shouldBypassGraphBindingLookup(const Expr &candidate) c
   return false;
 }
 
+bool SemanticsValidator::isBuiltinSoaRefExpr(
+    const Expr &candidate,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) const {
+  if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+    return false;
+  }
+
+  auto isDirectSoaVectorTarget = [&](const Expr &target) {
+    if (target.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+        return normalizeBindingTypeName(paramBinding->typeName) == "soa_vector";
+      }
+      auto localIt = locals.find(target.name);
+      return localIt != locals.end() &&
+             normalizeBindingTypeName(localIt->second.typeName) == "soa_vector";
+    }
+    std::string builtinCollection;
+    return getBuiltinCollectionName(target, builtinCollection) &&
+           builtinCollection == "soa_vector";
+  };
+
+  if (hasImportedDefinitionPath("/soa_vector/ref") ||
+      hasDeclaredDefinitionPath("/soa_vector/ref")) {
+    return false;
+  }
+
+  const std::string resolved = resolveCalleePath(candidate);
+  std::string normalizedName = candidate.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  std::string normalizedPrefix = candidate.namespacePrefix;
+  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+    normalizedPrefix.erase(normalizedPrefix.begin());
+  }
+
+  const bool isExplicitSoaRefCall =
+      (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+       normalizedName == "ref") ||
+      normalizedName == "soa_vector/ref";
+  const bool isBuiltinSoaRefMethod =
+      candidate.isMethodCall && normalizedName == "ref" &&
+      !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
+
+  return resolved == "/soa_vector/ref" ||
+         isExplicitSoaRefCall ||
+         isBuiltinSoaRefMethod ||
+         (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"));
+}
+
 bool SemanticsValidator::hasDirectExperimentalVectorImport() const {
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {

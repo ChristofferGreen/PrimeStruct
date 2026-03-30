@@ -1,3 +1,63 @@
+bool hasVisibleSoaRefHelperForMonomorph(const Context &ctx) {
+  if (ctx.sourceDefs.find("/soa_vector/ref") != ctx.sourceDefs.end()) {
+    return true;
+  }
+  const auto &importPaths = ctx.program.sourceImports.empty() ? ctx.program.imports : ctx.program.sourceImports;
+  for (const auto &importPath : importPaths) {
+    if (importPathCoversTarget(importPath, "/soa_vector/ref")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool isBuiltinSoaRefExprForMonomorph(const Expr &candidate,
+                                     const std::vector<ParameterInfo> &params,
+                                     const LocalTypeMap &locals,
+                                     const Context &ctx) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+    return false;
+  }
+  if (hasVisibleSoaRefHelperForMonomorph(ctx)) {
+    return false;
+  }
+  auto isDirectSoaVectorTarget = [&](const Expr &target) {
+    if (target.kind == Expr::Kind::Name) {
+      for (const auto &param : params) {
+        if (param.name == target.name) {
+          return normalizeBindingTypeName(param.binding.typeName) == "soa_vector";
+        }
+      }
+      auto localIt = locals.find(target.name);
+      return localIt != locals.end() &&
+             normalizeBindingTypeName(localIt->second.typeName) == "soa_vector";
+    }
+    std::string builtinCollection;
+    return getBuiltinCollectionName(target, builtinCollection) &&
+           builtinCollection == "soa_vector";
+  };
+  const std::string resolved = resolveCalleePath(candidate, candidate.namespacePrefix, ctx);
+  std::string normalizedName = candidate.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  std::string normalizedPrefix = candidate.namespacePrefix;
+  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+    normalizedPrefix.erase(normalizedPrefix.begin());
+  }
+  const bool isExplicitSoaRefCall =
+      (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+       normalizedName == "ref") ||
+      normalizedName == "soa_vector/ref";
+  const bool isBuiltinSoaRefMethod =
+      candidate.isMethodCall && normalizedName == "ref" &&
+      !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
+  return resolved == "/soa_vector/ref" ||
+         isExplicitSoaRefCall ||
+         isBuiltinSoaRefMethod ||
+         (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"));
+}
+
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
                                   const LocalTypeMap &locals,
@@ -249,6 +309,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
           argExpr == &param.args.front();
       if (usesDefaultArgBinding) {
         argInfo = paramInfo;
+      } else if (isBuiltinSoaRefExprForMonomorph(*argExpr, params, locals, ctx)) {
+        error = "soa_vector borrowed views are not implemented yet: ref";
+        return false;
       } else if (argExpr->isSpread) {
         std::string spreadElementType;
         if (!resolveArgsPackElementTypeForExpr(*argExpr, params, locals, spreadElementType)) {

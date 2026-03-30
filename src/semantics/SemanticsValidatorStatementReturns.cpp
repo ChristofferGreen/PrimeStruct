@@ -97,6 +97,10 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       return false;
     }
+    if (isBuiltinSoaRefExpr(stmt.args.front(), params, locals)) {
+      error_ = "soa_vector borrowed views are not implemented yet: ref";
+      return false;
+    }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {
       auto defIt = defMap_.find(currentValidationContext_.definitionPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
