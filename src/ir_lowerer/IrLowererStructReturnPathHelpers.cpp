@@ -153,6 +153,9 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
             normalizedRawMethodName.substr(std::string("std/collections/map/").size()))) {
       return {"/std/collections/map/" + methodName};
     }
+    if (isRemovedMapCompatibilityHelper(methodName)) {
+      return {"/std/collections/map/" + methodName};
+    }
     return {"/std/collections/map/" + methodName, "/map/" + methodName};
   }
   return {receiverStruct + "/" + methodName};
