@@ -294,12 +294,6 @@
   out << "  prefix.insert(prefix.end(), suffix.begin(), suffix.end());\n";
   out << "  return prefix;\n";
   out << "}\n";
-  out << "template <typename Key, typename Value, typename K>\n";
-  out << "static inline const Value &ps_missing_map_at_builtin_helper(\n";
-  out << "    const std::unordered_map<Key, Value> &, const K &) = delete;\n";
-  out << "template <typename Key, typename Value, typename K>\n";
-  out << "static inline const Value &ps_missing_map_at_unsafe_builtin_helper(\n";
-  out << "    const std::unordered_map<Key, Value> &, const K &) = delete;\n";
   out << "template <typename T, typename Index>\n";
   out << "static inline const T &ps_array_at(const std::vector<T> &value, Index index) {\n";
   out << "  int64_t i = static_cast<int64_t>(index);\n";

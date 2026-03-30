@@ -440,7 +440,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects canonical direct map access before deleted stubs") {
+TEST_CASE("C++ emitter rejects canonical direct map access before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -602,7 +602,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects canonical slash-method map access before deleted stubs") {
+TEST_CASE("C++ emitter rejects canonical slash-method map access before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
