@@ -863,6 +863,152 @@ TEST_CASE("ir lowerer setup type helper keeps explicit map count and contains re
   expectResolvedTag("/std/collections/map/contains", &canonicalContainsTagDef);
 }
 
+TEST_CASE("ir lowerer setup type helper keeps bare map method receiver canonical precedence") {
+  auto expectResolvedTag = [](const std::string &methodName) {
+    primec::Definition aliasDef;
+    aliasDef.fullPath = "/map/" + methodName;
+    aliasDef.namespacePrefix = "/map";
+    primec::Transform returnAliasResult;
+    returnAliasResult.name = "return";
+    returnAliasResult.templateArgs = {"/pkg/AliasResult"};
+    aliasDef.transforms.push_back(returnAliasResult);
+
+    primec::Definition canonicalDef;
+    canonicalDef.fullPath = "/std/collections/map/" + methodName;
+    canonicalDef.namespacePrefix = "/std/collections/map";
+    primec::Transform returnCanonicalResult;
+    returnCanonicalResult.name = "return";
+    returnCanonicalResult.templateArgs = {"/pkg/CanonicalResult"};
+    canonicalDef.transforms.push_back(returnCanonicalResult);
+
+    primec::Definition aliasTagDef;
+    aliasTagDef.fullPath = "/pkg/AliasResult/tag";
+    primec::Definition canonicalTagDef;
+    canonicalTagDef.fullPath = "/pkg/CanonicalResult/tag";
+    const std::unordered_map<std::string, const primec::Definition *> defMap = {
+        {aliasDef.fullPath, &aliasDef},
+        {canonicalDef.fullPath, &canonicalDef},
+        {aliasTagDef.fullPath, &aliasTagDef},
+        {canonicalTagDef.fullPath, &canonicalTagDef},
+    };
+
+    primec::Expr valuesExpr;
+    valuesExpr.kind = primec::Expr::Kind::Name;
+    valuesExpr.name = "values";
+
+    primec::Expr keyExpr;
+    keyExpr.kind = primec::Expr::Kind::Literal;
+    keyExpr.intWidth = 32;
+    keyExpr.literalValue = 1;
+
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.name = methodName;
+    receiverCall.isMethodCall = true;
+    receiverCall.args = {valuesExpr, keyExpr};
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = "tag";
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverCall};
+
+    primec::ir_lowerer::LocalMap locals;
+    primec::ir_lowerer::LocalInfo valuesLocal;
+    valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+    locals.emplace("values", valuesLocal);
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &expr) { return expr.name; },
+        {},
+        defMap,
+        error);
+    CHECK(resolved == &canonicalTagDef);
+    CHECK(error.empty());
+  };
+
+  expectResolvedTag("contains");
+  expectResolvedTag("tryAt");
+}
+
+TEST_CASE("ir lowerer setup type helper rejects bare map method receiver alias fallback") {
+  auto expectReject = [](const std::string &methodName) {
+    primec::Definition aliasDef;
+    aliasDef.fullPath = "/map/" + methodName;
+    aliasDef.namespacePrefix = "/map";
+    primec::Transform returnAliasResult;
+    returnAliasResult.name = "return";
+    returnAliasResult.templateArgs = {"/pkg/AliasResult"};
+    aliasDef.transforms.push_back(returnAliasResult);
+
+    primec::Definition aliasTagDef;
+    aliasTagDef.fullPath = "/pkg/AliasResult/tag";
+    const std::unordered_map<std::string, const primec::Definition *> defMap = {
+        {aliasDef.fullPath, &aliasDef},
+        {aliasTagDef.fullPath, &aliasTagDef},
+    };
+
+    primec::Expr valuesExpr;
+    valuesExpr.kind = primec::Expr::Kind::Name;
+    valuesExpr.name = "values";
+
+    primec::Expr keyExpr;
+    keyExpr.kind = primec::Expr::Kind::Literal;
+    keyExpr.intWidth = 32;
+    keyExpr.literalValue = 1;
+
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.name = methodName;
+    receiverCall.isMethodCall = true;
+    receiverCall.args = {valuesExpr, keyExpr};
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = "tag";
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverCall};
+
+    primec::ir_lowerer::LocalMap locals;
+    primec::ir_lowerer::LocalInfo valuesLocal;
+    valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+    locals.emplace("values", valuesLocal);
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &expr) { return expr.name; },
+        {},
+        defMap,
+        error);
+    CHECK(resolved == nullptr);
+    CHECK(error == "unknown method target for tag");
+  };
+
+  expectReject("contains");
+  expectReject("tryAt");
+}
+
 TEST_CASE("ir lowerer setup type helper keeps explicit map tryAt receiver alias precedence") {
   primec::Definition aliasTryAtDef;
   aliasTryAtDef.fullPath = "/map/tryAt";
