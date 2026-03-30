@@ -359,6 +359,11 @@ namespace std {
     mapInsertRef<K, V>(self, key, value)
   }
 
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  /std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value) {
+    mapInsertRef<K, V>(values, key, value)
+  }
+
   [public return<bool> Comparable<K>]
   mapContains<K, V>([Map<K, V>] entries, [K] key) {
     [Vector<K>] keys{entries.keys}

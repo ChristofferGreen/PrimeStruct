@@ -119,13 +119,18 @@ unexpectedCanonicalExperimentalMapBorrowedRefError([ContainerError] err) {
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapBorrowedRefError>]
 main() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}
+  [Reference<Map<string, i32>> mut] ref{borrowExperimentalMap(location(values))}
+  /std/collections/map/insert_ref<string, i32>(ref, "third"raw_utf8, 11i32)
+  /std/collections/map/insert_ref<string, i32>(ref, "right"raw_utf8, 13i32)
   [i32] found{try(/std/collections/map/tryAt_ref<string, i32>(ref, "left"raw_utf8))}
   [i32 mut] total{plus(/std/collections/map/count_ref<string, i32>(ref), found)}
   assign(total, plus(total, /std/collections/map/at_ref<string, i32>(ref, "left"raw_utf8)))
   assign(total, plus(total, /std/collections/map/at_unsafe_ref<string, i32>(ref, "right"raw_utf8)))
   if(/std/collections/map/contains_ref<string, i32>(ref, "left"raw_utf8),
      then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  if(not(/std/collections/map/contains_ref<string, i32>(ref, "missing"raw_utf8)),
+     then() { assign(total, plus(total, 2i32)) },
      else() { })
   return(Result.ok(total))
 }

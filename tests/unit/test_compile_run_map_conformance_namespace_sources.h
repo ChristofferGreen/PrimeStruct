@@ -13,7 +13,9 @@ inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSo
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapBorrowedRefError>]\n";
   source += "main() {\n";
   source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
-  source += "  [Reference<Map<string, i32>>] ref{location(values)}\n";
+  source += "  [Reference<Map<string, i32>> mut] ref{location(values)}\n";
+  source += "  /std/collections/map/insert_ref<string, i32>(ref, \"third\"raw_utf8, 11i32)\n";
+  source += "  /std/collections/map/insert_ref<string, i32>(ref, \"right\"raw_utf8, 13i32)\n";
   source += "  [i32] found{try(/std/collections/map/tryAt_ref<string, i32>(ref, \"left\"raw_utf8))}\n";
   source +=
       "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt_ref<string, i32>(ref, \"missing\"raw_utf8)}\n";
@@ -171,4 +173,3 @@ inline std::string makeCanonicalMapNamespaceAccessShadowSource() {
   source += "}\n";
   return source;
 }
-

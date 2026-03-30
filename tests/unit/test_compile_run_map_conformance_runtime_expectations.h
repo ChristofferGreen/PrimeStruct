@@ -285,7 +285,7 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                quoteShellArg(outPath);
-    CHECK(runCommand(runCmd) == 20);
+    CHECK(runCommand(runCmd) == 27);
     CHECK(readFile(outPath) == "container missing key\n");
     return;
   }
@@ -298,7 +298,7 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
                                  quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
-  CHECK(runCommand(runCmd) == 20);
+  CHECK(runCommand(runCmd) == 27);
   CHECK(readFile(outPath) == "container missing key\n");
 }
 
