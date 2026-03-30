@@ -23,6 +23,29 @@ main() {
   CHECK(runCommand(exePath) == 22);
 }
 
+TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  return(soaVectorCount<Particle>(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_experimental_soa_vector_helpers_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

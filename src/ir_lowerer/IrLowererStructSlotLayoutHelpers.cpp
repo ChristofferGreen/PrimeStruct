@@ -19,6 +19,11 @@ bool isBuiltinVectorTypeName(const std::string &typeName) {
          typeName == "/std/collections/vector";
 }
 
+bool isBuiltinSoaVectorTypeName(const std::string &typeName) {
+  return typeName == "soa_vector" || typeName == "/soa_vector" ||
+         typeName == "std/collections/soa_vector" || typeName == "/std/collections/soa_vector";
+}
+
 bool isExperimentalVectorTypeName(const std::string &typeName) {
   return typeName == "Vector" || typeName == "std/collections/experimental_vector/Vector" ||
          typeName == "/std/collections/experimental_vector/Vector" ||
@@ -49,6 +54,9 @@ bool isMapTypeName(const std::string &typeName) {
 std::string normalizeVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
     return "/vector";
+  }
+  if (isBuiltinSoaVectorTypeName(typeName)) {
+    return "/soa_vector";
   }
   if (typeName == "Vector") {
     return "/std/collections/experimental_vector/Vector";
@@ -150,6 +158,16 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     out = layout;
     return true;
   }
+  if (isBuiltinSoaVectorTypeName(structPath)) {
+    StructSlotLayoutInfo layout;
+    layout.structPath = normalizeVectorStructPath(structPath);
+    layout.totalSlots = 3;
+    layout.fields.push_back({"count", 0, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"capacity", 1, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"data", 2, 1, LocalInfo::ValueKind::Int64, ""});
+    out = layout;
+    return true;
+  }
   if (isExperimentalVectorTypeName(structPath)) {
     StructSlotLayoutInfo layout;
     layout.structPath = normalizeVectorStructPath(structPath);
@@ -239,6 +257,9 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.valueKind = elementKind;
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
+      } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
+        info.structPath = normalizeVectorStructPath(binding.typeName);
+        info.slotCount = 3;
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "Result") {
         std::vector<std::string> args;
         if (!splitTemplateArgs(binding.typeTemplateArg, args) || (args.size() != 1 && args.size() != 2)) {
@@ -294,6 +315,14 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         continue;
       }
       if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
+          normalizeCollectionBindingTypeName(inlineTemplateBase) == "soa_vector") {
+        info.structPath = normalizeVectorStructPath(inlineTemplateBase);
+        info.slotCount = 3;
+        layout.fields.push_back(info);
+        offset += info.slotCount;
+        continue;
+      }
+      if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
           isMapTypeName(inlineTemplateBase)) {
         std::string nestedStruct;
         if (!resolveSpecializedExperimentalMapStructPath(inlineTemplateBase, inlineTemplateArg, nestedStruct) &&
@@ -324,6 +353,13 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       if (isVectorTypeName(binding.typeName)) {
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
+        layout.fields.push_back(info);
+        offset += info.slotCount;
+        continue;
+      }
+      if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
+        info.structPath = normalizeVectorStructPath(binding.typeName);
+        info.slotCount = 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;
@@ -839,9 +875,13 @@ std::string inferStructPathFromCallTarget(
   }
 
   std::string collectionName;
-  if (getBuiltinCollectionName(expr, collectionName) && collectionName == "vector" &&
-      expr.templateArgs.size() == 1) {
-    return "/vector";
+  if (getBuiltinCollectionName(expr, collectionName) && expr.templateArgs.size() == 1) {
+    if (collectionName == "vector") {
+      return "/vector";
+    }
+    if (collectionName == "soa_vector") {
+      return "/soa_vector";
+    }
   }
 
   std::string normalizedName = expr.name;

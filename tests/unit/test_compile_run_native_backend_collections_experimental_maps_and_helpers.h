@@ -32,6 +32,30 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
+TEST_CASE("compiles and runs native experimental soa_vector stdlib helpers") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  return(soaVectorCount<Particle>(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_helpers.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs native templated stdlib wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*

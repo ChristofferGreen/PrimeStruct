@@ -1,3 +1,32 @@
+        const auto countAccessResult = tryEmitCountAccessCall(
+            expr,
+            localsIn,
+            isArrayCountCall,
+            isVectorCapacityCall,
+            isStringCountCall,
+            isEntryArgsName,
+            [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+              const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
+              return structPath == "/array" || structPath == "/vector" || structPath == "/Buffer" ||
+                     structPath == "/map" || structPath == "/soa_vector";
+            },
+            [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+              return inferStructExprPath(targetExpr, targetLocals) == "/vector";
+            },
+            [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+              return inferStructExprPath(targetExpr, targetLocals) == "/vector";
+            },
+            inferExprKind,
+            resolveStringTableTarget,
+            [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+            [&](IrOpcode opcode, uint64_t imm) { function.instructions.push_back({opcode, imm}); },
+            error);
+        if (countAccessResult == CountAccessCallEmitResult::Emitted) {
+          return true;
+        }
+        if (countAccessResult == CountAccessCallEmitResult::Error) {
+          return false;
+        }
         error =
             "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions";
         return false;

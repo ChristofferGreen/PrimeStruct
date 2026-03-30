@@ -192,12 +192,31 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   return false;
 }
 
+bool resolveSoaVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(0, 1);
+  }
+  const std::string soaVectorPrefix = "soa_vector/";
+  if (normalized.rfind(soaVectorPrefix, 0) != 0) {
+    return false;
+  }
+  helperNameOut = stripGeneratedHelperSuffix(normalized.substr(soaVectorPrefix.size()));
+  return helperNameOut == "count";
+}
+
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
     return true;
   }
   std::string aliasName;
-  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+  if (resolveVectorHelperAliasName(expr, aliasName) && aliasName == name) {
+    return true;
+  }
+  return resolveSoaVectorHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
 bool isMapBuiltinName(const Expr &expr, const char *name) {

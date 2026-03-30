@@ -312,6 +312,15 @@ TEST_CASE("ir lowerer struct layout helpers classify binding type layout") {
   CHECK(structTypeName.empty());
   CHECK(error.empty());
 
+  primec::ir_lowerer::LayoutFieldBinding soaVectorType;
+  soaVectorType.typeName = "soa_vector";
+  soaVectorType.typeTemplateArg = "Particle";
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(soaVectorType, layout, structTypeName, error));
+  CHECK(layout.sizeBytes == 8u);
+  CHECK(layout.alignmentBytes == 8u);
+  CHECK(structTypeName.empty());
+  CHECK(error.empty());
+
   primec::ir_lowerer::LayoutFieldBinding missingTemplate;
   missingTemplate.typeName = "uninitialized";
   CHECK_FALSE(primec::ir_lowerer::classifyBindingTypeLayout(missingTemplate, layout, structTypeName, error));
@@ -624,4 +633,3 @@ TEST_CASE("ir lowerer struct layout helpers compute uncached layout") {
   CHECK(layout.fields[1].alignmentBytes == 1u);
   CHECK(layout.fields[1].isStatic);
 }
-

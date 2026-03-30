@@ -482,6 +482,38 @@ TEST_CASE("ir lowerer struct type helpers report definition slot layout diagnost
     auto collectStructLayoutFields = [](const std::string &structPath,
                                         std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
       out.clear();
+      if (structPath == "/pkg/SoaHolder") {
+        out.push_back({"storage", "soa_vector", "Particle", false});
+        return true;
+      }
+      return false;
+    };
+    primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+    std::unordered_set<std::string> layoutStack;
+    primec::ir_lowerer::StructSlotLayoutInfo layout;
+    std::string error;
+    REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields("/pkg/SoaHolder",
+                                                                             collectStructLayoutFields,
+                                                                             resolveDefinitionNamespacePrefix,
+                                                                             resolveStructTypeName,
+                                                                             valueKindFromTypeName,
+                                                                             layoutCache,
+                                                                             layoutStack,
+                                                                             layout,
+                                                                             error));
+    CHECK(error.empty());
+    CHECK(layout.totalSlots == 4);
+    REQUIRE(layout.fields.size() == 1);
+    CHECK(layout.fields[0].name == "storage");
+    CHECK(layout.fields[0].slotOffset == 1);
+    CHECK(layout.fields[0].slotCount == 3);
+    CHECK(layout.fields[0].structPath == "/soa_vector");
+  }
+
+  {
+    auto collectStructLayoutFields = [](const std::string &structPath,
+                                        std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
+      out.clear();
       if (structPath == "/pkg/BadTemplate") {
         out.push_back({"slot", "array", "i32", false});
         return true;
@@ -645,4 +677,3 @@ TEST_CASE("ir lowerer struct type helpers build bundled setup-type and struct-ty
   adapters.structTypeResolutionAdapters.applyStructValueInfo(typedBinding, info);
   CHECK(info.structTypeName == "/pkg/Foo");
 }
-

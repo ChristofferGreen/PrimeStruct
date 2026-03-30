@@ -2346,6 +2346,11 @@ bad_use_after_take() {
     `meta.field_visibility<T>(i)`. Those queries validate only on reflect-enabled structs and are eliminated before IR
     emission, so future SoA stdlib code can derive column schemas from `T` without adding new compiler-owned
     collection-specific reflection primitives.
+  - **Experimental stdlib status:** the first stdlib namespace foothold now exists at
+    `/std/collections/experimental_soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`, and
+    `soaVectorCount<T>()`. That wrapper deliberately stores the current builtin header-only `soa_vector<T>` and routes
+    `count` through the existing builtin path. This is only a namespace/bootstrap step; the real `.prime`
+    storage/runtime path still depends on the pending column-storage and borrowed-view substrate.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of

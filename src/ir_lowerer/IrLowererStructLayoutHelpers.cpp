@@ -91,7 +91,7 @@ bool classifyBindingTypeLayoutInternal(const LayoutFieldBinding &binding,
     structTypeNameOut.clear();
     return true;
   }
-  if (normalized == "array" || normalized == "vector" || normalized == "map") {
+  if (normalized == "array" || normalized == "vector" || normalized == "map" || normalized == "soa_vector") {
     layoutOut = {8u, 8u};
     structTypeNameOut.clear();
     return true;

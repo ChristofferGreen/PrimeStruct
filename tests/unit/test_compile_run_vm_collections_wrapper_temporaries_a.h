@@ -20,6 +20,25 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("runs vm experimental soa_vector stdlib helpers") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  return(soaVectorCount<Particle>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
 TEST_CASE("runs vm with stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*

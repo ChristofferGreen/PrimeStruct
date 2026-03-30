@@ -1,0 +1,25 @@
+namespace std {
+  namespace collections {
+  namespace experimental_soa_vector {
+  [public struct]
+  SoaVector<T>() {
+    [public soa_vector<T>] storage{soa_vector<T>()}
+
+    [public return<i32>]
+    count() {
+      return(/soa_vector/count(this.storage))
+    }
+  }
+
+  [public effects(heap_alloc), return<SoaVector<T>>]
+  soaVectorNew<T>() {
+    return(SoaVector<T>())
+  }
+
+  [public return<i32>]
+  soaVectorCount<T>([SoaVector<T>] values) {
+    return(/soa_vector/count(values.storage))
+  }
+  }
+  }
+}
