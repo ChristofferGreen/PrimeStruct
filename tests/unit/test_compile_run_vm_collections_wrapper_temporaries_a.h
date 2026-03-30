@@ -324,18 +324,6 @@ TEST_CASE("runs vm canonical namespaced map inserts on explicit experimental map
   expectCanonicalMapNamespaceExperimentalInsertConformance("vm");
 }
 
-TEST_CASE("runs vm builtin canonical map first-growth inserts") {
-  expectBuiltinCanonicalMapInsertFirstGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map repeated-growth inserts") {
-  expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("vm");
-}
-
-TEST_CASE("runs vm builtin canonical map insert overwrites") {
-  expectBuiltinCanonicalMapInsertOverwriteConformance("vm");
-}
-
 TEST_CASE("rejects vm canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("vm");
 }

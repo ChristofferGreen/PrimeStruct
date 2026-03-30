@@ -1318,16 +1318,10 @@ for(
     reuses the canonical `map key not found` runtime contract on misses, literal-backed `Map<string, V>` helper flows
     now work across C++/VM/native, VM/native non-literal string-key constructors/lookups preserve the canonical
     string-key reject diagnostics, experimental map values now support `mapInsert(...)` plus `values.insert(...)`
-    updates together with `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()` method sugar on
-    ownership-sensitive element flows, explicit experimental `Map<K, V>` bindings now also support canonical
-    `/std/collections/map/insert(...)` on that same overwrite/update path, builtin canonical `map<K, V>` bindings now
-    route both `.insert(...)` method sugar and direct canonical `/std/collections/map/insert(...)` calls through a
-    helper that performs the real in-place overwrite path when the numeric key already exists and otherwise grows
-    through one generic arbitrary-`n` grow/copy/repoint path for owning local numeric maps without retaining the old
-    count-by-count lowerer staircase, borrowed
-    references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit cleanup now run through
-    the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly `drop(...)`ing and
-    `init(...)`ing payload slots. Borrowed
+    updates, explicit experimental `Map<K, V>` bindings now also support canonical
+    `/std/collections/map/insert(...)` on that same overwrite/update path, and overwrite/update plus scope-exit cleanup
+    now run through the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly
+    `drop(...)`ing and `init(...)`ing payload slots. Borrowed
     `Reference<Map<K, V>>` values now support distinct `*Ref` free-helper calls plus
     `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()`/`.insert()` method-call sugar through `.prime`
     `/Reference/*` helpers, and both value plus borrowed-reference experimental maps now participate in shared

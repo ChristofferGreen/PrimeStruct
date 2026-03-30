@@ -284,18 +284,6 @@ TEST_CASE("compiles and runs canonical namespaced map inserts on explicit experi
   expectCanonicalMapNamespaceExperimentalInsertConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map first-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertFirstGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map repeated-growth inserts in C++ emitter") {
-  expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("exe");
-}
-
-TEST_CASE("compiles and runs builtin canonical map insert overwrites in C++ emitter") {
-  expectBuiltinCanonicalMapInsertOverwriteConformance("exe");
-}
-
 TEST_CASE("rejects canonical map constructor ownership growth in C++ emitter") {
   expectCanonicalMapNamespaceOwnershipReject("exe");
 }

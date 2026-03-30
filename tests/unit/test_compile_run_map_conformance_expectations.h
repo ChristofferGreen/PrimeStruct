@@ -262,6 +262,14 @@ inline void expectExperimentalMapOwnershipConformance(const std::string &emitMod
                                             "");
 }
 
+inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalInsertConformanceSource(),
+                                            "map_namespace_canonical_experimental_insert",
+                                            emitMode,
+                                            18,
+                                            "");
+}
+
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
   expectMapConformanceCompileReject(makeExperimentalMapIndexConformanceSource(),
                                     "experimental_map_index",

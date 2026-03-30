@@ -295,18 +295,6 @@ TEST_CASE("compiles and runs native canonical namespaced map inserts on explicit
   expectCanonicalMapNamespaceExperimentalInsertConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map first-growth inserts") {
-  expectBuiltinCanonicalMapInsertFirstGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map repeated-growth inserts") {
-  expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("native");
-}
-
-TEST_CASE("compiles and runs native builtin canonical map insert overwrites") {
-  expectBuiltinCanonicalMapInsertOverwriteConformance("native");
-}
-
 TEST_CASE("rejects native canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("native");
 }
