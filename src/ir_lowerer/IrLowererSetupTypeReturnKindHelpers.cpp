@@ -359,7 +359,6 @@ bool resolveDefinitionCallReturnKind(const Expr &callExpr,
 
   auto candidates = collectionHelperPathCandidates(resolveExprPath(callExpr));
   pruneRemovedVectorCompatibilityCallReturnCandidates(candidates, resolveExprPath(callExpr));
-  pruneRemovedMapCompatibilityCallReturnCandidates(candidates, resolveExprPath(callExpr));
   bool matchedDefinition = false;
   for (const auto &candidate : candidates) {
     auto defIt = defMap.find(candidate);

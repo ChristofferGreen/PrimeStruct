@@ -105,11 +105,6 @@ bool resolveStdCollectionsVectorWrapperAliasName(std::string helperName, std::st
   return false;
 }
 
-bool isBuiltinMapHelperSuffix(const std::string &suffix) {
-  return suffix == "count" || suffix == "contains" || suffix == "tryAt" || suffix == "at" ||
-         suffix == "at_unsafe";
-}
-
 } // namespace
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
@@ -516,28 +511,6 @@ bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr) {
          normalizedPath == "/std/collections/vector/capacity";
 }
 
-void pruneRemovedMapCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,
-                                                      const std::string &path) {
-  const std::string normalizedPath = normalizeCollectionHelperPath(path);
-  if (normalizedPath.rfind("/map/", 0) != 0) {
-    return;
-  }
-
-  const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-  if (!isBuiltinMapHelperSuffix(suffix)) {
-    return;
-  }
-
-  const std::string canonicalCandidate = "/std/collections/map/" + suffix;
-  for (auto it = candidates.begin(); it != candidates.end();) {
-    if (*it == canonicalCandidate) {
-      it = candidates.erase(it);
-    } else {
-      ++it;
-    }
-  }
-}
-
 void pruneRemovedVectorCompatibilityCallReturnCandidates(std::vector<std::string> &candidates,
                                                          const std::string &path) {
   const std::string normalizedPath = normalizeCollectionHelperPath(path);
@@ -566,7 +539,6 @@ bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::
   }
 
   auto allowedCandidates = collectionHelperPathCandidates(callPath);
-  pruneRemovedMapCompatibilityCallReturnCandidates(allowedCandidates, callPath);
   const std::string normalizedResolvedPath = normalizeCollectionHelperPath(resolvedPath);
   return std::any_of(allowedCandidates.begin(), allowedCandidates.end(), [&](const std::string &candidate) {
     return candidate == normalizedResolvedPath;
