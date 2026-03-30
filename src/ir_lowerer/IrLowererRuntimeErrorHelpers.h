@@ -19,6 +19,7 @@ struct RuntimeErrorEmitters {
   EmitRuntimeErrorFn emitPointerIndexOutOfBounds;
   EmitRuntimeErrorFn emitStringIndexOutOfBounds;
   EmitRuntimeErrorFn emitMapKeyNotFound;
+  EmitRuntimeErrorFn emitBuiltinCanonicalMapInsertPending;
   EmitRuntimeErrorFn emitVectorIndexOutOfBounds;
   EmitRuntimeErrorFn emitVectorPopOnEmpty;
   EmitRuntimeErrorFn emitVectorCapacityExceeded;
@@ -51,6 +52,8 @@ EmitRuntimeErrorFn makeEmitPointerIndexOutOfBounds(IrFunction &function,
 EmitRuntimeErrorFn makeEmitStringIndexOutOfBounds(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitBuiltinCanonicalMapInsertPending(IrFunction &function,
+                                                            const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitVectorIndexOutOfBounds(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString);
@@ -69,6 +72,7 @@ void emitArrayIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStr
 void emitPointerIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitStringIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+void emitBuiltinCanonicalMapInsertPending(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitVectorIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitVectorCapacityExceeded(IrFunction &function, const InternRuntimeErrorStringFn &internString);

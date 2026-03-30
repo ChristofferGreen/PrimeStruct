@@ -328,8 +328,8 @@ TEST_CASE("runs vm canonical namespaced map inserts on explicit experimental map
   expectCanonicalMapNamespaceExperimentalInsertConformance("vm");
 }
 
-TEST_CASE("rejects vm builtin canonical map inserts with temporary runtime failure") {
-  expectBuiltinCanonicalMapInsertTemporaryFailure("vm");
+TEST_CASE("rejects vm builtin canonical map inserts with pending runtime diagnostic") {
+  expectBuiltinCanonicalMapInsertPendingDiagnostic("vm");
 }
 
 TEST_CASE("rejects vm canonical map constructor ownership growth") {

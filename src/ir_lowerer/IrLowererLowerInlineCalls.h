@@ -173,6 +173,15 @@
       return false;
     }
 
+    if (callee.fullPath == "/std/collections/map/insert_builtin_pending" ||
+        callee.fullPath.rfind("/std/collections/map/insert_builtin_pending__", 0) == 0) {
+      emitBuiltinCanonicalMapInsertPending();
+      emitFileScopeCleanup(fileScopeStack.back());
+      popFileScope();
+      inlineStack.erase(callee.fullPath);
+      return true;
+    }
+
     InlineContext context;
     context.defPath = callee.fullPath;
     ir_lowerer::LowerInlineCallContextSetupStepOutput contextSetup;

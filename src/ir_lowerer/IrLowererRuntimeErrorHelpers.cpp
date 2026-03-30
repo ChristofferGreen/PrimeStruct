@@ -34,6 +34,7 @@ RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const Intern
   emitters.emitPointerIndexOutOfBounds = makeEmitPointerIndexOutOfBounds(function, internString);
   emitters.emitStringIndexOutOfBounds = makeEmitStringIndexOutOfBounds(function, internString);
   emitters.emitMapKeyNotFound = makeEmitMapKeyNotFound(function, internString);
+  emitters.emitBuiltinCanonicalMapInsertPending = makeEmitBuiltinCanonicalMapInsertPending(function, internString);
   emitters.emitVectorIndexOutOfBounds = makeEmitVectorIndexOutOfBounds(function, internString);
   emitters.emitVectorPopOnEmpty = makeEmitVectorPopOnEmpty(function, internString);
   emitters.emitVectorCapacityExceeded = makeEmitVectorCapacityExceeded(function, internString);
@@ -77,6 +78,15 @@ EmitRuntimeErrorFn makeEmitMapKeyNotFound(IrFunction &function, const InternRunt
   auto internStringFn = internString;
   return [functionPtr, internStringFn]() {
     emitMapKeyNotFound(*functionPtr, internStringFn);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitBuiltinCanonicalMapInsertPending(IrFunction &function,
+                                                            const InternRuntimeErrorStringFn &internString) {
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitBuiltinCanonicalMapInsertPending(*functionPtr, internStringFn);
   };
 }
 
@@ -164,6 +174,10 @@ void emitStringIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorSt
 
 void emitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   emitRuntimeError(function, "map key not found", internString);
+}
+
+void emitBuiltinCanonicalMapInsertPending(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
+  emitRuntimeError(function, "builtin canonical map insert pending", internString);
 }
 
 void emitVectorIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString) {

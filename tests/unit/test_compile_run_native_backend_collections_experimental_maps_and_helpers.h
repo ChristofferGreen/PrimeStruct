@@ -244,8 +244,8 @@ TEST_CASE("compiles and runs native canonical namespaced map inserts on explicit
   expectCanonicalMapNamespaceExperimentalInsertConformance("native");
 }
 
-TEST_CASE("rejects native builtin canonical map inserts with temporary runtime failure") {
-  expectBuiltinCanonicalMapInsertTemporaryFailure("native");
+TEST_CASE("rejects native builtin canonical map inserts with pending runtime diagnostic") {
+  expectBuiltinCanonicalMapInsertPendingDiagnostic("native");
 }
 
 TEST_CASE("rejects native canonical map constructor ownership growth") {
