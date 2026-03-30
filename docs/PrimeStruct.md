@@ -1322,9 +1322,10 @@ for(
     ownership-sensitive element flows, explicit experimental `Map<K, V>` bindings now also support canonical
     `/std/collections/map/insert(...)` on that same overwrite/update path, builtin canonical `map<K, V>` bindings now
     route both `.insert(...)` method sugar and direct canonical `/std/collections/map/insert(...)` calls through a
-    temporary helper that performs the real in-place overwrite path when the numeric key already exists and still
-    reports the deterministic `builtin canonical map insert pending` diagnostic only for the remaining new-key
-    growth path, borrowed
+    temporary helper that performs the real in-place overwrite path when the numeric key already exists, grows an
+    empty builtin numeric map to its first entry by repointing the owning local handle, and still reports the
+    deterministic `builtin canonical map insert pending` diagnostic for the remaining non-empty new-key growth
+    path, borrowed
     references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit cleanup now run through
     the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly `drop(...)`ing and
     `init(...)`ing payload slots. Borrowed

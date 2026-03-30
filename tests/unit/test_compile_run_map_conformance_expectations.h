@@ -279,6 +279,14 @@ inline void expectBuiltinCanonicalMapInsertPendingDiagnostic(const std::string &
                               false);
 }
 
+inline void expectBuiltinCanonicalMapInsertFirstGrowthConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
+                                            "map_builtin_canonical_insert_first_growth_" + emitMode,
+                                            emitMode,
+                                            8,
+                                            "");
+}
+
 inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::string &emitMode) {
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
                                             "map_builtin_canonical_insert_overwrite_" + emitMode,
