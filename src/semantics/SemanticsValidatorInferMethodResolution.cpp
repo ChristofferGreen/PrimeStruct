@@ -157,6 +157,27 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return false;
   };
+  auto preferredExperimentalMapReferenceMethodTarget = [&](const std::string &helperName) {
+    if (helperName == "count") {
+      return std::string("/std/collections/experimental_map/mapCountRef");
+    }
+    if (helperName == "contains") {
+      return std::string("/std/collections/experimental_map/mapContainsRef");
+    }
+    if (helperName == "tryAt") {
+      return std::string("/std/collections/experimental_map/mapTryAtRef");
+    }
+    if (helperName == "at") {
+      return std::string("/std/collections/experimental_map/mapAtRef");
+    }
+    if (helperName == "at_unsafe") {
+      return std::string("/std/collections/experimental_map/mapAtUnsafeRef");
+    }
+    if (helperName == "insert") {
+      return std::string("/std/collections/experimental_map/mapInsertRef");
+    }
+    return std::string();
+  };
   auto setIndexedArgsPackMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.args.size() != 2) {
       return false;
@@ -563,6 +584,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
                                       resolveMethodStructTypePath(typeName, expr.namespacePrefix));
     if (!resolvedOut.empty()) {
       return true;
+    }
+  }
+  if (typeName == "Reference" &&
+      (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
+       normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
+       normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
+    std::string keyType;
+    std::string valueType;
+    if (resolveInferExperimentalMapTarget(params, locals, receiver, keyType, valueType)) {
+      resolvedOut = preferredExperimentalMapReferenceMethodTarget(normalizedMethodName);
+      return !resolvedOut.empty();
     }
   }
   if (typeName == "Pointer" || typeName == "Reference") {

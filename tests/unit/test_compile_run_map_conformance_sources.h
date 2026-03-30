@@ -298,8 +298,19 @@ inline std::string makeExperimentalMapReferenceMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
-  source += "[return<Reference<Map<string, i32>>>]\n";
-  source += "borrowExperimentalMap([Reference<Map<string, i32>>] values) {\n";
+  source += "[struct]\n";
+  source += "Owned() {\n";
+  source += "  [i32 mut] value{0i32}\n\n";
+  source += "  [mut]\n";
+  source += "  Move([Reference<Self>] other) {\n";
+  source += "    assign(this.value, other.value)\n";
+  source += "    assign(other.value, 0i32)\n";
+  source += "  }\n\n";
+  source += "  Destroy() {\n";
+  source += "  }\n";
+  source += "}\n\n";
+  source += "[return<Reference<Map<string, Owned>>>]\n";
+  source += "borrowExperimentalMap([Reference<Map<string, Owned>>] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
@@ -310,17 +321,23 @@ inline std::string makeExperimentalMapReferenceMethodConformanceSource() {
   source +=
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapReferenceMethodError>]\n";
   source += "main() {\n";
-  source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
-  source += "  [Reference<Map<string, i32>>] ref{borrowExperimentalMap(location(values))}\n";
-  source += "  [i32] found{try(ref.tryAt(\"left\"raw_utf8))}\n";
-  source += "  [Result<i32, ContainerError>] missing{ref.tryAt(\"missing\"raw_utf8)}\n";
-  source += "  [i32 mut] total{plus(ref.count(), found)}\n";
-  source += "  assign(total, plus(total, ref.at(\"left\"raw_utf8)))\n";
-  source += "  assign(total, plus(total, ref.at_unsafe(\"right\"raw_utf8)))\n";
-  source += "  if(ref.contains(\"left\"raw_utf8),\n";
+  source +=
+      "  [Map<string, Owned> mut] values{mapSingle<string, Owned>(\"left\"raw_utf8, Owned(4i32))}\n";
+  source += "  borrowExperimentalMap(location(values)).insert(\"right\"raw_utf8, Owned(7i32))\n";
+  source += "  borrowExperimentalMap(location(values)).insert(\"left\"raw_utf8, Owned(9i32))\n";
+  source += "  borrowExperimentalMap(location(values)).insert(\"third\"raw_utf8, Owned(11i32))\n";
+  source += "  [Owned] found{try(borrowExperimentalMap(location(values)).tryAt(\"left\"raw_utf8))}\n";
+  source +=
+      "  [Result<Owned, ContainerError>] missing{borrowExperimentalMap(location(values)).tryAt(\"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(borrowExperimentalMap(location(values)).count(), found.value)}\n";
+  source +=
+      "  assign(total, plus(total, borrowExperimentalMap(location(values)).at(\"right\"raw_utf8).value))\n";
+  source +=
+      "  assign(total, plus(total, borrowExperimentalMap(location(values)).at_unsafe(\"third\"raw_utf8).value))\n";
+  source += "  if(borrowExperimentalMap(location(values)).contains(\"right\"raw_utf8),\n";
   source += "     then() { assign(total, plus(total, 1i32)) },\n";
   source += "     else() { })\n";
-  source += "  if(not(ref.contains(\"missing\"raw_utf8)),\n";
+  source += "  if(not(borrowExperimentalMap(location(values)).contains(\"missing\"raw_utf8)),\n";
   source += "     then() { assign(total, plus(total, 2i32)) },\n";
   source += "     else() { })\n";
   source += "  print_line(Result.why(missing))\n";
@@ -647,4 +664,3 @@ inline std::string makeCanonicalMapNamespaceExperimentalParameterConformanceSour
   source += "}\n";
   return source;
 }
-

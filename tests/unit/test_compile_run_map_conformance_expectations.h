@@ -225,13 +225,11 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
-  const std::string expectedError = "try requires Result argument";
-  expectMapConformanceFailure(makeExperimentalMapReferenceMethodConformanceSource(),
-                              "experimental_map_reference_methods",
-                              emitMode,
-                              2,
-                              expectedError,
-                              true);
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapReferenceMethodConformanceSource(),
+                                            "experimental_map_reference_methods",
+                                            emitMode,
+                                            33,
+                                            "container missing key\n");
 }
 
 inline void expectExperimentalMapVariadicConstructorConformance(const std::string &emitMode) {
@@ -315,4 +313,3 @@ inline void expectCanonicalMapNamespaceExperimentalReferenceConformance(const st
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
-

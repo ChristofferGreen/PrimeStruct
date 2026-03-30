@@ -419,8 +419,7 @@ namespace std {
     if(less_than(index, /std/collections/experimental_vector/vectorCount<K>(keys)),
        then() { return(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, index)) },
        else() {
-         [map<K, V>] empty{/std/collections/map/map<K, V>()}
-         return(/std/collections/map/at<K, V>(empty, key))
+         return(/std/collections/experimental_vector/vectorAt<V>(payloads, index))
        })
   }
 
@@ -432,8 +431,7 @@ namespace std {
     if(less_than(index, /std/collections/experimental_vector/vectorCount<K>(keys)),
        then() { return(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, index)) },
        else() {
-         [map<K, V>] empty{/std/collections/map/map<K, V>()}
-         return(/std/collections/map/at<K, V>(empty, key))
+         return(/std/collections/experimental_vector/vectorAt<V>(payloads, index))
        })
   }
 

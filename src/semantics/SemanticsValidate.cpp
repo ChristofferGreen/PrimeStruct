@@ -6,6 +6,7 @@
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 #include "SemanticsValidateReflectionMetadata.h"
 #include "SemanticsValidateTransforms.h"
+#include "SemanticsHelpers.h"
 #include "SemanticsValidator.h"
 #include "TypeResolutionGraphPreparation.h"
 
@@ -96,6 +97,215 @@ bool runTypeResolutionSnapshot(
 }
 
 namespace {
+
+bool isExperimentalMapTypeText(const std::string &typeText) {
+  std::string keyType;
+  std::string valueType;
+  if (!semantics::extractMapKeyValueTypesFromTypeText(typeText, keyType, valueType)) {
+    return false;
+  }
+  const std::string normalizedInner = semantics::normalizeBindingTypeName(typeText);
+  return normalizedInner == "Map" ||
+         normalizedInner.rfind("Map<", 0) == 0 ||
+         normalizedInner.rfind("/std/collections/experimental_map/Map", 0) == 0 ||
+         normalizedInner.rfind("std/collections/experimental_map/Map", 0) == 0;
+}
+
+std::optional<semantics::BindingInfo> extractBorrowedExperimentalMapBinding(const Expr &expr) {
+  semantics::BindingInfo info;
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "Reference" &&
+        transform.templateArgs.size() == 1 &&
+        isExperimentalMapTypeText(transform.templateArgs.front())) {
+      info.typeName = "Reference";
+      info.typeTemplateArg = transform.templateArgs.front();
+      return info;
+    }
+  }
+  return std::nullopt;
+}
+
+bool isBorrowedExperimentalMapBinding(const semantics::BindingInfo &binding) {
+  return semantics::normalizeBindingTypeName(binding.typeName) == "Reference" &&
+         isExperimentalMapTypeText(binding.typeTemplateArg);
+}
+
+std::optional<semantics::BindingInfo> extractBorrowedExperimentalMapReturnBinding(
+    const Definition &def) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string base;
+    std::string argText;
+    if (!semantics::splitTemplateTypeName(transform.templateArgs.front(), base, argText)) {
+      continue;
+    }
+    if (semantics::normalizeBindingTypeName(base) != "Reference") {
+      continue;
+    }
+    std::vector<std::string> args;
+    if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1 ||
+        !isExperimentalMapTypeText(args.front())) {
+      continue;
+    }
+    semantics::BindingInfo info;
+    info.typeName = "Reference";
+    info.typeTemplateArg = args.front();
+    return info;
+  }
+  return std::nullopt;
+}
+
+std::string borrowedExperimentalMapHelperName(std::string_view methodName) {
+  if (methodName == "count") {
+    return "mapCountRef";
+  }
+  if (methodName == "contains") {
+    return "mapContainsRef";
+  }
+  if (methodName == "tryAt") {
+    return "mapTryAtRef";
+  }
+  if (methodName == "at") {
+    return "mapAtRef";
+  }
+  if (methodName == "at_unsafe") {
+    return "mapAtUnsafeRef";
+  }
+  if (methodName == "insert") {
+    return "mapInsertRef";
+  }
+  return {};
+}
+
+void rewriteBorrowedExperimentalMapMethodExpr(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &borrowedReturnDefinitions,
+    const std::string &definitionNamespace);
+
+void rewriteBorrowedExperimentalMapMethodStatements(
+    std::vector<Expr> &statements,
+    std::unordered_map<std::string, semantics::BindingInfo> bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &borrowedReturnDefinitions,
+    const std::string &definitionNamespace) {
+  for (Expr &stmt : statements) {
+    rewriteBorrowedExperimentalMapMethodExpr(
+        stmt, bindings, borrowedReturnDefinitions, definitionNamespace);
+    if (!stmt.bodyArguments.empty()) {
+      auto bodyBindings = bindings;
+      rewriteBorrowedExperimentalMapMethodStatements(
+          stmt.bodyArguments, bodyBindings, borrowedReturnDefinitions, definitionNamespace);
+    }
+    if (stmt.isBinding) {
+      if (auto binding = extractBorrowedExperimentalMapBinding(stmt); binding.has_value()) {
+        bindings[stmt.name] = *binding;
+      }
+    }
+  }
+}
+
+void rewriteBorrowedExperimentalMapMethodExpr(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &borrowedReturnDefinitions,
+    const std::string &definitionNamespace) {
+  for (Expr &arg : expr.args) {
+    rewriteBorrowedExperimentalMapMethodExpr(
+        arg, bindings, borrowedReturnDefinitions, definitionNamespace);
+  }
+  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
+      expr.args.front().kind == Expr::Kind::Literal) {
+    return;
+  }
+  const std::string helperName = borrowedExperimentalMapHelperName(expr.name);
+  if (helperName.empty()) {
+    return;
+  }
+  std::optional<semantics::BindingInfo> receiverBinding;
+  const Expr &receiver = expr.args.front();
+  if (receiver.kind == Expr::Kind::Name) {
+    auto bindingIt = bindings.find(receiver.name);
+    if (bindingIt != bindings.end() && isBorrowedExperimentalMapBinding(bindingIt->second)) {
+      receiverBinding = bindingIt->second;
+    }
+  } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+    std::vector<std::string> candidatePaths;
+    if (!receiver.name.empty() && receiver.name.front() == '/') {
+      candidatePaths.push_back(receiver.name);
+    } else {
+      if (!receiver.namespacePrefix.empty()) {
+        candidatePaths.push_back(receiver.namespacePrefix + "/" + receiver.name);
+      }
+      if (!definitionNamespace.empty()) {
+        candidatePaths.push_back(definitionNamespace + "/" + receiver.name);
+      }
+      candidatePaths.push_back("/" + receiver.name);
+      candidatePaths.push_back(receiver.name);
+    }
+    for (const std::string &candidatePath : candidatePaths) {
+      auto returnIt = borrowedReturnDefinitions.find(candidatePath);
+      if (returnIt != borrowedReturnDefinitions.end() &&
+          isBorrowedExperimentalMapBinding(returnIt->second)) {
+        receiverBinding = returnIt->second;
+        break;
+      }
+    }
+  }
+  if (!receiverBinding.has_value()) {
+    return;
+  }
+  std::string keyType;
+  std::string valueType;
+  if (expr.templateArgs.empty() &&
+      !semantics::extractMapKeyValueTypesFromTypeText(
+          receiverBinding->typeTemplateArg, keyType, valueType)) {
+    return;
+  }
+  expr.isMethodCall = false;
+  expr.isFieldAccess = false;
+  expr.name = helperName;
+  expr.namespacePrefix.clear();
+  if (expr.templateArgs.empty()) {
+    expr.templateArgs = {keyType, valueType};
+  }
+  expr.argNames.clear();
+}
+
+bool rewriteBorrowedExperimentalMapMethods(Program &program, std::string &error) {
+  error.clear();
+  std::unordered_map<std::string, semantics::BindingInfo> borrowedReturnDefinitions;
+  for (const Definition &def : program.definitions) {
+    if (auto binding = extractBorrowedExperimentalMapReturnBinding(def); binding.has_value()) {
+      borrowedReturnDefinitions[def.fullPath] = *binding;
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
+        borrowedReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+      }
+    }
+  }
+  for (Definition &def : program.definitions) {
+    std::unordered_map<std::string, semantics::BindingInfo> bindings;
+    for (const Expr &param : def.parameters) {
+      if (auto binding = extractBorrowedExperimentalMapBinding(param); binding.has_value()) {
+        bindings[param.name] = *binding;
+      }
+    }
+    std::string definitionNamespace;
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash != std::string::npos && slash > 0) {
+      definitionNamespace = def.fullPath.substr(0, slash);
+    }
+    rewriteBorrowedExperimentalMapMethodStatements(
+        def.statements, bindings, borrowedReturnDefinitions, definitionNamespace);
+    if (def.returnExpr.has_value()) {
+      rewriteBorrowedExperimentalMapMethodExpr(
+          *def.returnExpr, bindings, borrowedReturnDefinitions, definitionNamespace);
+    }
+  }
+  return true;
+}
 
 bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
   std::unordered_set<std::string> structNames;
@@ -324,6 +534,9 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (!semantics::rewriteReflectionGeneratedHelpers(program, error)) {
+    return false;
+  }
+  if (!rewriteBorrowedExperimentalMapMethods(program, error)) {
     return false;
   }
   try {

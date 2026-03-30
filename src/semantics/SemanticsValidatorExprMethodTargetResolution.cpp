@@ -499,6 +499,27 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {
     return "/std/collections/experimental_map/" + preferredExperimentalMapHelperTarget(helperName);
   };
+  auto preferredCanonicalExperimentalMapReferenceHelperTarget = [&](std::string_view helperName) {
+    if (helperName == "count") {
+      return std::string("/std/collections/experimental_map/mapCountRef");
+    }
+    if (helperName == "contains") {
+      return std::string("/std/collections/experimental_map/mapContainsRef");
+    }
+    if (helperName == "tryAt") {
+      return std::string("/std/collections/experimental_map/mapTryAtRef");
+    }
+    if (helperName == "at") {
+      return std::string("/std/collections/experimental_map/mapAtRef");
+    }
+    if (helperName == "at_unsafe") {
+      return std::string("/std/collections/experimental_map/mapAtUnsafeRef");
+    }
+    if (helperName == "insert") {
+      return std::string("/std/collections/experimental_map/mapInsertRef");
+    }
+    return std::string();
+  };
   auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {
     if (helperName == "count") {
       return definitionPathContains("/mapCount");
@@ -2285,6 +2306,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+  }
+  if (typeName == "Reference" &&
+      (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
+       normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
+       normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
+    std::string keyType;
+    std::string valueType;
+    if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
+      resolvedOut = preferredCanonicalExperimentalMapReferenceHelperTarget(normalizedMethodName);
+      isBuiltinOut = false;
+      return true;
+    }
   }
   if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||

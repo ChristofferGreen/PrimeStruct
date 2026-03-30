@@ -211,7 +211,7 @@ TEST_CASE("compiles and runs borrowed experimental map helpers in C++ emitter") 
   expectExperimentalMapReferenceHelperConformance("exe");
 }
 
-TEST_CASE("rejects borrowed experimental map methods in C++ emitter") {
+TEST_CASE("compiles and runs borrowed experimental map methods in C++ emitter") {
   expectExperimentalMapReferenceMethodConformance("exe");
 }
 

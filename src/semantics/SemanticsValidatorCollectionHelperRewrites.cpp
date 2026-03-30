@@ -427,6 +427,25 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     if (!normalizedMethod.empty() && normalizedMethod.front() == '/') {
       normalizedMethod.erase(normalizedMethod.begin());
     }
+    if (normalizedMethod == "insert") {
+      std::string keyType;
+      std::string valueType;
+      const bool resolvesBorrowedExperimentalMap =
+          dispatchResolvers.resolveExperimentalMapTarget(candidate.args.front(), keyType, valueType) &&
+          !dispatchResolvers.resolveExperimentalMapValueTarget(candidate.args.front(), keyType, valueType);
+      if (!resolvesBorrowedExperimentalMap) {
+        return false;
+      }
+      rewrittenOut = candidate;
+      rewrittenOut.isMethodCall = false;
+      rewrittenOut.isFieldAccess = false;
+      rewrittenOut.name = "/std/collections/experimental_map/mapInsertRef";
+      rewrittenOut.namespacePrefix.clear();
+      if (rewrittenOut.templateArgs.empty()) {
+        rewrittenOut.templateArgs = {keyType, valueType};
+      }
+      return true;
+    }
     if (normalizedMethod != "count" && normalizedMethod != "contains" && normalizedMethod != "tryAt" &&
         normalizedMethod != "at" && normalizedMethod != "at_unsafe") {
       return false;
