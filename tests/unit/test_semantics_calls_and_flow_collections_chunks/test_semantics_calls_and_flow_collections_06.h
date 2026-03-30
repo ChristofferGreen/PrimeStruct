@@ -677,9 +677,9 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Owned> mut] values{vector<Owned>()}
-  pop(values)
-  return(0i32)
+  [Vector<Owned> mut] values{/std/collections/vectorSingle<Owned>(Owned())}
+  values.pop()
+  return(/std/collections/vector/count<Owned>(values))
 }
 )";
   std::string error;

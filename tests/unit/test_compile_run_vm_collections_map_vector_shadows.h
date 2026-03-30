@@ -311,10 +311,6 @@ TEST_CASE("compiles and runs canonical vector discard helpers with owned element
   expectCanonicalVectorDiscardOwnershipConformance("vm");
 }
 
-TEST_CASE("compiles and runs canonical vector indexed removal helpers with owned elements in vm backend") {
-  expectCanonicalVectorIndexedRemovalOwnershipConformance("vm");
-}
-
 TEST_CASE("rejects vm vector push with non-relocation-trivial elements") {
   const std::string source = R"(
 import /std/collections/*

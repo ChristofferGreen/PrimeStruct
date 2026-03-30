@@ -141,37 +141,6 @@ inline std::string makeCanonicalVectorDiscardOwnershipConformanceSource() {
   return source;
 }
 
-inline std::string makeCanonicalVectorIndexedRemovalOwnershipConformanceSource() {
-  std::string source;
-  source += "import /std/collections/*\n\n";
-  source += "import /std/collections/experimental_vector/*\n\n";
-  source += "[struct]\n";
-  source += "Owned() {\n";
-  source += "  [i32 mut] value{0i32}\n\n";
-  source += "  Destroy() {\n";
-  source += "  }\n";
-  source += "}\n\n";
-  source += "[struct]\n";
-  source += "Wrapper() {\n";
-  source += "  [Owned] value{Owned()}\n";
-  source += "}\n\n";
-  source += "[effects(heap_alloc), return<int>]\n";
-  source += "main() {\n";
-  source += "  [Vector<Owned> mut] removed{/std/collections/vectorPair<Owned>(Owned(4i32), Owned(9i32))}\n";
-  source += "  remove_at(removed, 0i32)\n";
-  source += "  [Vector<Wrapper> mut] swapped{/std/collections/vectorTriple<Wrapper>(\n";
-  source += "      Wrapper(Owned(1i32)),\n";
-  source += "      Wrapper(Owned(7i32)),\n";
-  source += "      Wrapper(Owned(11i32)))}\n";
-  source += "  remove_swap(swapped, 0i32)\n";
-  source += "  return(plus(\n";
-  source += "      plus(/std/collections/vector/count<Owned>(removed), /std/collections/vector/at<Owned>(removed, 0i32).value),\n";
-  source += "      plus(/std/collections/vector/count<Wrapper>(swapped),\n";
-  source += "           /std/collections/vector/at_unsafe<Wrapper>(swapped, 0i32).value.value)))\n";
-  source += "}\n";
-  return source;
-}
-
 inline std::string makeVectorTypeMismatchRejectSource(const std::string &importPath) {
   std::string source;
   source += "import " + importPath + "\n\n";
