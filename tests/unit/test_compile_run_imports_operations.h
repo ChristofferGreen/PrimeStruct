@@ -247,6 +247,10 @@ TEST_CASE("compiles and runs builtin canonical map pair-growth inserts in C++ em
   expectBuiltinCanonicalMapInsertPairGrowthConformance("exe");
 }
 
+TEST_CASE("compiles and runs builtin canonical map triple-growth inserts in C++ emitter") {
+  expectBuiltinCanonicalMapInsertTripleGrowthConformance("exe");
+}
+
 TEST_CASE("compiles and runs builtin canonical map insert overwrites in C++ emitter") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("exe");
 }

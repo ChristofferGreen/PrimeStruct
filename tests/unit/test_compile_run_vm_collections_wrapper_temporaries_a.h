@@ -340,6 +340,10 @@ TEST_CASE("runs vm builtin canonical map pair-growth inserts") {
   expectBuiltinCanonicalMapInsertPairGrowthConformance("vm");
 }
 
+TEST_CASE("runs vm builtin canonical map triple-growth inserts") {
+  expectBuiltinCanonicalMapInsertTripleGrowthConformance("vm");
+}
+
 TEST_CASE("runs vm builtin canonical map insert overwrites") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("vm");
 }
