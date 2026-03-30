@@ -38,6 +38,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
   } else if (normalizedMethodName.rfind("array/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
+  } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("soa_vector/").size());
   } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
   } else if (normalizedMethodName.rfind("map/", 0) == 0) {

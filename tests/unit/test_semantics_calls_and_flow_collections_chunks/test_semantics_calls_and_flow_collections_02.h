@@ -301,6 +301,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("explicit soa_vector count validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(/soa_vector/count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit soa_vector count slash-method validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(values./soa_vector/count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("get helper validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {

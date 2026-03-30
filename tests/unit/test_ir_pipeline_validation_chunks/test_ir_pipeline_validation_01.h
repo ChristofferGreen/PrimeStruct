@@ -366,6 +366,33 @@ main() {
   CHECK(error == "native backend entry parameter must be array<string>");
 }
 
+TEST_CASE("semantics accepts explicit soa_vector count before lowerer rejection") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/use([soa_vector<Particle>] values) {
+  return(/soa_vector/count(values))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
+  CHECK(error == "native backend entry parameter must be array<string>");
+}
+
 TEST_CASE("ir lowerer rejects non-empty soa_vector literals with deterministic diagnostic") {
   const std::string source = R"(
 Particle() {
