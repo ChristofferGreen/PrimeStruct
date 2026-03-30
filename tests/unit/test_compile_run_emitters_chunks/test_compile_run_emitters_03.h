@@ -156,9 +156,9 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("C++ emitter lambda lowers explicit vector mutator statement without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects lambda explicit vector mutator statements without helper before emission") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   holder{[]([i32] seed) {
     [vector<i32> mut] values{vector<i32>(1i32, 2i32, seed)}
@@ -169,74 +169,80 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_lambda_explicit_vector_mutator_deleted_stub.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_cpp_lambda_explicit_vector_mutator_deleted_stub.cpp")
+      writeTemp("compile_cpp_lambda_explicit_vector_mutator_same_path_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_lambda_explicit_vector_mutator_same_path_reject.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
-TEST_CASE("C++ emitter lambda lowers cross-path explicit vector mutator statement to deleted stub") {
+TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator statements before emission") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
-  assign(values[0i32], plus(value, 50i32))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   holder{[]([i32] seed) {
     [vector<i32> mut] values{vector<i32>(1i32, 2i32, seed)}
     /vector/push(values, 5i32)
-    return(values[0i32])
+    return(0i32)
   }}
   return(0i32)
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_lambda_cross_path_vector_mutator_deleted_stub.prime", source);
-  const std::string outPath =
+      writeTemp("compile_cpp_lambda_cross_path_vector_mutator_same_path_reject.prime", source);
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_lambda_cross_path_vector_mutator_deleted_stub.cpp")
+       "primec_cpp_lambda_cross_path_vector_mutator_same_path_reject.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lambda lowers reordered cross-path explicit vector mutator statement to deleted stub") {
+TEST_CASE("C++ emitter rejects lambda reordered cross-path explicit vector mutator statements before emission") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
-  assign(values[0i32], plus(value, 60i32))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   holder{[]([i32] seed) {
     [vector<i32> mut] values{vector<i32>(1i32, 2i32, seed)}
     /vector/push(5i32, values)
-    return(values[0i32])
+    return(0i32)
   }}
   return(0i32)
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_lambda_reordered_cross_path_vector_mutator_deleted_stub.prime", source);
-  const std::string outPath =
+      writeTemp("compile_cpp_lambda_reordered_cross_path_vector_mutator_same_path_reject.prime",
+                source);
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_lambda_reordered_cross_path_vector_mutator_deleted_stub.cpp")
+       "primec_cpp_lambda_reordered_cross_path_vector_mutator_same_path_reject.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter lambda lowers explicit vector mutator method statement without helper to deleted stub") {
+TEST_CASE("C++ emitter rejects lambda explicit vector mutator methods without helper before emission") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   holder{[]([i32] seed) {
     [vector<i32> mut] values{vector<i32>(1i32, 2i32, seed)}
@@ -247,42 +253,47 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_lambda_explicit_vector_mutator_method_deleted_stub.prime", source);
-  const std::string outPath =
+      writeTemp("compile_cpp_lambda_explicit_vector_mutator_method_same_path_reject.prime", source);
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_lambda_explicit_vector_mutator_method_deleted_stub.cpp")
+       "primec_cpp_lambda_explicit_vector_mutator_method_same_path_reject.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
-TEST_CASE("C++ emitter lambda lowers cross-path explicit vector mutator method statement to deleted stub") {
+TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator methods before emission") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
-  assign(values[0i32], plus(value, 60i32))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   holder{[]([i32] seed) {
     [vector<i32> mut] values{vector<i32>(1i32, 2i32, seed)}
     values./vector/push(5i32)
-    return(values[0i32])
+    return(0i32)
   }}
   return(0i32)
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_lambda_cross_path_vector_mutator_method_deleted_stub.prime", source);
-  const std::string outPath =
+      writeTemp("compile_cpp_lambda_cross_path_vector_mutator_method_same_path_reject.prime",
+                source);
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_lambda_cross_path_vector_mutator_method_deleted_stub.cpp")
+       "primec_cpp_lambda_cross_path_vector_mutator_method_same_path_reject.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {
@@ -635,4 +646,3 @@ main() {
   const std::string errors = readFile(errPath);
   CHECK(errors.find("push requires vector binding") != std::string::npos);
 }
-
