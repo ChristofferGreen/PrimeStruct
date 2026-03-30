@@ -324,6 +324,10 @@ TEST_CASE("compiles and runs builtin canonical map oct-growth inserts in C++ emi
   expectBuiltinCanonicalMapInsertOctGrowthConformance("exe");
 }
 
+TEST_CASE("compiles and runs builtin canonical map ninth-growth inserts in C++ emitter") {
+  expectBuiltinCanonicalMapInsertNinthGrowthConformance("exe");
+}
+
 TEST_CASE("compiles and runs builtin canonical map insert overwrites in C++ emitter") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("exe");
 }
