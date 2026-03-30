@@ -1,4 +1,4 @@
-TEST_CASE("rejects native std-namespaced vector method alias access struct method chain with primitive receiver diagnostics") {
+TEST_CASE("rejects native std-namespaced vector method alias access struct method chain with helper receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -35,7 +35,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") != std::string::npos);
 }
 
 TEST_CASE("rejects native std-namespaced vector access slash methods without canonical helper on vector receiver") {
@@ -59,7 +59,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects native std-namespaced vector method alias access struct method chain with primitive argument diagnostics") {
+TEST_CASE("rejects native std-namespaced vector method alias access struct method chain with helper missing-method diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -96,7 +96,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib map wrapper temporary unsafe key mismatch") {

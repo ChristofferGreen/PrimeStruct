@@ -255,17 +255,11 @@ inline void expectExperimentalMapInsertConformance(const std::string &emitMode) 
 }
 
 inline void expectExperimentalMapOwnershipConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceCompileReject(makeExperimentalMapOwnershipConformanceSource(),
-                                      "experimental_map_ownership",
-                                      emitMode,
-                                      "vm backend does not support return type on /std/collections/mapNew");
-    return;
-  }
-  expectMapConformanceCompileReject(makeExperimentalMapOwnershipConformanceSource(),
-                                    "experimental_map_ownership",
-                                    emitMode,
-                                    "native backend does not support return type on /std/collections/mapNew");
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipConformanceSource(),
+                                            "experimental_map_ownership",
+                                            emitMode,
+                                            13,
+                                            "");
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {

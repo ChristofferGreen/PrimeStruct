@@ -270,9 +270,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental map method-call sugar validates on the real Map struct") {
@@ -552,8 +551,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") != std::string::npos);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
 }
 
 TEST_CASE("experimental map methods include builtin map key rejects on the real Map struct") {
@@ -580,8 +579,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") != std::string::npos);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
 }
 
 TEST_CASE("experimental map Ref helper calls include builtin map key rejects") {
@@ -609,8 +608,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") != std::string::npos);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
 }
 
 TEST_CASE("experimental map borrowed methods include builtin map key rejects") {
@@ -643,8 +642,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") != std::string::npos);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
 }
 
 TEST_CASE("experimental map insert helper calls include builtin map key rejects") {
@@ -670,8 +669,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") != std::string::npos);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
 }
 
 TEST_CASE("experimental map borrowed insert methods include builtin map key rejects") {
@@ -698,6 +697,6 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") != std::string::npos);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
 }

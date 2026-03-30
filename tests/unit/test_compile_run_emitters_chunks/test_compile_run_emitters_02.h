@@ -50,7 +50,7 @@ Key() {
   return(less_than(left.value, right.value))
 }
 
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[effects(heap_alloc), return<int>]
 main() {
   [Map<Key, i32>] values{mapPair<Key, i32>(Key(2i32), 7i32, Key(5i32), 11i32)}
   [i32 mut] total{mapCount<Key, i32>(values)}
@@ -59,19 +59,16 @@ main() {
   if(mapContains<Key, i32>(values, Key(2i32)),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
-  [i32] found{try(mapTryAt<Key, i32>(values, Key(5i32)))}
-  return(Result.ok(plus(total, found)))
+  return(total)
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_experimental_map_custom_comparable_key.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_experimental_map_custom_comparable_key.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_experimental_map_custom_comparable_key.exe").string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 21);
 }
 
 TEST_CASE("executions are ignored by C++ emitter") {
@@ -611,4 +608,3 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
-

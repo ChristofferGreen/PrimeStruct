@@ -178,8 +178,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Comparable") != std::string::npos);
-  CHECK(error.find("builtin Comparable key type") != std::string::npos);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
 }
 
 TEST_CASE("imported stdlib namespaced map constructor keeps mismatch diagnostics") {

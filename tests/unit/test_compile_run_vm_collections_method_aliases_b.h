@@ -468,7 +468,7 @@ main() {
   CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
-TEST_CASE("rejects vm std-namespaced vector method alias access struct method chain with primitive receiver diagnostics") {
+TEST_CASE("rejects vm std-namespaced vector method alias access struct method chain with helper receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -503,7 +503,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") != std::string::npos);
 }
 
 TEST_CASE("rejects vm std-namespaced vector access slash methods without canonical helper on vector receiver") {
@@ -526,7 +526,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm std-namespaced vector method alias access struct method chain with primitive argument diagnostics") {
+TEST_CASE("rejects vm std-namespaced vector method alias access struct method chain with helper missing-method diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -561,7 +561,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib map wrapper temporary unsafe key mismatch") {
