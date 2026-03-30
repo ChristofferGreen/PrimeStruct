@@ -404,6 +404,10 @@ TEST_CASE("runs vm builtin canonical map eighteenth-growth inserts") {
   expectBuiltinCanonicalMapInsertEighteenthGrowthConformance("vm");
 }
 
+TEST_CASE("runs vm builtin canonical map nineteenth-growth inserts") {
+  expectBuiltinCanonicalMapInsertNineteenthGrowthConformance("vm");
+}
+
 TEST_CASE("runs vm builtin canonical map insert overwrites") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("vm");
 }
