@@ -207,7 +207,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return true;
   }
 
-  if (resolvedMethod && (resolved == "/soa_vector/get" || resolved == "/soa_vector/ref")) {
+  if ((resolvedMethod || resolvedMissing) &&
+      (resolved == "/soa_vector/get" || resolved == "/soa_vector/ref")) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
         !(context.isNamedArgsPackMethodAccessCall != nullptr &&

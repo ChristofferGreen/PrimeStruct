@@ -337,6 +337,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("explicit soa_vector get validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  /soa_vector/get(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("get helper rejects non-soa target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -379,6 +397,24 @@ Particle() {
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   values.ref(0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit soa_vector ref validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  /soa_vector/ref(values, 0i32)
   return(0i32)
 }
 )";
@@ -642,4 +678,3 @@ main() {
   CHECK(error.find("argument type mismatch") != std::string::npos);
   CHECK(error.find("/simulateStep") != std::string::npos);
 }
-
