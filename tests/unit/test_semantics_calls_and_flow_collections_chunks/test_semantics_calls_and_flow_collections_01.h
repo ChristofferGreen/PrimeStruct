@@ -418,6 +418,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental map value methods validate ownership-sensitive values through Map helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[struct]
+Owned() {
+  [i32 mut] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, other.value)
+    assign(other.value, 0i32)
+  }
+
+  Destroy() {
+  }
+}
+
+[effects(io_err)]
+unexpectedExperimentalMapValueMethodError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+  print_line_error(Result.why(status))
+}
+
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapValueMethodError>]
+main() {
+  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned(4i32))}
+  values.insert("right"raw_utf8, Owned(7i32))
+  values.insert("left"raw_utf8, Owned(9i32))
+  values.insert("third"raw_utf8, Owned(11i32))
+  [Owned] found{try(values.tryAt("left"raw_utf8))}
+  [Result<Owned, ContainerError>] missing{values.tryAt("missing"raw_utf8)}
+  [i32 mut] total{plus(values.count(), found.value)}
+  assign(total, plus(total, values.at("right"raw_utf8).value))
+  assign(total, plus(total, values.at_unsafe("third"raw_utf8).value))
+  if(values.contains("right"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  if(not(values.contains("missing"raw_utf8)),
+     then() { assign(total, plus(total, 2i32)) },
+     else() { })
+  return(Result.ok(total))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental map borrowed methods validate ownership-sensitive values through reference helpers") {
   const std::string source = R"(
 import /std/collections/*
