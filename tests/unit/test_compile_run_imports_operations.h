@@ -76,6 +76,32 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("rejects experimental soa_vector stdlib non-empty helper in C++ emitter before real soa storage support") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(soaVectorCount<Particle>(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_experimental_soa_vector_single_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_vector_single_exe_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend does not support non-empty soa_vector literals") !=
+        std::string::npos);
+}
+
 TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

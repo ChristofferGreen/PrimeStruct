@@ -24,6 +24,12 @@ namespace std {
     return(SoaVector<T>())
   }
 
+  [public effects(heap_alloc), return<SoaVector<T>>]
+  soaVectorSingle<T>([T] value) {
+    soaVectorValidateType<T>()
+    return(SoaVector<T>(1i32, soa_vector<T>(value)))
+  }
+
   [public return<i32>]
   soaVectorCount<T>([SoaVector<T>] values) {
     soaVectorValidateType<T>()

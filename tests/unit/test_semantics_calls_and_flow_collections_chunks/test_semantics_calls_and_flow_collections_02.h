@@ -409,6 +409,26 @@ main() {
   CHECK(error.find("meta.field_count requires reflect-enabled struct type argument: /Particle") != std::string::npos);
 }
 
+TEST_CASE("experimental soa_vector stdlib non-empty helper validates on reflect-enabled struct elements") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(soaVectorCount<Particle>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("get helper validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {

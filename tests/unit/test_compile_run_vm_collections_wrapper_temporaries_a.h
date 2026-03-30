@@ -67,6 +67,30 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("vm rejects experimental soa_vector stdlib non-empty helper before real soa storage support") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(soaVectorCount<Particle>(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_single.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_single_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend does not support non-empty soa_vector literals") !=
+        std::string::npos);
+}
+
 TEST_CASE("runs vm with stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*
