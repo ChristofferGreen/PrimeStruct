@@ -1,7 +1,10 @@
 #include "EmitterExprResultCalls.h"
 #include "EmitterExprCollectionTypeHelpers.h"
 #include "EmitterExprCollectionFallbackHelpers.h"
-  std::string resolvedFull = preferExplicitVectorCountCapacityHelperPath(expr, full);
+  std::string resolvedFull = full;
+  if (!isExplicitVectorCountCapacityDirectCall(expr)) {
+    resolvedFull = preferStructReturningCollectionHelperPath(full);
+  }
   auto it = nameMap.find(resolvedFull);
   if (it == nameMap.end()) {
     #include "EmitterExprCollectionBuiltinCalls.h"

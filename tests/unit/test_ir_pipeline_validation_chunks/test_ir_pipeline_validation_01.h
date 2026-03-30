@@ -250,6 +250,40 @@ main() {
   CHECK(cpp.find("ps_array_count(") != std::string::npos);
 }
 
+TEST_CASE("emitter cpp keeps explicit canonical vector count same-path during emission") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(77i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(/vector/count(values))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  bool rewroteCall = false;
+  for (auto &def : program.definitions) {
+    if (def.fullPath != "/main" || !def.returnExpr.has_value()) {
+      continue;
+    }
+    def.returnExpr->name = "/std/collections/vector/count";
+    rewroteCall = true;
+    break;
+  }
+  REQUIRE(rewroteCall);
+
+  primec::Emitter emitter;
+  const std::string cpp = emitter.emitCpp(program, "/main");
+  CHECK(cpp.find("ps_array_count(") != std::string::npos);
+}
+
 TEST_CASE("emitter cpp keeps array count builtin fallback") {
   const std::string source = R"(
 [return<int>]
@@ -643,4 +677,3 @@ TEST_CASE("ir lowerer effects unit resolves entry metadata masks") {
   CHECK(entryEffectMask == (primec::EffectIoOut | primec::EffectHeapAlloc));
   CHECK(entryCapabilityMask == (primec::EffectIoOut | primec::EffectHeapAlloc));
 }
-

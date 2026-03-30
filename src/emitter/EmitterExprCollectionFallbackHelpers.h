@@ -76,12 +76,3 @@
     }
     return preferVectorStdlibHelperPath(path, nameMap);
   };
-  auto preferExplicitVectorCountCapacityHelperPath = [&](const Expr &candidate, const std::string &path) {
-    if (!isExplicitVectorCountCapacityDirectCall(candidate)) {
-      return preferStructReturningCollectionHelperPath(path);
-    }
-    if (path == "/vector/count" || path == "/vector/capacity") {
-      return path;
-    }
-    return preferStructReturningCollectionHelperPath(path);
-  };
