@@ -1333,8 +1333,9 @@ for(
     entries by repointing that same owning handle, grows a nine-entry builtin numeric map to ten entries by
     repointing that same owning handle, grows a ten-entry builtin numeric map to eleven entries by repointing that
     same owning handle, grows an eleven-entry builtin numeric map to twelve entries by repointing that same owning
-    handle, and still reports the deterministic `builtin canonical map insert pending` diagnostic for the remaining
-    larger non-empty new-key growth path, borrowed
+    handle, grows a twelve-entry builtin numeric map to thirteen entries by repointing that same owning handle, and
+    still reports the deterministic `builtin canonical map insert pending` diagnostic for the remaining larger
+    non-empty new-key growth path, borrowed
     references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit cleanup now run through
     the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly `drop(...)`ing and
     `init(...)`ing payload slots. Borrowed
