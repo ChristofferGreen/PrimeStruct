@@ -183,7 +183,7 @@ Map/vector deletion note: success here means canonical `vector`/`map` behavior l
   - ✓ Lock non-imported helper-returned canonical map reference access primitive receiver diagnostics across semantics, C++, native, and VM. Progress: without imported canonical helpers, `/std/collections/map/at(borrowMap(location(values)), ...).count()` now stays pinned to the same semantic-stage `unknown method: /i32/count` contract everywhere this direct helper-returned reference path is covered.
 Bridge parking note: do not split this bridge bucket further unless a specific failure blocks experimental stdlib bring-up, parity harness work, or deletion of an existing compiler-owned collection path.
 Minimal vector substrate note: the remaining items below are only worth keeping insofar as they extract the runtime/error/allocation substrate that stdlib `.prime` `vector` needs; they are not goals to preserve compiler-owned `vector` semantics indefinitely.
-- ◐ Dynamic vector-runtime substrate slice: lower VM/native vector locals through `count/capacity/data_ptr` records instead of fixed-capacity frame layouts. Progress: vector locals now lower through `count/capacity/data_ptr` records.
+- ✓ Dynamic vector-runtime substrate slice: VM/native vector locals now lower through heap-backed `count/capacity/data_ptr` records instead of fixed-capacity frame layouts. Progress: vector literal construction, `push`, `reserve`, `at`, `at_unsafe`, `pop`, `remove_at`, and `remove_swap` all operate on the record-backed layout; growth routes through heap allocation/reallocation with deterministic local-limit and OOM diagnostics instead of frame-local overflow behavior.
 
 
 **Group 8 - SoA de-builtinization**

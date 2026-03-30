@@ -2340,22 +2340,6 @@ bad_use_after_take() {
     soa_vector helper: reserve`). These compiler-owned `soa_vector` paths are
     not the intended end-state and should be deleted as the generic SoA substrate and stdlib `.prime` implementation
     land.
-  - **Compile-time schema substrate status:** the minimum field-schema introspection needed for a `.prime`
-    `soa_vector<T>` implementation already exists through compile-time reflection metadata queries:
-    `meta.field_count<T>()`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
-    `meta.field_visibility<T>(i)`. Those queries validate only on reflect-enabled structs and are eliminated before IR
-    emission, so future SoA stdlib code can derive column schemas from `T` without adding new compiler-owned
-    collection-specific reflection primitives.
-  - **Experimental stdlib status:** the first stdlib namespace foothold now exists at
-    `/std/collections/experimental_soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`, and
-    `soaVectorCount<T>()`, and it now also exposes the first empty-state `.prime` AoS conversion foothold through
-    `soaVectorToAos<T>()`. The wrapper owns explicit `.prime` empty-runtime count state while still storing the current
-    builtin header-only `soa_vector<T>` backing, and it currently requires `T` to be a reflect-enabled struct via
-    `meta.field_count<T>()` so non-SoA-safe element types fail early. Today that helper validates semantically but
-    still hits the deterministic backend boundary `* backend does not support return type on
-    /std/collections/experimental_soa_vector/soaVectorToAos__...` until vector<Struct> helper returns, real column
-    storage, and borrowed-view substrate are in place. Method-sugar `to_aos()`, `get`, borrowed `ref`, and any
-    non-empty conversion/access remain pending behind that same broader substrate work.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of
