@@ -387,6 +387,8 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   bool hasTwelfthGrowJump = false;
   size_t jumpAfterThirteenthGrow = 0;
   bool hasThirteenthGrowJump = false;
+  size_t jumpAfterFourteenthGrow = 0;
+  bool hasFourteenthGrowJump = false;
   if (valuesLocal >= 0) {
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
     emitInstruction(IrOpcode::PushI32, 0);
@@ -1178,6 +1180,93 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     hasThirteenthGrowJump = true;
 
     patchInstructionImm(jumpPendingAfterThirteenth, static_cast<uint64_t>(instructionCount()));
+
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
+    emitInstruction(IrOpcode::PushI32, 14);
+    emitInstruction(IrOpcode::CmpEqI32, 0);
+    const size_t jumpPendingAfterFourteenth = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+
+    const int32_t fourteenthGrownBaseLocal = allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    (void)allocTempLocal();
+    emitInstruction(IrOpcode::PushI32, 15);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fourteenthGrownBaseLocal));
+
+    auto emitCopyFourteenthExistingSlot = [&](int32_t sourceSlotIndex, int32_t destSlotIndex) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+      emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(sourceSlotIndex * IrSlotBytesI32));
+      emitInstruction(IrOpcode::AddI64, 0);
+      emitInstruction(IrOpcode::LoadIndirect, 0);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fourteenthGrownBaseLocal + destSlotIndex));
+    };
+    emitCopyFourteenthExistingSlot(1, 1);
+    emitCopyFourteenthExistingSlot(2, 2);
+    emitCopyFourteenthExistingSlot(3, 3);
+    emitCopyFourteenthExistingSlot(4, 4);
+    emitCopyFourteenthExistingSlot(5, 5);
+    emitCopyFourteenthExistingSlot(6, 6);
+    emitCopyFourteenthExistingSlot(7, 7);
+    emitCopyFourteenthExistingSlot(8, 8);
+    emitCopyFourteenthExistingSlot(9, 9);
+    emitCopyFourteenthExistingSlot(10, 10);
+    emitCopyFourteenthExistingSlot(11, 11);
+    emitCopyFourteenthExistingSlot(12, 12);
+    emitCopyFourteenthExistingSlot(13, 13);
+    emitCopyFourteenthExistingSlot(14, 14);
+    emitCopyFourteenthExistingSlot(15, 15);
+    emitCopyFourteenthExistingSlot(16, 16);
+    emitCopyFourteenthExistingSlot(17, 17);
+    emitCopyFourteenthExistingSlot(18, 18);
+    emitCopyFourteenthExistingSlot(19, 19);
+    emitCopyFourteenthExistingSlot(20, 20);
+    emitCopyFourteenthExistingSlot(21, 21);
+    emitCopyFourteenthExistingSlot(22, 22);
+    emitCopyFourteenthExistingSlot(23, 23);
+    emitCopyFourteenthExistingSlot(24, 24);
+    emitCopyFourteenthExistingSlot(25, 25);
+    emitCopyFourteenthExistingSlot(26, 26);
+    emitCopyFourteenthExistingSlot(27, 27);
+    emitCopyFourteenthExistingSlot(28, 28);
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fourteenthGrownBaseLocal + 29));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fourteenthGrownBaseLocal + 30));
+    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(fourteenthGrownBaseLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+    jumpAfterFourteenthGrow = instructionCount();
+    emitInstruction(IrOpcode::Jump, 0);
+    hasFourteenthGrowJump = true;
+
+    patchInstructionImm(jumpPendingAfterFourteenth, static_cast<uint64_t>(instructionCount()));
   }
   emitPending();
 
@@ -1237,6 +1326,9 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   }
   if (hasThirteenthGrowJump) {
     patchInstructionImm(jumpAfterThirteenthGrow, static_cast<uint64_t>(instructionCount()));
+  }
+  if (hasFourteenthGrowJump) {
+    patchInstructionImm(jumpAfterFourteenthGrow, static_cast<uint64_t>(instructionCount()));
   }
   return true;
 }
