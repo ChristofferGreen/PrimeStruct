@@ -247,6 +247,10 @@ TEST_CASE("compiles and runs native experimental map field assignments") {
   expectExperimentalMapFieldAssignConformance("native");
 }
 
+TEST_CASE("compiles and runs native dereferenced experimental map storage references") {
+  expectExperimentalMapStorageReferenceConformance("native");
+}
+
 TEST_CASE("compiles and runs native helper-wrapped Result.ok experimental map result struct fields") {
   expectWrappedExperimentalMapResultFieldAssignConformance("native");
 }

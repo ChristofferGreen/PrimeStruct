@@ -236,6 +236,10 @@ TEST_CASE("compiles and runs experimental map field assignments through canonica
   expectExperimentalMapFieldAssignConformance("exe");
 }
 
+TEST_CASE("compiles and runs dereferenced experimental map storage references in C++ emitter") {
+  expectExperimentalMapStorageReferenceConformance("exe");
+}
+
 TEST_CASE("compiles and runs helper-wrapped Result.ok experimental map result struct fields in C++ emitter") {
   expectWrappedExperimentalMapResultFieldAssignConformance("exe");
 }

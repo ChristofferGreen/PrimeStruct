@@ -280,6 +280,10 @@ TEST_CASE("runs vm helper-wrapped Result.ok experimental map result struct field
   expectWrappedExperimentalMapResultFieldAssignConformance("vm");
 }
 
+TEST_CASE("runs vm dereferenced experimental map storage references") {
+  expectExperimentalMapStorageReferenceConformance("vm");
+}
+
 TEST_CASE("runs vm helper-wrapped dereferenced Result.ok experimental map result struct fields") {
   expectWrappedExperimentalMapResultDerefFieldAssignConformance("vm");
 }
