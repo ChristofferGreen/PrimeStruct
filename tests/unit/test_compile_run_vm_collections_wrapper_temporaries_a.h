@@ -332,6 +332,10 @@ TEST_CASE("rejects vm builtin canonical map inserts with pending runtime diagnos
   expectBuiltinCanonicalMapInsertPendingDiagnostic("vm");
 }
 
+TEST_CASE("runs vm builtin canonical map insert overwrites") {
+  expectBuiltinCanonicalMapInsertOverwriteConformance("vm");
+}
+
 TEST_CASE("rejects vm canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("vm");
 }

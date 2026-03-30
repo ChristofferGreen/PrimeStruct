@@ -340,7 +340,6 @@ bool emitMapLookupTryAt(
 }
 
 bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
-    int32_t valuesLocal,
     int32_t ptrLocal,
     int32_t keyLocal,
     int32_t valueLocal,
@@ -359,145 +358,6 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   const size_t jumpFound = instructionCount();
   emitInstruction(IrOpcode::JumpIfZero, 0);
 
-  size_t jumpAfterGenericGrow = 0;
-  bool hasGenericGrowJump = false;
-  if (valuesLocal >= 0) {
-    constexpr uint64_t kHeapAddressTag = 1ull << 63;
-
-    const int32_t genericNewCountLocal = allocTempLocal();
-    const int32_t genericNewSlotCountLocal = allocTempLocal();
-    const int32_t genericOldSlotCountLocal = allocTempLocal();
-    const int32_t genericGrownPtrLocal = allocTempLocal();
-    const int32_t genericIsHeapBackedLocal = allocTempLocal();
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
-    emitInstruction(IrOpcode::PushI32, 1);
-    emitInstruction(IrOpcode::AddI32, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericNewCountLocal));
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericNewCountLocal));
-    emitInstruction(IrOpcode::PushI32, 2);
-    emitInstruction(IrOpcode::MulI32, 0);
-    emitInstruction(IrOpcode::PushI32, 1);
-    emitInstruction(IrOpcode::AddI32, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericNewSlotCountLocal));
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
-    emitInstruction(IrOpcode::PushI32, 2);
-    emitInstruction(IrOpcode::MulI32, 0);
-    emitInstruction(IrOpcode::PushI32, 1);
-    emitInstruction(IrOpcode::AddI32, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericOldSlotCountLocal));
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
-    emitInstruction(IrOpcode::PushI64, kHeapAddressTag);
-    emitInstruction(IrOpcode::CmpGeU64, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericIsHeapBackedLocal));
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericIsHeapBackedLocal));
-    const size_t jumpGenericLocalCopy = instructionCount();
-    emitInstruction(IrOpcode::JumpIfZero, 0);
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericNewSlotCountLocal));
-    emitInstruction(IrOpcode::HeapRealloc, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-    const size_t jumpGenericAfterAllocate = instructionCount();
-    emitInstruction(IrOpcode::Jump, 0);
-
-    const size_t genericLocalCopyIndex = instructionCount();
-    patchInstructionImm(jumpGenericLocalCopy, static_cast<uint64_t>(genericLocalCopyIndex));
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericNewSlotCountLocal));
-    emitInstruction(IrOpcode::HeapAlloc, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-
-    const int32_t genericCopyIndexLocal = allocTempLocal();
-    const int32_t genericSrcPtrLocal = allocTempLocal();
-    const int32_t genericDestPtrLocal = allocTempLocal();
-    const int32_t genericCopyValueLocal = allocTempLocal();
-
-    emitInstruction(IrOpcode::PushI32, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericCopyIndexLocal));
-
-    const size_t genericCopyLoopStart = instructionCount();
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericCopyIndexLocal));
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericOldSlotCountLocal));
-    emitInstruction(IrOpcode::CmpLtI32, 0);
-    const size_t jumpGenericCopyDone = instructionCount();
-    emitInstruction(IrOpcode::JumpIfZero, 0);
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericCopyIndexLocal));
-    emitInstruction(IrOpcode::PushI32, IrSlotBytesI32);
-    emitInstruction(IrOpcode::MulI32, 0);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericSrcPtrLocal));
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericCopyIndexLocal));
-    emitInstruction(IrOpcode::PushI32, IrSlotBytesI32);
-    emitInstruction(IrOpcode::MulI32, 0);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericDestPtrLocal));
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericSrcPtrLocal));
-    emitInstruction(IrOpcode::LoadIndirect, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericCopyValueLocal));
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericDestPtrLocal));
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericCopyValueLocal));
-    emitInstruction(IrOpcode::StoreIndirect, 0);
-    emitInstruction(IrOpcode::Pop, 0);
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericCopyIndexLocal));
-    emitInstruction(IrOpcode::PushI32, 1);
-    emitInstruction(IrOpcode::AddI32, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(genericCopyIndexLocal));
-    emitInstruction(IrOpcode::Jump, static_cast<uint64_t>(genericCopyLoopStart));
-
-    const size_t genericCopyDoneIndex = instructionCount();
-    patchInstructionImm(jumpGenericCopyDone, static_cast<uint64_t>(genericCopyDoneIndex));
-    patchInstructionImm(jumpGenericAfterAllocate, static_cast<uint64_t>(instructionCount()));
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericNewCountLocal));
-    emitInstruction(IrOpcode::StoreIndirect, 0);
-    emitInstruction(IrOpcode::Pop, 0);
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
-    emitInstruction(IrOpcode::PushI32, 2);
-    emitInstruction(IrOpcode::MulI32, 0);
-    emitInstruction(IrOpcode::PushI32, 1);
-    emitInstruction(IrOpcode::AddI32, 0);
-    emitInstruction(IrOpcode::PushI32, IrSlotBytesI32);
-    emitInstruction(IrOpcode::MulI32, 0);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
-    emitInstruction(IrOpcode::StoreIndirect, 0);
-    emitInstruction(IrOpcode::Pop, 0);
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
-    emitInstruction(IrOpcode::PushI32, 2);
-    emitInstruction(IrOpcode::MulI32, 0);
-    emitInstruction(IrOpcode::PushI32, 2);
-    emitInstruction(IrOpcode::AddI32, 0);
-    emitInstruction(IrOpcode::PushI32, IrSlotBytesI32);
-    emitInstruction(IrOpcode::MulI32, 0);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
-    emitInstruction(IrOpcode::StoreIndirect, 0);
-    emitInstruction(IrOpcode::Pop, 0);
-
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
-    jumpAfterGenericGrow = instructionCount();
-    emitInstruction(IrOpcode::Jump, 0);
-    hasGenericGrowJump = true;
-  }
-
   emitPending();
 
   const size_t foundIndex = instructionCount();
@@ -515,10 +375,6 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
   emitInstruction(IrOpcode::StoreIndirect, 0);
   emitInstruction(IrOpcode::Pop, 0);
-
-  if (hasGenericGrowJump) {
-    patchInstructionImm(jumpAfterGenericGrow, static_cast<uint64_t>(instructionCount()));
-  }
   return true;
 }
 
