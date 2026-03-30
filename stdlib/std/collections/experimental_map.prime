@@ -104,7 +104,25 @@ namespace std {
 
     [public effects(heap_alloc)]
     Destroy() {
+      mapDestroyVector<K>(this.keys)
+      mapDestroyVector<V>(this.payloads)
     }
+  }
+
+  [effects(heap_alloc), return<void>]
+  mapDestroyVector<T>([Vector<T> mut] values) {
+    if(values.ownsData,
+       then() {
+         /std/collections/experimental_vector/vectorCheckShape<T>(values)
+         /std/collections/experimental_vector/vectorDropRange<T>(
+             values,
+             /std/collections/experimental_vector/vectorCount<T>(values))
+         /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(values.data)
+         assign(values.ownsData, false)
+         values.set_field_count(0i32)
+         values.set_field_capacity(0i32)
+       },
+       else() { })
   }
 
   [return<i32> Comparable<K>]

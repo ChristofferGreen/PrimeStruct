@@ -90,6 +90,35 @@ main() {
   CHECK(ast.find("Green{/Colors(1)}") != std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic shows experimental map destroy cleanup") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+
+[return<int>]
+main() {
+  [Map<string, i32> mut] values{mapSingle<string, i32>("left"raw_utf8, 4i32)}
+  return(mapCount<string, i32>(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_experimental_map_destroy.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_experimental_map_destroy.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mapDestroyPos =
+      ast.find("[public, effects(heap_alloc)] /std/collections/experimental_map/Map__");
+  CHECK(mapDestroyPos != std::string::npos);
+  const size_t keysDestroyPos = ast.find("mapDestroyVector__", mapDestroyPos);
+  CHECK(keysDestroyPos != std::string::npos);
+  CHECK(ast.find("this.keys", keysDestroyPos) != std::string::npos);
+  const size_t payloadsDestroyPos = ast.find("mapDestroyVector__", keysDestroyPos + 1);
+  CHECK(payloadsDestroyPos != std::string::npos);
+  CHECK(ast.find("this.payloads", payloadsDestroyPos) != std::string::npos);
+}
+
 TEST_CASE("dump ast_semantic alias works") {
   const std::string source = R"(
 [return<int>]
@@ -339,4 +368,3 @@ main() {
   CHECK(diagnostics.find("\"column\":0") == std::string::npos);
   CHECK(diagnostics.find("\"related_spans\":[]") != std::string::npos);
 }
-
