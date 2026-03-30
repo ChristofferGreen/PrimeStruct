@@ -2,8 +2,7 @@
 #include "EmitterExprCollectionTypeHelpers.h"
 #include "EmitterExprCollectionFallbackHelpers.h"
   std::string resolvedFull = full;
-  if (!isExplicitVectorCountCapacityDirectCall(expr) &&
-      !isExplicitVectorAccessAliasDirectCall(expr)) {
+  if (!isExplicitVectorCountCapacityDirectCall(expr)) {
     resolvedFull = preferStructReturningCollectionHelperPath(full);
   }
   auto it = nameMap.find(resolvedFull);
