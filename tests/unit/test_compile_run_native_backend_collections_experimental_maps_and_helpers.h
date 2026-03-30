@@ -311,6 +311,10 @@ TEST_CASE("compiles and runs native builtin canonical map pair-growth inserts") 
   expectBuiltinCanonicalMapInsertPairGrowthConformance("native");
 }
 
+TEST_CASE("compiles and runs native builtin canonical map triple-growth inserts") {
+  expectBuiltinCanonicalMapInsertTripleGrowthConformance("native");
+}
+
 TEST_CASE("compiles and runs native builtin canonical map insert overwrites") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("native");
 }

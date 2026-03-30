@@ -1324,8 +1324,9 @@ for(
     route both `.insert(...)` method sugar and direct canonical `/std/collections/map/insert(...)` calls through a
     temporary helper that performs the real in-place overwrite path when the numeric key already exists, grows an
     empty builtin numeric map to its first entry by repointing the owning local handle, grows a single-entry builtin
-    numeric map to a pair by repointing that same owning handle, and still reports the deterministic
-    `builtin canonical map insert pending` diagnostic for the remaining larger non-empty new-key growth path, borrowed
+    numeric map to a pair by repointing that same owning handle, grows a two-entry builtin numeric map to a triple by
+    repointing that same owning handle, and still reports the deterministic `builtin canonical map insert pending`
+    diagnostic for the remaining larger non-empty new-key growth path, borrowed
     references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit cleanup now run through
     the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly `drop(...)`ing and
     `init(...)`ing payload slots. Borrowed
