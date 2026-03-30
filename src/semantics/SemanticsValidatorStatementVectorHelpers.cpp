@@ -467,13 +467,20 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
        vectorHelperResolved == "/std/collections/vector/clear" ||
        vectorHelperResolved == "/std/collections/vector/remove_at" ||
        vectorHelperResolved == "/std/collections/vector/remove_swap");
+  const bool isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall =
+      !stmt.isMethodCall &&
+      stmt.namespacePrefix.empty() &&
+      stmt.name == vectorHelper &&
+      (vectorHelper == "remove_at" || vectorHelper == "remove_swap") &&
+      vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0;
   if (isCanonicalStdVectorMutatorMethodCall &&
       !hasDeclaredDefinitionPath(vectorHelperResolved) &&
       !hasImportedDefinitionPath(vectorHelperResolved)) {
     error_ = "unknown method: " + vectorHelperResolved;
     return false;
   }
-  if (!shouldUseCanonicalBuiltinCompatibilityFallback &&
+  if (!isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall &&
+      !shouldUseCanonicalBuiltinCompatibilityFallback &&
       (hasDeclaredDefinitionPath(vectorHelperResolved) || hasImportedDefinitionPath(vectorHelperResolved))) {
     Expr helperCall = stmt;
     helperCall.name = vectorHelperResolved;

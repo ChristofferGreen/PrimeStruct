@@ -250,6 +250,10 @@ TEST_CASE("compiles and runs canonical vector discard helpers with owned element
   expectCanonicalVectorDiscardOwnershipConformance("native");
 }
 
+TEST_CASE("compiles and runs canonical vector indexed removal helpers with owned elements in native backend") {
+  expectCanonicalVectorIndexedRemovalOwnershipConformance("native");
+}
+
 TEST_CASE("rejects native vector reserve with non-relocation-trivial elements") {
   const std::string source = R"(
 import /std/collections/*

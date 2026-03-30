@@ -1304,8 +1304,9 @@ for(
     named-argument canonical constructor calls now resolve through same-path fixed-arity
     `/std/collections/vector/vector` overloads instead of helper-path rewrites for those same inferred and temporary
     receiver cases. Canonical `/std/collections/vector/*` `pop` / `clear` helpers now reuse that same experimental
-    discard path for ownership-sensitive element types on explicit experimental `Vector<T>` bindings, while
-    indexed-removal ownership remains part of the separate move/compaction follow-up.
+    discard path for ownership-sensitive element types on explicit experimental `Vector<T>` bindings, and canonical
+    `/std/collections/vector/*` `remove_at` / `remove_swap` helpers now reuse the experimental indexed-removal path
+    for those same explicit experimental `Vector<T>` bindings.
   - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_map/*` (`Entry<K, V>`,
     `entry(key, value)`, `map<K, V>(entries...)`, `mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`,
     `mapQuint`, `mapSext`, `mapSept`, `mapOct`, `mapInsert`, `mapCount`, `mapContains`, `mapTryAt`, `mapAt`,
@@ -2271,7 +2272,9 @@ bad_use_after_take() {
     `Destroy` hooks are rejected for builtin `pop`/`clear`.
   - Current indexed-removal contract: builtin `remove_at` and `remove_swap` are only defined for element types that are
     both drop-trivial and relocation-trivial while removed-element destruction plus survivor compaction/swap semantics
-    for non-trivial types are still being specified.
+    for non-trivial types are still being specified. Canonical `/std/collections/vector/*` indexed-removal helpers on
+    explicit experimental `Vector<T>` bindings are exempt from that builtin restriction because they route onto the
+    experimental `.prime` implementation instead.
   - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types
     while container move/reallocation semantics are still being specified. Relocation-trivial currently includes scalar
     primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of relocation-trivial elements, and concrete structs that

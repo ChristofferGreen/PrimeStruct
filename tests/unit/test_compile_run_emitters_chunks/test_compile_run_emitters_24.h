@@ -565,6 +565,10 @@ TEST_CASE("compiles and runs canonical vector discard helpers with owned element
   expectCanonicalVectorDiscardOwnershipConformance("exe");
 }
 
+TEST_CASE("compiles and runs canonical vector indexed removal helpers with owned elements in C++ emitter") {
+  expectCanonicalVectorIndexedRemovalOwnershipConformance("exe");
+}
+
 TEST_CASE("rejects vector reserve with non-relocation-trivial elements in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

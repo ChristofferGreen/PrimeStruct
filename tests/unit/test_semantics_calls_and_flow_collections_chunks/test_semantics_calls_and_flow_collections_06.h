@@ -153,6 +153,44 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical vector indexed removal helpers accept ownership-sensitive explicit Vector bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[struct]
+Owned() {
+  [i32] value{0i32}
+
+  Destroy() {
+  }
+}
+
+[struct]
+Wrapper() {
+  [Owned] value{Owned()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<Owned> mut] removed{/std/collections/vectorPair<Owned>(Owned(4i32), Owned(9i32))}
+  remove_at(removed, 0i32)
+  [Vector<Wrapper> mut] swapped{/std/collections/vectorTriple<Wrapper>(
+      Wrapper(Owned(1i32)),
+      Wrapper(Owned(7i32)),
+      Wrapper(Owned(11i32)))}
+  remove_swap(swapped, 0i32)
+  return(plus(
+      plus(/std/collections/vector/count<Owned>(removed), /std/collections/vector/at<Owned>(removed, 0i32).value),
+      plus(/std/collections/vector/count<Wrapper>(swapped),
+           /std/collections/vector/at_unsafe<Wrapper>(swapped, 0i32).value.value)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical vector helpers still require stdlib imports for experimental vector receivers") {
   const std::string source = R"(
 import /std/collections/experimental_vector/*
