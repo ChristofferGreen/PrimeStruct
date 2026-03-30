@@ -2324,8 +2324,8 @@ bad_use_after_take() {
     template-arity checks, and deterministic element-field envelope diagnostics such as `soa_vector field envelope is
     unsupported on /Type/field/...: ...` for disallowed direct or nested fields). Builtin `count`/`get`/`ref` validation
     and current lowering behavior remain temporary scaffolding while the language grows the substrate needed for a real
-    stdlib-owned implementation. Today, explicit AoS/SoA conversion helpers validate (`to_soa(vector<T>)`,
-    `to_aos(soa_vector<T>)`), method-form/call-form field-view names emit deterministic semantic diagnostics
+    stdlib-owned implementation. Today, explicit AoS/SoA conversion helpers validate in both call and method form
+    (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`, `vector<T>.to_soa()`, `soa_vector<T>.to_aos()`), method-form/call-form field-view names emit deterministic semantic diagnostics
     (`soa_vector field views are not implemented yet: <field>`) unless a user-defined `/soa_vector/<field>` helper is
     present, `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, and empty
     `soa_vector<T>()` literals lower to header-only storage. Non-empty SoA literals and draft helper paths still emit

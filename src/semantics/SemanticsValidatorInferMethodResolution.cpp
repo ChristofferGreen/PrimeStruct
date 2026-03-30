@@ -161,6 +161,14 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = "/soa_vector/" + normalizedMethodName;
       return true;
     }
+    if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
+      resolvedOut = "/to_soa";
+      return true;
+    }
+    if (normalizedMethodName == "to_aos" && collectionTypePath == "/soa_vector") {
+      resolvedOut = "/to_aos";
+      return true;
+    }
     return false;
   };
   auto preferredExperimentalMapReferenceMethodTarget = [&](const std::string &helperName) {

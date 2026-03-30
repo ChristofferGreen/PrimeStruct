@@ -47,11 +47,33 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
   }
+  auto stripReceiverPrefix = [&](std::string candidate) {
+    if (!candidate.empty() && candidate.front() == '/') {
+      candidate.erase(candidate.begin());
+    }
+    return candidate;
+  };
   auto isVectorReceiverTarget = [&](const std::string &candidate) {
-    return candidate == "vector" || candidate == "std/collections/vector";
+    const std::string normalized = stripReceiverPrefix(candidate);
+    return normalized == "vector" || normalized.rfind("vector<", 0) == 0 ||
+           normalized == "std/collections/vector" || normalized.rfind("std/collections/vector<", 0) == 0 ||
+           normalized == "Vector" || normalized.rfind("Vector<", 0) == 0 ||
+           normalized == "std/collections/experimental_vector/Vector" ||
+           normalized.rfind("std/collections/experimental_vector/Vector<", 0) == 0;
+  };
+  auto isSoaVectorReceiverTarget = [&](const std::string &candidate) {
+    const std::string normalized = stripReceiverPrefix(candidate);
+    return normalized == "soa_vector" || normalized.rfind("soa_vector<", 0) == 0 ||
+           normalized == "std/collections/soa_vector" ||
+           normalized.rfind("std/collections/soa_vector<", 0) == 0;
   };
   auto isMapReceiverTarget = [&](const std::string &candidate) {
-    return candidate == "map" || candidate == "std/collections/map";
+    const std::string normalized = stripReceiverPrefix(candidate);
+    return normalized == "map" || normalized.rfind("map<", 0) == 0 ||
+           normalized == "std/collections/map" || normalized.rfind("std/collections/map<", 0) == 0 ||
+           normalized == "Map" || normalized.rfind("Map<", 0) == 0 ||
+           normalized == "std/collections/experimental_map/Map" ||
+           normalized.rfind("std/collections/experimental_map/Map<", 0) == 0;
   };
   auto isBufferReceiverTarget = [&](const std::string &candidate) {
     return candidate == "Buffer" || candidate == "std/gfx/Buffer" || candidate == "std/gfx/experimental/Buffer";
@@ -215,6 +237,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
                    ? "/std/collections/map"
                    : normalizedResolvedTypePath);
     const std::string resolved = resolvedBase + "/" + normalizedMethodName;
+    if ((normalizedMethodName == "to_soa" && isVectorReceiverTarget(resolvedTypeWithoutSlash)) ||
+        (normalizedMethodName == "to_aos" && isSoaVectorReceiverTarget(resolvedTypeWithoutSlash))) {
+      errorOut.clear();
+      return nullptr;
+    }
     if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut = "unknown method: " + resolved;
       return nullptr;
@@ -262,6 +289,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
                  ? "/std/collections/map"
                  : "/" + normalizedTypeName);
   const std::string resolved = resolvedBase + "/" + normalizedMethodName;
+  if ((normalizedMethodName == "to_soa" && isVectorReceiverTarget(normalizedTypeName)) ||
+      (normalizedMethodName == "to_aos" && isSoaVectorReceiverTarget(normalizedTypeName))) {
+    errorOut.clear();
+    return nullptr;
+  }
   if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(normalizedTypeName)) {
     errorOut = "unknown method: " + resolved;
     return nullptr;

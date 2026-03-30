@@ -777,7 +777,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           return true;
         }
       }
-      if (!target.isMethodCall && isSimpleCallName(target, "to_aos") && target.args.size() == 1) {
+      if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
+           resolveCalleePath(target) == "/to_aos") &&
+          target.args.size() == 1) {
         std::string sourceElemType;
         const Expr &source = target.args.front();
         if (resolveSoaVectorTarget(source, sourceElemType)) {
@@ -806,8 +808,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                 source.templateArgs.size() == 1) {
               sourceElemType = source.templateArgs.front();
             }
-            if (sourceElemType.empty() && !source.isMethodCall && isSimpleCallName(source, "to_soa") &&
-                source.args.size() == 1) {
+            if (sourceElemType.empty() &&
+                (((!source.isMethodCall && isSimpleCallName(source, "to_soa")) ||
+                  resolveCalleePath(source) == "/to_soa") &&
+                 source.args.size() == 1)) {
               if (!resolveVectorTarget(source.args.front(), sourceElemType)) {
                 return false;
               }
@@ -874,7 +878,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         }
         return true;
       }
-      if (!target.isMethodCall && isSimpleCallName(target, "to_soa") && target.args.size() == 1) {
+      if (((!target.isMethodCall && isSimpleCallName(target, "to_soa")) ||
+           resolveCalleePath(target) == "/to_soa") &&
+          target.args.size() == 1) {
         return resolveVectorTarget(target.args.front(), elemType);
       }
     }
@@ -1537,6 +1543,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if ((normalizedMethodName == "get" || normalizedMethodName == "ref") &&
         collectionTypePath == "/soa_vector") {
       return setCollectionMethodTarget("/soa_vector/" + normalizedMethodName);
+    }
+    if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
+      return setCollectionMethodTarget("/to_soa");
+    }
+    if (normalizedMethodName == "to_aos" && collectionTypePath == "/soa_vector") {
+      return setCollectionMethodTarget("/to_aos");
     }
     return false;
   };
@@ -2306,6 +2318,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     resolvedOut = explicitVectorHelperPath;
     isBuiltinOut = false;
     return true;
+  }
+  if (normalizedMethodName == "to_soa" && normalizedTypeName == "vector") {
+    return setCollectionMethodTarget("/to_soa");
+  }
+  if (normalizedMethodName == "to_aos" && normalizedTypeName == "soa_vector") {
+    return setCollectionMethodTarget("/to_aos");
   }
   if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&
       (normalizedMethodName == "count" || normalizedMethodName == "contains" ||

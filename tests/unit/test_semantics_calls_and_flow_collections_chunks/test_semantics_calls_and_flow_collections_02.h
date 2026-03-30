@@ -489,6 +489,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("to_soa method validates on vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  values.to_soa()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit to_soa slash-method validates on vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  values./to_soa()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("to_aos helper validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {
@@ -499,6 +535,42 @@ Particle() {
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   to_aos(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("to_aos method validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values.to_aos()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit to_aos slash-method validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values./to_aos()
   return(0i32)
 }
 )";
@@ -589,6 +661,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("to_soa helper method-form falls back to user helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/to_soa([vector<Particle>] values) {
+  return(5i32)
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  return(values.to_soa())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("to_aos helper rejects non-soa target") {
   const std::string source = R"(
 Particle() {
@@ -622,6 +716,28 @@ Particle() {
 main() {
   [vector<Particle>] values{vector<Particle>()}
   return(to_aos(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("to_aos helper method-form falls back to user helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/to_aos([soa_vector<Particle>] values) {
+  return(6i32)
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  return(values.to_aos())
 }
 )";
   std::string error;

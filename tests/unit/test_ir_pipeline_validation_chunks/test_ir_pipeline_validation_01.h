@@ -547,6 +547,30 @@ main() {
   CHECK(error == "native backend requires typed bindings");
 }
 
+TEST_CASE("semantics accepts to_soa method forms before lowerer rejection") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  values.to_soa()
+  values./to_soa()
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend requires typed bindings");
+}
+
 TEST_CASE("semantics accepts to_aos before lowerer rejection") {
   const std::string source = R"(
 Particle() {
@@ -568,6 +592,30 @@ main() {
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error == "native backend requires typed bindings");
+}
+
+TEST_CASE("semantics accepts to_aos method forms before lowerer rejection") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values.to_aos()
+  values./to_aos()
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "native backend does not support to_aos");
 }
 
 TEST_CASE("semantics rejects soa_vector field-view before lowerer") {

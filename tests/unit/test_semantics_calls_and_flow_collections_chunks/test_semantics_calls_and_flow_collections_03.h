@@ -18,6 +18,8 @@ TEST_CASE("to_soa and to_aos reject named arguments for builtin calls") {
 
   checkNamedArgs("to_soa([values] values)");
   checkNamedArgs("to_aos([values] packed)");
+  checkNamedArgs("values.to_soa([values] values)");
+  checkNamedArgs("packed.to_aos([values] packed)");
 }
 
 TEST_CASE("soa_vector get and ref reject named arguments for builtin calls") {
@@ -87,6 +89,10 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
               "to_soa does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "to_aos<i32>(values)",
               "to_aos does not accept template arguments");
+  checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "values.to_soa<i32>()",
+              "to_soa does not accept template arguments");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "values.to_aos<i32>()",
+              "to_aos does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get<i32>(values, 0i32)",
               "get does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref<i32>(values, 0i32)",
@@ -118,6 +124,10 @@ TEST_CASE("soa_vector conversion and access builtins reject block arguments") {
               "block arguments require a definition target");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "to_aos(values) { return(values) }", "block arguments require a definition target");
+  checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "values.to_soa() { return(values) }",
+              "block arguments require a definition target");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
+              "values.to_aos() { return(values) }", "block arguments require a definition target");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "get(values, 0i32) { return(values) }", "block arguments require a definition target");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
@@ -144,6 +154,10 @@ TEST_CASE("soa_vector conversion and access builtins enforce argument counts") {
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa()",
               "argument count mismatch for builtin to_soa");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "to_aos(values, values)",
+              "argument count mismatch for builtin to_aos");
+  checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "values.to_soa(values)",
+              "argument count mismatch for builtin to_soa");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "values.to_aos(values)",
               "argument count mismatch for builtin to_aos");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get(values)",
               "argument count mismatch for builtin get");

@@ -262,6 +262,239 @@ std::string experimentalMapValueHelperName(std::string_view methodName) {
   return {};
 }
 
+bool isBuiltinVectorTypeText(const std::string &typeText) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
+  return normalizedType == "vector" || normalizedType.rfind("vector<", 0) == 0;
+}
+
+bool isBuiltinSoaVectorTypeText(const std::string &typeText) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
+  return normalizedType == "soa_vector" || normalizedType.rfind("soa_vector<", 0) == 0;
+}
+
+bool isBuiltinVectorBinding(const semantics::BindingInfo &binding) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
+  if (normalizedType == "Reference" || normalizedType == "Pointer") {
+    return false;
+  }
+  return isBuiltinVectorTypeText(bindingTypeText(binding));
+}
+
+bool isBuiltinSoaVectorBinding(const semantics::BindingInfo &binding) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
+  if (normalizedType == "Reference" || normalizedType == "Pointer") {
+    return false;
+  }
+  return isBuiltinSoaVectorTypeText(bindingTypeText(binding));
+}
+
+std::optional<semantics::BindingInfo> extractBuiltinVectorBinding(const Expr &expr) {
+  semantics::BindingInfo binding;
+  std::optional<std::string> restrictType;
+  std::string parseError;
+  static const std::unordered_set<std::string> emptyStructTypes;
+  static const std::unordered_map<std::string, std::string> emptyImportAliases;
+  if (!semantics::parseBindingInfo(
+          expr, expr.namespacePrefix, emptyStructTypes, emptyImportAliases, binding, restrictType, parseError)) {
+    return std::nullopt;
+  }
+  return isBuiltinVectorBinding(binding) ? std::optional<semantics::BindingInfo>(binding) : std::nullopt;
+}
+
+std::optional<semantics::BindingInfo> extractBuiltinSoaVectorBinding(const Expr &expr) {
+  semantics::BindingInfo binding;
+  std::optional<std::string> restrictType;
+  std::string parseError;
+  static const std::unordered_set<std::string> emptyStructTypes;
+  static const std::unordered_map<std::string, std::string> emptyImportAliases;
+  if (!semantics::parseBindingInfo(
+          expr, expr.namespacePrefix, emptyStructTypes, emptyImportAliases, binding, restrictType, parseError)) {
+    return std::nullopt;
+  }
+  return isBuiltinSoaVectorBinding(binding) ? std::optional<semantics::BindingInfo>(binding) : std::nullopt;
+}
+
+std::optional<semantics::BindingInfo> extractBuiltinVectorReturnBinding(const Definition &def) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    semantics::BindingInfo binding;
+    std::string base;
+    std::string argText;
+    const std::string normalizedReturnType =
+        semantics::normalizeBindingTypeName(transform.templateArgs.front());
+    if (semantics::splitTemplateTypeName(normalizedReturnType, base, argText)) {
+      if (semantics::normalizeBindingTypeName(base) == "Reference" ||
+          semantics::normalizeBindingTypeName(base) == "Pointer") {
+        continue;
+      }
+      binding.typeName = semantics::normalizeBindingTypeName(base);
+      binding.typeTemplateArg = argText;
+    } else {
+      binding.typeName = normalizedReturnType;
+    }
+    if (isBuiltinVectorBinding(binding)) {
+      return binding;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<semantics::BindingInfo> extractBuiltinSoaVectorReturnBinding(const Definition &def) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    semantics::BindingInfo binding;
+    std::string base;
+    std::string argText;
+    const std::string normalizedReturnType =
+        semantics::normalizeBindingTypeName(transform.templateArgs.front());
+    if (semantics::splitTemplateTypeName(normalizedReturnType, base, argText)) {
+      if (semantics::normalizeBindingTypeName(base) == "Reference" ||
+          semantics::normalizeBindingTypeName(base) == "Pointer") {
+        continue;
+      }
+      binding.typeName = semantics::normalizeBindingTypeName(base);
+      binding.typeTemplateArg = argText;
+    } else {
+      binding.typeName = normalizedReturnType;
+    }
+    if (isBuiltinSoaVectorBinding(binding)) {
+      return binding;
+    }
+  }
+  return std::nullopt;
+}
+
+std::string builtinSoaConversionMethodName(std::string_view methodName) {
+  std::string normalized(methodName);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  if (normalized.rfind("vector/", 0) == 0) {
+    normalized = normalized.substr(std::string("vector/").size());
+  } else if (normalized.rfind("soa_vector/", 0) == 0) {
+    normalized = normalized.substr(std::string("soa_vector/").size());
+  } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
+    normalized = normalized.substr(std::string("std/collections/vector/").size());
+  } else if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
+  }
+  if (normalized == "to_soa") {
+    return "to_soa";
+  }
+  if (normalized == "to_aos") {
+    return "to_aos";
+  }
+  return {};
+}
+
+void rewriteBuiltinSoaConversionMethodExpr(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace);
+
+void rewriteBuiltinSoaConversionMethodStatements(
+    std::vector<Expr> &statements,
+    std::unordered_map<std::string, semantics::BindingInfo> bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace) {
+  for (Expr &stmt : statements) {
+    rewriteBuiltinSoaConversionMethodExpr(
+        stmt, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+    if (!stmt.bodyArguments.empty()) {
+      auto bodyBindings = bindings;
+      rewriteBuiltinSoaConversionMethodStatements(
+          stmt.bodyArguments, bodyBindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+    }
+    if (stmt.isBinding) {
+      if (auto vectorBinding = extractBuiltinVectorBinding(stmt); vectorBinding.has_value()) {
+        bindings[stmt.name] = *vectorBinding;
+      } else if (auto soaBinding = extractBuiltinSoaVectorBinding(stmt); soaBinding.has_value()) {
+        bindings[stmt.name] = *soaBinding;
+      }
+    }
+  }
+}
+
+void rewriteBuiltinSoaConversionMethodExpr(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace) {
+  (void)bindings;
+  (void)vectorReturnDefinitions;
+  (void)soaVectorReturnDefinitions;
+  (void)definitionNamespace;
+  for (Expr &arg : expr.args) {
+    rewriteBuiltinSoaConversionMethodExpr(
+        arg, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+  }
+  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
+      expr.args.front().kind == Expr::Kind::Literal) {
+    return;
+  }
+  const std::string helperName = builtinSoaConversionMethodName(expr.name);
+  if (helperName.empty()) {
+    return;
+  }
+
+  expr.isMethodCall = false;
+  expr.isFieldAccess = false;
+  expr.name = helperName;
+  expr.namespacePrefix.clear();
+}
+
+bool rewriteBuiltinSoaConversionMethods(Program &program, std::string &error) {
+  error.clear();
+  std::unordered_map<std::string, semantics::BindingInfo> vectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  for (const Definition &def : program.definitions) {
+    if (auto binding = extractBuiltinVectorReturnBinding(def); binding.has_value()) {
+      vectorReturnDefinitions[def.fullPath] = *binding;
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
+        vectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+      }
+    }
+    if (auto binding = extractBuiltinSoaVectorReturnBinding(def); binding.has_value()) {
+      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
+        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+      }
+    }
+  }
+  for (Definition &def : program.definitions) {
+    std::unordered_map<std::string, semantics::BindingInfo> bindings;
+    for (const Expr &param : def.parameters) {
+      if (auto vectorBinding = extractBuiltinVectorBinding(param); vectorBinding.has_value()) {
+        bindings[param.name] = *vectorBinding;
+      } else if (auto soaBinding = extractBuiltinSoaVectorBinding(param); soaBinding.has_value()) {
+        bindings[param.name] = *soaBinding;
+      }
+    }
+    std::string definitionNamespace;
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash != std::string::npos && slash > 0) {
+      definitionNamespace = def.fullPath.substr(0, slash);
+    }
+    rewriteBuiltinSoaConversionMethodStatements(
+        def.statements, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+    if (def.returnExpr.has_value()) {
+      rewriteBuiltinSoaConversionMethodExpr(
+          *def.returnExpr, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+    }
+  }
+  return true;
+}
+
 void rewriteBorrowedExperimentalMapMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
@@ -852,6 +1085,9 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (!semantics::rewriteReflectionGeneratedHelpers(program, error)) {
+    return false;
+  }
+  if (!rewriteBuiltinSoaConversionMethods(program, error)) {
     return false;
   }
   if (!rewriteBorrowedExperimentalMapMethods(program, error)) {

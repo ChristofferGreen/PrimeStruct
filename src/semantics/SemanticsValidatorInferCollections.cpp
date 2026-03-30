@@ -473,7 +473,9 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         }
         return false;
       }
-      if (!target.isMethodCall && isSimpleCallName(target, "to_aos") && target.args.size() == 1) {
+      if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
+           resolveCalleePath(target) == "/to_aos") &&
+          target.args.size() == 1) {
         return state->resolveSoaVectorTarget(target.args.front(), elemType);
       }
     }
@@ -591,7 +593,9 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         }
         return true;
       }
-      if (!target.isMethodCall && isSimpleCallName(target, "to_soa") && target.args.size() == 1) {
+      if (((!target.isMethodCall && isSimpleCallName(target, "to_soa")) ||
+           resolveCalleePath(target) == "/to_soa") &&
+          target.args.size() == 1) {
         return state->resolveVectorTarget(target.args.front(), elemType);
       }
     }

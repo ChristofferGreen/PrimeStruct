@@ -163,9 +163,10 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return validateContainsBuiltin("contains");
   }
 
-  if (!resolvedMethod &&
-      (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
-      resolvedMissing) {
+  if ((!resolvedMethod &&
+       (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
+       resolvedMissing) ||
+      (resolvedMethod && (resolved == "/to_soa" || resolved == "/to_aos"))) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
         !(context.isNamedArgsPackMethodAccessCall != nullptr &&
@@ -176,7 +177,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return false;
     }
     const std::string helperName =
-        isSimpleCallName(expr, "to_soa") ? "to_soa" : "to_aos";
+        (isSimpleCallName(expr, "to_soa") || resolved == "/to_soa") ? "to_soa" : "to_aos";
     if (!expr.templateArgs.empty()) {
       error_ = helperName + " does not accept template arguments";
       return false;
