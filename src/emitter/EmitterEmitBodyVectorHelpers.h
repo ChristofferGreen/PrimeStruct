@@ -16,6 +16,7 @@
                   helperPath != explicitRequestedVectorHelperPath) {
                 helperPath.clear();
               } else {
+                helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
                 hasUserVectorHelper = nameMap.find(helperPath) != nameMap.end();
               }
             }
@@ -88,6 +89,8 @@
                 if (!explicitRequestedVectorHelperPath.empty() &&
                     helperPath != explicitRequestedVectorHelperPath) {
                   helperPath.clear();
+                } else {
+                  helperPath = preferVectorStdlibHelperPath(helperPath, nameMap);
                 }
               }
               if (resolvedMethodPath && !helperPath.empty() && nameMap.find(helperPath) != nameMap.end()) {
