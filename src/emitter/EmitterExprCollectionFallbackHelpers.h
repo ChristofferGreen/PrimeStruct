@@ -76,26 +76,6 @@
     }
     return preferVectorStdlibHelperPath(path, nameMap);
   };
-  auto preferBareMapHelperPath = [&](const Expr &candidate, const char *helperName) {
-    if (candidate.isMethodCall || !isSimpleCallName(candidate, helperName) || candidate.args.size() != 2) {
-      return std::string{};
-    }
-    if (!isResolvedMapTarget(candidate.args.front())) {
-      return std::string{};
-    }
-    const std::string canonicalPath = std::string("/std/collections/map/") + helperName;
-    if (nameMap.count(canonicalPath) > 0) {
-      return canonicalPath;
-    }
-    if (std::string_view(helperName) == "contains" || std::string_view(helperName) == "tryAt") {
-      return std::string{};
-    }
-    const std::string compatibilityPath = std::string("/map/") + helperName;
-    if (nameMap.count(compatibilityPath) > 0) {
-      return compatibilityPath;
-    }
-    return std::string{};
-  };
   auto preferExplicitVectorCountCapacityHelperPath = [&](const Expr &candidate, const std::string &path) {
     if (!isExplicitVectorCountCapacityDirectCall(candidate)) {
       return preferStructReturningCollectionHelperPath(path);
