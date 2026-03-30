@@ -35,7 +35,7 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  return(soaVectorCount<Particle>(values))
+  return(plus(values.count(), soaVectorCount<Particle>(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_helpers_exe.prime", source);

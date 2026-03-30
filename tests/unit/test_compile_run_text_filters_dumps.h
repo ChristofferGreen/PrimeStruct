@@ -119,6 +119,37 @@ main() {
   CHECK(ast.find("this.payloads", payloadsDestroyPos) != std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic shows experimental soa_vector wrapper count runtime") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_experimental_soa_vector_count.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_experimental_soa_vector_count.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t countPos =
+      ast.find("[public, return<i32>] /std/collections/experimental_soa_vector/SoaVector__");
+  CHECK(countPos != std::string::npos);
+  CHECK(ast.find("/count()", countPos) != std::string::npos);
+  CHECK(ast.find("return this.countValue", countPos) != std::string::npos);
+  CHECK(ast.find("/soa_vector/count(this.storage)", countPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast_semantic alias works") {
   const std::string source = R"(
 [return<int>]
