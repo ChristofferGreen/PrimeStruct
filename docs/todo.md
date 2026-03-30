@@ -25,7 +25,7 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   - ✓ Reject local bindings initialized from builtin `soa_vector ref(...)` until borrowed-view substrate exists.
   - ✓ Reject builtin `soa_vector ref(...)` escapes through call arguments and returns until borrowed-view substrate exists.
   - ✓ Reject builtin `soa_vector` field-view escapes through call arguments and returns until the field-view substrate exists.
-- ○ Land the minimum compile-time struct-field introspection/codegen needed for one `.prime` `soa_vector` implementation to derive SoA column schemas from `T`.
+- ✓ Land the minimum compile-time struct-field introspection/codegen needed for one `.prime` `soa_vector` implementation to derive SoA column schemas from `T`.
 - ○ Land the minimum column-storage substrate needed for one `.prime` `soa_vector` implementation: multi-column alloc/grow/free/read/write primitives with deterministic allocation-failure behavior.
 - ○ Land the minimum borrowed-view / invalidation substrate needed for one `.prime` `soa_vector` implementation so `ref(...)` and field views have language-level semantics independent of compiler-owned `soa_vector` paths.
 - ○ Add experimental stdlib `/std/collections/experimental_soa_vector/*` early with empty construction, `count`, SoA-safe type validation, and the smallest `.prime` storage/runtime path that exercises the new substrate.
