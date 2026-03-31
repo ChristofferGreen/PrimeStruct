@@ -187,7 +187,13 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         moduleRoot = root / "std" / relative;
       }
       if (!std::filesystem::exists(moduleRoot, ec)) {
-        continue;
+        std::filesystem::path moduleFile = moduleRoot;
+        moduleFile += ".prime";
+        if (std::filesystem::exists(moduleFile, ec)) {
+          moduleRoot = std::move(moduleFile);
+        } else {
+          continue;
+        }
       }
 
       auto appendFile = [&](const std::filesystem::path &filePath) -> bool {
