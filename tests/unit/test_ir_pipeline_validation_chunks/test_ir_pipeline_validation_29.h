@@ -177,8 +177,8 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == NativeResult::Error);
-  CHECK(error == "native backend does not support to_soa");
+            error) == NativeResult::NotHandled);
+  CHECK(error.empty());
 
   primec::Expr toAosExpr;
   toAosExpr.kind = primec::Expr::Kind::Call;

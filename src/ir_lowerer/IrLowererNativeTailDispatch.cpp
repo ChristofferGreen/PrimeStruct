@@ -108,11 +108,6 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     error = "native backend does not support math builtin: " + mathName;
     return NativeCallTailDispatchResult::Error;
   }
-  if (isSimpleCallName(expr, "to_soa") && expr.args.size() == 1 &&
-      isVectorTarget(expr.args.front(), localsIn)) {
-    error = "native backend does not support to_soa";
-    return NativeCallTailDispatchResult::Error;
-  }
   const auto countAccessResult = tryEmitCountAccessCall(
       expr,
       localsIn,

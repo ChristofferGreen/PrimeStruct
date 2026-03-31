@@ -2337,7 +2337,7 @@ bad_use_after_take() {
     persistence plus call-argument/return escapes with `soa_vector borrowed views are not implemented yet: ref`
     until the borrowed-view substrate exists.
     Non-empty SoA literals and remaining draft helper paths still emit deterministic unsupported diagnostics (`native
-    backend does not support non-empty soa_vector literals`, `native backend does not support to_soa`, `native backend does not
+    backend does not support non-empty soa_vector literals`, `native backend does not
     support soa_vector helper: push`, `native backend does not support
     soa_vector helper: reserve`). These compiler-owned `soa_vector` paths are
     not the intended end-state and are now tracked as separate cleanup follow-ups for the remaining semantics
@@ -2448,8 +2448,8 @@ borrowed-return paths now run successfully across the current backends without d
 conversion helper surface. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and
 non-empty wrapper state, while the remaining conversion-specific compiler-owned code is narrowed
-to the old root builtin `to_soa` rejection path plus invalid-target/user-shadow `to_aos`
-fallbacks rather than the stdlib helper route.
+to old root-builtin conversion scaffolding plus invalid-target/user-shadow `to_aos` fallbacks
+rather than the stdlib helper route.
 That single-column borrowed-slot substrate is the current completed foothold; the remaining
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental
