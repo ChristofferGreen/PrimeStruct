@@ -448,6 +448,37 @@ main() {
   CHECK(runCommand(exePath) == 60);
 }
 
+TEST_CASE("compiles and runs native experimental four-column soa storage helpers") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns4<i32, i32, i32, i32> mut] values{soaColumns4New<i32, i32, i32, i32>()}
+  soaColumns4Reserve<i32, i32, i32, i32>(values, 4i32)
+  soaColumns4Push<i32, i32, i32, i32>(values, 2i32, 3i32, 5i32, 7i32)
+  soaColumns4Push<i32, i32, i32, i32>(values, 11i32, 13i32, 17i32, 19i32)
+  soaColumns4Write<i32, i32, i32, i32>(values, 1i32, 23i32, 29i32, 31i32, 37i32)
+  [i32] total{plus(soaColumns4ReadFirst<i32, i32, i32, i32>(values, 0i32),
+                   plus(soaColumns4ReadSecond<i32, i32, i32, i32>(values, 1i32),
+                        plus(soaColumns4ReadThird<i32, i32, i32, i32>(values, 1i32),
+                             plus(soaColumns4ReadFourth<i32, i32, i32, i32>(values, 1i32),
+                                  plus(soaColumns4Count<i32, i32, i32, i32>(values),
+                                       soaColumns4Capacity<i32, i32, i32, i32>(values))))))}
+  soaColumns4Clear<i32, i32, i32, i32>(values)
+  return(plus(total, soaColumns4Count<i32, i32, i32, i32>(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_storage_four_columns.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_experimental_soa_storage_four_columns_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 105);
+}
+
 TEST_CASE("compiles and runs native templated stdlib wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*
