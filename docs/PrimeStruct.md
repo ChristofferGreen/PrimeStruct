@@ -2376,6 +2376,8 @@ bad_use_after_take() {
     `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`, `soaColumnPush<T>()`,
     `soaColumnRead<T>()`, `soaColumnWrite<T>()`, and `soaColumnClear<T>()`. This is a single-column primitive backed
     by checked buffer alloc/grow/free plus explicit `init(...)`, `drop(...)`, `take(...)`, and `borrow(...)` flows.
+    Its current allocation-failure contract is deterministic and matches the existing vector reserve overflow path:
+    oversized reserve requests report `vector reserve allocation failed (out of memory)`.
     It is the intended building block for future `.prime` `SoaVector<T>` column ownership, but it is not yet threaded
     into reflected multi-column schemas or wrapper borrowed-view/field-view surfaces.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record

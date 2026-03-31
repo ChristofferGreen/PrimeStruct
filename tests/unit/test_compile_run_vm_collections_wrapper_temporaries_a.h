@@ -254,6 +254,25 @@ main() {
   CHECK(runCommand(runCmd) == 14);
 }
 
+TEST_CASE("rejects vm experimental soa storage reserve overflow") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] values{soaColumnNew<i32>()}
+  soaColumnReserve<i32>(values, 1073741824i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_storage_reserve_overflow.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_storage_reserve_overflow_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "vector reserve allocation failed (out of memory)\n");
+}
+
 TEST_CASE("runs vm with stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*

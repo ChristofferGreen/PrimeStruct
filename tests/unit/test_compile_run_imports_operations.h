@@ -287,6 +287,31 @@ main() {
   CHECK(runCommand(exePath) == 14);
 }
 
+TEST_CASE("rejects experimental soa storage reserve overflow in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] values{soaColumnNew<i32>()}
+  soaColumnReserve<i32>(values, 1073741824i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_experimental_soa_storage_reserve_overflow_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_storage_reserve_overflow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_storage_reserve_overflow_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "vector reserve allocation failed (out of memory)\n");
+}
+
 TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
