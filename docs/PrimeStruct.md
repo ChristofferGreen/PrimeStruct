@@ -2400,9 +2400,10 @@ lowering also no longer depends on dedicated IR/emitter/backend/runtime conversi
 and valid root bare/direct/
 method `to_aos` calls on builtin `soa_vector<T>` bindings now rewrite onto that same canonical
 `/std/collections/soa_vector/to_aos` helper path when no visible user `/to_aos` helper shadows
-them. Valid root bare/method/old-explicit `get` and `ref` calls on builtin `soa_vector<T>`
-bindings likewise now rewrite onto `/std/collections/soa_vector/get` and
-`/std/collections/soa_vector/ref` when no visible root or same-path user helper shadows them.
+them. Valid root bare/method/old-explicit `count`, `get`, and `ref` calls on builtin
+`soa_vector<T>` bindings likewise now rewrite onto `/std/collections/soa_vector/count`,
+`/std/collections/soa_vector/get`, and `/std/collections/soa_vector/ref` when no visible root
+or same-path user helper shadows them.
 Valid root bare/method/old-explicit `push` and `reserve` calls on builtin `soa_vector<T>`
 bindings now likewise rewrite onto `/std/collections/soa_vector/push` and
 `/std/collections/soa_vector/reserve` when no visible root or same-path user helper shadows

@@ -335,6 +335,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("explicit soa_vector count forms keep canonical reject on vector target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  /soa_vector/count(values)
+  values./soa_vector/count()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("/std/collections/soa_vector/count") != std::string::npos);
+}
+
 TEST_CASE("experimental soa_vector stdlib helpers validate on builtin soa_vector binding") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

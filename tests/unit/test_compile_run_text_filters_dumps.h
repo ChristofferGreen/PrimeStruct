@@ -182,6 +182,36 @@ main() {
   CHECK(ast.find("return /std/collections/soa_vector/get__", mainPos) != std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites builtin soa_vector count forms to canonical helper path") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [int] total{plus(count(values), plus(/soa_vector/count(values), values./soa_vector/count()))}
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_builtin_soa_vector_count.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_builtin_soa_vector_count.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/count__", mainPos) != std::string::npos);
+  CHECK(ast.find("return /std/collections/soa_vector/count__", mainPos) == std::string::npos);
+  CHECK(ast.find("/soa_vector/count(values)", mainPos) == std::string::npos);
+  CHECK(ast.find("values./soa_vector/count()", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast_semantic alias works") {
   const std::string source = R"(
 [return<int>]

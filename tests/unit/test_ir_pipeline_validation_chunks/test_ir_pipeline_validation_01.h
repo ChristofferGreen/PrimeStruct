@@ -339,7 +339,7 @@ main() {
   CHECK_FALSE(module.functions[0].instructions.empty());
 }
 
-TEST_CASE("root count helper forms lower through generic inline fallback") {
+TEST_CASE("root count helper forms lower through canonical helper routing") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -350,6 +350,8 @@ main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [int] countA{count(values)}
   [int] countB{values.count()}
+  [int] countC{/soa_vector/count(values)}
+  [int] countD{values./soa_vector/count()}
 }
 )";
   primec::Program program;
