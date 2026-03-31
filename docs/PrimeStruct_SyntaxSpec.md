@@ -809,7 +809,9 @@ Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep th
 diagnostic, so those paths no longer depend on the old builtin conversion scaffolding. Inline lowering also
 no longer keeps a dedicated builtin `soa_vector` count/get/ref helper bridge, instead using the shared
 definition-resolution plus count/access fallback path for those helper shapes, and the old
-backend-specific root builtin `soa_vector` `push|reserve` rejection path is gone too.
+backend-specific root builtin `soa_vector` `push|reserve` rejection path is gone too. Lowerer
+count/access classifier fallback also no longer treats raw `/soa_vector/count` as a builtin count alias once
+semantics has canonicalized those old-surface forms earlier in validation.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

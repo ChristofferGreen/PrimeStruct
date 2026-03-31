@@ -258,6 +258,8 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   CHECK(isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK(isArrayCountCall(countEntry, locals));
+  countEntry.name = "/soa_vector/count";
+  CHECK_FALSE(isArrayCountCall(countEntry, locals));
 
   primec::ir_lowerer::LocalInfo vecInfo;
   vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
@@ -301,6 +303,8 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/std/collections/vector/count";
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  countEntry.name = "/soa_vector/count";
+  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
 
   primec::ir_lowerer::LocalInfo vecInfo;
   vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;

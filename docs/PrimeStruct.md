@@ -2427,7 +2427,9 @@ helper bridging is now gone as well, so those helper shapes flow through the sha
 definition-resolution plus count/access fallback path instead of a one-off SoA branch. Root
 builtin `push` and `reserve` forms now rewrite earlier onto the canonical helper surface as
 well, so the old backend-specific lowerer `soa_vector helper: push|reserve` rejection path is
-gone and the remaining helper-call cleanup is narrowed to the wildcard-imported follow-up.
+gone, and the lowerer count/access classifiers no longer treat raw `/soa_vector/count` as a
+builtin count alias once semantics has canonicalized those old-surface forms, so the remaining
+helper-call cleanup is narrowed to the wildcard-imported follow-up.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend
