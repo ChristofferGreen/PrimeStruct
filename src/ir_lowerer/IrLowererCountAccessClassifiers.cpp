@@ -22,6 +22,62 @@ bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
          helperName == "remove_at" || helperName == "remove_swap";
 }
 
+bool isCanonicalSoaToAosHelperCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.args.size() != 1 || expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  if (normalized.rfind("std/collections/soa_vector/to_aos", 0) == 0) {
+    return true;
+  }
+  return normalized == "to_aos" &&
+         (expr.namespacePrefix == "/std/collections/soa_vector" ||
+          expr.namespacePrefix == "std/collections/soa_vector");
+}
+
+bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn);
+
+bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    return it != localsIn.end() && it->second.isSoaVector;
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(target, collection) && collection == "soa_vector") {
+      return target.templateArgs.size() == 1;
+    }
+    if (!target.isMethodCall && isSimpleCallName(target, "to_soa") && target.args.size() == 1) {
+      return isVectorTargetImpl(target.args.front(), localsIn);
+    }
+  }
+  return false;
+}
+
+bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    return it != localsIn.end() &&
+           (it->second.kind == LocalInfo::Kind::Vector ||
+            (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector));
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(target, collection) && collection == "vector") {
+      return target.templateArgs.size() == 1;
+    }
+    if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
+         isCanonicalSoaToAosHelperCall(target)) &&
+        target.args.size() == 1) {
+      return isSoaVectorTargetImpl(target.args.front(), localsIn);
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool isExplicitArrayCountName(const Expr &expr) {
@@ -47,20 +103,7 @@ bool isExplicitVectorCompatibilityName(const Expr &expr, std::string_view helper
 }
 
 bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
-  if (target.kind == Expr::Kind::Name) {
-    auto it = localsIn.find(target.name);
-    return it != localsIn.end() &&
-           (it->second.kind == LocalInfo::Kind::Vector ||
-            (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector));
-  }
-  if (target.kind == Expr::Kind::Call) {
-    std::string collection;
-    if (!getBuiltinCollectionName(target, collection)) {
-      return false;
-    }
-    return collection == "vector" && target.templateArgs.size() == 1;
-  }
-  return false;
+  return isVectorTargetImpl(target, localsIn);
 }
 
 bool isDereferencedCollectionCountTarget(const Expr &countExpr, const Expr &target, const LocalMap &localsIn) {

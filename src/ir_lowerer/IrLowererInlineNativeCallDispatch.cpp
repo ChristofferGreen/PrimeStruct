@@ -10,6 +10,22 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isCanonicalSoaToAosHelperCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.args.size() != 1 || expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  if (normalized.rfind("std/collections/soa_vector/to_aos", 0) == 0) {
+    return true;
+  }
+  return normalized == "to_aos" &&
+         (expr.namespacePrefix == "/std/collections/soa_vector" ||
+          expr.namespacePrefix == "std/collections/soa_vector");
+}
+
 bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   auto matchesHelper = [&](std::string_view basePath) {
     return callee.fullPath == basePath ||
@@ -120,7 +136,9 @@ bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
     if (getBuiltinCollectionName(expr, collection) && collection == "vector") {
       return true;
     }
-    if (!expr.isMethodCall && isSimpleCallName(expr, "to_aos") && expr.args.size() == 1) {
+    if (((!expr.isMethodCall && isSimpleCallName(expr, "to_aos")) ||
+         isCanonicalSoaToAosHelperCall(expr)) &&
+        expr.args.size() == 1) {
       return isSoaVectorTarget(expr.args.front(), localsIn);
     }
   }

@@ -264,9 +264,16 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   primec::ir_lowerer::LocalInfo vecInfo;
   vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
   locals.emplace("values", vecInfo);
+  primec::ir_lowerer::LocalInfo soaInfo;
+  soaInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  soaInfo.isSoaVector = true;
+  locals.emplace("packed", soaInfo);
   primec::Expr valuesName;
   valuesName.kind = primec::Expr::Kind::Name;
   valuesName.name = "values";
+  primec::Expr packedName;
+  packedName.kind = primec::Expr::Kind::Name;
+  packedName.name = "packed";
   primec::Expr capacityCall;
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
@@ -274,6 +281,16 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
   capacityCall.name = "/std/collections/vector/capacity";
   CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr canonicalToAosCall;
+  canonicalToAosCall.kind = primec::Expr::Kind::Call;
+  canonicalToAosCall.name = "/std/collections/soa_vector/to_aos__t0";
+  canonicalToAosCall.args = {packedName};
+  primec::Expr countCanonicalToAos;
+  countCanonicalToAos.kind = primec::Expr::Kind::Call;
+  countCanonicalToAos.name = "count";
+  countCanonicalToAos.args = {canonicalToAosCall};
+  CHECK(isArrayCountCall(countCanonicalToAos, locals));
 
   primec::Expr stringCount;
   stringCount.kind = primec::Expr::Kind::Call;
@@ -309,9 +326,16 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   primec::ir_lowerer::LocalInfo vecInfo;
   vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
   locals.emplace("values", vecInfo);
+  primec::ir_lowerer::LocalInfo soaInfo;
+  soaInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  soaInfo.isSoaVector = true;
+  locals.emplace("packed", soaInfo);
   primec::Expr valuesName;
   valuesName.kind = primec::Expr::Kind::Name;
   valuesName.name = "values";
+  primec::Expr packedName;
+  packedName.kind = primec::Expr::Kind::Name;
+  packedName.name = "packed";
   primec::Expr capacityCall;
   capacityCall.kind = primec::Expr::Kind::Call;
   capacityCall.name = "capacity";
@@ -319,6 +343,15 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
   capacityCall.name = "/vector/capacity";
   CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
+  primec::Expr canonicalToAosCall;
+  canonicalToAosCall.kind = primec::Expr::Kind::Call;
+  canonicalToAosCall.name = "/std/collections/soa_vector/to_aos__t0";
+  canonicalToAosCall.args = {packedName};
+  primec::Expr countCanonicalToAos;
+  countCanonicalToAos.kind = primec::Expr::Kind::Call;
+  countCanonicalToAos.name = "count";
+  countCanonicalToAos.args = {canonicalToAosCall};
+  CHECK(classifiers.isArrayCountCall(countCanonicalToAos, locals));
   CHECK_FALSE(classifiers.isStringCountCall(capacityCall, locals));
 }
 

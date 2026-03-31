@@ -2443,7 +2443,9 @@ initializer/monomorph handling now accept that canonical resolved helper path to
 equivalent helper-return method/infer fallback for builtin `soa_vector` `to_aos` receivers now
 also prefers the canonical `/std/collections/soa_vector/to_aos` helper path while still
 preserving same-path `/to_aos` user-helper shadowing, and vector-result recognizers now accept
-that canonical resolved helper path too.
+that canonical resolved helper path too. Lowerer-side count target classification now also
+treats direct canonical `/std/collections/soa_vector/to_aos` call results as vector targets for
+nested count dispatch instead of depending on the old raw `/to_aos` call shape.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend

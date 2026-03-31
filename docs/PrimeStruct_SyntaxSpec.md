@@ -825,7 +825,9 @@ and monomorph handling now accept that canonical resolved helper path too. The e
 helper-return method/infer fallback for builtin `soa_vector` `to_aos` receivers now also
 prefers the canonical `/std/collections/soa_vector/to_aos` helper path while still preserving
 same-path `/to_aos` user-helper shadowing, and vector-result recognizers now accept that
-canonical resolved helper path too.
+canonical resolved helper path too. Lowerer-side count target classification now also treats
+direct canonical `/std/collections/soa_vector/to_aos` call results as vector targets for nested
+count dispatch instead of depending on the old raw `/to_aos` call shape.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
