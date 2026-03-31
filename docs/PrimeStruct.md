@@ -2373,14 +2373,18 @@ bad_use_after_take() {
     cleanly.
     Borrowed `ref` and field-view surfaces remain pending behind the broader SoA substrate work.
   - **Experimental SoA storage substrate:** the first reusable `.prime` storage layer now exists at
-    `/std/collections/experimental_soa_storage/*` with `SoaColumn<T>`, `soaColumnNew<T>()`,
-    `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`, `soaColumnPush<T>()`,
-    `soaColumnRead<T>()`, `soaColumnWrite<T>()`, and `soaColumnClear<T>()`. This is a single-column primitive backed
-    by checked buffer alloc/grow/free plus explicit `init(...)`, `drop(...)`, `take(...)`, and `borrow(...)` flows.
-    Its current allocation-failure contract is deterministic and matches the existing vector reserve overflow path:
-    oversized reserve requests report `vector reserve allocation failed (out of memory)`.
-    It is the intended building block for future `.prime` `SoaVector<T>` column ownership, but it is not yet threaded
-    into reflected multi-column schemas or wrapper borrowed-view/field-view surfaces.
+    `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
+    (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,
+    `soaColumnPush<T>()`, `soaColumnRead<T>()`, `soaColumnWrite<T>()`, `soaColumnClear<T>()`) plus the
+    first reusable fixed-width multi-column primitive `SoaColumns2<T0, T1>` and matching
+    `soaColumns2New`, `soaColumns2Count`, `soaColumns2Capacity`, `soaColumns2Reserve`,
+    `soaColumns2Push`, `soaColumns2ReadFirst`, `soaColumns2ReadSecond`, `soaColumns2Write`, and
+    `soaColumns2Clear` helpers. These primitives are backed by checked buffer alloc/grow/free plus
+    explicit `init(...)`, `drop(...)`, `take(...)`, and `borrow(...)` flows. Their current
+    allocation-failure contract is deterministic and matches the existing vector reserve overflow
+    path: oversized reserve requests report `vector reserve allocation failed (out of memory)`.
+    They are the intended building blocks for future `.prime` `SoaVector<T>` column ownership, but
+    they are not yet threaded into reflected arbitrary-width schemas or wrapper borrowed-view/field-view surfaces.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of

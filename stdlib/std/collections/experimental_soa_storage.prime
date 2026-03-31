@@ -66,6 +66,12 @@ namespace std {
     }
   }
 
+  [public struct]
+  SoaColumns2<T0, T1>() {
+    [public SoaColumn<T0> mut] first{soaColumnNew<T0>()}
+    [public SoaColumn<T1> mut] second{soaColumnNew<T1>()}
+  }
+
   [return<Pointer<uninitialized<T>>>]
   soaColumnSlotUnsafe<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
@@ -170,9 +176,29 @@ namespace std {
        else() { })
   }
 
+  [return<void>]
+  soaColumns2CheckShape<T0, T1>([SoaColumns2<T0, T1>] values) {
+    [SoaColumn<T0>] first{values.first}
+    [SoaColumn<T1>] second{values.second}
+    soaColumnCheckShape<T0>(first)
+    soaColumnCheckShape<T1>(second)
+    if(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
+          not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second)))),
+       then() {
+         [array<i32>] empty{array<i32>()}
+         empty[0i32]
+       },
+       else() { })
+  }
+
   [public effects(heap_alloc), return<SoaColumn<T>>]
   soaColumnNew<T>() {
     return(soaColumnAlloc<T>(0i32, 0i32))
+  }
+
+  [public effects(heap_alloc), return<SoaColumns2<T0, T1>>]
+  soaColumns2New<T0, T1>() {
+    return(SoaColumns2<T0, T1>())
   }
 
   [public return<i32>]
@@ -182,9 +208,23 @@ namespace std {
   }
 
   [public return<i32>]
+  soaColumns2Count<T0, T1>([SoaColumns2<T0, T1>] values) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [SoaColumn<T0>] first{values.first}
+    return(soaColumnCount<T0>(first))
+  }
+
+  [public return<i32>]
   soaColumnCapacity<T>([SoaColumn<T>] values) {
     soaColumnCheckShape<T>(values)
     return(values.field_capacity())
+  }
+
+  [public return<i32>]
+  soaColumns2Capacity<T0, T1>([SoaColumns2<T0, T1>] values) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [SoaColumn<T0>] first{values.first}
+    return(soaColumnCapacity<T0>(first))
   }
 
   [public effects(heap_alloc), return<void>]
@@ -218,6 +258,17 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
+  soaColumns2Reserve<T0, T1>([SoaColumns2<T0, T1> mut] values, [i32] capacity) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [SoaColumn<T0> mut] first{values.first}
+    [SoaColumn<T1> mut] second{values.second}
+    soaColumnReserve<T0>(first, capacity)
+    soaColumnReserve<T1>(second, capacity)
+    assign(values.first, first)
+    assign(values.second, second)
+  }
+
+  [public effects(heap_alloc), return<void>]
   soaColumnPush<T>([SoaColumn<T> mut] values, [T] value) {
     soaColumnCheckShape<T>(values)
     if(equal(values.field_count(), values.field_capacity()),
@@ -238,10 +289,46 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
+  soaColumns2Push<T0, T1>([SoaColumns2<T0, T1> mut] values, [T0] firstValue, [T1] secondValue) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [SoaColumn<T0> mut] first{values.first}
+    [SoaColumn<T1> mut] second{values.second}
+    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
+       then() {
+         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+         if(equal(nextCapacity, 0i32),
+            then() { assign(nextCapacity, 1i32) },
+            else() {
+              if(greater_than(nextCapacity, 536870911i32),
+                 then() { assign(nextCapacity, 1073741824i32) },
+                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
+            })
+         soaColumnReserve<T0>(first, nextCapacity)
+         soaColumnReserve<T1>(second, nextCapacity)
+       },
+       else() { })
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    assign(values.first, first)
+    assign(values.second, second)
+  }
+
+  [public effects(heap_alloc), return<void>]
   soaColumnClear<T>([SoaColumn<T> mut] values) {
     soaColumnCheckShape<T>(values)
     soaColumnDropRange<T>(values, values.field_count())
     values.set_field_count(0i32)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns2Clear<T0, T1>([SoaColumns2<T0, T1> mut] values) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [SoaColumn<T0> mut] first{values.first}
+    [SoaColumn<T1> mut] second{values.second}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    assign(values.first, first)
+    assign(values.second, second)
   }
 
   [public return<T>]
@@ -250,11 +337,39 @@ namespace std {
     return(soaColumnBorrowSlot<T>(values, index))
   }
 
+  [public return<T0>]
+  soaColumns2ReadFirst<T0, T1>([SoaColumns2<T0, T1>] values, [i32] index) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [SoaColumn<T0>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns2ReadSecond<T0, T1>([SoaColumns2<T0, T1>] values, [i32] index) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [SoaColumn<T1>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
   [public return<void>]
   soaColumnWrite<T>([SoaColumn<T> mut] values, [i32] index, [T] value) {
     soaColumnCheckIndex<T>(values, index)
     soaColumnDropSlot<T>(values, index)
     soaColumnInitSlot<T>(values, index, value)
+  }
+
+  [public return<void>]
+  soaColumns2Write<T0, T1>([SoaColumns2<T0, T1> mut] values,
+                           [i32] index,
+                           [T0] firstValue,
+                           [T1] secondValue) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [SoaColumn<T0> mut] first{values.first}
+    [SoaColumn<T1> mut] second{values.second}
+    soaColumnWrite<T0>(first, index, firstValue)
+    soaColumnWrite<T1>(second, index, secondValue)
+    assign(values.first, first)
+    assign(values.second, second)
   }
   }
   }

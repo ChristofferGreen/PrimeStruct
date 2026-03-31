@@ -389,6 +389,35 @@ main() {
   CHECK(readFile(errPath) == "vector reserve allocation failed (out of memory)\n");
 }
 
+TEST_CASE("compiles and runs native experimental two-column soa storage helpers") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns2<i32, i32> mut] values{soaColumns2New<i32, i32>()}
+  soaColumns2Reserve<i32, i32>(values, 3i32)
+  soaColumns2Push<i32, i32>(values, 2i32, 5i32)
+  soaColumns2Push<i32, i32>(values, 7i32, 11i32)
+  soaColumns2Write<i32, i32>(values, 1i32, 13i32, 17i32)
+  [i32] total{plus(soaColumns2ReadFirst<i32, i32>(values, 0i32),
+                   plus(soaColumns2ReadSecond<i32, i32>(values, 1i32),
+                        plus(soaColumns2Count<i32, i32>(values),
+                             soaColumns2Capacity<i32, i32>(values))))}
+  soaColumns2Clear<i32, i32>(values)
+  return(plus(total, soaColumns2Count<i32, i32>(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_storage_two_columns.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_experimental_soa_storage_two_columns_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 24);
+}
+
 TEST_CASE("compiles and runs native templated stdlib wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*

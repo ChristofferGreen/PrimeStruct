@@ -329,6 +329,30 @@ main() {
   CHECK(readFile(errPath) == "vector reserve allocation failed (out of memory)\n");
 }
 
+TEST_CASE("runs vm experimental two-column soa storage helpers") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns2<i32, i32> mut] values{soaColumns2New<i32, i32>()}
+  soaColumns2Reserve<i32, i32>(values, 3i32)
+  soaColumns2Push<i32, i32>(values, 2i32, 5i32)
+  soaColumns2Push<i32, i32>(values, 7i32, 11i32)
+  soaColumns2Write<i32, i32>(values, 1i32, 13i32, 17i32)
+  [i32] total{plus(soaColumns2ReadFirst<i32, i32>(values, 0i32),
+                   plus(soaColumns2ReadSecond<i32, i32>(values, 1i32),
+                        plus(soaColumns2Count<i32, i32>(values),
+                             soaColumns2Capacity<i32, i32>(values))))}
+  soaColumns2Clear<i32, i32>(values)
+  return(plus(total, soaColumns2Count<i32, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_storage_two_columns.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 24);
+}
+
 TEST_CASE("runs vm with stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*
