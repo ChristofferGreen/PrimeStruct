@@ -2386,7 +2386,8 @@ bad_use_after_take() {
     `SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>`,
     `SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>`, and
     `SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>`, and
-    `SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>` with matching `New` /
+    `SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>`, and
+    `SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>` with matching `New` /
     `Count` / `Capacity` / `Reserve` / `Push` / `Read*` / `Write` / `Clear` helpers. These
     primitives are backed by checked buffer alloc/grow/free plus explicit `init(...)`, `drop(...)`,
     `take(...)`, and `borrow(...)` flows. Their current allocation-failure contract is deterministic
