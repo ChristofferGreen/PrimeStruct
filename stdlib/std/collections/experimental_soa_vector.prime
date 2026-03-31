@@ -25,6 +25,12 @@ namespace std {
       return(soaVectorGet<T>(this, index))
     }
 
+    [public effects(heap_alloc), return<vector<T>>]
+    to_aos() {
+      soaVectorValidateType<T>()
+      return(soaVectorToAos<T>(this))
+    }
+
     [public mut effects(heap_alloc), return<void>]
     reserve([i32] capacity) {
       soaVectorValidateType<T>()

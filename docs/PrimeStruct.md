@@ -2350,8 +2350,8 @@ bad_use_after_take() {
     `/std/collections/experimental_soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`,
     `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, `soaVectorToAos<T>()`,
     `soaVectorCount<T>()`, `soaVectorGet<T>()`, `soaVectorReserve<T>()`, and
-    `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`, `.get(i)`, `.reserve(...)`,
-    and `.push(...)`.
+    `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`, `.get(i)`, `.to_aos()`,
+    `.reserve(...)`, and `.push(...)`.
     The wrapper now stores real `.prime` `SoaColumn<T>` state rather than the old builtin header-only
     `soa_vector<T>` backing, and it currently requires `T` to be a reflect-enabled struct via
     `meta.field_count<T>()` so non-SoA-safe element types fail early. Today the first real single-column
@@ -2361,11 +2361,11 @@ bad_use_after_take() {
     `soaVectorPush<T>()` plus wrapper method-sugar `values.reserve(...)` / `values.push(...)` mutate that same
     wrapper-backed column state in place. `soaVectorFromAos<T>()` already targets the same substrate semantically,
     but backend lowering still stops on the current `* backend requires typed bindings` boundary. `soaVectorToAos<T>()`
-    now provides the first explicit wrapper-to-AoS helper foothold on that same wrapper-owned state, but backend
-    lowering still stops on the imported helper `* backend does not support return type on
+    now provides the first explicit wrapper-to-AoS helper foothold on that same wrapper-owned state, and wrapper
+    method-sugar `values.to_aos()` now resolves onto that same helper path. Backend lowering still stops on the
+    imported helper `* backend does not support return type on
     /std/collections/experimental_soa_vector/soaVectorToAos__...` boundary for `vector<Struct>` helper returns.
-    Wrapper method-sugar `.to_aos()` plus richer non-empty conversion surfaces remain pending until that return-type
-    boundary is resolved cleanly.
+    Richer non-empty conversion surfaces still remain pending until that return-type boundary is resolved cleanly.
     Borrowed `ref` and field-view surfaces remain pending behind the broader SoA substrate work.
   - **Experimental SoA storage substrate:** the first reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with `SoaColumn<T>`, `soaColumnNew<T>()`,
