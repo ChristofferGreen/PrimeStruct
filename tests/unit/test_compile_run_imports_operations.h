@@ -260,6 +260,58 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("rejects experimental soa_vector stdlib ref helper on current wrapper boundary in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Particle] value{soaVectorRef<Particle>(values, 0i32)}
+  return(value.x)
+}
+)";
+  const std::string srcPath = writeTemp("compile_experimental_soa_vector_ref_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_vector_ref_err.txt").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+      "native backend does not support return type on "
+      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+}
+
+TEST_CASE("rejects experimental soa_vector stdlib ref method on current wrapper boundary in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Particle] value{values.ref(0i32)}
+  return(value.x)
+}
+)";
+  const std::string srcPath = writeTemp("compile_experimental_soa_vector_ref_method_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_vector_ref_method_err.txt").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+      "native backend does not support return type on "
+      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs experimental soa_vector stdlib push and reserve helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

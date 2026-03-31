@@ -25,6 +25,12 @@ namespace std {
       return(soaVectorGet<T>(this, index))
     }
 
+    [public return<T>]
+    ref([i32] index) {
+      soaVectorValidateType<T>()
+      return(soaVectorRef<T>(this, index))
+    }
+
     [public mut effects(heap_alloc), return<void>]
     reserve([i32] capacity) {
       soaVectorValidateType<T>()
@@ -89,6 +95,13 @@ namespace std {
     soaVectorValidateType<T>()
     [SoaColumn<T>] storage{values.storage}
     return(/std/collections/experimental_soa_storage/soaColumnRead<T>(storage, index))
+  }
+
+  [public return<T>]
+  soaVectorRef<T>([SoaVector<T>] values, [i32] index) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/experimental_soa_storage/soaColumnRef<T>(storage, index))
   }
 
   [public effects(heap_alloc), return<void>]

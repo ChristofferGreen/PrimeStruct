@@ -2371,7 +2371,12 @@ bad_use_after_take() {
     /std/collections/experimental_soa_vector_conversions/soaVectorToAos__...` boundary for `vector<Struct>` helper
     returns. Successful richer non-empty conversion surfaces still remain pending until that return-type boundary is resolved
     cleanly.
-    Borrowed `ref` and field-view surfaces remain pending behind the broader SoA substrate work.
+    The wrapper now also exposes `soaVectorRef<T>()` plus `values.ref(i)` on top of the current
+    single-column borrowed-slot substrate. Those surfaces validate semantically, but backend
+    lowering still stops on the current imported helper boundary
+    (`/std/collections/experimental_soa_vector_conversions/soaVectorToAos__...`) for wrapper
+    borrowed-return paths. Richer borrowed field-view surfaces still remain pending behind the
+    broader SoA substrate work.
   - **Experimental SoA storage substrate:** the first reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,

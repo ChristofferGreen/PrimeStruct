@@ -278,6 +278,12 @@ namespace std {
     return(borrow(dereference(slot)))
   }
 
+  [public return<T>]
+  soaColumnRef<T>([SoaColumn<T>] values, [i32] index) {
+    soaColumnCheckShape<T>(values)
+    return(soaColumnBorrowSlot<T>(values, index))
+  }
+
   [return<void>]
   soaColumnDropRange<T>([SoaColumn<T> mut] values, [i32] limit) {
     soaColumnCheckShape<T>(values)

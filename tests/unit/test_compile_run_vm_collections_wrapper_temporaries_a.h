@@ -239,6 +239,58 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
+TEST_CASE("vm rejects experimental soa_vector stdlib ref helper on current wrapper boundary") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Particle] value{soaVectorRef<Particle>(values, 0i32)}
+  return(value.x)
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_ref.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_ref_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find(
+      "vm backend does not support return type on "
+      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+}
+
+TEST_CASE("vm rejects experimental soa_vector stdlib ref method on current wrapper boundary") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Particle] value{values.ref(0i32)}
+  return(value.x)
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_ref_method.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_ref_method_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find(
+      "vm backend does not support return type on "
+      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+}
+
 TEST_CASE("runs vm experimental soa_vector stdlib push and reserve helpers") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
