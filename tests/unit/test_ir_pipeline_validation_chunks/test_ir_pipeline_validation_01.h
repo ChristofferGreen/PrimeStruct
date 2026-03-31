@@ -443,20 +443,18 @@ main() {
   CHECK(error == "native backend entry parameter must be array<string>");
 }
 
-TEST_CASE("semantics accepts explicit soa_vector get before lowerer rejection") {
+TEST_CASE("root get helper forms lower through canonical helper routing") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<void>]
-/use([soa_vector<Particle>] values) {
-  /soa_vector/get(values, 0i32)
-}
-
-[return<int>]
 main() {
-  return(0i32)
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [Particle] valueA{get(values, 0i32)}
+  [Particle] valueB{values.get(0i32)}
+  [Particle] valueC{/soa_vector/get(values, 0i32)}
 }
 )";
   primec::Program program;
@@ -466,24 +464,22 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
-  CHECK(error == "native backend entry parameter must be array<string>");
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("semantics accepts soa_vector ref before lowerer rejection") {
+TEST_CASE("root ref helper forms lower through canonical helper routing") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<void>]
-/use([soa_vector<Particle>] values) {
-  ref(values, 0i32)
-}
-
-[return<int>]
 main() {
-  return(0i32)
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [Particle] valueA{ref(values, 0i32)}
+  [Particle] valueB{values.ref(0i32)}
+  [Particle] valueC{/soa_vector/ref(values, 0i32)}
 }
 )";
   primec::Program program;
@@ -493,35 +489,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
-  CHECK(error == "native backend entry parameter must be array<string>");
-}
-
-TEST_CASE("semantics accepts explicit soa_vector ref before lowerer rejection") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<void>]
-/use([soa_vector<Particle>] values) {
-  /soa_vector/ref(values, 0i32)
-}
-
-[return<int>]
-main() {
-  return(0i32)
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
-  CHECK(error == "native backend entry parameter must be array<string>");
 }
 
 TEST_CASE("semantics accepts to_soa before lowerer rejection") {

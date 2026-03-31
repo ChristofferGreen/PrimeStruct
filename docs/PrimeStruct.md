@@ -2399,7 +2399,10 @@ lowering also no longer depends on dedicated IR/emitter/backend/runtime conversi
 outside the remaining old-root builtin conversion rejection path, and valid root bare/direct/
 method `to_aos` calls on builtin `soa_vector<T>` bindings now rewrite onto that same canonical
 `/std/collections/soa_vector/to_aos` helper path when no visible user `/to_aos` helper shadows
-them. The remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for root
+them. Valid root bare/method/old-explicit `get` and `ref` calls on builtin `soa_vector<T>`
+bindings likewise now rewrite onto `/std/collections/soa_vector/get` and
+`/std/collections/soa_vector/ref` when no visible root or same-path user helper shadows them.
+The remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for root
 `get`, root `ref`, root `to_aos`, and field-view diagnostics instead of one mixed fallback
 bucket, the remaining lowering cleanup is now tracked as explicit helper-call, conversion, and
 field-view follow-ups, with helper-call cleanup itself staged as direct-call versus

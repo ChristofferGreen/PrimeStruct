@@ -795,9 +795,10 @@ real stdlib-owned implementation. Method-form/call-form field-view names now emi
 and current IR lowering routes `count(...)` on `soa_vector` through the native count path for current SoA bindings
 while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
 direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
-across C++/native/VM, and valid root bare/direct/method `to_aos` calls on builtin `soa_vector<T>` bindings now
-rewrite onto that same canonical helper path unless a user `/to_aos` helper shadows them, so those paths no longer
-depend on the old builtin conversion scaffolding. Non-empty literals and the remaining old-root draft helper paths
+across C++/native/VM, and valid root bare/method/old-explicit `get`/`ref` plus bare/direct/method `to_aos` calls on
+builtin `soa_vector<T>` bindings now rewrite onto that same canonical helper path unless a visible old-surface user
+helper shadows them, so those paths no longer depend on the old builtin conversion scaffolding. Non-empty literals
+and the remaining old-root draft helper paths
 still emit deterministic unsupported diagnostics
 (`native backend does not support non-empty soa_vector literals`, `native backend does not support soa_vector get`,
 `native backend does not support soa_vector ref`, `native backend does not support to_soa`,
