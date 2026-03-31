@@ -411,6 +411,22 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("root get vector receiver keeps canonical reject contract") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  [i32] valueA{get(values, 0i32)}
+  [i32] valueB{values.get(0i32)}
+  [i32] valueC{/soa_vector/get(values, 0i32)}
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("/std/collections/soa_vector/get") != std::string::npos);
+}
+
 TEST_CASE("root ref helper forms lower through canonical helper routing") {
   const std::string source = R"(
 Particle() {
@@ -434,6 +450,22 @@ main() {
   primec::IrModule module;
   CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.empty());
+}
+
+TEST_CASE("root ref vector receiver keeps canonical reject contract") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  [i32] valueA{ref(values, 0i32)}
+  [i32] valueB{values.ref(0i32)}
+  [i32] valueC{/soa_vector/ref(values, 0i32)}
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("/std/collections/soa_vector/ref") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts to_soa before lowerer rejection") {

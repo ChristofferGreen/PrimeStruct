@@ -797,7 +797,10 @@ while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib 
 direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
 across C++/native/VM, and valid root bare/method/old-explicit `get`/`ref` plus bare/direct/method `to_aos` calls on
 builtin `soa_vector<T>` bindings now rewrite onto that same canonical helper path unless a visible old-surface user
-helper shadows them. Vector-target root bare/direct/method `to_aos` misuses now also keep that same canonical
+helper shadows them. Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
+`/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject contracts instead of the old builtin
+`get requires soa_vector target` / `ref requires soa_vector target` diagnostics. Vector-target root bare/direct/method
+`to_aos` misuses now also keep that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin `to_aos requires soa_vector target`
 diagnostic, so those paths no longer depend on the old builtin conversion scaffolding. Inline lowering also
 no longer keeps a dedicated builtin `soa_vector` count/get/ref helper bridge, instead using the shared

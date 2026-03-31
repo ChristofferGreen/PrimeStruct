@@ -1652,18 +1652,20 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("get helper rejects non-soa target") {
+TEST_CASE("get root forms keep canonical reject on vector target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   get(values, 0i32)
+  values.get(0i32)
+  /soa_vector/get(values, 0i32)
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("get requires soa_vector target") != std::string::npos);
+  CHECK(error.find("/std/collections/soa_vector/get") != std::string::npos);
 }
 
 TEST_CASE("ref helper validates on soa_vector binding") {
@@ -1720,18 +1722,20 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref helper rejects non-soa target") {
+TEST_CASE("ref root forms keep canonical reject on vector target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   ref(values, 0i32)
+  values.ref(0i32)
+  /soa_vector/ref(values, 0i32)
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("ref requires soa_vector target") != std::string::npos);
+  CHECK(error.find("/std/collections/soa_vector/ref") != std::string::npos);
 }
 
 TEST_CASE("to_soa helper validates on vector binding") {

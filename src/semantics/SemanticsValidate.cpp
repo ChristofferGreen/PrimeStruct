@@ -975,6 +975,7 @@ bool rewriteBuiltinSoaToAosCalls(Program &program, std::string &error) {
 void rewriteBuiltinSoaAccessExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveGetHelper,
@@ -983,6 +984,7 @@ void rewriteBuiltinSoaAccessExpr(
 void rewriteBuiltinSoaAccessStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveGetHelper,
@@ -991,6 +993,7 @@ void rewriteBuiltinSoaAccessStatements(
     rewriteBuiltinSoaAccessExpr(
         stmt,
         bindings,
+        vectorReturnDefinitions,
         soaVectorReturnDefinitions,
         definitionNamespace,
         preserveGetHelper,
@@ -1000,6 +1003,7 @@ void rewriteBuiltinSoaAccessStatements(
       rewriteBuiltinSoaAccessStatements(
           stmt.bodyArguments,
           bodyBindings,
+          vectorReturnDefinitions,
           soaVectorReturnDefinitions,
           definitionNamespace,
           preserveGetHelper,
@@ -1016,10 +1020,62 @@ void rewriteBuiltinSoaAccessStatements(
 void rewriteBuiltinSoaAccessExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveGetHelper,
     bool preserveRefHelper) {
+  auto findBuiltinVectorValueBinding = [&](const auto &self,
+                                           const Expr &candidate) -> std::optional<semantics::BindingInfo> {
+    if (candidate.kind == Expr::Kind::Name) {
+      auto bindingIt = bindings.find(candidate.name);
+      if (bindingIt != bindings.end() && isBuiltinVectorBinding(bindingIt->second)) {
+        return bindingIt->second;
+      }
+      return std::nullopt;
+    }
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+      return std::nullopt;
+    }
+    std::string collectionName;
+    if (getBuiltinCollectionName(candidate, collectionName) &&
+        collectionName == "vector" &&
+        candidate.templateArgs.size() == 1) {
+      semantics::BindingInfo binding;
+      binding.typeName = "vector";
+      binding.typeTemplateArg = candidate.templateArgs.front();
+      return binding;
+    }
+    for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
+      auto returnIt = vectorReturnDefinitions.find(candidatePath);
+      if (returnIt != vectorReturnDefinitions.end() && isBuiltinVectorBinding(returnIt->second)) {
+        return returnIt->second;
+      }
+    }
+    if (!candidate.isMethodCall &&
+        isSimpleCallName(candidate, "dereference") &&
+        candidate.args.size() == 1) {
+      const Expr &derefTarget = candidate.args.front();
+      if (derefTarget.kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(derefTarget.name);
+        if (bindingIt != bindings.end()) {
+          return extractBuiltinCollectionBindingFromWrappedTypeText(
+              bindingTypeText(bindingIt->second), "vector");
+        }
+      }
+      std::string accessName;
+      if (getBuiltinArrayAccessName(derefTarget, accessName) &&
+          derefTarget.args.size() == 2 &&
+          derefTarget.args.front().kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(derefTarget.args.front().name);
+        if (bindingIt != bindings.end()) {
+          return extractBuiltinCollectionBindingFromWrappedTypeText(
+              bindingTypeText(bindingIt->second), "vector");
+        }
+      }
+    }
+    return std::nullopt;
+  };
   auto findBuiltinSoaValueBinding = [&](const auto &self,
                                         const Expr &candidate) -> std::optional<semantics::BindingInfo> {
     if (candidate.kind == Expr::Kind::Name) {
@@ -1076,12 +1132,17 @@ void rewriteBuiltinSoaAccessExpr(
     rewriteBuiltinSoaAccessExpr(
         arg,
         bindings,
+        vectorReturnDefinitions,
         soaVectorReturnDefinitions,
         definitionNamespace,
         preserveGetHelper,
         preserveRefHelper);
   }
-  if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
+  if (expr.kind != Expr::Kind::Call || expr.args.size() != 2 ||
+      !expr.templateArgs.empty() ||
+      hasNamedArguments(expr.argNames) ||
+      expr.hasBodyArguments ||
+      !expr.bodyArguments.empty()) {
     return;
   }
   const std::string helperName = builtinSoaAccessHelperName(expr.name);
@@ -1092,7 +1153,11 @@ void rewriteBuiltinSoaAccessExpr(
       (helperName == "ref" && preserveRefHelper)) {
     return;
   }
-  if (!findBuiltinSoaValueBinding(findBuiltinSoaValueBinding, expr.args.front()).has_value()) {
+  const bool hasBuiltinSoaReceiver =
+      findBuiltinSoaValueBinding(findBuiltinSoaValueBinding, expr.args.front()).has_value();
+  const bool hasBuiltinVectorReceiver =
+      findBuiltinVectorValueBinding(findBuiltinVectorValueBinding, expr.args.front()).has_value();
+  if (!hasBuiltinSoaReceiver && !hasBuiltinVectorReceiver) {
     return;
   }
 
@@ -1104,8 +1169,16 @@ void rewriteBuiltinSoaAccessExpr(
 
 bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
   error.clear();
+  std::unordered_map<std::string, semantics::BindingInfo> vectorReturnDefinitions;
   std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
   for (const Definition &def : program.definitions) {
+    if (auto binding = extractBuiltinVectorReturnBinding(def); binding.has_value()) {
+      vectorReturnDefinitions[def.fullPath] = *binding;
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
+        vectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+      }
+    }
     if (auto binding = extractBuiltinSoaVectorReturnBinding(def); binding.has_value()) {
       soaVectorReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
@@ -1131,6 +1204,7 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
     rewriteBuiltinSoaAccessStatements(
         def.statements,
         bindings,
+        vectorReturnDefinitions,
         soaVectorReturnDefinitions,
         definitionNamespace,
         preserveGetHelper,
@@ -1139,6 +1213,7 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
       rewriteBuiltinSoaAccessExpr(
           *def.returnExpr,
           bindings,
+          vectorReturnDefinitions,
           soaVectorReturnDefinitions,
           definitionNamespace,
           preserveGetHelper,

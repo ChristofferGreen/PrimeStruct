@@ -2401,6 +2401,10 @@ method `to_aos` calls on builtin `soa_vector<T>` bindings now rewrite onto that 
 them. Valid root bare/method/old-explicit `get` and `ref` calls on builtin `soa_vector<T>`
 bindings likewise now rewrite onto `/std/collections/soa_vector/get` and
 `/std/collections/soa_vector/ref` when no visible root or same-path user helper shadows them.
+Vector-target root bare/method/old-explicit `get` and `ref` misuses now also keep those same
+canonical `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject
+contracts instead of the old builtin `get requires soa_vector target` / `ref requires
+soa_vector target` diagnostics.
 Vector-target root bare/direct/method `to_aos` misuses now also keep that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin
 `to_aos requires soa_vector target` diagnostic.
