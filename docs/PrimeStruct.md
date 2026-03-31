@@ -2394,8 +2394,10 @@ helper names for `count`, `get`, `ref`, `reserve`, `push`, and `to_aos` now keep
 canonical shim surface instead of pinning every bare `count(...)` call to the SoA alias. Bare
 wildcard-imported helper names now validate and lower successfully across C++/native/VM, and
 explicit canonical direct-call `to_aos(...)` now runs end-to-end through that same stdlib shim
-path as well once template arguments are present. The remaining compiler-owned builtin semantics
-are now tracked as explicit follow-ups for root
+path as well once template arguments are present. Direct-canonical plus imported-helper `to_aos`
+lowering also no longer depends on dedicated IR/emitter/backend/runtime conversion branches
+outside the remaining old-root builtin conversion rejection path. The remaining compiler-owned
+builtin semantics are now tracked as explicit follow-ups for root
 `get`, root `ref`, root `to_aos`, and field-view diagnostics instead of one mixed fallback
 bucket, the remaining lowering cleanup is now tracked as explicit helper-call, conversion, and
 field-view follow-ups, with helper-call cleanup itself staged as direct-call versus
@@ -2428,18 +2430,15 @@ plus a separate successful-indexing follow-up. The wrapper now also exposes `soa
 plus `values.ref(i)` on top of the current single-column borrowed-slot substrate, and those
 borrowed-return paths now run successfully across the current backends without depending on the
 conversion helper surface. The broader experimental wrapper/helper surface through imported
-`to_aos` helper and method routing is now in place to the current backend boundary; successful
-richer non-empty `to_aos` lowering still remains pending in two explicit follow-ups: clean
-backend support for imported
-    `vector<Struct>` helper returns, now tracked as explicit C++, native, and VM slices, then the
-    wrapper-side richer non-empty `to_aos` lowering that depends on those returns. That
-    single-column borrowed-slot
-    substrate is the current completed foothold; the remaining borrowed-view work is now tracked
-    as two explicit follow-ups: language-level invalidation rules, then richer borrowed
-    field-view semantics on top of that substrate. Successful experimental `value.field()[i]`
-    indexing is likewise staged explicitly: first a read-only single-column field-view slice on
-    top of the current substrate, then broader arbitrary-field and borrowed/mutating field-view
-    behavior.
+`to_aos` helper and method routing is now in place across C++/native/VM for both empty and
+non-empty wrapper state, while the remaining conversion-specific compiler-owned code is narrowed
+to the old root builtin `to_soa` / `to_aos` rejection path rather than the stdlib helper route.
+That single-column borrowed-slot substrate is the current completed foothold; the remaining
+borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
+then richer borrowed field-view semantics on top of that substrate. Successful experimental
+`value.field()[i]` indexing is likewise staged explicitly: first a read-only single-column
+field-view slice on top of the current substrate, then broader arbitrary-field and
+borrowed/mutating field-view behavior.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,

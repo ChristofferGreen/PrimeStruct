@@ -793,10 +793,13 @@ current lowering behavior are temporary scaffolding while the language grows the
 real stdlib-owned implementation. Method-form/call-form field-view names now emit
 `soa_vector field views are not implemented yet: <field>` unless a user-defined `/soa_vector/<field>` helper exists,
 and current IR lowering routes `count(...)` on `soa_vector` through the native count path for current SoA bindings
-while empty `soa_vector<T>()` literals lower to header-only storage. Non-empty literals and draft helper paths still
-emit deterministic unsupported diagnostics (`native backend does not support non-empty soa_vector literals`,
-`native backend does not support soa_vector get`, `native backend does not support soa_vector ref`,
-`native backend does not support to_soa`, `native backend does not support to_aos`,
+while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
+direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
+across C++/native/VM, so those paths no longer depend on the old builtin conversion scaffolding. Non-empty literals
+and the remaining old-root draft helper paths still emit deterministic unsupported diagnostics
+(`native backend does not support non-empty soa_vector literals`, `native backend does not support soa_vector get`,
+`native backend does not support soa_vector ref`, `native backend does not support to_soa`,
+`native backend does not support to_aos`,
 `native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper:
 reserve`).
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
