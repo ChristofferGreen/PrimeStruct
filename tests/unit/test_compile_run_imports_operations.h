@@ -267,6 +267,37 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("canonical soa_vector mutator helpers keep current backend boundary in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  /std/collections/soa_vector/reserve<Particle>(values, 2i32)
+  /std/collections/soa_vector/push<Particle>(values, Particle(4i32))
+  /std/collections/soa_vector/push<Particle>(values, Particle(9i32))
+  return(plus(/std/collections/soa_vector/count<Particle>(values),
+              /std/collections/soa_vector/get<Particle>(values, 1i32).x))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_canonical_soa_vector_mutators_experimental_wrapper_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_canonical_soa_vector_mutators_experimental_wrapper_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") !=
+        std::string::npos);
+}
+
 TEST_CASE("rejects experimental soa_vector stdlib wide structs on pending width boundary in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

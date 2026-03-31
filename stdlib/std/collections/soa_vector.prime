@@ -14,3 +14,13 @@ import /std/collections/experimental_soa_vector/*
 /std/collections/soa_vector/ref<T>([SoaVector<T>] values, [i32] index) {
   return(values.ref(index))
 }
+
+[public effects(heap_alloc), return<void>]
+/std/collections/soa_vector/reserve<T>([SoaVector<T> mut] values, [i32] capacity) {
+  values.reserve(capacity)
+}
+
+[public effects(heap_alloc), return<void>]
+/std/collections/soa_vector/push<T>([SoaVector<T> mut] values, [T] value) {
+  values.push(value)
+}
