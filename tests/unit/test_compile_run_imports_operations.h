@@ -570,6 +570,39 @@ main() {
   CHECK(runCommand(exePath) == 189);
 }
 
+TEST_CASE("compiles and runs experimental seven-column soa storage helpers in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns7<i32, i32, i32, i32, i32, i32, i32> mut] values{soaColumns7New<i32, i32, i32, i32, i32, i32, i32>()}
+  soaColumns7Reserve<i32, i32, i32, i32, i32, i32, i32>(values, 4i32)
+  soaColumns7Push<i32, i32, i32, i32, i32, i32, i32>(values, 2i32, 3i32, 5i32, 7i32, 11i32, 13i32, 17i32)
+  soaColumns7Push<i32, i32, i32, i32, i32, i32, i32>(values, 19i32, 23i32, 29i32, 31i32, 37i32, 41i32, 43i32)
+  soaColumns7Write<i32, i32, i32, i32, i32, i32, i32>(values, 1i32, 19i32, 23i32, 29i32, 31i32, 37i32, 41i32, 43i32)
+  [i32] total{plus(soaColumns7ReadFirst<i32, i32, i32, i32, i32, i32, i32>(values, 0i32),
+                   plus(soaColumns7ReadSecond<i32, i32, i32, i32, i32, i32, i32>(values, 1i32),
+                        plus(soaColumns7ReadThird<i32, i32, i32, i32, i32, i32, i32>(values, 1i32),
+                             plus(soaColumns7ReadFourth<i32, i32, i32, i32, i32, i32, i32>(values, 1i32),
+                                  plus(soaColumns7ReadFifth<i32, i32, i32, i32, i32, i32, i32>(values, 1i32),
+                                       plus(soaColumns7ReadSixth<i32, i32, i32, i32, i32, i32, i32>(values, 1i32),
+                                            plus(soaColumns7ReadSeventh<i32, i32, i32, i32, i32, i32, i32>(values, 1i32),
+                                                 plus(soaColumns7Count<i32, i32, i32, i32, i32, i32, i32>(values),
+                                                      soaColumns7Capacity<i32, i32, i32, i32, i32, i32, i32>(values)))))))))}
+  soaColumns7Clear<i32, i32, i32, i32, i32, i32, i32>(values)
+  return(plus(total, soaColumns7Count<i32, i32, i32, i32, i32, i32, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_experimental_soa_storage_seven_columns_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_storage_seven_columns_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 212);
+}
+
 TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
