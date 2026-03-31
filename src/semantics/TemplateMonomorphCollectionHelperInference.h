@@ -14,6 +14,8 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
   HelperFamily family = HelperFamily::None;
   if (def.fullPath.rfind("/std/collections/vector/", 0) == 0) {
     family = HelperFamily::Vector;
+  } else if (def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0) {
+    family = HelperFamily::Vector;
   } else if (def.fullPath.rfind("/std/collections/experimental_vector/", 0) == 0) {
     family = HelperFamily::Vector;
   } else if (def.fullPath.rfind("/std/collections/map/", 0) == 0) {

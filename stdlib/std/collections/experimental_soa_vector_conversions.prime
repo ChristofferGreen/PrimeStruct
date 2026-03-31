@@ -17,6 +17,12 @@ namespace std {
     return(out)
   }
 
+  [public effects(heap_alloc), return<vector<T>>]
+  /std/collections/experimental_soa_vector/SoaVector/to_aos<T>(
+      [/std/collections/experimental_soa_vector/SoaVector<T>] self) {
+    return(soaVectorToAos<T>(self))
+  }
+
   }
   }
 }

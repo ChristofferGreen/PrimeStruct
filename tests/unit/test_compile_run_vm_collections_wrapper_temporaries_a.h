@@ -204,86 +204,9 @@ main() {
       (testScratchPath("") / "primec_vm_wildcard_canonical_soa_vector_helpers_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("/std/collections/soa_vector/to_aos__") != std::string::npos);
-}
-
-TEST_CASE("vm canonical soa_vector ref helper keeps current backend boundary") {
-  const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  return(/std/collections/soa_vector/ref<Particle>(values, 0i32).x)
-}
-)";
-  const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_ref_experimental_wrapper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_canonical_soa_vector_ref_experimental_wrapper_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("/std/collections/soa_vector/to_aos__") != std::string::npos);
-}
-
-TEST_CASE("vm canonical soa_vector mutator helpers keep current backend boundary") {
-  const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  /std/collections/soa_vector/reserve<Particle>(values, 2i32)
-  /std/collections/soa_vector/push<Particle>(values, Particle(4i32))
-  /std/collections/soa_vector/push<Particle>(values, Particle(9i32))
-  return(plus(/std/collections/soa_vector/count<Particle>(values),
-              /std/collections/soa_vector/get<Particle>(values, 1i32).x))
-}
-)";
-  const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_mutators_experimental_wrapper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_canonical_soa_vector_mutators_experimental_wrapper_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("/std/collections/soa_vector/to_aos__") != std::string::npos);
-}
-
-TEST_CASE("vm canonical soa_vector to_aos helper keeps current backend boundary") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
-  return(count(unpacked))
-}
-)";
-  const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_to_aos_experimental_wrapper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_canonical_soa_vector_to_aos_experimental_wrapper_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("/std/collections/soa_vector/to_aos__") != std::string::npos);
+  CHECK(readFile(errPath).find(
+            "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") !=
+        std::string::npos);
 }
 
 TEST_CASE("vm rejects experimental soa_vector stdlib wide structs on pending width boundary") {

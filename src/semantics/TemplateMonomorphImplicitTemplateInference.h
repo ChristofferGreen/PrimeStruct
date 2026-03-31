@@ -230,6 +230,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
   }
   const bool isStdlibCollectionHelper =
       def.fullPath.rfind("/std/collections/vector/", 0) == 0 ||
+      def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
       def.fullPath.rfind("/std/collections/map/", 0) == 0 ||
       def.fullPath.rfind("/map/", 0) == 0;
   std::unordered_set<std::string> implicitSet;
@@ -484,7 +485,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         }
       }
       if (inferFromWrappedTemplateArgs) {
-        if (normalizeBindingTypeName(argInfo.typeName) != normalizeBindingTypeName(paramInfo.typeName)) {
+        if (normalizeCollectionReceiverTypeName(argInfo.typeName) !=
+            normalizeCollectionReceiverTypeName(paramInfo.typeName)) {
           if (isStdlibCollectionHelper) {
             return false;
           }
