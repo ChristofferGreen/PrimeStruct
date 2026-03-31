@@ -1,4 +1,5 @@
 import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
 
 [public return<i32>]
 /std/collections/soa_vector/count<T>([SoaVector<T>] values) {
@@ -13,6 +14,11 @@ import /std/collections/experimental_soa_vector/*
 [public return<T>]
 /std/collections/soa_vector/ref<T>([SoaVector<T>] values, [i32] index) {
   return(values.ref(index))
+}
+
+[public effects(heap_alloc), return<vector<T>>]
+/std/collections/soa_vector/to_aos<T>([SoaVector<T>] values) {
+  return(/std/collections/experimental_soa_vector_conversions/soaVectorToAos<T>(values))
 }
 
 [public effects(heap_alloc), return<void>]
