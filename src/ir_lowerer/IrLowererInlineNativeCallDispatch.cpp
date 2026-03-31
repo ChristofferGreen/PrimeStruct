@@ -394,53 +394,6 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
 
     return InlineCallDispatchResult::NotHandled;
   };
-  if (!expr.isMethodCall && expr.args.size() == 1 &&
-      isSoaVectorTarget(expr.args.front(), localsIn)) {
-    Expr methodExpr = expr;
-    methodExpr.isMethodCall = true;
-    const std::string priorError = error;
-    if (const Definition *callee = resolveMethodCallDefinitionFn(methodExpr, localsIn)) {
-      if (methodExpr.hasBodyArguments || !methodExpr.bodyArguments.empty()) {
-        error = "native backend does not support block arguments on calls";
-        return InlineCallDispatchResult::Error;
-      }
-      if (!emitCanonicalInlineDefinitionCall(methodExpr, *callee)) {
-        return InlineCallDispatchResult::Error;
-      }
-      return InlineCallDispatchResult::Emitted;
-    }
-    error = priorError;
-  }
-  if (expr.isMethodCall &&
-      (isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref")) &&
-      expr.args.size() == 2 &&
-      isSoaVectorTarget(expr.args.front(), localsIn)) {
-    if (const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn)) {
-      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error = "native backend does not support block arguments on calls";
-        return InlineCallDispatchResult::Error;
-      }
-      if (!emitCanonicalInlineDefinitionCall(expr, *callee)) {
-        return InlineCallDispatchResult::Error;
-      }
-      return InlineCallDispatchResult::Emitted;
-    }
-    return InlineCallDispatchResult::NotHandled;
-  }
-  if (expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
-      isSoaVectorTarget(expr.args.front(), localsIn)) {
-    if (const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn)) {
-      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error = "native backend does not support block arguments on calls";
-        return InlineCallDispatchResult::Error;
-      }
-      if (!emitCanonicalInlineDefinitionCall(expr, *callee)) {
-        return InlineCallDispatchResult::Error;
-      }
-      return InlineCallDispatchResult::Emitted;
-    }
-    return InlineCallDispatchResult::NotHandled;
-  }
   const auto vectorMutatorCallFormResult = tryEmitVectorMutatorCallFormExpr();
   if (vectorMutatorCallFormResult != InlineCallDispatchResult::NotHandled) {
     return vectorMutatorCallFormResult;

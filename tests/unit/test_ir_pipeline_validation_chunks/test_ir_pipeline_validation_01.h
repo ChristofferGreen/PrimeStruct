@@ -339,20 +339,17 @@ main() {
   CHECK_FALSE(module.functions[0].instructions.empty());
 }
 
-TEST_CASE("semantics accepts soa_vector count in non-entry helpers") {
+TEST_CASE("root count helper forms lower through generic inline fallback") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
-/use([soa_vector<Particle>] values) {
-  return(count(values))
-}
-
-[return<int>]
+[return<void>]
 main() {
-  return(0i32)
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [int] countA{count(values)}
+  [int] countB{values.count()}
 }
 )";
   primec::Program program;
@@ -362,35 +359,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
-  CHECK(error == "native backend entry parameter must be array<string>");
-}
-
-TEST_CASE("semantics accepts explicit soa_vector count before lowerer rejection") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<int>]
-/use([soa_vector<Particle>] values) {
-  return(/soa_vector/count(values))
-}
-
-[return<int>]
-main() {
-  return(0i32)
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
-  CHECK(error == "native backend entry parameter must be array<string>");
 }
 
 TEST_CASE("ir lowerer rejects non-empty soa_vector literals with deterministic diagnostic") {
@@ -414,33 +384,6 @@ main() {
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error == "native backend does not support non-empty soa_vector literals");
-}
-
-TEST_CASE("semantics accepts soa_vector get before lowerer rejection") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<void>]
-/use([soa_vector<Particle>] values) {
-  get(values, 0i32)
-}
-
-[return<int>]
-main() {
-  return(0i32)
-}
-)";
-  primec::Program program;
-  std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/use", {}, {}, module, error));
-  CHECK(error == "native backend entry parameter must be array<string>");
 }
 
 TEST_CASE("root get helper forms lower through canonical helper routing") {
