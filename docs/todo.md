@@ -27,13 +27,14 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   - ✓ Reject builtin `soa_vector ref(...)` escapes through call arguments and returns until borrowed-view substrate exists.
   - ✓ Reject builtin `soa_vector` field-view escapes through call arguments and returns until the field-view substrate exists.
 - ✓ Land the minimum compile-time struct-field introspection/codegen needed for one `.prime` `soa_vector` implementation to derive SoA column schemas from `T`.
-- ◐ Land the minimum column-storage substrate needed for one `.prime` `soa_vector` implementation. Progress: the first reusable `.prime` storage substrate now exists at `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` plus reusable fixed-width `SoaColumns2<T0, T1>`, `SoaColumns3<T0, T1, T2>`, `SoaColumns4<T0, T1, T2, T3>`, and `SoaColumns5<T0, T1, T2, T3, T4>` primitives, all backed by checked buffer alloc/grow/free plus explicit `init/drop/take/borrow` flows.
+- ◐ Land the minimum column-storage substrate needed for one `.prime` `soa_vector` implementation. Progress: the first reusable `.prime` storage substrate now exists at `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` plus reusable fixed-width `SoaColumns2<T0, T1>`, `SoaColumns3<T0, T1, T2>`, `SoaColumns4<T0, T1, T2, T3>`, `SoaColumns5<T0, T1, T2, T3, T4>`, and `SoaColumns6<T0, T1, T2, T3, T4, T5>` primitives, all backed by checked buffer alloc/grow/free plus explicit `init/drop/take/borrow` flows.
   - ✓ Add the first reusable `.prime` single-column storage primitive over checked buffer alloc/grow/free/read/write.
   - ✓ Add the first reusable `.prime` two-column storage primitive over checked buffer alloc/grow/free/read/write.
   - ✓ Add the first reusable `.prime` three-column storage primitive over checked buffer alloc/grow/free/read/write.
   - ✓ Add the first reusable `.prime` four-column storage primitive over checked buffer alloc/grow/free/read/write.
   - ✓ Add the first reusable `.prime` five-column storage primitive over checked buffer alloc/grow/free/read/write.
-  - ○ Extend the substrate from fixed single/two/three/four/five-column primitives to reflected arbitrary-width schema allocation/grow/free.
+  - ✓ Add the first reusable `.prime` six-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ○ Extend the substrate from fixed single/two/three/four/five/six-column primitives to reflected arbitrary-width schema allocation/grow/free.
   - ✓ Add deterministic allocation-failure coverage for the current single-column substrate once the wrapper starts consuming it.
   - ○ Add borrowed-view coverage for that substrate once the borrowed-view surface exists.
 - ○ Land the minimum borrowed-view / invalidation substrate needed for one `.prime` `soa_vector` implementation so `ref(...)` and field views have language-level semantics independent of compiler-owned `soa_vector` paths.

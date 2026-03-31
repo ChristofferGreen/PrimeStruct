@@ -483,6 +483,34 @@ main() {
   CHECK(runCommand(runCmd) == 176);
 }
 
+TEST_CASE("runs vm experimental six-column soa storage helpers") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns6<i32, i32, i32, i32, i32, i32> mut] values{soaColumns6New<i32, i32, i32, i32, i32, i32>()}
+  soaColumns6Reserve<i32, i32, i32, i32, i32, i32>(values, 4i32)
+  soaColumns6Push<i32, i32, i32, i32, i32, i32>(values, 2i32, 3i32, 5i32, 7i32, 11i32, 13i32)
+  soaColumns6Push<i32, i32, i32, i32, i32, i32>(values, 13i32, 17i32, 19i32, 23i32, 29i32, 31i32)
+  soaColumns6Write<i32, i32, i32, i32, i32, i32>(values, 1i32, 23i32, 29i32, 31i32, 37i32, 41i32, 43i32)
+  [i32] total{plus(soaColumns6ReadFirst<i32, i32, i32, i32, i32, i32>(values, 0i32),
+                   plus(soaColumns6ReadSecond<i32, i32, i32, i32, i32, i32>(values, 1i32),
+                        plus(soaColumns6ReadThird<i32, i32, i32, i32, i32, i32>(values, 1i32),
+                             plus(soaColumns6ReadFourth<i32, i32, i32, i32, i32, i32>(values, 1i32),
+                                  plus(soaColumns6ReadFifth<i32, i32, i32, i32, i32, i32>(values, 1i32),
+                                       plus(soaColumns6ReadSixth<i32, i32, i32, i32, i32, i32>(values, 1i32),
+                                            plus(soaColumns6Count<i32, i32, i32, i32, i32, i32>(values),
+                                                 soaColumns6Capacity<i32, i32, i32, i32, i32, i32>(values))))))))}
+  soaColumns6Clear<i32, i32, i32, i32, i32, i32>(values)
+  return(plus(total, soaColumns6Count<i32, i32, i32, i32, i32, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_storage_six_columns.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 189);
+}
+
 TEST_CASE("runs vm with stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*
