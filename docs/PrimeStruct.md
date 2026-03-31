@@ -2381,24 +2381,13 @@ bad_use_after_take() {
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,
     `soaColumnPush<T>()`, `soaColumnRead<T>()`, `soaColumnWrite<T>()`, `soaColumnClear<T>()`) plus
-    reusable fixed-width multi-column primitives `SoaColumns2<T0, T1>`, `SoaColumns3<T0, T1, T2>`,
-    `SoaColumns4<T0, T1, T2, T3>`, `SoaColumns5<T0, T1, T2, T3, T4>`,
-    `SoaColumns6<T0, T1, T2, T3, T4, T5>`,
-    `SoaColumns7<T0, T1, T2, T3, T4, T5, T6>`,
-    `SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>`, and
-    `SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>`, and
-    `SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>`,
-    `SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>`,
-    `SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>`, and
-    `SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>`, and
-    `SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>`, and
-    `SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>` with matching `New` /
-    `Count` / `Capacity` / `Reserve` / `Push` / `Read*` / `Write` / `Clear` helpers. These
-    primitives are backed by checked buffer alloc/grow/free plus explicit `init(...)`, `drop(...)`,
-    `take(...)`, and `borrow(...)` flows. Their current allocation-failure contract is deterministic
-    and matches the existing vector reserve overflow path: oversized reserve requests report
-    `vector reserve allocation failed (out of memory)`. They are the intended building blocks for
-    future `.prime` `SoaVector<T>` column ownership, but they are not yet threaded into reflected
+    reusable fixed-width multi-column primitives `SoaColumns2<T0, T1>` and `SoaColumns3<T0, T1, T2>`
+    with matching `New` / `Count` / `Capacity` / `Reserve` / `Push` / `Read*` / `Write` / `Clear`
+    helpers. These primitives are backed by checked buffer alloc/grow/free plus explicit `init(...)`,
+    `drop(...)`, `take(...)`, and `borrow(...)` flows. Their current allocation-failure contract is
+    deterministic and matches the existing vector reserve overflow path: oversized reserve requests
+    report `vector reserve allocation failed (out of memory)`. They are the intended building blocks
+    for future `.prime` `SoaVector<T>` column ownership, but they are not yet threaded into reflected
     arbitrary-width schemas or wrapper borrowed-view/field-view surfaces.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
