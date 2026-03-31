@@ -277,6 +277,11 @@ bool shouldPreserveCanonicalMapTemplatePath(const std::string &path, const Conte
 
 std::string normalizeCollectionReceiverTypeName(std::string value) {
   value = normalizeBindingTypeName(value);
+  std::string base;
+  std::string argText;
+  if (splitTemplateTypeName(value, base, argText) && !base.empty()) {
+    value = base;
+  }
   if (!value.empty() && value.front() == '/') {
     value.erase(value.begin());
   }

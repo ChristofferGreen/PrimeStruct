@@ -24,8 +24,6 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
     family = HelperFamily::Map;
   } else if (def.fullPath.rfind("/map/", 0) == 0) {
     family = HelperFamily::Map;
-  } else {
-    return false;
   }
   if (def.parameters.empty()) {
     return false;
@@ -49,6 +47,13 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
   }
   splitInlineTemplateType(receiverParamInfo);
   const std::string normalizedReceiverParamType = normalizeCollectionReceiverTypeName(receiverParamInfo.typeName);
+  if (family == HelperFamily::None && def.fullPath.rfind("/std/collections/", 0) == 0) {
+    if (normalizedReceiverParamType == "vector" || normalizedReceiverParamType == "soa_vector") {
+      family = HelperFamily::Vector;
+    } else if (normalizedReceiverParamType == "map") {
+      family = HelperFamily::Map;
+    }
+  }
   size_t expectedTemplateArgCount = 0;
   if (family == HelperFamily::Vector) {
     if (def.templateArgs.size() != 1) {
@@ -103,6 +108,10 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
       if (receiverTypeText.empty()) {
         return false;
       }
+      if (family == HelperFamily::Vector && normalizedReceiverParamType == "soa_vector" &&
+          extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(receiverTypeText, ctx, outArgs)) {
+        return true;
+      }
       while (true) {
         std::string base;
         std::string argText;
@@ -110,6 +119,13 @@ bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,
           std::vector<std::string> receiverArgs;
           if (family == HelperFamily::Vector &&
               extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(receiverTypeText, ctx, receiverArgs) &&
+              receiverArgs.size() == 1) {
+            outArgs = std::move(receiverArgs);
+            return true;
+          }
+          if (family == HelperFamily::Vector &&
+              extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(
+                  receiverTypeText, ctx, receiverArgs) &&
               receiverArgs.size() == 1) {
             outArgs = std::move(receiverArgs);
             return true;

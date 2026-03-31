@@ -229,10 +229,25 @@ bool inferImplicitTemplateArgs(const Definition &def,
     return false;
   }
   const bool isStdlibCollectionHelper =
-      def.fullPath.rfind("/std/collections/vector/", 0) == 0 ||
-      def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
-      def.fullPath.rfind("/std/collections/map/", 0) == 0 ||
-      def.fullPath.rfind("/map/", 0) == 0;
+      [&]() {
+        if (def.fullPath.rfind("/std/collections/vector/", 0) == 0 ||
+            def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
+            def.fullPath.rfind("/std/collections/map/", 0) == 0 ||
+            def.fullPath.rfind("/map/", 0) == 0) {
+          return true;
+        }
+        if (def.fullPath.rfind("/std/collections/", 0) != 0 || def.parameters.empty()) {
+          return false;
+        }
+        BindingInfo receiverBinding;
+        if (!extractExplicitBindingType(def.parameters.front(), receiverBinding)) {
+          return false;
+        }
+        const std::string normalizedReceiverType =
+            normalizeCollectionReceiverTypeName(receiverBinding.typeName);
+        return normalizedReceiverType == "vector" || normalizedReceiverType == "soa_vector" ||
+               normalizedReceiverType == "map";
+      }();
   std::unordered_set<std::string> implicitSet;
   auto implicitIt = ctx.implicitTemplateParams.find(def.fullPath);
   if (implicitIt != ctx.implicitTemplateParams.end()) {
@@ -485,7 +500,19 @@ bool inferImplicitTemplateArgs(const Definition &def,
         }
       }
       if (inferFromWrappedTemplateArgs) {
-        if (normalizeCollectionReceiverTypeName(argInfo.typeName) !=
+        std::string argBaseType = argInfo.typeName;
+        std::string argTemplateArgText = argInfo.typeTemplateArg;
+        if ((normalizeBindingTypeName(argBaseType) == "Reference" ||
+             normalizeBindingTypeName(argBaseType) == "Pointer") &&
+            !argTemplateArgText.empty()) {
+          std::string innerBase;
+          std::string innerArgs;
+          if (splitTemplateTypeName(argTemplateArgText, innerBase, innerArgs) && !innerBase.empty()) {
+            argBaseType = innerBase;
+            argTemplateArgText = innerArgs;
+          }
+        }
+        if (normalizeCollectionReceiverTypeName(argBaseType) !=
             normalizeCollectionReceiverTypeName(paramInfo.typeName)) {
           if (isStdlibCollectionHelper) {
             return false;
@@ -494,9 +521,25 @@ bool inferImplicitTemplateArgs(const Definition &def,
           return false;
         }
         std::vector<std::string> argTemplateArgs;
-        if (argInfo.typeTemplateArg.empty() ||
-            !splitTopLevelTemplateArgs(argInfo.typeTemplateArg, argTemplateArgs) ||
-            argTemplateArgs.size() != inferredParamNames.size()) {
+        if (argTemplateArgText.empty()) {
+          if (!extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs) &&
+              !extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(
+                  argBaseType, ctx, argTemplateArgs) &&
+              !extractExperimentalMapValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs)) {
+            if (isStdlibCollectionHelper) {
+              return false;
+            }
+            error = "unable to infer implicit template arguments for " + def.fullPath;
+            return false;
+          }
+        } else if (!splitTopLevelTemplateArgs(argTemplateArgText, argTemplateArgs)) {
+          if (isStdlibCollectionHelper) {
+            return false;
+          }
+          error = "unable to infer implicit template arguments for " + def.fullPath;
+          return false;
+        }
+        if (argTemplateArgs.size() != inferredParamNames.size()) {
           if (isStdlibCollectionHelper) {
             return false;
           }

@@ -201,6 +201,81 @@ bool extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(const std::s
   return false;
 }
 
+bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
+                                                                       const Context &ctx,
+                                                                       std::vector<std::string> &templateArgsOut) {
+  std::string normalizedType = normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+      const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+          return false;
+        }
+        normalizedType = normalizeBindingTypeName(args.front());
+        continue;
+      }
+      if (normalizedBase == "soa_vector" && !argText.empty()) {
+        return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
+      }
+    }
+    break;
+  }
+  std::string resolvedPath = normalizedType;
+  if (!resolvedPath.empty() && resolvedPath.front() != '/') {
+    resolvedPath.insert(resolvedPath.begin(), '/');
+  }
+  std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+  if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
+    normalizedResolvedPath.erase(normalizedResolvedPath.begin());
+  }
+  if (normalizedResolvedPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+    return false;
+  }
+  for (const auto &[cacheKey, specializedPath] : ctx.specializationCache) {
+    if (normalizeBindingTypeName(specializedPath) != normalizeBindingTypeName(resolvedPath)) {
+      continue;
+    }
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(cacheKey, base, argText) || base.empty()) {
+      continue;
+    }
+    if (normalizeCollectionReceiverTypeName(base) != "soa_vector") {
+      continue;
+    }
+    return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
+  }
+  auto defIt = ctx.sourceDefs.find(resolvedPath);
+  if (defIt == ctx.sourceDefs.end()) {
+    return false;
+  }
+  for (const auto &fieldExpr : defIt->second.statements) {
+    if (!fieldExpr.isBinding || fieldExpr.name != "storage") {
+      continue;
+    }
+    BindingInfo fieldBinding;
+    if (!extractExplicitBindingType(fieldExpr, fieldBinding)) {
+      continue;
+    }
+    std::string normalizedFieldType = normalizeBindingTypeName(fieldBinding.typeName);
+    if (!normalizedFieldType.empty() && normalizedFieldType.front() == '/') {
+      normalizedFieldType.erase(normalizedFieldType.begin());
+    }
+    if (fieldBinding.typeTemplateArg.empty() ||
+        (normalizedFieldType != "SoaColumn" &&
+         normalizedFieldType != "std/collections/experimental_soa_storage/SoaColumn")) {
+      continue;
+    }
+    return splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, templateArgsOut) &&
+           templateArgsOut.size() == 1;
+  }
+  return false;
+}
+
 bool resolvesExperimentalMapValueReceiver(const Expr *receiverExpr,
                                           const std::vector<ParameterInfo> &params,
                                           const LocalTypeMap &locals,
@@ -399,6 +474,46 @@ std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &pa
   if (path == "/std/collections/vector/at_unsafe" || path == "/vector/at_unsafe" ||
       path == "/std/collections/vectorAtUnsafe") {
     return "/std/collections/experimental_vector/vectorAtUnsafe";
+  }
+  return {};
+}
+
+std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string &path) {
+  if (path == "/std/collections/count") {
+    return "/std/collections/experimental_soa_vector/soaVectorCount";
+  }
+  if (path == "/std/collections/get") {
+    return "/std/collections/experimental_soa_vector/soaVectorGet";
+  }
+  if (path == "/std/collections/ref") {
+    return "/std/collections/experimental_soa_vector/soaVectorRef";
+  }
+  if (path == "/std/collections/reserve") {
+    return "/std/collections/experimental_soa_vector/soaVectorReserve";
+  }
+  if (path == "/std/collections/push") {
+    return "/std/collections/experimental_soa_vector/soaVectorPush";
+  }
+  if (path == "/std/collections/to_aos") {
+    return "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
+  }
+  if (path == "/std/collections/soa_vector/count") {
+    return "/std/collections/experimental_soa_vector/soaVectorCount";
+  }
+  if (path == "/std/collections/soa_vector/get") {
+    return "/std/collections/experimental_soa_vector/soaVectorGet";
+  }
+  if (path == "/std/collections/soa_vector/ref") {
+    return "/std/collections/experimental_soa_vector/soaVectorRef";
+  }
+  if (path == "/std/collections/soa_vector/reserve") {
+    return "/std/collections/experimental_soa_vector/soaVectorReserve";
+  }
+  if (path == "/std/collections/soa_vector/push") {
+    return "/std/collections/experimental_soa_vector/soaVectorPush";
+  }
+  if (path == "/std/collections/soa_vector/to_aos") {
+    return "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
   }
   return {};
 }

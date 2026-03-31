@@ -78,6 +78,24 @@ bool SemanticsValidator::buildImportAliases() {
     return false;
   };
 
+  auto registerCanonicalSoaVectorWildcardAliases = [&](const std::string &prefix) {
+    if (prefix != "/std/collections/soa_vector") {
+      return false;
+    }
+    static constexpr std::array<std::pair<std::string_view, std::string_view>, 6> aliases = {{
+        {"count", "/std/collections/soa_vector/count"},
+        {"get", "/std/collections/soa_vector/get"},
+        {"ref", "/std/collections/soa_vector/ref"},
+        {"reserve", "/std/collections/soa_vector/reserve"},
+        {"push", "/std/collections/soa_vector/push"},
+        {"to_aos", "/std/collections/soa_vector/to_aos"},
+    }};
+    for (const auto &[name, path] : aliases) {
+      importAliases_[std::string(name)] = std::string(path);
+    }
+    return true;
+  };
+
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
     if (importPath == "/std/math") {
@@ -102,6 +120,9 @@ bool SemanticsValidator::buildImportAliases() {
       prefix = importPath;
     }
     if (isWildcard) {
+      if (registerCanonicalSoaVectorWildcardAliases(prefix)) {
+        continue;
+      }
       const std::string scopedPrefix = prefix + "/";
       bool sawImmediateDefinition = false;
       bool importError = false;

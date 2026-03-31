@@ -149,6 +149,10 @@ bool extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(const std::s
                                                                     const Context &ctx,
                                                                     std::vector<std::string> &templateArgsOut);
 
+bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
+                                                                       const Context &ctx,
+                                                                       std::vector<std::string> &templateArgsOut);
+
 #include "TemplateMonomorphSetupUtilities.h"
 #include "TemplateMonomorphCollectionCompatibilityPaths.h"
 #include "TemplateMonomorphExperimentalCollectionTypeHelpers.h"

@@ -93,7 +93,10 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/vector/push" || path == "/std/collections/vector/pop" ||
            path == "/std/collections/vector/reserve" || path == "/std/collections/vector/clear" ||
            path == "/std/collections/vector/remove_at" || path == "/std/collections/vector/remove_swap" ||
-           path == "/std/collections/vector/at" || path == "/std/collections/vector/at_unsafe";
+           path == "/std/collections/vector/at" || path == "/std/collections/vector/at_unsafe" ||
+           path == "/std/collections/soa_vector/count" || path == "/std/collections/soa_vector/get" ||
+           path == "/std/collections/soa_vector/ref" || path == "/std/collections/soa_vector/reserve" ||
+           path == "/std/collections/soa_vector/push" || path == "/std/collections/soa_vector/to_aos";
   };
   auto mapHelperReceiverExpr = [&](const Expr &candidate) -> const Expr * {
     if (candidate.isMethodCall) {
@@ -188,6 +191,113 @@ bool rewriteExpr(Expr &expr,
       return normalizeCollectionReceiverTypeName(receiverBase) == "vector";
     }
     return normalizeCollectionReceiverTypeName(inferredReceiverType) == "vector";
+  };
+  auto resolveBuiltinSoaVectorReceiverTemplateArgs =
+      [&](const Expr *receiverExpr, std::vector<std::string> &templateArgsOut) {
+        templateArgsOut.clear();
+        if (receiverExpr == nullptr) {
+          return false;
+        }
+        auto tryBindingInfo = [&](BindingInfo receiverInfo) {
+          auto splitInlineTemplateType = [](BindingInfo &info) {
+            if (!info.typeTemplateArg.empty()) {
+              return;
+            }
+            std::string base;
+            std::string argText;
+            if (splitTemplateTypeName(info.typeName, base, argText) && !base.empty()) {
+              info.typeName = base;
+              info.typeTemplateArg = argText;
+            }
+          };
+          splitInlineTemplateType(receiverInfo);
+          std::string receiverType = normalizeCollectionReceiverTypeName(receiverInfo.typeName);
+          std::string receiverTemplateArg = receiverInfo.typeTemplateArg;
+          if ((receiverType == "Reference" || receiverType == "Pointer") && !receiverTemplateArg.empty()) {
+            std::string innerBase;
+            std::string innerArgs;
+            if (splitTemplateTypeName(receiverTemplateArg, innerBase, innerArgs) && !innerBase.empty()) {
+              receiverType = normalizeCollectionReceiverTypeName(innerBase);
+              receiverTemplateArg = innerArgs;
+            }
+          }
+          if (receiverType != "soa_vector" || receiverTemplateArg.empty()) {
+            return false;
+          }
+          std::vector<std::string> receiverArgs;
+          if (!splitTopLevelTemplateArgs(receiverTemplateArg, receiverArgs) || receiverArgs.size() != 1) {
+            return false;
+          }
+          templateArgsOut = std::move(receiverArgs);
+          return true;
+        };
+        if (receiverExpr->kind == Expr::Kind::Name) {
+          for (const auto &param : params) {
+            if (param.name == receiverExpr->name && tryBindingInfo(param.binding)) {
+              return true;
+            }
+          }
+          auto localIt = locals.find(receiverExpr->name);
+          if (localIt != locals.end() && tryBindingInfo(localIt->second)) {
+            return true;
+          }
+        }
+        auto inferFromTypeText = [&](std::string receiverTypeText) {
+          if (receiverTypeText.empty()) {
+            return false;
+          }
+          if (extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(
+                  receiverTypeText, ctx, templateArgsOut)) {
+            return true;
+          }
+          while (true) {
+            std::string base;
+            std::string argText;
+            if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
+              return false;
+            }
+            const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+            std::vector<std::string> receiverArgs;
+            if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+              if (!splitTopLevelTemplateArgs(argText, receiverArgs) || receiverArgs.size() != 1) {
+                return false;
+              }
+              receiverTypeText = receiverArgs.front();
+              continue;
+            }
+            if (normalizedBase != "soa_vector") {
+              return false;
+            }
+            if (!splitTopLevelTemplateArgs(argText, receiverArgs) || receiverArgs.size() != 1) {
+              return false;
+            }
+            templateArgsOut = std::move(receiverArgs);
+            return true;
+          }
+        };
+        BindingInfo receiverInfo;
+        if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
+            inferFromTypeText(bindingTypeToString(receiverInfo))) {
+          return true;
+        }
+        return inferFromTypeText(
+            inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
+      };
+  auto resolvesBuiltinSoaVectorReceiver = [&](const Expr *receiverExpr) {
+    std::vector<std::string> receiverTemplateArgs;
+    return resolveBuiltinSoaVectorReceiverTemplateArgs(receiverExpr, receiverTemplateArgs);
+  };
+  auto fallbackRootHelperPathForCanonicalSoaVectorAlias = [&](const std::string &path) -> std::string {
+    constexpr std::string_view prefix = "/std/collections/soa_vector/";
+    if (path.rfind(prefix, 0) != 0) {
+      return {};
+    }
+    const std::string suffix = path.substr(prefix.size());
+    if (suffix == "count" || suffix == "get" || suffix == "ref" || suffix == "reserve" ||
+        suffix == "push" || suffix == "to_aos") {
+      return "/" + suffix;
+    }
+    return {};
   };
   auto shouldDeferStdlibCollectionHelperTemplateRewrite = [&](const std::string &path) {
     if (!expr.templateArgs.empty() || !isCanonicalStdlibCollectionHelperPath(path)) {
@@ -332,6 +442,13 @@ bool rewriteExpr(Expr &expr,
       }
     }
     std::string resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
+    const std::string nonSoaReceiverFallbackPath = fallbackRootHelperPathForCanonicalSoaVectorAlias(resolvedPath);
+    if (!nonSoaReceiverFallbackPath.empty() &&
+        !resolvesBuiltinSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+      resolvedPath = nonSoaReceiverFallbackPath;
+      expr.name = nonSoaReceiverFallbackPath;
+      expr.namespacePrefix.clear();
+    }
     const std::string borrowedCanonicalMapUnknownTarget = canonicalMapHelperUnknownTargetPath(resolvedPath);
     if (!borrowedCanonicalMapUnknownTarget.empty() &&
         resolvesExperimentalMapBorrowedReceiver(
@@ -420,11 +537,25 @@ bool rewriteExpr(Expr &expr,
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
     }
+    if (expr.templateArgs.empty() &&
+        (resolvedPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0 ||
+         resolvedPath.rfind("/std/collections/experimental_soa_vector_conversions/", 0) == 0) &&
+        resolvesBuiltinSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+      std::vector<std::string> receiverTemplateArgs;
+      if (resolveBuiltinSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+        expr.templateArgs = std::move(receiverTemplateArgs);
+      }
+    }
     if (resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
     if (resolvedPath.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+        resolvedPath.find("__t") != std::string::npos) {
+      expr.templateArgs.clear();
+    }
+    if ((resolvedPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0 ||
+         resolvedPath.rfind("/std/collections/experimental_soa_vector_conversions/", 0) == 0) &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
@@ -461,6 +592,19 @@ bool rewriteExpr(Expr &expr,
       if (implicitTemplatePreferredPath != resolvedPath) {
         resolvedPath = implicitTemplatePreferredPath;
         expr.name = implicitTemplatePreferredPath;
+      }
+    }
+    const std::string lateExperimentalSoaVectorPath = experimentalSoaVectorHelperPathForCanonicalHelper(resolvedPath);
+    if (!lateExperimentalSoaVectorPath.empty() &&
+        resolvesBuiltinSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+      resolvedPath = lateExperimentalSoaVectorPath;
+      expr.name = lateExperimentalSoaVectorPath;
+      expr.namespacePrefix.clear();
+      if (expr.templateArgs.empty()) {
+        std::vector<std::string> receiverTemplateArgs;
+        if (resolveBuiltinSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+          expr.templateArgs = std::move(receiverTemplateArgs);
+        }
       }
     }
     if (ctx.helperOverloadInternalToPublic.count(resolvedPath) > 0) {
@@ -611,6 +755,8 @@ bool rewriteExpr(Expr &expr,
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
       const std::string experimentalVectorMethodPath =
           experimentalVectorHelperPathForCanonicalHelper(methodPath);
+      const std::string experimentalSoaVectorMethodPath =
+          experimentalSoaVectorHelperPathForCanonicalHelper(methodPath);
       const bool shouldRewriteCanonicalVectorMethodToExperimental =
           ctx.sourceDefs.count(methodPath) == 0 && ctx.helperOverloads.count(methodPath) == 0 &&
           hasVisibleStdCollectionsImportForPath(ctx, methodPath);
@@ -643,8 +789,19 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (expr.templateArgs.empty()) {
-        methodPath =
+          methodPath =
             preferVectorStdlibImplicitTemplatePath(expr, methodPath, locals, params, allowMathBare, ctx, namespacePrefix);
+      }
+      if (!experimentalSoaVectorMethodPath.empty() &&
+          resolvesBuiltinSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+        methodPath = experimentalSoaVectorMethodPath;
+        if (expr.templateArgs.empty()) {
+          std::vector<std::string> receiverTemplateArgs;
+          if (resolveBuiltinSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+            expr.templateArgs = std::move(receiverTemplateArgs);
+            allConcrete = true;
+          }
+        }
       }
       if (expr.templateArgs.empty() &&
           isExperimentalVectorPublicHelperPath(methodPath) &&
@@ -663,11 +820,26 @@ bool rewriteExpr(Expr &expr,
           allConcrete = true;
         }
       }
+      if (expr.templateArgs.empty() &&
+          (methodPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0 ||
+           methodPath.rfind("/std/collections/experimental_soa_vector_conversions/", 0) == 0) &&
+          resolvesBuiltinSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+        std::vector<std::string> receiverTemplateArgs;
+        if (resolveBuiltinSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+          expr.templateArgs = std::move(receiverTemplateArgs);
+          allConcrete = true;
+        }
+      }
       if (methodPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }
       if (methodPath.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+          methodPath.find("__t") != std::string::npos) {
+        expr.templateArgs.clear();
+      }
+      if ((methodPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0 ||
+           methodPath.rfind("/std/collections/experimental_soa_vector_conversions/", 0) == 0) &&
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }

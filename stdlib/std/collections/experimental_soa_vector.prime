@@ -81,7 +81,8 @@ namespace std {
   [public return<i32>]
   soaVectorCount<T>([SoaVector<T>] values) {
     soaVectorValidateType<T>()
-    return(values.count())
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/experimental_soa_storage/soaColumnCount<T>(storage))
   }
 
   [public return<T>]
