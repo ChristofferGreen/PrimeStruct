@@ -355,6 +355,140 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical soa_vector count helper validates on experimental wrapper bindings") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(/std/collections/soa_vector/count<Particle>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical soa_vector get helper validates on experimental wrapper bindings") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(/std/collections/soa_vector/get<Particle>(values, 0i32).x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical soa_vector ref helper validates on experimental wrapper bindings") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(/std/collections/soa_vector/ref<Particle>(values, 0i32).x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical soa_vector mutator helpers validate on experimental wrapper bindings") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  /std/collections/soa_vector/reserve<Particle>(values, 2i32)
+  /std/collections/soa_vector/push<Particle>(values, Particle(4i32))
+  /std/collections/soa_vector/push<Particle>(values, Particle(9i32))
+  return(plus(/std/collections/soa_vector/count<Particle>(values),
+              /std/collections/soa_vector/get<Particle>(values, 1i32).x))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical soa_vector to_aos helper validates on experimental wrapper bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
+  return(count(unpacked))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wildcard-imported canonical soa_vector helpers validate on experimental wrapper bindings") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa_vector/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  reserve(values, 2i32)
+  push(values, Particle(4i32))
+  push(values, Particle(9i32))
+  [Particle] first{get(values, 0i32)}
+  [Particle] second{ref(values, 1i32)}
+  [vector<Particle>] unpacked{to_aos(values)}
+  return(plus(plus(count(values), plus(first.x, second.x)), count(unpacked)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector stdlib helpers reject primitive element types") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
@@ -402,6 +536,41 @@ Particle() {
 main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   return(soaVectorCount<Particle>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector stdlib wide reflect-enabled structs validate on pending width boundary") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle16() {
+  [i32] a0{0i32}
+  [i32] a1{0i32}
+  [i32] a2{0i32}
+  [i32] a3{0i32}
+  [i32] a4{0i32}
+  [i32] a5{0i32}
+  [i32] a6{0i32}
+  [i32] a7{0i32}
+  [i32] a8{0i32}
+  [i32] a9{0i32}
+  [i32] a10{0i32}
+  [i32] a11{0i32}
+  [i32] a12{0i32}
+  [i32] a13{0i32}
+  [i32] a14{0i32}
+  [i32] a15{0i32}
+}
+
+[return<int>]
+main() {
+  [SoaVector<Particle16>] values{soaVectorNew<Particle16>()}
+  return(soaVectorCount<Particle16>(values))
 }
 )";
   std::string error;
@@ -641,6 +810,46 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector stdlib field-view method reports pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(values.x())
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
+TEST_CASE("experimental soa_vector stdlib field-view index syntax reports pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(values.x()[0i32])
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
 TEST_CASE("experimental soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*
@@ -679,6 +888,24 @@ main() {
   soaColumnWrite<Mover>(values, 0i32, Mover(8i32))
   soaColumnClear<Mover>(values)
   return(soaColumnCount<Mover>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa storage borrowed ref helper validates on explicit column bindings") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] values{soaColumnNew<i32>()}
+  soaColumnPush<i32>(values, 2i32)
+  soaColumnPush<i32>(values, 5i32)
+  [i32] borrowed{soaColumnRef<i32>(values, 1i32)}
+  return(plus(borrowed, soaColumnCount<i32>(values)))
 }
 )";
   std::string error;

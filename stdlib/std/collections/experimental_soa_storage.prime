@@ -66,6 +66,24 @@ namespace std {
     }
   }
 
+  [public return<void>]
+  soaArbitraryWidthPending<T>([i32] fieldCount) {
+    [array<i32>] trap{array<i32>()}
+    trap[fieldCount]
+  }
+
+  [public return<i32>]
+  soaSupportedFieldCount<T>() {
+    [i32] fieldCount{meta.field_count<T>()}
+    if(or(less_than(fieldCount, 1i32),
+          greater_than(fieldCount, 15i32)),
+       then() {
+         soaArbitraryWidthPending<T>(fieldCount)
+       },
+       else() { })
+    return(fieldCount)
+  }
+
   [public struct]
   SoaColumns2<T0, T1>() {
     [public SoaColumn<T0> mut] first{soaColumnNew<T0>()}
