@@ -302,8 +302,8 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Error);
-  CHECK(error == "native backend does not support soa_vector get");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   primec::Expr soaRefCall;
   soaRefCall.kind = primec::Expr::Kind::Call;
@@ -335,8 +335,8 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Error);
-  CHECK(error == "native backend does not support soa_vector ref");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   primec::Expr printCall;
   printCall.kind = primec::Expr::Kind::Call;
