@@ -133,6 +133,78 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("native canonical soa_vector get helper keeps canonical reject on non-soa receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  return(/std/collections/soa_vector/get<i32>(values, 0i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_soa_vector_get_non_soa_receiver.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_canonical_soa_vector_get_non_soa_receiver_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/soa_vector/get") !=
+        std::string::npos);
+}
+
+TEST_CASE("native canonical soa_vector get slash-method keeps canonical reject") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
+  return(values./std/collections/soa_vector/get(0i32).x)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_soa_vector_get_slash_method.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_canonical_soa_vector_get_slash_method_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/soa_vector/get") !=
+        std::string::npos);
+}
+
+TEST_CASE("native canonical soa_vector to_aos slash-method keeps canonical reject") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
+  [vector<Particle>] unpacked{values./std/collections/soa_vector/to_aos()}
+  return(count(unpacked))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_soa_vector_to_aos_slash_method.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_canonical_soa_vector_to_aos_slash_method_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: ") != std::string::npos);
+  CHECK(readFile(errPath).find("/std/collections/soa_vector/to_aos") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native canonical soa_vector ref helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
@@ -215,7 +287,7 @@ main() {
   CHECK(readFile(errPath).find("/std/collections/soa_vector/to_aos__") != std::string::npos);
 }
 
-TEST_CASE("native wildcard-imported canonical soa_vector helpers reach experimental conversion boundary") {
+TEST_CASE("native wildcard-imported canonical soa_vector helpers still require template inference parity") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -246,7 +318,7 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
-            "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") !=
+            "template arguments required for /std/collections/soa_vector/count") !=
         std::string::npos);
 }
 
@@ -596,7 +668,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("native rejects experimental soa_vector stdlib field-view index syntax before field-view substrate") {
+TEST_CASE("native rejects experimental soa_vector stdlib field-view index syntax with pending diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -617,7 +689,7 @@ main() {
       (testScratchPath("") / "primec_native_experimental_soa_vector_field_view_err.txt").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("at requires array, vector, map, or string target") != std::string::npos);
+  CHECK(readFile(errPath).find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native experimental soa storage helpers") {

@@ -509,6 +509,11 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return false;
     }
     if (!isArrayOrString && !isMap && !isExperimentalMap) {
+      if (std::string soaFieldViewName;
+          isBuiltinSoaFieldViewExpr(expr.args.front(), params, locals, &soaFieldViewName)) {
+        error_ = "soa_vector field views are not implemented yet: " + soaFieldViewName;
+        return false;
+      }
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }

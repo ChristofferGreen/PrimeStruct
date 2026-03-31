@@ -5,6 +5,117 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (March 31, 2026)**
+
+**Types & Semantics**
+**Group 4 - Ownership and lifetime substrate**
+- ✓ Split the remaining builtin ownership/drop substrate into explicit vector discard, vector indexed-removal, and wider builtin-map growth/drop slices.
+- ✓ Replace the temporary builtin canonical `map<K, V>` insert staircase with one generic arbitrary-`n` growth/drop implementation.
+- ✓ Delete the remaining dead count-by-count builtin-map growth branches after the generic lowerer path landed.
+
+**Group 8 - SoA de-builtinization**
+- ✓ `soa_vector<T>` freeze/stabilize slice: the v1 compiler-owned surface (empty/header-only construction, `count`, validation, helper precedence, and deterministic reject contracts) is now locked. Further work continues only under the explicit stdlib/substrate items below.
+- ✓ Lock the v1 `soa_vector` contract before more implementation work: construction forms, `count`, `get`, `ref`, field-view indexing shape, explicit `to_soa` / `to_aos`, and invalidation boundaries after structural mutation. Progress: semantic validation now emits deterministic indexing-shape diagnostics (`soa_vector field views require value.<field>()[index] syntax: <field>`) for invalid direct field-view argument forms such as `values.field(i)` and `field(values, i)` instead of a generic argument-reject message, unresolved call-form field-view index attempts (`field(values, i)`) now emit that same deterministic syntax diagnostic instead of `unknown call target`, builtin `get`/`ref` method forms now reject named arguments through the same deterministic `named arguments not supported for builtin calls` contract as call form, explicit `/soa_vector/get` / `/soa_vector/ref` direct calls now use that same builtin validation path instead of leaking into field-view fallback diagnostics, explicit `/soa_vector/count` direct-call and slash-method forms now normalize to the builtin `count` surface instead of doubling the helper path into `/soa_vector/soa_vector/count`, `to_soa` / `to_aos` method forms plus explicit slash-method forms now normalize to the builtin conversion surface instead of failing as unknown `/vector/to_soa` or `/soa_vector/to_aos` methods, builtin `soa_vector ref(...)` results now reject local binding persistence plus call-argument/return escapes with a deterministic `soa_vector borrowed views are not implemented yet: ref` diagnostic until the borrowed-view substrate exists, and builtin `soa_vector` field-view results now reject call-argument/return escapes with the same deterministic `soa_vector field views are not implemented yet: <field>` diagnostic until the field-view substrate exists.
+  - ✓ Lock explicit `/soa_vector/get` and `/soa_vector/ref` direct-call builtin diagnostics/parity with bare and method forms.
+  - ✓ Lock explicit `/soa_vector/count` direct-call and slash-method parity with bare and method forms.
+  - ✓ Lock `to_soa` / `to_aos` method-form and slash-method parity with bare builtin calls.
+  - ✓ Reject local bindings initialized from builtin `soa_vector ref(...)` until borrowed-view substrate exists.
+  - ✓ Reject builtin `soa_vector ref(...)` escapes through call arguments and returns until borrowed-view substrate exists.
+  - ✓ Reject builtin `soa_vector` field-view escapes through call arguments and returns until the field-view substrate exists.
+- ✓ Land the minimum compile-time struct-field introspection/codegen needed for one `.prime` `soa_vector` implementation to derive SoA column schemas from `T`.
+- ✓ Land the minimum fixed-width column-storage substrate needed for one `.prime` `soa_vector` implementation. Progress: the reusable `.prime` storage substrate now exists at `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` plus reusable fixed-width `SoaColumns2<T0, T1>`, `SoaColumns3<T0, T1, T2>`, `SoaColumns4<T0, T1, T2, T3>`, `SoaColumns5<T0, T1, T2, T3, T4>`, `SoaColumns6<T0, T1, T2, T3, T4, T5>`, `SoaColumns7<T0, T1, T2, T3, T4, T5, T6>`, `SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>`, `SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>`, `SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>`, `SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>`, `SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>`, `SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>`, `SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>`, and `SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>` primitives, all backed by checked buffer alloc/grow/free plus explicit `init/drop/take/borrow` flows, and reflect-enabled schemas wider than the fixed-width substrate now fail deterministically with `experimental soa storage arbitrary-width schemas pending` instead of slipping into undefined layout assumptions.
+  - ✓ Add the first reusable `.prime` single-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` two-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` three-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` four-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` five-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` six-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` seven-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` eight-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` nine-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` ten-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` eleven-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` twelve-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` thirteen-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` fourteen-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add the first reusable `.prime` fifteen-column storage primitive over checked buffer alloc/grow/free/read/write.
+  - ✓ Add a deterministic pending-width gate over the current fixed-width substrate so reflect-enabled schemas wider than fifteen fields fail explicitly while arbitrary-width allocation/grow/free remains pending.
+  - ✓ Add deterministic allocation-failure coverage for the current single-column substrate once the wrapper starts consuming it.
+  - ✓ Add borrowed-view coverage for that substrate once the borrowed-view surface exists.
+- ✓ Split arbitrary-width SoA schema support into allocation, grow/realloc, and free/drop slices.
+- ✓ Land the minimum single-column borrowed-slot substrate needed for one `.prime` `soa_vector` implementation. Progress: `soaColumnRef<T>(...)`, `soaVectorRef<T>(...)`, and `values.ref(i)` now all run through the experimental `.prime` storage/wrapper path and are backed by direct semantics/C++/native/VM coverage.
+  - ✓ Land the first single-column borrowed-slot substrate for experimental `.prime` `ref` helper/method flows and direct storage borrows.
+- ✓ Split the remaining borrowed-view substrate work into explicit invalidation and borrowed field-view slices.
+- ✓ Add experimental stdlib `/std/collections/experimental_soa_vector/*` early. Progress: the first namespace foothold now exists with `SoaVector<T>`, `soaVectorNew<T>()`, and `soaVectorCount<T>()`; that core wrapper now stores real `.prime` `SoaColumn<T>` state, and `soaVectorSingle<T>()`, `soaVectorGet<T>()`, `soaVectorReserve<T>()`, `soaVectorPush<T>()`, `values.get(i)`, `values.reserve(...)`, and `values.push(...)` now exercise the first real column-storage-backed wrapper path end-to-end without being blocked by the conversion-return boundary. The explicit AoS conversion helper foothold `soaVectorToAos<T>()` lives in the dedicated `/std/collections/experimental_soa_vector_conversions/*` surface, where backend lowering still intentionally stops on the current struct-return boundary.
+  - ✓ Land the first experimental stdlib empty-construction/count helper foothold (`SoaVector`, `soaVectorNew`, `soaVectorCount`) on top of the current builtin header-only surface.
+  - ✓ Add the first SoA-safe type validation gate so the helper foothold only accepts reflect-enabled struct element types.
+  - ✓ Add the smallest `.prime` runtime path by moving empty construction/count onto explicit wrapper-owned state instead of builtin `soa_vector/count`.
+  - ✓ Add the first empty-state `.prime` AoS conversion helper foothold (`soaVectorToAos`) and lock the current deterministic backend reject contract until vector<Struct> helper returns are supported.
+  - ✓ Add the first non-empty `.prime` construction helper foothold (`soaVectorSingle`) and lock the current deterministic backend reject contract while real SoA storage is still missing.
+  - ✓ Add the first real column-storage-backed `.prime` path (`single` / `get`, plus the first `fromAos` semantic foothold) that exercises the new substrate beyond header-only wrapper state.
+- ✓ Extend experimental stdlib `/std/collections/experimental_soa_vector/*` beyond empty-state count/conversion footholds to the current non-empty literal construction, `push`, `reserve`, `get`, `ref`, and explicit conversion-helper boundary. Progress: the first real single-column substrate is now threaded through the core wrapper, so `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, `soaVectorGet<T>()`, `values.get(i)`, `soaVectorReserve<T>()`, `soaVectorPush<T>()`, `values.reserve(...)`, and `values.push(...)` all run through `.prime` column-backed state semantically; `soaVectorRef<T>()` and `values.ref(i)` now also run successfully on that wrapper state through the single-column borrowed-slot substrate without depending on the conversion surface; `soaVectorFromAos<T>()` intentionally stays on the typed-binding backend boundary; and imported/helper-routed `soaVectorToAos<T>()` intentionally stays on the current struct-return backend boundary.
+  - ✓ Add the first empty-state `.prime` AoS conversion helper (`soaVectorToAos`) once it can live behind a clean importable surface without blocking the core wrapper module.
+  - ✓ Add wrapper method-sugar `.to_aos()` on top of the clean imported helper surface without colliding with the builtin `soa_vector.to_aos` semantic route.
+  - ✓ Add the first non-empty `.prime` construction helper foothold with a deterministic backend reject contract.
+  - ✓ Add the first `.prime` AoS-to-SoA wrapper conversion foothold (`soaVectorFromAos`), then thread it onto the first real single-column wrapper substrate path while keeping the current typed-binding backend boundary explicit.
+  - ✓ Add the first `.prime` `get` helper and method-sugar foothold, then thread them onto the first real single-column wrapper substrate path.
+  - ✓ Add `.prime` `ref` helper/method footholds on top of the current single-column borrowed-slot substrate, then make them run successfully without depending on the conversion boundary.
+  - ✓ Add `.prime` `push` / `reserve` helper surfaces once the new column allocation/grow/free substrate is threaded into the wrapper.
+  - ✓ Lock richer non-empty `to_aos` helper semantics plus the current imported-helper backend reject contract on the column-backed wrapper state.
+  - ✓ Add wrapper method-sugar `.to_aos()` that resolves to the imported helper surface and keeps the current struct-return backend boundary explicit.
+- ✓ Split the remaining richer non-empty imported `to_aos` work into explicit backend-return and wrapper-lowering slices.
+- ✓ Split imported `soaVectorToAos<T>()` backend-return support into explicit C++, native, and VM follow-ups.
+- ✓ Split the wrapper field-view parent back into a completed direct-semantics pending-diagnostic slice and an open successful-indexing slice once the attempted rewrite path proves incomplete, so the live TODO and focused tests stay honest.
+- ✓ Route experimental wrapper field-view attempts onto the deterministic pending diagnostic contract.
+- ✓ Route full compile-pipeline experimental wrapper field-view indexing attempts onto that same deterministic pending diagnostic contract.
+- ✓ Split the remaining successful field-view indexing work into an initial read-only single-column slice and the broader arbitrary-field/borrowed follow-up work.
+- ✓ Route canonical `/std/collections/soa_vector/*` names through the real experimental `.prime` implementation once parity is proven.
+  - ✓ Route explicit canonical `/std/collections/soa_vector/count(...)` direct calls through the experimental wrapper count path.
+  - ✓ Route explicit canonical `/std/collections/soa_vector/get(...)` direct calls through the experimental wrapper semantic path and lock the current backend boundary.
+  - ✓ Route explicit canonical `/std/collections/soa_vector/ref(...)` direct calls through the experimental wrapper semantic path and lock the current backend boundary.
+  - ✓ Route explicit canonical `/std/collections/soa_vector/to_aos(...)` direct calls through the experimental conversion surface and lock the current backend boundary.
+  - ✓ Route explicit canonical `/std/collections/soa_vector/reserve(...)` and `/std/collections/soa_vector/push(...)` direct calls through the experimental wrapper semantic path and lock the current backend boundary.
+  - ✓ Route successful backend parity for canonical struct-returning `/std/collections/soa_vector/*` helper names (`get` and `ref`) once the imported experimental wrapper stops dragging the `soaVectorToAos` return boundary into unrelated programs.
+- ✓ Split wildcard-imported canonical helper parity into explicit semantic-validation and compile-pipeline/backend follow-ups.
+- ✓ Delete the direct-call canonical `/std/collections/soa_vector/*` monomorph rewrite once the stdlib shim definitions carry those helpers themselves.
+- ✓ Delete the direct-call wrong-receiver fallback that rewrote canonical `/std/collections/soa_vector/*` helper misuse into bare root helper names.
+- ✓ Delete the dead explicit slash-method canonical `/std/collections/soa_vector/*` rewrite table entries and lock the current canonical unknown-target contract for that still-unsupported surface.
+- ✓ Split the remaining compiler-owned `soa_vector` cleanup into explicit semantics, lowering, emitter, and runtime sub-slices.
+- ✓ Delete the remaining method-form canonical `/std/collections/soa_vector/*` rewrite/fallback special cases in semantics.
+- ✓ Split the remaining builtin `soa_vector` semantic fallback work into explicit root helper, conversion, and field-view slices.
+- ✓ Split the remaining root builtin helper fallback work into explicit `get` and `ref` slices.
+- ✓ Split the remaining IR-lowerer `soa_vector` cleanup into explicit helper-call, conversion, and field-view slices.
+- ✓ Split the remaining IR-lowerer helper-call `soa_vector` cleanup into direct-call and wildcard-imported slices.
+- ✓ Split the remaining IR-lowerer conversion `soa_vector` cleanup into direct-canonical and imported-helper slices.
+- ✓ Split the remaining IR-lowerer field-view `soa_vector` cleanup into pending-diagnostic and successful-indexing slices.
+- ✓ Split the remaining IR-lowerer field-view work back into a completed pending-diagnostic slice and an open successful-indexing slice so the live TODO matches the current validated boundary.
+- ✓ Split the remaining backend `soa_vector` cleanup into explicit C++, native, and VM slices.
+- ✓ Split the remaining C++ emitter `soa_vector` cleanup into helper-call, conversion, and field-view slices.
+- ✓ Split the remaining C++ emitter helper-call `soa_vector` cleanup into direct-call and wildcard-imported slices.
+- ✓ Split the remaining C++ emitter conversion `soa_vector` cleanup into direct-canonical and imported-helper slices.
+- ✓ Split the remaining C++ emitter field-view `soa_vector` cleanup into pending-diagnostic and successful-indexing slices.
+- ✓ Split the remaining C++ field-view work back into a completed pending-diagnostic slice and an open successful-indexing slice so the live TODO matches the current validated boundary.
+- ✓ Split the remaining native-backend `soa_vector` cleanup into helper-call, conversion, and field-view slices.
+- ✓ Split the remaining native helper-call `soa_vector` cleanup into direct-call and wildcard-imported slices.
+- ✓ Split the remaining native conversion `soa_vector` cleanup into direct-canonical and imported-helper slices.
+- ✓ Split the remaining native field-view `soa_vector` cleanup into pending-diagnostic and successful-indexing slices.
+- ✓ Split the remaining native field-view work back into a completed pending-diagnostic slice and an open successful-indexing slice so the live TODO matches the current validated boundary.
+- ✓ Split the remaining VM-backend `soa_vector` cleanup into helper-call, conversion, and field-view slices.
+- ✓ Split the remaining VM helper-call `soa_vector` cleanup into direct-call and wildcard-imported slices.
+- ✓ Split the remaining VM conversion `soa_vector` cleanup into direct-canonical and imported-helper slices.
+- ✓ Split the remaining VM field-view `soa_vector` cleanup into pending-diagnostic and successful-indexing slices.
+- ✓ Split the remaining VM field-view work back into a completed pending-diagnostic slice and an open successful-indexing slice so the live TODO matches the current validated boundary.
+- ✓ Split the remaining runtime/diagnostic `soa_vector` cleanup into explicit runtime-code and diagnostic/test slices.
+- ✓ Split the remaining runtime-code `soa_vector` cleanup into helper-call, conversion, and field-view slices.
+- ✓ Split the remaining runtime-code helper-call `soa_vector` cleanup into direct-call and wildcard-imported slices.
+- ✓ Split the remaining runtime-code conversion `soa_vector` cleanup into direct-canonical and imported-helper slices.
+- ✓ Split the remaining runtime-code field-view `soa_vector` cleanup into pending-diagnostic and successful-indexing slices.
+- ✓ Split the remaining diagnostic/test `soa_vector` cleanup into helper-call, conversion, and field-view slices.
+- ✓ Split the remaining diagnostic/test helper-call `soa_vector` cleanup into direct-call and wildcard-imported slices.
+- ✓ Split the remaining diagnostic/test conversion `soa_vector` cleanup into direct-canonical and imported-helper slices.
+- ✓ Split the remaining diagnostic/test field-view `soa_vector` cleanup into pending-diagnostic and successful-indexing slices.
+- ✓ Split the remaining diagnostic/test field-view work back into a completed pending-diagnostic slice and an open successful-indexing slice so the live TODO matches the current validated boundary.
+
 **Todo Cleanup (March 30, 2026)**
 
 **Types & Semantics**

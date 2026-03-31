@@ -287,18 +287,6 @@ bool rewriteExpr(Expr &expr,
     std::vector<std::string> receiverTemplateArgs;
     return resolveBuiltinSoaVectorReceiverTemplateArgs(receiverExpr, receiverTemplateArgs);
   };
-  auto fallbackRootHelperPathForCanonicalSoaVectorAlias = [&](const std::string &path) -> std::string {
-    constexpr std::string_view prefix = "/std/collections/soa_vector/";
-    if (path.rfind(prefix, 0) != 0) {
-      return {};
-    }
-    const std::string suffix = path.substr(prefix.size());
-    if (suffix == "count" || suffix == "get" || suffix == "ref" || suffix == "reserve" ||
-        suffix == "push" || suffix == "to_aos") {
-      return "/" + suffix;
-    }
-    return {};
-  };
   auto shouldDeferStdlibCollectionHelperTemplateRewrite = [&](const std::string &path) {
     if (!expr.templateArgs.empty() || !isCanonicalStdlibCollectionHelperPath(path)) {
       return false;
@@ -442,13 +430,6 @@ bool rewriteExpr(Expr &expr,
       }
     }
     std::string resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
-    const std::string nonSoaReceiverFallbackPath = fallbackRootHelperPathForCanonicalSoaVectorAlias(resolvedPath);
-    if (!nonSoaReceiverFallbackPath.empty() &&
-        !resolvesBuiltinSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
-      resolvedPath = nonSoaReceiverFallbackPath;
-      expr.name = nonSoaReceiverFallbackPath;
-      expr.namespacePrefix.clear();
-    }
     const std::string borrowedCanonicalMapUnknownTarget = canonicalMapHelperUnknownTargetPath(resolvedPath);
     if (!borrowedCanonicalMapUnknownTarget.empty() &&
         resolvesExperimentalMapBorrowedReceiver(
@@ -592,19 +573,6 @@ bool rewriteExpr(Expr &expr,
       if (implicitTemplatePreferredPath != resolvedPath) {
         resolvedPath = implicitTemplatePreferredPath;
         expr.name = implicitTemplatePreferredPath;
-      }
-    }
-    const std::string lateExperimentalSoaVectorPath = experimentalSoaVectorHelperPathForCanonicalHelper(resolvedPath);
-    if (!lateExperimentalSoaVectorPath.empty() &&
-        resolvesBuiltinSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
-      resolvedPath = lateExperimentalSoaVectorPath;
-      expr.name = lateExperimentalSoaVectorPath;
-      expr.namespacePrefix.clear();
-      if (expr.templateArgs.empty()) {
-        std::vector<std::string> receiverTemplateArgs;
-        if (resolveBuiltinSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
-          expr.templateArgs = std::move(receiverTemplateArgs);
-        }
       }
     }
     if (ctx.helperOverloadInternalToPublic.count(resolvedPath) > 0) {

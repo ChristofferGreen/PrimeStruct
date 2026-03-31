@@ -497,24 +497,6 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
   if (path == "/std/collections/to_aos") {
     return "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
   }
-  if (path == "/std/collections/soa_vector/count") {
-    return "/std/collections/experimental_soa_vector/soaVectorCount";
-  }
-  if (path == "/std/collections/soa_vector/get") {
-    return "/std/collections/experimental_soa_vector/soaVectorGet";
-  }
-  if (path == "/std/collections/soa_vector/ref") {
-    return "/std/collections/experimental_soa_vector/soaVectorRef";
-  }
-  if (path == "/std/collections/soa_vector/reserve") {
-    return "/std/collections/experimental_soa_vector/soaVectorReserve";
-  }
-  if (path == "/std/collections/soa_vector/push") {
-    return "/std/collections/experimental_soa_vector/soaVectorPush";
-  }
-  if (path == "/std/collections/soa_vector/to_aos") {
-    return "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
-  }
   return {};
 }
 

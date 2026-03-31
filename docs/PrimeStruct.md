@@ -2283,6 +2283,9 @@ bad_use_after_take() {
     for non-trivial types are still being specified. Canonical `/std/collections/vector/*` indexed-removal helpers on
     explicit experimental `Vector<T>` bindings are exempt from that builtin restriction because they route onto the
     experimental `.prime` implementation instead.
+  - Remaining live ownership/runtime migration work is therefore split into three explicit follow-ups: lift the
+    builtin `pop` / `clear` discard restriction, lift the builtin indexed-removal restriction, and extend builtin
+    canonical `map<K, V>` growth/drop beyond the current owning local numeric-map path.
   - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types
     while container move/reallocation semantics are still being specified. Relocation-trivial currently includes scalar
     primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of relocation-trivial elements, and concrete structs that
@@ -2338,8 +2341,9 @@ bad_use_after_take() {
     backend does not support soa_vector ref`, `native backend does not support to_soa`, `native backend does not
     support to_aos`, `native backend does not support soa_vector helper: push`, `native backend does not support
     soa_vector helper: reserve`). These compiler-owned `soa_vector` paths are
-    not the intended end-state and should be deleted as the generic SoA substrate and stdlib `.prime` implementation
-    land.
+    not the intended end-state and are now tracked as separate cleanup follow-ups for the remaining semantics
+    method/builtin fallbacks, IR-lowerer special cases, emitter/backend special cases, and runtime/diagnostic
+    mentions while the generic SoA substrate and stdlib `.prime` implementation finish replacing them.
   - **Compile-time schema substrate status:** the minimum field-schema introspection needed for a `.prime`
     `soa_vector<T>` implementation already exists through compile-time reflection metadata queries:
     `meta.field_count<T>()`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
@@ -2362,8 +2366,8 @@ bad_use_after_take() {
     `soaVectorPush<T>()` plus wrapper method-sugar `values.reserve(...)` / `values.push(...)` mutate that same
     wrapper-backed column state in place. Experimental wrapper field-view attempts such as `values.x()` now reach
     the deterministic pending contract `soa_vector field views are not implemented yet: x` instead of falling through
-    to `unknown call target`. Indexed reads `values.x()[i]` are still pending; full compile-pipeline attempts
-    currently stop at the generic `at requires array, vector, map, or string target` boundary. `soaVectorFromAos<T>()`
+    to `unknown call target`, and indexed reads `values.x()[i]` now stop at that same deterministic pending contract
+    while successful field-view indexing itself remains unimplemented. `soaVectorFromAos<T>()`
     already targets the same substrate semantically, but backend lowering still stops on the current `* backend
     requires typed bindings` boundary.
     `soaVectorToAos<T>()` now lives in the dedicated `/std/collections/experimental_soa_vector_conversions/*` import
@@ -2375,20 +2379,66 @@ bad_use_after_take() {
     The first canonical bridges also exist now: explicit `/std/collections/soa_vector/count<T>(...)`,
     `/std/collections/soa_vector/get<T>(...)`, `/std/collections/soa_vector/ref<T>(...)`,
     `/std/collections/soa_vector/reserve<T>(...)`, and `/std/collections/soa_vector/push<T>(...)`
-    direct calls all run end-to-end on the experimental wrapper path. Wildcard-imported canonical
-    helper names for `count`, `get`, `ref`, `reserve`, `push`, and `to_aos` now route through the
-    same experimental wrapper/conversion surfaces. Backend lowering for canonical direct-call and
-    wildcard-imported `to_aos(...)` still stops on the explicit
-    `/std/collections/experimental_soa_vector_conversions/soaVectorToAos__...` return boundary,
-    so richer canonical conversion success remains pending there. The wrapper now also exposes
-    `soaVectorRef<T>()` plus `values.ref(i)` on top of the current
-    single-column borrowed-slot substrate, and those borrowed-return paths now run successfully
-    across the current backends without depending on the conversion helper surface. The broader
-    experimental wrapper/helper surface through imported `to_aos` helper and method routing is now
-    in place to the current backend boundary; successful richer non-empty `to_aos` lowering still
-    remains pending on clean `vector<Struct>` helper returns. That single-column borrowed-slot
-    substrate is the current completed foothold; richer borrowed invalidation rules and borrowed
-    field-view surfaces still remain pending behind the broader SoA substrate work.
+direct calls now stay on the canonical stdlib shim surface through `ast-semantic` and then run
+end-to-end on the experimental wrapper path; wrong-receiver direct-call misuse now preserves the
+same canonical `/std/collections/soa_vector/*` unknown-target diagnostic instead of degrading
+into bare `/get` / `/ref`-style fallback names. Explicit canonical slash-method attempts like
+`values./std/collections/soa_vector/get(...)` and
+`values./std/collections/soa_vector/to_aos()` now also stay on that same canonical
+unknown-target/unknown-method contract instead of depending on dead experimental or builtin
+rewrite-table entries. Wildcard-imported canonical
+helper names for `count`, `get`, `ref`, `reserve`, `push`, and `to_aos` still stop at
+`template arguments required for /std/collections/soa_vector/count` for bare wildcard-imported
+calls, so both semantic-validation parity and full compile-pipeline/backend parity remain pending
+on canonical helper template inference there. Backend lowering for explicit canonical direct-call
+`to_aos(...)` still stops on
+`/std/collections/soa_vector/to_aos__...` after the stdlib shim survives through `ast-semantic`.
+Richer canonical conversion success remains pending there. The
+remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for root
+`get`, root `ref`, root `to_aos`, and field-view diagnostics instead of one mixed fallback
+bucket, the remaining lowering cleanup is now tracked as explicit helper-call, conversion, and
+field-view follow-ups, with helper-call cleanup itself staged as direct-call versus
+wildcard-imported follow-ups, conversion cleanup itself staged as direct-canonical versus
+imported-helper follow-ups, and field-view cleanup itself staged as a completed
+pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend
+cleanup is tracked as explicit C++, native, and VM follow-ups instead of one combined
+emitter/runtime note, with the C++, native, and VM backend cleanup themselves staged as
+helper-call, conversion, and field-view follow-ups, with the C++ helper cleanup itself staged as
+direct-call versus wildcard-imported follow-ups, the C++ conversion cleanup itself staged as
+direct-canonical versus imported-helper follow-ups, the C++ field-view cleanup itself staged as a
+completed pending-diagnostic slice plus a separate successful-indexing follow-up, the native
+helper cleanup itself staged as direct-call versus wildcard-imported follow-ups, the native
+conversion cleanup itself staged as direct-canonical versus imported-helper follow-ups, the
+native field-view cleanup itself staged as a completed pending-diagnostic slice plus a separate
+successful-indexing follow-up, the VM helper cleanup itself staged as direct-call versus
+wildcard-imported follow-ups, the VM conversion cleanup itself staged as direct-canonical versus
+imported-helper follow-ups, and the VM field-view cleanup itself staged as a completed
+pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining runtime
+cleanup is now tracked separately as runtime-code versus diagnostic/test follow-ups, with both
+the runtime-code and diagnostic/test cleanup themselves staged as helper-call, conversion, and
+field-view follow-ups, with the runtime-code helper cleanup itself staged as direct-call versus
+wildcard-imported follow-ups, the diagnostic/test helper cleanup itself staged as direct-call
+versus wildcard-imported follow-ups, the runtime-code conversion cleanup itself staged as
+direct-canonical versus imported-helper follow-ups, the diagnostic/test conversion cleanup
+itself staged as direct-canonical versus imported-helper follow-ups, the runtime-code
+field-view cleanup itself staged as pending-diagnostic versus successful-indexing follow-ups,
+and the diagnostic/test field-view cleanup itself staged as a completed pending-diagnostic slice
+plus a separate successful-indexing follow-up. The wrapper now also exposes `soaVectorRef<T>()`
+plus `values.ref(i)` on top of the current single-column borrowed-slot substrate, and those
+borrowed-return paths now run successfully across the current backends without depending on the
+conversion helper surface. The broader experimental wrapper/helper surface through imported
+`to_aos` helper and method routing is now in place to the current backend boundary; successful
+richer non-empty `to_aos` lowering still remains pending in two explicit follow-ups: clean
+backend support for imported
+    `vector<Struct>` helper returns, now tracked as explicit C++, native, and VM slices, then the
+    wrapper-side richer non-empty `to_aos` lowering that depends on those returns. That
+    single-column borrowed-slot
+    substrate is the current completed foothold; the remaining borrowed-view work is now tracked
+    as two explicit follow-ups: language-level invalidation rules, then richer borrowed
+    field-view semantics on top of that substrate. Successful experimental `value.field()[i]`
+    indexing is likewise staged explicitly: first a read-only single-column field-view slice on
+    top of the current substrate, then broader arbitrary-field and borrowed/mutating field-view
+    behavior.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,
@@ -2414,7 +2464,7 @@ bad_use_after_take() {
     primitives are not yet threaded into reflected arbitrary-width schemas or richer wrapper
     field-view surfaces. Reflect-enabled schemas wider than the completed fifteen-column substrate
     now stop deterministically with `experimental soa storage arbitrary-width schemas pending`
-    until the separate arbitrary-width allocation/grow/free path lands.
+    until the separate arbitrary-width allocation, grow/realloc, and free/drop slices land.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of

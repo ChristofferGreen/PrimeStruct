@@ -395,6 +395,61 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical soa_vector get helper keeps canonical reject on non-soa receiver") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  return(/std/collections/soa_vector/get<i32>(values, 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/soa_vector/get") != std::string::npos);
+}
+
+TEST_CASE("canonical soa_vector get slash-method keeps canonical reject on experimental wrapper") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
+  return(values./std/collections/soa_vector/get(0i32).x)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/soa_vector/get") != std::string::npos);
+}
+
+TEST_CASE("canonical soa_vector to_aos slash-method keeps canonical reject on experimental wrapper") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
+  [vector<Particle>] unpacked{values./std/collections/soa_vector/to_aos()}
+  return(count(unpacked))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: ") != std::string::npos);
+  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
+}
+
 TEST_CASE("canonical soa_vector ref helper validates on experimental wrapper bindings") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
@@ -461,7 +516,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("wildcard-imported canonical soa_vector helpers validate on experimental wrapper bindings") {
+TEST_CASE("wildcard-imported canonical soa_vector helpers still require template inference parity") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -485,8 +540,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /std/collections/soa_vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector stdlib helpers reject primitive element types") {
@@ -621,7 +677,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib to-aos method remains pending on wrapper surface") {
+TEST_CASE("experimental soa_vector stdlib to-aos method validates on wrapper surface") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 import /std/collections/experimental_soa_vector_conversions/*
@@ -638,8 +694,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa_vector stdlib non-empty to-aos helper validates on wrapper state") {
@@ -663,7 +719,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib non-empty to-aos method remains pending on wrapper state") {
+TEST_CASE("experimental soa_vector stdlib non-empty to-aos method validates on wrapper state") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 import /std/collections/experimental_soa_vector_conversions/*
@@ -680,8 +736,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa_vector stdlib get helper validates on reflect-enabled struct elements") {

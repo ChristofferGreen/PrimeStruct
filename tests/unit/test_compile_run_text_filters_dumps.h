@@ -153,6 +153,35 @@ main() {
   CHECK(ast.find("/soa_vector/count(this.storage)", countPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic keeps canonical soa_vector get helper path") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(/std/collections/soa_vector/get<Particle>(values, 0i32).x)
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_canonical_soa_vector_get.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_canonical_soa_vector_get.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/get__", mainPos) != std::string::npos);
+  CHECK(ast.find("return /std/collections/soa_vector/get__", mainPos) != std::string::npos);
+}
+
 TEST_CASE("dump ast_semantic alias works") {
   const std::string source = R"(
 [return<int>]
