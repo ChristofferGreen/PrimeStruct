@@ -396,6 +396,35 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
+TEST_CASE("compiles and runs experimental three-column soa storage helpers in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns3<i32, i32, i32> mut] values{soaColumns3New<i32, i32, i32>()}
+  soaColumns3Reserve<i32, i32, i32>(values, 4i32)
+  soaColumns3Push<i32, i32, i32>(values, 2i32, 5i32, 7i32)
+  soaColumns3Push<i32, i32, i32>(values, 11i32, 13i32, 17i32)
+  soaColumns3Write<i32, i32, i32>(values, 1i32, 19i32, 23i32, 29i32)
+  [i32] total{plus(soaColumns3ReadFirst<i32, i32, i32>(values, 0i32),
+                   plus(soaColumns3ReadSecond<i32, i32, i32>(values, 1i32),
+                        plus(soaColumns3ReadThird<i32, i32, i32>(values, 1i32),
+                             plus(soaColumns3Count<i32, i32, i32>(values),
+                                  soaColumns3Capacity<i32, i32, i32>(values)))))}
+  soaColumns3Clear<i32, i32, i32>(values)
+  return(plus(total, soaColumns3Count<i32, i32, i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_experimental_soa_storage_three_columns_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_storage_three_columns_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 60);
+}
+
 TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
