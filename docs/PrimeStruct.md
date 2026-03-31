@@ -2364,11 +2364,12 @@ bad_use_after_take() {
     but backend lowering still stops on the current `* backend requires typed bindings` boundary. `soaVectorToAos<T>()`
     now lives in the dedicated `/std/collections/experimental_soa_vector_conversions/*` import surface so the core
     wrapper module stays usable for read/mutate paths. Wrapper method-sugar `values.to_aos()` now resolves onto that
-    imported helper surface instead of colliding with the builtin `soa_vector.to_aos` semantic route. Backend lowering
+    imported helper surface instead of colliding with the builtin `soa_vector.to_aos` semantic route, and both empty
+    and non-empty wrapper states now reach that same imported helper boundary. Backend lowering
     still stops on the imported helper
     `* backend does not support return type on
     /std/collections/experimental_soa_vector_conversions/soaVectorToAos__...` boundary for `vector<Struct>` helper
-    returns. Richer non-empty conversion surfaces still remain pending until that return-type boundary is resolved
+    returns. Successful richer non-empty conversion surfaces still remain pending until that return-type boundary is resolved
     cleanly.
     Borrowed `ref` and field-view surfaces remain pending behind the broader SoA substrate work.
   - **Experimental SoA storage substrate:** the first reusable `.prime` storage layer now exists at

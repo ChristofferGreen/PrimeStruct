@@ -168,6 +168,64 @@ main() {
       "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
 }
 
+TEST_CASE("native rejects experimental soa_vector stdlib non-empty to-aos helper") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [vector<Particle>] unpacked{soaVectorToAos<Particle>(values)}
+  return(count(unpacked))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_to_aos_non_empty.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_to_aos_non_empty_err.txt").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+      "native backend does not support return type on "
+      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+}
+
+TEST_CASE("native rejects experimental soa_vector stdlib non-empty to-aos method") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [vector<Particle>] unpacked{values.to_aos()}
+  return(count(unpacked))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_to_aos_non_empty_method.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_to_aos_non_empty_method_err.txt").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+      "native backend does not support return type on "
+      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native experimental soa_vector stdlib get helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
