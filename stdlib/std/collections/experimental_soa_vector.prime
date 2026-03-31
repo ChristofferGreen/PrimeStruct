@@ -36,6 +36,12 @@ namespace std {
       soaVectorValidateType<T>()
       soaVectorPush<T>(this, value)
     }
+
+    [public effects(heap_alloc), return<vector<T>>]
+    to_aos() {
+      soaVectorValidateType<T>()
+      return(/std/collections/experimental_soa_vector_conversions/soaVectorToAos<T>(this))
+    }
   }
 
   [public effects(heap_alloc), return<SoaVector<T>>]

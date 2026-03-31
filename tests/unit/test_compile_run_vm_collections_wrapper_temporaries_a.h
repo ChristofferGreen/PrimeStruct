@@ -113,7 +113,7 @@ main() {
       "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib to-aos method on wrapper surface") {
+TEST_CASE("vm rejects experimental soa_vector stdlib to-aos method after helper routing") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -136,7 +136,9 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_vector_to_aos_method_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("to_aos requires soa_vector target") != std::string::npos);
+  CHECK(readFile(errPath).find(
+      "vm backend does not support return type on "
+      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
 }
 
 TEST_CASE("runs vm experimental soa_vector stdlib get helper") {
