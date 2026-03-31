@@ -120,22 +120,27 @@ std::vector<std::string> collectSourceImportPaths(const std::string &source) {
   return collectImportPaths(source, false);
 }
 
-std::string normalizeStdlibAutoIncludeKey(const std::string &importPath) {
-  if (importPath.rfind("/std/gfx/experimental", 0) == 0) {
-    return "/std/gfx/experimental";
-  }
-  if (importPath.rfind("/std/gfx", 0) == 0) {
-    return "/std/gfx";
-  }
+std::vector<std::string> collectStdlibAutoIncludeKeys(const std::string &importPath) {
+  std::vector<std::string> keys;
   if (importPath.rfind("/std/", 0) != 0) {
-    return "";
+    return keys;
   }
-  const size_t moduleStart = std::string("/std/").size();
-  size_t moduleEnd = importPath.find('/', moduleStart);
-  if (moduleEnd == std::string::npos) {
-    moduleEnd = importPath.size();
+
+  std::string key = importPath;
+  if (key.size() >= 2 && key.compare(key.size() - 2, 2, "/*") == 0) {
+    key.erase(key.size() - 2);
   }
-  return importPath.substr(0, moduleEnd);
+
+  while (!key.empty()) {
+    keys.push_back(key);
+    const size_t slash = key.find_last_of('/');
+    if (slash <= std::string("/std").size()) {
+      break;
+    }
+    key.erase(slash);
+  }
+
+  return keys;
 }
 
 bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
@@ -146,9 +151,10 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   std::deque<std::string> pendingKeys;
   std::unordered_set<std::string> queuedKeys;
   for (const auto &importPath : sourceImports) {
-    const std::string key = normalizeStdlibAutoIncludeKey(importPath);
-    if (!key.empty() && queuedKeys.insert(key).second) {
-      pendingKeys.push_back(key);
+    for (const auto &key : collectStdlibAutoIncludeKeys(importPath)) {
+      if (queuedKeys.insert(key).second) {
+        pendingKeys.push_back(key);
+      }
     }
   }
   if (pendingKeys.empty()) {
@@ -219,9 +225,10 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
 
         const std::vector<std::string> nestedImports = collectStdImportPaths(contents);
         for (const auto &nestedImport : nestedImports) {
-          const std::string nestedKey = normalizeStdlibAutoIncludeKey(nestedImport);
-          if (!nestedKey.empty() && queuedKeys.insert(nestedKey).second) {
-            pendingKeys.push_back(nestedKey);
+          for (const auto &nestedKey : collectStdlibAutoIncludeKeys(nestedImport)) {
+            if (queuedKeys.insert(nestedKey).second) {
+              pendingKeys.push_back(nestedKey);
+            }
           }
         }
         return true;
@@ -236,6 +243,15 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
 
       if (!std::filesystem::is_directory(moduleRoot, ec)) {
         continue;
+      }
+
+      std::filesystem::path siblingModuleFile = moduleRoot;
+      siblingModuleFile += ".prime";
+      if (std::filesystem::exists(siblingModuleFile, ec) &&
+          std::filesystem::is_regular_file(siblingModuleFile, ec)) {
+        if (!appendFile(siblingModuleFile)) {
+          return false;
+        }
       }
 
       for (const auto &entry : std::filesystem::recursive_directory_iterator(moduleRoot, ec)) {
