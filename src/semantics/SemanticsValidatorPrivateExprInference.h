@@ -243,7 +243,13 @@
   bool extractExperimentalVectorElementTypeFromStructPath(const std::string &structPath,
                                                           std::string &elemTypeOut) const;
   bool extractExperimentalVectorElementType(const BindingInfo &binding,
-                                            std::string &elemTypeOut) const;
+                                           std::string &elemTypeOut) const;
+  bool extractExperimentalSoaColumnElementTypeFromStructPath(const std::string &structPath,
+                                                             std::string &elemTypeOut) const;
+  bool extractExperimentalSoaVectorElementTypeFromStructPath(const std::string &structPath,
+                                                             std::string &elemTypeOut) const;
+  bool extractExperimentalSoaVectorElementType(const BindingInfo &binding,
+                                               std::string &elemTypeOut) const;
   bool extractExperimentalMapFieldTypesFromStructPath(const std::string &structPath,
                                                       std::string &keyTypeOut,
                                                       std::string &valueTypeOut) const;

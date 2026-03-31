@@ -838,26 +838,26 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return false;
   };
   resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
+    auto extractValueBinding = [&](const BindingInfo &binding) {
+      if (binding.typeName == "soa_vector" && !binding.typeTemplateArg.empty()) {
+        elemType = binding.typeTemplateArg;
+        return true;
+      }
+      return extractExperimentalSoaVectorElementType(binding, elemType);
+    };
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        if (paramBinding->typeName == "soa_vector" && !paramBinding->typeTemplateArg.empty()) {
-          elemType = paramBinding->typeTemplateArg;
-          return true;
-        }
-        return false;
+        return extractValueBinding(*paramBinding);
       }
       auto it = locals.find(target.name);
-      if (it != locals.end() && it->second.typeName == "soa_vector" &&
-          !it->second.typeTemplateArg.empty()) {
-        elemType = it->second.typeTemplateArg;
-        return true;
+      if (it != locals.end()) {
+        return extractValueBinding(it->second);
       }
       return false;
     }
     BindingInfo fieldBinding;
-    if (resolveFieldBindingTarget(target, fieldBinding) && fieldBinding.typeName == "soa_vector" &&
-        !fieldBinding.typeTemplateArg.empty()) {
-      elemType = fieldBinding.typeTemplateArg;
+    if (resolveFieldBindingTarget(target, fieldBinding) &&
+        extractValueBinding(fieldBinding)) {
       return true;
     }
     if (target.kind == Expr::Kind::Call) {
@@ -882,6 +882,23 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
            resolveCalleePath(target) == "/to_soa") &&
           target.args.size() == 1) {
         return resolveVectorTarget(target.args.front(), elemType);
+      }
+      BindingInfo inferredBinding;
+      std::string inferredTypeText;
+      if (inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
+        std::string base;
+        std::string argText;
+        const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
+        if (splitTemplateTypeName(normalizedType, base, argText)) {
+          inferredBinding.typeName = normalizeBindingTypeName(base);
+          inferredBinding.typeTemplateArg = argText;
+        } else {
+          inferredBinding.typeName = normalizedType;
+          inferredBinding.typeTemplateArg.clear();
+        }
+        if (extractValueBinding(inferredBinding)) {
+          return true;
+        }
       }
     }
     return false;

@@ -171,6 +171,52 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return false;
   };
+  auto resolveSoaFieldViewMethodTarget = [&](const Expr &soaReceiver) -> bool {
+    std::string elemType;
+    if (!resolveSoaVectorTarget(soaReceiver, elemType)) {
+      return false;
+    }
+    const std::string normalizedElemType = normalizeBindingTypeName(elemType);
+    std::string currentNamespace;
+    if (!currentValidationContext_.definitionPath.empty()) {
+      const size_t slash = currentValidationContext_.definitionPath.find_last_of('/');
+      if (slash != std::string::npos && slash > 0) {
+        currentNamespace = currentValidationContext_.definitionPath.substr(0, slash);
+      }
+    }
+    const std::string lookupNamespace =
+        !soaReceiver.namespacePrefix.empty() ? soaReceiver.namespacePrefix : currentNamespace;
+    const std::string elementStructPath =
+        primec::semantics::resolveStructTypePath(normalizedElemType, lookupNamespace, structNames_);
+    if (elementStructPath.empty()) {
+      return false;
+    }
+    auto structIt = defMap_.find(elementStructPath);
+    if (structIt == defMap_.end() || structIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &stmt : structIt->second->statements) {
+      const bool isStaticBinding = [&]() {
+        for (const auto &transform : stmt.transforms) {
+          if (transform.name == "static") {
+            return true;
+          }
+        }
+        return false;
+      }();
+      if (!stmt.isBinding || isStaticBinding || stmt.name != normalizedMethodName) {
+        continue;
+      }
+      const std::string helperPath = "/soa_vector/" + normalizedMethodName;
+      if (defMap_.count(helperPath) > 0) {
+        resolvedOut = helperPath;
+      } else {
+        resolvedOut = "/soa_vector/field_view/" + normalizedMethodName;
+      }
+      return true;
+    }
+    return false;
+  };
   auto preferredExperimentalMapReferenceMethodTarget = [&](const std::string &helperName) {
     if (helperName == "count") {
       return std::string("/std/collections/experimental_map/mapCountRef");
@@ -439,6 +485,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if ((normalizedMethodName == "get" || normalizedMethodName == "ref") &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut = "/soa_vector/" + normalizedMethodName;
+      return true;
+    }
+    if (resolveSoaFieldViewMethodTarget(receiver)) {
       return true;
     }
   }

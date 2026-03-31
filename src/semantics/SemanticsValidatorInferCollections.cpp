@@ -286,10 +286,14 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     elemTypeOut = binding.typeTemplateArg;
     return true;
   };
-  auto resolveSoaVectorBinding = [](const BindingInfo &binding, std::string &elemTypeOut) -> bool {
+  auto resolveSoaVectorBinding = [this](const BindingInfo &binding, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     if (binding.typeName != "soa_vector" || binding.typeTemplateArg.empty()) {
-      return false;
+      const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+      if (normalizedType == "Reference" || normalizedType == "Pointer") {
+        return false;
+      }
+      return extractExperimentalSoaVectorElementType(binding, elemTypeOut);
     }
     elemTypeOut = binding.typeTemplateArg;
     return true;
