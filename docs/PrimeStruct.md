@@ -2432,7 +2432,10 @@ builtin count alias once semantics has canonicalized those old-surface forms, so
 helper-call cleanup is narrowed to the wildcard-imported follow-up. The remaining inferred and
 method-target fallback resolution for builtin `soa_vector` count receivers now also prefers the
 canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
-`/soa_vector/count` user-helper shadowing on helper-return receivers.
+`/soa_vector/count` user-helper shadowing on helper-return receivers, and the equivalent
+helper-return method/infer fallback for builtin `soa_vector` `get` receivers now prefers the
+canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
+`/soa_vector/get` user-helper shadowing.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend

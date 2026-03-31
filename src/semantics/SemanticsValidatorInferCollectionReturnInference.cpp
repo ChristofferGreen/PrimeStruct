@@ -320,7 +320,9 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     const bool isBuiltinSoaGetOrRef =
         !candidate.isMethodCall && candidate.args.size() == 2 &&
         (isSimpleCallName(candidate, "get") || isSimpleCallName(candidate, "ref") ||
-         resolvedCandidate == "/soa_vector/get" || resolvedCandidate == "/soa_vector/ref");
+         resolvedCandidate == "/soa_vector/get" ||
+         resolvedCandidate == "/std/collections/soa_vector/get" ||
+         resolvedCandidate == "/soa_vector/ref");
     if (isBuiltinSoaGetOrRef) {
       std::string elemType;
       if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {

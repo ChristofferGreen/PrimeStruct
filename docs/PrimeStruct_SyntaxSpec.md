@@ -814,7 +814,10 @@ count/access classifier fallback also no longer treats raw `/soa_vector/count` a
 semantics has canonicalized those old-surface forms earlier in validation, and the remaining
 inferred/method fallback resolution for builtin `soa_vector` count receivers now prefers the
 canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
-`/soa_vector/count` user-helper shadowing on helper-return receivers.
+`/soa_vector/count` user-helper shadowing on helper-return receivers. The equivalent
+helper-return method/infer fallback for builtin `soa_vector` `get` receivers now also prefers
+the canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
+`/soa_vector/get` user-helper shadowing.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

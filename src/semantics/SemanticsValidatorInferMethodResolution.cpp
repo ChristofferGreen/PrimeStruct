@@ -60,6 +60,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return canonical;
   };
+  auto preferredSoaGetMethodTarget = [&]() {
+    const std::string canonical = "/std/collections/soa_vector/get";
+    const std::string samePath = "/soa_vector/get";
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return samePath;
+    }
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
       if (normalizedMethodName == "count" &&
@@ -167,9 +178,12 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredBufferMethodTargetForCall(params, locals, receiver, "store");
       return !resolvedOut.empty();
     }
-    if ((normalizedMethodName == "get" || normalizedMethodName == "ref") &&
-        collectionTypePath == "/soa_vector") {
-      resolvedOut = "/soa_vector/" + normalizedMethodName;
+    if (normalizedMethodName == "get" && collectionTypePath == "/soa_vector") {
+      resolvedOut = preferredSoaGetMethodTarget();
+      return true;
+    }
+    if (normalizedMethodName == "ref" && collectionTypePath == "/soa_vector") {
+      resolvedOut = "/soa_vector/ref";
       return true;
     }
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
@@ -493,9 +507,14 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;
     }
-    if ((normalizedMethodName == "get" || normalizedMethodName == "ref") &&
+    if (normalizedMethodName == "get" &&
         resolveSoaVectorTarget(receiver, elemType)) {
-      resolvedOut = "/soa_vector/" + normalizedMethodName;
+      resolvedOut = preferredSoaGetMethodTarget();
+      return true;
+    }
+    if (normalizedMethodName == "ref" &&
+        resolveSoaVectorTarget(receiver, elemType)) {
+      resolvedOut = "/soa_vector/ref";
       return true;
     }
     if (resolveSoaFieldViewMethodTarget(receiver)) {

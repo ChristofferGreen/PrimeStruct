@@ -1771,6 +1771,63 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/get") != std::string::npos);
 }
 
+TEST_CASE("get method fallback validates through struct helper return receivers") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<soa_vector<Particle>>]
+  cloneValues() {
+    return(soa_vector<Particle>())
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(holder.cloneValues().get(0i32).x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("get method fallback keeps same-path helper shadow through struct helper return receivers") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<soa_vector<Particle>>]
+  cloneValues() {
+    return(soa_vector<Particle>())
+  }
+}
+
+[return<Particle>]
+/soa_vector/get([soa_vector<Particle>] values, [int] index) {
+  return(Particle(7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(holder.cloneValues().get(0i32).x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ref helper validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {
