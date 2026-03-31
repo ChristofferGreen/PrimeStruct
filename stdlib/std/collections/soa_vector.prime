@@ -1,0 +1,11 @@
+import /std/collections/experimental_soa_vector/*
+
+[public return<i32>]
+/std/collections/soa_vector/count<T>([SoaVector<T>] values) {
+  return(values.count())
+}
+
+[public return<T>]
+/std/collections/soa_vector/get<T>([SoaVector<T>] values, [i32] index) {
+  return(values.get(index))
+}
