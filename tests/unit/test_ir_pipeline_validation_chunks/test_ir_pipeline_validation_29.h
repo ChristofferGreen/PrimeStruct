@@ -210,8 +210,8 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == NativeResult::Error);
-  CHECK(error == "native backend does not support to_aos");
+            error) == NativeResult::NotHandled);
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {

@@ -808,7 +808,6 @@ definition-resolution plus count/access fallback path for those helper shapes. N
 and the remaining old-root draft helper paths
 still emit deterministic unsupported diagnostics
 (`native backend does not support non-empty soa_vector literals`, `native backend does not support to_soa`,
-`native backend does not support to_aos`,
 `native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper:
 reserve`).
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

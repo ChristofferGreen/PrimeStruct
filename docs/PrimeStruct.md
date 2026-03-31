@@ -2338,7 +2338,7 @@ bad_use_after_take() {
     until the borrowed-view substrate exists.
     Non-empty SoA literals and remaining draft helper paths still emit deterministic unsupported diagnostics (`native
     backend does not support non-empty soa_vector literals`, `native backend does not support to_soa`, `native backend does not
-    support to_aos`, `native backend does not support soa_vector helper: push`, `native backend does not support
+    support soa_vector helper: push`, `native backend does not support
     soa_vector helper: reserve`). These compiler-owned `soa_vector` paths are
     not the intended end-state and are now tracked as separate cleanup follow-ups for the remaining semantics
     method/builtin fallbacks, IR-lowerer special cases, emitter/backend special cases, and runtime/diagnostic
@@ -2394,8 +2394,8 @@ canonical shim surface instead of pinning every bare `count(...)` call to the So
 wildcard-imported helper names now validate and lower successfully across C++/native/VM, and
 explicit canonical direct-call `to_aos(...)` now runs end-to-end through that same stdlib shim
 path as well once template arguments are present. Direct-canonical plus imported-helper `to_aos`
-lowering also no longer depends on dedicated IR/emitter/backend/runtime conversion branches
-outside the remaining old-root builtin conversion rejection path, and valid root bare/direct/
+lowering also no longer depends on dedicated IR/emitter/backend/runtime conversion branches,
+and valid root bare/direct/
 method `to_aos` calls on builtin `soa_vector<T>` bindings now rewrite onto that same canonical
 `/std/collections/soa_vector/to_aos` helper path when no visible user `/to_aos` helper shadows
 them. Valid root bare/method/old-explicit `get` and `ref` calls on builtin `soa_vector<T>`

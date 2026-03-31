@@ -13,7 +13,6 @@ namespace {
 bool isMapContainsHelperName(const Expr &expr);
 bool isMapTryAtHelperName(const Expr &expr);
 bool isVectorTarget(const Expr &expr, const LocalMap &localsIn);
-bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
 MapAccessLookupEmitResult tryEmitMapContainsLookup(
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -112,11 +111,6 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   if (isSimpleCallName(expr, "to_soa") && expr.args.size() == 1 &&
       isVectorTarget(expr.args.front(), localsIn)) {
     error = "native backend does not support to_soa";
-    return NativeCallTailDispatchResult::Error;
-  }
-  if (isSimpleCallName(expr, "to_aos") && expr.args.size() == 1 &&
-      isSoaVectorTarget(expr.args.front(), localsIn)) {
-    error = "native backend does not support to_aos";
     return NativeCallTailDispatchResult::Error;
   }
   const auto countAccessResult = tryEmitCountAccessCall(
