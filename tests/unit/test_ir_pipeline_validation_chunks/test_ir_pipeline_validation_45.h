@@ -341,6 +341,35 @@ TEST_CASE("ir lowerer return inference helper resolves declared array and struct
   CHECK_FALSE(hasReturnAuto);
   CHECK(info.returnsArray);
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+
+  primec::Definition defVectorStruct;
+  defVectorStruct.namespacePrefix = "/pkg";
+  primec::Transform returnVectorStruct;
+  returnVectorStruct.name = "return";
+  returnVectorStruct.templateArgs = {"vector<VecLike>"};
+  defVectorStruct.transforms.push_back(returnVectorStruct);
+
+  info = primec::ir_lowerer::ReturnInfo{};
+  hasReturnTransform = false;
+  hasReturnAuto = false;
+  primec::ir_lowerer::analyzeDeclaredReturnTransforms(
+      defVectorStruct,
+      [](const std::string &typeName, const std::string &, std::string &pathOut) {
+        if (typeName == "VecLike") {
+          pathOut = "/pkg/VecLike";
+          return true;
+        }
+        return false;
+      },
+      [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
+      info,
+      hasReturnTransform,
+      hasReturnAuto);
+
+  CHECK(hasReturnTransform);
+  CHECK_FALSE(hasReturnAuto);
+  CHECK(info.returnsArray);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
 TEST_CASE("ir lowerer return inference helper unwraps referenced collection returns") {
@@ -592,4 +621,3 @@ TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument
   CHECK(instructions[6].op == primec::IrOpcode::AddressOfLocal);
   CHECK(instructions[6].imm == 10u);
 }
-

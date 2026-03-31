@@ -248,7 +248,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("canonical soa_vector to_aos helper keeps current backend boundary in C++ emitter") {
+TEST_CASE("canonical soa_vector to_aos helper lowers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -267,13 +267,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_canonical_soa_vector_to_aos_experimental_wrapper_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_canonical_soa_vector_to_aos_experimental_wrapper_err.txt")
-          .string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_canonical_soa_vector_to_aos_experimental_wrapper_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("/std/collections/soa_vector/to_aos__") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("wildcard-imported canonical soa_vector helpers still require template inference parity in C++ emitter") {
@@ -381,7 +380,7 @@ main() {
   CHECK(readFile(errPath).find("native backend requires typed bindings") != std::string::npos);
 }
 
-TEST_CASE("rejects experimental soa_vector stdlib to-aos helper in C++ emitter before struct return support") {
+TEST_CASE("runs experimental soa_vector stdlib to-aos helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -400,16 +399,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_to_aos_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_err.txt").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-      "native backend does not support return type on "
-      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("rejects experimental soa_vector stdlib to-aos method on wrapper surface in C++ emitter before struct return support") {
+TEST_CASE("runs experimental soa_vector stdlib to-aos method on wrapper surface in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -428,16 +425,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_to_aos_method_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_method_err.txt").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-      "native backend does not support return type on "
-      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_method_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("rejects experimental soa_vector stdlib non-empty to-aos helper in C++ emitter") {
+TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -456,16 +451,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_to_aos_non_empty_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_non_empty_err.txt").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-      "native backend does not support return type on "
-      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_non_empty_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("rejects experimental soa_vector stdlib non-empty to-aos method on wrapper state in C++ emitter before struct return support") {
+TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos method on wrapper state in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -484,13 +477,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_to_aos_non_empty_method_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_non_empty_method_err.txt").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-      "native backend does not support return type on "
-      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_non_empty_method_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib get helper in C++ emitter") {

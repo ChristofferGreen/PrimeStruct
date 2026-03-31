@@ -217,7 +217,7 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("vm canonical soa_vector to_aos helper keeps current backend boundary") {
+TEST_CASE("vm canonical soa_vector to_aos helper lowers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -236,12 +236,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_canonical_soa_vector_to_aos_experimental_wrapper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_canonical_soa_vector_to_aos_experimental_wrapper_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("/std/collections/soa_vector/to_aos__") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("vm wildcard-imported canonical soa_vector helpers still require template inference parity") {
@@ -341,7 +337,7 @@ main() {
   CHECK(readFile(errPath).find("vm backend requires typed bindings") != std::string::npos);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib to-aos helper before struct return support") {
+TEST_CASE("vm runs experimental soa_vector stdlib to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -360,16 +356,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_to_aos_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-      "vm backend does not support return type on "
-      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib to-aos method on wrapper surface before struct return support") {
+TEST_CASE("vm runs experimental soa_vector stdlib to-aos method on wrapper surface") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -388,16 +379,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos_method.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_to_aos_method_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-      "vm backend does not support return type on "
-      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib non-empty to-aos helper") {
+TEST_CASE("vm runs experimental soa_vector stdlib non-empty to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -416,16 +402,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos_non_empty.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_to_aos_non_empty_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-      "vm backend does not support return type on "
-      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib non-empty to-aos method on wrapper state before struct return support") {
+TEST_CASE("vm runs experimental soa_vector stdlib non-empty to-aos method on wrapper state") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -444,13 +425,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos_non_empty_method.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_to_aos_non_empty_method_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-      "vm backend does not support return type on "
-      "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("runs vm experimental soa_vector stdlib get helper") {

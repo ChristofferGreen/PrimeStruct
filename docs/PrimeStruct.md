@@ -2372,10 +2372,12 @@ bad_use_after_take() {
     requires typed bindings` boundary.
     `soaVectorToAos<T>()` now lives in the dedicated `/std/collections/experimental_soa_vector_conversions/*` import
     surface so the core wrapper module stays usable for read/mutate paths. Wrapper method-sugar `values.to_aos()`
-    now resolves onto that imported helper surface cleanly. Backend lowering still stops on the current `* backend
-    does not support return type on /std/collections/experimental_soa_vector_conversions/soaVectorToAos__...`
-    boundary for `vector<Struct>` returns, and successful richer non-empty conversion surfaces remain pending until
-    the return-type boundary is resolved cleanly.
+    now resolves onto that imported helper surface cleanly. Shared lowering now treats declared
+    `vector<Struct>` helper returns as opaque array-handle returns, so imported `soaVectorToAos<T>()`
+    and wrapper method-sugar `values.to_aos()` both lower successfully across C++/native/VM for
+    empty and non-empty wrapper state instead of stopping on the old `* backend does not support
+    return type on /std/collections/experimental_soa_vector_conversions/soaVectorToAos__...`
+    boundary.
     The first canonical bridges also exist now: explicit `/std/collections/soa_vector/count<T>(...)`,
     `/std/collections/soa_vector/get<T>(...)`, `/std/collections/soa_vector/ref<T>(...)`,
     `/std/collections/soa_vector/reserve<T>(...)`, and `/std/collections/soa_vector/push<T>(...)`
@@ -2390,10 +2392,8 @@ rewrite-table entries. Wildcard-imported canonical
 helper names for `count`, `get`, `ref`, `reserve`, `push`, and `to_aos` still stop at
 `template arguments required for /std/collections/soa_vector/count` for bare wildcard-imported
 calls, so both semantic-validation parity and full compile-pipeline/backend parity remain pending
-on canonical helper template inference there. Backend lowering for explicit canonical direct-call
-`to_aos(...)` still stops on
-`/std/collections/soa_vector/to_aos__...` after the stdlib shim survives through `ast-semantic`.
-Richer canonical conversion success remains pending there. The
+on canonical helper template inference there. Explicit canonical direct-call `to_aos(...)` now
+runs end-to-end through that same stdlib shim path as well once template arguments are present. The
 remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for root
 `get`, root `ref`, root `to_aos`, and field-view diagnostics instead of one mixed fallback
 bucket, the remaining lowering cleanup is now tracked as explicit helper-call, conversion, and
