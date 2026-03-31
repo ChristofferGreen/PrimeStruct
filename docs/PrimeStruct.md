@@ -2384,8 +2384,9 @@ bad_use_after_take() {
     reusable fixed-width multi-column primitives `SoaColumns2<T0, T1>`, `SoaColumns3<T0, T1, T2>`,
     `SoaColumns4<T0, T1, T2, T3>`, `SoaColumns5<T0, T1, T2, T3, T4>`,
     `SoaColumns6<T0, T1, T2, T3, T4, T5>`,
-    `SoaColumns7<T0, T1, T2, T3, T4, T5, T6>`, and
-    `SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>` with matching `New` /
+    `SoaColumns7<T0, T1, T2, T3, T4, T5, T6>`,
+    `SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>`, and
+    `SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>` with matching `New` /
     `Count` / `Capacity` / `Reserve` / `Push` / `Read*` / `Write` / `Clear` helpers. These
     primitives are backed by checked buffer alloc/grow/free plus explicit `init(...)`, `drop(...)`,
     `take(...)`, and `borrow(...)` flows. Their current allocation-failure contract is deterministic

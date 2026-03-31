@@ -129,6 +129,19 @@ namespace std {
     [public SoaColumn<T7> mut] eighth{soaColumnNew<T7>()}
   }
 
+  [public struct]
+  SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>() {
+    [public SoaColumn<T0> mut] first{soaColumnNew<T0>()}
+    [public SoaColumn<T1> mut] second{soaColumnNew<T1>()}
+    [public SoaColumn<T2> mut] third{soaColumnNew<T2>()}
+    [public SoaColumn<T3> mut] fourth{soaColumnNew<T3>()}
+    [public SoaColumn<T4> mut] fifth{soaColumnNew<T4>()}
+    [public SoaColumn<T5> mut] sixth{soaColumnNew<T5>()}
+    [public SoaColumn<T6> mut] seventh{soaColumnNew<T6>()}
+    [public SoaColumn<T7> mut] eighth{soaColumnNew<T7>()}
+    [public SoaColumn<T8> mut] ninth{soaColumnNew<T8>()}
+  }
+
   [return<Pointer<uninitialized<T>>>]
   soaColumnSlotUnsafe<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
@@ -433,6 +446,54 @@ namespace std {
        else() { })
   }
 
+  [return<void>]
+  soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values) {
+    [SoaColumn<T0>] first{values.first}
+    [SoaColumn<T1>] second{values.second}
+    [SoaColumn<T2>] third{values.third}
+    [SoaColumn<T3>] fourth{values.fourth}
+    [SoaColumn<T4>] fifth{values.fifth}
+    [SoaColumn<T5>] sixth{values.sixth}
+    [SoaColumn<T6>] seventh{values.seventh}
+    [SoaColumn<T7>] eighth{values.eighth}
+    [SoaColumn<T8>] ninth{values.ninth}
+    soaColumnCheckShape<T0>(first)
+    soaColumnCheckShape<T1>(second)
+    soaColumnCheckShape<T2>(third)
+    soaColumnCheckShape<T3>(fourth)
+    soaColumnCheckShape<T4>(fifth)
+    soaColumnCheckShape<T5>(sixth)
+    soaColumnCheckShape<T6>(seventh)
+    soaColumnCheckShape<T7>(eighth)
+    soaColumnCheckShape<T8>(ninth)
+    [bool] countMismatch{
+      or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
+               not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
+            or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
+               not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
+         or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
+                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
+               not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth)))),
+            not(equal(soaColumnCount<T0>(first), soaColumnCount<T8>(ninth)))))
+    }
+    [bool] capacityMismatch{
+      or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
+               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
+            or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
+               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))))),
+         or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
+                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))),
+               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth)))),
+            not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T8>(ninth)))))
+    }
+    if(or(countMismatch, capacityMismatch),
+       then() {
+         [array<i32>] empty{array<i32>()}
+         empty[0i32]
+       },
+       else() { })
+  }
+
   [public effects(heap_alloc), return<SoaColumn<T>>]
   soaColumnNew<T>() {
     return(soaColumnAlloc<T>(0i32, 0i32))
@@ -471,6 +532,11 @@ namespace std {
   [public effects(heap_alloc), return<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>]
   soaColumns8New<T0, T1, T2, T3, T4, T5, T6, T7>() {
     return(SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>())
+  }
+
+  [public effects(heap_alloc), return<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>]
+  soaColumns9New<T0, T1, T2, T3, T4, T5, T6, T7, T8>() {
+    return(SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>())
   }
 
   [public return<i32>]
@@ -529,6 +595,13 @@ namespace std {
   }
 
   [public return<i32>]
+  soaColumns9Count<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T0>] first{values.first}
+    return(soaColumnCount<T0>(first))
+  }
+
+  [public return<i32>]
   soaColumnCapacity<T>([SoaColumn<T>] values) {
     soaColumnCheckShape<T>(values)
     return(values.field_capacity())
@@ -579,6 +652,13 @@ namespace std {
   [public return<i32>]
   soaColumns8Capacity<T0, T1, T2, T3, T4, T5, T6, T7>([SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>] values) {
     soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [SoaColumn<T0>] first{values.first}
+    return(soaColumnCapacity<T0>(first))
+  }
+
+  [public return<i32>]
+  soaColumns9Capacity<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
     [SoaColumn<T0>] first{values.first}
     return(soaColumnCapacity<T0>(first))
   }
@@ -755,6 +835,39 @@ namespace std {
     assign(values.sixth, sixth)
     assign(values.seventh, seventh)
     assign(values.eighth, eighth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns9Reserve<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8> mut] values,
+                                                          [i32] capacity) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T0> mut] first{values.first}
+    [SoaColumn<T1> mut] second{values.second}
+    [SoaColumn<T2> mut] third{values.third}
+    [SoaColumn<T3> mut] fourth{values.fourth}
+    [SoaColumn<T4> mut] fifth{values.fifth}
+    [SoaColumn<T5> mut] sixth{values.sixth}
+    [SoaColumn<T6> mut] seventh{values.seventh}
+    [SoaColumn<T7> mut] eighth{values.eighth}
+    [SoaColumn<T8> mut] ninth{values.ninth}
+    soaColumnReserve<T0>(first, capacity)
+    soaColumnReserve<T1>(second, capacity)
+    soaColumnReserve<T2>(third, capacity)
+    soaColumnReserve<T3>(fourth, capacity)
+    soaColumnReserve<T4>(fifth, capacity)
+    soaColumnReserve<T5>(sixth, capacity)
+    soaColumnReserve<T6>(seventh, capacity)
+    soaColumnReserve<T7>(eighth, capacity)
+    soaColumnReserve<T8>(ninth, capacity)
+    assign(values.first, first)
+    assign(values.second, second)
+    assign(values.third, third)
+    assign(values.fourth, fourth)
+    assign(values.fifth, fifth)
+    assign(values.sixth, sixth)
+    assign(values.seventh, seventh)
+    assign(values.eighth, eighth)
+    assign(values.ninth, ninth)
   }
 
   [public effects(heap_alloc), return<void>]
@@ -1070,6 +1183,68 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
+  soaColumns9Push<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8> mut] values,
+                                                       [T0] firstValue,
+                                                       [T1] secondValue,
+                                                       [T2] thirdValue,
+                                                       [T3] fourthValue,
+                                                       [T4] fifthValue,
+                                                       [T5] sixthValue,
+                                                       [T6] seventhValue,
+                                                       [T7] eighthValue,
+                                                       [T8] ninthValue) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T0> mut] first{values.first}
+    [SoaColumn<T1> mut] second{values.second}
+    [SoaColumn<T2> mut] third{values.third}
+    [SoaColumn<T3> mut] fourth{values.fourth}
+    [SoaColumn<T4> mut] fifth{values.fifth}
+    [SoaColumn<T5> mut] sixth{values.sixth}
+    [SoaColumn<T6> mut] seventh{values.seventh}
+    [SoaColumn<T7> mut] eighth{values.eighth}
+    [SoaColumn<T8> mut] ninth{values.ninth}
+    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
+       then() {
+         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+         if(equal(nextCapacity, 0i32),
+            then() { assign(nextCapacity, 1i32) },
+            else() {
+              if(greater_than(nextCapacity, 536870911i32),
+                 then() { assign(nextCapacity, 1073741824i32) },
+                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
+            })
+         soaColumnReserve<T0>(first, nextCapacity)
+         soaColumnReserve<T1>(second, nextCapacity)
+         soaColumnReserve<T2>(third, nextCapacity)
+         soaColumnReserve<T3>(fourth, nextCapacity)
+         soaColumnReserve<T4>(fifth, nextCapacity)
+         soaColumnReserve<T5>(sixth, nextCapacity)
+         soaColumnReserve<T6>(seventh, nextCapacity)
+         soaColumnReserve<T7>(eighth, nextCapacity)
+         soaColumnReserve<T8>(ninth, nextCapacity)
+       },
+       else() { })
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+    soaColumnPush<T8>(ninth, ninthValue)
+    assign(values.first, first)
+    assign(values.second, second)
+    assign(values.third, third)
+    assign(values.fourth, fourth)
+    assign(values.fifth, fifth)
+    assign(values.sixth, sixth)
+    assign(values.seventh, seventh)
+    assign(values.eighth, eighth)
+    assign(values.ninth, ninth)
+  }
+
+  [public effects(heap_alloc), return<void>]
   soaColumnClear<T>([SoaColumn<T> mut] values) {
     soaColumnCheckShape<T>(values)
     soaColumnDropRange<T>(values, values.field_count())
@@ -1214,6 +1389,38 @@ namespace std {
     assign(values.sixth, sixth)
     assign(values.seventh, seventh)
     assign(values.eighth, eighth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns9Clear<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8> mut] values) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T0> mut] first{values.first}
+    [SoaColumn<T1> mut] second{values.second}
+    [SoaColumn<T2> mut] third{values.third}
+    [SoaColumn<T3> mut] fourth{values.fourth}
+    [SoaColumn<T4> mut] fifth{values.fifth}
+    [SoaColumn<T5> mut] sixth{values.sixth}
+    [SoaColumn<T6> mut] seventh{values.seventh}
+    [SoaColumn<T7> mut] eighth{values.eighth}
+    [SoaColumn<T8> mut] ninth{values.ninth}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+    soaColumnClear<T8>(ninth)
+    assign(values.first, first)
+    assign(values.second, second)
+    assign(values.third, third)
+    assign(values.fourth, fourth)
+    assign(values.fifth, fifth)
+    assign(values.sixth, sixth)
+    assign(values.seventh, seventh)
+    assign(values.eighth, eighth)
+    assign(values.ninth, ninth)
   }
 
   [public return<T>]
@@ -1482,6 +1689,78 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
+  [public return<T0>]
+  soaColumns9ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T0>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns9ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values,
+                                                             [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T1>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns9ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T2>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns9ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values,
+                                                             [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T3>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns9ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T4>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns9ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T5>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns9ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values,
+                                                              [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T6>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns9ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values,
+                                                             [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T7>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T8>]
+  soaColumns9ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T8>] ninth{values.ninth}
+    return(soaColumnRead<T8>(ninth, index))
+  }
+
   [public return<void>]
   soaColumnWrite<T>([SoaColumn<T> mut] values, [i32] index, [T] value) {
     soaColumnCheckIndex<T>(values, index)
@@ -1669,6 +1948,48 @@ namespace std {
     assign(values.sixth, sixth)
     assign(values.seventh, seventh)
     assign(values.eighth, eighth)
+  }
+
+  [public return<void>]
+  soaColumns9Write<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8> mut] values,
+                                                        [i32] index,
+                                                        [T0] firstValue,
+                                                        [T1] secondValue,
+                                                        [T2] thirdValue,
+                                                        [T3] fourthValue,
+                                                        [T4] fifthValue,
+                                                        [T5] sixthValue,
+                                                        [T6] seventhValue,
+                                                        [T7] eighthValue,
+                                                        [T8] ninthValue) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [SoaColumn<T0> mut] first{values.first}
+    [SoaColumn<T1> mut] second{values.second}
+    [SoaColumn<T2> mut] third{values.third}
+    [SoaColumn<T3> mut] fourth{values.fourth}
+    [SoaColumn<T4> mut] fifth{values.fifth}
+    [SoaColumn<T5> mut] sixth{values.sixth}
+    [SoaColumn<T6> mut] seventh{values.seventh}
+    [SoaColumn<T7> mut] eighth{values.eighth}
+    [SoaColumn<T8> mut] ninth{values.ninth}
+    soaColumnWrite<T0>(first, index, firstValue)
+    soaColumnWrite<T1>(second, index, secondValue)
+    soaColumnWrite<T2>(third, index, thirdValue)
+    soaColumnWrite<T3>(fourth, index, fourthValue)
+    soaColumnWrite<T4>(fifth, index, fifthValue)
+    soaColumnWrite<T5>(sixth, index, sixthValue)
+    soaColumnWrite<T6>(seventh, index, seventhValue)
+    soaColumnWrite<T7>(eighth, index, eighthValue)
+    soaColumnWrite<T8>(ninth, index, ninthValue)
+    assign(values.first, first)
+    assign(values.second, second)
+    assign(values.third, third)
+    assign(values.fourth, fourth)
+    assign(values.fifth, fifth)
+    assign(values.sixth, sixth)
+    assign(values.seventh, seventh)
+    assign(values.eighth, eighth)
+    assign(values.ninth, ninth)
   }
   }
   }
