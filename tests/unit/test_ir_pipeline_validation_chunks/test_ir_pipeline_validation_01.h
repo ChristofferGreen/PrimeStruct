@@ -560,6 +560,27 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("root to_aos vector receiver keeps canonical reject contract") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  [vector<Particle>] unpackedA{to_aos(values)}
+  [vector<Particle>] unpackedB{/to_aos(values)}
+  [vector<Particle>] unpackedC{values.to_aos()}
+  [vector<Particle>] unpackedD{values./to_aos()}
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
+}
+
 TEST_CASE("semantics rejects soa_vector field-view before lowerer") {
   const std::string source = R"(
 Particle() {

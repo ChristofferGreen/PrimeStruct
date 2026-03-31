@@ -2401,6 +2401,9 @@ method `to_aos` calls on builtin `soa_vector<T>` bindings now rewrite onto that 
 them. Valid root bare/method/old-explicit `get` and `ref` calls on builtin `soa_vector<T>`
 bindings likewise now rewrite onto `/std/collections/soa_vector/get` and
 `/std/collections/soa_vector/ref` when no visible root or same-path user helper shadows them.
+Vector-target root bare/direct/method `to_aos` misuses now also keep that same canonical
+`/std/collections/soa_vector/to_aos` reject contract instead of the old builtin
+`to_aos requires soa_vector target` diagnostic.
 The remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for root
 `get`, root `ref`, root `to_aos`, and field-view diagnostics instead of one mixed fallback
 bucket, the remaining lowering cleanup is now tracked as explicit helper-call, conversion, and

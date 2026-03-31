@@ -1964,7 +1964,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("to_aos helper rejects non-soa target") {
+TEST_CASE("to_aos root forms keep canonical reject on vector target") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1974,12 +1974,15 @@ Particle() {
 main() {
   [vector<Particle>] values{vector<Particle>()}
   to_aos(values)
+  /to_aos(values)
+  values.to_aos()
+  values./to_aos()
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("to_aos requires soa_vector target") != std::string::npos);
+  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
 TEST_CASE("to_aos helper call-form falls back to user helper") {

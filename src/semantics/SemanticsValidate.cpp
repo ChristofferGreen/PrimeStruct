@@ -895,11 +895,19 @@ void rewriteBuiltinSoaToAosCallExpr(
   if (preserveVisibleRootHelper ||
       expr.kind != Expr::Kind::Call ||
       expr.args.size() != 1 ||
+      !expr.templateArgs.empty() ||
+      hasNamedArguments(expr.argNames) ||
+      expr.hasBodyArguments ||
+      !expr.bodyArguments.empty() ||
       builtinSoaConversionMethodName(expr.name) != "to_aos") {
     return;
   }
 
-  if (!findBuiltinSoaValueBinding(findBuiltinSoaValueBinding, expr.args.front()).has_value()) {
+  const bool hasBuiltinSoaReceiver =
+      findBuiltinSoaValueBinding(findBuiltinSoaValueBinding, expr.args.front()).has_value();
+  const bool hasBuiltinVectorReceiver =
+      findBuiltinVectorValueBinding(findBuiltinVectorValueBinding, expr.args.front()).has_value();
+  if (!hasBuiltinSoaReceiver && !hasBuiltinVectorReceiver) {
     return;
   }
 
