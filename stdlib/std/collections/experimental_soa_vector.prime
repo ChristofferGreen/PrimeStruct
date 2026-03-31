@@ -25,12 +25,6 @@ namespace std {
       return(soaVectorGet<T>(this, index))
     }
 
-    [public effects(heap_alloc), return<vector<T>>]
-    to_aos() {
-      soaVectorValidateType<T>()
-      return(soaVectorToAos<T>(this))
-    }
-
     [public mut effects(heap_alloc), return<void>]
     reserve([i32] capacity) {
       soaVectorValidateType<T>()
@@ -74,19 +68,6 @@ namespace std {
       increment(index)
     })
     assign(out.storage, storage)
-    return(out)
-  }
-
-  [public effects(heap_alloc), return<vector<T>>]
-  soaVectorToAos<T>([SoaVector<T>] values) {
-    soaVectorValidateType<T>()
-    [i32] valueCount{soaVectorCount<T>(values)}
-    [vector<T> mut] out{vector<T>()}
-    [i32 mut] index{0i32}
-    while(less_than(index, valueCount), do() {
-      /std/collections/vector/push<T>(out, soaVectorGet<T>(values, index))
-      increment(index)
-    })
     return(out)
   }
 

@@ -2346,12 +2346,14 @@ bad_use_after_take() {
     `meta.field_visibility<T>(i)`. Those queries validate only on reflect-enabled structs and are eliminated before IR
     emission, so future SoA stdlib code can derive column schemas from `T` without adding new compiler-owned
     collection-specific reflection primitives.
-  - **Experimental stdlib status:** the first stdlib namespace foothold now exists at
+  - **Experimental stdlib status:** the first core stdlib namespace foothold now exists at
     `/std/collections/experimental_soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`,
-    `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, `soaVectorToAos<T>()`,
-    `soaVectorCount<T>()`, `soaVectorGet<T>()`, `soaVectorReserve<T>()`, and
-    `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`, `.get(i)`, `.to_aos()`,
-    `.reserve(...)`, and `.push(...)`.
+    `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, `soaVectorCount<T>()`, `soaVectorGet<T>()`,
+    `soaVectorReserve<T>()`, and `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`,
+    `.get(i)`, `.reserve(...)`, and `.push(...)`. The explicit AoS conversion surface now lives in
+    the dedicated `/std/collections/experimental_soa_vector_conversions/*` module with
+    `soaVectorToAos<T>()`. Wrapper method-sugar `SoaVector<T>.to_aos()` is still pending on top
+    of that imported helper surface.
     The wrapper now stores real `.prime` `SoaColumn<T>` state rather than the old builtin header-only
     `soa_vector<T>` backing, and it currently requires `T` to be a reflect-enabled struct via
     `meta.field_count<T>()` so non-SoA-safe element types fail early. Today the first real single-column
@@ -2361,11 +2363,14 @@ bad_use_after_take() {
     `soaVectorPush<T>()` plus wrapper method-sugar `values.reserve(...)` / `values.push(...)` mutate that same
     wrapper-backed column state in place. `soaVectorFromAos<T>()` already targets the same substrate semantically,
     but backend lowering still stops on the current `* backend requires typed bindings` boundary. `soaVectorToAos<T>()`
-    now provides the first explicit wrapper-to-AoS helper foothold on that same wrapper-owned state, and wrapper
-    method-sugar `values.to_aos()` now resolves onto that same helper path. Backend lowering still stops on the
-    imported helper `* backend does not support return type on
-    /std/collections/experimental_soa_vector/soaVectorToAos__...` boundary for `vector<Struct>` helper returns.
-    Richer non-empty conversion surfaces still remain pending until that return-type boundary is resolved cleanly.
+    now lives in the dedicated `/std/collections/experimental_soa_vector_conversions/*` import surface so the core
+    wrapper module stays usable for read/mutate paths. Wrapper method-sugar `values.to_aos()` is still pending there
+    because it currently collides with the builtin `soa_vector.to_aos` semantic route. Backend lowering still stops on
+    the imported helper
+    `* backend does not support return type on
+    /std/collections/experimental_soa_vector_conversions/soaVectorToAos__...` boundary for `vector<Struct>` helper
+    returns. Richer non-empty conversion surfaces still remain pending until that return-type boundary is resolved
+    cleanly.
     Borrowed `ref` and field-view surfaces remain pending behind the broader SoA substrate work.
   - **Experimental SoA storage substrate:** the first reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with `SoaColumn<T>`, `soaColumnNew<T>()`,

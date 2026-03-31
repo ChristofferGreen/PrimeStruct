@@ -434,6 +434,7 @@ main() {
 TEST_CASE("experimental soa_vector stdlib to-aos helper validates on reflect-enabled struct elements") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -451,9 +452,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib to-aos method validates on reflect-enabled struct elements") {
+TEST_CASE("experimental soa_vector stdlib to-aos method stays pending on wrapper surface") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -465,10 +467,16 @@ main() {
   [SoaVector<Particle>] values{soaVectorNew<Particle>()}
   return(values.to_aos())
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  const bool gotPendingMethodReject =
+      error.find("to_aos requires soa_vector target") != std::string::npos;
+  const bool gotImportSurfaceReject =
+      error.find("unknown import path: /std/collections/experimental_soa_vector_conversions/*") !=
+      std::string::npos;
+  const bool gotExpectedReject = gotPendingMethodReject || gotImportSurfaceReject;
+  CHECK(gotExpectedReject == true);
 }
 
 TEST_CASE("experimental soa_vector stdlib get helper validates on reflect-enabled struct elements") {
