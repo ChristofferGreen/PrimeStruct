@@ -240,6 +240,28 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
+TEST_CASE("vm canonical soa_vector to_aos temporaries route through vector capacity") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(capacity(/std/collections/soa_vector/to_aos<Particle>(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_canonical_soa_vector_to_aos_vector_capacity_experimental_wrapper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
 TEST_CASE("vm wildcard-imported canonical soa_vector helpers lower") {
   const std::string source = R"(
 import /std/collections/*

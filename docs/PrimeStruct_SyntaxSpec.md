@@ -830,7 +830,8 @@ direct canonical `/std/collections/soa_vector/to_aos` call results as vector tar
 count dispatch instead of depending on the old raw `/to_aos` call shape. C++ emitter
 vector-target classification now also treats those same direct canonical
 `/std/collections/soa_vector/to_aos` call results as vector targets for nested helper dispatch
-instead of depending on bound vector temporaries.
+instead of depending on bound vector temporaries, and the shared native/VM vector-capacity
+classifier now does the same for nested backend helper dispatch.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

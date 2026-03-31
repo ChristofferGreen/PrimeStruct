@@ -2448,7 +2448,8 @@ treats direct canonical `/std/collections/soa_vector/to_aos` call results as vec
 nested count dispatch instead of depending on the old raw `/to_aos` call shape. C++ emitter
 vector-target classification now also treats those same direct canonical
 `/std/collections/soa_vector/to_aos` call results as vector targets for nested helper dispatch
-instead of depending on bound vector temporaries.
+instead of depending on bound vector temporaries, and the shared native/VM vector-capacity
+classifier now does the same for nested backend helper dispatch.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend

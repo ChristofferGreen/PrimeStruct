@@ -252,7 +252,7 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
 
     std::string collection;
     if (!getBuiltinCollectionName(target, collection)) {
-      return false;
+      return isVectorCountTarget(target, localsIn);
     }
     return collection == "vector" && target.templateArgs.size() == 1;
   }

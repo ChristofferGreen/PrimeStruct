@@ -123,6 +123,11 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   soaVectorArgsInfo.isSoaVector = true;
   locals.emplace("soaVectorArgs", soaVectorArgsInfo);
 
+  primec::ir_lowerer::LocalInfo soaInfo;
+  soaInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  soaInfo.isSoaVector = true;
+  locals.emplace("soaValues", soaInfo);
+
   primec::Expr valuesName;
   valuesName.kind = primec::Expr::Kind::Name;
   valuesName.name = "values";
@@ -187,6 +192,16 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   derefPtrVector.name = "dereference";
   derefPtrVector.args = {indexedPtrVector};
   capacityCall.args = {derefPtrVector};
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr soaValuesName;
+  soaValuesName.kind = primec::Expr::Kind::Name;
+  soaValuesName.name = "soaValues";
+  primec::Expr toAosCall;
+  toAosCall.kind = primec::Expr::Kind::Call;
+  toAosCall.name = "/std/collections/soa_vector/to_aos";
+  toAosCall.args = {soaValuesName};
+  capacityCall.args = {toAosCall};
   CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 
   primec::Expr soaVectorArgsName;
