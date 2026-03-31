@@ -138,6 +138,10 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find("setCollectionMethodTarget(\"/soa_vector/count\")") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "setCollectionMethodTarget(preferredSoaCountMethodTarget())") != std::string::npos);
   CHECK(semanticsExprSource.find(
             "auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {") ==
         std::string::npos);

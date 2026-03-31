@@ -811,7 +811,10 @@ no longer keeps a dedicated builtin `soa_vector` count/get/ref helper bridge, in
 definition-resolution plus count/access fallback path for those helper shapes, and the old
 backend-specific root builtin `soa_vector` `push|reserve` rejection path is gone too. Lowerer
 count/access classifier fallback also no longer treats raw `/soa_vector/count` as a builtin count alias once
-semantics has canonicalized those old-surface forms earlier in validation.
+semantics has canonicalized those old-surface forms earlier in validation, and the remaining
+inferred/method fallback resolution for builtin `soa_vector` count receivers now prefers the
+canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
+`/soa_vector/count` user-helper shadowing on helper-return receivers.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

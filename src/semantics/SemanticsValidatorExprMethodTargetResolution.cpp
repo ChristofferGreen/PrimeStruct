@@ -1386,6 +1386,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return setCollectionMethodTarget(preferredMapHelper);
   };
+  auto preferredSoaCountMethodTarget = [&]() {
+    const std::string canonical = "/std/collections/soa_vector/count";
+    const std::string samePath = "/soa_vector/count";
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return samePath;
+    }
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   auto preferredBufferMethodTarget = [&](const std::string &helperName) {
     const std::string canonical = "/std/gfx/Buffer/" + helperName;
     const std::string experimental = "/std/gfx/experimental/Buffer/" + helperName;
@@ -1513,7 +1524,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
       }
       if (collectionTypePath == "/soa_vector") {
-        return setCollectionMethodTarget("/soa_vector/count");
+        return setCollectionMethodTarget(preferredSoaCountMethodTarget());
       }
       if (collectionTypePath == "/string") {
         return setCollectionMethodTarget("/string/count");
@@ -1805,7 +1816,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
     }
     if (resolveSoaVectorTarget(receiver, elemType)) {
-      return setCollectionMethodTarget("/soa_vector/count");
+      return setCollectionMethodTarget(preferredSoaCountMethodTarget());
     }
     if (resolveArrayTarget(receiver, elemType)) {
       return setCollectionMethodTarget("/array/count");

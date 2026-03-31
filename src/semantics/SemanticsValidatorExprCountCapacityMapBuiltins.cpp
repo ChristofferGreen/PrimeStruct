@@ -156,6 +156,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
                          logicalResolvedMethod == "/vector/count" ||
                          logicalResolvedMethod == "/std/collections/vector/count" ||
                          logicalResolvedMethod == "/soa_vector/count" ||
+                         logicalResolvedMethod == "/std/collections/soa_vector/count" ||
                          logicalResolvedMethod == "/string/count" ||
                          logicalResolvedMethod == "/map/count" ||
                          logicalResolvedMethod == "/std/collections/map/count")) {

@@ -2429,7 +2429,10 @@ builtin `push` and `reserve` forms now rewrite earlier onto the canonical helper
 well, so the old backend-specific lowerer `soa_vector helper: push|reserve` rejection path is
 gone, and the lowerer count/access classifiers no longer treat raw `/soa_vector/count` as a
 builtin count alias once semantics has canonicalized those old-surface forms, so the remaining
-helper-call cleanup is narrowed to the wildcard-imported follow-up.
+helper-call cleanup is narrowed to the wildcard-imported follow-up. The remaining inferred and
+method-target fallback resolution for builtin `soa_vector` count receivers now also prefers the
+canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
+`/soa_vector/count` user-helper shadowing on helper-return receivers.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend

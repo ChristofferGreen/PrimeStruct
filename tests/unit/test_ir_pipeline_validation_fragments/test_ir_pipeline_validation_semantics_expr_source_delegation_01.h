@@ -67,6 +67,8 @@
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateMapSoaBuiltins.cpp";
   const std::filesystem::path semanticsExprMethodResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
+  const std::filesystem::path semanticsExprMethodTargetResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodTargetResolution.cpp";
   const std::filesystem::path semanticsExprLateMapAccessBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateMapAccessBuiltins.cpp";
   const std::filesystem::path semanticsExprLateUnknownTargetFallbacksPath =
@@ -126,6 +128,7 @@
   REQUIRE(std::filesystem::exists(semanticsExprLateCallCompatibilityPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
+  REQUIRE(std::filesystem::exists(semanticsExprMethodTargetResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateMapAccessBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateUnknownTargetFallbacksPath));
   REQUIRE(std::filesystem::exists(semanticsExprMutationBorrowsPath));
@@ -185,6 +188,8 @@
       readText(semanticsExprLateMapSoaBuiltinsPath);
   const std::string semanticsExprMethodResolutionSource =
       readText(semanticsExprMethodResolutionPath);
+  const std::string semanticsExprMethodTargetResolutionSource =
+      readText(semanticsExprMethodTargetResolutionPath);
   const std::string semanticsExprLateMapAccessBuiltinsSource =
       readText(semanticsExprLateMapAccessBuiltinsPath);
   const std::string semanticsExprLateUnknownTargetFallbacksSource =

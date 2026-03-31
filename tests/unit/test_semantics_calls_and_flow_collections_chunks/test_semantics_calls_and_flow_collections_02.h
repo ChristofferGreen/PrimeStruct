@@ -350,6 +350,94 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/count") != std::string::npos);
 }
 
+TEST_CASE("soa_vector count fallback validates through struct helper return receivers") {
+  const std::string source = R"(
+[struct]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<soa_vector<Particle>>]
+  cloneValues() {
+    return(soa_vector<Particle>())
+  }
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(plus(count(holder.cloneValues()), holder.cloneValues().count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector bare count fallback keeps same-path helper shadow through struct helper return receivers") {
+  const std::string source = R"(
+[struct]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<soa_vector<Particle>>]
+  cloneValues() {
+    return(soa_vector<Particle>())
+  }
+}
+
+[return<string>]
+/soa_vector/count([soa_vector<Particle>] values) {
+  return("shadow"utf8)
+}
+
+[return<string>]
+main() {
+  [Holder] holder{Holder()}
+  return(count(holder.cloneValues()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector method count fallback keeps same-path helper shadow through struct helper return receivers") {
+  const std::string source = R"(
+[struct]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<soa_vector<Particle>>]
+  cloneValues() {
+    return(soa_vector<Particle>())
+  }
+}
+
+[return<string>]
+/soa_vector/count([soa_vector<Particle>] values) {
+  return("shadow"utf8)
+}
+
+[return<string>]
+main() {
+  [Holder] holder{Holder()}
+  return(holder.cloneValues().count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector stdlib helpers validate on builtin soa_vector binding") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

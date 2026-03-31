@@ -122,6 +122,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       readText(semanticsInferCollectionDispatchSetupPath);
   const std::string semanticsInferLateFallbackBuiltinsSource =
       readText(semanticsInferLateFallbackBuiltinsPath);
+  const std::string semanticsInferMethodResolutionSource =
+      readText(semanticsInferMethodResolutionPath);
   const std::string semanticsInferPreDispatchCallsSource =
       readText(semanticsInferPreDispatchCallsPath);
   const std::string semanticsInferScalarBuiltinsSource =
@@ -210,6 +212,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferSource.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget =") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveBuiltinAccessReceiverExprInline = [&](const Expr &accessExpr) -> const Expr * {") ==
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/count\";") ==
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = preferredSoaCountMethodTarget();") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
         std::string::npos);
@@ -622,4 +628,3 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementReturnsSource.find("bool SemanticsValidator::blockAlwaysReturns") !=
         std::string::npos);
 }
-
