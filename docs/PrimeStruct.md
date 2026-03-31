@@ -2414,7 +2414,9 @@ bucket, the remaining lowering cleanup is now tracked as explicit helper-call, c
 field-view follow-ups, with helper-call cleanup itself staged as direct-call versus
 wildcard-imported follow-ups. Dedicated inline-dispatch builtin `soa_vector` count/get/ref
 helper bridging is now gone as well, so those helper shapes flow through the shared
-definition-resolution plus count/access fallback path instead of a one-off SoA branch.
+definition-resolution plus count/access fallback path instead of a one-off SoA branch, and
+the remaining direct-call lowerer cleanup is narrowed further to the explicit root-builtin
+`push` and `reserve` rejection paths.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend

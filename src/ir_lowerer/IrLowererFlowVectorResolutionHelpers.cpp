@@ -258,6 +258,10 @@ bool validateVectorStatementHelperTarget(
     const LocalMap &localsIn,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     std::string &error) {
+  auto emitUnsupportedSoaTargetError = [&]() {
+    error = "native backend does not support soa_vector helper: " + vectorHelper;
+    return false;
+  };
   if (!isMutableVectorTargetExpr(target, localsIn, inferStructExprPath)) {
     error = vectorHelper + " requires mutable vector binding";
     return false;
@@ -269,8 +273,7 @@ bool validateVectorStatementHelperTarget(
       return false;
     }
     if (it->second.isSoaVector) {
-      error = "native backend does not support soa_vector helper: " + vectorHelper;
-      return false;
+      return emitUnsupportedSoaTargetError();
     }
     if (it->second.kind != LocalInfo::Kind::Vector || !it->second.isMutable) {
       error = vectorHelper + " requires mutable vector binding";
@@ -280,10 +283,6 @@ bool validateVectorStatementHelperTarget(
   }
   if (target.kind == Expr::Kind::Call && isSimpleCallName(target, "dereference") &&
       target.args.size() == 1) {
-    auto emitSoaTargetError = [&]() {
-      error = "native backend does not support soa_vector helper: " + vectorHelper;
-      return false;
-    };
     const Expr &derefTarget = target.args.front();
     if (derefTarget.kind == Expr::Kind::Name) {
       auto it = localsIn.find(derefTarget.name);
@@ -292,7 +291,7 @@ bool validateVectorStatementHelperTarget(
         return false;
       }
       if (it->second.isSoaVector) {
-        return emitSoaTargetError();
+        return emitUnsupportedSoaTargetError();
       }
       if (!((it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
             (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector))) {
@@ -315,7 +314,7 @@ bool validateVectorStatementHelperTarget(
       return false;
     }
     if (it->second.isSoaVector) {
-      return emitSoaTargetError();
+      return emitUnsupportedSoaTargetError();
     }
     if (!((it->second.argsPackElementKind == LocalInfo::Kind::Reference &&
            it->second.referenceToVector) ||
@@ -336,8 +335,7 @@ bool validateVectorStatementHelperTarget(
         return false;
       }
       if (it->second.isSoaVector) {
-        error = "native backend does not support soa_vector helper: " + vectorHelper;
-        return false;
+        return emitUnsupportedSoaTargetError();
       }
       if (it->second.argsPackElementKind != LocalInfo::Kind::Vector) {
         error = vectorHelper + " requires mutable vector binding";
