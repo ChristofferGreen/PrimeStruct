@@ -1806,6 +1806,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("explicit to_aos direct call validates on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  /to_aos(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("to_aos method validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {

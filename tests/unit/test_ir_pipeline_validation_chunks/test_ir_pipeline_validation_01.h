@@ -594,7 +594,7 @@ main() {
   CHECK(error == "native backend requires typed bindings");
 }
 
-TEST_CASE("semantics accepts to_aos method forms before lowerer rejection") {
+TEST_CASE("root to_aos helper forms lower through canonical helper routing") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -603,8 +603,10 @@ Particle() {
 [return<void>]
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
-  values.to_aos()
-  values./to_aos()
+  [vector<Particle>] unpackedA{to_aos(values)}
+  [vector<Particle>] unpackedB{/to_aos(values)}
+  [vector<Particle>] unpackedC{values.to_aos()}
+  [vector<Particle>] unpackedD{values./to_aos()}
 }
 )";
   primec::Program program;
@@ -614,8 +616,36 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error == "native backend does not support to_aos");
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("root to_aos canonical routing ignores vector-only user helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/to_aos([vector<Particle>] values) {
+  return(6i32)
+}
+
+[return<void>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<Particle>] unpacked{to_aos(values)}
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("semantics rejects soa_vector field-view before lowerer") {

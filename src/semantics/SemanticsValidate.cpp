@@ -436,6 +436,89 @@ std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBinding(
   return std::nullopt;
 }
 
+bool localImportPathCoversTarget(const std::string &importPath, const std::string &targetPath) {
+  if (importPath.empty() || importPath.front() != '/') {
+    return false;
+  }
+  if (importPath == targetPath) {
+    return true;
+  }
+  if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+    const std::string prefix = importPath.substr(0, importPath.size() - 2);
+    return targetPath == prefix || targetPath.rfind(prefix + "/", 0) == 0;
+  }
+  return false;
+}
+
+bool hasVisibleRootToAosHelper(const Program &program) {
+  for (const Definition &def : program.definitions) {
+    if (def.fullPath == "/to_aos" &&
+        !def.parameters.empty() &&
+        extractBuiltinSoaVectorBinding(def.parameters.front()).has_value()) {
+      return true;
+    }
+  }
+  const auto &importPaths = program.sourceImports.empty() ? program.imports : program.sourceImports;
+  for (const auto &importPath : importPaths) {
+    if (localImportPathCoversTarget(importPath, "/to_aos")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::vector<std::string> candidateDefinitionPaths(const Expr &expr, const std::string &definitionNamespace) {
+  std::vector<std::string> candidatePaths;
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    candidatePaths.push_back(expr.name);
+    return candidatePaths;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    candidatePaths.push_back(expr.namespacePrefix + "/" + expr.name);
+  }
+  if (!definitionNamespace.empty()) {
+    candidatePaths.push_back(definitionNamespace + "/" + expr.name);
+  }
+  candidatePaths.push_back("/" + expr.name);
+  candidatePaths.push_back(expr.name);
+  return candidatePaths;
+}
+
+std::optional<semantics::BindingInfo> extractBuiltinCollectionBindingFromTypeText(
+    const std::string &typeText,
+    std::string_view expectedBase) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
+  std::string base;
+  std::string argText;
+  if (!semantics::splitTemplateTypeName(normalizedType, base, argText) ||
+      semantics::normalizeBindingTypeName(base) != expectedBase) {
+    return std::nullopt;
+  }
+  semantics::BindingInfo binding;
+  binding.typeName = std::string(expectedBase);
+  binding.typeTemplateArg = argText;
+  return binding;
+}
+
+std::optional<semantics::BindingInfo> extractBuiltinCollectionBindingFromWrappedTypeText(
+    const std::string &typeText,
+    std::string_view expectedBase) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
+  std::string base;
+  std::string argText;
+  if (!semantics::splitTemplateTypeName(normalizedType, base, argText)) {
+    return std::nullopt;
+  }
+  const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
+  if (normalizedBase == "args") {
+    return extractBuiltinCollectionBindingFromWrappedTypeText(argText, expectedBase);
+  }
+  if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
+    return std::nullopt;
+  }
+  return extractBuiltinCollectionBindingFromTypeText(argText, expectedBase);
+}
+
 std::string builtinSoaConversionMethodName(std::string_view methodName) {
   std::string normalized(methodName);
   if (!normalized.empty() && normalized.front() == '/') {
@@ -596,6 +679,252 @@ bool rewriteBuiltinSoaConversionMethods(Program &program, std::string &error) {
     if (def.returnExpr.has_value()) {
       rewriteBuiltinSoaConversionMethodExpr(
           *def.returnExpr, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+    }
+  }
+  return true;
+}
+
+void rewriteBuiltinSoaToAosCallExpr(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace,
+    bool preserveVisibleRootHelper);
+
+void rewriteBuiltinSoaToAosCallStatements(
+    std::vector<Expr> &statements,
+    std::unordered_map<std::string, semantics::BindingInfo> bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace,
+    bool preserveVisibleRootHelper) {
+  for (Expr &stmt : statements) {
+    rewriteBuiltinSoaToAosCallExpr(
+        stmt,
+        bindings,
+        vectorReturnDefinitions,
+        soaVectorReturnDefinitions,
+        definitionNamespace,
+        preserveVisibleRootHelper);
+    if (!stmt.bodyArguments.empty()) {
+      auto bodyBindings = bindings;
+      rewriteBuiltinSoaToAosCallStatements(
+          stmt.bodyArguments,
+          bodyBindings,
+          vectorReturnDefinitions,
+          soaVectorReturnDefinitions,
+          definitionNamespace,
+          preserveVisibleRootHelper);
+    }
+    if (stmt.isBinding) {
+      if (auto vectorBinding = extractBuiltinVectorBinding(stmt); vectorBinding.has_value()) {
+        bindings[stmt.name] = *vectorBinding;
+      } else if (auto soaBinding = extractBuiltinSoaVectorBinding(stmt); soaBinding.has_value()) {
+        bindings[stmt.name] = *soaBinding;
+      }
+    }
+  }
+}
+
+void rewriteBuiltinSoaToAosCallExpr(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace,
+    bool preserveVisibleRootHelper) {
+  auto findBuiltinVectorValueBinding = [&](const auto &self,
+                                           const Expr &candidate) -> std::optional<semantics::BindingInfo> {
+    if (candidate.kind == Expr::Kind::Name) {
+      auto bindingIt = bindings.find(candidate.name);
+      if (bindingIt != bindings.end() && isBuiltinVectorBinding(bindingIt->second)) {
+        return bindingIt->second;
+      }
+      return std::nullopt;
+    }
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+      return std::nullopt;
+    }
+    std::string collectionName;
+    if (getBuiltinCollectionName(candidate, collectionName) &&
+        collectionName == "vector" &&
+        candidate.templateArgs.size() == 1) {
+      semantics::BindingInfo binding;
+      binding.typeName = "vector";
+      binding.typeTemplateArg = candidate.templateArgs.front();
+      return binding;
+    }
+    for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
+      auto returnIt = vectorReturnDefinitions.find(candidatePath);
+      if (returnIt != vectorReturnDefinitions.end() && isBuiltinVectorBinding(returnIt->second)) {
+        return returnIt->second;
+      }
+    }
+    if (!candidate.isMethodCall &&
+        isSimpleCallName(candidate, "dereference") &&
+        candidate.args.size() == 1) {
+      const Expr &derefTarget = candidate.args.front();
+      if (derefTarget.kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(derefTarget.name);
+        if (bindingIt != bindings.end()) {
+          return extractBuiltinCollectionBindingFromWrappedTypeText(
+              bindingTypeText(bindingIt->second), "vector");
+        }
+      }
+      std::string accessName;
+      if (getBuiltinArrayAccessName(derefTarget, accessName) &&
+          derefTarget.args.size() == 2 &&
+          derefTarget.args.front().kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(derefTarget.args.front().name);
+        if (bindingIt != bindings.end()) {
+          return extractBuiltinCollectionBindingFromWrappedTypeText(
+              bindingTypeText(bindingIt->second), "vector");
+        }
+      }
+    }
+    return std::nullopt;
+  };
+  auto findBuiltinSoaValueBinding = [&](const auto &self,
+                                        const Expr &candidate) -> std::optional<semantics::BindingInfo> {
+    if (candidate.kind == Expr::Kind::Name) {
+      auto bindingIt = bindings.find(candidate.name);
+      if (bindingIt != bindings.end() && isBuiltinSoaVectorBinding(bindingIt->second)) {
+        return bindingIt->second;
+      }
+      return std::nullopt;
+    }
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+      return std::nullopt;
+    }
+    std::string collectionName;
+    if (getBuiltinCollectionName(candidate, collectionName) &&
+        collectionName == "soa_vector" &&
+        candidate.templateArgs.size() == 1) {
+      semantics::BindingInfo binding;
+      binding.typeName = "soa_vector";
+      binding.typeTemplateArg = candidate.templateArgs.front();
+      return binding;
+    }
+    for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
+      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+      if (returnIt != soaVectorReturnDefinitions.end() && isBuiltinSoaVectorBinding(returnIt->second)) {
+        return returnIt->second;
+      }
+    }
+    if (!candidate.isMethodCall &&
+        builtinSoaConversionMethodName(candidate.name) == "to_soa" &&
+        candidate.args.size() == 1) {
+      auto vectorBinding = findBuiltinVectorValueBinding(findBuiltinVectorValueBinding, candidate.args.front());
+      if (!vectorBinding.has_value() || vectorBinding->typeTemplateArg.empty()) {
+        return std::nullopt;
+      }
+      semantics::BindingInfo binding;
+      binding.typeName = "soa_vector";
+      binding.typeTemplateArg = vectorBinding->typeTemplateArg;
+      return binding;
+    }
+    if (!candidate.isMethodCall &&
+        isSimpleCallName(candidate, "dereference") &&
+        candidate.args.size() == 1) {
+      const Expr &derefTarget = candidate.args.front();
+      if (derefTarget.kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(derefTarget.name);
+        if (bindingIt != bindings.end()) {
+          return extractBuiltinCollectionBindingFromWrappedTypeText(
+              bindingTypeText(bindingIt->second), "soa_vector");
+        }
+      }
+      std::string accessName;
+      if (getBuiltinArrayAccessName(derefTarget, accessName) &&
+          derefTarget.args.size() == 2 &&
+          derefTarget.args.front().kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(derefTarget.args.front().name);
+        if (bindingIt != bindings.end()) {
+          return extractBuiltinCollectionBindingFromWrappedTypeText(
+              bindingTypeText(bindingIt->second), "soa_vector");
+        }
+      }
+    }
+    return std::nullopt;
+  };
+
+  for (Expr &arg : expr.args) {
+    rewriteBuiltinSoaToAosCallExpr(
+        arg,
+        bindings,
+        vectorReturnDefinitions,
+        soaVectorReturnDefinitions,
+        definitionNamespace,
+        preserveVisibleRootHelper);
+  }
+  if (preserveVisibleRootHelper ||
+      expr.kind != Expr::Kind::Call ||
+      expr.args.size() != 1 ||
+      builtinSoaConversionMethodName(expr.name) != "to_aos") {
+    return;
+  }
+
+  if (!findBuiltinSoaValueBinding(findBuiltinSoaValueBinding, expr.args.front()).has_value()) {
+    return;
+  }
+
+  expr.isMethodCall = false;
+  expr.isFieldAccess = false;
+  expr.name = "/std/collections/soa_vector/to_aos";
+  expr.namespacePrefix.clear();
+}
+
+bool rewriteBuiltinSoaToAosCalls(Program &program, std::string &error) {
+  error.clear();
+  std::unordered_map<std::string, semantics::BindingInfo> vectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  for (const Definition &def : program.definitions) {
+    if (auto binding = extractBuiltinVectorReturnBinding(def); binding.has_value()) {
+      vectorReturnDefinitions[def.fullPath] = *binding;
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
+        vectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+      }
+    }
+    if (auto binding = extractBuiltinSoaVectorReturnBinding(def); binding.has_value()) {
+      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
+        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+      }
+    }
+  }
+  const bool preserveVisibleRootHelper = hasVisibleRootToAosHelper(program);
+  for (Definition &def : program.definitions) {
+    std::unordered_map<std::string, semantics::BindingInfo> bindings;
+    for (const Expr &param : def.parameters) {
+      if (auto vectorBinding = extractBuiltinVectorBinding(param); vectorBinding.has_value()) {
+        bindings[param.name] = *vectorBinding;
+      } else if (auto soaBinding = extractBuiltinSoaVectorBinding(param); soaBinding.has_value()) {
+        bindings[param.name] = *soaBinding;
+      }
+    }
+    std::string definitionNamespace;
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash != std::string::npos && slash > 0) {
+      definitionNamespace = def.fullPath.substr(0, slash);
+    }
+    rewriteBuiltinSoaToAosCallStatements(
+        def.statements,
+        bindings,
+        vectorReturnDefinitions,
+        soaVectorReturnDefinitions,
+        definitionNamespace,
+        preserveVisibleRootHelper);
+    if (def.returnExpr.has_value()) {
+      rewriteBuiltinSoaToAosCallExpr(
+          *def.returnExpr,
+          bindings,
+          vectorReturnDefinitions,
+          soaVectorReturnDefinitions,
+          definitionNamespace,
+          preserveVisibleRootHelper);
     }
   }
   return true;
@@ -1310,6 +1639,9 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (!rewriteBuiltinSoaConversionMethods(program, error)) {
+    return false;
+  }
+  if (!rewriteBuiltinSoaToAosCalls(program, error)) {
     return false;
   }
   if (!rewriteExperimentalSoaToAosMethods(program, error)) {
