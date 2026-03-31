@@ -64,6 +64,7 @@
   auto emitStringIndexOutOfBounds = runtimeErrorEmitters.emitStringIndexOutOfBounds;
   auto emitMapKeyNotFound = runtimeErrorEmitters.emitMapKeyNotFound;
   auto emitBuiltinCanonicalMapInsertPending = runtimeErrorEmitters.emitBuiltinCanonicalMapInsertPending;
+  auto emitSoaArbitraryWidthPending = runtimeErrorEmitters.emitSoaArbitraryWidthPending;
   auto emitVectorIndexOutOfBounds = runtimeErrorEmitters.emitVectorIndexOutOfBounds;
   auto emitVectorPopOnEmpty = runtimeErrorEmitters.emitVectorPopOnEmpty;
   auto emitVectorCapacityExceeded = runtimeErrorEmitters.emitVectorCapacityExceeded;

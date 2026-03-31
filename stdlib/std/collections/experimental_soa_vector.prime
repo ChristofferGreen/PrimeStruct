@@ -5,7 +5,7 @@ namespace std {
   namespace experimental_soa_vector {
   [return<void>]
   soaVectorValidateType<T>() {
-    [i32] fieldCount{meta.field_count<T>()}
+    [i32] fieldCount{/std/collections/experimental_soa_storage/soaSupportedFieldCount<T>()}
   }
 
   [public struct]

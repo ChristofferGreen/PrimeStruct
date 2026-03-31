@@ -35,6 +35,7 @@ RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const Intern
   emitters.emitStringIndexOutOfBounds = makeEmitStringIndexOutOfBounds(function, internString);
   emitters.emitMapKeyNotFound = makeEmitMapKeyNotFound(function, internString);
   emitters.emitBuiltinCanonicalMapInsertPending = makeEmitBuiltinCanonicalMapInsertPending(function, internString);
+  emitters.emitSoaArbitraryWidthPending = makeEmitSoaArbitraryWidthPending(function, internString);
   emitters.emitVectorIndexOutOfBounds = makeEmitVectorIndexOutOfBounds(function, internString);
   emitters.emitVectorPopOnEmpty = makeEmitVectorPopOnEmpty(function, internString);
   emitters.emitVectorCapacityExceeded = makeEmitVectorCapacityExceeded(function, internString);
@@ -87,6 +88,15 @@ EmitRuntimeErrorFn makeEmitBuiltinCanonicalMapInsertPending(IrFunction &function
   auto internStringFn = internString;
   return [functionPtr, internStringFn]() {
     emitBuiltinCanonicalMapInsertPending(*functionPtr, internStringFn);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitSoaArbitraryWidthPending(IrFunction &function,
+                                                    const InternRuntimeErrorStringFn &internString) {
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitSoaArbitraryWidthPending(*functionPtr, internStringFn);
   };
 }
 
@@ -178,6 +188,10 @@ void emitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &
 
 void emitBuiltinCanonicalMapInsertPending(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   emitRuntimeError(function, "builtin canonical map insert pending", internString);
+}
+
+void emitSoaArbitraryWidthPending(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
+  emitRuntimeError(function, "experimental soa storage arbitrary-width schemas pending", internString);
 }
 
 void emitVectorIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
