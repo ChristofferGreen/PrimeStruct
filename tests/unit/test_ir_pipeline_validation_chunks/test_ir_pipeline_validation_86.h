@@ -154,7 +154,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helpers through variadi
             emitExprCalls,
             error,
             instructions) == EmitResult::Error);
-  CHECK(error == "native backend does not support soa_vector helper: push");
+  CHECK(error == "push requires mutable vector binding");
 }
 
 TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics") {
@@ -291,7 +291,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             error) == EmitResult::Error);
-  CHECK(error == "native backend does not support soa_vector helper: push");
+  CHECK(error == "push requires mutable vector binding");
 
   locals.at("v").isMutable = true;
   pushCall.templateArgs = {"i32"};

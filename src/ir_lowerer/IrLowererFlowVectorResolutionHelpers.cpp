@@ -190,11 +190,6 @@ bool resolveVectorMutatorName(const Expr &expr, std::string &helperNameOut) {
 
 bool classifyMutableVectorLocal(const LocalInfo &localInfo, bool fromArgsPack) {
   const LocalInfo::Kind kind = fromArgsPack ? localInfo.argsPackElementKind : localInfo.kind;
-  if (localInfo.isSoaVector &&
-      (kind == LocalInfo::Kind::Value || kind == LocalInfo::Kind::Vector ||
-       kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer)) {
-    return true;
-  }
   if (!fromArgsPack && kind == LocalInfo::Kind::Vector && localInfo.isMutable) {
     return true;
   }
@@ -258,10 +253,6 @@ bool validateVectorStatementHelperTarget(
     const LocalMap &localsIn,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     std::string &error) {
-  auto emitUnsupportedSoaTargetError = [&]() {
-    error = "native backend does not support soa_vector helper: " + vectorHelper;
-    return false;
-  };
   if (!isMutableVectorTargetExpr(target, localsIn, inferStructExprPath)) {
     error = vectorHelper + " requires mutable vector binding";
     return false;
@@ -271,9 +262,6 @@ bool validateVectorStatementHelperTarget(
     if (it == localsIn.end()) {
       error = vectorHelper + " requires mutable vector binding";
       return false;
-    }
-    if (it->second.isSoaVector) {
-      return emitUnsupportedSoaTargetError();
     }
     if (it->second.kind != LocalInfo::Kind::Vector || !it->second.isMutable) {
       error = vectorHelper + " requires mutable vector binding";
@@ -289,9 +277,6 @@ bool validateVectorStatementHelperTarget(
       if (it == localsIn.end()) {
         error = vectorHelper + " requires mutable vector binding";
         return false;
-      }
-      if (it->second.isSoaVector) {
-        return emitUnsupportedSoaTargetError();
       }
       if (!((it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
             (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToVector))) {
@@ -312,9 +297,6 @@ bool validateVectorStatementHelperTarget(
     if (it == localsIn.end() || !it->second.isArgsPack) {
       error = vectorHelper + " requires mutable vector binding";
       return false;
-    }
-    if (it->second.isSoaVector) {
-      return emitUnsupportedSoaTargetError();
     }
     if (!((it->second.argsPackElementKind == LocalInfo::Kind::Reference &&
            it->second.referenceToVector) ||

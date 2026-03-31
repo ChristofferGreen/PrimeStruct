@@ -2336,10 +2336,12 @@ bad_use_after_take() {
     `soa_vector<T>()` literals lower to header-only storage, and builtin `ref(...)` now rejects local binding
     persistence plus call-argument/return escapes with `soa_vector borrowed views are not implemented yet: ref`
     until the borrowed-view substrate exists.
-    Non-empty SoA literals and remaining draft helper paths still emit deterministic unsupported diagnostics (`native
-    backend does not support non-empty soa_vector literals`, `native backend does not
-    support soa_vector helper: push`, `native backend does not support
-    soa_vector helper: reserve`). These compiler-owned `soa_vector` paths are
+    Non-empty SoA literals still emit the deterministic unsupported diagnostic `native
+    backend does not support non-empty soa_vector literals`. Root builtin `push(...)`,
+    `reserve(...)`, `values.push(...)`, `values.reserve(...)`, and old explicit
+    `/soa_vector/push|reserve(...)` forms now route through the canonical stdlib helper
+    surface instead of stopping on dedicated backend-specific `soa_vector helper`
+    diagnostics. These compiler-owned `soa_vector` paths are
     not the intended end-state and are now tracked as separate cleanup follow-ups for the remaining semantics
     method/builtin fallbacks, IR-lowerer special cases, emitter/backend special cases, and runtime/diagnostic
     mentions while the generic SoA substrate and stdlib `.prime` implementation finish replacing them.
@@ -2401,6 +2403,10 @@ method `to_aos` calls on builtin `soa_vector<T>` bindings now rewrite onto that 
 them. Valid root bare/method/old-explicit `get` and `ref` calls on builtin `soa_vector<T>`
 bindings likewise now rewrite onto `/std/collections/soa_vector/get` and
 `/std/collections/soa_vector/ref` when no visible root or same-path user helper shadows them.
+Valid root bare/method/old-explicit `push` and `reserve` calls on builtin `soa_vector<T>`
+bindings now likewise rewrite onto `/std/collections/soa_vector/push` and
+`/std/collections/soa_vector/reserve` when no visible root or same-path user helper shadows
+them.
 Vector-target root bare/method/old-explicit `get` and `ref` misuses now also keep those same
 canonical `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject
 contracts instead of the old builtin `get requires soa_vector target` / `ref requires
@@ -2414,9 +2420,10 @@ bucket, the remaining lowering cleanup is now tracked as explicit helper-call, c
 field-view follow-ups, with helper-call cleanup itself staged as direct-call versus
 wildcard-imported follow-ups. Dedicated inline-dispatch builtin `soa_vector` count/get/ref
 helper bridging is now gone as well, so those helper shapes flow through the shared
-definition-resolution plus count/access fallback path instead of a one-off SoA branch, and
-the remaining direct-call lowerer cleanup is narrowed further to the explicit root-builtin
-`push` and `reserve` rejection paths.
+definition-resolution plus count/access fallback path instead of a one-off SoA branch. Root
+builtin `push` and `reserve` forms now rewrite earlier onto the canonical helper surface as
+well, so the old backend-specific lowerer `soa_vector helper: push|reserve` rejection path is
+gone and the remaining helper-call cleanup is narrowed to the wildcard-imported follow-up.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend

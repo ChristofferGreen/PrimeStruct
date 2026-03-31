@@ -797,19 +797,19 @@ while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib 
 direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
 across C++/native/VM, and valid root bare/method/old-explicit `get`/`ref` plus bare/direct/method `to_aos` calls on
 builtin `soa_vector<T>` bindings now rewrite onto that same canonical helper path unless a visible old-surface user
-helper shadows them. Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
+helper shadows them. Valid root bare/method/old-explicit `push`/`reserve` calls on builtin `soa_vector<T>` bindings
+now also rewrite onto `/std/collections/soa_vector/push|reserve` unless a visible old-surface user helper shadows
+them. Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
 `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject contracts instead of the old builtin
 `get requires soa_vector target` / `ref requires soa_vector target` diagnostics. Vector-target root bare/direct/method
 `to_aos` misuses now also keep that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin `to_aos requires soa_vector target`
 diagnostic, so those paths no longer depend on the old builtin conversion scaffolding. Inline lowering also
 no longer keeps a dedicated builtin `soa_vector` count/get/ref helper bridge, instead using the shared
-definition-resolution plus count/access fallback path for those helper shapes. Non-empty literals
-and the remaining old-root draft helper paths
-still emit deterministic unsupported diagnostics
-(`native backend does not support non-empty soa_vector literals`,
-`native backend does not support soa_vector helper: push`, `native backend does not support soa_vector helper:
-reserve`).
+definition-resolution plus count/access fallback path for those helper shapes, and the old
+backend-specific root builtin `soa_vector` `push|reserve` rejection path is gone too.
+Non-empty literals still emit the deterministic unsupported diagnostic
+`native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
 stdlib `.prime` implementation replace them.
 Draft example source: `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA runtime support

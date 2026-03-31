@@ -1738,6 +1738,51 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/ref") != std::string::npos);
 }
 
+TEST_CASE("push and reserve root forms validate on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  reserve(values, 2i32)
+  push(values, Particle(4i32))
+  values.reserve(3i32)
+  values.push(Particle(9i32))
+  /soa_vector/reserve(values, 4i32)
+  /soa_vector/push(values, Particle(12i32))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("push helper call-form falls back to user helper on soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/push([soa_vector<Particle> mut] values, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  push(values, Particle(4i32))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /push parameter value") != std::string::npos);
+}
+
 TEST_CASE("to_soa helper validates on vector binding") {
   const std::string source = R"(
 Particle() {
