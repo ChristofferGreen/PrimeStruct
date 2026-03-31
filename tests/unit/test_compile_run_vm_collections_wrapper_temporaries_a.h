@@ -240,7 +240,7 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("vm wildcard-imported canonical soa_vector helpers still require template inference parity") {
+TEST_CASE("vm wildcard-imported canonical soa_vector helpers lower") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -265,13 +265,11 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_wildcard_canonical_soa_vector_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_wildcard_canonical_soa_vector_helpers_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "template arguments required for /std/collections/soa_vector/count") !=
-        std::string::npos);
+  const std::string outPath =
+      (testScratchPath("") / "primec_vm_wildcard_canonical_soa_vector_helpers.psvm").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(runVm(outPath) == 17);
 }
 
 TEST_CASE("vm rejects experimental soa_vector stdlib wide structs on pending width boundary") {

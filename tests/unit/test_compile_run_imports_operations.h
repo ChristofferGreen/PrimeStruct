@@ -275,7 +275,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("wildcard-imported canonical soa_vector helpers still require template inference parity in C++ emitter") {
+TEST_CASE("wildcard-imported canonical soa_vector helpers lower in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -300,15 +300,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_wildcard_canonical_soa_vector_helpers_experimental_wrapper_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_wildcard_canonical_soa_vector_helpers_experimental_wrapper_err.txt")
+  const std::string exePath =
+      (testScratchPath("") / "primec_wildcard_canonical_soa_vector_helpers_experimental_wrapper_exe")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "template arguments required for /std/collections/soa_vector/count") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("rejects experimental soa_vector stdlib wide structs on pending width boundary in C++ emitter") {

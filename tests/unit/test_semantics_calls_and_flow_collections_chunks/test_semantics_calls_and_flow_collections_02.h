@@ -516,7 +516,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("wildcard-imported canonical soa_vector helpers still require template inference parity") {
+TEST_CASE("wildcard-imported canonical soa_vector helpers infer receiver-matched templates") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -540,9 +540,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/soa_vector/count") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa_vector stdlib helpers reject primitive element types") {

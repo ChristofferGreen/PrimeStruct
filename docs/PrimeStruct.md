@@ -2389,12 +2389,13 @@ into bare `/get` / `/ref`-style fallback names. Explicit canonical slash-method 
 `values./std/collections/soa_vector/to_aos()` now also stay on that same canonical
 unknown-target/unknown-method contract instead of depending on dead experimental or builtin
 rewrite-table entries. Wildcard-imported canonical
-helper names for `count`, `get`, `ref`, `reserve`, `push`, and `to_aos` still stop at
-`template arguments required for /std/collections/soa_vector/count` for bare wildcard-imported
-calls, so both semantic-validation parity and full compile-pipeline/backend parity remain pending
-on canonical helper template inference there. Explicit canonical direct-call `to_aos(...)` now
-runs end-to-end through that same stdlib shim path as well once template arguments are present. The
-remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for root
+helper names for `count`, `get`, `ref`, `reserve`, `push`, and `to_aos` now keep mixed
+`/std/collections/*` plus `/std/collections/soa_vector/*` imports on the receiver-matched
+canonical shim surface instead of pinning every bare `count(...)` call to the SoA alias. Bare
+wildcard-imported helper names now validate and lower successfully across C++/native/VM, and
+explicit canonical direct-call `to_aos(...)` now runs end-to-end through that same stdlib shim
+path as well once template arguments are present. The remaining compiler-owned builtin semantics
+are now tracked as explicit follow-ups for root
 `get`, root `ref`, root `to_aos`, and field-view diagnostics instead of one mixed fallback
 bucket, the remaining lowering cleanup is now tracked as explicit helper-call, conversion, and
 field-view follow-ups, with helper-call cleanup itself staged as direct-call versus

@@ -287,6 +287,76 @@ bool rewriteExpr(Expr &expr,
     std::vector<std::string> receiverTemplateArgs;
     return resolveBuiltinSoaVectorReceiverTemplateArgs(receiverExpr, receiverTemplateArgs);
   };
+  auto inferCollectionReceiverFamily = [&](const Expr *receiverExpr) -> std::string {
+    auto inferFromTypeText = [&](std::string receiverTypeText) -> std::string {
+      if (receiverTypeText.empty()) {
+        return {};
+      }
+      while (true) {
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
+          return normalizeCollectionReceiverTypeName(receiverTypeText);
+        }
+        const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+        if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
+          return normalizedBase;
+        }
+        std::vector<std::string> receiverArgs;
+        if (!splitTopLevelTemplateArgs(argText, receiverArgs) || receiverArgs.size() != 1) {
+          return {};
+        }
+        receiverTypeText = receiverArgs.front();
+      }
+    };
+    if (receiverExpr == nullptr) {
+      return {};
+    }
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo)) {
+      const std::string family = inferFromTypeText(bindingTypeToString(receiverInfo));
+      if (!family.empty()) {
+        return family;
+      }
+    }
+    return inferFromTypeText(
+        inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
+  };
+  auto preferCanonicalStdlibVectorFamilyHelperPath = [&](const std::string &path) {
+    const Expr *receiverExpr = mapHelperReceiverExpr(expr);
+    if (receiverExpr == nullptr) {
+      return path;
+    }
+    std::string helperName;
+    bool resolvesVectorFamilyPath = false;
+    if (path.rfind("/std/collections/vector/", 0) == 0) {
+      helperName = path.substr(std::string("/std/collections/vector/").size());
+      resolvesVectorFamilyPath = true;
+    } else if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
+      helperName = path.substr(std::string("/std/collections/soa_vector/").size());
+    } else {
+      return path;
+    }
+    if (helperName != "count" && helperName != "push" && helperName != "reserve") {
+      return path;
+    }
+    const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
+    if (receiverFamily == "soa_vector" && resolvesVectorFamilyPath) {
+      const std::string preferred = "/std/collections/soa_vector/" + helperName;
+      if (ctx.sourceDefs.count(preferred) > 0) {
+        return preferred;
+      }
+    }
+    if (!resolvesVectorFamilyPath &&
+        (receiverFamily == "vector" || receiverFamily == "array" ||
+         (helperName == "count" && receiverFamily == "string"))) {
+      const std::string preferred = "/std/collections/vector/" + helperName;
+      if (ctx.sourceDefs.count(preferred) > 0) {
+        return preferred;
+      }
+    }
+    return path;
+  };
   auto shouldDeferStdlibCollectionHelperTemplateRewrite = [&](const std::string &path) {
     if (!expr.templateArgs.empty() || !isCanonicalStdlibCollectionHelperPath(path)) {
       return false;
@@ -430,6 +500,12 @@ bool rewriteExpr(Expr &expr,
       }
     }
     std::string resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
+    const std::string preferredVectorFamilyPath = preferCanonicalStdlibVectorFamilyHelperPath(resolvedPath);
+    if (preferredVectorFamilyPath != resolvedPath) {
+      resolvedPath = preferredVectorFamilyPath;
+      expr.name = preferredVectorFamilyPath;
+      expr.namespacePrefix.clear();
+    }
     const std::string borrowedCanonicalMapUnknownTarget = canonicalMapHelperUnknownTargetPath(resolvedPath);
     if (!borrowedCanonicalMapUnknownTarget.empty() &&
         resolvesExperimentalMapBorrowedReceiver(
