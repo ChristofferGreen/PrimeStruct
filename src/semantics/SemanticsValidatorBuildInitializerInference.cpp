@@ -143,6 +143,7 @@ bool SemanticsValidator::isBuiltinSoaRefExpr(
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
 
   return resolved == "/soa_vector/ref" ||
+         resolved == "/std/collections/soa_vector/ref" ||
          isExplicitSoaRefCall ||
          isBuiltinSoaRefMethod ||
          (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"));

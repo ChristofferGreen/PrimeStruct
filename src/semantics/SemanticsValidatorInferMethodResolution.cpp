@@ -71,6 +71,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return canonical;
   };
+  auto preferredSoaRefMethodTarget = [&]() {
+    const std::string canonical = "/std/collections/soa_vector/ref";
+    const std::string samePath = "/soa_vector/ref";
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return samePath;
+    }
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
       if (normalizedMethodName == "count" &&
@@ -183,7 +194,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if (normalizedMethodName == "ref" && collectionTypePath == "/soa_vector") {
-      resolvedOut = "/soa_vector/ref";
+      resolvedOut = preferredSoaRefMethodTarget();
       return true;
     }
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
@@ -514,7 +525,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (normalizedMethodName == "ref" &&
         resolveSoaVectorTarget(receiver, elemType)) {
-      resolvedOut = "/soa_vector/ref";
+      resolvedOut = preferredSoaRefMethodTarget();
       return true;
     }
     if (resolveSoaFieldViewMethodTarget(receiver)) {

@@ -1408,6 +1408,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return canonical;
   };
+  auto preferredSoaRefMethodTarget = [&]() {
+    const std::string canonical = "/std/collections/soa_vector/ref";
+    const std::string samePath = "/soa_vector/ref";
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return samePath;
+    }
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   auto preferredBufferMethodTarget = [&](const std::string &helperName) {
     const std::string canonical = "/std/gfx/Buffer/" + helperName;
     const std::string experimental = "/std/gfx/experimental/Buffer/" + helperName;
@@ -1583,7 +1594,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredSoaGetMethodTarget());
     }
     if (normalizedMethodName == "ref" && collectionTypePath == "/soa_vector") {
-      return setCollectionMethodTarget("/soa_vector/ref");
+      return setCollectionMethodTarget(preferredSoaRefMethodTarget());
     }
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
       return setCollectionMethodTarget("/to_soa");
@@ -1745,7 +1756,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget(preferredSoaGetMethodTarget());
       }
       if (base == "soa_vector" && normalizedMethodName == "ref") {
-        return setCollectionMethodTarget("/soa_vector/ref");
+        return setCollectionMethodTarget(preferredSoaRefMethodTarget());
       }
       if (base == "Buffer" &&
           (normalizedMethodName == "count" || normalizedMethodName == "empty" ||
@@ -1899,7 +1910,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (normalizedMethodName == "ref") {
     if (resolveSoaVectorTarget(receiver, elemType)) {
-      return setCollectionMethodTarget("/soa_vector/ref");
+      return setCollectionMethodTarget(preferredSoaRefMethodTarget());
     }
   }
   if (resolveSoaVectorTarget(receiver, elemType)) {

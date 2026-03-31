@@ -146,6 +146,10 @@
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "setCollectionMethodTarget(preferredSoaGetMethodTarget())") != std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find("auto preferredSoaRefMethodTarget = [&]()") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "setCollectionMethodTarget(preferredSoaRefMethodTarget())") != std::string::npos);
   CHECK(semanticsExprSource.find(
             "auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {") ==
         std::string::npos);
