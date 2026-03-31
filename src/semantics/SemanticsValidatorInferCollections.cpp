@@ -478,7 +478,8 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         return false;
       }
       if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
-           resolveCalleePath(target) == "/to_aos") &&
+           resolveCalleePath(target) == "/to_aos" ||
+           resolveCalleePath(target) == "/std/collections/soa_vector/to_aos") &&
           target.args.size() == 1) {
         return state->resolveSoaVectorTarget(target.args.front(), elemType);
       }

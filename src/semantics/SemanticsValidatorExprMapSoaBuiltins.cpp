@@ -166,7 +166,9 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   if ((!resolvedMethod &&
        (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
        resolvedMissing) ||
-      (resolvedMethod && (resolved == "/to_soa" || resolved == "/to_aos"))) {
+      (resolvedMethod &&
+       (resolved == "/to_soa" || resolved == "/to_aos" ||
+        resolved == "/std/collections/soa_vector/to_aos"))) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
         !(context.isNamedArgsPackMethodAccessCall != nullptr &&

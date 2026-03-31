@@ -150,6 +150,12 @@
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "setCollectionMethodTarget(preferredSoaRefMethodTarget())") != std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find("auto preferredSoaToAosMethodTarget = [&]()") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find("setCollectionMethodTarget(\"/to_aos\")") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "setCollectionMethodTarget(preferredSoaToAosMethodTarget())") != std::string::npos);
   CHECK(semanticsExprSource.find(
             "auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {") ==
         std::string::npos);

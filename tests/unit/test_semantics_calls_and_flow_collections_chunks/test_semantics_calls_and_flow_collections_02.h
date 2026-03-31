@@ -2282,6 +2282,32 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
+TEST_CASE("to_aos method fallback validates through struct helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[return<soa_vector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soa_vector<Particle>())
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(count(holder.cloneValues().to_aos()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("to_aos helper call-form falls back to user helper") {
   const std::string source = R"(
 Particle() {
@@ -2297,6 +2323,35 @@ Particle() {
 main() {
   [vector<Particle>] values{vector<Particle>()}
   return(to_aos(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("to_aos method fallback keeps same-path helper shadow through struct helper return receivers") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[return<soa_vector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soa_vector<Particle>())
+}
+
+[return<int>]
+/to_aos([soa_vector<Particle>] values) {
+  return(6i32)
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(holder.cloneValues().to_aos())
 }
 )";
   std::string error;

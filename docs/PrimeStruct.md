@@ -2439,7 +2439,11 @@ canonical `/std/collections/soa_vector/get` helper path while still preserving s
 builtin `soa_vector` `ref` receivers now also prefers the canonical
 `/std/collections/soa_vector/ref` helper path while still preserving same-path
 `/soa_vector/ref` user-helper shadowing, and the builtin borrowed-view recognizers in
-initializer/monomorph handling now accept that canonical resolved helper path too.
+initializer/monomorph handling now accept that canonical resolved helper path too. The
+equivalent helper-return method/infer fallback for builtin `soa_vector` `to_aos` receivers now
+also prefers the canonical `/std/collections/soa_vector/to_aos` helper path while still
+preserving same-path `/to_aos` user-helper shadowing, and vector-result recognizers now accept
+that canonical resolved helper path too.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend

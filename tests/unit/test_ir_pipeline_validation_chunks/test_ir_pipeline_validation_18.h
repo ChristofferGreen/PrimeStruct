@@ -225,6 +225,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = preferredSoaRefMethodTarget();") !=
         std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/to_aos\";") ==
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = preferredSoaToAosMethodTarget();") !=
+        std::string::npos);
   CHECK(semanticsInferSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto extractCollectionElementType = [&](const std::string &typeText,") ==

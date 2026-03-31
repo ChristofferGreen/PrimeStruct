@@ -82,6 +82,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return canonical;
   };
+  auto preferredSoaToAosMethodTarget = [&]() {
+    const std::string canonical = "/std/collections/soa_vector/to_aos";
+    const std::string samePath = "/to_aos";
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return samePath;
+    }
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
       if (normalizedMethodName == "count" &&
@@ -202,7 +213,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if (normalizedMethodName == "to_aos" && collectionTypePath == "/soa_vector") {
-      resolvedOut = "/to_aos";
+      resolvedOut = preferredSoaToAosMethodTarget();
       return true;
     }
     return false;

@@ -778,7 +778,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         }
       }
       if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
-           resolveCalleePath(target) == "/to_aos") &&
+           resolveCalleePath(target) == "/to_aos" ||
+           resolveCalleePath(target) == "/std/collections/soa_vector/to_aos") &&
           target.args.size() == 1) {
         std::string sourceElemType;
         const Expr &source = target.args.front();
@@ -1419,6 +1420,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return canonical;
   };
+  auto preferredSoaToAosMethodTarget = [&]() {
+    const std::string canonical = "/std/collections/soa_vector/to_aos";
+    const std::string samePath = "/to_aos";
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return samePath;
+    }
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   auto preferredBufferMethodTarget = [&](const std::string &helperName) {
     const std::string canonical = "/std/gfx/Buffer/" + helperName;
     const std::string experimental = "/std/gfx/experimental/Buffer/" + helperName;
@@ -1600,7 +1612,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget("/to_soa");
     }
     if (normalizedMethodName == "to_aos" && collectionTypePath == "/soa_vector") {
-      return setCollectionMethodTarget("/to_aos");
+      return setCollectionMethodTarget(preferredSoaToAosMethodTarget());
     }
     return false;
   };
@@ -2384,7 +2396,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return setCollectionMethodTarget("/to_soa");
   }
   if (normalizedMethodName == "to_aos" && normalizedTypeName == "soa_vector") {
-    return setCollectionMethodTarget("/to_aos");
+    return setCollectionMethodTarget(preferredSoaToAosMethodTarget());
   }
   if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&
       (normalizedMethodName == "count" || normalizedMethodName == "contains" ||

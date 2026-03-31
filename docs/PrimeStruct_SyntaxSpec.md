@@ -821,7 +821,11 @@ the canonical `/std/collections/soa_vector/get` helper path while still preservi
 builtin `soa_vector` `ref` receivers now also prefers the canonical
 `/std/collections/soa_vector/ref` helper path while still preserving same-path
 `/soa_vector/ref` user-helper shadowing, and builtin borrowed-view recognizers in initializer
-and monomorph handling now accept that canonical resolved helper path too.
+and monomorph handling now accept that canonical resolved helper path too. The equivalent
+helper-return method/infer fallback for builtin `soa_vector` `to_aos` receivers now also
+prefers the canonical `/std/collections/soa_vector/to_aos` helper path while still preserving
+same-path `/to_aos` user-helper shadowing, and vector-result recognizers now accept that
+canonical resolved helper path too.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
