@@ -4,13 +4,13 @@
 
 using OnErrorByDefinition = std::unordered_map<std::string, std::optional<OnErrorHandler>>;
 struct EntryCallOnErrorSetup {
-  CallResolutionAdapters callResolutionAdapters;
+  CallResolutionAdapters callResolutionAdapters{};
   bool hasTailExecution = false;
-  OnErrorByDefinition onErrorByDefinition;
+  OnErrorByDefinition onErrorByDefinition{};
 };
 struct EntryCountCallOnErrorSetup {
-  EntryCountAccessSetup countAccessSetup;
-  EntryCallOnErrorSetup callOnErrorSetup;
+  EntryCountAccessSetup countAccessSetup{};
+  EntryCallOnErrorSetup callOnErrorSetup{};
 };
 
 bool parseTransformArgumentExpr(const std::string &text,
@@ -50,4 +50,3 @@ bool buildEntryCountCallOnErrorSetup(const Program &program,
                                      const std::unordered_map<std::string, std::string> &importAliases,
                                      EntryCountCallOnErrorSetup &out,
                                      std::string &error);
-

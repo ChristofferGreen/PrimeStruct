@@ -1891,6 +1891,7 @@ TEST_CASE("to_soa and to_aos helpers compose for explicit conversion") {
   const std::string source = R"(
 import /std/collections/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -1902,8 +1903,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
 TEST_CASE("to_soa helper rejects non-vector target") {

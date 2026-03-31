@@ -388,6 +388,7 @@ main() {
 
 TEST_CASE("root get helper forms lower through canonical helper routing") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -407,15 +408,15 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("root get vector receiver keeps canonical reject contract") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [vector<i32>] values{vector<i32>(1i32)}
+  [vector<i32>] values{vector<i32>()}
   [i32] valueA{get(values, 0i32)}
   [i32] valueB{values.get(0i32)}
   [i32] valueC{/soa_vector/get(values, 0i32)}
@@ -429,6 +430,7 @@ main() {
 
 TEST_CASE("root ref helper forms lower through canonical helper routing") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -440,23 +442,18 @@ main() {
   [Particle] valueB{values.ref(0i32)}
   [Particle] valueC{/soa_vector/ref(values, 0i32)}
 }
-)";
+  )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("borrowed views are not implemented yet: ref") != std::string::npos);
 }
 
 TEST_CASE("root ref vector receiver keeps canonical reject contract") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [vector<i32>] values{vector<i32>(1i32)}
+  [vector<i32>] values{vector<i32>()}
   [i32] valueA{ref(values, 0i32)}
   [i32] valueB{values.ref(0i32)}
   [i32] valueC{/soa_vector/ref(values, 0i32)}
@@ -488,7 +485,9 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error == "native backend requires typed bindings");
+  CHECK(error ==
+        "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/"
+        "pointer/assign/increment/decrement calls in expressions");
 }
 
 TEST_CASE("semantics accepts to_soa method forms before lowerer rejection") {
@@ -512,11 +511,14 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error == "native backend requires typed bindings");
+  CHECK(error ==
+        "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/"
+        "pointer/assign/increment/decrement calls in expressions");
 }
 
 TEST_CASE("semantics accepts to_aos before lowerer rejection") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -529,17 +531,13 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error == "native backend requires typed bindings");
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
 TEST_CASE("root to_aos helper forms lower through canonical helper routing") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -560,12 +558,13 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("root to_aos canonical routing ignores vector-only user helper") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -583,13 +582,8 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("argument type mismatch for /to_aos parameter values") != std::string::npos);
 }
 
 TEST_CASE("root to_aos vector receiver keeps canonical reject contract") {

@@ -1,5 +1,7 @@
 #include "IrLowererLowerLocalsSetup.h"
 
+#include <memory>
+
 #include "IrLowererUninitializedTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -16,10 +18,11 @@ bool runLowerLocalsSetup(
     const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
     SetupLocalsOrchestration &setupLocalsOrchestrationOut,
     std::string &errorOut) {
-  setupLocalsOrchestrationOut = SetupLocalsOrchestration{};
+  std::destroy_at(&setupLocalsOrchestrationOut);
+  std::construct_at(&setupLocalsOrchestrationOut);
 
   EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
-      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
+      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup{};
   if (!buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
           stringTable,
           function,

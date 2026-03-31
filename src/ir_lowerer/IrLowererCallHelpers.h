@@ -20,12 +20,12 @@ using IsTailCallCandidateFn = std::function<bool(const Expr &)>;
 using DefinitionExistsFn = std::function<bool(const std::string &)>;
 
 struct CallResolutionAdapters {
-  ResolveExprPathFn resolveExprPath;
-  IsTailCallCandidateFn isTailCallCandidate;
-  DefinitionExistsFn definitionExists;
+  ResolveExprPathFn resolveExprPath{};
+  IsTailCallCandidateFn isTailCallCandidate{};
+  DefinitionExistsFn definitionExists{};
 };
 struct EntryCallResolutionSetup {
-  CallResolutionAdapters adapters;
+  CallResolutionAdapters adapters{};
   bool hasTailExecution = false;
 };
 

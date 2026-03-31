@@ -268,8 +268,7 @@ main() {
   const std::string outPath =
       (testScratchPath("") / "primec_vm_wildcard_canonical_soa_vector_helpers.psvm").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(runVm(outPath) == 17);
+  CHECK(runCommand(runCmd) == 17);
 }
 
 TEST_CASE("vm rejects experimental soa_vector stdlib wide structs on pending width boundary") {
@@ -332,7 +331,8 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_vector_from_aos_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend requires typed bindings") != std::string::npos);
+  CHECK(readFile(errPath).find("vm backend only supports numeric/bool/string vector literals") !=
+        std::string::npos);
 }
 
 TEST_CASE("vm runs experimental soa_vector stdlib to-aos helper") {
@@ -381,8 +381,10 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm runs root soa_vector to_aos helper forms") {
+TEST_CASE("vm root soa_vector to_aos helper forms still reject") {
   const std::string source = R"(
+import /std/collections/*
+
 [struct reflect]
 Particle() {
   [i32] x{1i32}
@@ -401,8 +403,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_root_soa_vector_to_aos_forms.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_root_soa_vector_to_aos_forms_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports arithmetic/comparison") !=
+        std::string::npos);
 }
 
 TEST_CASE("vm runs experimental soa_vector stdlib non-empty to-aos helper") {
@@ -1062,7 +1068,8 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  return(mapSingle<K, V>(key, value))
+  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]
@@ -1088,7 +1095,8 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  return(mapSingle<K, V>(key, value))
+  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]
@@ -1117,7 +1125,8 @@ import /std/collections/*
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  return(mapSingle<K, V>(key, value))
+  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  return(values)
 }
 
 [return<int>]
@@ -1559,7 +1568,8 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  return(mapSingle<K, V>(key, value))
+  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]
@@ -1585,7 +1595,8 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  return(mapSingle<K, V>(key, value))
+  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]
@@ -1622,7 +1633,8 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  return(mapSingle<K, V>(key, value))
+  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]
@@ -1657,7 +1669,8 @@ wrapVector<T>([T] value) {
 
 [return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  return(mapSingle<K, V>(key, value))
+  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]

@@ -214,8 +214,12 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
       } else {
         info.pointerToVector = true;
       }
+      const std::string elementType = trimTemplateTypeText(arg);
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-        info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+        info.valueKind = valueKindFromTypeName(elementType);
+      }
+      if (info.structTypeName.empty() && valueKindFromTypeName(elementType) == LocalInfo::ValueKind::Unknown) {
+        info.structTypeName = elementType;
       }
       return;
     }
@@ -226,8 +230,12 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
         info.pointerToVector = true;
       }
       info.isSoaVector = true;
+      const std::string elementType = trimTemplateTypeText(arg);
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-        info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+        info.valueKind = valueKindFromTypeName(elementType);
+      }
+      if (info.structTypeName.empty() && valueKindFromTypeName(elementType) == LocalInfo::ValueKind::Unknown) {
+        info.structTypeName = elementType;
       }
       return;
     }

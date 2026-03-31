@@ -241,6 +241,18 @@ bool emitInlinePackedCallParameter(
     return info.valueKind == paramInfo.valueKind;
   };
 
+  const auto requiresWrappedStructTypeMatch = [&]() {
+    if (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference) {
+      return !(paramInfo.referenceToArray || paramInfo.referenceToVector ||
+               paramInfo.referenceToMap || paramInfo.referenceToBuffer);
+    }
+    if (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer) {
+      return !(paramInfo.pointerToArray || paramInfo.pointerToVector ||
+               paramInfo.pointerToMap || paramInfo.pointerToBuffer);
+    }
+    return true;
+  };
+
   const auto matchesResultMetadata = [&](const LocalInfo &info) {
     return info.isResult == paramInfo.isResult &&
            info.resultHasValue == paramInfo.resultHasValue &&
@@ -377,7 +389,8 @@ bool emitInlinePackedCallParameter(
             it->second.isFileError != paramInfo.isFileError ||
             !matchesResultMetadata(it->second) ||
             !matchesWrappedScalarOrStructValueKind(it->second) ||
-            it->second.structTypeName != paramInfo.structTypeName) {
+            (requiresWrappedStructTypeMatch() &&
+             it->second.structTypeName != paramInfo.structTypeName)) {
           error = "variadic parameter type mismatch";
           return false;
         }
@@ -421,7 +434,8 @@ bool emitInlinePackedCallParameter(
              (it->second.mapKeyKind != paramInfo.mapKeyKind ||
               it->second.mapValueKind != paramInfo.mapValueKind)) ||
             !matchesWrappedScalarOrStructValueKind(it->second) ||
-            it->second.structTypeName != paramInfo.structTypeName) {
+            (requiresWrappedStructTypeMatch() &&
+             it->second.structTypeName != paramInfo.structTypeName)) {
           error = "variadic parameter type mismatch";
           return false;
         }
@@ -493,7 +507,8 @@ bool emitInlinePackedCallParameter(
             it->second.isFileError != paramInfo.isFileError ||
             !matchesResultMetadata(it->second) ||
             !matchesWrappedScalarOrStructValueKind(it->second) ||
-            it->second.structTypeName != paramInfo.structTypeName) {
+            (requiresWrappedStructTypeMatch() &&
+             it->second.structTypeName != paramInfo.structTypeName)) {
           error = "variadic parameter type mismatch";
           return false;
         }
@@ -527,7 +542,8 @@ bool emitInlinePackedCallParameter(
              (it->second.mapKeyKind != paramInfo.mapKeyKind ||
               it->second.mapValueKind != paramInfo.mapValueKind)) ||
             !matchesWrappedScalarOrStructValueKind(it->second) ||
-            it->second.structTypeName != paramInfo.structTypeName) {
+            (requiresWrappedStructTypeMatch() &&
+             it->second.structTypeName != paramInfo.structTypeName)) {
           error = "variadic parameter type mismatch";
           return false;
         }
@@ -587,7 +603,10 @@ bool emitInlinePackedCallParameter(
       return false;
     }
     if (callerIt->second.valueKind != paramInfo.valueKind ||
-        callerIt->second.structTypeName != paramInfo.structTypeName ||
+        ((requiresWrappedStructTypeMatch() ||
+          (paramInfo.argsPackElementKind != LocalInfo::Kind::Pointer &&
+           paramInfo.argsPackElementKind != LocalInfo::Kind::Reference)) &&
+         callerIt->second.structTypeName != paramInfo.structTypeName) ||
         callerIt->second.argsPackElementKind != paramInfo.argsPackElementKind) {
       error = "variadic parameter type mismatch";
       return false;

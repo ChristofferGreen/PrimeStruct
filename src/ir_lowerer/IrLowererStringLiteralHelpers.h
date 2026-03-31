@@ -16,8 +16,8 @@ using ResolveStringTableTargetFn =
     std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)>;
 
 struct StringLiteralHelperContext {
-  InternStringLiteralFn internString;
-  ResolveStringTableTargetFn resolveStringTableTarget;
+  InternStringLiteralFn internString{};
+  ResolveStringTableTargetFn resolveStringTableTarget{};
 };
 
 int32_t internLowererString(const std::string &text, std::vector<std::string> &stringTable);

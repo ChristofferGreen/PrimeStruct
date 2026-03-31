@@ -3,6 +3,7 @@
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 
+#include <memory>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -103,7 +104,8 @@ bool buildEntryCallOnErrorSetup(const Program &program,
                                 const std::unordered_map<std::string, std::string> &importAliases,
                                 EntryCallOnErrorSetup &out,
                                 std::string &error) {
-  out = EntryCallOnErrorSetup{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   const EntryCallResolutionSetup entryCallResolutionSetup = buildEntryCallResolutionSetup(
       entryDef, definitionReturnsVoid, defMap, importAliases);
   out.callResolutionAdapters = entryCallResolutionSetup.adapters;
@@ -122,7 +124,8 @@ bool buildEntryCountCallOnErrorSetup(const Program &program,
                                      const std::unordered_map<std::string, std::string> &importAliases,
                                      EntryCountCallOnErrorSetup &out,
                                      std::string &error) {
-  out = EntryCountCallOnErrorSetup{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   if (!buildEntryCountAccessSetup(entryDef, out.countAccessSetup, error)) {
     return false;
   }

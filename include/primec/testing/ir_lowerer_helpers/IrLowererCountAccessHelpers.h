@@ -8,16 +8,16 @@ using IsVectorCapacityCallFn = std::function<bool(const Expr &, const LocalMap &
 using IsStringCountCallFn = std::function<bool(const Expr &, const LocalMap &)>;
 
 struct CountAccessClassifiers {
-  IsEntryArgsNameFn isEntryArgsName;
-  IsArrayCountCallFn isArrayCountCall;
-  IsVectorCapacityCallFn isVectorCapacityCall;
-  IsStringCountCallFn isStringCountCall;
+  IsEntryArgsNameFn isEntryArgsName{};
+  IsArrayCountCallFn isArrayCountCall{};
+  IsVectorCapacityCallFn isVectorCapacityCall{};
+  IsStringCountCallFn isStringCountCall{};
 };
 
 struct EntryCountAccessSetup {
   bool hasEntryArgs = false;
-  std::string entryArgsName;
-  CountAccessClassifiers classifiers;
+  std::string entryArgsName{};
+  CountAccessClassifiers classifiers{};
 };
 enum class StringCountCallEmitResult {
   NotHandled,
@@ -89,4 +89,3 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error);
-

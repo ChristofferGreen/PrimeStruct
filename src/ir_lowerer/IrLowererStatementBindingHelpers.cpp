@@ -400,14 +400,22 @@ bool inferCallParameterLocalInfo(const Expr &param,
           splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
           normalizeCollectionBindingTypeName(wrappedBase) == "vector") {
         infoOut.pointerToVector = true;
-        infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
+        const std::string elementType = trimTemplateTypeText(wrappedArg);
+        infoOut.valueKind = valueKindFromTypeName(elementType);
+        if (infoOut.valueKind == LocalInfo::ValueKind::Unknown && infoOut.structTypeName.empty()) {
+          infoOut.structTypeName = elementType;
+        }
       }
       if (transform.name == "Pointer" &&
           splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
           normalizeCollectionBindingTypeName(wrappedBase) == "soa_vector") {
         infoOut.pointerToVector = true;
         infoOut.isSoaVector = true;
-        infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(wrappedArg));
+        const std::string elementType = trimTemplateTypeText(wrappedArg);
+        infoOut.valueKind = valueKindFromTypeName(elementType);
+        if (infoOut.valueKind == LocalInfo::ValueKind::Unknown && infoOut.structTypeName.empty()) {
+          infoOut.structTypeName = elementType;
+        }
       }
       if (transform.name == "Pointer" &&
           splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&

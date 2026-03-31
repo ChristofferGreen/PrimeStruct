@@ -58,7 +58,11 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       const bool isSoaVector = (builtin == "soa_vector");
       const bool isVectorLike = (builtin == "vector" || isSoaVector);
       LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
-      if (!isSoaVector && elemKind == LocalInfo::ValueKind::Unknown) {
+      const bool isEmptyOpaqueVectorLiteral =
+          builtin == "vector" && elemKind == LocalInfo::ValueKind::Unknown &&
+          expr.args.empty();
+      if (!isSoaVector && elemKind == LocalInfo::ValueKind::Unknown &&
+          !isEmptyOpaqueVectorLiteral) {
         error = "native backend only supports numeric/bool/string " + builtin + " literals";
         return false;
       }
@@ -88,7 +92,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       if (isVectorLike) {
         instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-        if (isSoaVector) {
+        if (isSoaVector || isEmptyOpaqueVectorLiteral) {
           instructions.push_back({IrOpcode::PushI64, 0});
         } else {
           instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(storageCapacity)});

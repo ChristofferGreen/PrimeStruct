@@ -46,7 +46,8 @@ inline std::string makeMapHelperSurfaceConformanceSource(const std::string &impo
   source += "import " + importPath + "\n\n";
   source += "[effects(heap_alloc), return<" + mapConformanceType(importPath, "K", "V") + "> Comparable<K>]\n";
   source += "wrapMap<K, V>([K] leftKey, [V] leftValue, [K] rightKey, [V] rightValue) {\n";
-  source += "  return(mapPair<K, V>(leftKey, leftValue, rightKey, rightValue))\n";
+  source += "  [" + mapConformanceType(importPath, "K", "V") + "] values{mapPair<K, V>(leftKey, leftValue, rightKey, rightValue)}\n";
+  source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
@@ -93,10 +94,11 @@ inline std::string makeMapExtendedConstructorConformanceSource(const std::string
   source += "import " + importPath + "\n\n";
   source += "[effects(heap_alloc), return<" + mapConformanceType(importPath, "K", "V") + "> Comparable<K>]\n";
   source += "wrapMap<K, V>() {\n";
-  source += "  return(mapOct<K, V>(" + wrappedAKey + ", 1i32, " + wrappedBKey + ", 2i32, " + wrappedCKey + ", 3i32, " +
-            wrappedDKey + ", 4i32,\n";
+  source += "  [" + mapConformanceType(importPath, "K", "V") + "] values{mapOct<K, V>(" + wrappedAKey + ", 1i32, " +
+            wrappedBKey + ", 2i32, " + wrappedCKey + ", 3i32, " + wrappedDKey + ", 4i32,\n";
   source += "      " + wrappedEKey + ", 5i32, " + wrappedFKey + ", 6i32, " + wrappedGKey + ", 7i32, " + wrappedHKey +
-            ", 8i32))\n";
+            ", 8i32)}\n";
+  source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
@@ -164,7 +166,8 @@ inline std::string makeExperimentalMapVariadicConstructorConformanceSource() {
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[effects(heap_alloc), return<Map<K, V>> Comparable<K>]\n";
   source += "wrapMap<K, V>([args<Entry<K, V>>] entries) {\n";
-  source += "  return(map<K, V>([spread] entries))\n";
+  source += "  [Map<K, V>] values{map<K, V>([spread] entries)}\n";
+  source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";

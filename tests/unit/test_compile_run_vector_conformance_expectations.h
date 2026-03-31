@@ -106,10 +106,11 @@ inline void expectVectorTypeMismatchReject(const std::string &emitMode,
 inline void expectVectorPopTypeMismatchReject(const std::string &emitMode,
                                               const std::string &importPath) {
   const std::string slug = vectorHelperConformanceImportSlug(importPath);
-  expectVectorConformanceProgramRuns(makeVectorPopTypeMismatchRejectSource(importPath),
-                                     "vector_pop_type_mismatch_" + slug,
-                                     emitMode,
-                                     0);
+  expectVectorConformanceCompileReject(makeVectorPopTypeMismatchRejectSource(importPath),
+                                       "vector_pop_type_mismatch_" + slug,
+                                       emitMode,
+                                       "/std/collections/vector/pop",
+                                       "argument type mismatch");
 }
 
 inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
@@ -118,8 +119,8 @@ inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
   expectVectorConformanceCompileReject(makeVectorPushTypeMismatchRejectSource(importPath),
                                        "vector_push_type_mismatch_" + slug,
                                        emitMode,
-                                       "/std/collections/vectorPush",
-                                       "push requires element type i32");
+                                       "/std/collections/vector/push",
+                                       "argument type mismatch");
 }
 
 inline void expectCanonicalVectorNamespaceConformance(const std::string &emitMode) {

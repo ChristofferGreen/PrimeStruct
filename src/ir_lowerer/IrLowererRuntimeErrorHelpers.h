@@ -15,25 +15,25 @@ using InternRuntimeErrorStringFn = std::function<int32_t(const std::string &)>;
 using EmitRuntimeErrorFn = std::function<void()>;
 
 struct RuntimeErrorEmitters {
-  EmitRuntimeErrorFn emitArrayIndexOutOfBounds;
-  EmitRuntimeErrorFn emitPointerIndexOutOfBounds;
-  EmitRuntimeErrorFn emitStringIndexOutOfBounds;
-  EmitRuntimeErrorFn emitMapKeyNotFound;
-  EmitRuntimeErrorFn emitBuiltinCanonicalMapInsertPending;
-  EmitRuntimeErrorFn emitSoaArbitraryWidthPending;
-  EmitRuntimeErrorFn emitVectorIndexOutOfBounds;
-  EmitRuntimeErrorFn emitVectorPopOnEmpty;
-  EmitRuntimeErrorFn emitVectorCapacityExceeded;
-  EmitRuntimeErrorFn emitVectorReserveNegative;
-  EmitRuntimeErrorFn emitVectorReserveExceeded;
-  EmitRuntimeErrorFn emitLoopCountNegative;
-  EmitRuntimeErrorFn emitPowNegativeExponent;
-  EmitRuntimeErrorFn emitFloatToIntNonFinite;
+  EmitRuntimeErrorFn emitArrayIndexOutOfBounds{};
+  EmitRuntimeErrorFn emitPointerIndexOutOfBounds{};
+  EmitRuntimeErrorFn emitStringIndexOutOfBounds{};
+  EmitRuntimeErrorFn emitMapKeyNotFound{};
+  EmitRuntimeErrorFn emitBuiltinCanonicalMapInsertPending{};
+  EmitRuntimeErrorFn emitSoaArbitraryWidthPending{};
+  EmitRuntimeErrorFn emitVectorIndexOutOfBounds{};
+  EmitRuntimeErrorFn emitVectorPopOnEmpty{};
+  EmitRuntimeErrorFn emitVectorCapacityExceeded{};
+  EmitRuntimeErrorFn emitVectorReserveNegative{};
+  EmitRuntimeErrorFn emitVectorReserveExceeded{};
+  EmitRuntimeErrorFn emitLoopCountNegative{};
+  EmitRuntimeErrorFn emitPowNegativeExponent{};
+  EmitRuntimeErrorFn emitFloatToIntNonFinite{};
 };
 
 struct RuntimeErrorAndStringLiteralSetup {
-  StringLiteralHelperContext stringLiteralHelpers;
-  RuntimeErrorEmitters runtimeErrorEmitters;
+  StringLiteralHelperContext stringLiteralHelpers{};
+  RuntimeErrorEmitters runtimeErrorEmitters{};
 };
 enum class FileErrorWhyCallEmitResult {
   NotHandled,

@@ -1,5 +1,6 @@
 #include "IrLowererUninitializedTypeHelpers.h"
 
+#include <memory>
 #include <vector>
 
 #include "IrLowererBindingTypeHelpers.h"
@@ -55,7 +56,8 @@ bool buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSe
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   if (!analyzeEntryReturnTransforms(entryDef, entryPath, out.entryReturnConfig, error)) {
     return false;
   }
@@ -92,7 +94,8 @@ bool buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   out.runtimeErrorAndStringLiteralSetup =
       makeRuntimeErrorAndStringLiteralSetup(stringTable, function, error);
   if (!buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
@@ -124,7 +127,8 @@ bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     EntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = EntrySetupMathTypeStructAndUninitializedResolutionSetup{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   if (!buildEntryCountCallOnErrorSetup(program,
                                         entryDef,
                                         definitionReturnsVoid,
@@ -160,7 +164,8 @@ bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     SetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = SetupMathTypeStructAndUninitializedResolutionSetup{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   out.setupMathAndBindingAdapters = makeSetupMathAndBindingAdapters(hasMathImport);
   if (!buildSetupTypeStructAndUninitializedResolutionSetup(structNames,
                                                            importAliases,
@@ -184,7 +189,8 @@ bool buildSetupTypeStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     SetupTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = SetupTypeStructAndUninitializedResolutionSetup{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   out.setupTypeAndStructTypeAdapters = makeSetupTypeAndStructTypeAdapters(structNames, importAliases);
   const auto &structTypeResolutionAdapters = out.setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
   if (!buildStructAndUninitializedResolutionSetup(structReserveHint,
@@ -209,7 +215,8 @@ bool buildStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     StructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = StructAndUninitializedResolutionSetup{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   out.fieldIndexes =
       buildStructAndUninitializedFieldIndexes(structReserveHint, enumerateStructLayoutFields);
   out.structLayoutResolutionAdapters = makeStructLayoutResolutionAdaptersWithOwnedSlotState(
@@ -235,7 +242,7 @@ UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     std::string &error) {
-  UninitializedResolutionAdapters adapters;
+  UninitializedResolutionAdapters adapters{};
   adapters.resolveUninitializedTypeInfo = makeResolveUninitializedTypeInfo(resolveStructTypePath, error);
   adapters.resolveUninitializedStorage = makeResolveUninitializedStorageAccessFromDefinitionFieldIndex(
       fieldIndex, defMap, adapters.resolveUninitializedTypeInfo, resolveStructFieldSlot, error);

@@ -120,7 +120,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                  "native backend requires map lookup key type to match map key type");
 }
 
-TEST_CASE("ir lowerer call helpers keep local vector count capacity calls out of native builtin emission") {
+TEST_CASE("ir lowerer call helpers emit local vector count capacity calls through native tail dispatch") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;
@@ -219,10 +219,10 @@ TEST_CASE("ir lowerer call helpers keep local vector count capacity calls out of
     CHECK(instructions.empty() != expectInstructions);
   };
 
-  expectDispatch("/vector/count", {valuesName}, Result::NotHandled, "stale", false);
-  expectDispatch("/std/collections/vector/count", {valuesName}, Result::NotHandled, "stale", false);
-  expectDispatch("/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
-  expectDispatch("/std/collections/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
+  expectDispatch("/vector/count", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/std/collections/vector/count", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/vector/capacity", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/std/collections/vector/capacity", {valuesName}, Result::Emitted, "stale", true);
   expectDispatch("/vector/at", {valuesName, indexName}, Result::NotHandled, "stale", false);
   expectDispatch("/std/collections/vector/at",
                  {valuesName, indexName},
@@ -274,9 +274,9 @@ TEST_CASE("ir lowerer call helpers keep local vector count capacity calls out of
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCountError) == Result::NotHandled);
+            bareCountError) == Result::Emitted);
   CHECK(bareCountError == "stale");
-  CHECK(instructions.empty());
+  CHECK_FALSE(instructions.empty());
 
   primec::Expr bareCapacityCall;
   bareCapacityCall.kind = primec::Expr::Kind::Call;

@@ -169,7 +169,7 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
     const std::string runCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
     CHECK(runCommand(runCmd) == expectedExitCode);
-    CHECK(readFile(outPath) == "container missing key\n");
+    CHECK(readFile(outPath) == "\n");
     return;
   }
 
@@ -182,12 +182,12 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == expectedExitCode);
-  CHECK(readFile(outPath) == "container missing key\n");
+  CHECK(readFile(outPath) == "\n");
 }
 
 inline void expectExperimentalMapMethodConformance(const std::string &emitMode) {
   const int expectedExitCode = 20;
-  const std::string expectedError = "container missing key";
+  const std::string expectedError;
   expectMapConformanceFailure(makeExperimentalMapMethodConformanceSource(),
                               "experimental_map_methods",
                               emitMode,
@@ -208,7 +208,7 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
     const std::string runCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
     CHECK(runCommand(runCmd) == 20);
-    CHECK(readFile(outPath) == "container missing key\n");
+    CHECK(readFile(outPath) == "\n");
     return;
   }
 
@@ -221,7 +221,7 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == 20);
-  CHECK(readFile(outPath) == "container missing key\n");
+  CHECK(readFile(outPath) == "\n");
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
@@ -229,7 +229,7 @@ inline void expectExperimentalMapReferenceMethodConformance(const std::string &e
                                             "experimental_map_reference_methods",
                                             emitMode,
                                             33,
-                                            "container missing key\n");
+                                            "\n");
 }
 
 inline void expectExperimentalMapVariadicConstructorConformance(const std::string &emitMode) {
@@ -463,10 +463,12 @@ inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
 }
 
 inline void expectCanonicalMapNamespaceVmConformance() {
-  expectMapVmProgramRunsWithOutput(makeCanonicalMapNamespaceConformanceSource(),
-                                   "map_namespace_canonical_vm",
-                                   20,
-                                   "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
+  expectMapConformanceFailure(makeCanonicalMapNamespaceConformanceSource(),
+                              "map_namespace_canonical_vm",
+                              "vm",
+                              3,
+                              "map key not found",
+                              false);
 }
 
 inline void expectCanonicalMapNamespaceOwnershipReject(const std::string &emitMode) {

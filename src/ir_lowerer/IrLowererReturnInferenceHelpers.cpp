@@ -8,6 +8,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <functional>
+#include <memory>
 
 namespace primec::ir_lowerer {
 
@@ -40,7 +41,8 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
                                   const std::string &entryPath,
                                   EntryReturnConfig &out,
                                   std::string &error) {
-  out = EntryReturnConfig{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   for (const auto &transform : entryDef.transforms) {
     if (transform.name != "return") {
       continue;

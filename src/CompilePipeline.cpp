@@ -133,6 +133,9 @@ std::vector<std::string> collectStdlibAutoIncludeKeys(const std::string &importP
 
   while (!key.empty()) {
     keys.push_back(key);
+    if (key == "/std/gfx/experimental") {
+      break;
+    }
     const size_t slash = key.find_last_of('/');
     if (slash <= std::string("/std").size()) {
       break;

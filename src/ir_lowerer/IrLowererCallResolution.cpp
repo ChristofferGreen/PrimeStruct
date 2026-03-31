@@ -100,7 +100,7 @@ EntryCallResolutionSetup buildEntryCallResolutionSetup(
     bool definitionReturnsVoid,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases) {
-  EntryCallResolutionSetup setup;
+  EntryCallResolutionSetup setup{};
   setup.adapters = makeCallResolutionAdapters(defMap, importAliases);
   setup.hasTailExecution = hasTailExecutionCandidate(
       entryDef.statements, definitionReturnsVoid, setup.adapters.isTailCallCandidate);

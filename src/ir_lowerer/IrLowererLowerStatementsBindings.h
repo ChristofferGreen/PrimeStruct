@@ -481,6 +481,8 @@
       }
       if (valueKind == LocalInfo::ValueKind::Unknown &&
           kind != LocalInfo::Kind::Map &&
+          kind != LocalInfo::Kind::Array &&
+          kind != LocalInfo::Kind::Vector &&
           info.structTypeName.empty() &&
           !info.isSoaVector &&
           info.kind != LocalInfo::Kind::Pointer &&

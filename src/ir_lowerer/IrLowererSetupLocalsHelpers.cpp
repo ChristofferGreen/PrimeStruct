@@ -4,7 +4,7 @@ namespace primec::ir_lowerer {
 
 SetupLocalsOrchestration unpackSetupLocalsOrchestration(
     const EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &setup) {
-  SetupLocalsOrchestration out;
+  SetupLocalsOrchestration out{};
   out.entryReturnConfig = setup.entryReturnConfig;
 
   const auto &runtimeEntrySetup =

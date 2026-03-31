@@ -6,15 +6,22 @@
             isStringCountCall,
             isEntryArgsName,
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
+              const auto targetInfo =
+                  ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, targetLocals);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
-              return structPath == "/array" || structPath == "/vector" || structPath == "/Buffer" ||
-                     structPath == "/map" || structPath == "/soa_vector";
+              return targetInfo.isArrayOrVectorTarget || structPath == "/array" ||
+                     structPath == "/vector" || structPath == "/Buffer" || structPath == "/map" ||
+                     structPath == "/soa_vector";
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
-              return inferStructExprPath(targetExpr, targetLocals) == "/vector";
+              const auto targetInfo =
+                  ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, targetLocals);
+              return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
-              return inferStructExprPath(targetExpr, targetLocals) == "/vector";
+              const auto targetInfo =
+                  ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, targetLocals);
+              return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
             },
             inferExprKind,
             resolveStringTableTarget,

@@ -22,7 +22,7 @@ RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
     std::vector<std::string> &stringTable,
     IrFunction &function,
     std::string &error) {
-  RuntimeErrorAndStringLiteralSetup setup;
+  RuntimeErrorAndStringLiteralSetup setup{};
   setup.stringLiteralHelpers = makeStringLiteralHelperContext(stringTable, error);
   setup.runtimeErrorEmitters = makeRuntimeErrorEmitters(function, setup.stringLiteralHelpers.internString);
   return setup;

@@ -22,7 +22,7 @@ struct EntryReturnConfig {
   bool hasReturnTransform = false;
   bool returnsVoid = false;
   bool hasResultInfo = false;
-  ResultReturnInfo resultInfo;
+  ResultReturnInfo resultInfo{};
 };
 
 using InferBindingIntoLocalsFn = std::function<bool(const Expr &, bool, LocalMap &, std::string &)>;

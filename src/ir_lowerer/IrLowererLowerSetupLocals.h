@@ -34,7 +34,7 @@
   std::optional<ResultReturnInfo> currentReturnResult;
   const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
 
-  ir_lowerer::SetupLocalsOrchestration setupLocalsOrchestration;
+  ir_lowerer::SetupLocalsOrchestration setupLocalsOrchestration{};
   if (!ir_lowerer::runLowerLocalsSetup(stringTable,
                                        function,
                                        program,

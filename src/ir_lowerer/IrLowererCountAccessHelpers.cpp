@@ -2,6 +2,7 @@
 #include "IrLowererCountAccessClassifiers.h"
 
 #include <limits>
+#include <memory>
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
@@ -42,7 +43,8 @@ bool resolveEntryArgsParameter(const Definition &entryDef,
 }
 
 bool buildEntryCountAccessSetup(const Definition &entryDef, EntryCountAccessSetup &out, std::string &error) {
-  out = EntryCountAccessSetup{};
+  std::destroy_at(&out);
+  std::construct_at(&out);
   if (!resolveEntryArgsParameter(entryDef, out.hasEntryArgs, out.entryArgsName, error)) {
     return false;
   }
@@ -51,7 +53,7 @@ bool buildEntryCountAccessSetup(const Definition &entryDef, EntryCountAccessSetu
 }
 
 CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::string &entryArgsName) {
-  CountAccessClassifiers classifiers;
+  CountAccessClassifiers classifiers{};
   classifiers.isEntryArgsName = makeIsEntryArgsName(hasEntryArgs, entryArgsName);
   classifiers.isArrayCountCall = makeIsArrayCountCall(hasEntryArgs, entryArgsName);
   classifiers.isVectorCapacityCall = makeIsVectorCapacityCall();
@@ -342,14 +344,18 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
        !isVectorCountTarget(expr.args.front(), localsIn));
   const bool blocksLocalVectorCountCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.args.size() == 1 &&
-      isVectorBuiltinName(expr, "count") && isVectorCountTarget(expr.args.front(), localsIn);
+      isVectorBuiltinName(expr, "count") && isVectorCountTarget(expr.args.front(), localsIn) &&
+      !(isDynamicCollectionCountTargetFn &&
+        isDynamicCollectionCountTargetFn(expr.args.front(), localsIn));
   const bool blocksBareVectorCapacityCall =
       expr.kind == Expr::Kind::Call && expr.name == "capacity" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
       (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn) &&
        !(isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)));
   const bool blocksLocalVectorCapacityCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.args.size() == 1 &&
-      isVectorBuiltinName(expr, "capacity") && isVectorCountTarget(expr.args.front(), localsIn);
+      isVectorBuiltinName(expr, "capacity") && isVectorCountTarget(expr.args.front(), localsIn) &&
+      !(isDynamicVectorCapacityTargetFn &&
+        isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn));
   if (blocksBareVectorCountCall || blocksLocalVectorCountCall ||
       blocksBareVectorCapacityCall || blocksLocalVectorCapacityCall) {
     return CountAccessCallEmitResult::NotHandled;

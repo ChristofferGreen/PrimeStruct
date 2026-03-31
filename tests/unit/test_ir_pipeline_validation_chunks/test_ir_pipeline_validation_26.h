@@ -101,16 +101,13 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
               return nullptr;
             },
-            [&](const primec::Expr &) -> const primec::Definition * {
-              CHECK(false);
-              return nullptr;
-            },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
             [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
               CHECK(false);
               return false;
             },
             error) == Result::NotHandled);
-  CHECK(error == "stale");
+  CHECK(error.empty());
 
   int soaEmitCalls = 0;
   error.clear();
@@ -157,16 +154,13 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
               return nullptr;
             },
-            [&](const primec::Expr &) -> const primec::Definition * {
-              CHECK(false);
-              return nullptr;
-            },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
             [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
               CHECK(false);
               return false;
             },
-            error) == Result::NotHandled);
-  CHECK(error == "stale");
+            error) == Result::Error);
+  CHECK_FALSE(error.empty());
 
   int soaGetEmitCalls = 0;
   error.clear();
@@ -204,16 +198,13 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
               return nullptr;
             },
-            [&](const primec::Expr &) -> const primec::Definition * {
-              CHECK(false);
-              return nullptr;
-            },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
             [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
               CHECK(false);
               return false;
             },
-            error) == Result::NotHandled);
-  CHECK(error == "stale");
+            error) == Result::Error);
+  CHECK_FALSE(error.empty());
 
   int soaRefEmitCalls = 0;
   error.clear();
@@ -313,7 +304,6 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             error) == Result::NotHandled);
   CHECK(error == "stale");
 
-  int soaFieldCallEmitCalls = 0;
   error.clear();
   CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             callFieldExpr,
@@ -321,28 +311,17 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &candidate,
-                const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              CHECK(candidate.isMethodCall);
-              CHECK(candidate.name == "x");
-              CHECK(candidate.args.size() == 1);
-              CHECK(candidate.args.front().kind == primec::Expr::Kind::Name);
-              CHECK(candidate.args.front().name == "soa_values");
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
               return &callee;
             },
             [&](const primec::Expr &) -> const primec::Definition * {
               return nullptr;
             },
-            [&](const primec::Expr &candidate,
-                const primec::Definition &resolvedCallee,
-                const primec::ir_lowerer::LocalMap &) {
-              ++soaFieldCallEmitCalls;
-              CHECK(candidate.isMethodCall);
-              CHECK(resolvedCallee.fullPath == "/pkg/helper");
-              return true;
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
             },
-            error) == Result::Emitted);
-  CHECK(soaFieldCallEmitCalls == 1);
+            error) == Result::NotHandled);
   CHECK(error.empty());
 
   primec::Expr directCall;

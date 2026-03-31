@@ -6,24 +6,25 @@ using InternRuntimeErrorStringFn = std::function<int32_t(const std::string &)>;
 using EmitRuntimeErrorFn = std::function<void()>;
 
 struct RuntimeErrorEmitters {
-  EmitRuntimeErrorFn emitArrayIndexOutOfBounds;
-  EmitRuntimeErrorFn emitPointerIndexOutOfBounds;
-  EmitRuntimeErrorFn emitStringIndexOutOfBounds;
-  EmitRuntimeErrorFn emitMapKeyNotFound;
-  EmitRuntimeErrorFn emitBuiltinCanonicalMapInsertPending;
-  EmitRuntimeErrorFn emitVectorIndexOutOfBounds;
-  EmitRuntimeErrorFn emitVectorPopOnEmpty;
-  EmitRuntimeErrorFn emitVectorCapacityExceeded;
-  EmitRuntimeErrorFn emitVectorReserveNegative;
-  EmitRuntimeErrorFn emitVectorReserveExceeded;
-  EmitRuntimeErrorFn emitLoopCountNegative;
-  EmitRuntimeErrorFn emitPowNegativeExponent;
-  EmitRuntimeErrorFn emitFloatToIntNonFinite;
+  EmitRuntimeErrorFn emitArrayIndexOutOfBounds{};
+  EmitRuntimeErrorFn emitPointerIndexOutOfBounds{};
+  EmitRuntimeErrorFn emitStringIndexOutOfBounds{};
+  EmitRuntimeErrorFn emitMapKeyNotFound{};
+  EmitRuntimeErrorFn emitBuiltinCanonicalMapInsertPending{};
+  EmitRuntimeErrorFn emitSoaArbitraryWidthPending{};
+  EmitRuntimeErrorFn emitVectorIndexOutOfBounds{};
+  EmitRuntimeErrorFn emitVectorPopOnEmpty{};
+  EmitRuntimeErrorFn emitVectorCapacityExceeded{};
+  EmitRuntimeErrorFn emitVectorReserveNegative{};
+  EmitRuntimeErrorFn emitVectorReserveExceeded{};
+  EmitRuntimeErrorFn emitLoopCountNegative{};
+  EmitRuntimeErrorFn emitPowNegativeExponent{};
+  EmitRuntimeErrorFn emitFloatToIntNonFinite{};
 };
 
 struct RuntimeErrorAndStringLiteralSetup {
-  StringLiteralHelperContext stringLiteralHelpers;
-  RuntimeErrorEmitters runtimeErrorEmitters;
+  StringLiteralHelperContext stringLiteralHelpers{};
+  RuntimeErrorEmitters runtimeErrorEmitters{};
 };
 enum class FileErrorWhyCallEmitResult {
   NotHandled,
@@ -45,6 +46,8 @@ EmitRuntimeErrorFn makeEmitStringIndexOutOfBounds(IrFunction &function,
 EmitRuntimeErrorFn makeEmitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitBuiltinCanonicalMapInsertPending(IrFunction &function,
                                                             const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitSoaArbitraryWidthPending(IrFunction &function,
+                                                    const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitVectorIndexOutOfBounds(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString);
@@ -64,6 +67,7 @@ void emitPointerIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorS
 void emitStringIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitBuiltinCanonicalMapInsertPending(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+void emitSoaArbitraryWidthPending(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitVectorIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitVectorCapacityExceeded(IrFunction &function, const InternRuntimeErrorStringFn &internString);

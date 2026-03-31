@@ -35,8 +35,8 @@ struct UninitializedFieldBindingInfo {
 using UninitializedFieldBindingIndex =
     std::unordered_map<std::string, std::vector<UninitializedFieldBindingInfo>>;
 struct StructAndUninitializedFieldIndexes {
-  StructLayoutFieldIndex structLayoutFieldIndex;
-  UninitializedFieldBindingIndex uninitializedFieldBindingIndex;
+  StructLayoutFieldIndex structLayoutFieldIndex{};
+  UninitializedFieldBindingIndex uninitializedFieldBindingIndex{};
 };
 using AppendUninitializedFieldBindingFn =
     std::function<void(const std::string &structPath, const UninitializedFieldBindingInfo &fieldBinding)>;
@@ -86,36 +86,36 @@ using ResolveUninitializedStorageAccessFromFieldIndexFn =
     std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>;
 
 struct UninitializedResolutionAdapters {
-  ResolveUninitializedFieldTypeInfoFn resolveUninitializedTypeInfo;
-  ResolveUninitializedStorageAccessFromFieldIndexFn resolveUninitializedStorage;
-  InferStructExprWithLocalsFn inferStructExprPath;
+  ResolveUninitializedFieldTypeInfoFn resolveUninitializedTypeInfo{};
+  ResolveUninitializedStorageAccessFromFieldIndexFn resolveUninitializedStorage{};
+  InferStructExprWithLocalsFn inferStructExprPath{};
 };
 
 struct StructAndUninitializedResolutionSetup {
-  StructAndUninitializedFieldIndexes fieldIndexes;
-  StructLayoutResolutionAdapters structLayoutResolutionAdapters;
-  UninitializedResolutionAdapters uninitializedResolutionAdapters;
+  StructAndUninitializedFieldIndexes fieldIndexes{};
+  StructLayoutResolutionAdapters structLayoutResolutionAdapters{};
+  UninitializedResolutionAdapters uninitializedResolutionAdapters{};
 };
 struct SetupTypeStructAndUninitializedResolutionSetup {
-  SetupTypeAndStructTypeAdapters setupTypeAndStructTypeAdapters;
-  StructAndUninitializedResolutionSetup structAndUninitializedResolutionSetup;
+  SetupTypeAndStructTypeAdapters setupTypeAndStructTypeAdapters{};
+  StructAndUninitializedResolutionSetup structAndUninitializedResolutionSetup{};
 };
 struct SetupMathTypeStructAndUninitializedResolutionSetup {
-  SetupMathAndBindingAdapters setupMathAndBindingAdapters;
-  SetupTypeStructAndUninitializedResolutionSetup setupTypeStructAndUninitializedResolutionSetup;
+  SetupMathAndBindingAdapters setupMathAndBindingAdapters{};
+  SetupTypeStructAndUninitializedResolutionSetup setupTypeStructAndUninitializedResolutionSetup{};
 };
 struct EntrySetupMathTypeStructAndUninitializedResolutionSetup {
-  EntryCountCallOnErrorSetup entryCountCallOnErrorSetup;
-  SetupMathTypeStructAndUninitializedResolutionSetup setupMathTypeStructAndUninitializedResolutionSetup;
+  EntryCountCallOnErrorSetup entryCountCallOnErrorSetup{};
+  SetupMathTypeStructAndUninitializedResolutionSetup setupMathTypeStructAndUninitializedResolutionSetup{};
 };
 struct RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup {
-  RuntimeErrorAndStringLiteralSetup runtimeErrorAndStringLiteralSetup;
-  EntrySetupMathTypeStructAndUninitializedResolutionSetup entrySetupMathTypeStructAndUninitializedResolutionSetup;
+  RuntimeErrorAndStringLiteralSetup runtimeErrorAndStringLiteralSetup{};
+  EntrySetupMathTypeStructAndUninitializedResolutionSetup entrySetupMathTypeStructAndUninitializedResolutionSetup{};
 };
 struct EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup {
-  EntryReturnConfig entryReturnConfig;
+  EntryReturnConfig entryReturnConfig{};
   RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
-      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
+      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup{};
 };
 
 bool buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(

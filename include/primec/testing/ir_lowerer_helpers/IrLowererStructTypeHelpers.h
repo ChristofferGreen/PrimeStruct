@@ -27,20 +27,20 @@ using ApplyStructValueInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using CollectStructArrayFieldsFn = std::function<bool(const std::string &, std::vector<StructArrayFieldInfo> &)>;
 
 struct StructTypeResolutionAdapters {
-  ResolveStructTypeNameFn resolveStructTypeName;
-  ApplyStructValueInfoFn applyStructValueInfo;
+  ResolveStructTypeNameFn resolveStructTypeName{};
+  ApplyStructValueInfoFn applyStructValueInfo{};
 };
 using SetupCombineNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
 struct SetupTypeAndStructTypeAdapters {
-  ValueKindFromTypeNameFn valueKindFromTypeName;
-  SetupCombineNumericKindsFn combineNumericKinds;
-  StructTypeResolutionAdapters structTypeResolutionAdapters;
+  ValueKindFromTypeNameFn valueKindFromTypeName{};
+  SetupCombineNumericKindsFn combineNumericKinds{};
+  StructTypeResolutionAdapters structTypeResolutionAdapters{};
 };
 
 struct StructArrayInfoAdapters {
-  ResolveStructArrayTypeInfoFn resolveStructArrayTypeInfoFromPath;
-  ApplyStructArrayInfoFn applyStructArrayInfo;
+  ResolveStructArrayTypeInfoFn resolveStructArrayTypeInfoFromPath{};
+  ApplyStructArrayInfoFn applyStructArrayInfo{};
 };
 
 struct StructSlotFieldInfo {
@@ -70,12 +70,12 @@ using ResolveStructSlotLayoutFn = std::function<bool(const std::string &, Struct
 using ResolveStructSlotFieldsFn =
     std::function<bool(const std::string &, std::vector<StructSlotFieldInfo> &)>;
 struct StructSlotResolutionAdapters {
-  ResolveStructSlotLayoutFn resolveStructSlotLayout;
-  ResolveStructFieldSlotFn resolveStructFieldSlot;
+  ResolveStructSlotLayoutFn resolveStructSlotLayout{};
+  ResolveStructFieldSlotFn resolveStructFieldSlot{};
 };
 struct StructLayoutResolutionAdapters {
-  StructArrayInfoAdapters structArrayInfo;
-  StructSlotResolutionAdapters structSlotResolution;
+  StructArrayInfoAdapters structArrayInfo{};
+  StructSlotResolutionAdapters structSlotResolution{};
 };
 using CollectStructLayoutFieldsFn =
     std::function<bool(const std::string &, std::vector<StructLayoutFieldInfo> &)>;
@@ -286,4 +286,3 @@ std::string inferStructPathFromFieldAccessCall(
     const LocalMap &localsIn,
     const InferStructExprWithLocalsFn &inferStructExprPath,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot);
-

@@ -13,12 +13,12 @@ using GetSetupMathBuiltinNameFn = std::function<bool(const Expr &, std::string &
 using GetSetupMathConstantNameFn = std::function<bool(const std::string &, std::string &)>;
 
 struct SetupMathResolvers {
-  GetSetupMathBuiltinNameFn getMathBuiltinName;
-  GetSetupMathConstantNameFn getMathConstantName;
+  GetSetupMathBuiltinNameFn getMathBuiltinName{};
+  GetSetupMathConstantNameFn getMathConstantName{};
 };
 struct SetupMathAndBindingAdapters {
-  SetupMathResolvers setupMathResolvers;
-  BindingTypeAdapters bindingTypeAdapters;
+  SetupMathResolvers setupMathResolvers{};
+  BindingTypeAdapters bindingTypeAdapters{};
 };
 
 bool isMathImportPath(const std::string &path);

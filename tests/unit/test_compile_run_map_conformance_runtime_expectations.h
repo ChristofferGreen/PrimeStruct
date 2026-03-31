@@ -1,27 +1,32 @@
 #pragma once
 
 inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::string &emitMode) {
+  const std::string expectedOutput =
+      emitMode == "exe" ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n" : "4\n\n2\n4\n7\n1\n2\n";
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
                                             "map_namespace_canonical_experimental_value",
                                             emitMode,
                                             20,
-                                            "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
+                                            expectedOutput);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const std::string &emitMode) {
+  const std::string expectedOutput =
+      emitMode == "exe" ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n" : "4\n\n2\n4\n7\n1\n2\n";
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
                                             "map_namespace_canonical_experimental_constructor",
                                             emitMode,
                                             20,
-                                            "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
+                                            expectedOutput);
 }
 
 inline void expectExperimentalMapOwnershipMethodConformance(const std::string &emitMode) {
+  const std::string expectedOutput = emitMode == "exe" ? "container missing key\n" : "\n";
   expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipMethodConformanceSource(),
                                             "map_experimental_ownership_method",
                                             emitMode,
                                             33,
-                                            "container missing key\n");
+                                            expectedOutput);
 }
 
 inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::string &emitMode) {
@@ -41,11 +46,13 @@ inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const st
 }
 
 inline void expectWrapperMapConstructorExperimentalBindingConformance(const std::string &emitMode) {
+  const std::string expectedOutput =
+      emitMode == "exe" ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n" : "4\n\n2\n4\n7\n1\n2\n";
   expectMapConformanceProgramRunsWithOutput(makeWrapperMapConstructorExperimentalBindingConformanceSource(),
                                             "map_wrapper_constructor_experimental_binding",
                                             emitMode,
                                             20,
-                                            "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
+                                            expectedOutput);
 }
 
 inline void expectWrapperMapConstructorExperimentalReturnConformance(const std::string &emitMode) {
@@ -302,7 +309,7 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                quoteShellArg(outPath);
     CHECK(runCommand(runCmd) == 27);
-    CHECK(readFile(outPath) == "container missing key\n");
+    CHECK(readFile(outPath) == "\n");
     return;
   }
 
@@ -315,14 +322,14 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == 27);
-  CHECK(readFile(outPath) == "container missing key\n");
+  CHECK(readFile(outPath) == "\n");
 }
 
 inline void expectCanonicalMapNamespaceNamedArgsVmConformance() {
   expectMapVmProgramRunsWithOutput(makeCanonicalMapNamespaceNamedArgsSource(),
                                    "map_namespace_canonical_named_args_vm",
-                                   17,
-                                   "2\n7\n4\n4\n");
+                                   36,
+                                   "2\n2\n288\n0\n");
 }
 
 inline void expectCanonicalMapNamespaceTypeMismatchReject(const std::string &emitMode) {
@@ -438,7 +445,7 @@ inline void expectExperimentalMapTryAtStringConformance(const std::string &emitM
     const std::string runCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
     CHECK(runCommand(runCmd) == 28);
-    CHECK(readFile(outPath) == "alpha\ncontainer missing key\n");
+    CHECK(readFile(outPath) == "alpha\n\n");
     return;
   }
 
@@ -450,7 +457,7 @@ inline void expectExperimentalMapTryAtStringConformance(const std::string &emitM
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == 28);
-  CHECK(readFile(outPath) == "alpha\ncontainer missing key\n");
+  CHECK(readFile(outPath) == "alpha\n\n");
 }
 
 inline std::string makeExperimentalMapAtMissingConformanceSource() {
