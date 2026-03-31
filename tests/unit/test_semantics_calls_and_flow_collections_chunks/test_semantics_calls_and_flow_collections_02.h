@@ -781,6 +781,51 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental five-column soa storage helpers validate on explicit column bindings") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns5<i32, i32, i32, i32, i32> mut] values{soaColumns5New<i32, i32, i32, i32, i32>()}
+  soaColumns5Reserve<i32, i32, i32, i32, i32>(values, 4i32)
+  soaColumns5Push<i32, i32, i32, i32, i32>(values, 2i32, 3i32, 5i32, 7i32, 11i32)
+  soaColumns5Push<i32, i32, i32, i32, i32>(values, 13i32, 17i32, 19i32, 23i32, 29i32)
+  soaColumns5Write<i32, i32, i32, i32, i32>(values, 1i32, 31i32, 37i32, 41i32, 43i32, 47i32)
+  soaColumns5Clear<i32, i32, i32, i32, i32>(values)
+  return(soaColumns5Count<i32, i32, i32, i32, i32>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental five-column soa storage helpers validate ownership-sensitive elements") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+Mover() {
+  [i32] value{0i32}
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns5<Mover, i32, i32, i32, i32> mut] values{soaColumns5New<Mover, i32, i32, i32, i32>()}
+  soaColumns5Push<Mover, i32, i32, i32, i32>(values, Mover(3i32), 5i32, 7i32, 11i32, 13i32)
+  soaColumns5Write<Mover, i32, i32, i32, i32>(values, 0i32, Mover(8i32), 9i32, 17i32, 19i32, 23i32)
+  soaColumns5Clear<Mover, i32, i32, i32, i32>(values)
+  return(soaColumns5Count<Mover, i32, i32, i32, i32>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("get helper validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {

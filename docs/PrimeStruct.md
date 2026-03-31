@@ -2377,14 +2377,14 @@ bad_use_after_take() {
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,
     `soaColumnPush<T>()`, `soaColumnRead<T>()`, `soaColumnWrite<T>()`, `soaColumnClear<T>()`) plus
     reusable fixed-width multi-column primitives `SoaColumns2<T0, T1>`, `SoaColumns3<T0, T1, T2>`,
-    and `SoaColumns4<T0, T1, T2, T3>` with matching `New` / `Count` / `Capacity` / `Reserve` /
-    `Push` / `Read*` / `Write` / `Clear` helpers. These primitives are backed by checked buffer
-    alloc/grow/free plus explicit `init(...)`, `drop(...)`, `take(...)`, and `borrow(...)` flows.
-    Their current allocation-failure contract is deterministic and matches the existing vector
-    reserve overflow path: oversized reserve requests report `vector reserve allocation failed (out
-    of memory)`. They are the intended building blocks for future `.prime` `SoaVector<T>` column
-    ownership, but they are not yet threaded into reflected arbitrary-width schemas or wrapper
-    borrowed-view/field-view surfaces.
+    `SoaColumns4<T0, T1, T2, T3>`, and `SoaColumns5<T0, T1, T2, T3, T4>` with matching `New` /
+    `Count` / `Capacity` / `Reserve` / `Push` / `Read*` / `Write` / `Clear` helpers. These
+    primitives are backed by checked buffer alloc/grow/free plus explicit `init(...)`, `drop(...)`,
+    `take(...)`, and `borrow(...)` flows. Their current allocation-failure contract is deterministic
+    and matches the existing vector reserve overflow path: oversized reserve requests report
+    `vector reserve allocation failed (out of memory)`. They are the intended building blocks for
+    future `.prime` `SoaVector<T>` column ownership, but they are not yet threaded into reflected
+    arbitrary-width schemas or wrapper borrowed-view/field-view surfaces.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of
