@@ -85,6 +85,33 @@ main() {
   CHECK(readFile(errPath).find("vm backend requires typed bindings") != std::string::npos);
 }
 
+TEST_CASE("vm rejects experimental soa_vector stdlib to-aos helper before struct return support") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  [vector<Particle>] unpacked{soaVectorToAos<Particle>(values)}
+  return(count(unpacked))
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_to_aos_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend does not support return type on "
+            "/std/collections/experimental_soa_vector/soaVectorToAos__") != std::string::npos);
+}
+
 TEST_CASE("runs vm experimental soa_vector stdlib get helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
