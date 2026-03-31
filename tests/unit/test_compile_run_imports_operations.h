@@ -601,7 +601,6 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
 }
-
 TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
