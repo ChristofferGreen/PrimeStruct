@@ -827,7 +827,10 @@ prefers the canonical `/std/collections/soa_vector/to_aos` helper path while sti
 same-path `/to_aos` user-helper shadowing, and vector-result recognizers now accept that
 canonical resolved helper path too. Lowerer-side count target classification now also treats
 direct canonical `/std/collections/soa_vector/to_aos` call results as vector targets for nested
-count dispatch instead of depending on the old raw `/to_aos` call shape.
+count dispatch instead of depending on the old raw `/to_aos` call shape. C++ emitter
+vector-target classification now also treats those same direct canonical
+`/std/collections/soa_vector/to_aos` call results as vector targets for nested helper dispatch
+instead of depending on bound vector temporaries.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

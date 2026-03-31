@@ -275,6 +275,33 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("canonical soa_vector to_aos temporaries route through vector capacity in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(capacity(/std/collections/soa_vector/to_aos<Particle>(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_canonical_soa_vector_to_aos_vector_capacity_experimental_wrapper_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_canonical_soa_vector_to_aos_vector_capacity_experimental_wrapper_exe")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("wildcard-imported canonical soa_vector helpers lower in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

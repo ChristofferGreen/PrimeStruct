@@ -4,6 +4,118 @@
 
 namespace primec::emitter {
 
+namespace {
+
+bool isCanonicalSoaToAosHelperCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.args.size() != 1 || expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  if (normalized.rfind("std/collections/soa_vector/to_aos", 0) == 0) {
+    return true;
+  }
+  return normalized == "to_aos" &&
+         (expr.namespacePrefix == "/std/collections/soa_vector" ||
+          expr.namespacePrefix == "std/collections/soa_vector");
+}
+
+bool isSoaVectorTypeNameLocal(const std::string &typeName) {
+  std::string normalized = typeName;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  if (normalized == "soa_vector" || normalized == "SoaVector" ||
+      normalized == "std/collections/experimental_soa_vector/SoaVector") {
+    return true;
+  }
+  if (normalized.rfind("soa_vector<", 0) == 0 ||
+      normalized.rfind("SoaVector<", 0) == 0 ||
+      normalized.rfind("SoaVector__", 0) == 0 ||
+      normalized.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0 ||
+      normalized.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+    return true;
+  }
+  std::string base;
+  std::string arg;
+  return splitTemplateTypeName(normalized, base, arg) && isSoaVectorTypeNameLocal(base);
+}
+
+bool isSoaVectorBindingLocal(const BindingInfo &binding) {
+  if (isSoaVectorTypeNameLocal(binding.typeName)) {
+    return true;
+  }
+  if (binding.typeName == "Reference") {
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(binding.typeTemplateArg, base, arg)) {
+      return isSoaVectorTypeNameLocal(base);
+    }
+    return isSoaVectorTypeNameLocal(binding.typeTemplateArg);
+  }
+  return false;
+}
+
+bool isSoaVectorValueLocal(const Expr &target,
+                           const std::unordered_map<std::string, BindingInfo> &localTypes);
+bool isVectorValueLocal(const Expr &target,
+                        const std::unordered_map<std::string, BindingInfo> &localTypes);
+
+bool isSoaVectorValueLocal(const Expr &target,
+                           const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localTypes.find(target.name);
+    return it != localTypes.end() && isSoaVectorBindingLocal(it->second);
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(target, collection) && collection == "soa_vector") {
+      return target.templateArgs.size() == 1;
+    }
+    if (!target.isMethodCall && isSimpleCallName(target, "to_soa") && target.args.size() == 1) {
+      return isVectorValueLocal(target.args.front(), localTypes);
+    }
+  }
+  return false;
+}
+
+bool isVectorValueLocal(const Expr &target,
+                        const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localTypes.find(target.name);
+    if (it == localTypes.end()) {
+      return false;
+    }
+    if (it->second.typeName == "vector") {
+      return true;
+    }
+    if (it->second.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
+        return base == "vector";
+      }
+    }
+    return false;
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(target, collection) && collection == "vector") {
+      return target.templateArgs.size() == 1;
+    }
+    if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
+         isCanonicalSoaToAosHelperCall(target)) &&
+        target.args.size() == 1) {
+      return isSoaVectorValueLocal(target.args.front(), localTypes);
+    }
+  }
+  return false;
+}
+
+} // namespace
+
 bool isArrayValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
@@ -53,28 +165,7 @@ bool isExplicitMapCountNameLocal(const Expr &expr) {
 }
 
 bool isVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
-  if (target.kind == Expr::Kind::Name) {
-    auto it = localTypes.find(target.name);
-    if (it == localTypes.end()) {
-      return false;
-    }
-    if (it->second.typeName == "vector") {
-      return true;
-    }
-    if (it->second.typeName == "Reference") {
-      std::string base;
-      std::string arg;
-      if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
-        return base == "vector";
-      }
-    }
-    return false;
-  }
-  if (target.kind == Expr::Kind::Call) {
-    std::string collection;
-    return getBuiltinCollectionName(target, collection) && collection == "vector" && target.templateArgs.size() == 1;
-  }
-  return false;
+  return isVectorValueLocal(target, localTypes);
 }
 
 bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {

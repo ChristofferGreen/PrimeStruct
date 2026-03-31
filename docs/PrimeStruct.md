@@ -2445,7 +2445,10 @@ also prefers the canonical `/std/collections/soa_vector/to_aos` helper path whil
 preserving same-path `/to_aos` user-helper shadowing, and vector-result recognizers now accept
 that canonical resolved helper path too. Lowerer-side count target classification now also
 treats direct canonical `/std/collections/soa_vector/to_aos` call results as vector targets for
-nested count dispatch instead of depending on the old raw `/to_aos` call shape.
+nested count dispatch instead of depending on the old raw `/to_aos` call shape. C++ emitter
+vector-target classification now also treats those same direct canonical
+`/std/collections/soa_vector/to_aos` call results as vector targets for nested helper dispatch
+instead of depending on bound vector temporaries.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend
