@@ -2408,6 +2408,9 @@ Valid root bare/method/old-explicit `push` and `reserve` calls on builtin `soa_v
 bindings now likewise rewrite onto `/std/collections/soa_vector/push` and
 `/std/collections/soa_vector/reserve` when no visible root or same-path user helper shadows
 them.
+Old-explicit vector-target `push` and `reserve` misuses now also keep those same canonical
+`/std/collections/soa_vector/push` and `/std/collections/soa_vector/reserve` reject
+contracts instead of the old builtin helper fallback.
 Vector-target root bare/method/old-explicit `get` and `ref` misuses now also keep those same
 canonical `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject
 contracts instead of the old builtin `get requires soa_vector target` / `ref requires

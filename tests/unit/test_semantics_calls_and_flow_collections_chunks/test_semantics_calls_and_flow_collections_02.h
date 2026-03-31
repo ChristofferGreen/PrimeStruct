@@ -1776,6 +1776,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("explicit soa_vector reserve keeps canonical reject on vector target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /soa_vector/reserve(values, 4i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
+}
+
+TEST_CASE("explicit soa_vector push slash-method keeps canonical reject on vector target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  values./soa_vector/push(12i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("/std/collections/soa_vector/push") != std::string::npos);
+}
+
 TEST_CASE("push helper call-form falls back to user helper on soa_vector binding") {
   const std::string source = R"(
 Particle() {

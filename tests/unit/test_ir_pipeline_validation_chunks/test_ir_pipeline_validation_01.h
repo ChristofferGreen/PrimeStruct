@@ -537,6 +537,20 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
+TEST_CASE("semantics rejects explicit soa_vector reserve on vector target through canonical helper path") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /soa_vector/reserve(values, 4i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
+}
+
 TEST_CASE("root to_aos helper forms lower through canonical helper routing") {
   const std::string source = R"(
 [struct reflect]

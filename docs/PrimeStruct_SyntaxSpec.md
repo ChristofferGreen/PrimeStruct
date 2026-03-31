@@ -799,8 +799,9 @@ across C++/native/VM, and valid root bare/method/old-explicit `count`/`get`/`ref
 calls on builtin `soa_vector<T>` bindings now rewrite onto that same canonical helper path unless a visible
 old-surface user helper shadows them. Valid root bare/method/old-explicit `push`/`reserve` calls on builtin
 `soa_vector<T>` bindings now also rewrite onto `/std/collections/soa_vector/push|reserve` unless a visible
-old-surface user helper shadows them. Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep
-the same canonical
+old-surface user helper shadows them. Old-explicit vector-target `push`/`reserve` misuses now also keep the same
+canonical `/std/collections/soa_vector/push|reserve` reject contract instead of the old builtin helper fallback.
+Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
 `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject contracts instead of the old builtin
 `get requires soa_vector target` / `ref requires soa_vector target` diagnostics. Vector-target root bare/direct/method
 `to_aos` misuses now also keep that same canonical
