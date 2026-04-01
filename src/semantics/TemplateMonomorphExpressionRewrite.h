@@ -307,6 +307,63 @@ bool rewriteExpr(Expr &expr,
     if (receiverExpr == nullptr) {
       return path;
     }
+    auto hasVisibleRootBuiltinSoaToAosHelper = [&]() {
+      auto matchesBuiltinSoaHelper = [&](const std::string &helperPath) {
+        auto defIt = ctx.sourceDefs.find(helperPath);
+        if (defIt == ctx.sourceDefs.end() || defIt->second.parameters.empty()) {
+          return false;
+        }
+        BindingInfo paramBinding;
+        if (!extractExplicitBindingType(defIt->second.parameters.front(), paramBinding)) {
+          return false;
+        }
+        return normalizeBindingTypeName(paramBinding.typeName) == "soa_vector" &&
+               !paramBinding.typeTemplateArg.empty();
+      };
+      if (matchesBuiltinSoaHelper("/to_aos")) {
+        return true;
+      }
+      auto familyIt = ctx.helperOverloads.find("/to_aos");
+      if (familyIt == ctx.helperOverloads.end()) {
+        return false;
+      }
+      for (const auto &entry : familyIt->second) {
+        if (matchesBuiltinSoaHelper(entry.internalPath)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    auto resolvesBuiltinSoaToAosShadowReceiver = [&](const Expr *candidate) {
+      if (candidate == nullptr) {
+        return false;
+      }
+      if (inferCollectionReceiverFamily(candidate) == "soa_vector") {
+        return true;
+      }
+      if (candidate->kind != Expr::Kind::Call || candidate->isBinding) {
+        return false;
+      }
+      std::string resolvedReceiverPath;
+      if (candidate->isMethodCall) {
+        if (!resolveMethodCallTemplateTarget(*candidate, locals, ctx, resolvedReceiverPath)) {
+          resolvedReceiverPath.clear();
+        }
+      } else {
+        resolvedReceiverPath = resolveCalleePath(*candidate, namespacePrefix, ctx);
+      }
+      auto defIt = ctx.sourceDefs.find(resolvedReceiverPath);
+      if (defIt == ctx.sourceDefs.end()) {
+        return false;
+      }
+      BindingInfo inferredReturn;
+      if (!inferDefinitionReturnBindingForTemplatedFallback(
+              defIt->second, hasMathImport(ctx), const_cast<Context &>(ctx), inferredReturn)) {
+        return false;
+      }
+      return normalizeBindingTypeName(inferredReturn.typeName) == "soa_vector" &&
+             !inferredReturn.typeTemplateArg.empty();
+    };
     std::string helperName;
     bool resolvesVectorFamilyPath = false;
     if (path.rfind("/std/collections/vector/", 0) == 0) {
@@ -329,6 +386,11 @@ bool rewriteExpr(Expr &expr,
         helperName != "get" && helperName != "ref" &&
         helperName != "to_aos") {
       return path;
+    }
+    if (helperName == "to_aos" &&
+        hasVisibleRootBuiltinSoaToAosHelper() &&
+        resolvesBuiltinSoaToAosShadowReceiver(receiverExpr)) {
+      return std::string("/to_aos");
     }
     const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
     if (receiverFamily == "soa_vector" && resolvesVectorFamilyPath) {

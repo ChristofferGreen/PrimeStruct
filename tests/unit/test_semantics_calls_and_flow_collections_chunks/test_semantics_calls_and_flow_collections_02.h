@@ -3837,6 +3837,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("to_aos helper-return builtin soa_vector forms keep same-path helper shadow") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[return<soa_vector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soa_vector<Particle>())
+}
+
+[return<int>]
+/to_aos([soa_vector<Particle>] values) {
+  return(9i32)
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [auto] itemA{to_aos(holder.cloneValues())}
+  [auto] itemB{/to_aos(holder.cloneValues())}
+  [auto] itemC{holder.cloneValues().to_aos()}
+  return(plus(plus(itemA, itemB), itemC))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("aos and soa containers do not implicitly convert") {
   const std::string source = R"(
 Particle() {

@@ -1210,6 +1210,53 @@ main() {
   CHECK(ast.find("holder.cloneValues().to_aos()", mainPos) != std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic keeps helper-return builtin soa_vector to_aos with same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[return<soa_vector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soa_vector<Particle>())
+}
+
+[return<int>]
+/to_aos([soa_vector<Particle>] values) {
+  return(9i32)
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [auto] itemA{to_aos(holder.cloneValues())}
+  [auto] itemB{/to_aos(holder.cloneValues())}
+  [auto] itemC{holder.cloneValues().to_aos()}
+  return(plus(plus(itemA, itemB), itemC))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_helper_return_builtin_soa_vector_to_aos_shadow.prime", source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_helper_return_builtin_soa_vector_to_aos_shadow.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/to_aos", mainPos) == std::string::npos);
+  CHECK(ast.find("/to_aos(holder.cloneValues())", mainPos) != std::string::npos);
+  CHECK(ast.find("[auto] itemA{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
+  CHECK(ast.find("[auto] itemB{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
+  CHECK(ast.find("[auto] itemC{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic rewrites inline location experimental soa_vector read-only methods") {
   const std::string source = R"(
 import /std/collections/*

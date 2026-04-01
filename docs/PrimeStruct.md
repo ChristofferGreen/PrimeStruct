@@ -2514,9 +2514,9 @@ initializer/monomorph handling now accept that canonical resolved helper path to
 equivalent helper-return method/infer fallback for builtin `soa_vector` `to_aos` receivers now
 also prefers the canonical `/std/collections/soa_vector/to_aos` helper path, and vector-result
 recognizers now accept that canonical resolved helper path too. Same-path `/to_aos`
-user-helper shadowing is still only preserved on direct local builtin-receiver forms;
-helper-return builtin `to_aos` method, bare, and direct-call fallback still canonicalize too
-early onto the canonical helper path. Experimental wrapper helper-return `to_aos()` method
+user-helper shadowing now also survives helper-return builtin `to_aos` bare, direct-call,
+method, and infer fallback instead of canonicalizing early onto the canonical helper path.
+Experimental wrapper helper-return `to_aos()` method
 rewrites now also stop short of forcing `soaVectorToAos(...)` when a same-path `/to_aos` helper
 is visible. Lowerer-side count target classification now also
 treats direct canonical `/std/collections/soa_vector/to_aos` call results as vector targets for
