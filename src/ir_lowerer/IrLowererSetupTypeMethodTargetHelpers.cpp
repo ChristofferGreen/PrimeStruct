@@ -78,6 +78,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   auto isBufferReceiverTarget = [&](const std::string &candidate) {
     return candidate == "Buffer" || candidate == "std/gfx/Buffer" || candidate == "std/gfx/experimental/Buffer";
   };
+  auto soaToAosMismatchError = [&]() {
+    return std::string("struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values: "
+                       "expected /std/collections/experimental_soa_vector/SoaVector__ specialization");
+  };
   auto shouldPreferCanonicalMapPath = [&](const std::string &candidate) {
     return !isExplicitCompatibilityMapMethodAlias && !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
            isMapReceiverTarget(candidate) &&
@@ -237,9 +241,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
                    ? "/std/collections/map"
                    : normalizedResolvedTypePath);
     const std::string resolved = resolvedBase + "/" + normalizedMethodName;
-    if ((normalizedMethodName == "to_soa" && isVectorReceiverTarget(resolvedTypeWithoutSlash)) ||
-        (normalizedMethodName == "to_aos" && isSoaVectorReceiverTarget(resolvedTypeWithoutSlash))) {
+    if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut.clear();
+      return nullptr;
+    }
+    if (normalizedMethodName == "to_aos" && isSoaVectorReceiverTarget(resolvedTypeWithoutSlash)) {
+      errorOut = soaToAosMismatchError();
       return nullptr;
     }
     if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
@@ -289,9 +296,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
                  ? "/std/collections/map"
                  : "/" + normalizedTypeName);
   const std::string resolved = resolvedBase + "/" + normalizedMethodName;
-  if ((normalizedMethodName == "to_soa" && isVectorReceiverTarget(normalizedTypeName)) ||
-      (normalizedMethodName == "to_aos" && isSoaVectorReceiverTarget(normalizedTypeName))) {
+  if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(normalizedTypeName)) {
     errorOut.clear();
+    return nullptr;
+  }
+  if (normalizedMethodName == "to_aos" && isSoaVectorReceiverTarget(normalizedTypeName)) {
+    errorOut = soaToAosMismatchError();
     return nullptr;
   }
   if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(normalizedTypeName)) {
