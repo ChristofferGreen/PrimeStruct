@@ -538,7 +538,7 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
-TEST_CASE("semantics rejects explicit soa_vector reserve on vector target through same-path helper path") {
+TEST_CASE("semantics rejects explicit soa_vector reserve on vector target through canonical helper path") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 main() {
@@ -549,7 +549,30 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error.find("/soa_vector/reserve") != std::string::npos);
+  CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
+}
+
+TEST_CASE("explicit soa_vector mutators share builtin lowerer reject path") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<void>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  /soa_vector/reserve(values, 4i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error == "reserve requires mutable vector binding");
 }
 
 TEST_CASE("root to_aos helper forms lower through canonical helper routing") {

@@ -2002,7 +2002,27 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit soa_vector reserve keeps same-path reject on vector target") {
+TEST_CASE("explicit soa_vector mutators validate on builtin soa_vector binding") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  /soa_vector/reserve(values, 4i32)
+  /soa_vector/push(values, Particle(12i32))
+  values./soa_vector/push(Particle(14i32))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit soa_vector reserve keeps canonical reject on vector target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2013,10 +2033,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/soa_vector/reserve") != std::string::npos);
+  CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector push slash-method keeps same-path reject on vector target") {
+TEST_CASE("explicit soa_vector push slash-method keeps canonical reject on vector target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2027,7 +2047,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/soa_vector/push") != std::string::npos);
+  CHECK(error.find("/std/collections/soa_vector/push") != std::string::npos);
 }
 
 TEST_CASE("push helper call-form falls back to user helper on soa_vector binding") {

@@ -13,6 +13,34 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
+namespace {
+
+bool isSoaMutatorName(std::string_view helperName) {
+  return helperName == "push" || helperName == "reserve";
+}
+
+std::string explicitOldSoaMutatorPath(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+    return "";
+  }
+  std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
+  std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
+  if (normalizedPrefix == "soa_vector" && isSoaMutatorName(normalizedName)) {
+    return "/soa_vector/" + normalizedName;
+  }
+  constexpr std::string_view kOldExplicitPrefix = "soa_vector/";
+  if (normalizedName.rfind(kOldExplicitPrefix, 0) != 0) {
+    return "";
+  }
+  const std::string_view helperName = std::string_view(normalizedName).substr(kOldExplicitPrefix.size());
+  if (!isSoaMutatorName(helperName)) {
+    return "";
+  }
+  return "/soa_vector/" + std::string(helperName);
+}
+
+} // namespace
+
 std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &typePath) const {
   std::string normalizedType = normalizeBindingTypeName(typePath);
   std::string base;
@@ -469,6 +497,11 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
           findRemovedCollectionHelper(RemovedCollectionHelperFamily::VectorLike, normalizedName);
       descriptor != nullptr && descriptor->statementOnly) {
     helperNameOut = std::string(descriptor->helperName);
+    return true;
+  }
+  const std::string oldExplicitSoaPath = explicitOldSoaMutatorPath(candidate);
+  if (!oldExplicitSoaPath.empty()) {
+    helperNameOut = oldExplicitSoaPath.substr(oldExplicitSoaPath.find_last_of('/') + 1);
     return true;
   }
 

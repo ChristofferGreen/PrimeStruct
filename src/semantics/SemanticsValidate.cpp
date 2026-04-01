@@ -1603,7 +1603,9 @@ void rewriteBuiltinSoaMutatorStatements(
           preserveReserveHelper);
     }
     if (stmt.isBinding) {
-      if (auto soaBinding = extractBuiltinSoaVectorBinding(stmt); soaBinding.has_value()) {
+      if (auto vectorBinding = extractBuiltinVectorBinding(stmt); vectorBinding.has_value()) {
+        bindings[stmt.name] = *vectorBinding;
+      } else if (auto soaBinding = extractBuiltinSoaVectorBinding(stmt); soaBinding.has_value()) {
         bindings[stmt.name] = *soaBinding;
       }
     }
@@ -1736,7 +1738,9 @@ void rewriteBuiltinSoaMutatorExpr(
       !expr.bodyArguments.empty()) {
     return;
   }
-  const std::string helperName = builtinSoaMutatorHelperName(expr.name);
+  const std::string rawHelperName =
+      expr.namespacePrefix.empty() ? expr.name : expr.namespacePrefix + "/" + expr.name;
+  const std::string helperName = builtinSoaMutatorHelperName(rawHelperName);
   if (helperName.empty()) {
     return;
   }
@@ -1745,7 +1749,7 @@ void rewriteBuiltinSoaMutatorExpr(
     return;
   }
   const auto receiverBinding = findBuiltinSoaValueBinding(expr.args.front());
-  const std::string explicitOldHelperName = oldExplicitSoaMutatorHelperName(expr.name);
+  const std::string explicitOldHelperName = oldExplicitSoaMutatorHelperName(rawHelperName);
   const auto fallbackVectorBinding =
       receiverBinding.has_value() || explicitOldHelperName.empty()
           ? std::optional<semantics::BindingInfo>{}
@@ -1792,7 +1796,9 @@ bool rewriteBuiltinSoaMutatorCalls(Program &program, std::string &error) {
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
-      if (auto soaBinding = extractBuiltinSoaVectorBinding(param); soaBinding.has_value()) {
+      if (auto vectorBinding = extractBuiltinVectorBinding(param); vectorBinding.has_value()) {
+        bindings[param.name] = *vectorBinding;
+      } else if (auto soaBinding = extractBuiltinSoaVectorBinding(param); soaBinding.has_value()) {
         bindings[param.name] = *soaBinding;
       }
     }

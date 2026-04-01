@@ -295,6 +295,44 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             error) == EmitResult::Error);
   CHECK(error == "push requires mutable vector binding");
 
+  primec::Expr explicitSoaPushCall = soaPushCall;
+  explicitSoaPushCall.name = "/soa_vector/push";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            explicitSoaPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "push requires mutable vector binding");
+
+  primec::Expr canonicalSoaPushCall = soaPushCall;
+  canonicalSoaPushCall.name = "/std/collections/soa_vector/push";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            canonicalSoaPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "push requires mutable vector binding");
+
   locals.at("v").isMutable = true;
   pushCall.templateArgs = {"i32"};
   error.clear();
@@ -353,6 +391,25 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             error) == EmitResult::Error);
   CHECK(error == "reserve requires integer capacity");
+
+  primec::Expr explicitSoaReserveCall = reserveCall;
+  explicitSoaReserveCall.name = "/soa_vector/reserve";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            explicitSoaReserveCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "reserve requires mutable vector binding");
 
   primec::Expr removeAtCall;
   removeAtCall.kind = primec::Expr::Kind::Call;

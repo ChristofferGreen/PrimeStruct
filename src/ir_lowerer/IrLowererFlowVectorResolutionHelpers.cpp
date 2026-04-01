@@ -58,6 +58,26 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
   return helperName;
 }
 
+std::string normalizeQualifiedHelperName(const Expr &expr) {
+  if (expr.name.empty()) {
+    return "";
+  }
+  std::string normalizedName = expr.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  if (!expr.namespacePrefix.empty() && normalizedName.find('/') == std::string::npos) {
+    std::string normalizedPrefix = expr.namespacePrefix;
+    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+      normalizedPrefix.erase(normalizedPrefix.begin());
+    }
+    if (!normalizedPrefix.empty()) {
+      normalizedName = normalizedPrefix + "/" + normalizedName;
+    }
+  }
+  return normalizedName;
+}
+
 bool resolveStdCollectionsVectorWrapperAliasName(std::string helperName,
                                                  std::string &helperNameOut) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
@@ -122,13 +142,12 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
   if (expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
+  std::string normalized = normalizeQualifiedHelperName(expr);
   const std::string vectorPrefix = "vector/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string collectionsVectorWrapperPrefix = "std/collections/vector";
+  const std::string soaVectorPrefix = "soa_vector/";
+  const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
@@ -142,6 +161,22 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
+  }
+  if (normalized.rfind(soaVectorPrefix, 0) == 0) {
+    const std::string helperName = stripGeneratedHelperSuffix(normalized.substr(soaVectorPrefix.size()));
+    if (helperName == "push" || helperName == "reserve") {
+      helperNameOut = helperName;
+      return true;
+    }
+    return false;
+  }
+  if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
+    const std::string helperName = stripGeneratedHelperSuffix(normalized.substr(stdSoaVectorPrefix.size()));
+    if (helperName == "push" || helperName == "reserve") {
+      helperNameOut = helperName;
+      return true;
+    }
+    return false;
   }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
     return resolveExperimentalVectorMutatorAliasName(

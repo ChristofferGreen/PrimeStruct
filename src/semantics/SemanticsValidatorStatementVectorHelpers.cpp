@@ -26,6 +26,30 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
+bool isSoaMutatorName(std::string_view helperName) {
+  return helperName == "push" || helperName == "reserve";
+}
+
+std::string explicitOldSoaMutatorPath(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+    return "";
+  }
+  const std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
+  const std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
+  if (normalizedPrefix == "soa_vector" && isSoaMutatorName(normalizedName)) {
+    return "/soa_vector/" + normalizedName;
+  }
+  constexpr std::string_view kOldExplicitPrefix = "soa_vector/";
+  if (normalizedName.rfind(kOldExplicitPrefix, 0) != 0) {
+    return "";
+  }
+  const std::string_view helperName = std::string_view(normalizedName).substr(kOldExplicitPrefix.size());
+  if (!isSoaMutatorName(helperName)) {
+    return "";
+  }
+  return "/soa_vector/" + std::string(helperName);
+}
+
 } // namespace
 
 std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &path) const {
@@ -282,6 +306,63 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
   if (isUserMethodTarget) {
     return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
+  }
+  const std::string oldExplicitSoaPath = explicitOldSoaMutatorPath(stmt);
+  const std::string oldExplicitSoaCanonicalPath =
+      oldExplicitSoaPath.empty() ? "" : "/std/collections/soa_vector/" + vectorHelper;
+  const bool hasVisibleOldExplicitSoaHelper =
+      !oldExplicitSoaPath.empty() &&
+      (hasDeclaredDefinitionPath(oldExplicitSoaPath) || hasImportedDefinitionPath(oldExplicitSoaPath));
+  if (!oldExplicitSoaPath.empty() && !hasVisibleOldExplicitSoaHelper) {
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
+    if (!stmt.templateArgs.empty()) {
+      error_ = vectorHelper + " does not accept template arguments";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = vectorHelper + " does not accept block arguments";
+      return false;
+    }
+    if (stmt.args.size() != 2) {
+      error_ = vectorHelper + " requires exactly two arguments";
+      return false;
+    }
+    if (!validateVectorStatementHelperReceiver(params, locals, stmt.args.front(), vectorHelper)) {
+      return false;
+    }
+    BindingInfo receiverBinding;
+    if (!resolveVectorStatementBinding(params, locals, stmt.args.front(), receiverBinding)) {
+      return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
+    }
+    if (receiverBinding.typeName != "soa_vector") {
+      error_ = std::string(stmt.isMethodCall ? "unknown method: " : "unknown call target: ") +
+               oldExplicitSoaCanonicalPath;
+      return false;
+    }
+    if (!validateVectorStatementHelperTarget(
+            params, locals, stmt.args.front(), vectorHelper.c_str(), receiverBinding)) {
+      return false;
+    }
+    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
+      error_ = vectorHelper + " requires heap_alloc effect";
+      return false;
+    }
+    if (!validateExpr(params, locals, stmt.args[1])) {
+      return false;
+    }
+    if (vectorHelper == "push") {
+      if (!validateVectorStatementElementType(params, locals, stmt.args[1], receiverBinding.typeTemplateArg)) {
+        return false;
+      }
+    } else if (!isVectorStatementIntegerExpr(params, locals, stmt.args[1])) {
+      error_ = "reserve requires integer capacity";
+      return false;
+    }
+    return validateVectorRelocationHelperElementType(
+        receiverBinding, vectorHelper, namespacePrefix, definitionTemplateArgs);
   }
   if (!explicitCanonicalStdVectorMutatorCallPath.empty() &&
       !hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorCallPath) &&
