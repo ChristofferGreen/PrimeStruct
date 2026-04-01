@@ -2507,7 +2507,8 @@ entrypoints, and the validator-side plus monomorph-side fallback probes now also
 checks plus duplicated error propagation across those fallback paths. The remaining compiler-owned
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
 construction/parsing instead of open-coded literals across validator and monomorph fallback logic,
-and the post-`validateExpr(...)` binding/return/call-argument reprobes are gone too.
+and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
+gone too.
 The remaining pending-diagnostic cleanup is therefore reduced to
 deleting the fallback checks themselves once field-view indexing moves onto the experimental
 substrate. The broader experimental wrapper/helper surface through imported

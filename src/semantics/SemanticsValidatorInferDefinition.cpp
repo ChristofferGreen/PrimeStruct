@@ -52,9 +52,6 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
   BindingInfo exprBinding;
   bool hasExprBinding = false;
   if (valueExpr != nullptr) {
-    if (!reportBuiltinSoaPendingExprDiagnostic(*valueExpr, defParams, activeLocals)) {
-      return false;
-    }
     exprKind = inferExprReturnKind(*valueExpr, defParams, activeLocals);
     if (exprKind == ReturnKind::Array || exprKind == ReturnKind::Unknown) {
       exprStructPath = inferStructReturnPath(*valueExpr, defParams, activeLocals);
