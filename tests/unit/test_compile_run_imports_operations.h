@@ -1039,8 +1039,15 @@ main() {
   [Reference<SoaVector<Particle>>] borrowed{location(values)}
   [Particle] first{borrowed.get(0i32)}
   [Particle] second{borrowed.ref(1i32)}
+  [Particle] firstBare{get(borrowed, 1i32)}
+  [Particle] secondBare{ref(dereference(borrowed), 0i32)}
   [vector<Particle>] unpacked{borrowed.to_aos()}
-  return(plus(plus(first.x, second.x), count(unpacked)))
+  [vector<Particle>] unpackedBare{to_aos(borrowed)}
+  [i32] countBare{count(borrowed)}
+  return(plus(plus(first.x, second.x),
+              plus(plus(firstBare.x, secondBare.x),
+                   plus(count(unpacked),
+                        plus(count(unpackedBare), countBare)))))
 }
 )";
   const std::string srcPath =
@@ -1049,7 +1056,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_vector_borrowed_local_methods_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 18);
+  CHECK(runCommand(exePath) == 38);
 }
 
 TEST_CASE("compiles and runs inline location experimental soa_vector read-only methods in C++ emitter") {
@@ -1092,7 +1099,7 @@ main() {
   CHECK(runCommand(exePath) == 40);
 }
 
-TEST_CASE("compiles and runs borrowed helper-return experimental soa_vector read-only methods in C++ emitter") {
+TEST_CASE("compiles and runs borrowed helper-return experimental soa_vector helper surfaces in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1115,8 +1122,15 @@ main() {
   values.push(Particle(9i32))
   [Particle] first{pickBorrowed(location(values)).get(0i32)}
   [Particle] second{pickBorrowed(location(values)).ref(1i32)}
+  [Particle] firstBare{get(pickBorrowed(location(values)), 1i32)}
+  [Particle] secondBare{ref(dereference(pickBorrowed(location(values))), 0i32)}
   [vector<Particle>] unpacked{pickBorrowed(location(values)).to_aos()}
-  return(plus(plus(first.x, second.x), count(unpacked)))
+  [vector<Particle>] unpackedBare{to_aos(pickBorrowed(location(values)))}
+  [i32] countBare{count(pickBorrowed(location(values)))}
+  return(plus(plus(first.x, second.x),
+              plus(plus(firstBare.x, secondBare.x),
+                   plus(count(unpacked),
+                        plus(count(unpackedBare), countBare)))))
 }
 )";
   const std::string srcPath =
@@ -1125,7 +1139,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_vector_borrowed_return_methods_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 18);
+  CHECK(runCommand(exePath) == 38);
 }
 
 TEST_CASE("compiles and runs inline location borrowed helper-return experimental soa_vector helpers in C++ emitter") {

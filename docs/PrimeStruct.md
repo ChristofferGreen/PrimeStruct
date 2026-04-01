@@ -2378,11 +2378,10 @@ bad_use_after_take() {
     `assign(location(pickBorrowed(...)).y()[i], next)` now keep that same pending field-view contract instead of
     degrading to the generic mutable-binding assignment error, and borrowed
     `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`, `borrowed.ref(i)`, and
-    `borrowed.to_aos()` now also rides on the existing helper/conversion substrate for local,
+    `borrowed.to_aos()` plus bare helper forms `count(...)`, `get(...)`, `ref(...)`, and
+    `to_aos(...)` now also ride on the existing helper/conversion substrate for local,
     parameter, helper-return, inline `location(...)`, inline
-    `dereference(location(...))`, and inline location-wrapped borrowed helper-return receivers, and
-    bare `get(...)` / `ref(...)` helper calls on those same inline borrowed helper-return wrappers
-    now clear semantics too instead of leaking through raw builtin
+    `dereference(location(...))`, and inline location-wrapped borrowed helper-return receivers instead of leaking through raw builtin
     target-mismatch diagnostics or the old helper-return conversion mismatch. Read-only field-view indexing now rides on that same helper
     substrate for reflected structs: both method-form `values.x()[i]` / `values.y()[i]` and
     call-form `x(values)[i]` / `y(values)[i]` reads plus

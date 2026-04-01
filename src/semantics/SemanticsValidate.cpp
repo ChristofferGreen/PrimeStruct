@@ -2336,6 +2336,56 @@ std::optional<Expr> normalizeExperimentalSoaInlineBorrowReceiver(
   return std::nullopt;
 }
 
+std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
+    const Expr &receiver,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace) {
+  auto hasBorrowedExperimentalSoaBinding = [&](const Expr &expr) {
+    auto isBorrowedBinding = [&](const semantics::BindingInfo &binding) {
+      const std::string normalizedType =
+          semantics::normalizeBindingTypeName(binding.typeName);
+      if (normalizedType != "Reference" && normalizedType != "Pointer") {
+        return false;
+      }
+      std::string ignoredElemType;
+      return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
+          binding, ignoredElemType);
+    };
+    if (expr.kind == Expr::Kind::Name) {
+      auto bindingIt = bindings.find(expr.name);
+      return bindingIt != bindings.end() && isBorrowedBinding(bindingIt->second);
+    }
+    if (expr.kind != Expr::Kind::Call || expr.isBinding) {
+      return false;
+    }
+    for (const std::string &candidatePath :
+         candidatePathsForExprCall(expr, definitionNamespace)) {
+      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+      if (returnIt != soaVectorReturnDefinitions.end() &&
+          isBorrowedBinding(returnIt->second)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (auto normalizedInline = normalizeExperimentalSoaInlineBorrowReceiver(
+          receiver, bindings, &soaVectorReturnDefinitions, definitionNamespace);
+      normalizedInline.has_value()) {
+    return normalizedInline;
+  }
+  if (hasBorrowedExperimentalSoaBinding(receiver)) {
+    return receiver;
+  }
+  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding &&
+      semantics::isSimpleCallName(receiver, "dereference") &&
+      receiver.args.size() == 1 &&
+      hasBorrowedExperimentalSoaBinding(receiver.args.front())) {
+    return receiver.args.front();
+  }
+  return std::nullopt;
+}
+
 void rewriteExperimentalSoaInlineBorrowMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
@@ -2397,8 +2447,8 @@ void rewriteExperimentalSoaInlineBorrowMethodExpr(
   if (!expr.isMethodCall && expr.name.find('/') != std::string::npos) {
     return;
   }
-  const auto normalizedReceiver = normalizeExperimentalSoaInlineBorrowReceiver(
-      expr.args.front(), bindings, &soaVectorReturnDefinitions, definitionNamespace);
+  const auto normalizedReceiver = normalizeExperimentalSoaBorrowedHelperReceiver(
+      expr.args.front(), bindings, soaVectorReturnDefinitions, definitionNamespace);
   if (!normalizedReceiver.has_value()) {
     return;
   }

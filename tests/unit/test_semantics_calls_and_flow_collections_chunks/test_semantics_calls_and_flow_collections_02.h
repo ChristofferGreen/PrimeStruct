@@ -924,8 +924,15 @@ Particle() {
 pick([Reference<SoaVector<Particle>>] borrowed) {
   [Particle] first{borrowed.get(0i32)}
   [Particle] second{borrowed.ref(1i32)}
+  [Particle] firstBare{get(borrowed, 1i32)}
+  [Particle] secondBare{ref(dereference(borrowed), 0i32)}
   [vector<Particle>] unpacked{borrowed.to_aos()}
-  return(plus(plus(first.x, second.x), count(unpacked)))
+  [vector<Particle>] unpackedBare{to_aos(borrowed)}
+  [i32] countBare{count(borrowed)}
+  return(plus(plus(first.x, second.x),
+              plus(plus(firstBare.x, secondBare.x),
+                   plus(count(unpacked),
+                        plus(count(unpackedBare), countBare)))))
 }
 
 [effects(heap_alloc), return<int>]
@@ -1026,37 +1033,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector borrowed helper-return get/ref methods validate on wrapper state") {
-  const std::string source = R"(
-import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-
-[struct reflect]
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<Reference<SoaVector<Particle>>>]
-pickBorrowed([Reference<SoaVector<Particle>>] values) {
-  return(values)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32))
-  values.push(Particle(9i32))
-  [Particle] first{pickBorrowed(location(values)).get(0i32)}
-  [Particle] second{pickBorrowed(location(values)).ref(1i32)}
-  return(plus(first.x, second.x))
-}
-  )";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("experimental soa_vector borrowed helper-return to_aos validates on wrapper state") {
+TEST_CASE("experimental soa_vector borrowed helper-return helper surfaces validate on wrapper state") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1077,8 +1054,17 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32))
   values.push(Particle(9i32))
+  [Particle] first{pickBorrowed(location(values)).get(0i32)}
+  [Particle] second{pickBorrowed(location(values)).ref(1i32)}
+  [Particle] firstBare{get(pickBorrowed(location(values)), 1i32)}
+  [Particle] secondBare{ref(dereference(pickBorrowed(location(values))), 0i32)}
   [vector<Particle>] unpacked{pickBorrowed(location(values)).to_aos()}
-  return(plus(unpacked.at(0i32).x, count(unpacked)))
+  [vector<Particle>] unpackedBare{to_aos(pickBorrowed(location(values)))}
+  [i32] countBare{count(pickBorrowed(location(values)))}
+  return(plus(plus(first.x, second.x),
+              plus(plus(firstBare.x, secondBare.x),
+                   plus(count(unpacked),
+                        plus(count(unpackedBare), countBare)))))
 }
   )";
   std::string error;
