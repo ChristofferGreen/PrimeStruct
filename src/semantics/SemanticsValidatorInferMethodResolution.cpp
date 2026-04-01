@@ -223,7 +223,51 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   };
   auto resolveSoaFieldViewMethodTarget = [&](const Expr &soaReceiver) -> bool {
     std::string elemType;
-    if (!resolveSoaVectorTarget(soaReceiver, elemType)) {
+    auto resolveSoaVectorOrExperimentalBorrowedReceiver = [&](const Expr &candidate) -> bool {
+      if (resolveSoaVectorTarget(candidate, elemType)) {
+        return true;
+      }
+      auto extractBorrowedBinding = [&](const BindingInfo &binding) -> bool {
+        const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+        if (normalizedType != "Reference" && normalizedType != "Pointer") {
+          return false;
+        }
+        return extractExperimentalSoaVectorElementType(binding, elemType);
+      };
+      auto assignBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
+        const std::string normalizedType = normalizeBindingTypeName(typeText);
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalizedType, base, argText)) {
+          bindingOut.typeName = normalizeBindingTypeName(base);
+          bindingOut.typeTemplateArg = argText;
+        } else {
+          bindingOut.typeName = normalizedType;
+          bindingOut.typeTemplateArg.clear();
+        }
+      };
+      if (candidate.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+          return extractBorrowedBinding(*paramBinding);
+        }
+        if (auto it = locals.find(candidate.name); it != locals.end()) {
+          return extractBorrowedBinding(it->second);
+        }
+        return false;
+      }
+      if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+        return false;
+      }
+      BindingInfo inferredBinding;
+      std::string inferredTypeText;
+      if (!inferQueryExprTypeText(candidate, params, locals, inferredTypeText) ||
+          inferredTypeText.empty()) {
+        return false;
+      }
+      assignBindingFromTypeText(inferredTypeText, inferredBinding);
+      return extractBorrowedBinding(inferredBinding);
+    };
+    if (!resolveSoaVectorOrExperimentalBorrowedReceiver(soaReceiver)) {
       return false;
     }
     const std::string normalizedElemType = normalizeBindingTypeName(elemType);

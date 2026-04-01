@@ -2367,11 +2367,12 @@ bad_use_after_take() {
     `soaVectorPush<T>()` plus wrapper method-sugar `values.reserve(...)` / `values.push(...)` mutate that same
     wrapper-backed column state in place. Experimental wrapper field-view attempts such as `values.x()` still reach
     the deterministic pending contract `soa_vector field views are not implemented yet: x` instead of falling through
-    to `unknown call target`, borrowed local standalone attempts such as `borrowed.x()` plus
-    inline borrow forms such as `location(values).x()` and `x(location(values))` now keep that same
+    to `unknown call target`, borrowed local standalone attempts such as `borrowed.x()` and
+    `x(borrowed)` plus inline borrow forms such as `location(values).x()` and `x(location(values))` now keep that same
     deterministic pending contract instead of degrading to a target-shape error, and
     inline location-wrapped borrowed helper-return forms such as
-    `location(pickBorrowed(...)).x()` and `x(location(pickBorrowed(...)))` now keep it too. Mutating standalone/indexed attempts
+    `pickBorrowed(...).x()`, `x(pickBorrowed(...))`, `location(pickBorrowed(...)).x()`, and
+    `x(location(pickBorrowed(...)))` now keep it too. Mutating standalone/indexed attempts
     such as `assign(values.x(), next)`, `assign(x(values), next)`, `assign(values.y()[i], next)`,
     `assign(dereference(pickBorrowed(...)).y()[i], next)`, and
     `assign(location(pickBorrowed(...)).y()[i], next)` now keep that same pending field-view contract instead of

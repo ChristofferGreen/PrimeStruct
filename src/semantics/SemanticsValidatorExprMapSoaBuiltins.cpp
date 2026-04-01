@@ -444,6 +444,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           error_ = "soa_vector field views require value.<field>()[index] syntax: " + expr.name;
           return false;
         }
+        error_ = soaFieldViewPendingDiagnostic(expr.name);
+        return false;
       }
     }
   }

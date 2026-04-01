@@ -1269,6 +1269,29 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
+TEST_CASE("experimental soa_vector borrowed local field-view call-form reports pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  [Reference<SoaVector<Particle>>] borrowed{location(values)}
+  x(borrowed)
+  x(dereference(borrowed))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
 TEST_CASE("experimental soa_vector inline location field-view methods report pending diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
@@ -1315,6 +1338,33 @@ main() {
   location(pickBorrowed(location(values))).x()
   x(location(pickBorrowed(location(values))))
   x(dereference(location(pickBorrowed(location(values)))))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
+TEST_CASE("experimental soa_vector borrowed helper-return field-view call-form reports pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  x(pickBorrowed(location(values)))
+  x(dereference(pickBorrowed(location(values))))
   return(0i32)
 }
 )";

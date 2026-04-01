@@ -858,10 +858,12 @@ validator-side plus monomorph-side fallback probes are gone entirely. The compil
 construction/parsing instead of open-coded literals, and the post-`validateExpr(...)`
 binding/return/call-argument plus return-inference reprobes are gone too. Read-only
 experimental wrapper standalone borrowed field-view attempts such as `borrowed.field()` plus
-inline borrow forms such as `location(values).field()` / `field(location(values))` now keep
-the same pending `soa_vector field views are not implemented yet: <field>` diagnostic as direct
-wrapper attempts, and inline location-wrapped borrowed helper-return forms such as
-`location(pickBorrowed(...)).field()` / `field(location(pickBorrowed(...)))` now keep it too.
+borrowed call-form attempts such as `field(borrowed)` plus inline borrow forms such as
+`location(values).field()` / `field(location(values))` now keep the same pending
+`soa_vector field views are not implemented yet: <field>` diagnostic as direct wrapper attempts,
+and helper-return plus inline location-wrapped borrowed helper-return forms such as
+`field(pickBorrowed(...))`, `location(pickBorrowed(...)).field()`, and
+`field(location(pickBorrowed(...)))` now keep it too.
 Mutating standalone/indexed attempts such as `assign(value.field(), next)` and
 `assign(value.field()[i], next)` now also keep that same pending field-view diagnostic on direct,
 borrowed helper-return, and inline location-wrapped borrowed helper-return receivers instead of

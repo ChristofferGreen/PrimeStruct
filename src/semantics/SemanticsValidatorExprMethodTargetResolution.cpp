@@ -1494,6 +1494,51 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return canonical;
   };
+  auto resolveSoaVectorOrExperimentalBorrowedReceiver = [&](const Expr &candidate,
+                                                            std::string &elemTypeOut) -> bool {
+    if (resolveSoaVectorTarget(candidate, elemTypeOut)) {
+      return true;
+    }
+    auto extractBorrowedBinding = [&](const BindingInfo &binding) -> bool {
+      const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+      if (normalizedType != "Reference" && normalizedType != "Pointer") {
+        return false;
+      }
+      return extractExperimentalSoaVectorElementType(binding, elemTypeOut);
+    };
+    auto assignBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
+      const std::string normalizedType = normalizeBindingTypeName(typeText);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        bindingOut.typeName = normalizeBindingTypeName(base);
+        bindingOut.typeTemplateArg = argText;
+      } else {
+        bindingOut.typeName = normalizedType;
+        bindingOut.typeTemplateArg.clear();
+      }
+    };
+    if (candidate.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+        return extractBorrowedBinding(*paramBinding);
+      }
+      if (auto it = locals.find(candidate.name); it != locals.end()) {
+        return extractBorrowedBinding(it->second);
+      }
+      return false;
+    }
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+      return false;
+    }
+    BindingInfo inferredBinding;
+    std::string inferredTypeText;
+    if (!inferQueryExprTypeText(candidate, params, locals, inferredTypeText) ||
+        inferredTypeText.empty()) {
+      return false;
+    }
+    assignBindingFromTypeText(inferredTypeText, inferredBinding);
+    return extractBorrowedBinding(inferredBinding);
+  };
   auto preferredBufferMethodTarget = [&](const std::string &helperName) {
     const std::string canonical = "/std/gfx/Buffer/" + helperName;
     const std::string experimental = "/std/gfx/experimental/Buffer/" + helperName;
@@ -1993,7 +2038,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredSoaToAosMethodTarget());
     }
   }
-  if (resolveSoaVectorTarget(receiver, elemType)) {
+  if (resolveSoaVectorOrExperimentalBorrowedReceiver(receiver, elemType)) {
     const std::string normalizedElemType = normalizeBindingTypeName(elemType);
     std::string currentNamespace;
     if (!currentValidationContext_.definitionPath.empty()) {
