@@ -841,7 +841,9 @@ count dispatch instead of depending on the old raw `/to_aos` call shape. C++ emi
 vector-target classification now also treats those same direct canonical
 `/std/collections/soa_vector/to_aos` call results as vector targets for nested helper dispatch
 instead of depending on bound vector temporaries, and the shared native/VM vector-capacity
-classifier now does the same for nested backend helper dispatch. Imported root bare/direct/method
+classifier now does the same for nested backend helper dispatch. Those backend-side classifier
+checks now share one generic AST call-path helper instead of each backend file carrying its own
+`soa_vector/to_aos` matcher. Imported root bare/direct/method
 builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the same canonical
 semantic rewrite and then stop later on the remaining conversion mismatch between builtin
 `/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the

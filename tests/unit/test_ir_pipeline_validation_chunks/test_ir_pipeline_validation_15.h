@@ -564,11 +564,19 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
 
   const std::filesystem::path emitterBuiltinCollectionsPath =
       repoRoot / "src" / "emitter" / "EmitterBuiltinCollectionInferenceHelpers.cpp";
+  const std::filesystem::path astCallPathHelpersPath =
+      repoRoot / "include" / "primec" / "AstCallPathHelpers.h";
   REQUIRE(std::filesystem::exists(emitterBuiltinCollectionsPath));
+  REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
   const std::string source = readText(emitterBuiltinCollectionsPath);
+  const std::string astCallPathHelpersSource = readText(astCallPathHelpersPath);
 
-  CHECK(source.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") != std::string::npos);
-  CHECK(source.find("std/collections/soa_vector/to_aos") != std::string::npos);
+  CHECK(astCallPathHelpersSource.find("bool isCanonicalCollectionHelperCall(") != std::string::npos);
+  CHECK(astCallPathHelpersSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
+  CHECK(source.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") == std::string::npos);
+  CHECK(source.find("isCanonicalCollectionHelperCall(target, \"std/collections/soa_vector\", \"to_aos\", 1)") !=
+        std::string::npos);
+  CHECK(source.find("std/collections/soa_vector/to_aos") == std::string::npos);
   CHECK(source.find("isSimpleCallName(target, \"to_aos\")") == std::string::npos);
   CHECK(source.find("std/collections/soa_vector/get") == std::string::npos);
   CHECK(source.find("std/collections/soa_vector/ref") == std::string::npos);

@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "IrLowererHelpers.h"
+#include "primec/AstCallPathHelpers.h"
 
 namespace primec::ir_lowerer::count_access_detail {
 
@@ -20,22 +21,6 @@ bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
          helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
          helperName == "remove_at" || helperName == "remove_swap";
-}
-
-bool isCanonicalSoaToAosHelperCall(const Expr &expr) {
-  if (expr.kind != Expr::Kind::Call || expr.args.size() != 1 || expr.name.empty()) {
-    return false;
-  }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  if (normalized.rfind("std/collections/soa_vector/to_aos", 0) == 0) {
-    return true;
-  }
-  return normalized == "to_aos" &&
-         (expr.namespacePrefix == "/std/collections/soa_vector" ||
-          expr.namespacePrefix == "std/collections/soa_vector");
 }
 
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn);
@@ -69,7 +54,7 @@ bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
     if (getBuiltinCollectionName(target, collection) && collection == "vector") {
       return target.templateArgs.size() == 1;
     }
-    if (isCanonicalSoaToAosHelperCall(target) && target.args.size() == 1) {
+    if (isCanonicalCollectionHelperCall(target, "std/collections/soa_vector", "to_aos", 1)) {
       return isSoaVectorTargetImpl(target.args.front(), localsIn);
     }
   }

@@ -23,22 +23,30 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
   const std::filesystem::path inlineDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
+  const std::filesystem::path countAccessClassifiersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessClassifiers.cpp";
   const std::filesystem::path nativeTailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
+  const std::filesystem::path astCallPathHelpersPath =
+      repoRoot / "include" / "primec" / "AstCallPathHelpers.h";
   REQUIRE(std::filesystem::exists(callHelpersPath));
   REQUIRE(std::filesystem::exists(accessTargetResolutionPath));
   REQUIRE(std::filesystem::exists(accessLoadHelpersPath));
   REQUIRE(std::filesystem::exists(indexedAccessEmitPath));
   REQUIRE(std::filesystem::exists(callResolutionPath));
   REQUIRE(std::filesystem::exists(inlineDispatchPath));
+  REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
+  REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
   const std::string callHelpersSource = readText(callHelpersPath);
   const std::string accessTargetResolutionSource = readText(accessTargetResolutionPath);
   const std::string accessLoadHelpersSource = readText(accessLoadHelpersPath);
   const std::string indexedAccessEmitSource = readText(indexedAccessEmitPath);
   const std::string callResolutionSource = readText(callResolutionPath);
   const std::string inlineDispatchSource = readText(inlineDispatchPath);
+  const std::string countAccessClassifiersSource = readText(countAccessClassifiersPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
+  const std::string astCallPathHelpersSource = readText(astCallPathHelpersPath);
 
   CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
         std::string::npos);
@@ -236,8 +244,12 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn)") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") !=
+  CHECK(inlineDispatchSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") ==
         std::string::npos);
+  CHECK(inlineDispatchSource.find(
+            "isCanonicalCollectionHelperCall(expr, \"std/collections/soa_vector\", \"to_aos\", 1)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
   CHECK(inlineDispatchSource.find("isSimpleCallName(expr, \"to_aos\")") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/get") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/ref") == std::string::npos);
@@ -256,6 +268,16 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") ==
         std::string::npos);
+
+  CHECK(countAccessClassifiersSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") ==
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find(
+            "isCanonicalCollectionHelperCall(target, \"std/collections/soa_vector\", \"to_aos\", 1)") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
+
+  CHECK(astCallPathHelpersSource.find("bool isCanonicalCollectionHelperCall(") != std::string::npos);
+  CHECK(astCallPathHelpersSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
 
   CHECK(nativeTailDispatchSource.find("bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName)") ==
         std::string::npos);

@@ -1,26 +1,11 @@
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterBuiltinCollectionInferenceInternal.h"
 #include "EmitterHelpers.h"
+#include "primec/AstCallPathHelpers.h"
 
 namespace primec::emitter {
 
 namespace {
-
-bool isCanonicalSoaToAosHelperCall(const Expr &expr) {
-  if (expr.kind != Expr::Kind::Call || expr.args.size() != 1 || expr.name.empty()) {
-    return false;
-  }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  if (normalized.rfind("std/collections/soa_vector/to_aos", 0) == 0) {
-    return true;
-  }
-  return normalized == "to_aos" &&
-         (expr.namespacePrefix == "/std/collections/soa_vector" ||
-          expr.namespacePrefix == "std/collections/soa_vector");
-}
 
 bool isSoaVectorTypeNameLocal(const std::string &typeName) {
   std::string normalized = typeName;
@@ -105,7 +90,7 @@ bool isVectorValueLocal(const Expr &target,
     if (getBuiltinCollectionName(target, collection) && collection == "vector") {
       return target.templateArgs.size() == 1;
     }
-    if (isCanonicalSoaToAosHelperCall(target) && target.args.size() == 1) {
+    if (isCanonicalCollectionHelperCall(target, "std/collections/soa_vector", "to_aos", 1)) {
       return isSoaVectorValueLocal(target.args.front(), localTypes);
     }
   }
