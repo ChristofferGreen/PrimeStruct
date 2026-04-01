@@ -1068,17 +1068,21 @@ main() {
   [Particle] firstBare{get(holder.pickBorrowed(location(values)), 1i32)}
   [Particle] secondBare{ref(dereference(holder.pickBorrowed(location(values))), 0i32)}
   [i32] countBare{count(holder.pickBorrowed(location(values)))}
+  [i32] fieldBareGet{get(holder.pickBorrowed(location(values)), 1i32).y}
+  [i32] fieldBareRef{ref(holder.pickBorrowed(location(values)), 0i32).x}
   [i32] fieldMethod{holder.pickBorrowed(location(values)).y()[1i32]}
   [i32] fieldCall{y(holder.pickBorrowed(location(values)))[0i32]}
   return(plus(plus(first.x, second.x),
               plus(plus(firstBare.x, secondBare.x),
-                   plus(countBare, plus(fieldMethod, fieldCall)))))
+                   plus(countBare,
+                        plus(plus(fieldBareGet, fieldBareRef),
+                             plus(fieldMethod, fieldCall))))))
 }
 )";
   const std::string srcPath =
       writeTemp("vm_experimental_soa_vector_method_like_borrowed_return_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 54);
+  CHECK(runCommand(runCmd) == 73);
 }
 
 TEST_CASE("vm runs inline location method-like borrowed helper-return experimental soa_vector helpers") {
@@ -1119,6 +1123,8 @@ main() {
   [Particle] secondD{ref(dereference(location(holder.pickBorrowed(location(values)))), 1i32)}
   [vector<Particle>] unpackedB{dereference(location(holder.pickBorrowed(location(values)))).to_aos()}
   [i32] countB{dereference(location(holder.pickBorrowed(location(values)))).count()}
+  [i32] fieldBareGet{get(location(holder.pickBorrowed(location(values))), 1i32).y}
+  [i32] fieldBareRef{ref(dereference(location(holder.pickBorrowed(location(values)))), 0i32).x}
   [int] helpersA{plus(plus(firstA.x, secondA.x), plus(firstC.x, secondC.y))}
   [int] unpackedCountsA{plus(count(unpackedA), countA)}
   [int] helpersB{plus(plus(firstB.x, secondB.x), plus(firstD.x, secondD.y))}
@@ -1133,7 +1139,8 @@ main() {
     plus(helpersA,
          plus(unpackedCountsA,
               plus(helpersB,
-                   plus(unpackedCountsB, fieldTotals))))
+                   plus(unpackedCountsB,
+                        plus(plus(fieldBareGet, fieldBareRef), fieldTotals)))))
   }
   return(total)
 }
@@ -1141,7 +1148,7 @@ main() {
   const std::string srcPath = writeTemp(
       "vm_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 116);
+  CHECK(runCommand(runCmd) == 135);
 }
 
 TEST_CASE("vm runs inline location borrowed helper-return experimental soa_vector helpers") {

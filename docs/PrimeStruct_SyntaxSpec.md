@@ -887,8 +887,11 @@ inline location-wrapped method-like struct-helper return `location(holder.pickBo
 and explicitly dereferenced borrowed helper-return
 `dereference(pickBorrowed(...)).field()[i]` reads onto the existing
 `soaVectorGet<T>(..., i).field` helper path for both single-field and multi-field structs.
-Direct bare helper-field reads such as `ref(values, i).field` and `get(values, i).field` now
-also ride that same generic struct-field path, and that successful read path no
+Direct bare helper-field reads such as `ref(values, i).field`, `get(values, i).field`,
+bound method-like helper-return forms such as `[i32] field{get(holder.pickBorrowed(...), i).field}`,
+and bound inline location-wrapped method-like helper-return forms such as
+`[i32] field{get(location(holder.pickBorrowed(...)), i).field}` now also ride that same
+generic struct-field path, and that successful read path no
 longer depends on lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef`
 routing branches. The compiler-owned direct
 unsupported field-view path still remains for standalone borrowed or mutating field-view

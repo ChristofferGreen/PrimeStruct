@@ -555,9 +555,12 @@ main() {
   values.push(Particle(9i32, 12i32))
   [Holder] holder{Holder()}
   [Particle] picked{get(holder.pickBorrowed(location(values)), 1i32)}
+  [i32] fieldBareGet{get(holder.pickBorrowed(location(values)), 1i32).y}
+  [i32] fieldBareRef{ref(holder.pickBorrowed(location(values)), 0i32).x}
   return(plus(picked.x,
-              plus(holder.pickBorrowed(location(values)).y()[0i32],
-                   y(holder.pickBorrowed(location(values)))[1i32])))
+              plus(plus(fieldBareGet, fieldBareRef),
+                   plus(holder.pickBorrowed(location(values)).y()[0i32],
+                        y(holder.pickBorrowed(location(values)))[1i32]))))
 }
 )";
   const std::string srcPath = writeTemp(
@@ -575,10 +578,14 @@ main() {
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
   CHECK(ast.find("get(holder.pickBorrowed(location(values)),", mainPos) == std::string::npos);
+  CHECK(ast.find("ref(holder.pickBorrowed(location(values)),", mainPos) == std::string::npos);
   CHECK(ast.find("holder.pickBorrowed(location(values)).get(1)", mainPos) == std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1)", mainPos) != std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(0)", mainPos) != std::string::npos);
   CHECK(ast.find("holder.pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
   CHECK(ast.find("y(holder.pickBorrowed(location(values)))[", mainPos) == std::string::npos);
+  CHECK(ast.find(".get(1).y", mainPos) != std::string::npos);
+  CHECK(ast.find(".ref(0).x", mainPos) != std::string::npos);
   CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
@@ -616,6 +623,8 @@ main() {
   [i32] countA{location(holder.pickBorrowed(location(values))).count()}
   [Particle] firstB{dereference(location(holder.pickBorrowed(location(values)))).get(0i32)}
   [Particle] secondB{dereference(location(holder.pickBorrowed(location(values)))).ref(1i32)}
+  [i32] fieldBareGet{get(location(holder.pickBorrowed(location(values))), 1i32).y}
+  [i32] fieldBareRef{ref(dereference(location(holder.pickBorrowed(location(values)))), 0i32).x}
   [vector<Particle>] unpackedB{dereference(location(holder.pickBorrowed(location(values)))).to_aos()}
   [i32] countB{dereference(location(holder.pickBorrowed(location(values)))).count()}
   [int] fieldTotals{
@@ -630,7 +639,8 @@ main() {
               plus(countA,
                    plus(plus(firstB.x, secondB.x),
                         plus(count(unpackedB),
-                             plus(countB, fieldTotals))))))
+                             plus(countB,
+                                  plus(plus(fieldBareGet, fieldBareRef), fieldTotals)))))))
   }
   return(total)
 }
@@ -651,6 +661,9 @@ main() {
   CHECK(mainPos != std::string::npos);
   CHECK(ast.find("location(holder.pickBorrowed(location(values))).get(", mainPos) == std::string::npos);
   CHECK(ast.find("location(holder.pickBorrowed(location(values))).ref(", mainPos) == std::string::npos);
+  CHECK(ast.find("get(location(holder.pickBorrowed(location(values))),", mainPos) == std::string::npos);
+  CHECK(ast.find("ref(dereference(location(holder.pickBorrowed(location(values)))),", mainPos) ==
+        std::string::npos);
   CHECK(ast.find("location(holder.pickBorrowed(location(values))).to_aos()", mainPos) ==
         std::string::npos);
   CHECK(ast.find("location(holder.pickBorrowed(location(values))).count()", mainPos) ==
@@ -672,6 +685,10 @@ main() {
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(0)", mainPos) !=
         std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(1)", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1).y", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(0).x", mainPos) !=
         std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).count()", mainPos) !=
         std::string::npos);

@@ -2483,6 +2483,48 @@ std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
   return std::nullopt;
 }
 
+bool normalizeExperimentalSoaBorrowedHelperMethodCall(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_set<std::string> &structPaths,
+    const std::string &definitionNamespace) {
+  if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
+    return false;
+  }
+  const std::string normalizedMethodName = [&]() {
+    std::string name = expr.name;
+    if (!name.empty() && name.front() == '/') {
+      name.erase(name.begin());
+    }
+    if (name.rfind("std/collections/soa_vector/", 0) == 0) {
+      name = name.substr(std::string("std/collections/soa_vector/").size());
+    } else if (name.rfind("soa_vector/", 0) == 0) {
+      name = name.substr(std::string("soa_vector/").size());
+    }
+    return name;
+  }();
+  if (normalizedMethodName != "count" &&
+      normalizedMethodName != "get" &&
+      normalizedMethodName != "ref" &&
+      normalizedMethodName != "to_aos") {
+    return false;
+  }
+  if (!expr.isMethodCall && expr.name.find('/') != std::string::npos) {
+    return false;
+  }
+  const auto normalizedReceiver = normalizeExperimentalSoaBorrowedHelperReceiver(
+      expr.args.front(), bindings, soaVectorReturnDefinitions, definitionNamespace, structPaths);
+  if (!normalizedReceiver.has_value()) {
+    return false;
+  }
+  expr.args.front() = *normalizedReceiver;
+  if (!expr.isMethodCall) {
+    expr.isMethodCall = true;
+  }
+  return true;
+}
+
 void rewriteExperimentalSoaInlineBorrowMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
@@ -2524,39 +2566,16 @@ void rewriteExperimentalSoaInlineBorrowMethodExpr(
     rewriteExperimentalSoaInlineBorrowMethodExpr(
         arg, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
   }
-  if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
+  if (expr.kind != Expr::Kind::Call) {
     return;
   }
-  const std::string normalizedMethodName = [&]() {
-    std::string name = expr.name;
-    if (!name.empty() && name.front() == '/') {
-      name.erase(name.begin());
-    }
-    if (name.rfind("std/collections/soa_vector/", 0) == 0) {
-      name = name.substr(std::string("std/collections/soa_vector/").size());
-    } else if (name.rfind("soa_vector/", 0) == 0) {
-      name = name.substr(std::string("soa_vector/").size());
-    }
-    return name;
-  }();
-  if (normalizedMethodName != "count" &&
-      normalizedMethodName != "get" &&
-      normalizedMethodName != "ref" &&
-      normalizedMethodName != "to_aos") {
-    return;
+  if (expr.isFieldAccess && !expr.args.empty()) {
+    Expr &receiverExpr = expr.args.front();
+    normalizeExperimentalSoaBorrowedHelperMethodCall(
+        receiverExpr, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
   }
-  if (!expr.isMethodCall && expr.name.find('/') != std::string::npos) {
-    return;
-  }
-  const auto normalizedReceiver = normalizeExperimentalSoaBorrowedHelperReceiver(
-      expr.args.front(), bindings, soaVectorReturnDefinitions, definitionNamespace, structPaths);
-  if (!normalizedReceiver.has_value()) {
-    return;
-  }
-  expr.args.front() = *normalizedReceiver;
-  if (!expr.isMethodCall) {
-    expr.isMethodCall = true;
-  }
+  normalizeExperimentalSoaBorrowedHelperMethodCall(
+      expr, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
 }
 
 bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &error) {
