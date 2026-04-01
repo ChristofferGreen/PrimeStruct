@@ -1014,6 +1014,49 @@ main() {
   CHECK(runCommand(runCmd) == 38);
 }
 
+TEST_CASE("vm runs method-like borrowed helper-return experimental soa_vector helper surfaces") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  [Particle] first{holder.pickBorrowed(location(values)).get(0i32)}
+  [Particle] second{holder.pickBorrowed(location(values)).ref(1i32)}
+  [Particle] firstBare{get(holder.pickBorrowed(location(values)), 1i32)}
+  [Particle] secondBare{ref(dereference(holder.pickBorrowed(location(values))), 0i32)}
+  [i32] countBare{count(holder.pickBorrowed(location(values)))}
+  [i32] fieldMethod{holder.pickBorrowed(location(values)).y()[1i32]}
+  [i32] fieldCall{y(holder.pickBorrowed(location(values)))[0i32]}
+  return(plus(plus(first.x, second.x),
+              plus(plus(firstBare.x, secondBare.x),
+                   plus(countBare, plus(fieldMethod, fieldCall)))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_soa_vector_method_like_borrowed_return_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 54);
+}
+
 TEST_CASE("vm runs inline location borrowed helper-return experimental soa_vector helpers") {
   const std::string source = R"(
 import /std/collections/*

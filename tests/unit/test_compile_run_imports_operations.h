@@ -1142,6 +1142,53 @@ main() {
   CHECK(runCommand(exePath) == 38);
 }
 
+TEST_CASE("compiles and runs method-like borrowed helper-return experimental soa_vector helper surfaces in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  [Particle] first{holder.pickBorrowed(location(values)).get(0i32)}
+  [Particle] second{holder.pickBorrowed(location(values)).ref(1i32)}
+  [Particle] firstBare{get(holder.pickBorrowed(location(values)), 1i32)}
+  [Particle] secondBare{ref(dereference(holder.pickBorrowed(location(values))), 0i32)}
+  [i32] countBare{count(holder.pickBorrowed(location(values)))}
+  [i32] fieldMethod{holder.pickBorrowed(location(values)).y()[1i32]}
+  [i32] fieldCall{y(holder.pickBorrowed(location(values)))[0i32]}
+  return(plus(plus(first.x, second.x),
+              plus(plus(firstBare.x, secondBare.x),
+                   plus(countBare, plus(fieldMethod, fieldCall)))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_experimental_soa_vector_method_like_borrowed_return_helpers_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_method_like_borrowed_return_helpers_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 54);
+}
+
 TEST_CASE("compiles and runs inline location borrowed helper-return experimental soa_vector helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

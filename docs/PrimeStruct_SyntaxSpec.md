@@ -873,10 +873,12 @@ degrading to the generic mutable-binding assignment contract, borrowed
 `count(...)`, `get(...)`, `ref(...)`, and `to_aos(...)` now also validate on the existing wrapper
 helper/conversion path for local, parameter, helper-return, inline `location(...)`, inline
 `dereference(location(...))`, and inline location-wrapped borrowed helper-return receivers instead of stopping on raw builtin target mismatch or the
-old helper-return lowerer mismatch. Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
+old helper-return lowerer mismatch. Method-like struct-helper return receivers now also clear that
+same read-only wrapper path for bare `count(...)`, `get(...)`, and `ref(...)`. Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,
 explicitly dereferenced borrowed `dereference(borrowed).field()[i]`, borrowed helper-return `pickBorrowed(...).field()[i]`,
+method-like struct-helper return `holder.pickBorrowed(...).field()[i]` / `field(holder.pickBorrowed(...))[i]`,
 inline location-wrapped borrowed helper-return `location(pickBorrowed(...)).field()[i]` / `field(location(pickBorrowed(...)))[i]`,
 and explicitly dereferenced borrowed helper-return
 `dereference(pickBorrowed(...)).field()[i]` reads onto the existing
