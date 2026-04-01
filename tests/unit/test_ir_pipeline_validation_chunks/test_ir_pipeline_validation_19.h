@@ -238,6 +238,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") !=
         std::string::npos);
+  CHECK(inlineDispatchSource.find("isSimpleCallName(expr, \"to_aos\")") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/get") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/ref") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/count") == std::string::npos);

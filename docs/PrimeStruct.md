@@ -2497,9 +2497,11 @@ plus `values.ref(i)` on top of the current single-column borrowed-slot substrate
 borrowed-return paths now run successfully across the current backends without depending on the
 conversion helper surface. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and
-non-empty wrapper state, while the remaining conversion-specific compiler-owned code is narrowed
-to old root-builtin conversion scaffolding plus invalid-target/user-shadow `to_aos` fallbacks
-rather than the stdlib helper route.
+non-empty wrapper state, and stale post-semantics bare `to_aos(...)` target classification is
+now gone from the shared emitter/lowerer path as well. The remaining conversion-specific
+compiler-owned code is therefore narrowed to the shared canonical `to_aos` conversion-result
+classifier plus invalid-target/user-shadow `to_aos` fallbacks rather than old root-builtin
+direct-call routing outside the stdlib helper path.
 That single-column borrowed-slot substrate is the current completed foothold; the remaining
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental

@@ -105,9 +105,7 @@ bool isVectorValueLocal(const Expr &target,
     if (getBuiltinCollectionName(target, collection) && collection == "vector") {
       return target.templateArgs.size() == 1;
     }
-    if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
-         isCanonicalSoaToAosHelperCall(target)) &&
-        target.args.size() == 1) {
+    if (isCanonicalSoaToAosHelperCall(target) && target.args.size() == 1) {
       return isSoaVectorValueLocal(target.args.front(), localTypes);
     }
   }

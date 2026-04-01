@@ -136,9 +136,7 @@ bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
     if (getBuiltinCollectionName(expr, collection) && collection == "vector") {
       return true;
     }
-    if (((!expr.isMethodCall && isSimpleCallName(expr, "to_aos")) ||
-         isCanonicalSoaToAosHelperCall(expr)) &&
-        expr.args.size() == 1) {
+    if (isCanonicalSoaToAosHelperCall(expr) && expr.args.size() == 1) {
       return isSoaVectorTarget(expr.args.front(), localsIn);
     }
   }
