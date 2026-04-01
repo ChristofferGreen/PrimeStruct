@@ -374,6 +374,28 @@ bool validateVectorStatementHelperTarget(
   error = vectorHelper + " requires mutable vector binding";
   return false;
 }
+
+bool isImportedBuiltinSoaMethodMutatorCall(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath) {
+  if (!stmt.isMethodCall || stmt.args.empty()) {
+    return false;
+  }
+  if (!(isSimpleCallName(stmt, "push") || isSimpleCallName(stmt, "reserve"))) {
+    return false;
+  }
+  const Expr &target = stmt.args.front();
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    return it != localsIn.end() && it->second.isSoaVector;
+  }
+  if (target.kind == Expr::Kind::Call && target.isFieldAccess &&
+      inferStructExprPath(target, localsIn) == "/soa_vector") {
+    return true;
+  }
+  return false;
+}
 } // namespace
 
 SignedLiteralIntegerEvalResult tryEvaluateSignedLiteralIntegerExpr(const Expr &expr, int64_t &out) {
@@ -602,6 +624,12 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
   if (callStmt.args.size() != expectedArgs) {
     error = expectedArgs == 1 ? vectorHelper + " requires exactly one argument"
                               : vectorHelper + " requires exactly two arguments";
+    return VectorStatementHelperPrepareResult::Error;
+  }
+
+  if (isImportedBuiltinSoaMethodMutatorCall(callStmt, localsIn, inferStructExprPath)) {
+    error = "struct parameter type mismatch for /std/collections/soa_vector/" + vectorHelper +
+            " parameter values: expected /std/collections/experimental_soa_vector/SoaVector__ specialization";
     return VectorStatementHelperPrepareResult::Error;
   }
 

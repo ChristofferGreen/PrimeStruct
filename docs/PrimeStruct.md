@@ -2524,11 +2524,12 @@ semantic rewrite and then stop later on the remaining conversion mismatch betwee
 `/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the
 stdlib conversion implementation, instead of failing earlier against the wrapper helper itself.
 Imported raw-builtin bare/method canonical `count/get/ref/push/reserve` forms now also clear
-semantics on that same canonical helper surface, and imported method `get(...).field` /
-`ref(...).field` now resolves the element struct before lowering. Those raw-builtin imported
-helper forms still stop later on the remaining lowering bridge from builtin `/soa_vector`
-values to experimental wrapper `SoaVector<T>` parameters instead of on the older
-imported method `get/ref` unknown-target gap.
+semantics on that same canonical helper surface, imported method `get(...).field` /
+`ref(...).field` now resolves the element struct before lowering, and imported method
+`push/reserve` now also reaches the same canonical wrapper-mismatch boundary instead of the
+older mutable-vector-binding gap. Those raw-builtin imported helper forms still stop later on
+the remaining lowering bridge from builtin `/soa_vector` values to experimental wrapper
+`SoaVector<T>` parameters instead of on the older imported method `get/ref` unknown-target gap.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, while field-view cleanup is now reduced to the remaining
 direct pending-diagnostic path plus future richer borrowed/mutating behavior because the
