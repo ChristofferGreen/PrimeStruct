@@ -847,7 +847,9 @@ checks now share one generic AST call-path helper instead of each backend file c
 builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the same canonical
 semantic rewrite and then stop later on the remaining conversion mismatch between builtin
 `/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the
-stdlib conversion implementation.
+stdlib conversion implementation. The diagnostic harness now also locks both direct-canonical and
+imported-helper experimental-wrapper `to_aos` forms to that same canonical helper path at
+`ast-semantic`, so the remaining diagnostic/test cleanup is now field-view only.
 The current pending `soa_vector field views are not implemented yet: <field>` and
 `soa_vector borrowed views are not implemented yet: ref` diagnostics now come from shared
 semantics helpers rather than duplicated validator and monomorph string assembly, and the

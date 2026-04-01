@@ -2486,13 +2486,16 @@ field-view follow-ups. Runtime-code helper-call cleanup is now complete because 
 runtime-side helper routing remains outside the semantics/lowering/emitter/backend layers, and
 diagnostic/test helper-call cleanup is now complete as well because direct canonical helper
 coverage plus helper-return bare `get(...)` dump coverage now lock those routing paths in the
-test harnesses. The remaining runtime-code and diagnostic/test cleanup is therefore reduced to
-conversion plus field-view follow-ups, with the runtime-code conversion cleanup itself staged as
-direct-canonical versus imported-helper follow-ups, the diagnostic/test conversion cleanup
-itself staged as direct-canonical versus imported-helper follow-ups, the runtime-code
-field-view cleanup itself staged as pending-diagnostic versus successful-indexing follow-ups,
-and the diagnostic/test field-view cleanup itself staged as a completed pending-diagnostic slice
-plus a separate successful-indexing follow-up. The wrapper now also exposes `soaVectorRef<T>()`
+test harnesses. Diagnostic/test conversion cleanup is now complete too because compile-run,
+IR-lowerer, and semantic-dump coverage lock both direct-canonical and imported-helper wrapper
+`to_aos` forms to the canonical `/std/collections/soa_vector/to_aos` path plus the current
+lowerer `struct parameter type mismatch` boundary. The remaining runtime-code cleanup is therefore
+reduced to conversion plus field-view follow-ups, while the remaining diagnostic/test cleanup is
+reduced to field-view follow-ups only. The runtime-code conversion cleanup itself is still staged
+as direct-canonical versus imported-helper follow-ups, the runtime-code field-view cleanup itself
+is still staged as pending-diagnostic versus successful-indexing follow-ups, and the
+diagnostic/test field-view cleanup itself remains a completed pending-diagnostic slice plus a
+separate successful-indexing follow-up. The wrapper now also exposes `soaVectorRef<T>()`
 plus `values.ref(i)` on top of the current single-column borrowed-slot substrate, and those
 borrowed-return paths now run successfully across the current backends without depending on the
 conversion helper surface. The pending `soa_vector` field-view and borrowed-view diagnostics now also route through shared

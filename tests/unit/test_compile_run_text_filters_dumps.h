@@ -285,6 +285,75 @@ main() {
   CHECK(ast.find("/to_aos(values)", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic keeps direct canonical experimental soa_vector to_aos helper path") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
+  return(count(unpacked))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_direct_canonical_experimental_soa_vector_to_aos.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_direct_canonical_experimental_soa_vector_to_aos.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/to_aos__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
+        std::string::npos);
+}
+
+TEST_CASE("dump ast-semantic keeps imported experimental soa_vector to_aos helper path") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [vector<Particle>] unpacked{to_aos(values)}
+  return(count(unpacked))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_imported_experimental_soa_vector_to_aos.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_imported_experimental_soa_vector_to_aos.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/to_aos__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("to_aos(values)", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast_semantic alias works") {
   const std::string source = R"(
 [return<int>]
