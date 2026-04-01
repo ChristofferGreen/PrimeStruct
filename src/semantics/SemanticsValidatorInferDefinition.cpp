@@ -52,8 +52,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
   BindingInfo exprBinding;
   bool hasExprBinding = false;
   if (valueExpr != nullptr) {
-    if (auto soaPending = builtinSoaPendingExprDiagnostic(*valueExpr, defParams, activeLocals)) {
-      error_ = *soaPending;
+    if (!reportBuiltinSoaPendingExprDiagnostic(*valueExpr, defParams, activeLocals)) {
       return false;
     }
     exprKind = inferExprReturnKind(*valueExpr, defParams, activeLocals);

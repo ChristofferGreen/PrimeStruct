@@ -852,7 +852,8 @@ The current pending `soa_vector field views are not implemented yet: <field>` an
 `soa_vector borrowed views are not implemented yet: ref` diagnostics now come from shared
 semantics helpers rather than duplicated validator and monomorph string assembly, and the
 remaining validator-side plus monomorph-side fallback probes now also share
-`builtinSoaPendingExprDiagnostic(...)` and
+`builtinSoaPendingExprDiagnostic(...)`,
+`reportBuiltinSoaPendingExprDiagnostic(...)`, and
 `builtinSoaPendingExprDiagnosticForMonomorph(...)` helpers. The compiler-owned fallback checks themselves
 still remain until field-view indexing moves onto the experimental substrate.
 Non-empty literals still emit the deterministic unsupported diagnostic

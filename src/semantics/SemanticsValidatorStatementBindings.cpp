@@ -197,8 +197,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return false;
   }
-  if (auto soaPending = builtinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)) {
-    error_ = *soaPending;
+  if (!reportBuiltinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)) {
     return false;
   }
 

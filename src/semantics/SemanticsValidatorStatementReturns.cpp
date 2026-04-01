@@ -97,8 +97,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       return false;
     }
-    if (auto soaPending = builtinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)) {
-      error_ = *soaPending;
+    if (!reportBuiltinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)) {
       return false;
     }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {

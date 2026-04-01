@@ -101,8 +101,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (!validateExpr(params, locals, *arg)) {
       return false;
     }
-    if (auto soaPending = builtinSoaPendingExprDiagnostic(*arg, params, locals)) {
-      error_ = *soaPending;
+    if (!reportBuiltinSoaPendingExprDiagnostic(*arg, params, locals)) {
       return false;
     }
   }
@@ -113,8 +112,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (!validateExpr(params, locals, *arg)) {
       return false;
     }
-    if (auto soaPending = builtinSoaPendingExprDiagnostic(*arg, params, locals)) {
-      error_ = *soaPending;
+    if (!reportBuiltinSoaPendingExprDiagnostic(*arg, params, locals)) {
       return false;
     }
   }

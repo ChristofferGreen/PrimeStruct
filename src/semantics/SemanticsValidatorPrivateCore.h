@@ -104,6 +104,10 @@
       const Expr &expr,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals) const;
+  bool reportBuiltinSoaPendingExprDiagnostic(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   bool graphBindingIsUsable(const BindingInfo &binding) const;
   bool shouldBypassGraphBindingLookup(const Expr &candidate) const;
   bool hasDirectExperimentalVectorImport() const;
