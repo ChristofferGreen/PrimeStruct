@@ -461,46 +461,68 @@ std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBindingI
   return std::nullopt;
 }
 
-std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBinding(const Definition &def) {
-  return extractExperimentalSoaVectorReturnBindingImpl(def, false);
-}
-
 std::optional<semantics::BindingInfo> extractExperimentalSoaVectorOrBorrowedReturnBinding(
     const Definition &def) {
   return extractExperimentalSoaVectorReturnBindingImpl(def, true);
 }
 
 bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics::BindingInfo &binding,
+                                                                const std::unordered_map<std::string, std::string>
+                                                                    &specializedSoaVectorElementTypes,
                                                                 std::string &elemTypeOut) {
   auto extractFromTypeText = [&](std::string normalizedType) {
     while (true) {
       std::string base;
       std::string argText;
-      if (!semantics::splitTemplateTypeName(normalizedType, base, argText) || base.empty()) {
-        return false;
-      }
-      base = semantics::normalizeBindingTypeName(base);
-      if (base == "Reference" || base == "Pointer") {
-        std::vector<std::string> args;
-        if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
-          return false;
+      if (semantics::splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+        base = semantics::normalizeBindingTypeName(base);
+        if (base == "Reference" || base == "Pointer") {
+          std::vector<std::string> args;
+          if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+            return false;
+          }
+          normalizedType = semantics::normalizeBindingTypeName(args.front());
+          continue;
         }
-        normalizedType = semantics::normalizeBindingTypeName(args.front());
-        continue;
-      }
-      if (!base.empty() && base.front() == '/') {
-        base.erase(base.begin());
-      }
-      if ((base == "SoaVector" || base == "std/collections/experimental_soa_vector/SoaVector") &&
-          !argText.empty()) {
-        std::vector<std::string> args;
-        if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
-          return false;
+        if (!base.empty() && base.front() == '/') {
+          base.erase(base.begin());
         }
-        elemTypeOut = args.front();
+        if ((base == "SoaVector" || base == "std/collections/experimental_soa_vector/SoaVector") &&
+            !argText.empty()) {
+          std::vector<std::string> args;
+          if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+            return false;
+          }
+          elemTypeOut = args.front();
+          return true;
+        }
+      }
+
+      std::string resolvedPath = normalizedType;
+      if (!resolvedPath.empty() && resolvedPath.front() != '/') {
+        resolvedPath.insert(resolvedPath.begin(), '/');
+      }
+      auto specializedIt = specializedSoaVectorElementTypes.find(resolvedPath);
+      if (specializedIt != specializedSoaVectorElementTypes.end()) {
+        elemTypeOut = specializedIt->second;
         return true;
       }
-      return false;
+      std::string normalizedResolvedPath = semantics::normalizeBindingTypeName(resolvedPath);
+      if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
+        normalizedResolvedPath.erase(normalizedResolvedPath.begin());
+      }
+      if (normalizedResolvedPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+        return false;
+      }
+      auto normalizedIt = specializedSoaVectorElementTypes.find("/" + normalizedResolvedPath);
+      if (normalizedIt == specializedSoaVectorElementTypes.end()) {
+        normalizedIt = specializedSoaVectorElementTypes.find(normalizedResolvedPath);
+      }
+      if (normalizedIt == specializedSoaVectorElementTypes.end()) {
+        return false;
+      }
+      elemTypeOut = normalizedIt->second;
+      return true;
     }
   };
 
@@ -510,6 +532,138 @@ bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics:
   }
   return extractFromTypeText(
       semantics::normalizeBindingTypeName(binding.typeName + "<" + binding.typeTemplateArg + ">"));
+}
+
+bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics::BindingInfo &binding,
+                                                                std::string &elemTypeOut) {
+  static const std::unordered_map<std::string, std::string> emptySpecializedSoaVectorElementTypes;
+  return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
+      binding, emptySpecializedSoaVectorElementTypes, elemTypeOut);
+}
+
+bool extractExperimentalSoaColumnElementTypeFromSpecializedDefinition(
+    const Definition &def,
+    std::string &elemTypeOut) {
+  elemTypeOut.clear();
+  if (def.fullPath.rfind("/std/collections/experimental_soa_storage/SoaColumn__", 0) != 0) {
+    return false;
+  }
+  for (const auto &fieldExpr : def.statements) {
+    if (!fieldExpr.isBinding || fieldExpr.name != "data") {
+      continue;
+    }
+    semantics::BindingInfo fieldBinding;
+    std::optional<std::string> restrictType;
+    std::string parseError;
+    static const std::unordered_set<std::string> emptyStructTypes;
+    static const std::unordered_map<std::string, std::string> emptyImportAliases;
+    if (!semantics::parseBindingInfo(fieldExpr,
+                                     def.namespacePrefix,
+                                     emptyStructTypes,
+                                     emptyImportAliases,
+                                     fieldBinding,
+                                     restrictType,
+                                     parseError)) {
+      continue;
+    }
+    if (semantics::normalizeBindingTypeName(fieldBinding.typeName) != "Pointer" ||
+        fieldBinding.typeTemplateArg.empty()) {
+      continue;
+    }
+    std::string pointeeBase;
+    std::string pointeeArgText;
+    if (!semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(fieldBinding.typeTemplateArg),
+                                          pointeeBase,
+                                          pointeeArgText) ||
+        semantics::normalizeBindingTypeName(pointeeBase) != "uninitialized") {
+      continue;
+    }
+    std::vector<std::string> pointeeArgs;
+    if (!semantics::splitTopLevelTemplateArgs(pointeeArgText, pointeeArgs) ||
+        pointeeArgs.size() != 1) {
+      continue;
+    }
+    elemTypeOut = pointeeArgs.front();
+    return true;
+  }
+  return false;
+}
+
+bool extractExperimentalSoaVectorElementTypeFromSpecializedDefinition(
+    const Definition &def,
+    const std::unordered_map<std::string, const Definition *> &definitionMap,
+    std::string &elemTypeOut) {
+  elemTypeOut.clear();
+  if (def.fullPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+    return false;
+  }
+  for (const auto &fieldExpr : def.statements) {
+    if (!fieldExpr.isBinding || fieldExpr.name != "storage") {
+      continue;
+    }
+    semantics::BindingInfo fieldBinding;
+    std::optional<std::string> restrictType;
+    std::string parseError;
+    static const std::unordered_set<std::string> emptyStructTypes;
+    static const std::unordered_map<std::string, std::string> emptyImportAliases;
+    if (!semantics::parseBindingInfo(fieldExpr,
+                                     def.namespacePrefix,
+                                     emptyStructTypes,
+                                     emptyImportAliases,
+                                     fieldBinding,
+                                     restrictType,
+                                     parseError)) {
+      continue;
+    }
+    std::string normalizedFieldType = semantics::normalizeBindingTypeName(fieldBinding.typeName);
+    if (!normalizedFieldType.empty() && normalizedFieldType.front() == '/') {
+      normalizedFieldType.erase(normalizedFieldType.begin());
+    }
+    if (!fieldBinding.typeTemplateArg.empty() &&
+        (normalizedFieldType == "SoaColumn" ||
+         normalizedFieldType == "std/collections/experimental_soa_storage/SoaColumn")) {
+      std::vector<std::string> args;
+      if (!semantics::splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, args) || args.size() != 1) {
+        continue;
+      }
+      elemTypeOut = args.front();
+      return true;
+    }
+    std::string resolvedFieldPath = semantics::normalizeBindingTypeName(fieldBinding.typeName);
+    if (!resolvedFieldPath.empty() && resolvedFieldPath.front() != '/') {
+      resolvedFieldPath.insert(resolvedFieldPath.begin(), '/');
+    }
+    auto defIt = definitionMap.find(resolvedFieldPath);
+    if (defIt == definitionMap.end() || defIt->second == nullptr) {
+      continue;
+    }
+    if (!extractExperimentalSoaColumnElementTypeFromSpecializedDefinition(*defIt->second, elemTypeOut)) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+std::unordered_map<std::string, std::string> buildSpecializedExperimentalSoaVectorElementTypes(
+    const Program &program) {
+  std::unordered_map<std::string, const Definition *> definitionMap;
+  for (const Definition &def : program.definitions) {
+    definitionMap[def.fullPath] = &def;
+  }
+
+  std::unordered_map<std::string, std::string> elemTypes;
+  for (const Definition &def : program.definitions) {
+    std::string elemType;
+    if (!extractExperimentalSoaVectorElementTypeFromSpecializedDefinition(def, definitionMap, elemType)) {
+      continue;
+    }
+    elemTypes[def.fullPath] = elemType;
+    if (!def.fullPath.empty() && def.fullPath.front() == '/') {
+      elemTypes[def.fullPath.substr(1)] = elemType;
+    }
+  }
+  return elemTypes;
 }
 
 bool extractExperimentalSoaVectorElementTypeForToAosRewrite(const semantics::BindingInfo &binding,
@@ -2140,6 +2294,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
         &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
     const std::unordered_map<std::string, std::unordered_set<std::string>> &structFieldNames,
     const std::unordered_set<std::string> &structPaths,
     const std::unordered_set<std::string> &visibleSoaFieldHelpers,
@@ -2151,6 +2306,7 @@ void rewriteExperimentalSoaFieldViewIndexStatements(
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
         &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
     const std::unordered_map<std::string, std::unordered_set<std::string>> &structFieldNames,
     const std::unordered_set<std::string> &structPaths,
     const std::unordered_set<std::string> &visibleSoaFieldHelpers,
@@ -2161,6 +2317,7 @@ void rewriteExperimentalSoaFieldViewIndexStatements(
         bindings,
         allBindings,
         soaVectorReturnDefinitions,
+        specializedSoaVectorElementTypes,
         structFieldNames,
         structPaths,
         visibleSoaFieldHelpers,
@@ -2172,6 +2329,7 @@ void rewriteExperimentalSoaFieldViewIndexStatements(
           bodyBindings,
           allBindings,
           soaVectorReturnDefinitions,
+          specializedSoaVectorElementTypes,
           structFieldNames,
           structPaths,
           visibleSoaFieldHelpers,
@@ -2192,6 +2350,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
         &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
     const std::unordered_map<std::string, std::unordered_set<std::string>> &structFieldNames,
     const std::unordered_set<std::string> &structPaths,
     const std::unordered_set<std::string> &visibleSoaFieldHelpers,
@@ -2202,6 +2361,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
         bindings,
         allBindings,
         soaVectorReturnDefinitions,
+        specializedSoaVectorElementTypes,
         structFieldNames,
         structPaths,
         visibleSoaFieldHelpers,
@@ -2239,7 +2399,8 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     receiverNeedsDereference =
         semantics::normalizeBindingTypeName(binding.typeName) == "Reference" ||
         semantics::normalizeBindingTypeName(binding.typeName) == "Pointer";
-    return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(binding, receiverElemType);
+    return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
+        binding, specializedSoaVectorElementTypes, receiverElemType);
   };
   auto candidatePathsForCall = [&](const Expr &callExpr) {
     std::vector<std::string> candidatePaths;
@@ -2353,12 +2514,14 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
   std::unordered_set<std::string> structPaths;
   std::unordered_set<std::string> visibleSoaFieldHelpers;
   std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  const auto specializedSoaVectorElementTypes =
+      buildSpecializedExperimentalSoaVectorElementTypes(program);
 
   for (const Definition &def : program.definitions) {
     if (def.fullPath.rfind("/soa_vector/", 0) == 0) {
       visibleSoaFieldHelpers.insert(def.fullPath);
     }
-    if (auto binding = extractExperimentalSoaVectorReturnBinding(def);
+    if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
       soaVectorReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
@@ -2425,6 +2588,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
         bindings,
         allBindings,
         soaVectorReturnDefinitions,
+        specializedSoaVectorElementTypes,
         structFieldNames,
         structPaths,
         visibleSoaFieldHelpers,
@@ -2435,6 +2599,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
           bindings,
           allBindings,
           soaVectorReturnDefinitions,
+          specializedSoaVectorElementTypes,
           structFieldNames,
           structPaths,
           visibleSoaFieldHelpers,

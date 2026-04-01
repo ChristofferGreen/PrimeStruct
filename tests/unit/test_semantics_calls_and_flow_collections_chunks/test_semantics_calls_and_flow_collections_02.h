@@ -1262,6 +1262,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector stdlib reflected borrowed helper-return index syntax validates") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  return(pickBorrowed(location(values)).y()[1i32])
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*

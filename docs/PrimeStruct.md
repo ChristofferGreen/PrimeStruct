@@ -2374,8 +2374,9 @@ bad_use_after_take() {
     parameter, and helper-return receivers instead of leaking through raw builtin
     target-mismatch diagnostics or the old helper-return conversion mismatch. Read-only field-view indexing now rides on that same helper
     substrate for reflected structs: direct `values.x()[i]` / `values.y()[i]` reads plus
-    borrowed local forms such as `borrowed.y()[i]` and `dereference(borrowed).y()[i]`
-    rewrite to the existing `soaVectorGet<T>(..., i).field` path and run across
+    borrowed local forms such as `borrowed.y()[i]`, `dereference(borrowed).y()[i]`, and
+    borrowed helper-return forms such as `pickBorrowed(...).y()[i]` rewrite to the existing
+    `soaVectorGet<T>(..., i).field` path and run across
     C++/native/VM for both single-field and multi-field wrappers, while standalone borrowed
     or mutating field-view surfaces still keep the pending contract.
     `soaVectorFromAos<T>()`
@@ -2534,10 +2535,10 @@ That single-column borrowed-slot substrate is the current completed foothold; th
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
-the current substrate for direct wrapper receivers, borrowed local shorthand, and explicitly
-dereferenced borrowed local receivers, while borrowed helper-return receivers now share the
-same completed read-only method surface for `get`, `ref`, and `to_aos` as the other borrowed
-wrapper receivers. The remaining
+the current substrate for direct wrapper receivers, borrowed local shorthand, explicitly
+dereferenced borrowed local receivers, and borrowed helper-return receivers, while those same
+borrowed helper-return receivers now also share the completed read-only method surface for
+`get`, `ref`, and `to_aos` with the other borrowed wrapper receivers. The remaining
 field-view work is richer borrowed/mutating behavior rather than backend cleanup for that
 read-only path.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
