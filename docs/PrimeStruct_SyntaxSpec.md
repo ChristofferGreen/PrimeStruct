@@ -856,9 +856,12 @@ semantics helpers rather than duplicated validator and monomorph string assembly
 validator-side plus monomorph-side fallback probes are gone entirely. The compiler-owned
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
 construction/parsing instead of open-coded literals, and the post-`validateExpr(...)`
-binding/return/call-argument plus return-inference reprobes are gone too. The compiler-owned
-direct unsupported field-view path still remains until field-view indexing moves onto the
-experimental substrate.
+binding/return/call-argument plus return-inference reprobes are gone too. Read-only
+experimental wrapper field-view indexing now routes reflected `values.field()[i]` reads onto the
+existing `soaVectorGet<T>(values, i).field` helper path for both single-field and multi-field
+structs, while the compiler-owned direct unsupported field-view path still remains for standalone
+borrowed or mutating field-view surfaces until indexing moves fully onto the experimental
+substrate.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

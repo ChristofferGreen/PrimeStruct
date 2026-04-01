@@ -752,28 +752,58 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("native rejects experimental soa_vector stdlib field-view index syntax with pending diagnostic") {
+TEST_CASE("native compiles and runs experimental soa_vector single-field index syntax") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+ScalarBox() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<ScalarBox> mut] values{soaVectorNew<ScalarBox>()}
+  values.push(ScalarBox(4i32))
+  values.push(ScalarBox(9i32))
+  return(values.x()[1i32])
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_single_field_view.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_single_field_view_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("native compiles and runs experimental soa_vector reflected multi-field index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
 [struct reflect]
 Particle() {
   [i32] x{1i32}
+  [i32] y{2i32}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(values.x()[0i32])
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  return(values.y()[1i32])
 }
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_field_view.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_field_view_err.txt").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_field_view_exe").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
 TEST_CASE("compiles and runs native experimental soa storage helpers") {

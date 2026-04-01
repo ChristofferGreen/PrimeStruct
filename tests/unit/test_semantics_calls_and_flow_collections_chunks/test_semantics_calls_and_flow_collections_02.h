@@ -1035,6 +1035,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector stdlib single-field index syntax validates") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+ScalarBox() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<ScalarBox> mut] values{soaVectorNew<ScalarBox>()}
+  values.push(ScalarBox(4i32))
+  values.push(ScalarBox(9i32))
+  return(values.x()[1i32])
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector stdlib field-view method reports pending diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
@@ -1055,24 +1077,27 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib field-view index syntax reports pending diagnostic") {
+TEST_CASE("experimental soa_vector stdlib reflected multi-field index syntax validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
 [struct reflect]
 Particle() {
   [i32] x{1i32}
+  [i32] y{2i32}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(values.x()[0i32])
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  return(values.y()[1i32])
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa storage helpers validate on explicit column bindings") {

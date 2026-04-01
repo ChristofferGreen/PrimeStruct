@@ -2365,10 +2365,12 @@ bad_use_after_take() {
     wrapper, `soaVectorGet<T>()` plus wrapper method-sugar `values.get(i)` read elements back from that
     column-backed state, and `soaVectorReserve<T>()` /
     `soaVectorPush<T>()` plus wrapper method-sugar `values.reserve(...)` / `values.push(...)` mutate that same
-    wrapper-backed column state in place. Experimental wrapper field-view attempts such as `values.x()` now reach
+    wrapper-backed column state in place. Experimental wrapper field-view attempts such as `values.x()` still reach
     the deterministic pending contract `soa_vector field views are not implemented yet: x` instead of falling through
-    to `unknown call target`, and indexed reads `values.x()[i]` now stop at that same deterministic pending contract
-    while successful field-view indexing itself remains unimplemented. `soaVectorFromAos<T>()`
+    to `unknown call target`, but read-only field-view indexing now rides on that same substrate for reflected
+    structs: `values.x()[i]` and `values.y()[i]` rewrite to the existing
+    `soaVectorGet<T>(values, i).field` path and run across C++/native/VM for both single-field and multi-field
+    wrappers, while standalone borrowed or mutating field-view surfaces still keep the pending contract. `soaVectorFromAos<T>()`
     already targets the same substrate semantically, but backend lowering still stops on the current `* backend
     requires typed bindings` boundary.
     `soaVectorToAos<T>()` now lives in the dedicated `/std/collections/experimental_soa_vector_conversions/*` import
@@ -2520,9 +2522,9 @@ path.
 That single-column borrowed-slot substrate is the current completed foothold; the remaining
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental
-`value.field()[i]` indexing is likewise staged explicitly: first a read-only single-column
-field-view slice on top of the current substrate, then broader arbitrary-field and
-borrowed/mutating field-view behavior.
+`value.field()[i]` indexing now has its first completed read-only single-column slice on top of
+the current substrate, and the remaining field-view work is the broader arbitrary-field plus
+borrowed/mutating behavior.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,

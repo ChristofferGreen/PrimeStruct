@@ -640,27 +640,49 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib field-view index syntax with pending diagnostic") {
+TEST_CASE("vm runs experimental soa_vector single-field index syntax") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+ScalarBox() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<ScalarBox> mut] values{soaVectorNew<ScalarBox>()}
+  values.push(ScalarBox(4i32))
+  values.push(ScalarBox(9i32))
+  return(values.x()[1i32])
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_single_field_view.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
+TEST_CASE("vm runs experimental soa_vector reflected multi-field index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
 [struct reflect]
 Particle() {
   [i32] x{1i32}
+  [i32] y{2i32}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(values.x()[0i32])
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  return(values.y()[1i32])
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_soa_vector_field_view.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_field_view_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
 }
 
 TEST_CASE("runs vm experimental soa storage helpers") {
