@@ -2263,26 +2263,64 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   return true;
 }
 
-std::optional<std::string> inlineExperimentalSoaReceiverName(
+std::vector<std::string> candidatePathsForExprCall(
+    const Expr &callExpr,
+    const std::string &definitionNamespace) {
+  std::vector<std::string> candidatePaths;
+  if (!callExpr.name.empty() && callExpr.name.front() == '/') {
+    candidatePaths.push_back(callExpr.name);
+  } else {
+    if (!callExpr.namespacePrefix.empty()) {
+      candidatePaths.push_back(callExpr.namespacePrefix + "/" + callExpr.name);
+    }
+    if (!definitionNamespace.empty()) {
+      candidatePaths.push_back(definitionNamespace + "/" + callExpr.name);
+    }
+    candidatePaths.push_back("/" + callExpr.name);
+    candidatePaths.push_back(callExpr.name);
+  }
+  return candidatePaths;
+}
+
+std::optional<Expr> normalizeExperimentalSoaInlineBorrowReceiver(
     const Expr &receiver,
-    const std::unordered_map<std::string, semantics::BindingInfo> &bindings) {
-  auto hasExperimentalSoaBinding = [&](const std::string &name) {
-    auto bindingIt = bindings.find(name);
-    if (bindingIt == bindings.end()) {
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> *soaVectorReturnDefinitions,
+    const std::string &definitionNamespace) {
+  auto hasExperimentalSoaBinding = [&](const Expr &expr) {
+    if (expr.kind == Expr::Kind::Name) {
+      const std::string &name = expr.name;
+      auto bindingIt = bindings.find(name);
+      if (bindingIt == bindings.end()) {
+        return false;
+      }
+      std::string ignoredElemType;
+      return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
+          bindingIt->second, ignoredElemType);
+    }
+    if (expr.kind != Expr::Kind::Call || expr.isBinding || soaVectorReturnDefinitions == nullptr) {
       return false;
     }
-    std::string ignoredElemType;
-    return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
-        bindingIt->second, ignoredElemType);
+    for (const std::string &candidatePath : candidatePathsForExprCall(expr, definitionNamespace)) {
+      auto returnIt = soaVectorReturnDefinitions->find(candidatePath);
+      if (returnIt == soaVectorReturnDefinitions->end()) {
+        continue;
+      }
+      std::string ignoredElemType;
+      if (extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
+              returnIt->second, ignoredElemType)) {
+        return true;
+      }
+    }
+    return false;
   };
   if (receiver.kind != Expr::Kind::Call || receiver.isBinding) {
     return std::nullopt;
   }
   if (semantics::isSimpleCallName(receiver, "location") &&
       receiver.args.size() == 1 &&
-      receiver.args.front().kind == Expr::Kind::Name &&
-      hasExperimentalSoaBinding(receiver.args.front().name)) {
-    return receiver.args.front().name;
+      hasExperimentalSoaBinding(receiver.args.front())) {
+    return receiver.args.front();
   }
   if (semantics::isSimpleCallName(receiver, "dereference") &&
       receiver.args.size() == 1) {
@@ -2291,9 +2329,8 @@ std::optional<std::string> inlineExperimentalSoaReceiverName(
         !borrowedExpr.isBinding &&
         semantics::isSimpleCallName(borrowedExpr, "location") &&
         borrowedExpr.args.size() == 1 &&
-        borrowedExpr.args.front().kind == Expr::Kind::Name &&
-        hasExperimentalSoaBinding(borrowedExpr.args.front().name)) {
-      return borrowedExpr.args.front().name;
+        hasExperimentalSoaBinding(borrowedExpr.args.front())) {
+      return borrowedExpr.args.front();
     }
   }
   return std::nullopt;
@@ -2301,16 +2338,22 @@ std::optional<std::string> inlineExperimentalSoaReceiverName(
 
 void rewriteExperimentalSoaInlineBorrowMethodExpr(
     Expr &expr,
-    const std::unordered_map<std::string, semantics::BindingInfo> &bindings);
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace);
 
 void rewriteExperimentalSoaInlineBorrowMethodStatements(
     std::vector<Expr> &statements,
-    std::unordered_map<std::string, semantics::BindingInfo> bindings) {
+    std::unordered_map<std::string, semantics::BindingInfo> bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace) {
   for (Expr &stmt : statements) {
-    rewriteExperimentalSoaInlineBorrowMethodExpr(stmt, bindings);
+    rewriteExperimentalSoaInlineBorrowMethodExpr(
+        stmt, bindings, soaVectorReturnDefinitions, definitionNamespace);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
-      rewriteExperimentalSoaInlineBorrowMethodStatements(stmt.bodyArguments, bodyBindings);
+      rewriteExperimentalSoaInlineBorrowMethodStatements(
+          stmt.bodyArguments, bodyBindings, soaVectorReturnDefinitions, definitionNamespace);
     }
     if (stmt.isBinding) {
       if (auto soaBinding = extractExperimentalSoaVectorFieldViewReceiverBinding(stmt);
@@ -2323,9 +2366,12 @@ void rewriteExperimentalSoaInlineBorrowMethodStatements(
 
 void rewriteExperimentalSoaInlineBorrowMethodExpr(
     Expr &expr,
-    const std::unordered_map<std::string, semantics::BindingInfo> &bindings) {
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::string &definitionNamespace) {
   for (Expr &arg : expr.args) {
-    rewriteExperimentalSoaInlineBorrowMethodExpr(arg, bindings);
+    rewriteExperimentalSoaInlineBorrowMethodExpr(
+        arg, bindings, soaVectorReturnDefinitions, definitionNamespace);
   }
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty()) {
     return;
@@ -2348,20 +2394,27 @@ void rewriteExperimentalSoaInlineBorrowMethodExpr(
       normalizedMethodName != "to_aos") {
     return;
   }
-  const auto receiverName = inlineExperimentalSoaReceiverName(expr.args.front(), bindings);
-  if (!receiverName.has_value()) {
+  const auto normalizedReceiver = normalizeExperimentalSoaInlineBorrowReceiver(
+      expr.args.front(), bindings, &soaVectorReturnDefinitions, definitionNamespace);
+  if (!normalizedReceiver.has_value()) {
     return;
   }
-  Expr normalizedReceiver;
-  normalizedReceiver.kind = Expr::Kind::Name;
-  normalizedReceiver.name = *receiverName;
-  normalizedReceiver.sourceLine = expr.args.front().sourceLine;
-  normalizedReceiver.sourceColumn = expr.args.front().sourceColumn;
-  expr.args.front() = std::move(normalizedReceiver);
+  expr.args.front() = *normalizedReceiver;
 }
 
 bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &error) {
   error.clear();
+  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  for (const Definition &def : program.definitions) {
+    if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
+        binding.has_value()) {
+      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
+        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+      }
+    }
+  }
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
@@ -2370,9 +2423,16 @@ bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &er
         bindings[param.name] = *soaBinding;
       }
     }
-    rewriteExperimentalSoaInlineBorrowMethodStatements(def.statements, bindings);
+    std::string definitionNamespace;
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash != std::string::npos && slash > 0) {
+      definitionNamespace = def.fullPath.substr(0, slash);
+    }
+    rewriteExperimentalSoaInlineBorrowMethodStatements(
+        def.statements, bindings, soaVectorReturnDefinitions, definitionNamespace);
     if (def.returnExpr.has_value()) {
-      rewriteExperimentalSoaInlineBorrowMethodExpr(*def.returnExpr, bindings);
+      rewriteExperimentalSoaInlineBorrowMethodExpr(
+          *def.returnExpr, bindings, soaVectorReturnDefinitions, definitionNamespace);
     }
   }
   return true;
@@ -2539,21 +2599,31 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
   };
   auto tryLocationReceiverBinding = [&](const Expr &locationExpr) -> bool {
     if (!semantics::isSimpleCallName(locationExpr, "location") ||
-        locationExpr.args.size() != 1 ||
-        locationExpr.args.front().kind != Expr::Kind::Name) {
+        locationExpr.args.size() != 1) {
       return false;
     }
     const Expr &locationTarget = locationExpr.args.front();
-    auto bindingIt = bindings.find(locationTarget.name);
-    if (bindingIt != bindings.end() && tryReceiverBinding(bindingIt->second)) {
-      getReceiverExpr = &locationTarget;
-      return true;
-    }
-    auto allBindingIt = allBindings.find(locationTarget.name);
-    if (allBindingIt != allBindings.end() &&
-        tryReceiverBinding(allBindingIt->second)) {
-      getReceiverExpr = &locationTarget;
-      return true;
+    if (locationTarget.kind == Expr::Kind::Name) {
+      auto bindingIt = bindings.find(locationTarget.name);
+      if (bindingIt != bindings.end() && tryReceiverBinding(bindingIt->second)) {
+        getReceiverExpr = &locationTarget;
+        return true;
+      }
+      auto allBindingIt = allBindings.find(locationTarget.name);
+      if (allBindingIt != allBindings.end() &&
+          tryReceiverBinding(allBindingIt->second)) {
+        getReceiverExpr = &locationTarget;
+        return true;
+      }
+    } else if (locationTarget.kind == Expr::Kind::Call && !locationTarget.isBinding) {
+      for (const std::string &candidatePath : candidatePathsForExprCall(locationTarget, definitionNamespace)) {
+        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+        if (returnIt != soaVectorReturnDefinitions.end() &&
+            tryReceiverBinding(returnIt->second)) {
+          getReceiverExpr = &locationTarget;
+          return true;
+        }
+      }
     }
     return false;
   };

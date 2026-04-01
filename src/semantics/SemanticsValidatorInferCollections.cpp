@@ -586,8 +586,19 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     auto resolveInlineBorrowedSoaBinding = [&](const Expr &candidate) -> bool {
       auto resolveValueBinding = [&](const Expr &valueExpr) -> bool {
         BindingInfo valueBinding;
-        return resolveBindingTarget(valueExpr, valueBinding) &&
-               resolveSoaVectorBinding(valueBinding, elemType);
+        if (resolveBindingTarget(valueExpr, valueBinding) &&
+            resolveSoaVectorBinding(valueBinding, elemType)) {
+          return true;
+        }
+        if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
+          return false;
+        }
+        std::string inferredTypeText;
+        if (!inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText)) {
+          return false;
+        }
+        extractBindingFromTypeText(inferredTypeText, valueBinding);
+        return resolveSoaVectorBinding(valueBinding, elemType);
       };
       if (!candidate.isBinding &&
           isSimpleCallName(candidate, "location") &&

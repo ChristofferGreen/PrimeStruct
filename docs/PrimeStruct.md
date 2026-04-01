@@ -2369,20 +2369,24 @@ bad_use_after_take() {
     the deterministic pending contract `soa_vector field views are not implemented yet: x` instead of falling through
     to `unknown call target`, borrowed local standalone attempts such as `borrowed.x()` plus
     inline borrow forms such as `location(values).x()` and `x(location(values))` now keep that same
-    deterministic pending contract instead of degrading to a target-shape error, mutating standalone/indexed attempts
+    deterministic pending contract instead of degrading to a target-shape error, and
+    inline location-wrapped borrowed helper-return forms such as
+    `location(pickBorrowed(...)).x()` and `x(location(pickBorrowed(...)))` now keep it too. Mutating standalone/indexed attempts
     such as `assign(values.x(), next)`, `assign(x(values), next)`, `assign(values.y()[i], next)`, and
     `assign(dereference(pickBorrowed(...)).y()[i], next)` now keep that same pending field-view contract instead of
     degrading to the generic mutable-binding assignment error, and borrowed
     `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`, `borrowed.ref(i)`, and
     `borrowed.to_aos()` now also rides on the existing helper/conversion substrate for local,
-    parameter, helper-return, inline `location(...)`, and inline
-    `dereference(location(...))` receivers instead of leaking through raw builtin
+    parameter, helper-return, inline `location(...)`, inline
+    `dereference(location(...))`, and inline location-wrapped borrowed helper-return receivers instead of leaking through raw builtin
     target-mismatch diagnostics or the old helper-return conversion mismatch. Read-only field-view indexing now rides on that same helper
     substrate for reflected structs: both method-form `values.x()[i]` / `values.y()[i]` and
     call-form `x(values)[i]` / `y(values)[i]` reads plus
     borrowed local forms such as `borrowed.y()[i]`, `dereference(borrowed).y()[i]`,
     `location(values).y()[i]`, and `y(dereference(location(values)))[i]`,
-    borrowed helper-return forms such as `pickBorrowed(...).y()[i]`, and explicitly
+    borrowed helper-return forms such as `pickBorrowed(...).y()[i]`,
+    inline location-wrapped borrowed helper-return forms such as
+    `location(pickBorrowed(...)).y()[i]` and `y(location(pickBorrowed(...)))[i]`, and explicitly
     dereferenced borrowed helper-return forms such as
     `dereference(pickBorrowed(...)).y()[i]` rewrite to the existing
     `soaVectorGet<T>(..., i).field` path and run across

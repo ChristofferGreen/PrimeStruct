@@ -1000,6 +1000,57 @@ main() {
   CHECK(runCommand(runCmd) == 18);
 }
 
+TEST_CASE("vm runs inline location borrowed helper-return experimental soa_vector helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Particle] firstA{location(pickBorrowed(location(values))).get(0i32)}
+  [Particle] secondA{location(pickBorrowed(location(values))).ref(1i32)}
+  [vector<Particle>] unpackedA{location(pickBorrowed(location(values))).to_aos()}
+  [i32] countA{location(pickBorrowed(location(values))).count()}
+  [Particle] firstB{dereference(location(pickBorrowed(location(values)))).get(0i32)}
+  [Particle] secondB{dereference(location(pickBorrowed(location(values)))).ref(1i32)}
+  [vector<Particle>] unpackedB{dereference(location(pickBorrowed(location(values)))).to_aos()}
+  [i32] countB{dereference(location(pickBorrowed(location(values)))).count()}
+  [int] total{
+    plus(plus(firstA.x, secondA.x),
+         plus(count(unpackedA),
+              plus(countA,
+                   plus(plus(firstB.x, secondB.x),
+                        plus(count(unpackedB),
+                             plus(countB,
+                                  plus(location(pickBorrowed(location(values))).y()[0i32],
+                                       plus(dereference(location(pickBorrowed(location(values)))).y()[1i32],
+                                            plus(y(location(pickBorrowed(location(values))))[0i32],
+                                                 y(dereference(location(pickBorrowed(location(values)))))[1i32])))))))))
+  }
+  return(total)
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_soa_vector_inline_location_borrowed_return_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 80);
+}
+
 TEST_CASE("runs vm experimental soa storage helpers") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*

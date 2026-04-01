@@ -978,6 +978,48 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector inline location borrowed helper-return read-only methods validate on wrapper state") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Particle] firstA{location(pickBorrowed(location(values))).get(0i32)}
+  [Particle] secondA{location(pickBorrowed(location(values))).ref(1i32)}
+  [vector<Particle>] unpackedA{location(pickBorrowed(location(values))).to_aos()}
+  [i32] countA{location(pickBorrowed(location(values))).count()}
+  [Particle] firstB{dereference(location(pickBorrowed(location(values)))).get(0i32)}
+  [Particle] secondB{dereference(location(pickBorrowed(location(values)))).ref(1i32)}
+  [vector<Particle>] unpackedB{dereference(location(pickBorrowed(location(values)))).to_aos()}
+  [i32] countB{dereference(location(pickBorrowed(location(values)))).count()}
+  return(plus(plus(firstA.x, secondA.x),
+              plus(count(unpackedA),
+                   plus(countA,
+                        plus(plus(firstB.x, secondB.x),
+                             plus(count(unpackedB), countB))))))
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector borrowed helper-return get/ref methods validate on wrapper state") {
   const std::string source = R"(
 import /std/collections/*
@@ -1244,6 +1286,35 @@ main() {
   location(values).x()
   x(location(values))
   x(dereference(location(values)))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
+TEST_CASE("experimental soa_vector inline location borrowed helper-return field-view methods report pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  location(pickBorrowed(location(values))).x()
+  x(location(pickBorrowed(location(values))))
+  x(dereference(location(pickBorrowed(location(values)))))
   return(0i32)
 }
 )";
@@ -1569,6 +1640,46 @@ main() {
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
   return(dereference(pickBorrowed(location(values))).y()[1i32])
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector stdlib reflected inline location borrowed helper-return index syntax validates") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [int] total{
+    plus(
+      location(pickBorrowed(location(values))).y()[0i32],
+      plus(
+        dereference(location(pickBorrowed(location(values)))).y()[1i32],
+        plus(
+          y(location(pickBorrowed(location(values))))[0i32],
+          y(dereference(location(pickBorrowed(location(values)))))[1i32]
+        )
+      )
+    )
+  }
+  return(total)
 }
 )";
   std::string error;

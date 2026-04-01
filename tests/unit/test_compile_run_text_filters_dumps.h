@@ -764,6 +764,93 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites inline location borrowed helper-return experimental soa_vector helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Particle] firstA{location(pickBorrowed(location(values))).get(0i32)}
+  [Particle] secondA{location(pickBorrowed(location(values))).ref(1i32)}
+  [vector<Particle>] unpackedA{location(pickBorrowed(location(values))).to_aos()}
+  [i32] countA{location(pickBorrowed(location(values))).count()}
+  [Particle] firstB{dereference(location(pickBorrowed(location(values)))).get(0i32)}
+  [Particle] secondB{dereference(location(pickBorrowed(location(values)))).ref(1i32)}
+  [vector<Particle>] unpackedB{dereference(location(pickBorrowed(location(values)))).to_aos()}
+  [i32] countB{dereference(location(pickBorrowed(location(values)))).count()}
+  [int] total{
+    plus(plus(firstA.x, secondA.x),
+         plus(count(unpackedA),
+              plus(countA,
+                   plus(plus(firstB.x, secondB.x),
+                        plus(count(unpackedB),
+                             plus(countB,
+                                  plus(location(pickBorrowed(location(values))).y()[0i32],
+                                       plus(dereference(location(pickBorrowed(location(values)))).y()[1i32],
+                                            plus(y(location(pickBorrowed(location(values))))[0i32],
+                                                 y(dereference(location(pickBorrowed(location(values)))))[1i32])))))))))
+  }
+  return(total)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_inline_location_borrowed_return_experimental_soa_vector_helpers.prime",
+                source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_inline_location_borrowed_return_experimental_soa_vector_helpers.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("location(pickBorrowed(location(values))).get(", mainPos) == std::string::npos);
+  CHECK(ast.find("location(pickBorrowed(location(values))).ref(", mainPos) == std::string::npos);
+  CHECK(ast.find("location(pickBorrowed(location(values))).to_aos()", mainPos) == std::string::npos);
+  CHECK(ast.find("location(pickBorrowed(location(values))).count()", mainPos) == std::string::npos);
+  CHECK(ast.find("dereference(location(pickBorrowed(location(values)))).get(", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("dereference(location(pickBorrowed(location(values)))).ref(", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("dereference(location(pickBorrowed(location(values)))).to_aos()", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("dereference(location(pickBorrowed(location(values)))).count()", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("location(pickBorrowed(location(values))).y()[", mainPos) == std::string::npos);
+  CHECK(ast.find("dereference(location(pickBorrowed(location(values)))).y()[", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("y(location(pickBorrowed(location(values))))[", mainPos) == std::string::npos);
+  CHECK(ast.find("y(dereference(location(pickBorrowed(location(values)))))[", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("pickBorrowed(location(values)).get(0)", mainPos) != std::string::npos);
+  CHECK(ast.find("pickBorrowed(location(values)).ref(1)", mainPos) != std::string::npos);
+  CHECK(ast.find("pickBorrowed(location(values)).count()", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find(".y", mainPos) != std::string::npos);
+}
+
 TEST_CASE("dump ast_semantic alias works") {
   const std::string source = R"(
 [return<int>]

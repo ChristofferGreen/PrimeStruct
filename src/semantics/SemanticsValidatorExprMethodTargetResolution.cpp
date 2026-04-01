@@ -851,14 +851,34 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     };
     auto resolveInlineBorrowedValue = [&](const Expr &candidate) -> bool {
       auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
-        if (valueExpr.kind != Expr::Kind::Name) {
+        if (valueExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, valueExpr.name)) {
+            return extractValueBinding(*paramBinding);
+          }
+          auto it = locals.find(valueExpr.name);
+          return it != locals.end() && extractValueBinding(it->second);
+        }
+        if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
           return false;
         }
-        if (const BindingInfo *paramBinding = findParamBinding(params, valueExpr.name)) {
-          return extractValueBinding(*paramBinding);
+        BindingInfo inferredBinding;
+        std::string inferredTypeText;
+        if (inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText)) {
+          std::string base;
+          std::string argText;
+          const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
+          if (splitTemplateTypeName(normalizedType, base, argText)) {
+            inferredBinding.typeName = normalizeBindingTypeName(base);
+            inferredBinding.typeTemplateArg = argText;
+          } else {
+            inferredBinding.typeName = normalizedType;
+            inferredBinding.typeTemplateArg.clear();
+          }
+          if (extractValueBinding(inferredBinding)) {
+            return true;
+          }
         }
-        auto it = locals.find(valueExpr.name);
-        return it != locals.end() && extractValueBinding(it->second);
+        return false;
       };
       if (!candidate.isBinding &&
           isSimpleCallName(candidate, "location") &&
