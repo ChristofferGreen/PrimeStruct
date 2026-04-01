@@ -2368,7 +2368,9 @@ bad_use_after_take() {
     wrapper-backed column state in place. Experimental wrapper field-view attempts such as `values.x()` still reach
     the deterministic pending contract `soa_vector field views are not implemented yet: x` instead of falling through
     to `unknown call target`, borrowed local standalone attempts such as `borrowed.x()` now keep that same
-    deterministic pending contract instead of degrading to a target-shape error, and borrowed
+    deterministic pending contract instead of degrading to a target-shape error, mutating indexed attempts such as
+    `assign(values.y()[i], next)` and `assign(dereference(pickBorrowed(...)).y()[i], next)` now keep that same
+    pending field-view contract instead of degrading to the generic mutable-binding assignment error, and borrowed
     `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`, `borrowed.ref(i)`, and
     `borrowed.to_aos()` now also rides on the existing helper/conversion substrate for local,
     parameter, and helper-return receivers instead of leaking through raw builtin

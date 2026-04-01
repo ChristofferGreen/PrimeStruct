@@ -27,6 +27,92 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
       makeBuiltinCollectionDispatchResolvers(
           params, locals, builtinCollectionDispatchResolverAdapters);
+  auto resolveExperimentalBorrowedSoaTypeText =
+      [&](const std::string &typeText, std::string &elemTypeOut) -> bool {
+    BindingInfo inferredBinding;
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      inferredBinding.typeName = normalizeBindingTypeName(base);
+      inferredBinding.typeTemplateArg = argText;
+    } else {
+      inferredBinding.typeName = normalizedType;
+      inferredBinding.typeTemplateArg.clear();
+    }
+    const std::string normalizedBindingType =
+        normalizeBindingTypeName(inferredBinding.typeName);
+    if (normalizedBindingType != "Reference" &&
+        normalizedBindingType != "Pointer") {
+      return false;
+    }
+    return this->extractExperimentalSoaVectorElementType(inferredBinding,
+                                                         elemTypeOut);
+  };
+  auto resolveExperimentalSoaOrBorrowedReceiver =
+      [&](const Expr &target, std::string &elemTypeOut) -> bool {
+    if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(target,
+                                                                 elemTypeOut)) {
+      return true;
+    }
+    if (target.kind == Expr::Kind::Name) {
+      const BindingInfo *binding = findParamBinding(params, target.name);
+      if (binding == nullptr) {
+        auto localIt = locals.find(target.name);
+        if (localIt != locals.end()) {
+          binding = &localIt->second;
+        }
+      }
+      if (binding != nullptr &&
+          this->extractExperimentalSoaVectorElementType(*binding,
+                                                       elemTypeOut)) {
+        return true;
+      }
+    }
+    std::string inferredTypeText;
+    return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
+           !inferredTypeText.empty() &&
+           resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
+                                                  elemTypeOut);
+  };
+  auto pendingExperimentalSoaFieldViewNameForAssignTarget =
+      [&](const Expr &target, std::string &fieldNameOut) -> bool {
+    fieldNameOut.clear();
+    if (target.kind == Expr::Kind::Call && target.isFieldAccess &&
+        target.args.size() == 1) {
+      const Expr &receiver = target.args.front();
+      if (receiver.kind == Expr::Kind::Call &&
+          receiver.name.rfind("/std/collections/experimental_soa_vector/soaVectorGet", 0) == 0) {
+        fieldNameOut = target.name;
+        return !fieldNameOut.empty();
+      }
+    }
+    std::string accessName;
+    if (!getBuiltinArrayAccessName(target, accessName) || target.args.size() != 2) {
+      return false;
+    }
+    const Expr &fieldViewExpr = target.args.front();
+    if (fieldViewExpr.kind != Expr::Kind::Call || fieldViewExpr.isBinding ||
+        !fieldViewExpr.isMethodCall || fieldViewExpr.name.empty() ||
+        fieldViewExpr.name.find('/') != std::string::npos ||
+        !fieldViewExpr.templateArgs.empty() || fieldViewExpr.hasBodyArguments ||
+        !fieldViewExpr.bodyArguments.empty() ||
+        hasNamedArguments(fieldViewExpr.argNames) ||
+        fieldViewExpr.args.size() != 1) {
+      return false;
+    }
+    const std::string samePath = "/soa_vector/" + fieldViewExpr.name;
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return false;
+    }
+    std::string elemType;
+    if (!resolveExperimentalSoaOrBorrowedReceiver(fieldViewExpr.args.front(),
+                                                  elemType)) {
+      return false;
+    }
+    fieldNameOut = fieldViewExpr.name;
+    return true;
+  };
   auto isVectorOrArrayIndexedTarget = [&](const Expr &target) -> bool {
     auto bindingTargetsVectorOrArray = [&](const BindingInfo &binding,
                                            auto &&bindingTargetsVectorOrArrayRef)
@@ -383,6 +469,12 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       return false;
     }
     const Expr &target = expr.args.front();
+    std::string pendingSoaFieldViewName;
+    if (pendingExperimentalSoaFieldViewNameForAssignTarget(
+            target, pendingSoaFieldViewName)) {
+      error_ = soaFieldViewPendingDiagnostic(pendingSoaFieldViewName);
+      return false;
+    }
     const bool targetIsName = target.kind == Expr::Kind::Name;
     auto isLifecycleHelperPath = [](const std::string &fullPath) -> bool {
       static const std::array<std::string_view, 10> suffixes = {
