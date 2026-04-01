@@ -862,8 +862,9 @@ the same pending `soa_vector field views are not implemented yet: <field>` diagn
 wrapper attempts, borrowed `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
 `borrowed.ref(i)` now also validates on the existing wrapper helper path for local, parameter,
 and helper-return receivers instead of stopping on raw builtin target mismatch, while
-`borrowed.to_aos()` already validates on the existing conversion path for local and parameter
-receivers. Read-only wrapper field-view indexing now routes reflected direct `values.field()[i]`
+`borrowed.to_aos()` now also validates on that same conversion path for helper-return receivers
+and reaches the existing lowerer `struct parameter type mismatch` boundary shared with the other
+canonical experimental-wrapper `to_aos` surfaces. Read-only wrapper field-view indexing now routes reflected direct `values.field()[i]`
 reads, borrowed local `borrowed.field()[i]`, and explicitly dereferenced borrowed
 `dereference(borrowed).field()[i]` reads onto the existing `soaVectorGet<T>(..., i).field`
 helper path for both single-field and multi-field structs, and that successful read path no

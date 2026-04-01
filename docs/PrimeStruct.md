@@ -2372,8 +2372,9 @@ bad_use_after_take() {
     `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)` and `borrowed.ref(i)`
     now also rides on the existing helper substrate for local, parameter, and helper-return
     receivers instead of leaking through raw builtin target-mismatch diagnostics, while
-    `borrowed.to_aos()` already rides on the existing conversion substrate for local and
-    parameter receivers. Read-only field-view indexing now rides on that same helper
+    `borrowed.to_aos()` now also clears semantics on helper-return receivers and reaches the
+    same current canonical lowerer `struct parameter type mismatch` boundary it already had
+    on local and parameter receivers. Read-only field-view indexing now rides on that same helper
     substrate for reflected structs: direct `values.x()[i]` / `values.y()[i]` reads plus
     borrowed local forms such as `borrowed.y()[i]` and `dereference(borrowed).y()[i]`
     rewrite to the existing `soaVectorGet<T>(..., i).field` path and run across
@@ -2537,7 +2538,8 @@ then richer borrowed field-view semantics on top of that substrate. Successful e
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
 the current substrate for direct wrapper receivers, borrowed local shorthand, and explicitly
 dereferenced borrowed local receivers, while borrowed helper-return receivers now share the
-same completed read-only method surface for `get` and `ref`. The remaining
+same completed read-only method surface for `get` and `ref` and the same current `to_aos`
+lowerer boundary as other borrowed wrapper receivers. The remaining
 field-view work is richer borrowed/mutating behavior rather than backend cleanup for that
 read-only path.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at

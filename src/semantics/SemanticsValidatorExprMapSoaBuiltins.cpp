@@ -262,7 +262,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         helperName == "to_soa"
             ? (context.resolveVectorTarget != nullptr &&
                context.resolveVectorTarget(expr.args.front(), elemType))
-            : resolveSoaVectorOrExperimentalBorrowedTarget(expr.args.front(), elemType);
+            : resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType);
     if (!targetValid) {
       if (helperName == "to_aos" && isCanonicalSoaToAosResolved) {
         error_ = "argument type mismatch for /std/collections/soa_vector/to_aos parameter values";
