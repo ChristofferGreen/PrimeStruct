@@ -241,6 +241,18 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     if (methodName.empty()) {
       return false;
     }
+    std::string resolvedMethodTarget;
+    bool isBuiltinMethod = false;
+    if (resolveMethodTarget(params,
+                            locals,
+                            target.namespacePrefix,
+                            target.args.front(),
+                            target.name,
+                            resolvedMethodTarget,
+                            isBuiltinMethod) &&
+        inferResolvedDefinitionBinding(resolvedMethodTarget)) {
+      return true;
+    }
     const std::string ownerPath =
         resolveMethodOwnerPath(bindingTypeText(receiverBinding), target.args.front().namespacePrefix);
     return !ownerPath.empty() && inferResolvedDefinitionBinding(ownerPath + "/" + methodName);

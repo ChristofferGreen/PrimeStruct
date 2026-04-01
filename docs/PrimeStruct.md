@@ -2507,7 +2507,9 @@ canonical `/std/collections/soa_vector/get` helper path while still preserving s
 `/soa_vector/get` user-helper shadowing. The equivalent helper-return method/infer fallback for
 builtin `soa_vector` `ref` receivers now also prefers the canonical
 `/std/collections/soa_vector/ref` helper path while still preserving same-path
-`/soa_vector/ref` user-helper shadowing, and the builtin borrowed-view recognizers in
+`/soa_vector/ref` user-helper shadowing. Local `auto` inference on builtin and helper-return
+`ref(...)` method sugar now also respects that same-path helper return type instead of collapsing
+to the builtin element type, and the builtin borrowed-view recognizers in
 initializer/monomorph handling now accept that canonical resolved helper path too. The
 equivalent helper-return method/infer fallback for builtin `soa_vector` `to_aos` receivers now
 also prefers the canonical `/std/collections/soa_vector/to_aos` helper path while still

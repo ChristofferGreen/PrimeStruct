@@ -317,6 +317,22 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return !currentTypeTextOut.empty();
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
+    auto hasVisibleSamePathSoaHelper = [&](const std::string &helperName) {
+      const std::string samePath = "/soa_vector/" + helperName;
+      return hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath);
+    };
+    auto candidateUsesVisibleSamePathSoaHelper = [&](const std::string &helperName) {
+      if (!hasVisibleSamePathSoaHelper(helperName)) {
+        return false;
+      }
+      if (isSimpleCallName(candidate, helperName.c_str())) {
+        return true;
+      }
+      if (candidate.isMethodCall && candidate.name == helperName) {
+        return true;
+      }
+      return resolvedCandidate == "/soa_vector/" + helperName;
+    };
     const bool isBuiltinSoaGetOrRef =
         candidate.args.size() == 2 &&
         (isSimpleCallName(candidate, "get") || isSimpleCallName(candidate, "ref") ||
@@ -324,7 +340,24 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
          resolvedCandidate == "/std/collections/soa_vector/get" ||
          resolvedCandidate == "/std/collections/soa_vector/ref" ||
          resolvedCandidate == "/soa_vector/ref");
-    if (isBuiltinSoaGetOrRef) {
+    const bool preferBuiltinSoaGetInference =
+        isBuiltinSoaGetOrRef && !candidateUsesVisibleSamePathSoaHelper("get");
+    const bool preferBuiltinSoaRefInference =
+        isBuiltinSoaGetOrRef && !candidateUsesVisibleSamePathSoaHelper("ref");
+    if ((isSimpleCallName(candidate, "get") ||
+         resolvedCandidate == "/soa_vector/get" ||
+         resolvedCandidate == "/std/collections/soa_vector/get") &&
+        preferBuiltinSoaGetInference) {
+      std::string elemType;
+      if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
+        currentTypeTextOut = normalizeBindingTypeName(elemType);
+        return !currentTypeTextOut.empty();
+      }
+    }
+    if ((isSimpleCallName(candidate, "ref") ||
+         resolvedCandidate == "/soa_vector/ref" ||
+         resolvedCandidate == "/std/collections/soa_vector/ref") &&
+        preferBuiltinSoaRefInference) {
       std::string elemType;
       if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
         currentTypeTextOut = normalizeBindingTypeName(elemType);
@@ -521,6 +554,24 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
       return ownerPath + "/" + methodName;
     };
+    auto resolvedMethodTargetCandidate = [&]() -> std::string {
+      if (!candidate.isMethodCall || candidate.args.empty() || candidate.name.empty()) {
+        return {};
+      }
+      std::string resolvedMethodTarget;
+      bool isBuiltinMethod = false;
+      if (!resolveMethodTarget(
+              params,
+              locals,
+              candidate.namespacePrefix,
+              candidate.args.front(),
+              candidate.name,
+              resolvedMethodTarget,
+              isBuiltinMethod)) {
+        return {};
+      }
+      return resolvedMethodTarget;
+    };
     if (isDirectMapConstructorPath(resolvedCandidate)) {
       if (candidate.templateArgs.size() == 2) {
         currentTypeTextOut = "map<" + candidate.templateArgs[0] + ", " + candidate.templateArgs[1] + ">";
@@ -597,6 +648,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     appendResolvedCandidate(resolvedCandidate);
     appendResolvedCandidate(canonicalResolvedCandidate);
     appendResolvedCandidate(preferredResolvedCandidate());
+    appendResolvedCandidate(resolvedMethodTargetCandidate());
     appendResolvedCandidate(methodResolvedCandidate());
     const Definition *resolvedDefinition = nullptr;
     std::string resolvedDefinitionPath;

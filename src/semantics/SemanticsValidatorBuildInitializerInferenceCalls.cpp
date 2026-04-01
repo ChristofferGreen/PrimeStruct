@@ -526,6 +526,24 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       return true;
     }
   }
+  if (initializer.isMethodCall && !initializer.args.empty() && !initializer.name.empty()) {
+    std::string resolvedMethodTarget;
+    bool isBuiltinMethod = false;
+    if (resolveMethodTarget(params,
+                            locals,
+                            initializer.namespacePrefix,
+                            initializer.args.front(),
+                            initializer.name,
+                            resolvedMethodTarget,
+                            isBuiltinMethod)) {
+      if (inferResolvedDirectCallBindingType(resolvedMethodTarget, bindingOut)) {
+        return true;
+      }
+      if (inferDeclaredDirectCallBinding(resolvedMethodTarget)) {
+        return true;
+      }
+    }
+  }
   if (initializerExprForInference != nullptr &&
       !isUnresolvedActiveInferenceCall(*initializerExprForInference)) {
     std::string builtinCollectionName;
