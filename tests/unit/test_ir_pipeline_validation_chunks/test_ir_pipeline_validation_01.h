@@ -366,6 +366,78 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("bare soa_vector count helper lowers through wrapper return routing") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(count(holder.cloneValues()))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare soa_vector get helper lowers through wrapper return routing") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    [SoaVector<Particle>, mut] values{soaVectorNew<Particle>()}
+    values.push(Particle(7i32))
+    return(values)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(get(holder.cloneValues(), 0i32).x)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer rejects non-empty soa_vector literals with deterministic diagnostic") {
   const std::string source = R"(
 Particle() {

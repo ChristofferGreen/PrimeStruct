@@ -1337,6 +1337,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isBuiltinOut = true;
       return true;
     }
+    if ((resolvedOut == "/std/collections/soa_vector/count" ||
+         resolvedOut == "/std/collections/soa_vector/get" ||
+         resolvedOut == "/std/collections/soa_vector/ref" ||
+         resolvedOut == "/std/collections/soa_vector/to_aos") &&
+        hasImportedDefinitionPath(resolvedOut) &&
+        defMap_.count(resolvedOut) == 0) {
+      isBuiltinOut = true;
+      return true;
+    }
     if ((resolvedOut == "/std/collections/map/count" ||
          resolvedOut == "/std/collections/map/contains" ||
          resolvedOut == "/std/collections/map/tryAt" ||

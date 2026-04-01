@@ -521,6 +521,33 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
+TEST_CASE("runs vm bare soa_vector get helper through helper return") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<SoaVector<Particle>>]
+cloneValues() {
+  [SoaVector<Particle>, mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(get(cloneValues(), 0i32).x)
+}
+)";
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_get_helper_return.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
+}
+
 TEST_CASE("vm runs experimental soa_vector stdlib ref helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

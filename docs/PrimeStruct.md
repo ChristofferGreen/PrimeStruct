@@ -2393,7 +2393,9 @@ rewrite-table entries. Wildcard-imported canonical
 helper names for `count`, `get`, `ref`, `reserve`, `push`, and `to_aos` now keep mixed
 `/std/collections/*` plus `/std/collections/soa_vector/*` imports on the receiver-matched
 canonical shim surface instead of pinning every bare `count(...)` call to the SoA alias. Bare
-wildcard-imported helper names now validate and lower successfully across C++/native/VM, and
+wildcard-imported helper names now validate and lower successfully across C++/native/VM,
+including helper-return `count(...)` and `get(...).field` receiver flows that previously
+leaked through unresolved root helper names, and
 explicit canonical direct-call `to_aos(...)` now runs end-to-end through that same stdlib shim
 path as well once template arguments are present. Direct-canonical plus imported-helper `to_aos`
 lowering also no longer depends on dedicated IR/emitter/backend/runtime conversion branches,
@@ -2430,10 +2432,13 @@ builtin `push` and `reserve` forms now rewrite earlier onto the canonical helper
 well, so the old backend-specific lowerer `soa_vector helper: push|reserve` rejection path is
 gone, and the lowerer count/access classifiers no longer treat raw `/soa_vector/count` as a
 builtin count alias once semantics has canonicalized those old-surface forms, so the remaining
-helper-call cleanup is narrowed to the wildcard-imported follow-up. The remaining inferred and
+helper-call cleanup is no longer blocked on bare wildcard-imported helper parity. The remaining inferred and
 method-target fallback resolution for builtin `soa_vector` count receivers now also prefers the
 canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
-`/soa_vector/count` user-helper shadowing on helper-return receivers, and the equivalent
+`/soa_vector/count` user-helper shadowing on helper-return receivers, helper-return bare
+wildcard-imported helper names now also canonicalize from the receiver family before the
+experimental wrapper rewrite so `count(holder.cloneValues())` and
+`get(holder.cloneValues(), i).field` stay on the same canonical helper surface, and the equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now prefers the
 canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
 `/soa_vector/get` user-helper shadowing. The equivalent helper-return method/infer fallback for

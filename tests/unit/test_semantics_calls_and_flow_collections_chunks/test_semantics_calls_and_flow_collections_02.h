@@ -379,6 +379,64 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("bare count helper validates through experimental soa helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(count(holder.cloneValues()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("count method validates through experimental soa helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(holder.cloneValues().count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical soa_vector count helper keeps same-path helper shadow through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
@@ -1809,6 +1867,64 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("bare get helper validates through experimental soa helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(get(holder.cloneValues(), 0i32).x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("get method validates through experimental soa helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(holder.cloneValues().get(0i32).x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("get method fallback keeps same-path helper shadow through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
@@ -1935,6 +2051,66 @@ Holder() {
 main() {
   [Holder] holder{Holder()}
   /std/collections/soa_vector/ref(holder.cloneValues(), 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare ref helper validates through experimental soa helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  ref(holder.cloneValues(), 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("ref method validates through experimental soa helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  holder.cloneValues().ref(0i32)
   return(0i32)
 }
 )";

@@ -815,7 +815,11 @@ count/access classifier fallback also no longer treats raw `/soa_vector/count` a
 semantics has canonicalized those old-surface forms earlier in validation, and the remaining
 inferred/method fallback resolution for builtin `soa_vector` count receivers now prefers the
 canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
-`/soa_vector/count` user-helper shadowing on helper-return receivers. The equivalent
+`/soa_vector/count` user-helper shadowing on helper-return receivers. Bare wildcard-imported
+helper names on helper-return builtin `soa_vector` receivers now also canonicalize from the
+receiver family before experimental wrapper rewriting, so `count(holder.cloneValues())` and
+`get(holder.cloneValues(), i).field` stay on the canonical helper surface instead of leaking
+through unresolved root helper names. The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now also prefers
 the canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
 `/soa_vector/get` user-helper shadowing. The equivalent helper-return method/infer fallback for

@@ -479,22 +479,31 @@ std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &pa
 }
 
 std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string &path) {
-  if (path == "/std/collections/count") {
+  auto matchesPath = [&](std::string_view basePath) {
+    return path == basePath || path.rfind(std::string(basePath) + "__", 0) == 0;
+  };
+  if (matchesPath("/std/collections/count") ||
+      matchesPath("/std/collections/soa_vector/count")) {
     return "/std/collections/experimental_soa_vector/soaVectorCount";
   }
-  if (path == "/std/collections/get") {
+  if (matchesPath("/std/collections/get") ||
+      matchesPath("/std/collections/soa_vector/get")) {
     return "/std/collections/experimental_soa_vector/soaVectorGet";
   }
-  if (path == "/std/collections/ref") {
+  if (matchesPath("/std/collections/ref") ||
+      matchesPath("/std/collections/soa_vector/ref")) {
     return "/std/collections/experimental_soa_vector/soaVectorRef";
   }
-  if (path == "/std/collections/reserve") {
+  if (matchesPath("/std/collections/reserve") ||
+      matchesPath("/std/collections/soa_vector/reserve")) {
     return "/std/collections/experimental_soa_vector/soaVectorReserve";
   }
-  if (path == "/std/collections/push") {
+  if (matchesPath("/std/collections/push") ||
+      matchesPath("/std/collections/soa_vector/push")) {
     return "/std/collections/experimental_soa_vector/soaVectorPush";
   }
-  if (path == "/std/collections/to_aos") {
+  if (matchesPath("/std/collections/to_aos") ||
+      matchesPath("/std/collections/soa_vector/to_aos")) {
     return "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
   }
   return {};

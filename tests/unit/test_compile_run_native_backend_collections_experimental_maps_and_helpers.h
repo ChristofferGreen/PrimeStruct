@@ -610,6 +610,38 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("native runs bare soa_vector get helper through helper return") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<SoaVector<Particle>>]
+cloneValues() {
+  [SoaVector<Particle>, mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(get(cloneValues(), 0i32).x)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_get_helper_return.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_get_helper_return_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("native runs experimental soa_vector stdlib ref helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

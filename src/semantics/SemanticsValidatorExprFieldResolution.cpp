@@ -258,6 +258,14 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
     if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
       structPathOut = inferredStruct;
     } else {
+      std::string inferredTypeText;
+      if (inferQueryExprTypeText(receiverExpr, params, locals, inferredTypeText)) {
+        const std::string inferredValueType =
+            unwrapReferencePointerTypeText(normalizeBindingTypeName(inferredTypeText));
+        (void)resolveStructPathFromType(inferredValueType, receiverExpr.namespacePrefix, structPathOut);
+      }
+    }
+    if (structPathOut.empty()) {
       std::string resolvedType = resolveCalleePath(receiverExpr);
       if (structNames_.count(resolvedType) > 0) {
         structPathOut = resolvedType;

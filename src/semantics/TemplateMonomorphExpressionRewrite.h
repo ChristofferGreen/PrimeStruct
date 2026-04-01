@@ -334,10 +334,20 @@ bool rewriteExpr(Expr &expr,
       resolvesVectorFamilyPath = true;
     } else if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
       helperName = path.substr(std::string("/std/collections/soa_vector/").size());
+    } else if (!expr.isMethodCall &&
+               !path.empty() &&
+               path.front() == '/' &&
+               path.find('/', 1) == std::string::npos &&
+               ctx.sourceDefs.count(path) == 0 &&
+               ctx.helperOverloads.count(path) == 0) {
+      helperName = path.substr(1);
     } else {
       return path;
     }
-    if (helperName != "count" && helperName != "push" && helperName != "reserve") {
+    if (helperName != "count" && helperName != "capacity" &&
+        helperName != "push" && helperName != "reserve" &&
+        helperName != "get" && helperName != "ref" &&
+        helperName != "to_aos") {
       return path;
     }
     const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
@@ -347,11 +357,19 @@ bool rewriteExpr(Expr &expr,
         return preferred;
       }
     }
+    if (receiverFamily == "soa_vector" && !resolvesVectorFamilyPath) {
+      const std::string preferred = "/std/collections/soa_vector/" + helperName;
+      if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
+          ctx.sourceDefs.count(preferred) > 0) {
+        return preferred;
+      }
+    }
     if (!resolvesVectorFamilyPath &&
         (receiverFamily == "vector" || receiverFamily == "array" ||
          (helperName == "count" && receiverFamily == "string"))) {
       const std::string preferred = "/std/collections/vector/" + helperName;
-      if (ctx.sourceDefs.count(preferred) > 0) {
+      if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
+          ctx.sourceDefs.count(preferred) > 0) {
         return preferred;
       }
     }
@@ -571,6 +589,20 @@ bool rewriteExpr(Expr &expr,
       if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
         if (!rewriteNestedExperimentalVectorConstructorValue(*receiverExpr)) {
           return false;
+        }
+      }
+    }
+    const std::string experimentalSoaVectorPath = experimentalSoaVectorHelperPathForCanonicalHelper(resolvedPath);
+    if (!experimentalSoaVectorPath.empty() &&
+        ctx.sourceDefs.count(experimentalSoaVectorPath) > 0 &&
+        resolvesBuiltinSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+      resolvedPath = experimentalSoaVectorPath;
+      expr.name = experimentalSoaVectorPath;
+      expr.namespacePrefix.clear();
+      if (expr.templateArgs.empty()) {
+        std::vector<std::string> receiverTemplateArgs;
+        if (resolveBuiltinSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+          expr.templateArgs = std::move(receiverTemplateArgs);
         }
       }
     }
