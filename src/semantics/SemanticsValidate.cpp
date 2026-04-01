@@ -301,6 +301,27 @@ bool isExperimentalSoaVectorBinding(const semantics::BindingInfo &binding) {
   return isExperimentalSoaVectorBaseName(binding.typeName);
 }
 
+bool isExperimentalSoaVectorOrBorrowedTypeText(std::string typeText) {
+  typeText = semantics::normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!semantics::splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+      return isExperimentalSoaVectorBaseName(typeText);
+    }
+    const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
+    if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+      std::vector<std::string> args;
+      if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      typeText = args.front();
+      continue;
+    }
+    return isExperimentalSoaVectorBaseName(base);
+  }
+}
+
 bool isBuiltinVectorBinding(const semantics::BindingInfo &binding) {
   const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
   if (normalizedType == "Reference" || normalizedType == "Pointer") {
@@ -410,7 +431,9 @@ std::optional<semantics::BindingInfo> extractBuiltinSoaVectorReturnBinding(const
   return std::nullopt;
 }
 
-std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBinding(const Definition &def) {
+std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBindingImpl(
+    const Definition &def,
+    bool allowBorrowed) {
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
@@ -421,7 +444,8 @@ std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBinding(
     const std::string returnType = transform.templateArgs.front();
     if (semantics::splitTemplateTypeName(returnType, base, argText)) {
       const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
-      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+      if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
+          !allowBorrowed) {
         continue;
       }
       binding.typeName = base;
@@ -429,11 +453,21 @@ std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBinding(
     } else {
       binding.typeName = returnType;
     }
-    if (isExperimentalSoaVectorBinding(binding)) {
+    if ((allowBorrowed && isExperimentalSoaVectorOrBorrowedTypeText(bindingTypeText(binding))) ||
+        (!allowBorrowed && isExperimentalSoaVectorBinding(binding))) {
       return binding;
     }
   }
   return std::nullopt;
+}
+
+std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBinding(const Definition &def) {
+  return extractExperimentalSoaVectorReturnBindingImpl(def, false);
+}
+
+std::optional<semantics::BindingInfo> extractExperimentalSoaVectorOrBorrowedReturnBinding(
+    const Definition &def) {
+  return extractExperimentalSoaVectorReturnBindingImpl(def, true);
 }
 
 bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics::BindingInfo &binding,
@@ -467,6 +501,62 @@ bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics:
         return true;
       }
       return false;
+    }
+  };
+
+  elemTypeOut.clear();
+  if (binding.typeTemplateArg.empty()) {
+    return extractFromTypeText(semantics::normalizeBindingTypeName(binding.typeName));
+  }
+  return extractFromTypeText(
+      semantics::normalizeBindingTypeName(binding.typeName + "<" + binding.typeTemplateArg + ">"));
+}
+
+bool extractExperimentalSoaVectorElementTypeForToAosRewrite(const semantics::BindingInfo &binding,
+                                                            std::string &elemTypeOut) {
+  auto extractFromTypeText = [&](std::string normalizedType) {
+    while (true) {
+      std::string base;
+      std::string argText;
+      if (semantics::splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+        base = semantics::normalizeBindingTypeName(base);
+        if (base == "Reference" || base == "Pointer") {
+          std::vector<std::string> args;
+          if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+            return false;
+          }
+          normalizedType = semantics::normalizeBindingTypeName(args.front());
+          continue;
+        }
+        std::string normalizedBase = base;
+        if (!normalizedBase.empty() && normalizedBase.front() == '/') {
+          normalizedBase.erase(normalizedBase.begin());
+        }
+        if ((normalizedBase == "SoaVector" ||
+             normalizedBase == "std/collections/experimental_soa_vector/SoaVector") &&
+            !argText.empty()) {
+          std::vector<std::string> args;
+          if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+            return false;
+          }
+          elemTypeOut = args.front();
+          return true;
+        }
+      }
+
+      std::string resolvedPath = normalizedType;
+      if (!resolvedPath.empty() && resolvedPath.front() != '/') {
+        resolvedPath.insert(resolvedPath.begin(), '/');
+      }
+      std::string normalizedResolvedPath = semantics::normalizeBindingTypeName(resolvedPath);
+      if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
+        normalizedResolvedPath.erase(normalizedResolvedPath.begin());
+      }
+      if (normalizedResolvedPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+        return false;
+      }
+      elemTypeOut = resolvedPath;
+      return true;
     }
   };
 
@@ -1933,7 +2023,7 @@ void rewriteExperimentalSoaToAosMethodExpr(
   std::optional<semantics::BindingInfo> receiverBinding;
   auto tryReceiverBinding = [&](const semantics::BindingInfo &binding) {
     std::string ignoredElemType;
-    return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(binding, ignoredElemType);
+    return extractExperimentalSoaVectorElementTypeForToAosRewrite(binding, ignoredElemType);
   };
   const Expr &receiver = expr.args.front();
   if (receiver.kind == Expr::Kind::Name) {
@@ -1987,7 +2077,8 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
   for (const Definition &def : program.definitions) {
-    if (auto binding = extractExperimentalSoaVectorReturnBinding(def); binding.has_value()) {
+    if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
+        binding.has_value()) {
       soaVectorReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {

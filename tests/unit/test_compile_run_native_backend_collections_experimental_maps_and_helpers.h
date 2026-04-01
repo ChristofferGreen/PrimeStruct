@@ -929,6 +929,43 @@ main() {
   CHECK(runCommand(exePath) == 18);
 }
 
+TEST_CASE("native compiles and runs borrowed helper-return experimental soa_vector read-only methods") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [Particle] first{pickBorrowed(location(values)).get(0i32)}
+  [Particle] second{pickBorrowed(location(values)).ref(1i32)}
+  [vector<Particle>] unpacked{pickBorrowed(location(values)).to_aos()}
+  return(plus(plus(first.x, second.x), count(unpacked)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_borrowed_return_methods.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_return_methods_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 18);
+}
+
 TEST_CASE("compiles and runs native experimental soa storage helpers") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*

@@ -353,6 +353,20 @@ std::string SemanticsValidator::inferStructReturnPath(
             !collectionPath.empty()) {
           return collectionPath;
         }
+        const std::string unwrappedReturnType =
+            unwrapReferencePointerTypeText(normalizedReturnType);
+        if (unwrappedReturnType != normalizedReturnType) {
+          if (std::string collectionPath = normalizeCollectionTypePath(unwrappedReturnType);
+              !collectionPath.empty()) {
+            return collectionPath;
+          }
+          if (std::string structPath =
+                  resolveInferStructTypePath(unwrappedReturnType,
+                                             directDefIt->second->namespacePrefix);
+              !structPath.empty()) {
+            return structPath;
+          }
+        }
         std::string base;
         std::string argText;
         if (splitTemplateTypeName(normalizedReturnType, base, argText)) {

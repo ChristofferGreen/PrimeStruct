@@ -744,7 +744,7 @@ main() {
   CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
 }
 
-TEST_CASE("borrowed helper-return experimental wrapper to_aos reaches canonical lowerer mismatch") {
+TEST_CASE("borrowed helper-return experimental wrapper to_aos lowers through conversion helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -776,10 +776,10 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("struct parameter type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
-  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("root to_aos canonical routing ignores vector-only user helper") {
