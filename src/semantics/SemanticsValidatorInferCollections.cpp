@@ -583,11 +583,37 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         bindingOut.typeTemplateArg.clear();
       }
     };
+    auto resolveInlineBorrowedSoaBinding = [&](const Expr &candidate) -> bool {
+      auto resolveValueBinding = [&](const Expr &valueExpr) -> bool {
+        BindingInfo valueBinding;
+        return resolveBindingTarget(valueExpr, valueBinding) &&
+               resolveSoaVectorBinding(valueBinding, elemType);
+      };
+      if (!candidate.isBinding &&
+          isSimpleCallName(candidate, "location") &&
+          candidate.args.size() == 1) {
+        return resolveValueBinding(candidate.args.front());
+      }
+      if (!candidate.isBinding &&
+          isSimpleCallName(candidate, "dereference") &&
+          candidate.args.size() == 1) {
+        const Expr &borrowedExpr = candidate.args.front();
+        return borrowedExpr.kind == Expr::Kind::Call &&
+               !borrowedExpr.isBinding &&
+               isSimpleCallName(borrowedExpr, "location") &&
+               borrowedExpr.args.size() == 1 &&
+               resolveValueBinding(borrowedExpr.args.front());
+      }
+      return false;
+    };
     BindingInfo binding;
     if (resolveBindingTarget(target, binding)) {
       return resolveSoaVectorBinding(binding, elemType);
     }
     if (target.kind == Expr::Kind::Call) {
+      if (resolveInlineBorrowedSoaBinding(target)) {
+        return true;
+      }
       std::string indexedElemType;
       if (state->resolveIndexedArgsPackElementType(target, indexedElemType) &&
           extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {

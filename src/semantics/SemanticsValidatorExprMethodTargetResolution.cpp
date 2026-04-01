@@ -849,6 +849,34 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       return extractExperimentalSoaVectorElementType(binding, elemType);
     };
+    auto resolveInlineBorrowedValue = [&](const Expr &candidate) -> bool {
+      auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
+        if (valueExpr.kind != Expr::Kind::Name) {
+          return false;
+        }
+        if (const BindingInfo *paramBinding = findParamBinding(params, valueExpr.name)) {
+          return extractValueBinding(*paramBinding);
+        }
+        auto it = locals.find(valueExpr.name);
+        return it != locals.end() && extractValueBinding(it->second);
+      };
+      if (!candidate.isBinding &&
+          isSimpleCallName(candidate, "location") &&
+          candidate.args.size() == 1) {
+        return resolveValueExpr(candidate.args.front());
+      }
+      if (!candidate.isBinding &&
+          isSimpleCallName(candidate, "dereference") &&
+          candidate.args.size() == 1) {
+        const Expr &borrowedExpr = candidate.args.front();
+        return borrowedExpr.kind == Expr::Kind::Call &&
+               !borrowedExpr.isBinding &&
+               isSimpleCallName(borrowedExpr, "location") &&
+               borrowedExpr.args.size() == 1 &&
+               resolveValueExpr(borrowedExpr.args.front());
+      }
+      return false;
+    };
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
         return extractValueBinding(*paramBinding);
@@ -865,6 +893,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     if (target.kind == Expr::Kind::Call) {
+      if (resolveInlineBorrowedValue(target)) {
+        return true;
+      }
       std::string indexedElemType;
       if ((resolveIndexedArgsPackElementType(target, indexedElemType) ||
            resolveWrappedIndexedArgsPackElementType(target, indexedElemType) ||
