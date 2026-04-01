@@ -2341,7 +2341,13 @@ bad_use_after_take() {
     `reserve(...)`, `values.push(...)`, `values.reserve(...)`, and old explicit
     `/soa_vector/push|reserve(...)` forms now route through the canonical stdlib helper
     surface instead of stopping on dedicated backend-specific `soa_vector helper`
-    diagnostics. These compiler-owned `soa_vector` paths are
+    diagnostics, and imported raw-builtin bare `count/get/ref/push/reserve` forms now
+    also clear semantics on that canonical surface while imported method
+    `get(...).field` / `ref(...).field` now resolves the element struct during
+    semantics. Those imported raw-builtin forms still stop later on the remaining
+    builtin-`/soa_vector` versus wrapper-`SoaVector<T>` lowering bridge, with method
+    `get/ref` still exposing the old unknown-method lowering gap. These compiler-owned
+    `soa_vector` paths are
     not the intended end-state and are now tracked as separate cleanup follow-ups for the remaining semantics
     method/builtin fallbacks, IR-lowerer special cases, emitter/backend special cases, and runtime/diagnostic
     mentions while the generic SoA substrate and stdlib `.prime` implementation finish replacing them.
@@ -2514,6 +2520,12 @@ builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the s
 semantic rewrite and then stop later on the remaining conversion mismatch between builtin
 `/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the
 stdlib conversion implementation, instead of failing earlier against the wrapper helper itself.
+Imported raw-builtin bare canonical `count/get/ref/push/reserve` forms now also clear semantics
+on that same canonical helper surface, and imported method `get(...).field` / `ref(...).field`
+now resolves the element struct before lowering. Those raw-builtin imported helper forms still
+stop later on the remaining lowering bridge from builtin `/soa_vector` values to experimental
+wrapper `SoaVector<T>` parameters, while imported method `get/ref` forms still expose the older
+unknown-method lowering gap.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, while field-view cleanup is now reduced to the remaining
 direct pending-diagnostic path plus future richer borrowed/mutating behavior because the

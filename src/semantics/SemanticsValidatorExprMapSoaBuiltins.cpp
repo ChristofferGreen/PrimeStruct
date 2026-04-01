@@ -312,9 +312,13 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return true;
   }
 
-  if ((resolvedMethod || resolvedMissing) &&
+  if ((resolvedMethod || resolvedMissing ||
+       resolved == "/std/collections/soa_vector/get" ||
+       resolved == "/std/collections/soa_vector/ref") &&
       (resolved == "/soa_vector/get" ||
        resolved == "/soa_vector/ref" ||
+       resolved == "/std/collections/soa_vector/get" ||
+       resolved == "/std/collections/soa_vector/ref" ||
        (resolvedMethod && resolved == "/std/collections/soa_vector/get") ||
        (resolvedMethod && resolved == "/std/collections/soa_vector/ref"))) {
     handledOut = true;

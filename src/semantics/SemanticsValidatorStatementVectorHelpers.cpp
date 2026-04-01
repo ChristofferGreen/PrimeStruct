@@ -166,12 +166,19 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       getNamespacedCollectionHelperName(stmt, namespacedCollection, namespacedHelper);
   const bool isNamespacedVectorHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+  const bool isStdNamespacedSoaCanonicalMutatorHelperCall =
+      !stmt.isMethodCall &&
+      (vectorHelperResolved.rfind("/std/collections/soa_vector/push", 0) == 0 ||
+       vectorHelperResolved.rfind("/std/collections/soa_vector/reserve", 0) == 0);
   const bool isStdNamespacedVectorCanonicalHelperCall =
       !stmt.isMethodCall && vectorHelperResolved.rfind("/std/collections/vector/", 0) == 0 &&
       (namespacedHelper == "count" || namespacedHelper == "capacity" || namespacedHelper == "at" ||
        namespacedHelper == "at_unsafe" || namespacedHelper == "push" || namespacedHelper == "pop" ||
        namespacedHelper == "reserve" || namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
        namespacedHelper == "remove_swap");
+  const bool isStdNamespacedCanonicalBuiltinHelperCall =
+      isStdNamespacedVectorCanonicalHelperCall ||
+      isStdNamespacedSoaCanonicalMutatorHelperCall;
   auto isVectorMutatorName = [](std::string_view helperName) {
     return helperName == "push" || helperName == "pop" || helperName == "reserve" ||
            helperName == "clear" || helperName == "remove_at" || helperName == "remove_swap";
@@ -402,10 +409,10 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     resolvedReceiverIndex = 0;
   }
   const bool shouldProbeVectorHelperReceiver =
-      !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(vectorHelperResolved) == defMap_.end() &&
+      !(isStdNamespacedCanonicalBuiltinHelperCall && defMap_.find(vectorHelperResolved) == defMap_.end() &&
         !shouldAllowStdNamespacedVectorHelperCompatibilityFallback) &&
       (defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
-      !(isStdNamespacedVectorCanonicalHelperCall && defMap_.find(vectorHelperResolved) != defMap_.end());
+      !(isStdNamespacedCanonicalBuiltinHelperCall && defMap_.find(vectorHelperResolved) != defMap_.end());
   if (shouldProbeVectorHelperReceiver && !stmt.args.empty()) {
     auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Name) {
@@ -453,7 +460,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       appendReceiverIndex(0);
     }
     const bool probePositionalReorderedReceiver =
-        !isStdNamespacedVectorCanonicalHelperCall &&
+        !isStdNamespacedCanonicalBuiltinHelperCall &&
         !hasNamedArgs && stmt.args.size() > 1 &&
         (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
          stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
@@ -481,7 +488,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
   }
   const bool canonicalBuiltinCompatibilityHelper =
-      isStdNamespacedVectorCanonicalHelperCall &&
+      isStdNamespacedCanonicalBuiltinHelperCall &&
       (hasDeclaredDefinitionPath(vectorHelperResolved) || hasImportedDefinitionPath(vectorHelperResolved));
   bool shouldUseCanonicalBuiltinCompatibilityFallback = false;
   size_t canonicalBuiltinCompatibilityReceiverIndex = 0;
@@ -515,7 +522,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     } else {
       appendReceiverIndex(0);
       const bool probePositionalReorderedReceiver =
-          !isStdNamespacedVectorCanonicalHelperCall &&
+          !isStdNamespacedCanonicalBuiltinHelperCall &&
           stmt.args.size() > 1 &&
           (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
            stmt.args.front().kind == Expr::Kind::FloatLiteral ||
@@ -534,6 +541,50 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       const bool allowSoaVectorTarget = vectorHelper == "push" || vectorHelper == "reserve";
       if (receiverBinding.typeName == "vector" ||
           (allowSoaVectorTarget && receiverBinding.typeName == "soa_vector")) {
+        shouldUseCanonicalBuiltinCompatibilityFallback = true;
+        canonicalBuiltinCompatibilityReceiverIndex = receiverIndex;
+        break;
+      }
+    }
+  }
+  if (!shouldUseCanonicalBuiltinCompatibilityFallback &&
+      isStdNamespacedSoaCanonicalMutatorHelperCall &&
+      !stmt.args.empty()) {
+    std::vector<size_t> receiverIndices;
+    auto appendReceiverIndex = [&](size_t index) {
+      if (index >= stmt.args.size()) {
+        return;
+      }
+      for (size_t existing : receiverIndices) {
+        if (existing == index) {
+          return;
+        }
+      }
+      receiverIndices.push_back(index);
+    };
+    if (hasNamedArguments(stmt.argNames)) {
+      bool hasValuesNamedReceiver = false;
+      for (size_t i = 0; i < stmt.args.size(); ++i) {
+        if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
+          appendReceiverIndex(i);
+          hasValuesNamedReceiver = true;
+        }
+      }
+      if (!hasValuesNamedReceiver) {
+        appendReceiverIndex(0);
+        for (size_t i = 1; i < stmt.args.size(); ++i) {
+          appendReceiverIndex(i);
+        }
+      }
+    } else {
+      appendReceiverIndex(0);
+    }
+    for (size_t receiverIndex : receiverIndices) {
+      BindingInfo receiverBinding;
+      if (!resolveVectorStatementBinding(params, locals, stmt.args[receiverIndex], receiverBinding)) {
+        continue;
+      }
+      if (receiverBinding.typeName == "soa_vector") {
         shouldUseCanonicalBuiltinCompatibilityFallback = true;
         canonicalBuiltinCompatibilityReceiverIndex = receiverIndex;
         break;
@@ -605,7 +656,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         }
       }
     }
-    if (!isStdNamespacedVectorCanonicalHelperCall &&
+    if (!isStdNamespacedCanonicalBuiltinHelperCall &&
         hasResolvedReceiverIndex && resolvedReceiverIndex > 0 && resolvedReceiverIndex < helperCall.args.size()) {
       std::swap(helperCall.args[0], helperCall.args[resolvedReceiverIndex]);
       if (helperCall.argNames.size() < helperCall.args.size()) {
@@ -615,7 +666,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return validateExpr(params, locals, helperCall, enclosingStatements, statementIndex);
   }
-  if (isStdNamespacedVectorCanonicalHelperCall &&
+  if (isStdNamespacedCanonicalBuiltinHelperCall &&
       !shouldAllowStdNamespacedVectorHelperCompatibilityFallback &&
       !shouldUseCanonicalBuiltinCompatibilityFallback) {
     error_ = "unknown call target: " + vectorHelperResolved;

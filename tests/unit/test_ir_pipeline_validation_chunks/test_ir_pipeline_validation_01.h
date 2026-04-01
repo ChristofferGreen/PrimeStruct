@@ -715,6 +715,66 @@ main() {
   CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
 }
 
+TEST_CASE("imported builtin soa_vector bare helper forms reach canonical lowerer mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  reserve(values, 2i32)
+  push(values, Particle(4i32))
+  [i32] total{count(values)}
+  [Particle] first{get(values, 0i32)}
+  [Particle] second{ref(values, 0i32)}
+  return(plus(total, plus(first.x, second.x)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("struct parameter type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+}
+
+TEST_CASE("imported builtin soa_vector method access forms keep old lowerer gap") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [Particle] first{values.get(0i32)}
+  [Particle] second{values.ref(0i32)}
+  return(plus(first.x, second.x))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("unknown method: /soa_vector/") != std::string::npos);
+}
+
 TEST_CASE("canonical experimental wrapper to_aos slash-method reaches canonical lowerer mismatch") {
   const std::string source = R"(
 import /std/collections/*

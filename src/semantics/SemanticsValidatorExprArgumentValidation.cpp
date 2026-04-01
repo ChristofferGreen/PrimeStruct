@@ -521,7 +521,9 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   std::string actualMapBase;
   std::vector<std::string> actualMapTemplateArgs;
   std::string expectedExperimentalVectorElemType;
+  std::string expectedExperimentalSoaVectorElemType;
   std::string actualVectorElemType;
+  std::string actualSoaVectorElemType;
   const bool isCompatibleExperimentalMapReceiver =
       extractExperimentalMapFieldTypesFromStructPath(
           expectedStructPath, expectedMapKeyType, expectedMapValueType) &&
@@ -598,9 +600,35 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
            normalizeBindingTypeName(expectedExperimentalVectorElemType) ==
                normalizeBindingTypeName(inferredTypeArgs.front());
   }();
+  const bool isCompatibleExperimentalSoaVectorReceiver = [&] {
+    if (!extractExperimentalSoaVectorElementTypeFromStructPath(
+            expectedStructPath, expectedExperimentalSoaVectorElemType)) {
+      return false;
+    }
+    if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
+        dispatchResolvers.resolveSoaVectorTarget(arg, actualSoaVectorElemType) &&
+        normalizeBindingTypeName(expectedExperimentalSoaVectorElemType) ==
+            normalizeBindingTypeName(actualSoaVectorElemType)) {
+      return true;
+    }
+    std::string inferredBase;
+    std::vector<std::string> inferredArgs;
+    if (inferCollectionBindingType(arg, inferredBase, inferredArgs) &&
+        inferredArgs.size() == 1) {
+      std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
+      if (!normalizedInferredBase.empty() && normalizedInferredBase.front() == '/') {
+        normalizedInferredBase.erase(normalizedInferredBase.begin());
+      }
+      return normalizedInferredBase == "soa_vector" &&
+             normalizeBindingTypeName(expectedExperimentalSoaVectorElemType) ==
+                 normalizeBindingTypeName(inferredArgs.front());
+    }
+    return false;
+  }();
   const std::string actualStructPath = inferStructReturnPath(arg, params, locals);
   if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
-    if (isCompatibleExperimentalMapReceiver || isCompatibleCanonicalVectorReceiver) {
+    if (isCompatibleExperimentalMapReceiver || isCompatibleCanonicalVectorReceiver ||
+        isCompatibleExperimentalSoaVectorReceiver) {
       return true;
     }
     error_ = argumentStructMismatchDiagnostic(
@@ -608,7 +636,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     return false;
   }
   if (actualStructPath.empty()) {
-    if (isCompatibleExperimentalMapReceiver || isCompatibleCanonicalVectorReceiver) {
+    if (isCompatibleExperimentalMapReceiver || isCompatibleCanonicalVectorReceiver ||
+        isCompatibleExperimentalSoaVectorReceiver) {
       return true;
     }
     const BindingInfo *actualBinding = nullptr;

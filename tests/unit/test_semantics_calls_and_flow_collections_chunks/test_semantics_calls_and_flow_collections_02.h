@@ -301,6 +301,27 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("imported count forms validate on builtin soa_vector binding") {
+  const std::string source = R"(
+import /std/collections/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [i32] direct{count(values)}
+  [i32] method{values.count()}
+  return(plus(direct, method))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("explicit soa_vector count validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {
@@ -2850,6 +2871,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("imported get forms validate on builtin soa_vector binding") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [Particle] direct{get(values, 0i32)}
+  [Particle] method{values.get(0i32)}
+  return(plus(direct.x, method.x))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("explicit soa_vector get validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {
@@ -3034,6 +3077,28 @@ main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   values.ref(0i32)
   return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("imported ref forms validate on builtin soa_vector binding") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [Particle] direct{ref(values, 0i32)}
+  [Particle] method{values.ref(0i32)}
+  return(plus(direct.x, method.x))
 }
 )";
   std::string error;
@@ -3236,6 +3301,29 @@ main() {
   /soa_vector/reserve(values, 4i32)
   /soa_vector/push(values, Particle(12i32))
   values./soa_vector/push(Particle(14i32))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("imported soa_vector mutators validate on builtin soa_vector binding") {
+  const std::string source = R"(
+import /std/collections/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  reserve(values, 4i32)
+  push(values, Particle(12i32))
+  values.reserve(6i32)
+  values.push(Particle(14i32))
   return(0i32)
 }
 )";

@@ -318,8 +318,8 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
     const bool isBuiltinSoaGetOrRef =
-        !candidate.isMethodCall && candidate.args.size() == 2 &&
-         (isSimpleCallName(candidate, "get") || isSimpleCallName(candidate, "ref") ||
+        candidate.args.size() == 2 &&
+        (isSimpleCallName(candidate, "get") || isSimpleCallName(candidate, "ref") ||
          resolvedCandidate == "/soa_vector/get" ||
          resolvedCandidate == "/std/collections/soa_vector/get" ||
          resolvedCandidate == "/std/collections/soa_vector/ref" ||

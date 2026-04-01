@@ -41,6 +41,10 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       context.shouldBuiltinValidateStdNamespacedVectorCapacityCall &&
       expr.args.size() == 1 &&
       resolved.rfind("/std/collections/vector/capacity", 0) == 0;
+  const bool isDirectStdNamespacedSoaCountBuiltinCall =
+      !expr.isMethodCall && !resolvedMethod &&
+      expr.args.size() == 1 &&
+      resolved.rfind("/std/collections/soa_vector/count", 0) == 0;
   auto inferDirectVectorElementType = [&](const Expr &target, std::string &elemTypeOut) {
     elemTypeOut.clear();
     std::string inferredTypeText;
@@ -133,6 +137,30 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
   if (isDirectStdNamespacedVectorCapacityBuiltinCall) {
     return validateDirectVectorCountCapacityCall("capacity", "/std/collections/vector/capacity");
+  }
+  if (isDirectStdNamespacedSoaCountBuiltinCall) {
+    handledOut = true;
+    if (!expr.templateArgs.empty()) {
+      error_ = "count does not accept template arguments";
+      return false;
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      error_ = "count does not accept block arguments";
+      return false;
+    }
+    if (expr.args.size() != 1) {
+      error_ = "argument count mismatch for builtin count";
+      return false;
+    }
+    std::string elemType;
+    if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(), elemType)) {
+      if (!validateExpr(params, locals, expr.args.front())) {
+        return false;
+      }
+      error_ = "count requires soa_vector target";
+      return false;
+    }
+    return validateExpr(params, locals, expr.args.front());
   }
   if (it != defMap_.end() && !resolvedMethod) {
     return true;
