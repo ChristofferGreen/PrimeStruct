@@ -804,11 +804,11 @@ conversion helper. Valid root bare/method/old-explicit `push`/`reserve` calls on
 old-surface user helper shadows them, and old-explicit builtin mutator spellings now also share the same remaining
 `push|reserve requires mutable vector binding` lowerer contract on builtin `soa_vector<T>` receivers instead of
 falling through to the generic unsupported-expression-call rejection.
-Imported raw-builtin bare canonical `count/get/ref/push/reserve` forms now also clear semantics on that same
+Imported raw-builtin bare/method canonical `count/get/ref/push/reserve` forms now also clear semantics on that same
 canonical helper surface, and imported method `get(...).field` / `ref(...).field` now resolves the element struct
 before lowering. Those raw-builtin imported helper forms still stop later on the remaining lowering bridge from
-builtin `/soa_vector` values to experimental wrapper `SoaVector<T>` parameters, while imported method `get/ref`
-forms still expose the older unknown-method lowering gap.
+builtin `/soa_vector` values to experimental wrapper `SoaVector<T>` parameters instead of on the older
+imported method `get/ref` unknown-target gap.
 Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
 `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject contracts instead of the old builtin
 `get requires soa_vector target` / `ref requires soa_vector target` diagnostics. Vector-target root bare/direct/method

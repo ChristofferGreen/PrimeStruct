@@ -2341,12 +2341,12 @@ bad_use_after_take() {
     `reserve(...)`, `values.push(...)`, `values.reserve(...)`, and old explicit
     `/soa_vector/push|reserve(...)` forms now route through the canonical stdlib helper
     surface instead of stopping on dedicated backend-specific `soa_vector helper`
-    diagnostics, and imported raw-builtin bare `count/get/ref/push/reserve` forms now
-    also clear semantics on that canonical surface while imported method
+    diagnostics, and imported raw-builtin bare/method `count/get/ref/push/reserve`
+    forms now also clear semantics on that canonical surface while imported method
     `get(...).field` / `ref(...).field` now resolves the element struct during
     semantics. Those imported raw-builtin forms still stop later on the remaining
-    builtin-`/soa_vector` versus wrapper-`SoaVector<T>` lowering bridge, with method
-    `get/ref` still exposing the old unknown-method lowering gap. These compiler-owned
+    builtin-`/soa_vector` versus wrapper-`SoaVector<T>` lowering bridge instead of on
+    the older imported method `get/ref` unknown-target gap. These compiler-owned
     `soa_vector` paths are
     not the intended end-state and are now tracked as separate cleanup follow-ups for the remaining semantics
     method/builtin fallbacks, IR-lowerer special cases, emitter/backend special cases, and runtime/diagnostic
@@ -2490,9 +2490,12 @@ helper bridging is now gone as well, so those helper shapes flow through the sha
 definition-resolution plus count/access fallback path instead of a one-off SoA branch. Root
 builtin `push` and `reserve` forms now rewrite earlier onto the canonical helper surface as
 well, so the old backend-specific lowerer `soa_vector helper: push|reserve` rejection path is
-gone, and the lowerer count/access classifiers no longer treat raw `/soa_vector/count` as a
-builtin count alias once semantics has canonicalized those old-surface forms, so the remaining
-helper-call cleanup is no longer blocked on bare wildcard-imported helper parity. The remaining inferred and
+gone, and old-explicit builtin mutator spellings still share the narrower remaining
+`push|reserve requires mutable vector binding` contract. The lowerer count/access classifiers no longer treat raw `/soa_vector/count` as a
+builtin count alias once semantics has canonicalized those old-surface forms. Imported raw-builtin
+method `get/ref` forms now also reach the same canonical wrapper-mismatch lowerer
+boundary as their bare imported counterparts, so the remaining helper-call cleanup is no longer
+blocked on wildcard-imported access-method parity. The remaining inferred and
 method-target fallback resolution for builtin `soa_vector` count receivers now also prefers the
 canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
 `/soa_vector/count` user-helper shadowing on helper-return receivers, helper-return bare
@@ -2520,12 +2523,12 @@ builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the s
 semantic rewrite and then stop later on the remaining conversion mismatch between builtin
 `/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the
 stdlib conversion implementation, instead of failing earlier against the wrapper helper itself.
-Imported raw-builtin bare canonical `count/get/ref/push/reserve` forms now also clear semantics
-on that same canonical helper surface, and imported method `get(...).field` / `ref(...).field`
-now resolves the element struct before lowering. Those raw-builtin imported helper forms still
-stop later on the remaining lowering bridge from builtin `/soa_vector` values to experimental
-wrapper `SoaVector<T>` parameters, while imported method `get/ref` forms still expose the older
-unknown-method lowering gap.
+Imported raw-builtin bare/method canonical `count/get/ref/push/reserve` forms now also clear
+semantics on that same canonical helper surface, and imported method `get(...).field` /
+`ref(...).field` now resolves the element struct before lowering. Those raw-builtin imported
+helper forms still stop later on the remaining lowering bridge from builtin `/soa_vector`
+values to experimental wrapper `SoaVector<T>` parameters instead of on the older
+imported method `get/ref` unknown-target gap.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, while field-view cleanup is now reduced to the remaining
 direct pending-diagnostic path plus future richer borrowed/mutating behavior because the

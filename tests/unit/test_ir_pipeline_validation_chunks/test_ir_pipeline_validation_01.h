@@ -747,7 +747,7 @@ main() {
   CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
 }
 
-TEST_CASE("imported builtin soa_vector method access forms keep old lowerer gap") {
+TEST_CASE("imported builtin soa_vector method access forms reach canonical lowerer mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -772,8 +772,10 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("unknown method: /soa_vector/") != std::string::npos);
+  CHECK(error.find("struct parameter type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
 }
+
 
 TEST_CASE("canonical experimental wrapper to_aos slash-method reaches canonical lowerer mismatch") {
   const std::string source = R"(
