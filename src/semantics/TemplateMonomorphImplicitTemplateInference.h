@@ -455,10 +455,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
         argInfo = paramInfo;
       } else if (std::string soaFieldViewName;
                  isBuiltinSoaFieldViewExprForMonomorph(*argExpr, params, locals, ctx, soaFieldViewName)) {
-        error = "soa_vector field views are not implemented yet: " + soaFieldViewName;
+        error = soaFieldViewPendingDiagnostic(soaFieldViewName);
         return false;
       } else if (isBuiltinSoaRefExprForMonomorph(*argExpr, params, locals, ctx)) {
-        error = "soa_vector borrowed views are not implemented yet: ref";
+        error = soaBorrowedViewPendingDiagnostic();
         return false;
       } else if (argExpr->isSpread) {
         std::string spreadElementType;

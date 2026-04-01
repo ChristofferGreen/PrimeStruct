@@ -54,11 +54,11 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
   if (valueExpr != nullptr) {
     std::string soaFieldViewName;
     if (isBuiltinSoaFieldViewExpr(*valueExpr, defParams, activeLocals, &soaFieldViewName)) {
-      error_ = "soa_vector field views are not implemented yet: " + soaFieldViewName;
+      error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
       return false;
     }
     if (isBuiltinSoaRefExpr(*valueExpr, defParams, activeLocals)) {
-      error_ = "soa_vector borrowed views are not implemented yet: ref";
+      error_ = soaBorrowedViewPendingDiagnostic();
       return false;
     }
     exprKind = inferExprReturnKind(*valueExpr, defParams, activeLocals);

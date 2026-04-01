@@ -511,7 +511,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     if (!isArrayOrString && !isMap && !isExperimentalMap) {
       if (std::string soaFieldViewName;
           isBuiltinSoaFieldViewExpr(expr.args.front(), params, locals, &soaFieldViewName)) {
-        error_ = "soa_vector field views are not implemented yet: " + soaFieldViewName;
+        error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
         return false;
       }
       if (!validateExpr(params, locals, expr.args.front())) {

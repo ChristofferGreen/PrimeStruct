@@ -99,11 +99,11 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     }
     std::string soaFieldViewName;
     if (isBuiltinSoaFieldViewExpr(stmt.args.front(), params, locals, &soaFieldViewName)) {
-      error_ = "soa_vector field views are not implemented yet: " + soaFieldViewName;
+      error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
       return false;
     }
     if (isBuiltinSoaRefExpr(stmt.args.front(), params, locals)) {
-      error_ = "soa_vector borrowed views are not implemented yet: ref";
+      error_ = soaBorrowedViewPendingDiagnostic();
       return false;
     }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {

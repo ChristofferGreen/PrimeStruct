@@ -848,6 +848,11 @@ builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the s
 semantic rewrite and then stop later on the remaining conversion mismatch between builtin
 `/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the
 stdlib conversion implementation.
+The current pending `soa_vector field views are not implemented yet: <field>` and
+`soa_vector borrowed views are not implemented yet: ref` diagnostics now come from shared
+semantics helpers rather than duplicated validator and monomorph string assembly, but the
+compiler-owned fallback checks still remain until field-view indexing itself moves onto the
+experimental substrate.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

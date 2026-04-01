@@ -3,6 +3,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -131,6 +132,8 @@ bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
+std::string soaFieldViewPendingDiagnostic(std::string_view fieldName);
+std::string soaBorrowedViewPendingDiagnostic();
 bool isSoaVectorStructElementType(const std::string &typeArg,
                                   const std::string &namespacePrefix,
                                   const std::unordered_set<std::string> &structTypes,

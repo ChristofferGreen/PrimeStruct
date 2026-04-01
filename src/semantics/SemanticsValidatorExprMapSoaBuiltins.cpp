@@ -291,7 +291,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = "soa_vector field view requires soa_vector target";
       return false;
     }
-    error_ = "soa_vector field views are not implemented yet: " + expr.name;
+    error_ = soaFieldViewPendingDiagnostic(expr.name);
     return false;
   }
 

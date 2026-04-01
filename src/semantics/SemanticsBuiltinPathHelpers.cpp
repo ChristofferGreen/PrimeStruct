@@ -430,6 +430,14 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   return false;
 }
 
+std::string soaFieldViewPendingDiagnostic(std::string_view fieldName) {
+  return "soa_vector field views are not implemented yet: " + std::string(fieldName);
+}
+
+std::string soaBorrowedViewPendingDiagnostic() {
+  return "soa_vector borrowed views are not implemented yet: ref";
+}
+
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;

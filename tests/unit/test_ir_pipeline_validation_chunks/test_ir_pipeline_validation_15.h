@@ -584,3 +584,44 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
   CHECK(source.find("std/collections/soa_vector/push") == std::string::npos);
   CHECK(source.find("std/collections/soa_vector/reserve") == std::string::npos);
 }
+
+TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path builtinPathHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsBuiltinPathHelpers.cpp";
+  const std::filesystem::path exprMapSoaBuiltinsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMapSoaBuiltins.cpp";
+  const std::filesystem::path inferDefinitionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferDefinition.cpp";
+  REQUIRE(std::filesystem::exists(builtinPathHelpersPath));
+  REQUIRE(std::filesystem::exists(exprMapSoaBuiltinsPath));
+  REQUIRE(std::filesystem::exists(inferDefinitionPath));
+
+  const std::string builtinPathHelpersSource = readText(builtinPathHelpersPath);
+  const std::string exprMapSoaBuiltinsSource = readText(exprMapSoaBuiltinsPath);
+  const std::string inferDefinitionSource = readText(inferDefinitionPath);
+
+  CHECK(builtinPathHelpersSource.find("std::string soaFieldViewPendingDiagnostic(std::string_view fieldName)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("std::string soaBorrowedViewPendingDiagnostic()") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find("soa_vector field views are not implemented yet: ") ==
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find("soaFieldViewPendingDiagnostic(expr.name)") !=
+        std::string::npos);
+  CHECK(inferDefinitionSource.find("soa_vector borrowed views are not implemented yet: ref") ==
+        std::string::npos);
+  CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") !=
+        std::string::npos);
+}

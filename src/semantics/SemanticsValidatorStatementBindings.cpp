@@ -198,7 +198,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     return false;
   }
   if (isBuiltinSoaRefExpr(*initializerExprForValidation, params, locals)) {
-    error_ = "soa_vector borrowed views are not implemented yet: ref";
+    error_ = soaBorrowedViewPendingDiagnostic();
     return false;
   }
 
