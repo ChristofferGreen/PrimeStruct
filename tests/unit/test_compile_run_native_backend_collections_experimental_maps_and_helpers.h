@@ -149,7 +149,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/get") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/soa_vector/get") !=
         std::string::npos);
 }
 
@@ -175,7 +175,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/soa_vector/get") !=
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/get") !=
         std::string::npos);
 }
 

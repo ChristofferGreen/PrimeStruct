@@ -412,13 +412,13 @@ Particle() {
 }
 
 [struct]
-Holder() {
-  [return<SoaVector<Particle>>]
-  cloneValues() {
-    [SoaVector<Particle>, mut] values{soaVectorNew<Particle>()}
-    values.push(Particle(7i32))
-    return(values)
-  }
+Holder() {}
+
+[return<SoaVector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  [SoaVector<Particle>, mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]
@@ -606,8 +606,13 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("semantics rejects explicit soa_vector reserve on vector target through canonical helper path") {

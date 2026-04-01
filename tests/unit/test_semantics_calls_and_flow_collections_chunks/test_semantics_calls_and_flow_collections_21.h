@@ -93,7 +93,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("vector unsafe method access with canonical helper does not infer auto return") {
+TEST_CASE("vector unsafe method access with canonical helper validates auto return") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -116,8 +116,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map method access keeps canonical struct-return forwarding") {

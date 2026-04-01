@@ -7,9 +7,10 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     const Expr &receiverExpr,
     const BuiltinCollectionDispatchResolvers &resolvers,
     ReturnKind &kindOut) const {
-  if (resolvedPath == "/array/count" || resolvedPath == "/vector/count" || resolvedPath == "/string/count" ||
+  if (resolvedPath == "/array/count" || resolvedPath == "/vector/count" ||
+      resolvedPath == "/std/collections/vector/count" || resolvedPath == "/string/count" ||
       resolvedPath == "/map/count" || resolvedPath == "/std/collections/map/count" ||
-      resolvedPath == "/vector/capacity") {
+      resolvedPath == "/vector/capacity" || resolvedPath == "/std/collections/vector/capacity") {
     kindOut = ReturnKind::Int;
     return true;
   }
@@ -33,7 +34,9 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     }
     return false;
   }
-  if (resolvedPath == "/vector/at" || resolvedPath == "/vector/at_unsafe") {
+  if (resolvedPath == "/vector/at" || resolvedPath == "/vector/at_unsafe" ||
+      resolvedPath == "/std/collections/vector/at" ||
+      resolvedPath == "/std/collections/vector/at_unsafe") {
     std::string elemType;
     if (resolvers.resolveVectorTarget(receiverExpr, elemType)) {
       ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));

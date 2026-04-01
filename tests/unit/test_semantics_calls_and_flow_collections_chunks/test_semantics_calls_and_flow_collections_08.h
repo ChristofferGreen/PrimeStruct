@@ -1,4 +1,25 @@
-TEST_CASE("bare vector mutator named args reject builtin call syntax even through imported stdlib helpers") {
+TEST_CASE("push and reserve named args validate through imported stdlib helpers") {
+  const auto checkStatement = [](const std::string &stmtText) {
+    const std::string source =
+        "import /std/collections/*\n\n"
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}\n"
+        "  " +
+        stmtText +
+        "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK(validateProgram(source, "/main", error));
+    CHECK(error.empty());
+  };
+
+  checkStatement("push([value] 3i32, [values] values)");
+  checkStatement("reserve([capacity] 8i32, [values] values)");
+}
+
+TEST_CASE("indexed removal and discard named args still reject builtin call syntax") {
   const auto checkInvalidStatement = [](const std::string &stmtText) {
     const std::string source =
         "import /std/collections/*\n\n"
@@ -15,8 +36,6 @@ TEST_CASE("bare vector mutator named args reject builtin call syntax even throug
     CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
   };
 
-  checkInvalidStatement("push([value] 3i32, [values] values)");
-  checkInvalidStatement("reserve([capacity] 8i32, [values] values)");
   checkInvalidStatement("remove_at([index] 0i32, [values] values)");
   checkInvalidStatement("remove_swap([index] 0i32, [values] values)");
   checkInvalidStatement("pop([values] values)");

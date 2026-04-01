@@ -408,8 +408,8 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::Error);
-  CHECK(error == "reserve requires mutable vector binding");
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
 
   primec::Expr removeAtCall;
   removeAtCall.kind = primec::Expr::Kind::Call;

@@ -1,4 +1,4 @@
-TEST_CASE("push rejects non-relocation-trivial vector element types") {
+TEST_CASE("push accepts non-relocation-trivial vector element types through imported stdlib helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -20,10 +20,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find(
-            "push requires relocation-trivial vector element type until container move/reallocation semantics are "
-            "implemented: Mover") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector constructor rejects non-relocation-trivial vector element types") {
@@ -493,7 +491,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("reserve rejects nested non-relocation-trivial vector element types") {
+TEST_CASE("reserve accepts nested non-relocation-trivial vector element types through imported stdlib helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -520,10 +518,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find(
-            "reserve requires relocation-trivial vector element type until container move/reallocation semantics are "
-            "implemented: Wrapper") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("reserve validates on mutable soa_vector parameter") {

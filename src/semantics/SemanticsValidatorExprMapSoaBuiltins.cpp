@@ -204,8 +204,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             : (context.resolveSoaVectorTarget != nullptr &&
                context.resolveSoaVectorTarget(expr.args.front(), elemType));
     if (!targetValid) {
-      error_ = helperName == "to_soa" ? "to_soa requires vector target"
-                                      : "to_aos requires soa_vector target";
+      if (helperName == "to_aos" && isCanonicalSoaToAosResolved) {
+        error_ = "argument type mismatch for /std/collections/soa_vector/to_aos parameter values";
+      } else {
+        error_ = helperName == "to_soa" ? "to_soa requires vector target"
+                                        : "to_aos requires soa_vector target";
+      }
       return false;
     }
     if (!validateExpr(params, locals, expr.args.front())) {

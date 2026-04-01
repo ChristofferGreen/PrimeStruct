@@ -985,11 +985,6 @@ void rewriteBuiltinSoaToAosCallExpr(
   expr.name = "/std/collections/soa_vector/to_aos";
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
-  if (receiverBinding.has_value() && !receiverBinding->typeTemplateArg.empty()) {
-    expr.templateArgs.push_back(receiverBinding->typeTemplateArg);
-  } else if (fallbackVectorBinding.has_value() && !fallbackVectorBinding->typeTemplateArg.empty()) {
-    expr.templateArgs.push_back(fallbackVectorBinding->typeTemplateArg);
-  }
 }
 
 bool rewriteBuiltinSoaToAosCalls(Program &program, std::string &error) {

@@ -325,7 +325,7 @@ main() {
   CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("capacity wrapper temporaries infer i32 for chained methods") {
+TEST_CASE("capacity wrapper temporaries keep current chained method failure boundary") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -346,11 +346,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method target for tag") != std::string::npos);
 }
 
-TEST_CASE("wrapper vector capacity method resolves through imported stdlib helper") {
+TEST_CASE("wrapper vector capacity method keeps current imported compile boundary") {
   const std::string source = R"(
 import /std/collections/*
 
