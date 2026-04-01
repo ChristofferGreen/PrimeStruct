@@ -2382,10 +2382,12 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
 
   const Expr &fieldViewExpr = expr.args.front();
   if (fieldViewExpr.kind != Expr::Kind::Call || fieldViewExpr.isBinding ||
-      !fieldViewExpr.isMethodCall || fieldViewExpr.name.empty() ||
+      fieldViewExpr.name.empty() ||
       fieldViewExpr.name.find('/') != std::string::npos ||
       !fieldViewExpr.templateArgs.empty() || fieldViewExpr.hasBodyArguments ||
-      !fieldViewExpr.bodyArguments.empty() || fieldViewExpr.args.size() != 1) {
+      !fieldViewExpr.bodyArguments.empty() ||
+      semantics::hasNamedArguments(fieldViewExpr.argNames) ||
+      fieldViewExpr.args.size() != 1) {
     return;
   }
 
