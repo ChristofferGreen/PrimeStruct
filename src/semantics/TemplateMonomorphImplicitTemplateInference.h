@@ -186,6 +186,21 @@ bool isBuiltinSoaFieldViewExprForMonomorph(const Expr &candidate,
   return false;
 }
 
+std::optional<std::string> builtinSoaPendingExprDiagnosticForMonomorph(
+    const Expr &expr,
+    const std::vector<ParameterInfo> &params,
+    const LocalTypeMap &locals,
+    const Context &ctx) {
+  std::string soaFieldViewName;
+  if (isBuiltinSoaFieldViewExprForMonomorph(expr, params, locals, ctx, soaFieldViewName)) {
+    return soaFieldViewPendingDiagnostic(soaFieldViewName);
+  }
+  if (isBuiltinSoaRefExprForMonomorph(expr, params, locals, ctx)) {
+    return soaBorrowedViewPendingDiagnostic();
+  }
+  return std::nullopt;
+}
+
 bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   const std::vector<ParameterInfo> &params,
                                   const LocalTypeMap &locals,
@@ -453,12 +468,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
           argExpr == &param.args.front();
       if (usesDefaultArgBinding) {
         argInfo = paramInfo;
-      } else if (std::string soaFieldViewName;
-                 isBuiltinSoaFieldViewExprForMonomorph(*argExpr, params, locals, ctx, soaFieldViewName)) {
-        error = soaFieldViewPendingDiagnostic(soaFieldViewName);
-        return false;
-      } else if (isBuiltinSoaRefExprForMonomorph(*argExpr, params, locals, ctx)) {
-        error = soaBorrowedViewPendingDiagnostic();
+      } else if (const std::optional<std::string> soaPendingDiagnostic =
+                     builtinSoaPendingExprDiagnosticForMonomorph(*argExpr, params, locals, ctx)) {
+        error = *soaPendingDiagnostic;
         return false;
       } else if (argExpr->isSpread) {
         std::string spreadElementType;

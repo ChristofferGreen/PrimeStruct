@@ -2497,9 +2497,10 @@ plus `values.ref(i)` on top of the current single-column borrowed-slot substrate
 borrowed-return paths now run successfully across the current backends without depending on the
 conversion helper surface. The pending `soa_vector` field-view and borrowed-view diagnostics now also route through shared
 semantics helper functions instead of duplicated string assembly across validator and monomorph
-entrypoints, and the validator-side fallback probes now also share one
-`builtinSoaPendingExprDiagnostic(...)` helper instead of repeated field-view/ref checks across
-multiple validator paths. The remaining pending-diagnostic cleanup is therefore reduced to
+entrypoints, and the validator-side plus monomorph-side fallback probes now also share
+`builtinSoaPendingExprDiagnostic(...)` and
+`builtinSoaPendingExprDiagnosticForMonomorph(...)` helpers instead of repeated field-view/ref
+checks across those fallback paths. The remaining pending-diagnostic cleanup is therefore reduced to
 deleting the fallback checks themselves once field-view indexing moves onto the experimental
 substrate. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and

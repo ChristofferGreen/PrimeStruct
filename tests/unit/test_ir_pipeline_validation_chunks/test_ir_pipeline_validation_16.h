@@ -434,6 +434,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (inferCallBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut,") !=
         std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "std::optional<std::string> builtinSoaPendingExprDiagnosticForMonomorph(") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "builtinSoaPendingExprDiagnosticForMonomorph(*argExpr, params, locals, ctx)") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "isBuiltinSoaFieldViewExprForMonomorph(*argExpr, params, locals, ctx, soaFieldViewName)") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "isBuiltinSoaRefExprForMonomorph(*argExpr, params, locals, ctx)") ==
+        std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find("if (handledCallInference) {") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(

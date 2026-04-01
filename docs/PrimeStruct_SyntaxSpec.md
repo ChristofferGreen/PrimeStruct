@@ -851,8 +851,9 @@ stdlib conversion implementation.
 The current pending `soa_vector field views are not implemented yet: <field>` and
 `soa_vector borrowed views are not implemented yet: ref` diagnostics now come from shared
 semantics helpers rather than duplicated validator and monomorph string assembly, and the
-remaining validator-side fallback probes now also share one
-`builtinSoaPendingExprDiagnostic(...)` helper. The compiler-owned fallback checks themselves
+remaining validator-side plus monomorph-side fallback probes now also share
+`builtinSoaPendingExprDiagnostic(...)` and
+`builtinSoaPendingExprDiagnosticForMonomorph(...)` helpers. The compiler-owned fallback checks themselves
 still remain until field-view indexing moves onto the experimental substrate.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
