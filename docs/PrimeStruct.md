@@ -2375,7 +2375,8 @@ bad_use_after_take() {
     degrading to the generic mutable-binding assignment error, and borrowed
     `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`, `borrowed.ref(i)`, and
     `borrowed.to_aos()` now also rides on the existing helper/conversion substrate for local,
-    parameter, and helper-return receivers instead of leaking through raw builtin
+    parameter, helper-return, inline `location(...)`, and inline
+    `dereference(location(...))` receivers instead of leaking through raw builtin
     target-mismatch diagnostics or the old helper-return conversion mismatch. Read-only field-view indexing now rides on that same helper
     substrate for reflected structs: both method-form `values.x()[i]` / `values.y()[i]` and
     call-form `x(values)[i]` / `y(values)[i]` reads plus

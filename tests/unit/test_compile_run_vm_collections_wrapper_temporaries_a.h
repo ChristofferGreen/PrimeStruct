@@ -930,6 +930,43 @@ main() {
   CHECK(runCommand(runCmd) == 18);
 }
 
+TEST_CASE("vm runs inline location experimental soa_vector read-only methods") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [Particle] firstA{location(values).get(0i32)}
+  [Particle] secondA{location(values).ref(1i32)}
+  [vector<Particle>] unpackedA{location(values).to_aos()}
+  [i32] countA{location(values).count()}
+  [Particle] firstB{dereference(location(values)).get(0i32)}
+  [Particle] secondB{dereference(location(values)).ref(1i32)}
+  [vector<Particle>] unpackedB{dereference(location(values)).to_aos()}
+  [i32] countB{dereference(location(values)).count()}
+  return(plus(plus(firstA.x, secondA.x),
+              plus(count(unpackedA),
+                   plus(countA,
+                        plus(plus(firstB.x, secondB.x),
+                             plus(count(unpackedB), countB))))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_soa_vector_inline_location_methods.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 40);
+}
+
 TEST_CASE("vm runs borrowed helper-return experimental soa_vector read-only methods") {
   const std::string source = R"(
 import /std/collections/*

@@ -705,6 +705,65 @@ main() {
   CHECK(ast.find("pickBorrowed(location(values)).to_aos()", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites inline location experimental soa_vector read-only methods") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [Particle] firstA{location(values).get(0i32)}
+  [Particle] secondA{location(values).ref(1i32)}
+  [vector<Particle>] unpackedA{location(values).to_aos()}
+  [i32] countA{location(values).count()}
+  [Particle] firstB{dereference(location(values)).get(0i32)}
+  [Particle] secondB{dereference(location(values)).ref(1i32)}
+  [vector<Particle>] unpackedB{dereference(location(values)).to_aos()}
+  [i32] countB{dereference(location(values)).count()}
+  return(plus(plus(firstA.x, secondA.x),
+              plus(count(unpackedA),
+                   plus(countA,
+                        plus(plus(firstB.x, secondB.x),
+                             plus(count(unpackedB), countB))))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_inline_location_experimental_soa_vector_methods.prime", source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_inline_location_experimental_soa_vector_methods.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("location(values).get(", mainPos) == std::string::npos);
+  CHECK(ast.find("location(values).ref(", mainPos) == std::string::npos);
+  CHECK(ast.find("location(values).to_aos()", mainPos) == std::string::npos);
+  CHECK(ast.find("location(values).count()", mainPos) == std::string::npos);
+  CHECK(ast.find("dereference(location(values)).get(", mainPos) == std::string::npos);
+  CHECK(ast.find("dereference(location(values)).ref(", mainPos) == std::string::npos);
+  CHECK(ast.find("dereference(location(values)).to_aos()", mainPos) == std::string::npos);
+  CHECK(ast.find("dereference(location(values)).count()", mainPos) == std::string::npos);
+  CHECK(ast.find("values.get(0)", mainPos) != std::string::npos);
+  CHECK(ast.find("values.ref(1)", mainPos) != std::string::npos);
+  CHECK(ast.find("values.count()", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+        std::string::npos);
+}
+
 TEST_CASE("dump ast_semantic alias works") {
   const std::string source = R"(
 [return<int>]

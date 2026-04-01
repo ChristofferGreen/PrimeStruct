@@ -942,6 +942,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector inline location read-only methods validate on wrapper state") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [Particle] firstA{location(values).get(0i32)}
+  [Particle] secondA{location(values).ref(1i32)}
+  [vector<Particle>] unpackedA{location(values).to_aos()}
+  [i32] countA{location(values).count()}
+  [Particle] firstB{dereference(location(values)).get(0i32)}
+  [Particle] secondB{dereference(location(values)).ref(1i32)}
+  [vector<Particle>] unpackedB{dereference(location(values)).to_aos()}
+  [i32] countB{dereference(location(values)).count()}
+  return(plus(plus(firstA.x, secondA.x),
+              plus(count(unpackedA),
+                   plus(countA,
+                        plus(plus(firstB.x, secondB.x),
+                             plus(count(unpackedB), countB))))))
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector borrowed helper-return get/ref methods validate on wrapper state") {
   const std::string source = R"(
 import /std/collections/*
