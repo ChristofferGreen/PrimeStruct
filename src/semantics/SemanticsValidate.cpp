@@ -2373,7 +2373,7 @@ void rewriteExperimentalSoaInlineBorrowMethodExpr(
     rewriteExperimentalSoaInlineBorrowMethodExpr(
         arg, bindings, soaVectorReturnDefinitions, definitionNamespace);
   }
-  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty()) {
+  if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
     return;
   }
   const std::string normalizedMethodName = [&]() {
@@ -2394,12 +2394,18 @@ void rewriteExperimentalSoaInlineBorrowMethodExpr(
       normalizedMethodName != "to_aos") {
     return;
   }
+  if (!expr.isMethodCall && expr.name.find('/') != std::string::npos) {
+    return;
+  }
   const auto normalizedReceiver = normalizeExperimentalSoaInlineBorrowReceiver(
       expr.args.front(), bindings, &soaVectorReturnDefinitions, definitionNamespace);
   if (!normalizedReceiver.has_value()) {
     return;
   }
   expr.args.front() = *normalizedReceiver;
+  if (!expr.isMethodCall) {
+    expr.isMethodCall = true;
+  }
 }
 
 bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &error) {

@@ -1024,23 +1024,29 @@ main() {
   values.push(Particle(9i32, 12i32))
   [Particle] firstA{location(pickBorrowed(location(values))).get(0i32)}
   [Particle] secondA{location(pickBorrowed(location(values))).ref(1i32)}
+  [Particle] firstC{get(location(pickBorrowed(location(values))), 1i32)}
+  [Particle] secondC{ref(location(pickBorrowed(location(values))), 0i32)}
   [vector<Particle>] unpackedA{location(pickBorrowed(location(values))).to_aos()}
   [i32] countA{location(pickBorrowed(location(values))).count()}
   [Particle] firstB{dereference(location(pickBorrowed(location(values)))).get(0i32)}
   [Particle] secondB{dereference(location(pickBorrowed(location(values)))).ref(1i32)}
+  [Particle] firstD{get(dereference(location(pickBorrowed(location(values)))), 0i32)}
+  [Particle] secondD{ref(dereference(location(pickBorrowed(location(values)))), 1i32)}
   [vector<Particle>] unpackedB{dereference(location(pickBorrowed(location(values)))).to_aos()}
   [i32] countB{dereference(location(pickBorrowed(location(values)))).count()}
   [int] total{
     plus(plus(firstA.x, secondA.x),
-         plus(count(unpackedA),
-              plus(countA,
-                   plus(plus(firstB.x, secondB.x),
-                        plus(count(unpackedB),
-                             plus(countB,
-                                  plus(location(pickBorrowed(location(values))).y()[0i32],
-                                       plus(dereference(location(pickBorrowed(location(values)))).y()[1i32],
-                                            plus(y(location(pickBorrowed(location(values))))[0i32],
-                                                 y(dereference(location(pickBorrowed(location(values)))))[1i32])))))))))
+         plus(plus(firstC.x, secondC.y),
+              plus(count(unpackedA),
+                   plus(countA,
+                        plus(plus(firstB.x, secondB.x),
+                             plus(plus(firstD.x, secondD.y),
+                                  plus(count(unpackedB),
+                                       plus(countB,
+                                            plus(location(pickBorrowed(location(values))).y()[0i32],
+                                                 plus(dereference(location(pickBorrowed(location(values)))).y()[1i32],
+                                                      plus(y(location(pickBorrowed(location(values))))[0i32],
+                                                           y(dereference(location(pickBorrowed(location(values)))))[1i32]))))))))))
   }
   return(total)
 }
@@ -1048,7 +1054,7 @@ main() {
   const std::string srcPath =
       writeTemp("vm_experimental_soa_vector_inline_location_borrowed_return_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 80);
+  CHECK(runCommand(runCmd) == 116);
 }
 
 TEST_CASE("runs vm experimental soa storage helpers") {

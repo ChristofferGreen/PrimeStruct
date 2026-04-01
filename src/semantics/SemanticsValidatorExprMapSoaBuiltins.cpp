@@ -414,8 +414,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return false;
     }
     std::string elemType;
-    if (!(context.resolveSoaVectorTarget != nullptr &&
-          context.resolveSoaVectorTarget(expr.args.front(), elemType))) {
+    if (!resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
       error_ = helperName + " requires soa_vector target";
       return false;
     }
