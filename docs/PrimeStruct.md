@@ -2467,21 +2467,22 @@ semantic rewrite and then stop later on the remaining conversion mismatch betwee
 `/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the
 stdlib conversion implementation, instead of failing earlier against the wrapper helper itself.
 Conversion cleanup itself is staged as direct-canonical versus
-imported-helper follow-ups, and field-view cleanup itself staged as a completed
-pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend
+imported-helper follow-ups, while field-view cleanup is now reduced to the remaining
+direct pending-diagnostic path plus future richer borrowed/mutating behavior because the
+current successful read-only indexing surface no longer depends on backend-local
+field-view routing. The remaining backend
 cleanup is tracked as explicit C++, native, and VM follow-ups instead of one combined
 emitter/runtime note, with the C++, native, and VM backend cleanup themselves staged as
 helper-call, conversion, and field-view follow-ups, with the C++ helper cleanup itself staged as
 direct-call versus wildcard-imported follow-ups, the C++ conversion cleanup itself staged as
-direct-canonical versus imported-helper follow-ups, the C++ field-view cleanup itself staged as a
-completed pending-diagnostic slice plus a separate successful-indexing follow-up, the native
+direct-canonical versus imported-helper follow-ups, the C++ field-view cleanup itself now reduced
+to the pending-diagnostic path only, the native
 helper cleanup itself staged as direct-call versus wildcard-imported follow-ups, the native
 conversion cleanup itself staged as direct-canonical versus imported-helper follow-ups, the
-native field-view cleanup itself staged as a completed pending-diagnostic slice plus a separate
-successful-indexing follow-up, the VM helper cleanup itself staged as direct-call versus
+native field-view cleanup itself now reduced to the pending-diagnostic path only, the VM helper cleanup itself staged as direct-call versus
 wildcard-imported follow-ups, the VM conversion cleanup itself staged as direct-canonical versus
-imported-helper follow-ups, and the VM field-view cleanup itself staged as a completed
-pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining runtime
+imported-helper follow-ups, and the VM field-view cleanup itself now reduced to the
+pending-diagnostic path only. The remaining runtime
 cleanup is now tracked separately as runtime-code versus diagnostic/test follow-ups, with both
 the runtime-code and diagnostic/test cleanup themselves staged as helper-call, conversion, and
 field-view follow-ups. Runtime-code helper-call cleanup is now complete because no production
@@ -2492,12 +2493,11 @@ test harnesses. Diagnostic/test conversion cleanup is now complete too because c
 IR-lowerer, and semantic-dump coverage lock both direct-canonical and imported-helper wrapper
 `to_aos` forms to the canonical `/std/collections/soa_vector/to_aos` path plus the current
 lowerer `struct parameter type mismatch` boundary. The remaining runtime-code cleanup is therefore
-reduced to conversion plus field-view follow-ups, while the remaining diagnostic/test cleanup is
-reduced to field-view follow-ups only. The runtime-code conversion cleanup itself is still staged
-as direct-canonical versus imported-helper follow-ups, the runtime-code field-view cleanup itself
-is still staged as pending-diagnostic versus successful-indexing follow-ups, and the
-diagnostic/test field-view cleanup itself remains a completed pending-diagnostic slice plus a
-separate successful-indexing follow-up. The wrapper now also exposes `soaVectorRef<T>()`
+reduced to conversion plus the direct pending-diagnostic field-view path, while the remaining
+diagnostic/test cleanup is reduced to field-view follow-ups only. The runtime-code conversion
+cleanup itself is still staged as direct-canonical versus imported-helper follow-ups, and the
+current successful field-view indexing surface is already locked by compile-run, dump, and
+source-level coverage rather than backend-local routing contracts. The wrapper now also exposes `soaVectorRef<T>()`
 plus `values.ref(i)` on top of the current single-column borrowed-slot substrate, and those
 borrowed-return paths now run successfully across the current backends without depending on the
 conversion helper surface. The pending `soa_vector` field-view and borrowed-view diagnostics now also route through shared
@@ -2506,7 +2506,9 @@ entrypoints, and the validator-side plus monomorph-side fallback probes are gone
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
 construction/parsing instead of open-coded literals across validator and monomorph fallback logic,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
-gone too.
+gone too. The current successful read-only `values.field()[i]` path likewise no longer depends on
+lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
+it now runs through the generic helper-call plus struct-field path end-to-end.
 The remaining pending-diagnostic cleanup is therefore reduced to
 deleting the direct compiler-owned unsupported field-view path itself once field-view indexing
 moves onto the experimental substrate. The broader experimental wrapper/helper surface through imported
@@ -2522,9 +2524,9 @@ path.
 That single-column borrowed-slot substrate is the current completed foothold; the remaining
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental
-`value.field()[i]` indexing now has its first completed read-only single-column slice on top of
-the current substrate, and the remaining field-view work is the broader arbitrary-field plus
-borrowed/mutating behavior.
+`value.field()[i]` indexing now has its first completed read-only reflected slice on top of
+the current substrate, and the remaining field-view work is borrowed/mutating behavior rather
+than backend cleanup for that read-only path.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,

@@ -295,6 +295,70 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("soa field-view backend cleanup stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                            : std::filesystem::path("..");
+
+  const std::filesystem::path emitterCollectionInferencePath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinCollectionInferenceHelpers.cpp";
+  const std::filesystem::path inlineDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
+  const std::filesystem::path countAccessClassifiersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessClassifiers.cpp";
+  const std::filesystem::path nativeTailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
+  REQUIRE(std::filesystem::exists(emitterCollectionInferencePath));
+  REQUIRE(std::filesystem::exists(inlineDispatchPath));
+  REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
+  REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
+
+  const std::string emitterCollectionInferenceSource = readText(emitterCollectionInferencePath);
+  const std::string inlineDispatchSource = readText(inlineDispatchPath);
+  const std::string countAccessClassifiersSource = readText(countAccessClassifiersPath);
+  const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
+
+  CHECK(emitterCollectionInferenceSource.find("field_view") == std::string::npos);
+  CHECK(emitterCollectionInferenceSource.find("soa_vector field views are not implemented yet: ") ==
+        std::string::npos);
+  CHECK(emitterCollectionInferenceSource.find("soa_vector borrowed views are not implemented yet: ref") ==
+        std::string::npos);
+  CHECK(emitterCollectionInferenceSource.find("soaVectorGet") == std::string::npos);
+  CHECK(emitterCollectionInferenceSource.find("soaVectorRef") == std::string::npos);
+
+  CHECK(inlineDispatchSource.find("field_view") == std::string::npos);
+  CHECK(inlineDispatchSource.find("soa_vector field views are not implemented yet: ") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("soa_vector borrowed views are not implemented yet: ref") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("soaVectorGet") == std::string::npos);
+  CHECK(inlineDispatchSource.find("soaVectorRef") == std::string::npos);
+
+  CHECK(countAccessClassifiersSource.find("field_view") == std::string::npos);
+  CHECK(countAccessClassifiersSource.find("soa_vector field views are not implemented yet: ") ==
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("soa_vector borrowed views are not implemented yet: ref") ==
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("soaVectorGet") == std::string::npos);
+  CHECK(countAccessClassifiersSource.find("soaVectorRef") == std::string::npos);
+
+  CHECK(nativeTailDispatchSource.find("field_view") == std::string::npos);
+  CHECK(nativeTailDispatchSource.find("soa_vector field views are not implemented yet: ") ==
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("soa_vector borrowed views are not implemented yet: ref") ==
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("soaVectorGet") == std::string::npos);
+  CHECK(nativeTailDispatchSource.find("soaVectorRef") == std::string::npos);
+}
+
 TEST_CASE("vm heap helpers source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
