@@ -2405,8 +2405,12 @@ bad_use_after_take() {
     method-like helper-return forms such as
     `[i32] field{get(location(holder.pickBorrowed(...)), i).y}` now ride that same generic
     struct-field access flow, so those currently covered read-only surfaces run across
-    C++/native/VM for both single-field and multi-field wrappers, while standalone borrowed
-    or mutating field-view surfaces still keep the pending contract.
+    C++/native/VM for both single-field and multi-field wrappers. Direct return/root-expression
+    method-like borrowed helper-return reads such as `return(holder.pickBorrowed(...).y()[i])`,
+    `return(get(holder.pickBorrowed(...), i).y)`, and
+    `return(holder.pickBorrowed(...).get(i).y)` still fail on
+    `unknown call target: pickBorrowed`, while standalone borrowed or mutating field-view
+    surfaces still keep the pending contract.
     `soaVectorFromAos<T>()`
     already targets the same substrate semantically, but backend lowering still stops on the current `* backend
     requires typed bindings` boundary.

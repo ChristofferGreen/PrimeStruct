@@ -893,9 +893,12 @@ and bound inline location-wrapped method-like helper-return forms such as
 `[i32] field{get(location(holder.pickBorrowed(...)), i).field}` now also ride that same
 generic struct-field path, and that successful read path no
 longer depends on lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef`
-routing branches. The compiler-owned direct
-unsupported field-view path still remains for standalone borrowed or mutating field-view
-surfaces until indexing moves fully onto the experimental substrate.
+routing branches. Direct return/root-expression method-like borrowed helper-return reads such as
+`return(holder.pickBorrowed(...).field()[i])`, `return(get(holder.pickBorrowed(...), i).field)`,
+and `return(holder.pickBorrowed(...).get(i).field)` still fail on
+`unknown call target: pickBorrowed`. The compiler-owned direct unsupported field-view path still
+remains for those return-root helper-return shapes plus standalone borrowed or mutating
+field-view surfaces until indexing moves fully onto the experimental substrate.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
