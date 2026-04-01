@@ -557,8 +557,9 @@ main() {
   [Particle] picked{get(holder.pickBorrowed(location(values)), 1i32)}
   [i32] fieldBareGet{get(holder.pickBorrowed(location(values)), 1i32).y}
   [i32] fieldBareRef{ref(holder.pickBorrowed(location(values)), 0i32).x}
+  [i32] fieldMethodRef{holder.pickBorrowed(location(values)).ref(1i32).y}
   return(plus(picked.x,
-              plus(plus(fieldBareGet, fieldBareRef),
+              plus(plus(plus(fieldBareGet, fieldBareRef), fieldMethodRef),
                    plus(holder.pickBorrowed(location(values)).y()[0i32],
                         y(holder.pickBorrowed(location(values)))[1i32]))))
 }
@@ -580,8 +581,11 @@ main() {
   CHECK(ast.find("get(holder.pickBorrowed(location(values)),", mainPos) == std::string::npos);
   CHECK(ast.find("ref(holder.pickBorrowed(location(values)),", mainPos) == std::string::npos);
   CHECK(ast.find("holder.pickBorrowed(location(values)).get(1)", mainPos) == std::string::npos);
+  CHECK(ast.find("holder.pickBorrowed(location(values)).ref(1).y", mainPos) == std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1)", mainPos) != std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(0)", mainPos) != std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(1).y", mainPos) !=
+        std::string::npos);
   CHECK(ast.find("holder.pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
   CHECK(ast.find("y(holder.pickBorrowed(location(values)))[", mainPos) == std::string::npos);
   CHECK(ast.find(".get(1).y", mainPos) != std::string::npos);
@@ -625,6 +629,7 @@ main() {
   [Particle] secondB{dereference(location(holder.pickBorrowed(location(values)))).ref(1i32)}
   [i32] fieldBareGet{get(location(holder.pickBorrowed(location(values))), 1i32).y}
   [i32] fieldBareRef{ref(dereference(location(holder.pickBorrowed(location(values)))), 0i32).x}
+  [i32] fieldMethodRef{location(holder.pickBorrowed(location(values))).ref(1i32).y}
   [vector<Particle>] unpackedB{dereference(location(holder.pickBorrowed(location(values)))).to_aos()}
   [i32] countB{dereference(location(holder.pickBorrowed(location(values)))).count()}
   [int] fieldTotals{
@@ -640,7 +645,8 @@ main() {
                    plus(plus(firstB.x, secondB.x),
                         plus(count(unpackedB),
                              plus(countB,
-                                  plus(plus(fieldBareGet, fieldBareRef), fieldTotals)))))))
+                                  plus(plus(plus(fieldBareGet, fieldBareRef), fieldMethodRef),
+                                       fieldTotals)))))))
   }
   return(total)
 }
@@ -664,6 +670,8 @@ main() {
   CHECK(ast.find("get(location(holder.pickBorrowed(location(values))),", mainPos) == std::string::npos);
   CHECK(ast.find("ref(dereference(location(holder.pickBorrowed(location(values)))),", mainPos) ==
         std::string::npos);
+  CHECK(ast.find("location(holder.pickBorrowed(location(values))).ref(1).y", mainPos) ==
+        std::string::npos);
   CHECK(ast.find("location(holder.pickBorrowed(location(values))).to_aos()", mainPos) ==
         std::string::npos);
   CHECK(ast.find("location(holder.pickBorrowed(location(values))).count()", mainPos) ==
@@ -685,6 +693,8 @@ main() {
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(0)", mainPos) !=
         std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(1)", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(1).y", mainPos) !=
         std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1).y", mainPos) !=
         std::string::npos);

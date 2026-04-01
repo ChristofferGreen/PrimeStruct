@@ -1202,12 +1202,13 @@ main() {
   [i32] countBare{count(holder.pickBorrowed(location(values)))}
   [i32] fieldBareGet{get(holder.pickBorrowed(location(values)), 1i32).y}
   [i32] fieldBareRef{ref(holder.pickBorrowed(location(values)), 0i32).x}
+  [i32] fieldMethodRef{holder.pickBorrowed(location(values)).ref(1i32).y}
   [i32] fieldMethod{holder.pickBorrowed(location(values)).y()[1i32]}
   [i32] fieldCall{y(holder.pickBorrowed(location(values)))[0i32]}
   return(plus(plus(first.x, second.x),
               plus(plus(firstBare.x, secondBare.x),
                    plus(countBare,
-                        plus(plus(fieldBareGet, fieldBareRef),
+                        plus(plus(plus(fieldBareGet, fieldBareRef), fieldMethodRef),
                              plus(fieldMethod, fieldCall))))))
 }
 )";
@@ -1218,7 +1219,7 @@ main() {
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 73);
+  CHECK(runCommand(exePath) == 85);
 }
 
 TEST_CASE("compiles and runs direct return method-like borrowed helper-return experimental soa_vector reads in C++ emitter") {
@@ -1310,6 +1311,7 @@ main() {
   [i32] countB{dereference(location(holder.pickBorrowed(location(values)))).count()}
   [i32] fieldBareGet{get(location(holder.pickBorrowed(location(values))), 1i32).y}
   [i32] fieldBareRef{ref(dereference(location(holder.pickBorrowed(location(values)))), 0i32).x}
+  [i32] fieldMethodRef{location(holder.pickBorrowed(location(values))).ref(1i32).y}
   [int] helpersA{plus(plus(firstA.x, secondA.x), plus(firstC.x, secondC.y))}
   [int] unpackedCountsA{plus(count(unpackedA), countA)}
   [int] helpersB{plus(plus(firstB.x, secondB.x), plus(firstD.x, secondD.y))}
@@ -1325,7 +1327,7 @@ main() {
          plus(unpackedCountsA,
               plus(helpersB,
                    plus(unpackedCountsB,
-                        plus(plus(fieldBareGet, fieldBareRef), fieldTotals)))))
+                        plus(plus(plus(fieldBareGet, fieldBareRef), fieldMethodRef), fieldTotals)))))
   }
   return(total)
 }
@@ -1339,7 +1341,7 @@ main() {
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 135);
+  CHECK(runCommand(exePath) == 147);
 }
 
 TEST_CASE("compiles and runs direct return inline location method-like borrowed helper-return experimental soa_vector reads in C++ emitter") {

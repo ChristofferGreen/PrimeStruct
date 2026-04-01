@@ -1070,19 +1070,20 @@ main() {
   [i32] countBare{count(holder.pickBorrowed(location(values)))}
   [i32] fieldBareGet{get(holder.pickBorrowed(location(values)), 1i32).y}
   [i32] fieldBareRef{ref(holder.pickBorrowed(location(values)), 0i32).x}
+  [i32] fieldMethodRef{holder.pickBorrowed(location(values)).ref(1i32).y}
   [i32] fieldMethod{holder.pickBorrowed(location(values)).y()[1i32]}
   [i32] fieldCall{y(holder.pickBorrowed(location(values)))[0i32]}
   return(plus(plus(first.x, second.x),
               plus(plus(firstBare.x, secondBare.x),
                    plus(countBare,
-                        plus(plus(fieldBareGet, fieldBareRef),
+                        plus(plus(plus(fieldBareGet, fieldBareRef), fieldMethodRef),
                              plus(fieldMethod, fieldCall))))))
 }
 )";
   const std::string srcPath =
       writeTemp("vm_experimental_soa_vector_method_like_borrowed_return_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 73);
+  CHECK(runCommand(runCmd) == 85);
 }
 
 TEST_CASE("vm runs direct return method-like borrowed helper-return experimental soa_vector reads") {
@@ -1168,6 +1169,7 @@ main() {
   [i32] countB{dereference(location(holder.pickBorrowed(location(values)))).count()}
   [i32] fieldBareGet{get(location(holder.pickBorrowed(location(values))), 1i32).y}
   [i32] fieldBareRef{ref(dereference(location(holder.pickBorrowed(location(values)))), 0i32).x}
+  [i32] fieldMethodRef{location(holder.pickBorrowed(location(values))).ref(1i32).y}
   [int] helpersA{plus(plus(firstA.x, secondA.x), plus(firstC.x, secondC.y))}
   [int] unpackedCountsA{plus(count(unpackedA), countA)}
   [int] helpersB{plus(plus(firstB.x, secondB.x), plus(firstD.x, secondD.y))}
@@ -1183,7 +1185,7 @@ main() {
          plus(unpackedCountsA,
               plus(helpersB,
                    plus(unpackedCountsB,
-                        plus(plus(fieldBareGet, fieldBareRef), fieldTotals)))))
+                        plus(plus(plus(fieldBareGet, fieldBareRef), fieldMethodRef), fieldTotals)))))
   }
   return(total)
 }
@@ -1191,7 +1193,7 @@ main() {
   const std::string srcPath = writeTemp(
       "vm_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 135);
+  CHECK(runCommand(runCmd) == 147);
 }
 
 TEST_CASE("vm runs direct return inline location method-like borrowed helper-return experimental soa_vector reads") {
