@@ -857,10 +857,11 @@ validator-side plus monomorph-side fallback probes are gone entirely. The compil
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
 construction/parsing instead of open-coded literals, and the post-`validateExpr(...)`
 binding/return/call-argument plus return-inference reprobes are gone too. Read-only
-experimental wrapper field-view indexing now routes reflected `values.field()[i]` reads onto the
-existing `soaVectorGet<T>(values, i).field` helper path for both single-field and multi-field
-structs, and that successful read path no longer depends on lowerer/emitter/backend-local
-`field_view` or `soaVectorGet|soaVectorRef` routing branches. The compiler-owned direct
+experimental wrapper field-view indexing now routes reflected direct `values.field()[i]` reads
+plus explicitly dereferenced borrowed `dereference(borrowed).field()[i]` reads onto the existing
+`soaVectorGet<T>(..., i).field` helper path for both single-field and multi-field structs, and
+that successful read path no longer depends on lowerer/emitter/backend-local `field_view` or
+`soaVectorGet|soaVectorRef` routing branches. The compiler-owned direct
 unsupported field-view path still remains for standalone borrowed or mutating field-view
 surfaces until indexing moves fully onto the experimental substrate.
 Non-empty literals still emit the deterministic unsupported diagnostic

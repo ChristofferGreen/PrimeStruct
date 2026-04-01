@@ -780,6 +780,34 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("compiles and runs borrowed experimental soa_vector reflected index syntax in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Reference<SoaVector<Particle>>] borrowed{location(values)}
+  return(dereference(borrowed).y()[1i32])
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_experimental_soa_vector_borrowed_field_view_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_borrowed_field_view_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
 TEST_CASE("compiles and runs experimental soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*

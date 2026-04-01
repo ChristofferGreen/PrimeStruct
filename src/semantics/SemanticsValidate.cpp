@@ -436,6 +436,69 @@ std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBinding(
   return std::nullopt;
 }
 
+bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics::BindingInfo &binding,
+                                                                std::string &elemTypeOut) {
+  auto extractFromTypeText = [&](std::string normalizedType) {
+    while (true) {
+      std::string base;
+      std::string argText;
+      if (!semantics::splitTemplateTypeName(normalizedType, base, argText) || base.empty()) {
+        return false;
+      }
+      base = semantics::normalizeBindingTypeName(base);
+      if (base == "Reference" || base == "Pointer") {
+        std::vector<std::string> args;
+        if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+          return false;
+        }
+        normalizedType = semantics::normalizeBindingTypeName(args.front());
+        continue;
+      }
+      if (!base.empty() && base.front() == '/') {
+        base.erase(base.begin());
+      }
+      if ((base == "SoaVector" || base == "std/collections/experimental_soa_vector/SoaVector") &&
+          !argText.empty()) {
+        std::vector<std::string> args;
+        if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+          return false;
+        }
+        elemTypeOut = args.front();
+        return true;
+      }
+      return false;
+    }
+  };
+
+  elemTypeOut.clear();
+  if (binding.typeTemplateArg.empty()) {
+    return extractFromTypeText(semantics::normalizeBindingTypeName(binding.typeName));
+  }
+  return extractFromTypeText(
+      semantics::normalizeBindingTypeName(binding.typeName + "<" + binding.typeTemplateArg + ">"));
+}
+
+std::optional<semantics::BindingInfo> extractExperimentalSoaVectorFieldViewReceiverBinding(const Expr &expr) {
+  if (auto directBinding = extractExperimentalSoaVectorBinding(expr); directBinding.has_value()) {
+    return directBinding;
+  }
+
+  for (const auto &transform : expr.transforms) {
+    if ((transform.name != "Reference" && transform.name != "Pointer") ||
+        transform.templateArgs.size() != 1 || !transform.arguments.empty()) {
+      continue;
+    }
+    semantics::BindingInfo binding;
+    binding.typeName = transform.name;
+    binding.typeTemplateArg = transform.templateArgs.front();
+    std::string elemType;
+    if (extractExperimentalSoaVectorElementTypeForFieldViewRewrite(binding, elemType)) {
+      return binding;
+    }
+  }
+  return std::nullopt;
+}
+
 bool localImportPathCoversTarget(const std::string &importPath, const std::string &targetPath) {
   if (importPath.empty() || importPath.front() != '/') {
     return false;
@@ -2009,7 +2072,7 @@ void rewriteExperimentalSoaFieldViewIndexStatements(
           definitionNamespace);
     }
     if (stmt.isBinding) {
-      if (auto soaBinding = extractExperimentalSoaVectorBinding(stmt);
+      if (auto soaBinding = extractExperimentalSoaVectorFieldViewReceiverBinding(stmt);
           soaBinding.has_value()) {
         bindings[stmt.name] = *soaBinding;
       }
@@ -2064,49 +2127,65 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     return;
   }
 
-  std::optional<semantics::BindingInfo> receiverBinding;
+  std::string receiverElemType;
+  auto tryReceiverBinding = [&](const semantics::BindingInfo &binding) {
+    return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(binding, receiverElemType);
+  };
   const Expr &receiver = fieldViewExpr.args.front();
   if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
-    if (bindingIt != bindings.end() &&
-        isExperimentalSoaVectorBinding(bindingIt->second)) {
-      receiverBinding = bindingIt->second;
+    if (bindingIt != bindings.end() && tryReceiverBinding(bindingIt->second)) {
+      // handled
     } else {
       auto allBindingIt = allBindings.find(receiver.name);
-      if (allBindingIt != allBindings.end() &&
-          isExperimentalSoaVectorBinding(allBindingIt->second)) {
-        receiverBinding = allBindingIt->second;
+      if (allBindingIt != allBindings.end()) {
+        tryReceiverBinding(allBindingIt->second);
       }
     }
   } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
-    std::vector<std::string> candidatePaths;
-    if (!receiver.name.empty() && receiver.name.front() == '/') {
-      candidatePaths.push_back(receiver.name);
-    } else {
-      if (!receiver.namespacePrefix.empty()) {
-        candidatePaths.push_back(receiver.namespacePrefix + "/" + receiver.name);
+    if (semantics::isSimpleCallName(receiver, "dereference") &&
+        receiver.args.size() == 1 && receiver.args.front().kind == Expr::Kind::Name) {
+      const std::string &sourceName = receiver.args.front().name;
+      auto bindingIt = bindings.find(sourceName);
+      if (bindingIt != bindings.end()) {
+        tryReceiverBinding(bindingIt->second);
       }
-      if (!definitionNamespace.empty()) {
-        candidatePaths.push_back(definitionNamespace + "/" + receiver.name);
+      if (receiverElemType.empty()) {
+        auto allBindingIt = allBindings.find(sourceName);
+        if (allBindingIt != allBindings.end()) {
+          tryReceiverBinding(allBindingIt->second);
+        }
       }
-      candidatePaths.push_back("/" + receiver.name);
-      candidatePaths.push_back(receiver.name);
     }
-    for (const std::string &candidatePath : candidatePaths) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end() &&
-          isExperimentalSoaVectorBinding(returnIt->second)) {
-        receiverBinding = returnIt->second;
-        break;
+    if (receiverElemType.empty()) {
+      std::vector<std::string> candidatePaths;
+      if (!receiver.name.empty() && receiver.name.front() == '/') {
+        candidatePaths.push_back(receiver.name);
+      } else {
+        if (!receiver.namespacePrefix.empty()) {
+          candidatePaths.push_back(receiver.namespacePrefix + "/" + receiver.name);
+        }
+        if (!definitionNamespace.empty()) {
+          candidatePaths.push_back(definitionNamespace + "/" + receiver.name);
+        }
+        candidatePaths.push_back("/" + receiver.name);
+        candidatePaths.push_back(receiver.name);
+      }
+      for (const std::string &candidatePath : candidatePaths) {
+        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+        if (returnIt != soaVectorReturnDefinitions.end() &&
+            tryReceiverBinding(returnIt->second)) {
+          break;
+        }
       }
     }
   }
-  if (!receiverBinding.has_value() || receiverBinding->typeTemplateArg.empty()) {
+  if (receiverElemType.empty()) {
     return;
   }
 
   const std::string normalizedElemType =
-      semantics::normalizeBindingTypeName(receiverBinding->typeTemplateArg);
+      semantics::normalizeBindingTypeName(receiverElemType);
   if (normalizedElemType.empty()) {
     return;
   }
@@ -2123,7 +2202,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
   Expr getCall;
   getCall.kind = Expr::Kind::Call;
   getCall.name = "/std/collections/experimental_soa_vector/soaVectorGet";
-  getCall.templateArgs = {receiverBinding->typeTemplateArg};
+  getCall.templateArgs = {receiverElemType};
   getCall.args.push_back(receiver);
   getCall.args.push_back(expr.args[1]);
   getCall.argNames.resize(getCall.args.size());
@@ -2189,7 +2268,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
-      if (auto soaBinding = extractExperimentalSoaVectorBinding(param);
+      if (auto soaBinding = extractExperimentalSoaVectorFieldViewReceiverBinding(param);
           soaBinding.has_value()) {
         bindings[param.name] = *soaBinding;
       }
@@ -2199,7 +2278,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
         [&](const std::vector<Expr> &statements) {
           for (const Expr &stmt : statements) {
             if (stmt.isBinding) {
-              if (auto soaBinding = extractExperimentalSoaVectorBinding(stmt);
+              if (auto soaBinding = extractExperimentalSoaVectorFieldViewReceiverBinding(stmt);
                   soaBinding.has_value()) {
                 allBindings[stmt.name] = *soaBinding;
               }
