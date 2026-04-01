@@ -2128,8 +2128,28 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
   }
 
   std::string receiverElemType;
+  bool receiverNeedsDereference = false;
   auto tryReceiverBinding = [&](const semantics::BindingInfo &binding) {
+    receiverNeedsDereference =
+        semantics::normalizeBindingTypeName(binding.typeName) == "Reference" ||
+        semantics::normalizeBindingTypeName(binding.typeName) == "Pointer";
     return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(binding, receiverElemType);
+  };
+  auto candidatePathsForCall = [&](const Expr &callExpr) {
+    std::vector<std::string> candidatePaths;
+    if (!callExpr.name.empty() && callExpr.name.front() == '/') {
+      candidatePaths.push_back(callExpr.name);
+    } else {
+      if (!callExpr.namespacePrefix.empty()) {
+        candidatePaths.push_back(callExpr.namespacePrefix + "/" + callExpr.name);
+      }
+      if (!definitionNamespace.empty()) {
+        candidatePaths.push_back(definitionNamespace + "/" + callExpr.name);
+      }
+      candidatePaths.push_back("/" + callExpr.name);
+      candidatePaths.push_back(callExpr.name);
+    }
+    return candidatePaths;
   };
   const Expr &receiver = fieldViewExpr.args.front();
   if (receiver.kind == Expr::Kind::Name) {
@@ -2143,35 +2163,24 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
       }
     }
   } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
-    if (semantics::isSimpleCallName(receiver, "dereference") &&
-        receiver.args.size() == 1 && receiver.args.front().kind == Expr::Kind::Name) {
-      const std::string &sourceName = receiver.args.front().name;
-      auto bindingIt = bindings.find(sourceName);
-      if (bindingIt != bindings.end()) {
-        tryReceiverBinding(bindingIt->second);
-      }
-      if (receiverElemType.empty()) {
-        auto allBindingIt = allBindings.find(sourceName);
-        if (allBindingIt != allBindings.end()) {
-          tryReceiverBinding(allBindingIt->second);
+    if (semantics::isSimpleCallName(receiver, "dereference") && receiver.args.size() == 1) {
+      const Expr &borrowedSource = receiver.args.front();
+      if (borrowedSource.kind == Expr::Kind::Name) {
+        const std::string &sourceName = borrowedSource.name;
+        auto bindingIt = bindings.find(sourceName);
+        if (bindingIt != bindings.end()) {
+          tryReceiverBinding(bindingIt->second);
+        }
+        if (receiverElemType.empty()) {
+          auto allBindingIt = allBindings.find(sourceName);
+          if (allBindingIt != allBindings.end()) {
+            tryReceiverBinding(allBindingIt->second);
+          }
         }
       }
     }
     if (receiverElemType.empty()) {
-      std::vector<std::string> candidatePaths;
-      if (!receiver.name.empty() && receiver.name.front() == '/') {
-        candidatePaths.push_back(receiver.name);
-      } else {
-        if (!receiver.namespacePrefix.empty()) {
-          candidatePaths.push_back(receiver.namespacePrefix + "/" + receiver.name);
-        }
-        if (!definitionNamespace.empty()) {
-          candidatePaths.push_back(definitionNamespace + "/" + receiver.name);
-        }
-        candidatePaths.push_back("/" + receiver.name);
-        candidatePaths.push_back(receiver.name);
-      }
-      for (const std::string &candidatePath : candidatePaths) {
+      for (const std::string &candidatePath : candidatePathsForCall(receiver)) {
         auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
         if (returnIt != soaVectorReturnDefinitions.end() &&
             tryReceiverBinding(returnIt->second)) {
@@ -2203,7 +2212,18 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
   getCall.kind = Expr::Kind::Call;
   getCall.name = "/std/collections/experimental_soa_vector/soaVectorGet";
   getCall.templateArgs = {receiverElemType};
-  getCall.args.push_back(receiver);
+  if (receiverNeedsDereference && receiver.kind == Expr::Kind::Name) {
+    Expr dereferenceCall;
+    dereferenceCall.kind = Expr::Kind::Call;
+    dereferenceCall.name = "dereference";
+    dereferenceCall.args.push_back(receiver);
+    dereferenceCall.argNames.resize(dereferenceCall.args.size());
+    dereferenceCall.sourceLine = receiver.sourceLine;
+    dereferenceCall.sourceColumn = receiver.sourceColumn;
+    getCall.args.push_back(std::move(dereferenceCall));
+  } else {
+    getCall.args.push_back(receiver);
+  }
   getCall.args.push_back(expr.args[1]);
   getCall.argNames.resize(getCall.args.size());
   getCall.sourceLine = expr.sourceLine;

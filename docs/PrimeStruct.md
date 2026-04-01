@@ -2368,10 +2368,10 @@ bad_use_after_take() {
     wrapper-backed column state in place. Experimental wrapper field-view attempts such as `values.x()` still reach
     the deterministic pending contract `soa_vector field views are not implemented yet: x` instead of falling through
     to `unknown call target`, but read-only field-view indexing now rides on that same substrate for reflected
-    structs: direct `values.x()[i]` / `values.y()[i]` reads plus explicitly dereferenced borrowed forms such as
-    `dereference(borrowed).y()[i]` rewrite to the existing `soaVectorGet<T>(..., i).field` path and run across
-    C++/native/VM for both single-field and multi-field wrappers, while standalone borrowed or mutating field-view
-    surfaces still keep the pending contract. `soaVectorFromAos<T>()`
+    structs: direct `values.x()[i]` / `values.y()[i]` reads plus borrowed local forms such as
+    `borrowed.y()[i]` and `dereference(borrowed).y()[i]` rewrite to the existing `soaVectorGet<T>(..., i).field`
+    path and run across C++/native/VM for both single-field and multi-field wrappers, while standalone borrowed or
+    mutating field-view surfaces still keep the pending contract. `soaVectorFromAos<T>()`
     already targets the same substrate semantically, but backend lowering still stops on the current `* backend
     requires typed bindings` boundary.
     `soaVectorToAos<T>()` now lives in the dedicated `/std/collections/experimental_soa_vector_conversions/*` import
@@ -2509,8 +2509,8 @@ construction/parsing instead of open-coded literals across validator and monomor
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
-both direct wrapper reads and explicitly dereferenced borrowed reads now run through the generic
-helper-call plus struct-field path end-to-end.
+both direct wrapper reads and borrowed local shorthand plus explicitly dereferenced borrowed local
+reads now run through the generic helper-call plus struct-field path end-to-end.
 The remaining pending-diagnostic cleanup is therefore reduced to
 deleting the direct compiler-owned unsupported field-view path itself once field-view indexing
 moves onto the experimental substrate. The broader experimental wrapper/helper surface through imported
@@ -2527,9 +2527,9 @@ That single-column borrowed-slot substrate is the current completed foothold; th
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
-the current substrate for both direct wrapper receivers and explicitly dereferenced borrowed
-receivers, and the remaining field-view work is richer borrowed/mutating behavior rather than
-backend cleanup for that read-only path.
+the current substrate for both direct wrapper receivers and borrowed local shorthand or
+explicitly dereferenced borrowed local receivers, and the remaining field-view work is richer
+borrowed/mutating behavior rather than backend cleanup for that read-only path.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,
