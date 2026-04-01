@@ -595,11 +595,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/soa_vector/get") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/get") != std::string::npos);
 }
 
-TEST_CASE("canonical soa_vector to_aos slash-method keeps canonical reject on experimental wrapper") {
+TEST_CASE("canonical soa_vector to_aos slash-method validates on experimental wrapper") {
   const std::string source = R"(
+import /std/collections/*
 import /std/collections/experimental_soa_vector/*
 
 [struct reflect]
@@ -615,9 +616,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: ") != std::string::npos);
-  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical soa_vector ref helper validates on experimental wrapper bindings") {

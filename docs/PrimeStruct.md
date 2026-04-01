@@ -2385,11 +2385,12 @@ bad_use_after_take() {
 direct calls now stay on the canonical stdlib shim surface through `ast-semantic` and then run
 end-to-end on the experimental wrapper path; wrong-receiver direct-call misuse now preserves the
 same canonical `/std/collections/soa_vector/*` unknown-target diagnostic instead of degrading
-into bare `/get` / `/ref`-style fallback names. Explicit canonical slash-method attempts like
-`values./std/collections/soa_vector/get(...)` and
-`values./std/collections/soa_vector/to_aos()` now also stay on that same canonical
-unknown-target/unknown-method contract instead of depending on dead experimental or builtin
-rewrite-table entries. Wildcard-imported canonical
+into bare `/get` / `/ref`-style fallback names. Explicit canonical slash-method `get` attempts like
+`values./std/collections/soa_vector/get(...)` still keep that same canonical unknown-method
+contract, while `values./std/collections/soa_vector/to_aos()` now validates on the canonical
+helper path and reaches the same current lowerer `struct parameter type mismatch` boundary as the
+other routed `to_aos` forms instead of degrading to an unknown experimental-wrapper method path.
+Wildcard-imported canonical
 helper names for `count`, `get`, `ref`, `reserve`, `push`, and `to_aos` now keep mixed
 `/std/collections/*` plus `/std/collections/soa_vector/*` imports on the receiver-matched
 canonical shim surface instead of pinning every bare `count(...)` call to the SoA alias. Bare

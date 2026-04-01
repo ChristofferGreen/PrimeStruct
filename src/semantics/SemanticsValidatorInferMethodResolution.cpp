@@ -40,6 +40,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("soa_vector/").size());
+  } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalizedMethodName =
+        normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
   } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
   } else if (normalizedMethodName.rfind("map/", 0) == 0) {
@@ -537,6 +540,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (normalizedMethodName == "ref" &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut = preferredSoaRefMethodTarget();
+      return true;
+    }
+    if (normalizedMethodName == "to_aos" &&
+        resolveSoaVectorTarget(receiver, elemType)) {
+      resolvedOut = preferredSoaToAosMethodTarget();
       return true;
     }
     if (resolveSoaFieldViewMethodTarget(receiver)) {

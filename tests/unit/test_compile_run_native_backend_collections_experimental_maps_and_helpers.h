@@ -149,7 +149,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/soa_vector/get") !=
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/get") !=
         std::string::npos);
 }
 
@@ -181,6 +181,7 @@ main() {
 
 TEST_CASE("native canonical soa_vector to_aos slash-method keeps canonical reject") {
   const std::string source = R"(
+import /std/collections/*
 import /std/collections/experimental_soa_vector/*
 
 [struct reflect]
@@ -202,8 +203,9 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: ") != std::string::npos);
-  CHECK(readFile(errPath).find("/std/collections/soa_vector/to_aos") != std::string::npos);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("/std/collections/experimental_soa_vector/SoaVector__") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native canonical soa_vector ref helper") {

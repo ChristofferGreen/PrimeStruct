@@ -180,6 +180,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("soa_vector/").size());
+  } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalizedMethodName =
+        normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
   } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
   } else if (normalizedMethodName.rfind("map/", 0) == 0) {
@@ -1932,6 +1935,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (normalizedMethodName == "ref") {
     if (resolveSoaVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(preferredSoaRefMethodTarget());
+    }
+  }
+  if (normalizedMethodName == "to_aos") {
+    if (resolveSoaVectorTarget(receiver, elemType)) {
+      return setCollectionMethodTarget(preferredSoaToAosMethodTarget());
     }
   }
   if (resolveSoaVectorTarget(receiver, elemType)) {

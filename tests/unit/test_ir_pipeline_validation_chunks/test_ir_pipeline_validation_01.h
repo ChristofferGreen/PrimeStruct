@@ -705,6 +705,35 @@ main() {
   CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
 }
 
+TEST_CASE("canonical experimental wrapper to_aos slash-method reaches canonical lowerer mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
+  [vector<Particle>] unpacked{values./std/collections/soa_vector/to_aos()}
+  return(count(unpacked))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("struct parameter type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+}
+
 TEST_CASE("root to_aos canonical routing ignores vector-only user helper") {
   const std::string source = R"(
 [struct reflect]

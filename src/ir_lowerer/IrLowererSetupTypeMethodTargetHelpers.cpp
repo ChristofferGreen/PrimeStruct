@@ -22,6 +22,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
   } else if (normalizedMethodName.rfind("array/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
+  } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(std::string("soa_vector/").size());
+  } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalizedMethodName =
+        normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
   } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
   } else if (normalizedMethodName.rfind("map/", 0) == 0) {
@@ -65,7 +70,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string normalized = stripReceiverPrefix(candidate);
     return normalized == "soa_vector" || normalized.rfind("soa_vector<", 0) == 0 ||
            normalized == "std/collections/soa_vector" ||
-           normalized.rfind("std/collections/soa_vector<", 0) == 0;
+           normalized.rfind("std/collections/soa_vector<", 0) == 0 ||
+           normalized == "SoaVector" || normalized.rfind("SoaVector<", 0) == 0 ||
+           normalized.rfind("SoaVector__", 0) == 0 ||
+           normalized == "std/collections/experimental_soa_vector/SoaVector" ||
+           normalized.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0 ||
+           normalized.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
   };
   auto isMapReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);

@@ -18,15 +18,23 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     if (receiverTypeName == "array" || receiverTypeName == "vector" || receiverTypeName == "soa_vector") {
       const std::string vectorPrefix = "vector/";
       const std::string arrayPrefix = "array/";
+      const std::string soaVectorPrefix = "soa_vector/";
       const std::string stdVectorPrefix = "std/collections/vector/";
+      const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
       if (candidate.rfind(vectorPrefix, 0) == 0) {
         return candidate.substr(vectorPrefix.size());
       }
       if (candidate.rfind(arrayPrefix, 0) == 0) {
         return candidate.substr(arrayPrefix.size());
       }
+      if (candidate.rfind(soaVectorPrefix, 0) == 0) {
+        return candidate.substr(soaVectorPrefix.size());
+      }
       if (candidate.rfind(stdVectorPrefix, 0) == 0) {
         return candidate.substr(stdVectorPrefix.size());
+      }
+      if (candidate.rfind(stdSoaVectorPrefix, 0) == 0) {
+        return candidate.substr(stdSoaVectorPrefix.size());
       }
     }
     if (receiverTypeName == "map") {
