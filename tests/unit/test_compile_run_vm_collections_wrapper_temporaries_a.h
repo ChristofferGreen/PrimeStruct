@@ -1057,6 +1057,69 @@ main() {
   CHECK(runCommand(runCmd) == 54);
 }
 
+TEST_CASE("vm runs inline location method-like borrowed helper-return experimental soa_vector helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  [Particle] firstA{location(holder.pickBorrowed(location(values))).get(0i32)}
+  [Particle] secondA{location(holder.pickBorrowed(location(values))).ref(1i32)}
+  [Particle] firstC{get(location(holder.pickBorrowed(location(values))), 1i32)}
+  [Particle] secondC{ref(location(holder.pickBorrowed(location(values))), 0i32)}
+  [vector<Particle>] unpackedA{location(holder.pickBorrowed(location(values))).to_aos()}
+  [i32] countA{location(holder.pickBorrowed(location(values))).count()}
+  [Particle] firstB{dereference(location(holder.pickBorrowed(location(values)))).get(0i32)}
+  [Particle] secondB{dereference(location(holder.pickBorrowed(location(values)))).ref(1i32)}
+  [Particle] firstD{get(dereference(location(holder.pickBorrowed(location(values)))), 0i32)}
+  [Particle] secondD{ref(dereference(location(holder.pickBorrowed(location(values)))), 1i32)}
+  [vector<Particle>] unpackedB{dereference(location(holder.pickBorrowed(location(values)))).to_aos()}
+  [i32] countB{dereference(location(holder.pickBorrowed(location(values)))).count()}
+  [int] helpersA{plus(plus(firstA.x, secondA.x), plus(firstC.x, secondC.y))}
+  [int] unpackedCountsA{plus(count(unpackedA), countA)}
+  [int] helpersB{plus(plus(firstB.x, secondB.x), plus(firstD.x, secondD.y))}
+  [int] unpackedCountsB{plus(count(unpackedB), countB)}
+  [int] fieldTotals{
+    plus(location(holder.pickBorrowed(location(values))).y()[0i32],
+         plus(dereference(location(holder.pickBorrowed(location(values)))).y()[1i32],
+              plus(y(location(holder.pickBorrowed(location(values))))[0i32],
+                   y(dereference(location(holder.pickBorrowed(location(values)))))[1i32])))
+  }
+  [int] total{
+    plus(helpersA,
+         plus(unpackedCountsA,
+              plus(helpersB,
+                   plus(unpackedCountsB, fieldTotals))))
+  }
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp(
+      "vm_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 116);
+}
+
 TEST_CASE("vm runs inline location borrowed helper-return experimental soa_vector helpers") {
   const std::string source = R"(
 import /std/collections/*

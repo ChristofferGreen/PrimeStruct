@@ -2381,10 +2381,10 @@ bad_use_after_take() {
     `borrowed.to_aos()` plus bare helper forms `count(...)`, `get(...)`, `ref(...)`, and
     `to_aos(...)` now also ride on the existing helper/conversion substrate for local,
     parameter, helper-return, inline `location(...)`, inline
-    `dereference(location(...))`, and inline location-wrapped borrowed helper-return receivers instead of leaking through raw builtin
-    target-mismatch diagnostics or the old helper-return conversion mismatch. Method-like
-    struct-helper return receivers now also clear that same read-only wrapper path for bare
-    `count(...)`, `get(...)`, and `ref(...)`. Read-only field-view indexing now rides on that same helper
+    `dereference(location(...))`, inline location-wrapped borrowed helper-return, method-like
+    struct-helper return, and inline location-wrapped method-like struct-helper return receivers
+    instead of leaking through raw builtin target-mismatch diagnostics or the old helper-return
+    conversion mismatch. Read-only field-view indexing now rides on that same helper
     substrate for reflected structs: both method-form `values.x()[i]` / `values.y()[i]` and
     call-form `x(values)[i]` / `y(values)[i]` reads plus
     borrowed local forms such as `borrowed.y()[i]`, `dereference(borrowed).y()[i]`,
@@ -2393,8 +2393,10 @@ bad_use_after_take() {
     method-like struct-helper return forms such as
     `holder.pickBorrowed(...).y()[i]` and `y(holder.pickBorrowed(...))[i]`,
     inline location-wrapped borrowed helper-return forms such as
-    `location(pickBorrowed(...)).y()[i]` and `y(location(pickBorrowed(...)))[i]`, and explicitly
-    dereferenced borrowed helper-return forms such as
+    `location(pickBorrowed(...)).y()[i]` and `y(location(pickBorrowed(...)))[i]`,
+    inline location-wrapped method-like struct-helper return forms such as
+    `location(holder.pickBorrowed(...)).y()[i]` and `y(location(holder.pickBorrowed(...)))[i]`,
+    and explicitly dereferenced borrowed helper-return forms such as
     `dereference(pickBorrowed(...)).y()[i]` rewrite to the existing
     `soaVectorGet<T>(..., i).field` path and run across
     C++/native/VM for both single-field and multi-field wrappers, while standalone borrowed

@@ -2362,22 +2362,27 @@ std::optional<Expr> normalizeExperimentalSoaInlineBorrowReceiver(
     const Expr &receiver,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> *soaVectorReturnDefinitions,
-    const std::string &definitionNamespace) {
-  auto hasExperimentalSoaBinding = [&](const Expr &expr) {
+    const std::string &definitionNamespace,
+    const std::unordered_set<std::string> *structPaths) {
+  auto canonicalExperimentalSoaReceiver = [&](const Expr &expr) -> std::optional<Expr> {
     if (expr.kind == Expr::Kind::Name) {
       const std::string &name = expr.name;
       auto bindingIt = bindings.find(name);
       if (bindingIt == bindings.end()) {
-        return false;
+        return std::nullopt;
       }
       std::string ignoredElemType;
-      return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
-          bindingIt->second, ignoredElemType);
+      if (extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
+              bindingIt->second, ignoredElemType)) {
+        return expr;
+      }
+      return std::nullopt;
     }
     if (expr.kind != Expr::Kind::Call || expr.isBinding || soaVectorReturnDefinitions == nullptr) {
-      return false;
+      return std::nullopt;
     }
-    for (const std::string &candidatePath : candidatePathsForExprCall(expr, definitionNamespace)) {
+    for (const std::string &candidatePath :
+         candidatePathsForExprCall(expr, definitionNamespace, &bindings, structPaths)) {
       auto returnIt = soaVectorReturnDefinitions->find(candidatePath);
       if (returnIt == soaVectorReturnDefinitions->end()) {
         continue;
@@ -2385,18 +2390,19 @@ std::optional<Expr> normalizeExperimentalSoaInlineBorrowReceiver(
       std::string ignoredElemType;
       if (extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
               returnIt->second, ignoredElemType)) {
-        return true;
+        return canonicalizeResolvedCallPath(expr, candidatePath);
       }
     }
-    return false;
+    return std::nullopt;
   };
   if (receiver.kind != Expr::Kind::Call || receiver.isBinding) {
     return std::nullopt;
   }
-  if (semantics::isSimpleCallName(receiver, "location") &&
-      receiver.args.size() == 1 &&
-      hasExperimentalSoaBinding(receiver.args.front())) {
-    return receiver.args.front();
+  if (semantics::isSimpleCallName(receiver, "location") && receiver.args.size() == 1) {
+    if (auto canonicalReceiver = canonicalExperimentalSoaReceiver(receiver.args.front());
+        canonicalReceiver.has_value()) {
+      return canonicalReceiver;
+    }
   }
   if (semantics::isSimpleCallName(receiver, "dereference") &&
       receiver.args.size() == 1) {
@@ -2404,9 +2410,11 @@ std::optional<Expr> normalizeExperimentalSoaInlineBorrowReceiver(
     if (borrowedExpr.kind == Expr::Kind::Call &&
         !borrowedExpr.isBinding &&
         semantics::isSimpleCallName(borrowedExpr, "location") &&
-        borrowedExpr.args.size() == 1 &&
-        hasExperimentalSoaBinding(borrowedExpr.args.front())) {
-      return borrowedExpr.args.front();
+        borrowedExpr.args.size() == 1) {
+      if (auto canonicalReceiver = canonicalExperimentalSoaReceiver(borrowedExpr.args.front());
+          canonicalReceiver.has_value()) {
+        return canonicalReceiver;
+      }
     }
   }
   return std::nullopt;
@@ -2443,7 +2451,7 @@ std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
     return std::nullopt;
   };
   if (auto normalizedInline = normalizeExperimentalSoaInlineBorrowReceiver(
-          receiver, bindings, &soaVectorReturnDefinitions, definitionNamespace);
+          receiver, bindings, &soaVectorReturnDefinitions, definitionNamespace, &structPaths);
       normalizedInline.has_value()) {
     return normalizedInline;
   }
