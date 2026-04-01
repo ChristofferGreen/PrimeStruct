@@ -2474,9 +2474,12 @@ imported-helper follow-ups, and the VM field-view cleanup itself staged as a com
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining runtime
 cleanup is now tracked separately as runtime-code versus diagnostic/test follow-ups, with both
 the runtime-code and diagnostic/test cleanup themselves staged as helper-call, conversion, and
-field-view follow-ups, with the runtime-code helper cleanup itself staged as direct-call versus
-wildcard-imported follow-ups, the diagnostic/test helper cleanup itself staged as direct-call
-versus wildcard-imported follow-ups, the runtime-code conversion cleanup itself staged as
+field-view follow-ups. Runtime-code helper-call cleanup is now complete because no production
+runtime-side helper routing remains outside the semantics/lowering/emitter/backend layers, and
+diagnostic/test helper-call cleanup is now complete as well because direct canonical helper
+coverage plus helper-return bare `get(...)` dump coverage now lock those routing paths in the
+test harnesses. The remaining runtime-code and diagnostic/test cleanup is therefore reduced to
+conversion plus field-view follow-ups, with the runtime-code conversion cleanup itself staged as
 direct-canonical versus imported-helper follow-ups, the diagnostic/test conversion cleanup
 itself staged as direct-canonical versus imported-helper follow-ups, the runtime-code
 field-view cleanup itself staged as pending-diagnostic versus successful-indexing follow-ups,
