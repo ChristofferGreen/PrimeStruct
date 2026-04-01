@@ -864,9 +864,11 @@ wrapper attempts, borrowed `Reference<SoaVector<T>>` read-only method sugar `bor
 helper/conversion path for local, parameter, and helper-return receivers instead of stopping on
 raw builtin target mismatch or the old helper-return lowerer mismatch. Read-only wrapper field-view indexing now routes reflected direct `values.field()[i]`
 reads, borrowed local `borrowed.field()[i]`, explicitly dereferenced borrowed
-`dereference(borrowed).field()[i]`, and borrowed helper-return `pickBorrowed(...).field()[i]`
-reads onto the existing `soaVectorGet<T>(..., i).field` helper path for both single-field and
-multi-field structs, and that successful read path no
+`dereference(borrowed).field()[i]`, borrowed helper-return `pickBorrowed(...).field()[i]`,
+and explicitly dereferenced borrowed helper-return
+`dereference(pickBorrowed(...)).field()[i]` reads onto the existing
+`soaVectorGet<T>(..., i).field` helper path for both single-field and multi-field structs, and
+that successful read path no
 longer depends on lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef`
 routing branches. The compiler-owned direct
 unsupported field-view path still remains for standalone borrowed or mutating field-view

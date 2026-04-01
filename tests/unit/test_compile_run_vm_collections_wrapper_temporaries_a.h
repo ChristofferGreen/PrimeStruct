@@ -763,6 +763,35 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
+TEST_CASE("vm runs dereferenced borrowed helper-return experimental soa_vector reflected index syntax") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(4i32, 6i32))
+  values.push(Particle(9i32, 12i32))
+  return(dereference(pickBorrowed(location(values))).y()[1i32])
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_soa_vector_dereferenced_borrowed_return_field_view.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
+}
+
 TEST_CASE("vm runs borrowed helper-return experimental soa_vector get/ref methods") {
   const std::string source = R"(
 import /std/collections/*

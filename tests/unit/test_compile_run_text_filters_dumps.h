@@ -376,6 +376,49 @@ main() {
   CHECK(ast.find("pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites dereferenced borrowed helper-return experimental soa_vector reflected field index syntax") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(4i32, 6i32))
+  values.push(Particle(9i32, 12i32))
+  return(dereference(pickBorrowed(location(values))).y()[1i32])
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_dump_ast_semantic_dereferenced_borrowed_return_experimental_soa_vector_field_view.prime",
+      source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_dereferenced_borrowed_return_experimental_soa_vector_field_view.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find(".y", mainPos) != std::string::npos);
+  CHECK(ast.find("dereference(pickBorrowed(location(values))).y()[", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic rewrites builtin soa_vector count forms to canonical helper path") {
   const std::string source = R"(
 [struct reflect]
