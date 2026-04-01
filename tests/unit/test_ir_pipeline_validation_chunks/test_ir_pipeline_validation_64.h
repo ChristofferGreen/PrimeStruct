@@ -290,7 +290,7 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countCanonicalToAos.kind = primec::Expr::Kind::Call;
   countCanonicalToAos.name = "count";
   countCanonicalToAos.args = {canonicalToAosCall};
-  CHECK(isArrayCountCall(countCanonicalToAos, locals));
+  CHECK_FALSE(isArrayCountCall(countCanonicalToAos, locals));
 
   primec::Expr stringCount;
   stringCount.kind = primec::Expr::Kind::Call;
@@ -351,7 +351,7 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countCanonicalToAos.kind = primec::Expr::Kind::Call;
   countCanonicalToAos.name = "count";
   countCanonicalToAos.args = {canonicalToAosCall};
-  CHECK(classifiers.isArrayCountCall(countCanonicalToAos, locals));
+  CHECK_FALSE(classifiers.isArrayCountCall(countCanonicalToAos, locals));
   CHECK_FALSE(classifiers.isStringCountCall(capacityCall, locals));
 }
 

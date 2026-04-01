@@ -91,50 +91,54 @@ main() {
 TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with indexed count methods") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/experimental_soa_vector/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-score_refs([args<Reference<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] head{dereference(at(values, 0i32))}
-  [soa_vector<Particle>] tail{dereference(at(values, 2i32))}
-  return(plus(count(values), plus(count(head), count(tail))))
+score_refs([args<Reference<SoaVector<Particle>>>] values) {
+  [SoaVector<Particle>] head{dereference(at(values, 0i32))}
+  [SoaVector<Particle>] tail{dereference(at(values, 2i32))}
+  return(plus(count(values),
+              plus(/std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(head)),
+                   /std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(tail)))))
 }
 
 [return<int>]
-forward([args<Reference<soa_vector<Particle>>>] values) {
+forward([args<Reference<SoaVector<Particle>>>] values) {
   return(score_refs([spread] values))
 }
 
 [return<int>]
-forward_mixed([args<Reference<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] extra{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] extra_ref{location(extra)}
+forward_mixed([args<Reference<SoaVector<Particle>>>] values) {
+  [SoaVector<Particle>] extra{soaVectorNew<Particle>()}
+  [Reference<SoaVector<Particle>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] a0{soa_vector<Particle>()}
-  [soa_vector<Particle>] a1{soa_vector<Particle>()}
-  [soa_vector<Particle>] a2{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] r0{location(a0)}
-  [Reference<soa_vector<Particle>>] r1{location(a1)}
-  [Reference<soa_vector<Particle>>] r2{location(a2)}
+  [SoaVector<Particle>] a0{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] a1{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] a2{soaVectorNew<Particle>()}
+  [Reference<SoaVector<Particle>>] r0{location(a0)}
+  [Reference<SoaVector<Particle>>] r1{location(a1)}
+  [Reference<SoaVector<Particle>>] r2{location(a2)}
 
-  [soa_vector<Particle>] b0{soa_vector<Particle>()}
-  [soa_vector<Particle>] b1{soa_vector<Particle>()}
-  [soa_vector<Particle>] b2{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] s0{location(b0)}
-  [Reference<soa_vector<Particle>>] s1{location(b1)}
-  [Reference<soa_vector<Particle>>] s2{location(b2)}
+  [SoaVector<Particle>] b0{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] b1{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] b2{soaVectorNew<Particle>()}
+  [Reference<SoaVector<Particle>>] s0{location(b0)}
+  [Reference<SoaVector<Particle>>] s1{location(b1)}
+  [Reference<SoaVector<Particle>>] s2{location(b2)}
 
-  [soa_vector<Particle>] c0{soa_vector<Particle>()}
-  [soa_vector<Particle>] c1{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] t0{location(c0)}
-  [Reference<soa_vector<Particle>>] t1{location(c1)}
+  [SoaVector<Particle>] c0{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] c1{soaVectorNew<Particle>()}
+  [Reference<SoaVector<Particle>>] t0{location(c0)}
+  [Reference<SoaVector<Particle>>] t1{location(c1)}
 
   return(plus(score_refs(r0, r1, r2),
               plus(forward(s0, s1, s2),
@@ -161,50 +165,54 @@ main() {
 TEST_CASE("ir lowerer materializes variadic pointer soa_vector packs with indexed count methods") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/experimental_soa_vector/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-score_ptrs([args<Pointer<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] head{dereference(at(values, 0i32))}
-  [soa_vector<Particle>] tail{dereference(at(values, 2i32))}
-  return(plus(count(values), plus(count(head), count(tail))))
+score_ptrs([args<Pointer<SoaVector<Particle>>>] values) {
+  [SoaVector<Particle>] head{dereference(at(values, 0i32))}
+  [SoaVector<Particle>] tail{dereference(at(values, 2i32))}
+  return(plus(count(values),
+              plus(/std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(head)),
+                   /std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(tail)))))
 }
 
 [return<int>]
-forward([args<Pointer<soa_vector<Particle>>>] values) {
+forward([args<Pointer<SoaVector<Particle>>>] values) {
   return(score_ptrs([spread] values))
 }
 
 [return<int>]
-forward_mixed([args<Pointer<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] extra{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] extra_ptr{location(extra)}
+forward_mixed([args<Pointer<SoaVector<Particle>>>] values) {
+  [SoaVector<Particle>] extra{soaVectorNew<Particle>()}
+  [Pointer<SoaVector<Particle>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] a0{soa_vector<Particle>()}
-  [soa_vector<Particle>] a1{soa_vector<Particle>()}
-  [soa_vector<Particle>] a2{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] r0{location(a0)}
-  [Pointer<soa_vector<Particle>>] r1{location(a1)}
-  [Pointer<soa_vector<Particle>>] r2{location(a2)}
+  [SoaVector<Particle>] a0{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] a1{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] a2{soaVectorNew<Particle>()}
+  [Pointer<SoaVector<Particle>>] r0{location(a0)}
+  [Pointer<SoaVector<Particle>>] r1{location(a1)}
+  [Pointer<SoaVector<Particle>>] r2{location(a2)}
 
-  [soa_vector<Particle>] b0{soa_vector<Particle>()}
-  [soa_vector<Particle>] b1{soa_vector<Particle>()}
-  [soa_vector<Particle>] b2{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] s0{location(b0)}
-  [Pointer<soa_vector<Particle>>] s1{location(b1)}
-  [Pointer<soa_vector<Particle>>] s2{location(b2)}
+  [SoaVector<Particle>] b0{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] b1{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] b2{soaVectorNew<Particle>()}
+  [Pointer<SoaVector<Particle>>] s0{location(b0)}
+  [Pointer<SoaVector<Particle>>] s1{location(b1)}
+  [Pointer<SoaVector<Particle>>] s2{location(b2)}
 
-  [soa_vector<Particle>] c0{soa_vector<Particle>()}
-  [soa_vector<Particle>] c1{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] t0{location(c0)}
-  [Pointer<soa_vector<Particle>>] t1{location(c1)}
+  [SoaVector<Particle>] c0{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] c1{soaVectorNew<Particle>()}
+  [Pointer<SoaVector<Particle>>] t0{location(c0)}
+  [Pointer<SoaVector<Particle>>] t1{location(c1)}
 
   return(plus(score_ptrs(r0, r1, r2),
               plus(forward(s0, s1, s2),
@@ -231,33 +239,37 @@ main() {
 TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/experimental_soa_vector/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-score_soas([args<soa_vector<Particle>>] values) {
-  [soa_vector<Particle>] head{values[0i32]}
-  [soa_vector<Particle>] tail{values[2i32]}
-  return(plus(count(values), plus(count(head), count(tail))))
+score_soas([args<SoaVector<Particle>>] values) {
+  [SoaVector<Particle>] head{values[0i32]}
+  [SoaVector<Particle>] tail{values[2i32]}
+  return(plus(count(values),
+              plus(/std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(head)),
+                   /std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(tail)))))
 }
 
 [return<int>]
-forward([args<soa_vector<Particle>>] values) {
+forward([args<SoaVector<Particle>>] values) {
   return(score_soas([spread] values))
 }
 
 [return<int>]
-forward_mixed([args<soa_vector<Particle>>] values) {
-  return(score_soas(soa_vector<Particle>(), [spread] values))
+forward_mixed([args<SoaVector<Particle>>] values) {
+  return(score_soas(soaVectorNew<Particle>(), [spread] values))
 }
 
 [return<int>]
 main() {
-  return(plus(score_soas(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
-              plus(forward(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
-                   forward_mixed(soa_vector<Particle>(), soa_vector<Particle>()))))
+  return(plus(score_soas(soaVectorNew<Particle>(), soaVectorNew<Particle>(), soaVectorNew<Particle>()),
+              plus(forward(soaVectorNew<Particle>(), soaVectorNew<Particle>(), soaVectorNew<Particle>()),
+                   forward_mixed(soaVectorNew<Particle>(), soaVectorNew<Particle>()))))
 }
 )";
   primec::Program program;

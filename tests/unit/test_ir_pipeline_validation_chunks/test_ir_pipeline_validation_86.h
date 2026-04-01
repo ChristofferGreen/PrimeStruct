@@ -153,8 +153,10 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helpers through variadi
             makeCall("push", {makeDeref(makeAccess("soaRefs", 0)), makeI32Literal(7)}),
             emitExprCalls,
             error,
-            instructions) == EmitResult::Error);
-  CHECK(error == "push requires mutable vector binding");
+            instructions) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls >= 2);
+  CHECK_FALSE(instructions.empty());
 }
 
 TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics") {

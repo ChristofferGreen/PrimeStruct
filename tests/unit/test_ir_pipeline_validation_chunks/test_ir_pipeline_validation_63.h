@@ -202,7 +202,7 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   toAosCall.name = "/std/collections/soa_vector/to_aos";
   toAosCall.args = {soaValuesName};
   capacityCall.args = {toAosCall};
-  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 
   primec::Expr soaVectorArgsName;
   soaVectorArgsName.kind = primec::Expr::Kind::Name;

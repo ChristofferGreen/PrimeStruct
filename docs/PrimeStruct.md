@@ -2404,13 +2404,12 @@ them. Valid root bare/method/old-explicit `count`, `get`, and `ref` calls on bui
 `soa_vector<T>` bindings likewise now rewrite onto `/std/collections/soa_vector/count`,
 `/std/collections/soa_vector/get`, and `/std/collections/soa_vector/ref` when no visible root
 or same-path user helper shadows them.
-Valid root bare/method/old-explicit `push` and `reserve` calls on builtin `soa_vector<T>`
-bindings now likewise rewrite onto `/std/collections/soa_vector/push` and
+Valid root bare/method `push` and `reserve` calls on builtin `soa_vector<T>` bindings now
+likewise rewrite onto `/std/collections/soa_vector/push` and
 `/std/collections/soa_vector/reserve` when no visible root or same-path user helper shadows
-them.
-Old-explicit vector-target `push` and `reserve` misuses now also keep those same canonical
-`/std/collections/soa_vector/push` and `/std/collections/soa_vector/reserve` reject
-contracts instead of the old builtin helper fallback.
+them, while old-explicit `/soa_vector/push|reserve` forms still remain on a separate pending
+path and currently degrade into same-path field-view or unknown-target diagnostics instead of
+those canonical stdlib reject contracts.
 Vector-target root bare/method/old-explicit `get` and `ref` misuses now also keep those same
 canonical `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject
 contracts instead of the old builtin `get requires soa_vector target` / `ref requires
@@ -2418,11 +2417,12 @@ soa_vector target` diagnostics.
 Vector-target root bare/direct/method `to_aos` misuses now also keep that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin
 `to_aos requires soa_vector target` diagnostic.
-The remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for root
-`get`, root `ref`, root `to_aos`, and field-view diagnostics instead of one mixed fallback
-bucket, the remaining lowering cleanup is now tracked as explicit helper-call, conversion, and
-field-view follow-ups, with helper-call cleanup itself staged as direct-call versus
-wildcard-imported follow-ups. Dedicated inline-dispatch builtin `soa_vector` count/get/ref
+The remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for
+old-explicit mutators, root `get`, root `ref`, root `to_aos`, and field-view diagnostics
+instead of one mixed fallback bucket, the remaining lowering cleanup is now tracked as explicit
+helper-call, conversion, and field-view follow-ups, with helper-call cleanup itself staged as
+direct-call versus wildcard-imported follow-ups. Dedicated inline-dispatch builtin
+`soa_vector` count/get/ref
 helper bridging is now gone as well, so those helper shapes flow through the shared
 definition-resolution plus count/access fallback path instead of a one-off SoA branch. Root
 builtin `push` and `reserve` forms now rewrite earlier onto the canonical helper surface as

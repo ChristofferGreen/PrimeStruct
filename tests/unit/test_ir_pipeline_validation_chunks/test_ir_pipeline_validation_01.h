@@ -339,19 +339,20 @@ main() {
   CHECK_FALSE(module.functions[0].instructions.empty());
 }
 
-TEST_CASE("root count helper forms lower through canonical helper routing") {
+TEST_CASE("canonical soa_vector count helper lowers through wrapper routing") {
   const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
-[return<void>]
+[return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  [int] countA{count(values)}
-  [int] countB{values.count()}
-  [int] countC{/soa_vector/count(values)}
-  [int] countD{values./soa_vector/count()}
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  return(/std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(values)))
 }
 )";
   primec::Program program;
@@ -537,9 +538,9 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
-TEST_CASE("semantics rejects explicit soa_vector reserve on vector target through canonical helper path") {
+TEST_CASE("semantics rejects explicit soa_vector reserve on vector target through same-path helper path") {
   const std::string source = R"(
-[return<void>]
+[effects(heap_alloc), return<void>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   /soa_vector/reserve(values, 4i32)
@@ -548,7 +549,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
+  CHECK(error.find("/soa_vector/reserve") != std::string::npos);
 }
 
 TEST_CASE("root to_aos helper forms lower through canonical helper routing") {

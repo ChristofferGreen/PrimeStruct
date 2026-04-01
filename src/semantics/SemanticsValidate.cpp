@@ -1723,6 +1723,7 @@ void rewriteBuiltinSoaMutatorExpr(
     rewriteBuiltinSoaMutatorExpr(
         arg,
         bindings,
+        vectorReturnDefinitions,
         soaVectorReturnDefinitions,
         definitionNamespace,
         preservePushHelper,

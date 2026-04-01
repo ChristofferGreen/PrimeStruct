@@ -317,7 +317,8 @@ bool validateVectorStatementHelperTarget(
         return false;
       }
       if (it->second.isSoaVector) {
-        return emitUnsupportedSoaTargetError();
+        error = vectorHelper + " requires mutable vector binding";
+        return false;
       }
       if (it->second.argsPackElementKind != LocalInfo::Kind::Vector) {
         error = vectorHelper + " requires mutable vector binding";

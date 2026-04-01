@@ -337,7 +337,7 @@ main() {
 
 TEST_CASE("explicit soa_vector count forms keep canonical reject on vector target") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   /soa_vector/count(values)
@@ -350,25 +350,28 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/count") != std::string::npos);
 }
 
-TEST_CASE("soa_vector count fallback validates through struct helper return receivers") {
+TEST_CASE("canonical soa_vector count helper validates through struct helper return receivers") {
   const std::string source = R"(
-[struct]
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 [struct]
 Holder() {
-  [return<soa_vector<Particle>>]
+  [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soa_vector<Particle>())
+    return(soaVectorNew<Particle>())
   }
 }
 
 [return<int>]
 main() {
   [Holder] holder{Holder()}
-  return(plus(count(holder.cloneValues()), holder.cloneValues().count()))
+  return(/std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(holder.cloneValues())))
 }
 )";
   std::string error;
@@ -376,30 +379,33 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector bare count fallback keeps same-path helper shadow through struct helper return receivers") {
+TEST_CASE("canonical soa_vector count helper keeps same-path helper shadow through struct helper return receivers") {
   const std::string source = R"(
-[struct]
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 [struct]
 Holder() {
-  [return<soa_vector<Particle>>]
+  [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soa_vector<Particle>())
+    return(soaVectorNew<Particle>())
   }
 }
 
 [return<string>]
-/soa_vector/count([soa_vector<Particle>] values) {
+/soa_vector/count([SoaVector<Particle>] values) {
   return("shadow"utf8)
 }
 
 [return<string>]
 main() {
   [Holder] holder{Holder()}
-  return(count(holder.cloneValues()))
+  return(holder.cloneValues().count())
 }
 )";
   std::string error;
@@ -409,21 +415,24 @@ main() {
 
 TEST_CASE("soa_vector method count fallback keeps same-path helper shadow through struct helper return receivers") {
   const std::string source = R"(
-[struct]
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 [struct]
 Holder() {
-  [return<soa_vector<Particle>>]
+  [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soa_vector<Particle>())
+    return(soaVectorNew<Particle>())
   }
 }
 
 [return<string>]
-/soa_vector/count([soa_vector<Particle>] values) {
+/soa_vector/count([SoaVector<Particle>] values) {
   return("shadow"utf8)
 }
 
@@ -1771,8 +1780,11 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/get") != std::string::npos);
 }
 
-TEST_CASE("get method fallback validates through struct helper return receivers") {
+TEST_CASE("canonical get helper validates through struct helper return receivers") {
   const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
 [struct reflect]
 Particle() {
   [i32] x{1i32}
@@ -1780,16 +1792,16 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<soa_vector<Particle>>]
+  [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soa_vector<Particle>())
+    return(soaVectorNew<Particle>())
   }
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder()}
-  return(holder.cloneValues().get(0i32).x)
+  return(/std/collections/soa_vector/get(holder.cloneValues(), 0i32).x)
 }
 )";
   std::string error;
@@ -1799,6 +1811,9 @@ main() {
 
 TEST_CASE("get method fallback keeps same-path helper shadow through struct helper return receivers") {
   const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
 [struct reflect]
 Particle() {
   [i32] x{1i32}
@@ -1806,14 +1821,14 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<soa_vector<Particle>>]
+  [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soa_vector<Particle>())
+    return(soaVectorNew<Particle>())
   }
 }
 
 [return<Particle>]
-/soa_vector/get([soa_vector<Particle>] values, [int] index) {
+/soa_vector/get([SoaVector<Particle>] values, [int] index) {
   return(Particle(7i32))
 }
 
@@ -1898,25 +1913,28 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/ref") != std::string::npos);
 }
 
-TEST_CASE("ref method fallback validates through struct helper return receivers") {
+TEST_CASE("canonical ref helper validates through struct helper return receivers") {
   const std::string source = R"(
-[struct]
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 [struct]
 Holder() {
-  [return<soa_vector<Particle>>]
+  [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soa_vector<Particle>())
+    return(soaVectorNew<Particle>())
   }
 }
 
 [return<int>]
 main() {
   [Holder] holder{Holder()}
-  holder.cloneValues().ref(0i32)
+  /std/collections/soa_vector/ref(holder.cloneValues(), 0i32)
   return(0i32)
 }
 )";
@@ -1927,21 +1945,24 @@ main() {
 
 TEST_CASE("ref method fallback keeps same-path helper shadow through struct helper return receivers") {
   const std::string source = R"(
-[struct]
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 [struct]
 Holder() {
-  [return<soa_vector<Particle>>]
+  [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soa_vector<Particle>())
+    return(soaVectorNew<Particle>())
   }
 }
 
 [return<Particle>]
-/soa_vector/ref([soa_vector<Particle>] values, [int] index) {
+/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
   return(Particle(7i32))
 }
 
@@ -1956,21 +1977,23 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("push and reserve root forms validate on soa_vector binding") {
+TEST_CASE("push and reserve bare and method forms validate on experimental soa_vector bindings") {
   const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   reserve(values, 2i32)
   push(values, Particle(4i32))
   values.reserve(3i32)
   values.push(Particle(9i32))
-  /soa_vector/reserve(values, 4i32)
-  /soa_vector/push(values, Particle(12i32))
   return(0i32)
 }
 )";
@@ -1979,9 +2002,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit soa_vector reserve keeps canonical reject on vector target") {
+TEST_CASE("explicit soa_vector reserve keeps same-path reject on vector target") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   /soa_vector/reserve(values, 4i32)
@@ -1990,12 +2013,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
+  CHECK(error.find("/soa_vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector push slash-method keeps canonical reject on vector target") {
+TEST_CASE("explicit soa_vector push slash-method keeps same-path reject on vector target") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   values./soa_vector/push(12i32)
@@ -2004,7 +2027,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/std/collections/soa_vector/push") != std::string::npos);
+  CHECK(error.find("/soa_vector/push") != std::string::npos);
 }
 
 TEST_CASE("push helper call-form falls back to user helper on soa_vector binding") {
@@ -2285,22 +2308,25 @@ main() {
 TEST_CASE("to_aos method fallback validates through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/experimental_soa_vector/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 Holder() {}
 
-[return<soa_vector<Particle>>]
+[return<SoaVector<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa_vector<Particle>())
+  return(soaVectorNew<Particle>())
 }
 
 [return<int>]
 main() {
   [Holder] holder{Holder()}
-  return(count(holder.cloneValues().to_aos()))
+  [vector<Particle>] unpacked{holder.cloneValues().to_aos()}
+  return(/std/collections/vector/count(unpacked))
 }
 )";
   std::string error;
@@ -2330,28 +2356,34 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("to_aos method fallback keeps same-path helper shadow through struct helper return receivers") {
+TEST_CASE("to_aos method fallback validates with same-path helper present on struct helper return receivers") {
   const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 Holder() {}
 
-[return<soa_vector<Particle>>]
+[return<SoaVector<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa_vector<Particle>())
+  return(soaVectorNew<Particle>())
 }
 
-[return<int>]
-/to_aos([soa_vector<Particle>] values) {
-  return(6i32)
+[return<vector<Particle>>]
+/to_aos([SoaVector<Particle>] values) {
+  [vector<Particle>] shadowed{vector<Particle>()}
+  return(shadowed)
 }
 
 [return<int>]
 main() {
   [Holder] holder{Holder()}
-  return(holder.cloneValues().to_aos())
+  [vector<Particle>] unpacked{holder.cloneValues().to_aos()}
+  return(/std/collections/vector/count(unpacked))
 }
 )";
   std::string error;

@@ -240,7 +240,7 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("vm canonical soa_vector to_aos temporaries route through vector capacity") {
+TEST_CASE("vm canonical soa_vector to_aos temporaries route through canonical vector capacity") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -253,7 +253,7 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(capacity(/std/collections/soa_vector/to_aos<Particle>(values)))
+  return(/std/collections/vector/capacity(/std/collections/soa_vector/to_aos<Particle>(values)))
 }
 )";
   const std::string srcPath =
