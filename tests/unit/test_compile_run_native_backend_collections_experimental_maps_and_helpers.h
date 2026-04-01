@@ -1253,6 +1253,55 @@ main() {
   CHECK(runCommand(exePath) == 73);
 }
 
+TEST_CASE("native compiles and runs direct return method-like borrowed helper-return experimental soa_vector reads") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  return(
+    plus(count(holder.pickBorrowed(location(values))),
+         plus(count(holder.pickBorrowed(location(values)).to_aos()),
+              plus(holder.pickBorrowed(location(values)).get(0i32).x,
+                   plus(ref(holder.pickBorrowed(location(values)), 1i32).y,
+                        plus(get(holder.pickBorrowed(location(values)), 1i32).y,
+                             plus(holder.pickBorrowed(location(values)).y()[1i32],
+                                  y(holder.pickBorrowed(location(values)))[0i32]))))))
+  )
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_native_experimental_soa_vector_direct_return_method_like_borrowed_return_reads.prime",
+      source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_native_experimental_soa_vector_direct_return_method_like_borrowed_return_reads")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 55);
+}
+
 TEST_CASE("native compiles and runs inline location method-like borrowed helper-return experimental soa_vector helpers") {
   const std::string source = R"(
 import /std/collections/*
@@ -1323,6 +1372,55 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 135);
+}
+
+TEST_CASE("native compiles and runs direct return inline location method-like borrowed helper-return experimental soa_vector reads") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  return(
+    plus(location(holder.pickBorrowed(location(values))).count(),
+         plus(count(location(holder.pickBorrowed(location(values))).to_aos()),
+              plus(dereference(location(holder.pickBorrowed(location(values)))).get(1i32).x,
+                   plus(ref(dereference(location(holder.pickBorrowed(location(values)))), 0i32).x,
+                        plus(get(location(holder.pickBorrowed(location(values))), 1i32).y,
+                             plus(location(holder.pickBorrowed(location(values))).y()[0i32],
+                                  y(dereference(location(holder.pickBorrowed(location(values)))))[1i32]))))))
+  )
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_native_experimental_soa_vector_direct_return_inline_location_method_like_borrowed_return_reads.prime",
+      source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_native_experimental_soa_vector_direct_return_inline_location_method_like_borrowed_return_reads")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 52);
 }
 
 TEST_CASE("native compiles and runs inline location borrowed helper-return experimental soa_vector helpers") {

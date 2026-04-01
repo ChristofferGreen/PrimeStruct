@@ -2307,8 +2307,18 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     rewriteExperimentalSoaToAosMethodStatements(
         def.statements, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
     if (def.returnExpr.has_value()) {
+      auto returnBindings = bindings;
+      for (const Expr &stmt : def.statements) {
+        if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
+          returnBindings[stmt.name] = *binding;
+        }
+      }
       rewriteExperimentalSoaToAosMethodExpr(
-          *def.returnExpr, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+          *def.returnExpr,
+          returnBindings,
+          soaVectorReturnDefinitions,
+          structPaths,
+          definitionNamespace);
     }
   }
   return true;
@@ -2610,8 +2620,18 @@ bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &er
     rewriteExperimentalSoaInlineBorrowMethodStatements(
         def.statements, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
     if (def.returnExpr.has_value()) {
+      auto returnBindings = bindings;
+      for (const Expr &stmt : def.statements) {
+        if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
+          returnBindings[stmt.name] = *binding;
+        }
+      }
       rewriteExperimentalSoaInlineBorrowMethodExpr(
-          *def.returnExpr, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+          *def.returnExpr,
+          returnBindings,
+          soaVectorReturnDefinitions,
+          structPaths,
+          definitionNamespace);
     }
   }
   return true;

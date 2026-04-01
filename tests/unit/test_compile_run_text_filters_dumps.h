@@ -699,6 +699,156 @@ main() {
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites direct return method-like borrowed helper-return experimental soa_vector reads") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  return(
+    plus(count(holder.pickBorrowed(location(values))),
+         plus(count(holder.pickBorrowed(location(values)).to_aos()),
+              plus(holder.pickBorrowed(location(values)).get(0i32).x,
+                   plus(ref(holder.pickBorrowed(location(values)), 1i32).y,
+                        plus(get(holder.pickBorrowed(location(values)), 1i32).y,
+                             plus(holder.pickBorrowed(location(values)).y()[1i32],
+                                  y(holder.pickBorrowed(location(values)))[0i32]))))))
+  )
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_dump_ast_semantic_direct_return_method_like_borrowed_helper_reads.prime",
+      source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_direct_return_method_like_borrowed_helper_reads.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("holder.pickBorrowed(location(values)).get(", mainPos) == std::string::npos);
+  CHECK(ast.find("holder.pickBorrowed(location(values)).to_aos()", mainPos) == std::string::npos);
+  CHECK(ast.find("count(holder.pickBorrowed(location(values)))", mainPos) == std::string::npos);
+  CHECK(ast.find("get(holder.pickBorrowed(location(values)),", mainPos) == std::string::npos);
+  CHECK(ast.find("ref(holder.pickBorrowed(location(values)),", mainPos) == std::string::npos);
+  CHECK(ast.find("holder.pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
+  CHECK(ast.find("y(holder.pickBorrowed(location(values)))[", mainPos) == std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).count()", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(0).x", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(1).y", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find(".get(1).y", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+        std::string::npos);
+}
+
+TEST_CASE("dump ast-semantic rewrites direct return inline location method-like borrowed helper-return experimental soa_vector reads") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  return(
+    plus(location(holder.pickBorrowed(location(values))).count(),
+         plus(count(location(holder.pickBorrowed(location(values))).to_aos()),
+              plus(dereference(location(holder.pickBorrowed(location(values)))).get(1i32).x,
+                   plus(ref(dereference(location(holder.pickBorrowed(location(values)))), 0i32).x,
+                        plus(get(location(holder.pickBorrowed(location(values))), 1i32).y,
+                             plus(location(holder.pickBorrowed(location(values))).y()[0i32],
+                                  y(dereference(location(holder.pickBorrowed(location(values)))))[1i32]))))))
+  )
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_dump_ast_semantic_direct_return_inline_location_method_like_borrowed_helper_reads.prime",
+      source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_direct_return_inline_location_method_like_borrowed_helper_reads.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("location(holder.pickBorrowed(location(values))).count()", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("location(holder.pickBorrowed(location(values))).to_aos()", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("dereference(location(holder.pickBorrowed(location(values)))).get(", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("get(location(holder.pickBorrowed(location(values))),", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("ref(dereference(location(holder.pickBorrowed(location(values)))),", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("location(holder.pickBorrowed(location(values))).y()[", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("y(dereference(location(holder.pickBorrowed(location(values)))))[", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).count()", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1).x", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(0).x", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1).y", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+        std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic rewrites builtin soa_vector count forms to canonical helper path") {
   const std::string source = R"(
 [struct reflect]

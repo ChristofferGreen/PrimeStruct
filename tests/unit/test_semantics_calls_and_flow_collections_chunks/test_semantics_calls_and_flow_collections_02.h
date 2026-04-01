@@ -1118,6 +1118,48 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector direct return method-like borrowed helper-return reads validate on wrapper state") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  return(
+    plus(count(holder.pickBorrowed(location(values))),
+         plus(count(holder.pickBorrowed(location(values)).to_aos()),
+              plus(holder.pickBorrowed(location(values)).get(0i32).x,
+                   plus(ref(holder.pickBorrowed(location(values)), 1i32).y,
+                        plus(get(holder.pickBorrowed(location(values)), 1i32).y,
+                             plus(holder.pickBorrowed(location(values)).y()[1i32],
+                                  y(holder.pickBorrowed(location(values)))[0i32]))))))
+  )
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector inline location method-like borrowed helper-return helper surfaces validate on wrapper state") {
   const std::string source = R"(
 import /std/collections/*
@@ -1176,6 +1218,48 @@ main() {
                         plus(plus(fieldBareGet, fieldBareRef), fieldTotals)))))
   }
   return(total)
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector direct return inline location method-like borrowed helper-return reads validate on wrapper state") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  return(
+    plus(location(holder.pickBorrowed(location(values))).count(),
+         plus(count(location(holder.pickBorrowed(location(values))).to_aos()),
+              plus(dereference(location(holder.pickBorrowed(location(values)))).get(1i32).x,
+                   plus(ref(dereference(location(holder.pickBorrowed(location(values)))), 0i32).x,
+                        plus(get(location(holder.pickBorrowed(location(values))), 1i32).y,
+                             plus(location(holder.pickBorrowed(location(values))).y()[0i32],
+                                  y(dereference(location(holder.pickBorrowed(location(values)))))[1i32]))))))
+  )
 }
   )";
   std::string error;
