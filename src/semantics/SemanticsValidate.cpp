@@ -2397,6 +2397,8 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
 
   std::string receiverElemType;
   bool receiverNeedsDereference = false;
+  const Expr &receiver = fieldViewExpr.args.front();
+  const Expr *getReceiverExpr = &receiver;
   auto tryReceiverBinding = [&](const semantics::BindingInfo &binding) {
     receiverNeedsDereference =
         semantics::normalizeBindingTypeName(binding.typeName) == "Reference" ||
@@ -2420,8 +2422,26 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     }
     return candidatePaths;
   };
-  const Expr &receiver = fieldViewExpr.args.front();
-  const Expr *getReceiverExpr = &receiver;
+  auto tryLocationReceiverBinding = [&](const Expr &locationExpr) -> bool {
+    if (!semantics::isSimpleCallName(locationExpr, "location") ||
+        locationExpr.args.size() != 1 ||
+        locationExpr.args.front().kind != Expr::Kind::Name) {
+      return false;
+    }
+    const Expr &locationTarget = locationExpr.args.front();
+    auto bindingIt = bindings.find(locationTarget.name);
+    if (bindingIt != bindings.end() && tryReceiverBinding(bindingIt->second)) {
+      getReceiverExpr = &locationTarget;
+      return true;
+    }
+    auto allBindingIt = allBindings.find(locationTarget.name);
+    if (allBindingIt != allBindings.end() &&
+        tryReceiverBinding(allBindingIt->second)) {
+      getReceiverExpr = &locationTarget;
+      return true;
+    }
+    return false;
+  };
   if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
     if (bindingIt != bindings.end() && tryReceiverBinding(bindingIt->second)) {
@@ -2433,9 +2453,13 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
       }
     }
   } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
-    if (semantics::isSimpleCallName(receiver, "dereference") && receiver.args.size() == 1) {
+    if (!tryLocationReceiverBinding(receiver) &&
+        semantics::isSimpleCallName(receiver, "dereference") &&
+        receiver.args.size() == 1) {
       const Expr &borrowedSource = receiver.args.front();
-      if (borrowedSource.kind == Expr::Kind::Name) {
+      if (tryLocationReceiverBinding(borrowedSource)) {
+        // handled
+      } else if (borrowedSource.kind == Expr::Kind::Name) {
         const std::string &sourceName = borrowedSource.name;
         auto bindingIt = bindings.find(sourceName);
         if (bindingIt != bindings.end()) {

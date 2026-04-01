@@ -434,6 +434,59 @@ main() {
   CHECK(ast.find("y(dereference(pickBorrowed(location(values))))[", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites experimental soa_vector inline location borrow field index syntax") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [int] total{
+    plus(
+      location(values).y()[0i32],
+      plus(
+        dereference(location(values)).y()[1i32],
+        plus(
+          y(location(values))[0i32],
+          y(dereference(location(values)))[1i32]
+        )
+      )
+    )
+  }
+  return(total)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_inline_location_experimental_soa_vector_field_view.prime",
+                source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_inline_location_experimental_soa_vector_field_view.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find(".y", mainPos) != std::string::npos);
+  CHECK(ast.find("location(values).y()[", mainPos) == std::string::npos);
+  CHECK(ast.find("dereference(location(values)).y()[", mainPos) == std::string::npos);
+  CHECK(ast.find("y(location(values))[", mainPos) == std::string::npos);
+  CHECK(ast.find("y(dereference(location(values)))[", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic rewrites dereferenced borrowed helper-return experimental soa_vector reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

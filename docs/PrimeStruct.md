@@ -2379,6 +2379,7 @@ bad_use_after_take() {
     substrate for reflected structs: both method-form `values.x()[i]` / `values.y()[i]` and
     call-form `x(values)[i]` / `y(values)[i]` reads plus
     borrowed local forms such as `borrowed.y()[i]`, `dereference(borrowed).y()[i]`,
+    `location(values).y()[i]`, and `y(dereference(location(values)))[i]`,
     borrowed helper-return forms such as `pickBorrowed(...).y()[i]`, and explicitly
     dereferenced borrowed helper-return forms such as
     `dereference(pickBorrowed(...)).y()[i]` rewrite to the existing
@@ -2541,8 +2542,9 @@ That single-column borrowed-slot substrate is the current completed foothold; th
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
-the current substrate for direct wrapper receivers, borrowed local shorthand, explicitly
-dereferenced borrowed local receivers, borrowed helper-return receivers, and explicitly
+the current substrate for direct wrapper receivers, borrowed local shorthand, inline
+`location(...)` borrow expressions, explicitly dereferenced borrowed local receivers, borrowed
+helper-return receivers, and explicitly
 dereferenced borrowed helper-return receivers, with both method-form `value.field()[i]` and
 call-form `field(value)[i]` read-only syntax now working on those receivers, while those same borrowed helper-return
 receivers now also share the completed read-only method surface for `get`, `ref`, and

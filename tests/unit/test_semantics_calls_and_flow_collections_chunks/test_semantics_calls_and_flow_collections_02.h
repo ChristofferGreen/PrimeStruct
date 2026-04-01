@@ -1376,6 +1376,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector stdlib reflected inline location borrow index syntax validates") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [int] total{
+    plus(
+      location(values).y()[0i32],
+      plus(
+        dereference(location(values)).y()[1i32],
+        plus(
+          y(location(values))[0i32],
+          y(dereference(location(values)))[1i32]
+        )
+      )
+    )
+  }
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector stdlib reflected borrowed dereference index syntax validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
