@@ -435,21 +435,25 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "if (inferCallBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut,") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "std::optional<std::string> builtinSoaPendingExprDiagnosticForMonomorph(") !=
+            "std::optional<std::string> builtinSoaPendingExprDiagnosticForMonomorph(") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "builtinSoaPendingExprDiagnosticForMonomorph(*argExpr, params, locals, ctx)") !=
+            "builtinSoaPendingExprDiagnosticForMonomorph(*argExpr, params, locals, ctx)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "splitSoaFieldViewHelperPath(resolved, &fieldNameOut)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find("\"/soa_vector/field_view/\"") ==
         std::string::npos);
-  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "isBuiltinSoaFieldViewExprForMonomorph(*argExpr, params, locals, ctx, soaFieldViewName)") ==
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find("hasVisibleSoaRefHelperForMonomorph(") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find("hasVisibleSoaFieldHelperForMonomorph(") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "isBuiltinSoaRefExprForMonomorph(*argExpr, params, locals, ctx)") ==
+            "isBuiltinSoaFieldViewExprForMonomorph(") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "isBuiltinSoaRefExprForMonomorph(") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find("if (handledCallInference) {") !=
         std::string::npos);
