@@ -853,10 +853,8 @@ imported-helper experimental-wrapper `to_aos` forms to that same canonical helpe
 The current pending `soa_vector field views are not implemented yet: <field>` and
 `soa_vector borrowed views are not implemented yet: ref` diagnostics now come from shared
 semantics helpers rather than duplicated validator and monomorph string assembly, and the
-remaining validator-side plus monomorph-side fallback probes now also share
-`builtinSoaPendingExprDiagnostic(...)`,
-`reportBuiltinSoaPendingExprDiagnostic(...)`, and
-`builtinSoaPendingExprDiagnosticForMonomorph(...)` helpers. The compiler-owned
+validator-side fallback probes are gone entirely while the remaining monomorph-side inference
+fallback now shares `builtinSoaPendingExprDiagnosticForMonomorph(...)`. The compiler-owned
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
 construction/parsing instead of open-coded literals, and the post-`validateExpr(...)`
 binding/return/call-argument plus return-inference reprobes are gone too. The compiler-owned

@@ -509,9 +509,6 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return false;
     }
     if (!isArrayOrString && !isMap && !isExperimentalMap) {
-      if (!reportBuiltinSoaPendingExprDiagnostic(expr.args.front(), params, locals)) {
-        return false;
-      }
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }

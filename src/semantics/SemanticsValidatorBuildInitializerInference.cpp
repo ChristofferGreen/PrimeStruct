@@ -268,31 +268,6 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   return false;
 }
 
-std::optional<std::string> SemanticsValidator::builtinSoaPendingExprDiagnostic(
-    const Expr &expr,
-    const std::vector<ParameterInfo> &params,
-    const std::unordered_map<std::string, BindingInfo> &locals) const {
-  std::string soaFieldViewName;
-  if (isBuiltinSoaFieldViewExpr(expr, params, locals, &soaFieldViewName)) {
-    return soaFieldViewPendingDiagnostic(soaFieldViewName);
-  }
-  if (isBuiltinSoaRefExpr(expr, params, locals)) {
-    return soaBorrowedViewPendingDiagnostic();
-  }
-  return std::nullopt;
-}
-
-bool SemanticsValidator::reportBuiltinSoaPendingExprDiagnostic(
-    const Expr &expr,
-    const std::vector<ParameterInfo> &params,
-    const std::unordered_map<std::string, BindingInfo> &locals) {
-  if (auto soaPending = builtinSoaPendingExprDiagnostic(expr, params, locals)) {
-    error_ = *soaPending;
-    return false;
-  }
-  return true;
-}
-
 bool SemanticsValidator::hasDirectExperimentalVectorImport() const {
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {

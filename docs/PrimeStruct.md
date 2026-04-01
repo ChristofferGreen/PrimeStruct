@@ -2500,11 +2500,9 @@ plus `values.ref(i)` on top of the current single-column borrowed-slot substrate
 borrowed-return paths now run successfully across the current backends without depending on the
 conversion helper surface. The pending `soa_vector` field-view and borrowed-view diagnostics now also route through shared
 semantics helper functions instead of duplicated string assembly across validator and monomorph
-entrypoints, and the validator-side plus monomorph-side fallback probes now also share
-`builtinSoaPendingExprDiagnostic(...)`,
-`reportBuiltinSoaPendingExprDiagnostic(...)`, and
-`builtinSoaPendingExprDiagnosticForMonomorph(...)` helpers instead of repeated field-view/ref
-checks plus duplicated error propagation across those fallback paths. The remaining compiler-owned
+entrypoints, and the validator-side fallback probes are gone entirely while the remaining
+monomorph-side inference fallback still shares `builtinSoaPendingExprDiagnosticForMonomorph(...)`
+instead of repeating field-view/ref checks plus error propagation inline. The remaining compiler-owned
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
 construction/parsing instead of open-coded literals across validator and monomorph fallback logic,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
