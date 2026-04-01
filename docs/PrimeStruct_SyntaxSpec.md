@@ -896,11 +896,14 @@ and bound inline location-wrapped method-like helper-return forms such as
 `[i32] field{location(holder.pickBorrowed(...)).ref(i).field}` now also ride that same
 generic struct-field path, and that successful read path no
 longer depends on lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef`
-routing branches. Direct return/root-expression method-like borrowed helper-return reads such as
-`return(holder.pickBorrowed(...).count())`, `return(holder.pickBorrowed(...).field()[i])`,
-`return(get(holder.pickBorrowed(...), i).field)`, `return(holder.pickBorrowed(...).get(i).field)`,
-`return(holder.pickBorrowed(...).ref(i).field)`, and inline `location(...)`-wrapped variants now
-route through that same helper/indexing
+routing branches. Direct return/root-expression borrowed helper-return reads such as
+`return(pickBorrowed(...).count())`, `return(pickBorrowed(...).field()[i])`,
+`return(get(pickBorrowed(...), i).field)`, `return(pickBorrowed(...).get(i).field)`,
+`return(pickBorrowed(...).ref(i).field)`, direct return/root-expression method-like borrowed
+helper-return reads such as `return(holder.pickBorrowed(...).count())`,
+`return(holder.pickBorrowed(...).field()[i])`, `return(get(holder.pickBorrowed(...), i).field)`,
+`return(holder.pickBorrowed(...).get(i).field)`, `return(holder.pickBorrowed(...).ref(i).field)`,
+and inline `location(...)`-wrapped variants now route through that same helper/indexing
 substrate. The compiler-owned direct unsupported field-view path still remains only for
 standalone borrowed or mutating field-view surfaces until indexing moves fully onto the
 experimental substrate.

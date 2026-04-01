@@ -2407,8 +2407,11 @@ bad_use_after_take() {
     method-like helper-return forms such as
     `[i32] field{get(location(holder.pickBorrowed(...)), i).y}` and
     `[i32] field{location(holder.pickBorrowed(...)).ref(i).y}` now ride that same generic
-    struct-field access flow. Direct return/root-expression method-like borrowed helper-return
-    reads such as `return(holder.pickBorrowed(...).count())`,
+    struct-field access flow. Direct return/root-expression borrowed helper-return reads such as
+    `return(pickBorrowed(...).count())`, `return(pickBorrowed(...).y()[i])`,
+    `return(get(pickBorrowed(...), i).y)`, `return(pickBorrowed(...).get(i).y)`,
+    `return(pickBorrowed(...).ref(i).y)`, direct return/root-expression method-like borrowed
+    helper-return reads such as `return(holder.pickBorrowed(...).count())`,
     `return(holder.pickBorrowed(...).y()[i])`, `return(get(holder.pickBorrowed(...), i).y)`,
     `return(holder.pickBorrowed(...).get(i).y)`, `return(holder.pickBorrowed(...).ref(i).y)`,
     and inline `location(...)`-wrapped variants now ride that same helper/field-access flow too,
