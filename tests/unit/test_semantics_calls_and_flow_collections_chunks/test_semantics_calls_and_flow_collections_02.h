@@ -909,6 +909,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector borrowed parameter read-only methods validate on wrapper state") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+pick([Reference<SoaVector<Particle>>] borrowed) {
+  [Particle] first{borrowed.get(0i32)}
+  [Particle] second{borrowed.ref(1i32)}
+  [vector<Particle>] unpacked{borrowed.to_aos()}
+  return(plus(plus(first.x, second.x), count(unpacked)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [Reference<SoaVector<Particle>>] borrowed{location(values)}
+  return(pick(borrowed))
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector stdlib get helper validates on reflect-enabled struct elements") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

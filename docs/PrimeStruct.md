@@ -2367,8 +2367,12 @@ bad_use_after_take() {
     `soaVectorPush<T>()` plus wrapper method-sugar `values.reserve(...)` / `values.push(...)` mutate that same
     wrapper-backed column state in place. Experimental wrapper field-view attempts such as `values.x()` still reach
     the deterministic pending contract `soa_vector field views are not implemented yet: x` instead of falling through
-    to `unknown call target`, and borrowed local standalone attempts such as `borrowed.x()` now keep that same
-    deterministic pending contract instead of degrading to a target-shape error, but read-only field-view indexing now rides on that same substrate for reflected
+    to `unknown call target`, borrowed local standalone attempts such as `borrowed.x()` now keep that same
+    deterministic pending contract instead of degrading to a target-shape error, and borrowed
+    `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`, `borrowed.ref(i)`, and
+    `borrowed.to_aos()` now also rides on the existing helper/conversion substrate for local and
+    parameter receivers instead of leaking through raw builtin target-mismatch diagnostics, but
+    read-only field-view indexing now rides on that same substrate for reflected
     structs: direct `values.x()[i]` / `values.y()[i]` reads plus borrowed local forms such as
     `borrowed.y()[i]` and `dereference(borrowed).y()[i]` rewrite to the existing `soaVectorGet<T>(..., i).field`
     path and run across C++/native/VM for both single-field and multi-field wrappers, while standalone borrowed or

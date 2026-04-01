@@ -859,7 +859,10 @@ construction/parsing instead of open-coded literals, and the post-`validateExpr(
 binding/return/call-argument plus return-inference reprobes are gone too. Read-only
 experimental wrapper standalone borrowed field-view attempts such as `borrowed.field()` now keep
 the same pending `soa_vector field views are not implemented yet: <field>` diagnostic as direct
-wrapper attempts, and read-only wrapper field-view indexing now routes reflected direct `values.field()[i]` reads
+wrapper attempts, borrowed `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
+`borrowed.ref(i)`, and `borrowed.to_aos()` now also validates on the existing wrapper helper path
+for local and parameter receivers instead of stopping on raw builtin target mismatch, and
+read-only wrapper field-view indexing now routes reflected direct `values.field()[i]` reads
 plus borrowed local `borrowed.field()[i]` and explicitly dereferenced borrowed
 `dereference(borrowed).field()[i]` reads onto the existing `soaVectorGet<T>(..., i).field`
 helper path for both single-field and multi-field structs, and that successful read path no
