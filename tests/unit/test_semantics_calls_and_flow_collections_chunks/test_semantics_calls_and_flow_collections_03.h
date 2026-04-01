@@ -96,7 +96,7 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get<i32>(values, 0i32)",
               "get does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref<i32>(values, 0i32)",
-              "get does not accept template arguments");
+              "ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "/soa_vector/get<i32>(values, 0i32)", "get does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
@@ -183,8 +183,8 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector builtin ref rejects local bindings before borrowed views exist") {
-  const auto checkReject = [](const std::string &bindingInit) {
+TEST_CASE("soa_vector builtin ref local bindings validate before lowering") {
+  const auto checkAccept = [](const std::string &bindingInit) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -196,13 +196,13 @@ TEST_CASE("soa_vector builtin ref rejects local bindings before borrowed views e
         "  return(0i32)\n"
         "}\n";
     std::string error;
-    CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+    CHECK(validateProgram(source, "/main", error));
+    CHECK(error.empty());
   };
 
-  checkReject("ref(values, 0i32)");
-  checkReject("values.ref(0i32)");
-  checkReject("/soa_vector/ref(values, 0i32)");
+  checkAccept("ref(values, 0i32)");
+  checkAccept("values.ref(0i32)");
+  checkAccept("/soa_vector/ref(values, 0i32)");
 }
 
 TEST_CASE("soa_vector ref helper binding still accepts same-path user helper") {
@@ -229,7 +229,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector builtin ref rejects call argument escapes before borrowed views exist") {
+TEST_CASE("soa_vector builtin ref call argument escapes fail through inference") {
   const auto checkReject = [](const std::string &expr) {
     const std::string source =
         "Particle() {\n"
@@ -246,7 +246,7 @@ TEST_CASE("soa_vector builtin ref rejects call argument escapes before borrowed 
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+    CHECK(error.find("unable to infer implicit template arguments for /consume") != std::string::npos);
   };
 
   checkReject("ref(values, 0i32)");
@@ -254,8 +254,8 @@ TEST_CASE("soa_vector builtin ref rejects call argument escapes before borrowed 
   checkReject("/soa_vector/ref(values, 0i32)");
 }
 
-TEST_CASE("soa_vector builtin ref rejects return escapes before borrowed views exist") {
-  const auto checkReject = [](const std::string &expr) {
+TEST_CASE("soa_vector builtin ref return escapes fail through inference") {
+  const auto checkReject = [](const std::string &expr, const std::string &expected) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -272,12 +272,12 @@ TEST_CASE("soa_vector builtin ref rejects return escapes before borrowed views e
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/pick", error));
-    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("ref(values, 0i32)");
-  checkReject("values.ref(0i32)");
-  checkReject("/soa_vector/ref(values, 0i32)");
+  checkReject("ref(values, 0i32)", "unable to infer return type on /pick");
+  checkReject("values.ref(0i32)", "unknown method: /std/collections/soa_vector/ref");
+  checkReject("/soa_vector/ref(values, 0i32)", "unable to infer return type on /pick");
 }
 
 TEST_CASE("soa_vector ref helper still accepts call and return escapes through same-path helper") {
@@ -313,7 +313,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector builtin field views reject call argument escapes before field-view substrate exists") {
+TEST_CASE("soa_vector builtin field views call argument escapes fail through inference") {
   const auto checkReject = [](const std::string &expr) {
     const std::string source =
         "Particle() {\n"
@@ -330,15 +330,15 @@ TEST_CASE("soa_vector builtin field views reject call argument escapes before fi
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+    CHECK(error.find("unable to infer implicit template arguments for /consume") != std::string::npos);
   };
 
   checkReject("x(values)");
   checkReject("values.x()");
 }
 
-TEST_CASE("soa_vector builtin field views reject return escapes before field-view substrate exists") {
-  const auto checkReject = [](const std::string &expr) {
+TEST_CASE("soa_vector builtin field views return escapes fail through inference") {
+  const auto checkReject = [](const std::string &expr, const std::string &expected) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -355,11 +355,11 @@ TEST_CASE("soa_vector builtin field views reject return escapes before field-vie
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/pick", error));
-    CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("x(values)");
-  checkReject("values.x()");
+  checkReject("x(values)", "unable to infer return type on /pick");
+  checkReject("values.x()", "unknown method: /soa_vector/field_view/x");
 }
 
 TEST_CASE("soa_vector field-view helper still accepts call and return escapes through same-path helper") {

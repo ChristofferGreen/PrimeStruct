@@ -693,6 +693,6 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferDefinitionSource.find("soa_vector borrowed views are not implemented yet: ref") ==
         std::string::npos);
-  CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") !=
+  CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
 }

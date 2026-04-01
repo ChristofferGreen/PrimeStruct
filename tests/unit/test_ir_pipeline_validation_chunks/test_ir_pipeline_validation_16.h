@@ -441,7 +441,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "builtinSoaPendingExprDiagnosticForMonomorph(*argExpr, params, locals, ctx)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "splitSoaFieldViewHelperPath(resolved, &fieldNameOut)") !=
+            "splitSoaFieldViewHelperPath(resolved, &fieldNameOut)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find("\"/soa_vector/field_view/\"") ==
         std::string::npos);

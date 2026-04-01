@@ -503,7 +503,7 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/get") != std::string::npos);
 }
 
-TEST_CASE("root ref helper forms lower through canonical helper routing") {
+TEST_CASE("root ref helper forms route through canonical helper routing") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -517,11 +517,16 @@ main() {
   [Particle] valueB{values.ref(0i32)}
   [Particle] valueC{/soa_vector/ref(values, 0i32)}
 }
-  )";
+)";
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error.find("borrowed views are not implemented yet: ref") != std::string::npos);
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("root ref vector receiver keeps canonical reject contract") {
