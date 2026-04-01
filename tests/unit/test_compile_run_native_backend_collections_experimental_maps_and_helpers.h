@@ -474,7 +474,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native root soa_vector to_aos method helper forms still reach canonical lowerer mismatch") {
+TEST_CASE("native root soa_vector to_aos method helper forms still trap after canonical lowering") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -493,12 +493,11 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_root_soa_vector_to_aos_forms.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_root_soa_vector_to_aos_forms_err.txt").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values") !=
-        std::string::npos);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_root_soa_vector_to_aos_forms_exe").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("native runs experimental soa_vector stdlib non-empty to-aos helper") {

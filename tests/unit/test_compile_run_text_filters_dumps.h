@@ -1033,6 +1033,7 @@ main() {
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{/to_aos(values)}
   [vector<Particle>] unpackedC{values.to_aos()}
+  [vector<Particle>] unpackedD{values./to_aos()}
   return(0i32)
 }
 )";
@@ -1050,6 +1051,8 @@ main() {
   CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
         std::string::npos);
   CHECK(ast.find("/to_aos(values)", mainPos) == std::string::npos);
+  CHECK(ast.find("values.to_aos()", mainPos) == std::string::npos);
+  CHECK(ast.find("values./to_aos()", mainPos) == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic keeps direct canonical experimental soa_vector to_aos helper path") {

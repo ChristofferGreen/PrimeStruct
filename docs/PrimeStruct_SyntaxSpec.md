@@ -856,11 +856,13 @@ vector-target classification now also treats those same direct canonical
 instead of depending on bound vector temporaries, and the shared native/VM vector-capacity
 classifier now does the same for nested backend helper dispatch. Those backend-side classifier
 checks now share one generic AST call-path helper instead of each backend file carrying its own
-`soa_vector/to_aos` matcher. Imported root bare/direct/method
+`soa_vector/to_aos` matcher. Imported root bare/direct/method/slash-method
 builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the same canonical
-semantic rewrite and then stop later on the remaining conversion mismatch between builtin
-`/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the
-stdlib conversion implementation. The diagnostic harness now also locks both direct-canonical and
+semantic rewrite, with the method/slash-method surface materializing
+`/std/collections/soa_vector/to_aos__...` and clearing lowering plus C++/VM execution while the
+native runtime still traps on that bridged conversion path. The remaining raw-builtin
+conversion-specific compiler-owned gap is now the no-import root method/slash-method
+instantiation follow-up plus that native runtime trap. The diagnostic harness now also locks both direct-canonical and
 imported-helper experimental-wrapper `to_aos` forms to that same canonical helper path at
 `ast-semantic`, so the remaining diagnostic/test cleanup is now field-view only.
 The current pending `soa_vector field views are not implemented yet: <field>` and

@@ -485,6 +485,31 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("root soa_vector to_aos method helper forms run in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<Particle>] unpackedA{values.to_aos()}
+  [vector<Particle>] unpackedB{values./to_aos()}
+  return(plus(count(unpackedA), count(unpackedB)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_root_soa_vector_to_aos_method_forms_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_root_soa_vector_to_aos_method_forms_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

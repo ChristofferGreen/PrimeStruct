@@ -427,6 +427,28 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
+TEST_CASE("vm root soa_vector to_aos method helper forms run") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<Particle>] unpackedA{values.to_aos()}
+  [vector<Particle>] unpackedB{values./to_aos()}
+  return(plus(count(unpackedA), count(unpackedB)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_root_soa_vector_to_aos_method_forms.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
 TEST_CASE("vm runs experimental soa_vector stdlib non-empty to-aos helper") {
   const std::string source = R"(
 import /std/collections/*

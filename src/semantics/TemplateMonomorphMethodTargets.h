@@ -117,6 +117,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return false;
   };
+  auto preferredSoaToAosMethodTarget = [&]() {
+    const std::string canonical = "/std/collections/soa_vector/to_aos";
+    const std::string samePath = "/to_aos";
+    if (hasDefinitionFamilyPath(samePath)) {
+      return samePath;
+    }
+    if (hasDefinitionFamilyPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   const Expr &receiver = expr.args.front();
   if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
     if (methodName == "result") {
@@ -238,6 +249,10 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   std::string normalizedTypeName = typeName;
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
+  }
+  if (normalizedTypeName == "soa_vector" && normalizedMethodName == "to_aos") {
+    pathOut = selectHelperOverloadPath(expr, preferredSoaToAosMethodTarget(), ctx);
+    return true;
   }
   std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
   const bool isCollectionFamilyReceiver =

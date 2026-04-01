@@ -2566,9 +2566,11 @@ diagnostic/test helper-call cleanup is now complete as well because direct canon
 coverage plus helper-return bare `get(...)` dump coverage now lock those routing paths in the
 test harnesses. Diagnostic/test conversion cleanup is now complete too because compile-run,
 IR-lowerer, and semantic-dump coverage lock both direct-canonical and imported-helper wrapper
-`to_aos` forms to the canonical `/std/collections/soa_vector/to_aos` path plus the current
-lowerer `struct parameter type mismatch` boundary. The remaining runtime-code cleanup is therefore
-reduced to the raw-builtin native conversion follow-up plus the direct pending-diagnostic
+`to_aos` forms to the canonical `/std/collections/soa_vector/to_aos` path, and imported
+raw-builtin method/slash-method `to_aos` now also lock to the canonical
+`/std/collections/soa_vector/to_aos__...` helper path through lowering plus C++/VM execution.
+The remaining runtime-code cleanup is therefore reduced to the raw-builtin native conversion
+follow-up plus the direct pending-diagnostic
 field-view path, while the remaining diagnostic/test cleanup is reduced to field-view
 follow-ups only. The runtime-code conversion cleanup on direct-canonical and imported-helper
 paths is complete, and the
@@ -2597,7 +2599,9 @@ either, instead using one shared AST call-path helper for canonical
 `/std/collections/soa_vector/to_aos...` matching. The remaining conversion-specific
 compiler-owned code is therefore narrowed to that shared helper plus invalid-target/user-shadow
 `to_aos` fallbacks rather than old root-builtin direct-call routing outside the stdlib helper
-path.
+path. The remaining raw-builtin conversion-specific compiler-owned gap is now split between the
+no-import root method/slash-method helper-instantiation follow-up and the native runtime trap on
+already-canonicalized imported bare/direct/method `to_aos` calls.
 That single-column borrowed-slot substrate is the current completed foothold; the remaining
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental
