@@ -549,3 +549,29 @@ TEST_CASE("emitter emit setup source delegation stays stable") {
   CHECK(emitterEmitSource.find("#include \"EmitterEmitSetupLifecycleHelperStep.h\"") != std::string::npos);
 }
 
+TEST_CASE("emitter builtin collection inference source stays canonical") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path emitterBuiltinCollectionsPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinCollectionInferenceHelpers.cpp";
+  REQUIRE(std::filesystem::exists(emitterBuiltinCollectionsPath));
+  const std::string source = readText(emitterBuiltinCollectionsPath);
+
+  CHECK(source.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") != std::string::npos);
+  CHECK(source.find("std/collections/soa_vector/to_aos") != std::string::npos);
+  CHECK(source.find("std/collections/soa_vector/get") == std::string::npos);
+  CHECK(source.find("std/collections/soa_vector/ref") == std::string::npos);
+  CHECK(source.find("std/collections/soa_vector/count") == std::string::npos);
+  CHECK(source.find("std/collections/soa_vector/push") == std::string::npos);
+  CHECK(source.find("std/collections/soa_vector/reserve") == std::string::npos);
+}
