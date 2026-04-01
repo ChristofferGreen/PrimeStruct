@@ -2513,8 +2513,10 @@ to the builtin element type, and the builtin borrowed-view recognizers in
 initializer/monomorph handling now accept that canonical resolved helper path too. The
 equivalent helper-return method/infer fallback for builtin `soa_vector` `to_aos` receivers now
 also prefers the canonical `/std/collections/soa_vector/to_aos` helper path while still
-preserving same-path `/to_aos` user-helper shadowing, and vector-result recognizers now accept
-that canonical resolved helper path too. Lowerer-side count target classification now also
+tolerating same-path `/to_aos` user-helper shadowing, and vector-result recognizers now accept
+that canonical resolved helper path too. Experimental wrapper helper-return `to_aos()` method
+rewrites now also stop short of forcing `soaVectorToAos(...)` when a same-path `/to_aos` helper
+is visible. Lowerer-side count target classification now also
 treats direct canonical `/std/collections/soa_vector/to_aos` call results as vector targets for
 nested count dispatch instead of depending on the old raw `/to_aos` call shape. C++ emitter
 vector-target classification now also treats those same direct canonical

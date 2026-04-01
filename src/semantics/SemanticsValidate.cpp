@@ -2195,7 +2195,8 @@ void rewriteExperimentalSoaToAosMethodExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
-    const std::string &definitionNamespace);
+    const std::string &definitionNamespace,
+    bool hasVisibleToAosHelper);
 
 std::vector<std::string> candidatePathsForExprCall(
     const Expr &callExpr,
@@ -2210,14 +2211,25 @@ void rewriteExperimentalSoaToAosMethodStatements(
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
-    const std::string &definitionNamespace) {
+    const std::string &definitionNamespace,
+    bool hasVisibleToAosHelper) {
   for (Expr &stmt : statements) {
     rewriteExperimentalSoaToAosMethodExpr(
-        stmt, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+        stmt,
+        bindings,
+        soaVectorReturnDefinitions,
+        structPaths,
+        definitionNamespace,
+        hasVisibleToAosHelper);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteExperimentalSoaToAosMethodStatements(
-          stmt.bodyArguments, bodyBindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+          stmt.bodyArguments,
+          bodyBindings,
+          soaVectorReturnDefinitions,
+          structPaths,
+          definitionNamespace,
+          hasVisibleToAosHelper);
     }
     if (stmt.isBinding) {
       if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths); binding.has_value()) {
@@ -2232,16 +2244,25 @@ void rewriteExperimentalSoaToAosMethodExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
-    const std::string &definitionNamespace) {
+    const std::string &definitionNamespace,
+    bool hasVisibleToAosHelper) {
   for (Expr &arg : expr.args) {
     rewriteExperimentalSoaToAosMethodExpr(
-        arg, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+        arg,
+        bindings,
+        soaVectorReturnDefinitions,
+        structPaths,
+        definitionNamespace,
+        hasVisibleToAosHelper);
   }
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
     return;
   }
   if (builtinSoaConversionMethodName(expr.name) != "to_aos") {
+    return;
+  }
+  if (hasVisibleToAosHelper) {
     return;
   }
 
@@ -2291,6 +2312,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
   std::unordered_set<std::string> structPaths;
+  bool hasVisibleToAosHelper = false;
   for (const Definition &def : program.definitions) {
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
@@ -2302,6 +2324,17 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     }
     if (isStructLikeDefinition(def)) {
       structPaths.insert(def.fullPath);
+    }
+    if (def.fullPath == "/to_aos") {
+      hasVisibleToAosHelper = true;
+    }
+  }
+  if (!hasVisibleToAosHelper) {
+    for (const auto &importPath : program.imports) {
+      if (importPath == "/to_aos" || importPath == "to_aos") {
+        hasVisibleToAosHelper = true;
+        break;
+      }
     }
   }
   for (Definition &def : program.definitions) {
@@ -2317,7 +2350,12 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
       definitionNamespace = def.fullPath.substr(0, slash);
     }
     rewriteExperimentalSoaToAosMethodStatements(
-        def.statements, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+        def.statements,
+        bindings,
+        soaVectorReturnDefinitions,
+        structPaths,
+        definitionNamespace,
+        hasVisibleToAosHelper);
     if (def.returnExpr.has_value()) {
       auto returnBindings = bindings;
       for (const Expr &stmt : def.statements) {
@@ -2330,7 +2368,8 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
           returnBindings,
           soaVectorReturnDefinitions,
           structPaths,
-          definitionNamespace);
+          definitionNamespace,
+          hasVisibleToAosHelper);
     }
   }
   return true;

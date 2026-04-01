@@ -3781,6 +3781,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("to_aos method fallback keeps same-path helper shadow for auto inference through struct helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[return<SoaVector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soaVectorNew<Particle>())
+}
+
+[return<int>]
+/to_aos([SoaVector<Particle>] values) {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [auto] item{holder.cloneValues().to_aos()}
+  return(item)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("to_aos helper method-form falls back to user helper") {
   const std::string source = R"(
 Particle() {
