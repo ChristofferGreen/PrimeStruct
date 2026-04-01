@@ -87,6 +87,23 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         return !fieldNameOut.empty();
       }
     }
+    if (target.kind == Expr::Kind::Call && !target.isBinding &&
+        !target.isFieldAccess &&
+        target.templateArgs.empty() && !target.hasBodyArguments &&
+        target.bodyArguments.empty() && !hasNamedArguments(target.argNames) &&
+        target.args.size() == 1 && !target.name.empty() &&
+        target.name.find('/') == std::string::npos) {
+      const std::string helperPath = "/soa_vector/" + target.name;
+      if (!hasDeclaredDefinitionPath(helperPath) &&
+          !hasImportedDefinitionPath(helperPath)) {
+        const Expr &receiver = target.args.front();
+        std::string elemType;
+        if (resolveExperimentalSoaOrBorrowedReceiver(receiver, elemType)) {
+          fieldNameOut = target.name;
+          return true;
+        }
+      }
+    }
     std::string accessName;
     if (!getBuiltinArrayAccessName(target, accessName) || target.args.size() != 2) {
       return false;

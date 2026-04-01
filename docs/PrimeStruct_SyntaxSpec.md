@@ -859,9 +859,10 @@ construction/parsing instead of open-coded literals, and the post-`validateExpr(
 binding/return/call-argument plus return-inference reprobes are gone too. Read-only
 experimental wrapper standalone borrowed field-view attempts such as `borrowed.field()` now keep
 the same pending `soa_vector field views are not implemented yet: <field>` diagnostic as direct
-wrapper attempts, mutating indexed attempts such as `assign(value.field()[i], next)` now also keep
-that same pending field-view diagnostic instead of degrading to the generic mutable-binding
-assignment contract, borrowed `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
+wrapper attempts, mutating standalone/indexed attempts such as `assign(value.field(), next)` and
+`assign(value.field()[i], next)` now also keep that same pending field-view diagnostic instead of
+degrading to the generic mutable-binding assignment contract, borrowed
+`Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
 `borrowed.ref(i)`, and `borrowed.to_aos()` now also validates on the existing wrapper
 helper/conversion path for local, parameter, and helper-return receivers instead of stopping on
 raw builtin target mismatch or the old helper-return lowerer mismatch. Read-only wrapper field-view indexing now routes reflected direct `values.field()[i]`
