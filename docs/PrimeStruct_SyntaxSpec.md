@@ -863,7 +863,8 @@ the same pending `soa_vector field views are not implemented yet: <field>` diagn
 wrapper attempts, and inline location-wrapped borrowed helper-return forms such as
 `location(pickBorrowed(...)).field()` / `field(location(pickBorrowed(...)))` now keep it too.
 Mutating standalone/indexed attempts such as `assign(value.field(), next)` and
-`assign(value.field()[i], next)` now also keep that same pending field-view diagnostic instead of
+`assign(value.field()[i], next)` now also keep that same pending field-view diagnostic on direct,
+borrowed helper-return, and inline location-wrapped borrowed helper-return receivers instead of
 degrading to the generic mutable-binding assignment contract, borrowed
 `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
 `borrowed.ref(i)`, and `borrowed.to_aos()` now also validates on the existing wrapper

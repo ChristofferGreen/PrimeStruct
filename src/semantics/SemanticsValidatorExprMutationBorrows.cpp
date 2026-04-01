@@ -49,6 +49,53 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     return this->extractExperimentalSoaVectorElementType(inferredBinding,
                                                          elemTypeOut);
   };
+  auto resolveInlineBorrowedExperimentalSoaReceiver =
+      [&](const Expr &candidate, std::string &elemTypeOut) -> bool {
+    auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
+      if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(valueExpr,
+                                                                   elemTypeOut)) {
+        return true;
+      }
+      if (valueExpr.kind == Expr::Kind::Name) {
+        const BindingInfo *binding = findParamBinding(params, valueExpr.name);
+        if (binding == nullptr) {
+          auto localIt = locals.find(valueExpr.name);
+          if (localIt != locals.end()) {
+            binding = &localIt->second;
+          }
+        }
+        if (binding != nullptr &&
+            this->extractExperimentalSoaVectorElementType(*binding,
+                                                         elemTypeOut)) {
+          return true;
+        }
+      }
+      if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
+        return false;
+      }
+      std::string inferredTypeText;
+      return inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText) &&
+             !inferredTypeText.empty() &&
+             resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
+                                                    elemTypeOut);
+    };
+    if (!candidate.isBinding &&
+        isSimpleCallName(candidate, "location") &&
+        candidate.args.size() == 1) {
+      return resolveValueExpr(candidate.args.front());
+    }
+    if (!candidate.isBinding &&
+        isSimpleCallName(candidate, "dereference") &&
+        candidate.args.size() == 1) {
+      const Expr &borrowedExpr = candidate.args.front();
+      return borrowedExpr.kind == Expr::Kind::Call &&
+             !borrowedExpr.isBinding &&
+             isSimpleCallName(borrowedExpr, "location") &&
+             borrowedExpr.args.size() == 1 &&
+             resolveValueExpr(borrowedExpr.args.front());
+    }
+    return false;
+  };
   auto resolveExperimentalSoaOrBorrowedReceiver =
       [&](const Expr &target, std::string &elemTypeOut) -> bool {
     if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(target,
@@ -68,6 +115,10 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
                                                        elemTypeOut)) {
         return true;
       }
+    }
+    if (target.kind == Expr::Kind::Call &&
+        resolveInlineBorrowedExperimentalSoaReceiver(target, elemTypeOut)) {
+      return true;
     }
     std::string inferredTypeText;
     return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
