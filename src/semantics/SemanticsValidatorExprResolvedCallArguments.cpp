@@ -101,13 +101,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (!validateExpr(params, locals, *arg)) {
       return false;
     }
-    std::string soaFieldViewName;
-    if (this->isBuiltinSoaFieldViewExpr(*arg, params, locals, &soaFieldViewName)) {
-      error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
-      return false;
-    }
-    if (this->isBuiltinSoaRefExpr(*arg, params, locals)) {
-      error_ = soaBorrowedViewPendingDiagnostic();
+    if (auto soaPending = builtinSoaPendingExprDiagnostic(*arg, params, locals)) {
+      error_ = *soaPending;
       return false;
     }
   }
@@ -118,13 +113,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (!validateExpr(params, locals, *arg)) {
       return false;
     }
-    std::string soaFieldViewName;
-    if (this->isBuiltinSoaFieldViewExpr(*arg, params, locals, &soaFieldViewName)) {
-      error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
-      return false;
-    }
-    if (this->isBuiltinSoaRefExpr(*arg, params, locals)) {
-      error_ = soaBorrowedViewPendingDiagnostic();
+    if (auto soaPending = builtinSoaPendingExprDiagnostic(*arg, params, locals)) {
+      error_ = *soaPending;
       return false;
     }
   }

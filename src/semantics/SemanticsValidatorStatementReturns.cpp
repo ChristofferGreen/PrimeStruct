@@ -97,13 +97,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       return false;
     }
-    std::string soaFieldViewName;
-    if (isBuiltinSoaFieldViewExpr(stmt.args.front(), params, locals, &soaFieldViewName)) {
-      error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
-      return false;
-    }
-    if (isBuiltinSoaRefExpr(stmt.args.front(), params, locals)) {
-      error_ = soaBorrowedViewPendingDiagnostic();
+    if (auto soaPending = builtinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)) {
+      error_ = *soaPending;
       return false;
     }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {

@@ -52,13 +52,8 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
   BindingInfo exprBinding;
   bool hasExprBinding = false;
   if (valueExpr != nullptr) {
-    std::string soaFieldViewName;
-    if (isBuiltinSoaFieldViewExpr(*valueExpr, defParams, activeLocals, &soaFieldViewName)) {
-      error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
-      return false;
-    }
-    if (isBuiltinSoaRefExpr(*valueExpr, defParams, activeLocals)) {
-      error_ = soaBorrowedViewPendingDiagnostic();
+    if (auto soaPending = builtinSoaPendingExprDiagnostic(*valueExpr, defParams, activeLocals)) {
+      error_ = *soaPending;
       return false;
     }
     exprKind = inferExprReturnKind(*valueExpr, defParams, activeLocals);

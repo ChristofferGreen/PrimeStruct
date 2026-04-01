@@ -509,9 +509,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return false;
     }
     if (!isArrayOrString && !isMap && !isExperimentalMap) {
-      if (std::string soaFieldViewName;
-          isBuiltinSoaFieldViewExpr(expr.args.front(), params, locals, &soaFieldViewName)) {
-        error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
+      if (auto soaPending = builtinSoaPendingExprDiagnostic(expr.args.front(), params, locals)) {
+        error_ = *soaPending;
         return false;
       }
       if (!validateExpr(params, locals, expr.args.front())) {

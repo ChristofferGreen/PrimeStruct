@@ -197,8 +197,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return false;
   }
-  if (isBuiltinSoaRefExpr(*initializerExprForValidation, params, locals)) {
-    error_ = soaBorrowedViewPendingDiagnostic();
+  if (auto soaPending = builtinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)) {
+    error_ = *soaPending;
     return false;
   }
 
