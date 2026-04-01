@@ -97,9 +97,6 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       return false;
     }
-    if (!reportBuiltinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)) {
-      return false;
-    }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {
       auto defIt = defMap_.find(currentValidationContext_.definitionPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {

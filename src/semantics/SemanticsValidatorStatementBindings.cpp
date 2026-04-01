@@ -197,9 +197,6 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return false;
   }
-  if (!reportBuiltinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)) {
-    return false;
-  }
 
   ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
   if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(initializer)) {

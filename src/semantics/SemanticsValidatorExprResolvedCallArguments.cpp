@@ -101,18 +101,12 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (!validateExpr(params, locals, *arg)) {
       return false;
     }
-    if (!reportBuiltinSoaPendingExprDiagnostic(*arg, params, locals)) {
-      return false;
-    }
   }
   for (const auto *arg : packedArgs) {
     if (!arg) {
       continue;
     }
     if (!validateExpr(params, locals, *arg)) {
-      return false;
-    }
-    if (!reportBuiltinSoaPendingExprDiagnostic(*arg, params, locals)) {
       return false;
     }
   }

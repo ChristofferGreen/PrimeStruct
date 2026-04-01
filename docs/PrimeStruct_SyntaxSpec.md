@@ -858,8 +858,9 @@ remaining validator-side plus monomorph-side fallback probes now also share
 `reportBuiltinSoaPendingExprDiagnostic(...)`, and
 `builtinSoaPendingExprDiagnosticForMonomorph(...)` helpers. The compiler-owned
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
-construction/parsing instead of open-coded literals. The compiler-owned fallback checks themselves
-still remain until field-view indexing moves onto the experimental substrate.
+construction/parsing instead of open-coded literals, and the post-`validateExpr(...)`
+binding/return/call-argument reprobes are gone too. The compiler-owned fallback checks
+themselves still remain until field-view indexing moves onto the experimental substrate.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

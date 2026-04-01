@@ -610,6 +610,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodTargetResolution.cpp";
   const std::filesystem::path inferDefinitionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferDefinition.cpp";
+  const std::filesystem::path exprResolvedCallArgumentsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprResolvedCallArguments.cpp";
   const std::filesystem::path statementBindingsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementBindings.cpp";
   const std::filesystem::path statementReturnsPath =
@@ -620,6 +622,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   REQUIRE(std::filesystem::exists(inferMethodResolutionPath));
   REQUIRE(std::filesystem::exists(exprMethodTargetResolutionPath));
   REQUIRE(std::filesystem::exists(inferDefinitionPath));
+  REQUIRE(std::filesystem::exists(exprResolvedCallArgumentsPath));
   REQUIRE(std::filesystem::exists(statementBindingsPath));
   REQUIRE(std::filesystem::exists(statementReturnsPath));
 
@@ -629,6 +632,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   const std::string inferMethodResolutionSource = readText(inferMethodResolutionPath);
   const std::string exprMethodTargetResolutionSource = readText(exprMethodTargetResolutionPath);
   const std::string inferDefinitionSource = readText(inferDefinitionPath);
+  const std::string exprResolvedCallArgumentsSource = readText(exprResolvedCallArgumentsPath);
   const std::string statementBindingsSource = readText(statementBindingsPath);
   const std::string statementReturnsSource = readText(statementReturnsPath);
 
@@ -669,12 +673,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferDefinitionSource.find("reportBuiltinSoaPendingExprDiagnostic(*valueExpr, defParams, activeLocals)") !=
         std::string::npos);
+  CHECK(exprResolvedCallArgumentsSource.find("reportBuiltinSoaPendingExprDiagnostic(*arg, params, locals)") ==
+        std::string::npos);
   CHECK(statementBindingsSource.find(
-            "reportBuiltinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)") !=
+            "reportBuiltinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)") ==
         std::string::npos);
   CHECK(statementBindingsSource.find("builtinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)") ==
         std::string::npos);
-  CHECK(statementReturnsSource.find("reportBuiltinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") !=
+  CHECK(statementReturnsSource.find("reportBuiltinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
         std::string::npos);
   CHECK(statementReturnsSource.find("builtinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
         std::string::npos);
