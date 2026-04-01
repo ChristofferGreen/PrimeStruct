@@ -2369,14 +2369,17 @@ bad_use_after_take() {
     the deterministic pending contract `soa_vector field views are not implemented yet: x` instead of falling through
     to `unknown call target`, borrowed local standalone attempts such as `borrowed.x()` now keep that same
     deterministic pending contract instead of degrading to a target-shape error, and borrowed
-    `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`, `borrowed.ref(i)`, and
-    `borrowed.to_aos()` now also rides on the existing helper/conversion substrate for local and
-    parameter receivers instead of leaking through raw builtin target-mismatch diagnostics, but
-    read-only field-view indexing now rides on that same substrate for reflected
-    structs: direct `values.x()[i]` / `values.y()[i]` reads plus borrowed local forms such as
-    `borrowed.y()[i]` and `dereference(borrowed).y()[i]` rewrite to the existing `soaVectorGet<T>(..., i).field`
-    path and run across C++/native/VM for both single-field and multi-field wrappers, while standalone borrowed or
-    mutating field-view surfaces still keep the pending contract. `soaVectorFromAos<T>()`
+    `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)` and `borrowed.ref(i)`
+    now also rides on the existing helper substrate for local, parameter, and helper-return
+    receivers instead of leaking through raw builtin target-mismatch diagnostics, while
+    `borrowed.to_aos()` already rides on the existing conversion substrate for local and
+    parameter receivers. Read-only field-view indexing now rides on that same helper
+    substrate for reflected structs: direct `values.x()[i]` / `values.y()[i]` reads plus
+    borrowed local forms such as `borrowed.y()[i]` and `dereference(borrowed).y()[i]`
+    rewrite to the existing `soaVectorGet<T>(..., i).field` path and run across
+    C++/native/VM for both single-field and multi-field wrappers, while standalone borrowed
+    or mutating field-view surfaces still keep the pending contract.
+    `soaVectorFromAos<T>()`
     already targets the same substrate semantically, but backend lowering still stops on the current `* backend
     requires typed bindings` boundary.
     `soaVectorToAos<T>()` now lives in the dedicated `/std/collections/experimental_soa_vector_conversions/*` import
@@ -2532,9 +2535,11 @@ That single-column borrowed-slot substrate is the current completed foothold; th
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
-the current substrate for both direct wrapper receivers and borrowed local shorthand or
-explicitly dereferenced borrowed local receivers, and the remaining field-view work is richer
-borrowed/mutating behavior rather than backend cleanup for that read-only path.
+the current substrate for direct wrapper receivers, borrowed local shorthand, and explicitly
+dereferenced borrowed local receivers, while borrowed helper-return receivers now share the
+same completed read-only method surface for `get` and `ref`. The remaining
+field-view work is richer borrowed/mutating behavior rather than backend cleanup for that
+read-only path.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,
