@@ -487,7 +487,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("root get vector receiver keeps canonical reject contract") {
+TEST_CASE("root get vector receiver rejects template arguments") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -500,7 +500,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error.find("/std/collections/soa_vector/get") != std::string::npos);
+  CHECK(error.find("get does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("root ref helper forms route through canonical helper routing") {
@@ -529,7 +529,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("root ref vector receiver keeps canonical reject contract") {
+TEST_CASE("root ref vector receiver rejects template arguments") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -542,7 +542,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error.find("/std/collections/soa_vector/ref") != std::string::npos);
+  CHECK(error.find("ref does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts to_soa before lowerer rejection") {

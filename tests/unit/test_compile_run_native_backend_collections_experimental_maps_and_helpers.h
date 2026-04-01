@@ -134,7 +134,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("native canonical soa_vector get helper keeps canonical reject on non-soa receiver") {
+TEST_CASE("native canonical soa_vector get helper rejects template arguments on non-soa receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -149,11 +149,11 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/soa_vector/get") !=
+  CHECK(readFile(errPath).find("get does not accept template arguments") !=
         std::string::npos);
 }
 
-TEST_CASE("native canonical soa_vector get slash-method keeps canonical reject") {
+TEST_CASE("native canonical soa_vector get slash-method reaches field access reject") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -175,7 +175,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/get") !=
+  CHECK(readFile(errPath).find("field access requires struct receiver") !=
         std::string::npos);
 }
 
@@ -1561,7 +1561,7 @@ main() {
                                             plus(location(pickBorrowed(location(values))).y()[0i32],
                                                  plus(dereference(location(pickBorrowed(location(values)))).y()[1i32],
                                                       plus(y(location(pickBorrowed(location(values))))[0i32],
-                                                           y(dereference(location(pickBorrowed(location(values)))))[1i32]))))))))))
+                                                           y(dereference(location(pickBorrowed(location(values)))))[1i32])))))))))))
   }
   return(total)
 }

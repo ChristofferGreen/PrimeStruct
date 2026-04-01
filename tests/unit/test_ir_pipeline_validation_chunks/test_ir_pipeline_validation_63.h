@@ -151,7 +151,7 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   ptrVecName.kind = primec::Expr::Kind::Name;
   ptrVecName.name = "ptrVec";
   capacityCall.args = {ptrVecName};
-  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 
   primec::Expr vectorArgsName;
   vectorArgsName.kind = primec::Expr::Kind::Name;

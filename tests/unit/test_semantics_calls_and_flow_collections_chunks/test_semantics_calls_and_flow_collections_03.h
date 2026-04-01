@@ -205,7 +205,7 @@ TEST_CASE("soa_vector builtin ref local bindings validate before lowering") {
   checkAccept("/soa_vector/ref(values, 0i32)");
 }
 
-TEST_CASE("soa_vector ref helper binding still accepts same-path user helper") {
+TEST_CASE("soa_vector ref helper binding does not override method sugar") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -225,8 +225,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("soa_vector builtin ref call argument escapes fail through inference") {

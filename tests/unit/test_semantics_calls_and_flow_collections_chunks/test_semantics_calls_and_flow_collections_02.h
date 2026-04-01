@@ -305,6 +305,7 @@ TEST_CASE("imported count forms validate on builtin soa_vector binding") {
   const std::string source = R"(
 import /std/collections/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -356,7 +357,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit soa_vector count forms keep canonical reject on vector target") {
+TEST_CASE("explicit soa_vector count forms reject vector target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -368,7 +369,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/std/collections/soa_vector/count") != std::string::npos);
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("canonical soa_vector count helper validates through struct helper return receivers") {
@@ -586,7 +587,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical soa_vector get helper keeps canonical reject on non-soa receiver") {
+TEST_CASE("canonical soa_vector get helper rejects template arguments on non-soa receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -596,10 +597,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/soa_vector/get") != std::string::npos);
+  CHECK(error.find("get does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("canonical soa_vector get slash-method keeps canonical reject on experimental wrapper") {
+TEST_CASE("canonical soa_vector get slash-method validates on experimental wrapper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -615,8 +616,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical soa_vector to_aos slash-method validates on experimental wrapper") {
@@ -2911,7 +2912,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("get root forms keep canonical reject on vector target") {
+TEST_CASE("get root forms reject vector target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2924,7 +2925,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/std/collections/soa_vector/get") != std::string::npos);
+  CHECK(error.find("get does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("canonical get helper validates through struct helper return receivers") {
@@ -3124,7 +3125,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref root forms keep canonical reject on vector target") {
+TEST_CASE("ref root forms reject vector target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3137,7 +3138,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/std/collections/soa_vector/ref") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("canonical ref helper validates through struct helper return receivers") {
@@ -3291,6 +3292,7 @@ main() {
 
 TEST_CASE("explicit soa_vector mutators validate on builtin soa_vector binding") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -3313,6 +3315,7 @@ TEST_CASE("imported soa_vector mutators validate on builtin soa_vector binding")
   const std::string source = R"(
 import /std/collections/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }

@@ -45,9 +45,12 @@ bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
-    return it != localsIn.end() &&
+    return it != localsIn.end() && !it->second.isSoaVector &&
            (it->second.kind == LocalInfo::Kind::Vector ||
-            (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToVector));
+            (it->second.kind == LocalInfo::Kind::Reference &&
+             it->second.referenceToVector) ||
+            (it->second.kind == LocalInfo::Kind::Pointer &&
+             it->second.pointerToVector));
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
@@ -100,8 +103,9 @@ bool isDereferencedCollectionCountTarget(const Expr &countExpr, const Expr &targ
         (kind == LocalInfo::Kind::Reference && info.referenceToArray) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToArray);
     const bool isVectorTarget =
-        (kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
-        (kind == LocalInfo::Kind::Pointer && info.pointerToVector);
+        !info.isSoaVector &&
+        ((kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
+         (kind == LocalInfo::Kind::Pointer && info.pointerToVector));
     const bool isBufferTarget =
         (kind == LocalInfo::Kind::Reference && info.referenceToBuffer) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToBuffer);
@@ -144,6 +148,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string vectorPrefix = "vector/";
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
+  const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
   const std::string collectionsVectorWrapperPrefix = "std/collections/vector";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
   auto resolveCollectionsVectorAlias = [&](std::string helperName) {
@@ -190,6 +195,10 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
+  }
+  if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdSoaVectorPrefix.size()));
+    return helperNameOut == "count";
   }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
     return resolveCollectionsVectorAlias(normalized.substr(experimentalVectorPrefix.size()));

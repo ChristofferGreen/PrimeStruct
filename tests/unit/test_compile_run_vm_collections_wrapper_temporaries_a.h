@@ -102,7 +102,7 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("vm canonical soa_vector get helper keeps canonical reject on non-soa receiver") {
+TEST_CASE("vm canonical soa_vector get helper rejects template arguments on non-soa receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -116,11 +116,11 @@ main() {
       (testScratchPath("") / "primec_vm_canonical_soa_vector_get_non_soa_receiver_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/soa_vector/get") !=
+  CHECK(readFile(errPath).find("get does not accept template arguments") !=
         std::string::npos);
 }
 
-TEST_CASE("vm canonical soa_vector get slash-method keeps canonical reject") {
+TEST_CASE("vm canonical soa_vector get slash-method reaches field access reject") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -141,7 +141,7 @@ main() {
       (testScratchPath("") / "primec_vm_canonical_soa_vector_get_slash_method_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/get") !=
+  CHECK(readFile(errPath).find("field access requires struct receiver") !=
         std::string::npos);
 }
 
@@ -1365,7 +1365,7 @@ main() {
                                             plus(location(pickBorrowed(location(values))).y()[0i32],
                                                  plus(dereference(location(pickBorrowed(location(values)))).y()[1i32],
                                                       plus(y(location(pickBorrowed(location(values))))[0i32],
-                                                           y(dereference(location(pickBorrowed(location(values)))))[1i32]))))))))))
+                                                           y(dereference(location(pickBorrowed(location(values)))))[1i32])))))))))))
   }
   return(total)
 }

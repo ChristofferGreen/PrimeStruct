@@ -838,6 +838,18 @@ std::optional<semantics::BindingInfo> extractParsedBindingInfo(
   return binding;
 }
 
+std::optional<semantics::BindingInfo> extractParsedOrExperimentalSoaBindingInfo(
+    const Expr &expr,
+    const std::unordered_set<std::string> *structTypes = nullptr) {
+  if (auto parsed = extractParsedBindingInfo(expr, structTypes); parsed.has_value()) {
+    return parsed;
+  }
+  if (!expr.isBinding) {
+    return std::nullopt;
+  }
+  return extractExperimentalSoaVectorFieldViewReceiverBinding(expr);
+}
+
 std::string resolveStructReceiverPathFromBinding(
     const semantics::BindingInfo &binding,
     const std::string &namespacePrefix,
@@ -2208,7 +2220,7 @@ void rewriteExperimentalSoaToAosMethodStatements(
           stmt.bodyArguments, bodyBindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
     }
     if (stmt.isBinding) {
-      if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
+      if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths); binding.has_value()) {
         bindings[stmt.name] = *binding;
       }
     }
@@ -2295,7 +2307,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
-      if (auto binding = extractParsedBindingInfo(param, &structPaths); binding.has_value()) {
+      if (auto binding = extractParsedOrExperimentalSoaBindingInfo(param, &structPaths); binding.has_value()) {
         bindings[param.name] = *binding;
       }
     }
@@ -2309,7 +2321,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     if (def.returnExpr.has_value()) {
       auto returnBindings = bindings;
       for (const Expr &stmt : def.statements) {
-        if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
+        if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths); binding.has_value()) {
           returnBindings[stmt.name] = *binding;
         }
       }
@@ -2559,7 +2571,7 @@ void rewriteExperimentalSoaInlineBorrowMethodStatements(
           stmt.bodyArguments, bodyBindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
     }
     if (stmt.isBinding) {
-      if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
+      if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths); binding.has_value()) {
         bindings[stmt.name] = *binding;
       }
     }
@@ -2608,7 +2620,7 @@ bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &er
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
-      if (auto binding = extractParsedBindingInfo(param, &structPaths); binding.has_value()) {
+      if (auto binding = extractParsedOrExperimentalSoaBindingInfo(param, &structPaths); binding.has_value()) {
         bindings[param.name] = *binding;
       }
     }
@@ -2622,7 +2634,7 @@ bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &er
     if (def.returnExpr.has_value()) {
       auto returnBindings = bindings;
       for (const Expr &stmt : def.statements) {
-        if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
+        if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths); binding.has_value()) {
           returnBindings[stmt.name] = *binding;
         }
       }
@@ -2969,7 +2981,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
-      if (auto binding = extractParsedBindingInfo(param, &structPaths); binding.has_value()) {
+      if (auto binding = extractParsedOrExperimentalSoaBindingInfo(param, &structPaths); binding.has_value()) {
         bindings[param.name] = *binding;
       }
     }
@@ -2978,7 +2990,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
         [&](const std::vector<Expr> &statements) {
           for (const Expr &stmt : statements) {
             if (stmt.isBinding) {
-              if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
+              if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths); binding.has_value()) {
                 allBindings[stmt.name] = *binding;
               }
             }
