@@ -857,7 +857,9 @@ validator-side plus monomorph-side fallback probes are gone entirely. The compil
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
 construction/parsing instead of open-coded literals, and the post-`validateExpr(...)`
 binding/return/call-argument plus return-inference reprobes are gone too. Read-only
-experimental wrapper field-view indexing now routes reflected direct `values.field()[i]` reads
+experimental wrapper standalone borrowed field-view attempts such as `borrowed.field()` now keep
+the same pending `soa_vector field views are not implemented yet: <field>` diagnostic as direct
+wrapper attempts, and read-only wrapper field-view indexing now routes reflected direct `values.field()[i]` reads
 plus borrowed local `borrowed.field()[i]` and explicitly dereferenced borrowed
 `dereference(borrowed).field()[i]` reads onto the existing `soaVectorGet<T>(..., i).field`
 helper path for both single-field and multi-field structs, and that successful read path no

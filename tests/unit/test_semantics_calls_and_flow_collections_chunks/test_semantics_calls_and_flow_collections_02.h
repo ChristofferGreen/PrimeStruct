@@ -1077,6 +1077,27 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
+TEST_CASE("experimental soa_vector borrowed local field-view method reports pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  [Reference<SoaVector<Particle>>] borrowed{location(values)}
+  return(borrowed.x())
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
 TEST_CASE("experimental soa_vector stdlib reflected multi-field index syntax validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

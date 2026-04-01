@@ -73,6 +73,39 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     return inferExprReturnKind(arg, params, locals) == ReturnKind::String;
   };
+  auto resolveSoaVectorOrBorrowedTarget = [&](const Expr &target,
+                                              std::string &elemTypeOut) -> bool {
+    if (context.resolveSoaVectorTarget != nullptr &&
+        context.resolveSoaVectorTarget(target, elemTypeOut)) {
+      return true;
+    }
+    if (target.kind != Expr::Kind::Name) {
+      return false;
+    }
+    const BindingInfo *binding = findParamBinding(params, target.name);
+    if (binding == nullptr) {
+      auto it = locals.find(target.name);
+      if (it != locals.end()) {
+        binding = &it->second;
+      }
+    }
+    if (binding == nullptr) {
+      return false;
+    }
+    const std::string normalizedType = normalizeBindingTypeName(binding->typeName);
+    if (normalizedType != "Reference" && normalizedType != "Pointer") {
+      return false;
+    }
+    Expr dereferenceExpr;
+    dereferenceExpr.kind = Expr::Kind::Call;
+    dereferenceExpr.name = "dereference";
+    dereferenceExpr.args.push_back(target);
+    dereferenceExpr.argNames.resize(dereferenceExpr.args.size());
+    dereferenceExpr.sourceLine = target.sourceLine;
+    dereferenceExpr.sourceColumn = target.sourceColumn;
+    return context.resolveSoaVectorTarget != nullptr &&
+           context.resolveSoaVectorTarget(dereferenceExpr, elemTypeOut);
+  };
 
   auto validateMapContainsKeyExpr = [&](const Expr &keyExpr,
                                         const std::string &mapKeyType) -> bool {
@@ -287,8 +320,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return false;
     }
     std::string elemType;
-    if (!(context.resolveSoaVectorTarget != nullptr &&
-          context.resolveSoaVectorTarget(expr.args.front(), elemType))) {
+    if (!resolveSoaVectorOrBorrowedTarget(expr.args.front(), elemType)) {
       error_ = "soa_vector field view requires soa_vector target";
       return false;
     }
@@ -344,8 +376,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                                     isSimpleCallName(expr, "contains");
     if (!handledBuiltinName) {
       std::string elemType;
-      if (context.resolveSoaVectorTarget != nullptr &&
-          context.resolveSoaVectorTarget(expr.args.front(), elemType)) {
+      if (resolveSoaVectorOrBorrowedTarget(expr.args.front(), elemType)) {
         handledOut = true;
         if (expr.args.size() != 1) {
           error_ = "soa_vector field views require value.<field>()[index] syntax: " + expr.name;
