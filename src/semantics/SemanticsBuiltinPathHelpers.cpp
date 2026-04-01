@@ -430,6 +430,21 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   return false;
 }
 
+std::string soaFieldViewHelperPath(std::string_view fieldName) {
+  return "/soa_vector/field_view/" + std::string(fieldName);
+}
+
+bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut) {
+  constexpr std::string_view kSoaFieldViewPrefix = "/soa_vector/field_view/";
+  if (!path.starts_with(kSoaFieldViewPrefix)) {
+    return false;
+  }
+  if (fieldNameOut != nullptr) {
+    *fieldNameOut = std::string(path.substr(kSoaFieldViewPrefix.size()));
+  }
+  return true;
+}
+
 std::string soaFieldViewPendingDiagnostic(std::string_view fieldName) {
   return "soa_vector field views are not implemented yet: " + std::string(fieldName);
 }

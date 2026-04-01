@@ -132,6 +132,8 @@ bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
+std::string soaFieldViewHelperPath(std::string_view fieldName);
+bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut = nullptr);
 std::string soaFieldViewPendingDiagnostic(std::string_view fieldName);
 std::string soaBorrowedViewPendingDiagnostic();
 bool isSoaVectorStructElementType(const std::string &typeArg,

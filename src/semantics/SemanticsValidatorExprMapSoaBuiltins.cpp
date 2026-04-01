@@ -263,7 +263,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return true;
   }
 
-  if (resolvedMethod && resolved.rfind("/soa_vector/field_view/", 0) == 0) {
+  std::string soaFieldViewName;
+  if (resolvedMethod && splitSoaFieldViewHelperPath(resolved, &soaFieldViewName)) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
         !(context.isNamedArgsPackMethodAccessCall != nullptr &&
@@ -291,7 +292,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = "soa_vector field view requires soa_vector target";
       return false;
     }
-    error_ = soaFieldViewPendingDiagnostic(expr.name);
+    error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
     return false;
   }
 

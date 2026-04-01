@@ -261,7 +261,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       if (defMap_.count(helperPath) > 0) {
         resolvedOut = helperPath;
       } else {
-        resolvedOut = "/soa_vector/field_view/" + normalizedMethodName;
+        resolvedOut = soaFieldViewHelperPath(normalizedMethodName);
       }
       return true;
     }

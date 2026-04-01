@@ -197,10 +197,7 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   };
 
   const std::string resolved = resolveCalleePath(candidate);
-  if (resolved.rfind("/soa_vector/field_view/", 0) == 0) {
-    if (fieldNameOut != nullptr) {
-      *fieldNameOut = resolved.substr(std::string("/soa_vector/field_view/").size());
-    }
+  if (splitSoaFieldViewHelperPath(resolved, fieldNameOut)) {
     return true;
   }
 

@@ -1966,7 +1966,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             resolvedOut = helperPath;
             isBuiltinOut = false;
           } else {
-            resolvedOut = "/soa_vector/field_view/" + normalizedMethodName;
+            resolvedOut = soaFieldViewHelperPath(normalizedMethodName);
             isBuiltinOut = true;
           }
           return true;

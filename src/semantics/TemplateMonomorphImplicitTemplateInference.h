@@ -127,8 +127,7 @@ bool isBuiltinSoaFieldViewExprForMonomorph(const Expr &candidate,
   };
 
   const std::string resolved = resolveCalleePath(candidate, candidate.namespacePrefix, ctx);
-  if (resolved.rfind("/soa_vector/field_view/", 0) == 0) {
-    fieldNameOut = resolved.substr(std::string("/soa_vector/field_view/").size());
+  if (splitSoaFieldViewHelperPath(resolved, &fieldNameOut)) {
     return true;
   }
 
