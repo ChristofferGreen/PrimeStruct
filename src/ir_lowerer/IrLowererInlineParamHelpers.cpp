@@ -11,6 +11,21 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isCanonicalBuiltinSoaToAosPath(const std::string &calleePath) {
+  return calleePath == "/std/collections/soa_vector/to_aos" ||
+         calleePath.rfind("/std/collections/soa_vector/to_aos__", 0) == 0;
+}
+
+bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
+                                  const std::string &expectedStruct,
+                                  const std::string &argStruct) {
+  if (!isCanonicalBuiltinSoaToAosPath(calleePath)) {
+    return false;
+  }
+  return normalizeCollectionBindingTypeName(expectedStruct) == "soa_vector" &&
+         normalizeCollectionBindingTypeName(argStruct) == "soa_vector";
+}
+
 bool isBuiltinMapConstructorExpr(const Expr &callExpr) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
@@ -169,6 +184,7 @@ bool emitInlineDefinitionCallParameters(
                                             orderedArgs,
                                             packedArgs,
                                             packedParamIndex,
+                                            std::string(),
                                             callerLocals,
                                             nextLocal,
                                             calleeLocals,
@@ -193,6 +209,99 @@ bool emitInlineDefinitionCallParameters(
     const std::vector<const Expr *> &orderedArgs,
     const std::vector<const Expr *> &packedArgs,
     size_t packedParamIndex,
+    const std::string &calleePath,
+    const LocalMap &callerLocals,
+    int32_t &nextLocal,
+    LocalMap &calleeLocals,
+    const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
+    const IsInlineParameterStringBindingFn &isStringBinding,
+    const EmitInlineParameterStringValueFn &emitStringValueForCall,
+    const InferInlineParameterStructExprPathFn &inferStructExprPath,
+    const InferInlineParameterExprKindFn &inferExprKind,
+    const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
+    const EmitInlineParameterExprFn &emitExpr,
+    const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
+    const AllocInlineParameterTempLocalFn &allocTempLocal,
+    const EmitInlineParameterInstructionFn &emitInstruction,
+    const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
+    std::string &error,
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
+  return emitInlineDefinitionCallParameters(callParams,
+                                            orderedArgs,
+                                            packedArgs,
+                                            packedParamIndex,
+                                            calleePath,
+                                            callerLocals,
+                                            nextLocal,
+                                            calleeLocals,
+                                            inferCallParameterLocalInfo,
+                                            isStringBinding,
+                                            emitStringValueForCall,
+                                            inferStructExprPath,
+                                            inferExprKind,
+                                            {},
+                                            resolveStructSlotLayout,
+                                            emitExpr,
+                                            emitStructCopySlots,
+                                            allocTempLocal,
+                                            emitInstruction,
+                                            trackFileHandleLocal,
+                                            error,
+                                            inferExprLocalInfo);
+}
+
+bool emitInlineDefinitionCallParameters(
+    const std::vector<Expr> &callParams,
+    const std::vector<const Expr *> &orderedArgs,
+    const std::vector<const Expr *> &packedArgs,
+    size_t packedParamIndex,
+    const LocalMap &callerLocals,
+    int32_t &nextLocal,
+    LocalMap &calleeLocals,
+    const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
+    const IsInlineParameterStringBindingFn &isStringBinding,
+    const EmitInlineParameterStringValueFn &emitStringValueForCall,
+    const InferInlineParameterStructExprPathFn &inferStructExprPath,
+    const InferInlineParameterExprKindFn &inferExprKind,
+    const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
+    const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
+    const EmitInlineParameterExprFn &emitExpr,
+    const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
+    const AllocInlineParameterTempLocalFn &allocTempLocal,
+    const EmitInlineParameterInstructionFn &emitInstruction,
+    const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
+    std::string &error,
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
+  return emitInlineDefinitionCallParameters(callParams,
+                                            orderedArgs,
+                                            packedArgs,
+                                            packedParamIndex,
+                                            std::string(),
+                                            callerLocals,
+                                            nextLocal,
+                                            calleeLocals,
+                                            inferCallParameterLocalInfo,
+                                            isStringBinding,
+                                            emitStringValueForCall,
+                                            inferStructExprPath,
+                                            inferExprKind,
+                                            resolveDefinitionCall,
+                                            resolveStructSlotLayout,
+                                            emitExpr,
+                                            emitStructCopySlots,
+                                            allocTempLocal,
+                                            emitInstruction,
+                                            trackFileHandleLocal,
+                                            error,
+                                            inferExprLocalInfo);
+}
+
+bool emitInlineDefinitionCallParameters(
+    const std::vector<Expr> &callParams,
+    const std::vector<const Expr *> &orderedArgs,
+    const std::vector<const Expr *> &packedArgs,
+    size_t packedParamIndex,
+    const std::string &calleePath,
     const LocalMap &callerLocals,
     int32_t &nextLocal,
     LocalMap &calleeLocals,
@@ -324,7 +433,9 @@ bool emitInlineDefinitionCallParameters(
         return false;
       }
       std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
-      if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
+      if (argStruct.empty() ||
+          (argStruct != paramInfo.structTypeName &&
+           !isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct))) {
         error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
@@ -362,7 +473,9 @@ bool emitInlineDefinitionCallParameters(
         return false;
       }
       std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
-      if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
+      if (argStruct.empty() ||
+          (argStruct != paramInfo.structTypeName &&
+           !isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct))) {
         error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
@@ -407,7 +520,9 @@ bool emitInlineDefinitionCallParameters(
         return false;
       }
       std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
-      if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
+      if (argStruct.empty() ||
+          (argStruct != paramInfo.structTypeName &&
+           !isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct))) {
         error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;

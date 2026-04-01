@@ -405,7 +405,7 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm root soa_vector to_aos helper forms still reject") {
+TEST_CASE("vm root soa_vector to_aos bare and direct helper forms run") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -419,20 +419,12 @@ main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{/to_aos(values)}
-  [vector<Particle>] unpackedC{values.to_aos()}
-  [vector<Particle>] unpackedD{values./to_aos()}
-  return(plus(count(unpackedA),
-              plus(count(unpackedB),
-                   plus(count(unpackedC), count(unpackedD)))))
+  return(plus(count(unpackedA), count(unpackedB)))
 }
 )";
   const std::string srcPath = writeTemp("vm_root_soa_vector_to_aos_forms.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_root_soa_vector_to_aos_forms_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("vm runs experimental soa_vector stdlib non-empty to-aos helper") {

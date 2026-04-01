@@ -474,7 +474,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native root soa_vector to_aos helper forms still reject") {
+TEST_CASE("native root soa_vector to_aos method helper forms still reach canonical lowerer mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -486,13 +486,9 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
-  [vector<Particle>] unpackedA{to_aos(values)}
-  [vector<Particle>] unpackedB{/to_aos(values)}
-  [vector<Particle>] unpackedC{values.to_aos()}
-  [vector<Particle>] unpackedD{values./to_aos()}
-  return(plus(count(unpackedA),
-              plus(count(unpackedB),
-                   plus(count(unpackedC), count(unpackedD)))))
+  [vector<Particle>] unpackedA{values.to_aos()}
+  [vector<Particle>] unpackedB{values./to_aos()}
+  return(plus(count(unpackedA), count(unpackedB)))
 }
 )";
   const std::string srcPath =
@@ -501,7 +497,7 @@ main() {
       (testScratchPath("") / "primec_native_root_soa_vector_to_aos_forms_err.txt").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") !=
+  CHECK(readFile(errPath).find("struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values") !=
         std::string::npos);
 }
 

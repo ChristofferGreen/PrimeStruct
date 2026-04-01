@@ -460,7 +460,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("root soa_vector to_aos helper forms still reject in C++ emitter") {
+TEST_CASE("root soa_vector to_aos bare and direct helper forms run in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -474,20 +474,15 @@ main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{/to_aos(values)}
-  [vector<Particle>] unpackedC{values.to_aos()}
-  [vector<Particle>] unpackedD{values./to_aos()}
-  return(plus(count(unpackedA),
-              plus(count(unpackedB),
-                   plus(count(unpackedC), count(unpackedD)))))
+  return(plus(count(unpackedA), count(unpackedB)))
 }
 )";
   const std::string srcPath = writeTemp("compile_root_soa_vector_to_aos_forms_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_root_soa_vector_to_aos_forms_exe_err.txt").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") !=
-        std::string::npos);
+  const std::string exePath =
+      (testScratchPath("") / "primec_root_soa_vector_to_aos_forms_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos helper in C++ emitter") {

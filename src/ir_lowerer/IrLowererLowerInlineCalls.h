@@ -107,6 +107,7 @@
             orderedArgs,
             packedArgs,
             packedParamIndex,
+            callee.fullPath,
             callerLocals,
             nextLocal,
             calleeLocals,

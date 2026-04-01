@@ -657,7 +657,7 @@ main() {
   CHECK(error == "reserve requires mutable vector binding");
 }
 
-TEST_CASE("root to_aos helper forms lower through canonical helper routing") {
+TEST_CASE("root to_aos bare and direct helper forms lower through canonical helper routing") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -669,8 +669,6 @@ main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{/to_aos(values)}
-  [vector<Particle>] unpackedC{values.to_aos()}
-  [vector<Particle>] unpackedD{values./to_aos()}
 }
 )";
   primec::Program program;
@@ -680,11 +678,11 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK_FALSE(error.empty());
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("imported root to_aos helper forms reach canonical lowerer mismatch") {
+TEST_CASE("imported root to_aos bare and direct helper forms lower through canonical helper routing") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -698,8 +696,31 @@ main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{/to_aos(values)}
-  [vector<Particle>] unpackedC{values.to_aos()}
-  [vector<Particle>] unpackedD{values./to_aos()}
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("root to_aos method helper forms still reach canonical lowerer mismatch") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<Particle>] unpackedA{values.to_aos()}
+  [vector<Particle>] unpackedB{values./to_aos()}
 }
 )";
   primec::Program program;
@@ -710,9 +731,36 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK_FALSE(error.empty());
-  CHECK(error.find("struct parameter type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+  CHECK(error.find("struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values") !=
+        std::string::npos);
+}
+
+TEST_CASE("imported root to_aos method helper forms still reach canonical lowerer mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<Particle>] unpackedA{values.to_aos()}
+  [vector<Particle>] unpackedB{values./to_aos()}
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.find("struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values") !=
+        std::string::npos);
 }
 
 TEST_CASE("imported builtin soa_vector bare helper forms reach canonical lowerer mismatch") {
