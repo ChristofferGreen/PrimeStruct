@@ -1621,6 +1621,56 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
+TEST_CASE("experimental soa_vector mutating ref field access reports pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  assign(ref(values, 0i32).y, 19i32)
+  assign(values.ref(1i32).y, 17i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: y") != std::string::npos);
+}
+
+TEST_CASE("experimental soa_vector bare get and ref field access validates") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  return(plus(ref(values, 0i32).y, get(values, 1i32).y))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector stdlib reflected multi-field index syntax validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

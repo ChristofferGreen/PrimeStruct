@@ -598,12 +598,12 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         error_ = "assign target must be a mutable binding";
         return false;
       }
-      if (!validateExpr(params, locals, fieldTarget.args.front())) {
+      const Expr &fieldReceiver = fieldTarget.args.front();
+      if (!validateExpr(params, locals, fieldReceiver)) {
         return false;
       }
       BindingInfo fieldBinding;
-      if (!this->resolveStructFieldBinding(params, locals,
-                                           fieldTarget.args.front(),
+      if (!this->resolveStructFieldBinding(params, locals, fieldReceiver,
                                            fieldTarget.name, fieldBinding)) {
         if (error_.empty()) {
           error_ = "assign target must be a mutable binding";
@@ -614,18 +614,88 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       const bool allowMutableReceiverFieldWrite =
           resolveFieldTargetRootName(fieldTarget, fieldTargetRootName) &&
           isMutableBinding(fieldTargetRootName);
+      std::string mutableBorrowRootName;
+      std::string ignoreBorrowName;
+      bool allowMutableBorrowedFieldWrite = false;
+      if (fieldReceiver.kind == Expr::Kind::Call) {
+        auto resolveSoaRefReceiverTarget =
+            [&](const Expr &refExpr, const Expr *&receiverTargetOut) -> bool {
+              auto isResolvedSoaRefPath = [&](const std::string &resolvedPath,
+                                             bool methodForm) -> bool {
+                if (resolvedPath.empty()) {
+                  return false;
+                }
+                if (methodForm) {
+                  return resolvedPath.rfind(
+                             "/std/collections/experimental_soa_vector/", 0) ==
+                             0 &&
+                         resolvedPath.size() >= 4 &&
+                         resolvedPath.compare(resolvedPath.size() - 4, 4,
+                                              "/ref") == 0;
+                }
+                return resolvedPath.rfind("/std/collections/soa_vector/ref", 0) ==
+                           0 ||
+                       resolvedPath.rfind("/soa_vector/ref", 0) == 0;
+              };
+              receiverTargetOut = nullptr;
+              if (refExpr.kind != Expr::Kind::Call || refExpr.args.empty()) {
+                return false;
+              }
+              if (refExpr.isMethodCall) {
+                if (refExpr.name == "ref") {
+                  receiverTargetOut = &refExpr.args.front();
+                  return true;
+                }
+                const std::string resolvedMethodPath = resolveCalleePath(refExpr);
+                if (isResolvedSoaRefPath(resolvedMethodPath, true)) {
+                  receiverTargetOut = &refExpr.args.front();
+                  return true;
+                }
+                return false;
+              }
+
+              const bool isBareRefCall = isSimpleCallName(refExpr, "ref");
+              const std::string resolvedCallPath = resolveCalleePath(refExpr);
+              const bool isExperimentalSoaRefCall =
+                  isResolvedSoaRefPath(resolvedCallPath, false);
+              if ((!isBareRefCall && !isExperimentalSoaRefCall) ||
+                  refExpr.args.size() != 2) {
+                return false;
+              }
+              receiverTargetOut = &refExpr.args.front();
+              return true;
+            };
+        const Expr *soaRefReceiverTarget = nullptr;
+        if (resolveSoaRefReceiverTarget(fieldReceiver, soaRefReceiverTarget) &&
+            soaRefReceiverTarget != nullptr) {
+          std::string soaElemType;
+          if (resolveExperimentalSoaOrBorrowedReceiver(*soaRefReceiverTarget,
+                                                       soaElemType)) {
+            error_ =
+                "soa_vector field views are not implemented yet: " +
+                fieldTarget.name;
+            return false;
+          }
+        }
+      }
       const bool allowLifecycleFieldWrite =
           !fieldBinding.isMutable && isNamedFieldTarget(fieldTarget, "this") &&
           isLifecycleHelperPath(currentValidationContext_.definitionPath);
       if (!fieldBinding.isMutable && !allowLifecycleFieldWrite &&
-          !allowMutableReceiverFieldWrite) {
+          !allowMutableReceiverFieldWrite && !allowMutableBorrowedFieldWrite) {
         error_ = "assign target must be a mutable binding";
         return false;
       }
-      if (fieldTarget.args.front().kind == Expr::Kind::Name &&
-          hasActiveBorrowForBinding(fieldTarget.args.front().name)) {
-        formatBorrowedBindingError(fieldTarget.args.front().name,
-                                   fieldTarget.args.front().name);
+      if (!mutableBorrowRootName.empty() &&
+          hasActiveBorrowForBinding(mutableBorrowRootName, ignoreBorrowName)) {
+        const std::string borrowSink =
+            !ignoreBorrowName.empty() ? ignoreBorrowName : mutableBorrowRootName;
+        formatBorrowedBindingError(mutableBorrowRootName, borrowSink);
+        return false;
+      }
+      if (fieldReceiver.kind == Expr::Kind::Name &&
+          hasActiveBorrowForBinding(fieldReceiver.name)) {
+        formatBorrowedBindingError(fieldReceiver.name, fieldReceiver.name);
         return false;
       }
       return true;

@@ -2374,8 +2374,9 @@ bad_use_after_take() {
     `pickBorrowed(...).x()`, `x(pickBorrowed(...))`, `location(pickBorrowed(...)).x()`, and
     `x(location(pickBorrowed(...)))` now keep it too. Mutating standalone/indexed attempts
     such as `assign(values.x(), next)`, `assign(x(values), next)`, `assign(values.y()[i], next)`,
-    `assign(dereference(pickBorrowed(...)).y()[i], next)`, and
-    `assign(location(pickBorrowed(...)).y()[i], next)` now keep that same pending field-view contract instead of
+    `assign(dereference(pickBorrowed(...)).y()[i], next)`,
+    `assign(location(pickBorrowed(...)).y()[i], next)`, `assign(ref(values, i).y, next)`, and
+    `assign(values.ref(i).y, next)` now keep that same pending field-view contract instead of
     degrading to the generic mutable-binding assignment error, and borrowed
     `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`, `borrowed.ref(i)`, and
     `borrowed.to_aos()` plus bare helper forms `count(...)`, `get(...)`, `ref(...)`, and
@@ -2398,7 +2399,9 @@ bad_use_after_take() {
     `location(holder.pickBorrowed(...)).y()[i]` and `y(location(holder.pickBorrowed(...)))[i]`,
     and explicitly dereferenced borrowed helper-return forms such as
     `dereference(pickBorrowed(...)).y()[i]` rewrite to the existing
-    `soaVectorGet<T>(..., i).field` path and run across
+    `soaVectorGet<T>(..., i).field` path, and direct bare helper-field reads such as
+    `ref(values, i).y` and `get(values, i).y` now ride that same generic struct-field access
+    flow, so those read-only surfaces run across
     C++/native/VM for both single-field and multi-field wrappers, while standalone borrowed
     or mutating field-view surfaces still keep the pending contract.
     `soaVectorFromAos<T>()`

@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -38,6 +39,86 @@ std::string normalizeUninitializedVectorStructPath(const std::string &typeName) 
     return "/" + typeName;
   }
   return typeName;
+}
+
+std::string inferExperimentalSoaElementStructPathFromReceiverStruct(
+    const std::string &receiverStructPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName) {
+  std::string normalizedReceiverStruct = trimTemplateTypeText(receiverStructPath);
+  if (!normalizedReceiverStruct.empty() &&
+      normalizedReceiverStruct.front() != '/') {
+    normalizedReceiverStruct.insert(normalizedReceiverStruct.begin(), '/');
+  }
+  if (normalizedReceiverStruct.rfind(
+          "/std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+    return "";
+  }
+
+  auto defIt = defMap.find(normalizedReceiverStruct);
+  if (defIt == defMap.end() || defIt->second == nullptr) {
+    return "";
+  }
+
+  LayoutFieldBinding storageBinding;
+  bool foundStorageBinding = false;
+  for (const auto &stmt : defIt->second->statements) {
+    if (!stmt.isBinding || stmt.name != "storage") {
+      continue;
+    }
+    if (!extractExplicitLayoutFieldBinding(stmt, storageBinding)) {
+      return "";
+    }
+    foundStorageBinding = true;
+    break;
+  }
+  if (!foundStorageBinding) {
+    return "";
+  }
+
+  std::string columnStructPath = trimTemplateTypeText(storageBinding.typeName);
+  if (!columnStructPath.empty() && columnStructPath.front() != '/') {
+    columnStructPath.insert(columnStructPath.begin(), '/');
+  }
+  if (columnStructPath.rfind(
+          "/std/collections/experimental_soa_storage/SoaColumn__", 0) != 0) {
+    return "";
+  }
+
+  auto columnIt = defMap.find(columnStructPath);
+  if (columnIt == defMap.end() || columnIt->second == nullptr) {
+    return "";
+  }
+
+  LayoutFieldBinding dataBinding;
+  bool foundDataBinding = false;
+  for (const auto &stmt : columnIt->second->statements) {
+    if (!stmt.isBinding || stmt.name != "data") {
+      continue;
+    }
+    if (!extractExplicitLayoutFieldBinding(stmt, dataBinding)) {
+      return "";
+    }
+    foundDataBinding = true;
+    break;
+  }
+  if (!foundDataBinding || dataBinding.typeTemplateArg.empty()) {
+    return "";
+  }
+
+  std::string pointeeType = trimTemplateTypeText(dataBinding.typeTemplateArg);
+  std::string pointeeBase;
+  std::string pointeeArgs;
+  if (!splitTemplateTypeName(pointeeType, pointeeBase, pointeeArgs) ||
+      normalizeCollectionBindingTypeName(pointeeBase) != "uninitialized") {
+    return "";
+  }
+
+  std::string resolvedStructPath;
+  if (resolveStructTypeName(pointeeArgs, std::string{}, resolvedStructPath)) {
+    return resolvedStructPath;
+  }
+  return "";
 }
 
 std::string inferUninitializedTargetStructPath(const std::string &typeText,
@@ -241,6 +322,18 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
             resultExpr.args.front().kind == Expr::Kind::Name && resultExpr.args.front().name == "Result" &&
             resultExpr.name == "ok") {
           return inferStructExprPath(resultExpr.args[1], localsInExpr);
+        }
+      }
+      if (!exprIn.isMethodCall &&
+          (isSimpleCallName(exprIn, "get") || isSimpleCallName(exprIn, "ref")) &&
+          exprIn.args.size() == 2) {
+        const std::string receiverStruct = inferStructExprPath(exprIn.args.front(),
+                                                               localsInExpr);
+        const std::string elementStruct =
+            inferExperimentalSoaElementStructPathFromReceiverStruct(
+                receiverStruct, defMap, resolveStructTypeName);
+        if (!elementStruct.empty()) {
+          return elementStruct;
         }
       }
       if (exprIn.isFieldAccess && exprIn.args.size() == 1) {

@@ -864,8 +864,9 @@ borrowed call-form attempts such as `field(borrowed)` plus inline borrow forms s
 and helper-return plus inline location-wrapped borrowed helper-return forms such as
 `field(pickBorrowed(...))`, `location(pickBorrowed(...)).field()`, and
 `field(location(pickBorrowed(...)))` now keep it too.
-Mutating standalone/indexed attempts such as `assign(value.field(), next)` and
-`assign(value.field()[i], next)` now also keep that same pending field-view diagnostic on direct,
+Mutating standalone/indexed attempts such as `assign(value.field(), next)`,
+`assign(value.field()[i], next)`, `assign(ref(value, i).field, next)`, and
+`assign(value.ref(i).field, next)` now also keep that same pending field-view diagnostic on direct,
 borrowed helper-return, and inline location-wrapped borrowed helper-return receivers instead of
 degrading to the generic mutable-binding assignment contract, borrowed
 `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
@@ -885,8 +886,9 @@ inline location-wrapped method-like struct-helper return `location(holder.pickBo
 `field(location(holder.pickBorrowed(...)))[i]`,
 and explicitly dereferenced borrowed helper-return
 `dereference(pickBorrowed(...)).field()[i]` reads onto the existing
-`soaVectorGet<T>(..., i).field` helper path for both single-field and multi-field structs, and
-that successful read path no
+`soaVectorGet<T>(..., i).field` helper path for both single-field and multi-field structs.
+Direct bare helper-field reads such as `ref(values, i).field` and `get(values, i).field` now
+also ride that same generic struct-field path, and that successful read path no
 longer depends on lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef`
 routing branches. The compiler-owned direct
 unsupported field-view path still remains for standalone borrowed or mutating field-view

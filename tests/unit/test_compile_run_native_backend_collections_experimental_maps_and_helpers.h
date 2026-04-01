@@ -834,6 +834,35 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("native compiles and runs experimental soa_vector bare get and ref field access") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  return(plus(ref(values, 0i32).y, get(values, 1i32).y))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_bare_ref_field_access.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_bare_ref_field_access_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 20);
+}
+
 TEST_CASE("native compiles and runs borrowed local experimental soa_vector reflected index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
