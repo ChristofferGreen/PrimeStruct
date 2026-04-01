@@ -797,7 +797,9 @@ while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib 
 direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
 across C++/native/VM, and valid root bare/method/old-explicit `count`/`get`/`ref` plus bare/direct/method `to_aos`
 calls on builtin `soa_vector<T>` bindings now rewrite onto that same canonical helper path unless a visible
-old-surface user helper shadows them. Valid root bare/method/old-explicit `push`/`reserve` calls on builtin
+old-surface user helper shadows them. Imported root bare/direct/method builtin `to_aos` forms now also clear
+semantics on that same canonical helper path instead of resolving directly against the experimental wrapper
+conversion helper. Valid root bare/method/old-explicit `push`/`reserve` calls on builtin
 `soa_vector<T>` bindings now also rewrite onto `/std/collections/soa_vector/push|reserve` unless a visible
 old-surface user helper shadows them, and old-explicit builtin mutator spellings now also share the same remaining
 `push|reserve requires mutable vector binding` lowerer contract on builtin `soa_vector<T>` receivers instead of
@@ -836,7 +838,11 @@ count dispatch instead of depending on the old raw `/to_aos` call shape. C++ emi
 vector-target classification now also treats those same direct canonical
 `/std/collections/soa_vector/to_aos` call results as vector targets for nested helper dispatch
 instead of depending on bound vector temporaries, and the shared native/VM vector-capacity
-classifier now does the same for nested backend helper dispatch.
+classifier now does the same for nested backend helper dispatch. Imported root bare/direct/method
+builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the same canonical
+semantic rewrite and then stop later on the remaining conversion mismatch between builtin
+`/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the
+stdlib conversion implementation.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

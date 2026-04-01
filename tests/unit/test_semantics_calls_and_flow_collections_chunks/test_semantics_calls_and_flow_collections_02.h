@@ -2356,6 +2356,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("imported to_aos root forms validate on soa_vector binding") {
+  const std::string source = R"(
+import /std/collections/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<Particle>] unpackedA{to_aos(values)}
+  [vector<Particle>] unpackedB{/to_aos(values)}
+  [vector<Particle>] unpackedC{values.to_aos()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("explicit to_aos slash-method validates on soa_vector binding") {
   const std::string source = R"(
 Particle() {

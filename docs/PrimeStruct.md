@@ -2402,7 +2402,10 @@ lowering also no longer depends on dedicated IR/emitter/backend/runtime conversi
 and valid root bare/direct/
 method `to_aos` calls on builtin `soa_vector<T>` bindings now rewrite onto that same canonical
 `/std/collections/soa_vector/to_aos` helper path when no visible user `/to_aos` helper shadows
-them. Valid root bare/method/old-explicit `count`, `get`, and `ref` calls on builtin
+them. Imported root bare/direct/method `to_aos` forms on builtin `soa_vector<T>` bindings now
+also clear semantics on that same canonical helper path instead of being rewritten onto the
+experimental wrapper conversion helper directly. Valid root bare/method/old-explicit `count`,
+`get`, and `ref` calls on builtin
 `soa_vector<T>` bindings likewise now rewrite onto `/std/collections/soa_vector/count`,
 `/std/collections/soa_vector/get`, and `/std/collections/soa_vector/ref` when no visible root
 or same-path user helper shadows them.
@@ -2455,7 +2458,11 @@ nested count dispatch instead of depending on the old raw `/to_aos` call shape. 
 vector-target classification now also treats those same direct canonical
 `/std/collections/soa_vector/to_aos` call results as vector targets for nested helper dispatch
 instead of depending on bound vector temporaries, and the shared native/VM vector-capacity
-classifier now does the same for nested backend helper dispatch.
+classifier now does the same for nested backend helper dispatch. Imported root bare/direct/method
+builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the same canonical
+semantic rewrite and then stop later on the remaining conversion mismatch between builtin
+`/soa_vector` arguments and the experimental wrapper `SoaVector<T>` parameter expected by the
+stdlib conversion implementation, instead of failing earlier against the wrapper helper itself.
 Conversion cleanup itself is staged as direct-canonical versus
 imported-helper follow-ups, and field-view cleanup itself staged as a completed
 pending-diagnostic slice plus a separate successful-indexing follow-up. The remaining backend

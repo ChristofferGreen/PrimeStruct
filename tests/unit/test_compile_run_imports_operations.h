@@ -484,7 +484,7 @@ main() {
       (testScratchPath("") / "primec_root_soa_vector_to_aos_forms_exe_err.txt").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison") !=
+  CHECK(readFile(errPath).find("struct parameter type mismatch") !=
         std::string::npos);
 }
 

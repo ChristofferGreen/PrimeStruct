@@ -429,7 +429,7 @@ main() {
       (testScratchPath("") / "primec_vm_root_soa_vector_to_aos_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports arithmetic/comparison") !=
+  CHECK(readFile(errPath).find("struct parameter type mismatch") !=
         std::string::npos);
 }
 

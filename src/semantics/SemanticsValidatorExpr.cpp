@@ -572,7 +572,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (handledCountCapacityMapBuiltin) {
       return true;
     }
-    if (it == defMap_.end() || resolvedMethod) {
+    const bool shouldLateValidateCanonicalSoaToAos =
+        resolved.rfind("/std/collections/soa_vector/to_aos", 0) == 0;
+    if (it == defMap_.end() || resolvedMethod || shouldLateValidateCanonicalSoaToAos) {
       ExprLateMapSoaBuiltinContext lateMapSoaBuiltinContext;
       prepareExprLateMapSoaBuiltinContext(
           shouldBuiltinValidateBareMapContainsCall,

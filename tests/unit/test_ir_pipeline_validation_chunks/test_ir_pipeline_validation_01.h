@@ -674,6 +674,36 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
+TEST_CASE("imported root to_aos helper forms reach canonical lowerer mismatch") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<Particle>] unpackedA{to_aos(values)}
+  [vector<Particle>] unpackedB{/to_aos(values)}
+  [vector<Particle>] unpackedC{values.to_aos()}
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("struct parameter type mismatch") != std::string::npos);
+  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+}
+
 TEST_CASE("root to_aos canonical routing ignores vector-only user helper") {
   const std::string source = R"(
 [struct reflect]
