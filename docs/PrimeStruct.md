@@ -2348,7 +2348,11 @@ bad_use_after_take() {
     `get(...).field` / `ref(...).field` now resolves the element struct during
     semantics. Helper-return builtin bare/method `count/get/ref` reads on global and
     explicit `/Type/helper` receivers now also clear semantics on that same canonical
-    surface instead of degrading to `does not accept template arguments`.
+    surface instead of degrading to `does not accept template arguments`, and
+    helper-return bare/method `push/reserve` local binding plus call-argument and
+    direct-return escapes on those same receivers now preserve same-path
+    `/soa_vector/push|reserve` helpers instead of degrading to builtin
+    statement-only semantics or synthetic template-argument errors.
     Root/imported builtin bare/direct `to_aos` forms on raw `soa_vector<T>`
     bindings now also clear the old builtin-versus-wrapper lowering mismatch through the
     canonical stdlib shim, and imported plus no-import root builtin bare/direct/method/slash-method

@@ -98,6 +98,11 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/soa_vector/ref" || path == "/std/collections/soa_vector/reserve" ||
            path == "/std/collections/soa_vector/push" || path == "/std/collections/soa_vector/to_aos";
   };
+  auto isSyntheticSamePathSoaHelperTemplateCarryPath = [](const std::string &path) {
+    return path == "/soa_vector/count" || path == "/soa_vector/get" ||
+           path == "/soa_vector/ref" || path == "/soa_vector/push" ||
+           path == "/soa_vector/reserve";
+  };
   auto mapHelperReceiverExpr = [&](const Expr &candidate) -> const Expr * {
     if (candidate.isMethodCall) {
       return candidate.args.empty() ? nullptr : &candidate.args.front();
@@ -771,9 +776,7 @@ bool rewriteExpr(Expr &expr,
     }
     const Expr *resolvedReceiverExpr = mapHelperReceiverExpr(expr);
     const bool isSyntheticSamePathSoaHelperTemplateCarry =
-        (resolvedPath == "/soa_vector/count" ||
-         resolvedPath == "/soa_vector/get" ||
-         resolvedPath == "/soa_vector/ref") &&
+        isSyntheticSamePathSoaHelperTemplateCarryPath(resolvedPath) &&
         ctx.templateDefs.count(resolvedPath) == 0 &&
         !expr.templateArgs.empty() &&
         resolvedReceiverExpr != nullptr &&
@@ -1022,6 +1025,17 @@ bool rewriteExpr(Expr &expr,
       if (ctx.helperOverloadInternalToPublic.count(methodPath) > 0) {
         expr.name = methodPath;
         expr.namespacePrefix.clear();
+      }
+      const Expr *resolvedReceiverExpr = mapHelperReceiverExpr(expr);
+      const bool isSyntheticSamePathSoaHelperTemplateCarry =
+          isSyntheticSamePathSoaHelperTemplateCarryPath(methodPath) &&
+          ctx.templateDefs.count(methodPath) == 0 &&
+          !expr.templateArgs.empty() &&
+          resolvedReceiverExpr != nullptr &&
+          resolvedReceiverExpr->kind == Expr::Kind::Call &&
+          !resolvedReceiverExpr->isBinding;
+      if (isSyntheticSamePathSoaHelperTemplateCarry) {
+        expr.templateArgs.clear();
       }
       if (isStaticFileErrorHelperCall) {
         expr.name = methodPath;

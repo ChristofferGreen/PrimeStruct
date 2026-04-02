@@ -815,6 +815,11 @@ bindings now also lower through the canonical stdlib shim instead of stopping on
 parameter mismatch, and imported plus no-import root builtin bare/direct/method/slash-method `to_aos` now
 materialize `/std/collections/soa_vector/to_aos__...` before lowering. The bridged native runtime path remains a
 follow-up.
+Helper-return builtin bare/method `count/get/ref` reads on global and explicit `/Type/helper` receivers now also clear
+semantics on that same canonical surface instead of degrading to `does not accept template arguments`, and
+helper-return bare/method `push/reserve` local binding plus call-argument and direct-return escapes on those same
+receivers now preserve same-path `/soa_vector/push|reserve` helpers instead of degrading to builtin statement-only
+semantics or synthetic non-templated-definition template-argument errors.
 Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
 `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject contracts instead of the old builtin
 `get requires soa_vector target` / `ref requires soa_vector target` diagnostics. Vector-target root bare/direct/method

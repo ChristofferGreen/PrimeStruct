@@ -479,6 +479,121 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("soa_vector helper-return push and reserve keep same-path helper across escapes") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[return<int>]
+/soa_vector/push([soa_vector<Particle>] values, [Particle] value) {
+  return(7i32)
+}
+
+[return<int>]
+/soa_vector/reserve([soa_vector<Particle>] values, [int] count) {
+  return(8i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pickPush() {
+  return(cloneValues().push(Particle(1i32)))
+}
+
+[return<auto>]
+pickReserve() {
+  return(reserve(cloneValues(), 2i32))
+}
+
+[return<int>]
+main() {
+  [auto] pushBare{push(cloneValues(), Particle(1i32))}
+  [auto] pushMethod{cloneValues().push(Particle(1i32))}
+  [auto] reserveBare{reserve(cloneValues(), 2i32)}
+  [auto] reserveMethod{cloneValues().reserve(2i32)}
+  return(plus(pushBare,
+              plus(pushMethod,
+                   plus(reserveBare,
+                        plus(reserveMethod,
+                             plus(consume(push(cloneValues(), Particle(1i32))),
+                                  plus(consume(cloneValues().reserve(2i32)),
+                                       plus(pickPush(), pickReserve()))))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector method-like helper-return push and reserve keep same-path helper across escapes") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[return<soa_vector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soa_vector<Particle>())
+}
+
+[return<int>]
+/soa_vector/push([soa_vector<Particle>] values, [Particle] value) {
+  return(7i32)
+}
+
+[return<int>]
+/soa_vector/reserve([soa_vector<Particle>] values, [int] count) {
+  return(8i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pickPush([Holder] holder) {
+  return(holder.cloneValues().push(Particle(1i32)))
+}
+
+[return<auto>]
+pickReserve([Holder] holder) {
+  return(reserve(holder.cloneValues(), 2i32))
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [auto] pushBare{push(holder.cloneValues(), Particle(1i32))}
+  [auto] pushMethod{holder.cloneValues().push(Particle(1i32))}
+  [auto] reserveBare{reserve(holder.cloneValues(), 2i32)}
+  [auto] reserveMethod{holder.cloneValues().reserve(2i32)}
+  return(plus(pushBare,
+              plus(pushMethod,
+                   plus(reserveBare,
+                        plus(reserveMethod,
+                             plus(consume(push(holder.cloneValues(), Particle(1i32))),
+                                  plus(consume(holder.cloneValues().reserve(2i32)),
+                                       plus(pickPush(holder), pickReserve(holder)))))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector builtin field views call argument escapes fail through inference") {
   const auto checkReject = [](const std::string &expr, const std::string &expected) {
     const std::string source =
