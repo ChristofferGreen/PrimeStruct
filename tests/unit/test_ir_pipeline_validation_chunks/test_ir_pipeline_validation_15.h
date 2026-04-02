@@ -679,6 +679,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "bool SemanticsValidator::usesVisibleSamePathSoaHelper(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -790,7 +793,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferMethodResolutionSource.find("this->hasVisibleSoaRefHelper()") ==
         std::string::npos);
   CHECK(inferMethodResolutionSource.find(
-            "preferredVisibleDefinitionPathForCurrentImports(") !=
+            "preferredSoaHelperTargetForCurrentImports(") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("hasVisibleDefinitionPathForCurrentImports(") !=
         std::string::npos);
@@ -809,7 +814,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMethodTargetResolutionSource.find("this->hasVisibleSoaRefHelper()") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "preferredVisibleDefinitionPathForCurrentImports(") !=
+            "preferredSoaHelperTargetForCurrentImports(") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("hasVisibleDefinitionPathForCurrentImports(") !=
         std::string::npos);

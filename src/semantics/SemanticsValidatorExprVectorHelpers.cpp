@@ -113,9 +113,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     std::string &resolvedOut) {
   resolvedOut.clear();
   auto preferredSoaMutatorHelperTarget = [&](std::string_view resolvedHelperName) {
-    return preferredVisibleDefinitionPathForCurrentImports(
-        "/soa_vector/" + std::string(resolvedHelperName),
-        "/std/collections/soa_vector/" + std::string(resolvedHelperName));
+    return preferredSoaHelperTargetForCurrentImports(resolvedHelperName);
   };
   auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
