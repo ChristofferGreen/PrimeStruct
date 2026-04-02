@@ -96,6 +96,10 @@
   bool isBuiltinSoaRefExpr(const Expr &expr,
                            const std::vector<ParameterInfo> &params,
                            const std::unordered_map<std::string, BindingInfo> &locals) const;
+  std::optional<std::string> builtinSoaAccessHelperName(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals) const;
   bool isBuiltinSoaFieldViewExpr(const Expr &expr,
                                  const std::vector<ParameterInfo> &params,
                                  const std::unordered_map<std::string, BindingInfo> &locals,

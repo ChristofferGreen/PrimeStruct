@@ -243,15 +243,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return true;
   }
 
+  const auto soaAccessHelperName =
+      builtinSoaAccessHelperName(expr, params, locals);
   if ((resolvedMethod || resolvedMissing ||
        resolved == "/std/collections/soa_vector/get" ||
        resolved == "/std/collections/soa_vector/ref") &&
-      (resolved == "/soa_vector/get" ||
-       resolved == "/soa_vector/ref" ||
-       resolved == "/std/collections/soa_vector/get" ||
-       resolved == "/std/collections/soa_vector/ref" ||
-       (resolvedMethod && resolved == "/std/collections/soa_vector/get") ||
-       (resolvedMethod && resolved == "/std/collections/soa_vector/ref"))) {
+      soaAccessHelperName.has_value()) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
         !(context.isNamedArgsPackMethodAccessCall != nullptr &&
@@ -261,9 +258,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = "named arguments not supported for builtin calls";
       return false;
     }
-    const std::string helperName =
-        (resolved == "/soa_vector/ref" || resolved == "/std/collections/soa_vector/ref") ? "ref"
-                                                                                          : "get";
+    const std::string &helperName = *soaAccessHelperName;
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = helperName + " does not accept block arguments";
       return false;
@@ -279,7 +274,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             locals,
             resolveDirectSoaReceiver,
             elemType)) {
-      if ((resolved == "/soa_vector/get" || resolved == "/soa_vector/ref") &&
+      if (resolved == "/soa_vector/" + helperName &&
           hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
         handledOut = false;
         return true;
@@ -322,50 +317,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     error_ = soaDirectPendingUnavailableMethodDiagnostic(resolved);
     return false;
-  }
-
-  if (!resolvedMethod && (expr.name == "get" || expr.name == "ref") && resolvedMissing) {
-    handledOut = true;
-    if (hasNamedArguments(expr.argNames) &&
-        !(context.isNamedArgsPackMethodAccessCall != nullptr &&
-          context.isNamedArgsPackMethodAccessCall(expr)) &&
-        !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
-          context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
-      error_ = "named arguments not supported for builtin calls";
-      return false;
-    }
-    const std::string helperName = expr.name;
-    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = helperName + " does not accept block arguments";
-      return false;
-    }
-    if (expr.args.size() != 2) {
-      error_ = "argument count mismatch for builtin " + helperName;
-      return false;
-    }
-    std::string elemType;
-    if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
-            expr.args.front(),
-            params,
-            locals,
-            resolveDirectSoaReceiver,
-            elemType)) {
-      error_ = helperName + " requires soa_vector target";
-      return false;
-    }
-    if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, helperName)) {
-      return false;
-    }
-    if (!isIntegerExpr(expr.args[1])) {
-      error_ = helperName + " requires integer index";
-      return false;
-    }
-    for (const auto &arg : expr.args) {
-      if (!validateExpr(params, locals, arg)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   return true;

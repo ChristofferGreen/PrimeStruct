@@ -317,33 +317,20 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return !currentTypeTextOut.empty();
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
-    const bool isBuiltinSoaGetOrRef =
-        candidate.args.size() == 2 &&
-        (isSimpleCallName(candidate, "get") || isSimpleCallName(candidate, "ref") ||
-         resolvedCandidate == "/soa_vector/get" ||
-         resolvedCandidate == "/std/collections/soa_vector/get" ||
-         resolvedCandidate == "/std/collections/soa_vector/ref" ||
-         resolvedCandidate == "/soa_vector/ref");
-    const bool preferBuiltinSoaGetInference =
-        isBuiltinSoaGetOrRef &&
-        !usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, "get");
-    const bool preferBuiltinSoaRefInference =
-        isBuiltinSoaGetOrRef &&
-        !usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, "ref");
-    if ((isSimpleCallName(candidate, "get") ||
-         resolvedCandidate == "/soa_vector/get" ||
-         resolvedCandidate == "/std/collections/soa_vector/get") &&
-        preferBuiltinSoaGetInference) {
+    const auto soaAccessHelper =
+        candidate.args.size() == 2
+            ? builtinSoaAccessHelperName(candidate, params, locals)
+            : std::nullopt;
+    if (soaAccessHelper.has_value() && *soaAccessHelper == "get" &&
+        !usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, "get")) {
       std::string elemType;
       if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
         currentTypeTextOut = normalizeBindingTypeName(elemType);
         return !currentTypeTextOut.empty();
       }
     }
-    if ((isSimpleCallName(candidate, "ref") ||
-         resolvedCandidate == "/soa_vector/ref" ||
-         resolvedCandidate == "/std/collections/soa_vector/ref") &&
-        preferBuiltinSoaRefInference) {
+    if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
+        !usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, "ref")) {
       std::string elemType;
       if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
         currentTypeTextOut = normalizeBindingTypeName(elemType);

@@ -97,12 +97,12 @@ bool SemanticsValidator::shouldBypassGraphBindingLookup(const Expr &candidate) c
   return false;
 }
 
-bool SemanticsValidator::isBuiltinSoaRefExpr(
+std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals) const {
   if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
-    return false;
+    return std::nullopt;
   }
 
   auto isDirectSoaVectorTarget = [&](const Expr &target) {
@@ -118,10 +118,6 @@ bool SemanticsValidator::isBuiltinSoaRefExpr(
     return getBuiltinCollectionName(target, builtinCollection) &&
            builtinCollection == "soa_vector";
   };
-
-  if (hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")) {
-    return false;
-  }
 
   const std::string resolved = resolveCalleePath(candidate);
   std::string normalizedName = candidate.name;
@@ -140,12 +136,41 @@ bool SemanticsValidator::isBuiltinSoaRefExpr(
   const bool isBuiltinSoaRefMethod =
       candidate.isMethodCall && normalizedName == "ref" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
+  if (resolved == "/soa_vector/ref" ||
+      resolved == "/std/collections/soa_vector/ref" ||
+      isExplicitSoaRefCall ||
+      isBuiltinSoaRefMethod ||
+      (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"))) {
+    return std::string("ref");
+  }
 
-  return resolved == "/soa_vector/ref" ||
-         resolved == "/std/collections/soa_vector/ref" ||
-         isExplicitSoaRefCall ||
-         isBuiltinSoaRefMethod ||
-         (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"));
+  const bool isExplicitSoaGetCall =
+      (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+       normalizedName == "get") ||
+      normalizedName == "soa_vector/get";
+  const bool isBuiltinSoaGetMethod =
+      candidate.isMethodCall && normalizedName == "get" &&
+      !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
+  if (resolved == "/soa_vector/get" ||
+      resolved == "/std/collections/soa_vector/get" ||
+      isExplicitSoaGetCall ||
+      isBuiltinSoaGetMethod ||
+      (!candidate.isMethodCall && isSimpleCallName(candidate, "get"))) {
+    return std::string("get");
+  }
+
+  return std::nullopt;
+}
+
+bool SemanticsValidator::isBuiltinSoaRefExpr(
+    const Expr &candidate,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) const {
+  if (hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")) {
+    return false;
+  }
+  const auto helperName = builtinSoaAccessHelperName(candidate, params, locals);
+  return helperName.has_value() && *helperName == "ref";
 }
 
 bool SemanticsValidator::isBuiltinSoaFieldViewExpr(

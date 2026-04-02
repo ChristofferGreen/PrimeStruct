@@ -682,6 +682,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "bool SemanticsValidator::usesVisibleSamePathSoaHelper(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -753,6 +756,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("soaUnavailableMethodDiagnostic(resolved, false)") ==
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "builtinSoaAccessHelperName(expr, params, locals)") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "!resolvedMethod && (expr.name == \"get\" || expr.name == \"ref\") && resolvedMissing") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("soaFieldViewPendingDiagnostic(soaFieldViewName)") ==
         std::string::npos);
@@ -882,6 +891,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, \"get\")") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "builtinSoaAccessHelperName(candidate, params, locals)") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("const bool isBuiltinSoaGetOrRef =") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find("auto hasVisibleSamePathSoaHelper =") ==
         std::string::npos);
