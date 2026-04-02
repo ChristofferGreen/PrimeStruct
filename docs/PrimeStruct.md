@@ -2633,16 +2633,17 @@ both direct wrapper reads and borrowed local shorthand plus explicitly dereferen
 reads now run through the generic helper-call plus struct-field path end-to-end.
 The remaining pending-diagnostic cleanup is therefore reduced to one compiler-owned
 area in `SemanticsValidatorExprMutationBorrows.cpp`, and that area is now concentrated
-in the shared assign-target helper path. The remaining concrete follow-ups are
-assign-target method/call field-view writes like `assign(values.x(), next)` /
-`assign(x(values), next)` and assign-target indexed field-view writes like
-`assign(y(values)[i], next)`. The old late `assign(ref(values, i).field, next)`
-special case is now folded into that same shared pending helper instead of
-staying as a separate branch.
+in the shared assign-target helper path. Assign-target indexed field-view writes like
+`assign(y(values)[i], next)` and explicit borrowed-slot writes like
+`assign(ref(values, i).field, next)` now lower through the experimental
+`soaVectorRef<T>(..., i).field` substrate instead of staying on the old pending-only
+branch. The remaining concrete follow-up is therefore the standalone assign-target
+method/call field-view write surface like `assign(values.x(), next)` /
+`assign(x(values), next)`.
 Standalone builtin field-view call forms now route through the shared synthetic
 `/soa_vector/field_view/<field>` or same-path `/soa_vector/<field>` method-target
 path instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback.
-Those remaining mutating write paths stay in place until richer borrowed-view
+That remaining standalone mutating write path stays in place until richer borrowed-view
 and mutating write semantics move fully onto the experimental substrate. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and
 non-empty wrapper state, and stale post-semantics bare `to_aos(...)` target classification is

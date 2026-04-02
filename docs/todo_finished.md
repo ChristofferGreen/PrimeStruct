@@ -5,6 +5,16 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 2, 2026)**
+
+**Types & Semantics**
+**Group 8 - SoA de-builtinization**
+- ✓ Stabilize nested struct-body experimental `SoaVector<T>` helper returns beyond the current constructor-light foothold. Completed: global helper-return and explicit `/Type/helper` method-like `SoaVector<T>` returns already cleared the working helper/conversion substrate when they materialized values through `soaVectorSingle<T>(T(...))`, and nested struct-body helper returns now match that surface too: constructor-bearing helper bodies clear semantic validation, unused-module compilation, direct and bound default helper/conversion expressions, and same-path `/soa_vector/*` plus `/to_aos` method-shadow compile-run paths instead of failing during specialization or later expression lowering.
+- ✓ Fix the native backend/runtime path for bridged/imported builtin bare/direct/method/slash-method `to_aos` forms so they stop trapping after canonical lowering. Completed: builtin `soa_vector<T>` bare/direct/method/slash-method `to_aos` calls now bridge through the canonical `/std/collections/soa_vector/to_aos` shim without trapping on native once lowering materializes the experimental `SoaVector<T>` storage explicitly instead of generic-copying mismatched struct slots.
+- ✓ Delete the remaining runtime-code conversion `soa_vector` special cases once `to_aos` routing is fully stdlib-owned. Completed: direct-canonical `/std/collections/soa_vector/to_aos<T>(...)` calls plus imported-helper `to_aos` routing no longer rely on dedicated runtime-side conversion branches, stale post-semantics bare `to_aos(...)` target classification is gone from the shared emitter/lowerer path too, and root/imported builtin bare/direct/method/slash-method `to_aos` forms now bridge through the canonical stdlib shim during lowering and run across C++/native/VM.
+- ✓ Delete the remaining mutating builtin `soa_vector` assign-target indexed field-view pending path in `SemanticsValidatorExprMutationBorrows.cpp`. Completed: indexed field-view writes such as `assign(values.y()[i], next)` and explicit borrowed-slot writes such as `assign(ref(values, i).field, next)` now leave the pending-only branch and lower through the experimental `soaVectorRef<T>(..., i).field` substrate across C++/native/VM.
+- ✓ Delete the remaining diagnostic/test indexed mutating field-view `soa_vector` special cases. Completed: focused semantics, dump, and compile-run coverage now pin the successful indexed/ref-field write path instead of only the earlier pending-diagnostic branch.
+
 **Todo Cleanup (April 1, 2026)**
 
 **Types & Semantics**

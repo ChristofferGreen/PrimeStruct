@@ -1050,6 +1050,37 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
+TEST_CASE("vm runs experimental soa_vector mutating indexed field writes") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  assign(values.y()[1i32], 17i32)
+  assign(y(values)[0i32], 19i32)
+  assign(ref(values, 0i32).x, 5i32)
+  assign(values.ref(1i32).x, 11i32)
+  return(plus(values.x()[0i32],
+              plus(values.y()[0i32],
+                   plus(values.x()[1i32], values.y()[1i32]))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_soa_vector_mutating_indexed_field_writes.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 52);
+}
+
 TEST_CASE("vm runs borrowed experimental soa_vector reflected index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

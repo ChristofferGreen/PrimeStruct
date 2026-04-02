@@ -3359,6 +3359,61 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
   return true;
 }
 
+void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
+  for (Expr &arg : expr.args) {
+    rewriteExperimentalSoaFieldViewAssignTargetsExpr(arg);
+  }
+  for (Expr &bodyArg : expr.bodyArguments) {
+    rewriteExperimentalSoaFieldViewAssignTargetsExpr(bodyArg);
+  }
+
+  if (!semantics::isAssignCall(expr) || expr.args.size() != 2) {
+    return;
+  }
+
+  Expr &target = expr.args.front();
+  if (target.kind != Expr::Kind::Call || !target.isFieldAccess ||
+      target.args.size() != 1) {
+    return;
+  }
+
+  Expr &receiver = target.args.front();
+  if (receiver.kind != Expr::Kind::Call || receiver.isBinding) {
+    return;
+  }
+
+  static constexpr std::string_view getPrefix =
+      "/std/collections/experimental_soa_vector/soaVectorGet";
+  static constexpr std::string_view refPrefix =
+      "/std/collections/experimental_soa_vector/soaVectorRef";
+  if (receiver.name.rfind(getPrefix, 0) != 0) {
+    return;
+  }
+  receiver.name.replace(0, getPrefix.size(), refPrefix);
+}
+
+bool rewriteExperimentalSoaFieldViewAssignTargets(Program &program,
+                                                  std::string &error) {
+  error.clear();
+  for (Definition &def : program.definitions) {
+    for (Expr &stmt : def.statements) {
+      rewriteExperimentalSoaFieldViewAssignTargetsExpr(stmt);
+    }
+    if (def.returnExpr.has_value()) {
+      rewriteExperimentalSoaFieldViewAssignTargetsExpr(*def.returnExpr);
+    }
+  }
+  for (auto &exec : program.executions) {
+    for (Expr &arg : exec.arguments) {
+      rewriteExperimentalSoaFieldViewAssignTargetsExpr(arg);
+    }
+    for (Expr &arg : exec.bodyArguments) {
+      rewriteExperimentalSoaFieldViewAssignTargetsExpr(arg);
+    }
+  }
+  return true;
+}
+
 void rewriteBorrowedExperimentalMapMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
@@ -3976,6 +4031,9 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (!rewriteExperimentalSoaFieldViewIndexes(program, error)) {
+    return false;
+  }
+  if (!rewriteExperimentalSoaFieldViewAssignTargets(program, error)) {
     return false;
   }
   if (!rewriteBorrowedExperimentalMapMethods(program, error)) {

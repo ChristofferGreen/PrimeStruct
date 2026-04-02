@@ -1584,7 +1584,7 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating field-view index reports pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating field-view index validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1600,15 +1600,15 @@ main() {
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
   assign(values.y()[1i32], 17i32)
-  return(0i32)
+  return(values.y()[1i32])
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: y") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector mutating field-view call-form index reports pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating field-view call-form index validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1624,12 +1624,12 @@ main() {
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
   assign(y(values)[1i32], 17i32)
-  return(0i32)
+  return(y(values)[1i32])
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: y") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa_vector mutating field-view method reports pending diagnostic") {
@@ -1760,7 +1760,7 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating ref field access reports pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating ref field access validates") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1778,12 +1778,12 @@ main() {
   values.push(Particle(9i32, 12i32))
   assign(ref(values, 0i32).y, 19i32)
   assign(values.ref(1i32).y, 17i32)
-  return(0i32)
+  return(plus(ref(values, 0i32).y, values.ref(1i32).y))
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: y") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa_vector bare get and ref field access validates") {

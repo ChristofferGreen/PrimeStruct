@@ -429,51 +429,6 @@ bool SemanticsValidator::extractExperimentalSoaAssignFieldViewName(
     }
     return false;
   };
-  auto resolveSoaRefReceiverTarget =
-      [&](const Expr &refExpr, const Expr *&receiverTargetOut) -> bool {
-    auto isResolvedSoaRefPath = [&](const std::string &resolvedPath,
-                                    bool methodForm) -> bool {
-      if (resolvedPath.empty()) {
-        return false;
-      }
-      if (methodForm) {
-        return resolvedPath.rfind(
-                   "/std/collections/experimental_soa_vector/", 0) == 0 &&
-               resolvedPath.size() >= 4 &&
-               resolvedPath.compare(resolvedPath.size() - 4, 4, "/ref") == 0;
-      }
-      return resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
-             resolvedPath.rfind("/soa_vector/ref", 0) == 0;
-    };
-    receiverTargetOut = nullptr;
-    if (refExpr.kind != Expr::Kind::Call || refExpr.args.empty()) {
-      return false;
-    }
-    if (refExpr.isMethodCall) {
-      if (refExpr.name == "ref") {
-        receiverTargetOut = &refExpr.args.front();
-        return true;
-      }
-      const std::string resolvedMethodPath = resolveCalleePath(refExpr);
-      if (isResolvedSoaRefPath(resolvedMethodPath, true)) {
-        receiverTargetOut = &refExpr.args.front();
-        return true;
-      }
-      return false;
-    }
-
-    const bool isBareRefCall = isSimpleCallName(refExpr, "ref");
-    const std::string resolvedCallPath = resolveCalleePath(refExpr);
-    const bool isExperimentalSoaRefCall =
-        isResolvedSoaRefPath(resolvedCallPath, false);
-    if ((!isBareRefCall && !isExperimentalSoaRefCall) ||
-        refExpr.args.size() != 2) {
-      return false;
-    }
-    receiverTargetOut = &refExpr.args.front();
-    return true;
-  };
-
   std::function<bool(const Expr &, std::string &)>
       extractExperimentalSoaFieldViewName;
   extractExperimentalSoaFieldViewName =
@@ -486,14 +441,6 @@ bool SemanticsValidator::extractExperimentalSoaAssignFieldViewName(
           receiver.name.rfind(
               "/std/collections/experimental_soa_vector/soaVectorGet",
               0) == 0) {
-        candidateFieldNameOut = target.name;
-        return !candidateFieldNameOut.empty();
-      }
-      const Expr *soaRefReceiverTarget = nullptr;
-      if (resolveSoaRefReceiverTarget(receiver, soaRefReceiverTarget) &&
-          soaRefReceiverTarget != nullptr &&
-          receiverHasExperimentalSoaField(*soaRefReceiverTarget,
-                                          target.name)) {
         candidateFieldNameOut = target.name;
         return !candidateFieldNameOut.empty();
       }

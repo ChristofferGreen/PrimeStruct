@@ -17,6 +17,14 @@ bool isVectorStructPath(const std::string &structPath) {
          structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
+bool isSpecializedExperimentalSoaVectorStructPath(const std::string &structPath) {
+  return structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
+bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {
+  return structPath == "/soa_vector" || structPath == "/std/collections/soa_vector";
+}
+
 bool areCompatibleStructPaths(const std::string &lhs, const std::string &rhs) {
   return lhs == rhs || (isVectorStructPath(lhs) && isVectorStructPath(rhs));
 }
@@ -585,7 +593,219 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         error = "assign target must be a mutable binding";
         return false;
       }
+      auto resolveSoaRefWriteTarget = [&](const Expr &candidate,
+                                          const Expr *&valuesExprOut,
+                                          const Expr *&indexExprOut) -> bool {
+        valuesExprOut = nullptr;
+        indexExprOut = nullptr;
+        auto matchesBuiltinRefPath = [](const std::string &path) {
+          return path.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0 ||
+                 path.rfind("/std/collections/soa_vector/ref", 0) == 0;
+        };
+        if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 2 ||
+            !candidate.templateArgs.empty() || candidate.hasBodyArguments ||
+            !candidate.bodyArguments.empty()) {
+          return false;
+        }
+        if (!candidate.isMethodCall) {
+          const Definition *callee = context.resolveDefinitionCall(candidate);
+          if (callee == nullptr || !matchesBuiltinRefPath(callee->fullPath)) {
+            return false;
+          }
+          valuesExprOut = &candidate.args.front();
+          indexExprOut = &candidate.args[1];
+          return true;
+        }
+
+        std::string normalizedMethodName = candidate.name;
+        if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+          normalizedMethodName.erase(normalizedMethodName.begin());
+        }
+        if (normalizedMethodName == "std/collections/soa_vector/ref") {
+          valuesExprOut = &candidate.args.front();
+          indexExprOut = &candidate.args[1];
+          return true;
+        }
+        if (normalizedMethodName == "soa_vector/ref") {
+          Expr samePathCandidate = candidate;
+          samePathCandidate.isMethodCall = false;
+          samePathCandidate.name = "/soa_vector/ref";
+          samePathCandidate.namespacePrefix.clear();
+          if (const Definition *samePathCallee = context.resolveDefinitionCall(samePathCandidate);
+              samePathCallee != nullptr && samePathCallee->fullPath.rfind("/soa_vector/ref", 0) == 0) {
+            return false;
+          }
+
+          valuesExprOut = &candidate.args.front();
+          indexExprOut = &candidate.args[1];
+          return true;
+        }
+        if (normalizedMethodName != "ref") {
+          return false;
+        }
+
+        Expr samePathCandidate = candidate;
+        samePathCandidate.isMethodCall = false;
+        samePathCandidate.name = "/soa_vector/ref";
+        samePathCandidate.namespacePrefix.clear();
+        if (const Definition *samePathCallee = context.resolveDefinitionCall(samePathCandidate);
+            samePathCallee != nullptr && samePathCallee->fullPath.rfind("/soa_vector/ref", 0) == 0) {
+          return false;
+        }
+
+        valuesExprOut = &candidate.args.front();
+        indexExprOut = &candidate.args[1];
+        return true;
+      };
+      auto emitSoaRefFieldPointer = [&](const Expr &candidate) -> bool {
+        const Expr *valuesExpr = nullptr;
+        const Expr *indexExpr = nullptr;
+        if (!resolveSoaRefWriteTarget(candidate, valuesExpr, indexExpr) || valuesExpr == nullptr ||
+            indexExpr == nullptr) {
+          return false;
+        }
+
+        const std::string valuesStructPath = inferStructExprPath(*valuesExpr, localsIn);
+        if (valuesStructPath.empty()) {
+          return false;
+        }
+
+        int32_t elementSlotCount = 0;
+        if (!resolveStructSlotCount(receiverStruct, elementSlotCount)) {
+          return false;
+        }
+
+        const LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(*indexExpr, localsIn));
+        if (!isSupportedIndexKind(indexKind)) {
+          error = "assign target must be a mutable binding";
+          return false;
+        }
+
+        const int32_t indexLocal = allocTempLocal();
+        if (!emitExpr(*indexExpr, localsIn)) {
+          return false;
+        }
+        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+
+        const int32_t dataPtrLocal = allocTempLocal();
+        const int32_t capacityLocal = allocTempLocal();
+        if (isSpecializedExperimentalSoaVectorStructPath(valuesStructPath)) {
+          int32_t storageSlotOffset = 0;
+          int32_t storageSlotCount = 0;
+          std::string storageStructPath;
+          if (!resolveStructFieldInfo(valuesStructPath,
+                                      "storage",
+                                      storageSlotOffset,
+                                      storageSlotCount,
+                                      storageStructPath) ||
+              storageStructPath.empty()) {
+            error = "assign target must be a mutable binding";
+            return false;
+          }
+
+          int32_t capacitySlotOffset = 0;
+          int32_t capacitySlotCount = 0;
+          std::string ignoredStructPath;
+          if (!resolveStructFieldInfo(storageStructPath,
+                                      "capacity",
+                                      capacitySlotOffset,
+                                      capacitySlotCount,
+                                      ignoredStructPath)) {
+            error = "assign target must be a mutable binding";
+            return false;
+          }
+
+          int32_t dataSlotOffset = 0;
+          int32_t dataSlotCount = 0;
+          if (!resolveStructFieldInfo(storageStructPath,
+                                      "data",
+                                      dataSlotOffset,
+                                      dataSlotCount,
+                                      ignoredStructPath)) {
+            error = "assign target must be a mutable binding";
+            return false;
+          }
+
+          const int32_t valuesPtrLocal = allocTempLocal();
+          if (!emitExpr(*valuesExpr, localsIn)) {
+            return false;
+          }
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valuesPtrLocal)});
+
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+          const uint64_t capacityOffsetBytes =
+              static_cast<uint64_t>(storageSlotOffset + capacitySlotOffset) * IrSlotBytes;
+          if (capacityOffsetBytes != 0) {
+            instructions.push_back({IrOpcode::PushI64, capacityOffsetBytes});
+            instructions.push_back({IrOpcode::AddI64, 0});
+          }
+          instructions.push_back({IrOpcode::LoadIndirect, 0});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+          const uint64_t dataOffsetBytes =
+              static_cast<uint64_t>(storageSlotOffset + dataSlotOffset) * IrSlotBytes;
+          if (dataOffsetBytes != 0) {
+            instructions.push_back({IrOpcode::PushI64, dataOffsetBytes});
+            instructions.push_back({IrOpcode::AddI64, 0});
+          }
+          instructions.push_back({IrOpcode::LoadIndirect, 0});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataPtrLocal)});
+        } else if (isRawBuiltinSoaVectorStructPath(valuesStructPath)) {
+          const int32_t valuesPtrLocal = allocTempLocal();
+          if (!emitExpr(*valuesExpr, localsIn)) {
+            return false;
+          }
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valuesPtrLocal)});
+
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+          instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(IrSlotBytes)});
+          instructions.push_back({IrOpcode::AddI64, 0});
+          instructions.push_back({IrOpcode::LoadIndirect, 0});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+          instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2 * IrSlotBytes)});
+          instructions.push_back({IrOpcode::AddI64, 0});
+          instructions.push_back({IrOpcode::LoadIndirect, 0});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataPtrLocal)});
+        } else {
+          return false;
+        }
+
+        if (indexKind != LocalInfo::ValueKind::UInt64) {
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+          instructions.push_back({pushZeroForIndex(indexKind), 0});
+          instructions.push_back({cmpLtForIndex(indexKind), 0});
+          const size_t jumpNonNegative = instructions.size();
+          instructions.push_back({IrOpcode::JumpIfZero, 0});
+          emitArrayIndexOutOfBounds();
+          instructions[jumpNonNegative].imm = static_cast<uint64_t>(instructions.size());
+        }
+
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+        instructions.push_back({cmpGeForIndex(indexKind), 0});
+        const size_t jumpInRange = instructions.size();
+        instructions.push_back({IrOpcode::JumpIfZero, 0});
+        emitArrayIndexOutOfBounds();
+        instructions[jumpInRange].imm = static_cast<uint64_t>(instructions.size());
+
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+        if (elementSlotCount != 1) {
+          instructions.push_back({pushOneForIndex(indexKind), static_cast<uint64_t>(elementSlotCount)});
+          instructions.push_back({mulForIndex(indexKind), 0});
+        }
+        instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
+        instructions.push_back({mulForIndex(indexKind), 0});
+        instructions.push_back({IrOpcode::AddI64, 0});
+        return true;
+      };
       auto emitReceiverPointer = [&]() -> bool {
+        if (emitSoaRefFieldPointer(receiverExpr)) {
+          return true;
+        }
         if (receiverExpr.kind == Expr::Kind::Name) {
           auto it = localsIn.find(receiverExpr.name);
           if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference) {
