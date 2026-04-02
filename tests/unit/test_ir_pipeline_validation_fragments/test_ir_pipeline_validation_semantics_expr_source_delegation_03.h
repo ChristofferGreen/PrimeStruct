@@ -525,6 +525,11 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "hasVisibleDefinitionPathForCurrentImports(samePath)") !=
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "preferredVisibleDefinitionPathForCurrentImports(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find("auto preferredSoaMutatorHelperTarget =") !=
+        std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("auto hasVisibleSoaMutatorShadow =") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(

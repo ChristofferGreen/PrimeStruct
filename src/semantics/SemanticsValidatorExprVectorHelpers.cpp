@@ -113,11 +113,9 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     std::string &resolvedOut) {
   resolvedOut.clear();
   auto preferredSoaMutatorHelperTarget = [&](std::string_view resolvedHelperName) {
-    const std::string samePath = "/soa_vector/" + std::string(resolvedHelperName);
-    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
-      return samePath;
-    }
-    return "/std/collections/soa_vector/" + std::string(resolvedHelperName);
+    return preferredVisibleDefinitionPathForCurrentImports(
+        "/soa_vector/" + std::string(resolvedHelperName),
+        "/std/collections/soa_vector/" + std::string(resolvedHelperName));
   };
   auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
