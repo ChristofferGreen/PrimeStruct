@@ -34,14 +34,11 @@ bool hasVisibleDefinitionPathForMonomorph(const Context &ctx,
          ctx.helperOverloads.count(ownedPath) > 0;
 }
 
-bool hasVisibleSoaRefHelperForMonomorph(const Context &ctx) {
-  return hasVisibleDefinitionPathForMonomorph(ctx, "/soa_vector/ref");
-}
-
 std::optional<std::string> soaPendingUnavailableMethodDiagnosticForMonomorph(
     const Context &ctx, std::string_view resolvedPath) {
   return soaPendingUnavailableMethodDiagnostic(
-      resolvedPath, hasVisibleSoaRefHelperForMonomorph(ctx));
+      resolvedPath,
+      hasVisibleDefinitionPathForMonomorph(ctx, "/soa_vector/ref"));
 }
 
 bool inferImplicitTemplateArgs(const Definition &def,
@@ -208,7 +205,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return {};
     }
     const bool hasVisibleSoaRefHelper =
-        hasVisibleSoaRefHelperForMonomorph(ctx);
+        hasVisibleDefinitionPathForMonomorph(ctx, "/soa_vector/ref");
     if (candidate.isMethodCall) {
       if (const auto pending =
               soaPendingUnavailableMethodDiagnosticForMonomorph(

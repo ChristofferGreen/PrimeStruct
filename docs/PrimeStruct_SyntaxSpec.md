@@ -970,12 +970,15 @@ visibility and pending/unavailable split inline, while validator-side visible
 same-path `/soa_vector/count|get|push|reserve` helper checks now also route
 through that same shared definition-visibility helper instead of repeating
 import/declared probes across method-target and infer-time helper-shadow
-paths, while monomorph-side visible same-path `/soa_vector/<field>` helper
-checks now also route through that same shared definition-visibility helper
-instead of probing `sourceDefs` and `helperOverloads` inline, while
-monomorph-side fixed method pending rejects now also route through one shared
-visibility-aware helper instead of open-coding the optional pending lookup
-around that same visibility probe, and the low-level field-view and
+paths, while monomorph-side visible `/soa_vector/ref` fallback detection now
+also uses that same shared definition-visibility helper instead of a dedicated
+ref-specific wrapper, while monomorph-side visible same-path
+`/soa_vector/<field>` helper checks now also route through that same shared
+definition-visibility helper instead of probing `sourceDefs` and
+`helperOverloads` inline, while monomorph-side fixed method pending rejects
+now also route through one shared visibility-aware helper instead of
+open-coding the optional pending lookup around that same visibility probe, and
+the low-level field-view and
 borrowed-view pending string builders are now
 file-local to the shared helper implementation instead of part of the public
 semantics-helper surface, while direct collection-access, count/capacity

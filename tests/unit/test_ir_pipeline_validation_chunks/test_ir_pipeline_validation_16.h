@@ -451,19 +451,14 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaPendingUnavailableMethodDiagnostic(\n"
-            "      resolvedPath, hasVisibleSoaRefHelperForMonomorph(ctx))") !=
+            "      resolvedPath,\n"
+            "      hasVisibleDefinitionPathForMonomorph(ctx, \"/soa_vector/ref\"))") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "bool hasVisibleDefinitionPathForMonomorph(const Context &ctx,") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "return hasVisibleDefinitionPathForMonomorph(ctx, \"/soa_vector/ref\");") !=
-        std::string::npos);
-  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "bool hasVisibleSoaRefHelperForMonomorph(const Context &ctx) {") !=
-        std::string::npos);
-  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "hasVisibleSoaRefHelperForMonomorph(ctx)") !=
+            "hasVisibleDefinitionPathForMonomorph(ctx, \"/soa_vector/ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "hasVisibleDefinitionPathForMonomorph(ctx, helperPath)") !=
