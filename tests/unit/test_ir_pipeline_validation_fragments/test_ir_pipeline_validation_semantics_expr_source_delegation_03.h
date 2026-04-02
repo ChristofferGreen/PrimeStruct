@@ -432,7 +432,10 @@
             "soaFieldViewPendingDiagnostic(pendingSoaFieldViewName)") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
-            "soaFieldViewPendingDiagnostic(fieldTarget.name)") !=
+            "resolveSoaRefReceiverTarget") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "soaFieldViewPendingDiagnostic(fieldTarget.name)") ==
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "bool SemanticsValidator::validateExprNamedArgumentBuiltins") !=

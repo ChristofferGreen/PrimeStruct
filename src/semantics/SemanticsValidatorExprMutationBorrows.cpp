@@ -126,6 +126,50 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
            resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
                                                   elemTypeOut);
   };
+  auto resolveSoaRefReceiverTarget =
+      [&](const Expr &refExpr, const Expr *&receiverTargetOut) -> bool {
+    auto isResolvedSoaRefPath = [&](const std::string &resolvedPath,
+                                   bool methodForm) -> bool {
+      if (resolvedPath.empty()) {
+        return false;
+      }
+      if (methodForm) {
+        return resolvedPath.rfind(
+                   "/std/collections/experimental_soa_vector/", 0) == 0 &&
+               resolvedPath.size() >= 4 &&
+               resolvedPath.compare(resolvedPath.size() - 4, 4, "/ref") == 0;
+      }
+      return resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
+             resolvedPath.rfind("/soa_vector/ref", 0) == 0;
+    };
+    receiverTargetOut = nullptr;
+    if (refExpr.kind != Expr::Kind::Call || refExpr.args.empty()) {
+      return false;
+    }
+    if (refExpr.isMethodCall) {
+      if (refExpr.name == "ref") {
+        receiverTargetOut = &refExpr.args.front();
+        return true;
+      }
+      const std::string resolvedMethodPath = resolveCalleePath(refExpr);
+      if (isResolvedSoaRefPath(resolvedMethodPath, true)) {
+        receiverTargetOut = &refExpr.args.front();
+        return true;
+      }
+      return false;
+    }
+
+    const bool isBareRefCall = isSimpleCallName(refExpr, "ref");
+    const std::string resolvedCallPath = resolveCalleePath(refExpr);
+    const bool isExperimentalSoaRefCall =
+        isResolvedSoaRefPath(resolvedCallPath, false);
+    if ((!isBareRefCall && !isExperimentalSoaRefCall) ||
+        refExpr.args.size() != 2) {
+      return false;
+    }
+    receiverTargetOut = &refExpr.args.front();
+    return true;
+  };
   auto pendingExperimentalSoaFieldViewNameForAssignTarget =
       [&](const Expr &target, std::string &fieldNameOut) -> bool {
     fieldNameOut.clear();
@@ -136,6 +180,16 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           receiver.name.rfind("/std/collections/experimental_soa_vector/soaVectorGet", 0) == 0) {
         fieldNameOut = target.name;
         return !fieldNameOut.empty();
+      }
+      const Expr *soaRefReceiverTarget = nullptr;
+      if (resolveSoaRefReceiverTarget(receiver, soaRefReceiverTarget) &&
+          soaRefReceiverTarget != nullptr) {
+        std::string elemType;
+        if (resolveExperimentalSoaOrBorrowedReceiver(*soaRefReceiverTarget,
+                                                     elemType)) {
+          fieldNameOut = target.name;
+          return !fieldNameOut.empty();
+        }
       }
     }
     if (target.kind == Expr::Kind::Call && !target.isBinding &&
@@ -617,65 +671,6 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       std::string mutableBorrowRootName;
       std::string ignoreBorrowName;
       bool allowMutableBorrowedFieldWrite = false;
-      if (fieldReceiver.kind == Expr::Kind::Call) {
-        auto resolveSoaRefReceiverTarget =
-            [&](const Expr &refExpr, const Expr *&receiverTargetOut) -> bool {
-              auto isResolvedSoaRefPath = [&](const std::string &resolvedPath,
-                                             bool methodForm) -> bool {
-                if (resolvedPath.empty()) {
-                  return false;
-                }
-                if (methodForm) {
-                  return resolvedPath.rfind(
-                             "/std/collections/experimental_soa_vector/", 0) ==
-                             0 &&
-                         resolvedPath.size() >= 4 &&
-                         resolvedPath.compare(resolvedPath.size() - 4, 4,
-                                              "/ref") == 0;
-                }
-                return resolvedPath.rfind("/std/collections/soa_vector/ref", 0) ==
-                           0 ||
-                       resolvedPath.rfind("/soa_vector/ref", 0) == 0;
-              };
-              receiverTargetOut = nullptr;
-              if (refExpr.kind != Expr::Kind::Call || refExpr.args.empty()) {
-                return false;
-              }
-              if (refExpr.isMethodCall) {
-                if (refExpr.name == "ref") {
-                  receiverTargetOut = &refExpr.args.front();
-                  return true;
-                }
-                const std::string resolvedMethodPath = resolveCalleePath(refExpr);
-                if (isResolvedSoaRefPath(resolvedMethodPath, true)) {
-                  receiverTargetOut = &refExpr.args.front();
-                  return true;
-                }
-                return false;
-              }
-
-              const bool isBareRefCall = isSimpleCallName(refExpr, "ref");
-              const std::string resolvedCallPath = resolveCalleePath(refExpr);
-              const bool isExperimentalSoaRefCall =
-                  isResolvedSoaRefPath(resolvedCallPath, false);
-              if ((!isBareRefCall && !isExperimentalSoaRefCall) ||
-                  refExpr.args.size() != 2) {
-                return false;
-              }
-              receiverTargetOut = &refExpr.args.front();
-              return true;
-            };
-        const Expr *soaRefReceiverTarget = nullptr;
-        if (resolveSoaRefReceiverTarget(fieldReceiver, soaRefReceiverTarget) &&
-            soaRefReceiverTarget != nullptr) {
-          std::string soaElemType;
-          if (resolveExperimentalSoaOrBorrowedReceiver(*soaRefReceiverTarget,
-                                                       soaElemType)) {
-            error_ = soaFieldViewPendingDiagnostic(fieldTarget.name);
-            return false;
-          }
-        }
-      }
       const bool allowLifecycleFieldWrite =
           !fieldBinding.isMutable && isNamedFieldTarget(fieldTarget, "this") &&
           isLifecycleHelperPath(currentValidationContext_.definitionPath);

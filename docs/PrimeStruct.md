@@ -2631,11 +2631,13 @@ lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routin
 both direct wrapper reads and borrowed local shorthand plus explicitly dereferenced borrowed local
 reads now run through the generic helper-call plus struct-field path end-to-end.
 The remaining pending-diagnostic cleanup is therefore reduced to one compiler-owned
-area in `SemanticsValidatorExprMutationBorrows.cpp`, but that area is still split
-between three concrete follow-ups: assign-target method/call field-view writes like
-`assign(values.x(), next)` / `assign(x(values), next)`, assign-target indexed
-field-view writes like `assign(y(values)[i], next)`, and the separate
-borrowed-element field-write path like `assign(ref(values, i).field, next)`.
+area in `SemanticsValidatorExprMutationBorrows.cpp`, and that area is now concentrated
+in the shared assign-target helper path. The remaining concrete follow-ups are
+assign-target method/call field-view writes like `assign(values.x(), next)` /
+`assign(x(values), next)` and assign-target indexed field-view writes like
+`assign(y(values)[i], next)`. The old late `assign(ref(values, i).field, next)`
+special case is now folded into that same shared pending helper instead of
+staying as a separate branch.
 Standalone builtin field-view call forms now route through the shared synthetic
 `/soa_vector/field_view/<field>` or same-path `/soa_vector/<field>` method-target
 path instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback.
