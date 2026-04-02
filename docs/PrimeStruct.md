@@ -2394,12 +2394,15 @@ bad_use_after_take() {
     deterministic pending contract instead of degrading to a target-shape error, and
     inline location-wrapped borrowed helper-return forms such as
     `pickBorrowed(...).x()`, `x(pickBorrowed(...))`, `location(pickBorrowed(...)).x()`, and
-    `x(location(pickBorrowed(...)))` now keep it too. Mutating standalone/indexed attempts
-    such as `assign(values.x(), next)`, `assign(x(values), next)`, `assign(values.y()[i], next)`,
+    `x(location(pickBorrowed(...)))` now keep it too. Mutating standalone method/call attempts
+    such as `assign(values.x(), next)` and `assign(x(values), next)` now keep that same pending
+    field-view contract instead of degrading to the generic mutable-binding assignment error,
+    while indexed and explicit borrowed-slot writes such as `assign(values.y()[i], next)`,
     `assign(dereference(pickBorrowed(...)).y()[i], next)`,
-    `assign(location(pickBorrowed(...)).y()[i], next)`, `assign(ref(values, i).y, next)`, and
-    `assign(values.ref(i).y, next)` now keep that same pending field-view contract instead of
-    degrading to the generic mutable-binding assignment error, and borrowed
+    `assign(location(pickBorrowed(...)).y()[i], next)`,
+    `assign(y(location(pickBorrowed(...)))[i], next)`, `assign(ref(values, i).y, next)`, and
+    `assign(values.ref(i).y, next)` now clear semantics/runtime through the existing
+    `soaVectorRef<T>(..., i).field` substrate, and borrowed
     `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`, `borrowed.ref(i)`, and
     `borrowed.to_aos()` plus bare helper forms `count(...)`, `get(...)`, `ref(...)`, and
     `to_aos(...)` now also ride on the existing helper/conversion substrate for local,
@@ -2439,8 +2442,7 @@ bad_use_after_take() {
     and inline `location(...)`-wrapped variants now ride that same helper/field-access flow too,
     so those read-only surfaces run across C++/native/VM for both single-field and multi-field
     wrappers while the remaining pending field-view surfaces are now narrowed to standalone
-    borrowed reads plus the still-unimplemented mutating method/call and indexed field-view
-    writes.
+    borrowed reads plus the still-unimplemented standalone mutating method/call writes.
     `soaVectorFromAos<T>()`
     already targets the same substrate semantically, but backend lowering still stops on the current `* backend
     requires typed bindings` boundary.
@@ -2659,9 +2661,9 @@ Standalone builtin field-view call forms now route through the shared synthetic
 path instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback,
 and resolved helper-form field-view rejects now reuse the shared unavailable-method
 helper path instead of an inline pending-diagnostic branch there.
-The remaining follow-up is therefore richer borrowed-view and mutating write
-semantics on top of the experimental substrate rather than more compiler-owned
-pending plumbing. The broader experimental wrapper/helper surface through imported
+The remaining follow-up is therefore richer borrowed-view semantics on top of
+the experimental substrate rather than more compiler-owned pending plumbing or
+another indexed-write bridge. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and
 non-empty wrapper state, and stale post-semantics bare `to_aos(...)` target classification is
 now gone from the shared emitter/lowerer path as well. The remaining backend-side

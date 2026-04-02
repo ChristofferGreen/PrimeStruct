@@ -585,6 +585,55 @@ main() {
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites richer borrowed experimental soa_vector mutating field index targets to soaVectorRef") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  assign(dereference(pickBorrowed(location(values))).y()[1i32], 17i32)
+  assign(y(location(pickBorrowed(location(values))))[0i32], 19i32)
+  return(plus(dereference(pickBorrowed(location(values))).y()[1i32],
+              y(location(pickBorrowed(location(values))))[0i32]))
+}
+)";
+  const std::string srcPath = writeTemp(
+      "compile_dump_ast_semantic_experimental_soa_vector_richer_borrowed_mutating_field_view.prime",
+      source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_experimental_soa_vector_richer_borrowed_mutating_field_view.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorRef__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("assign(dereference(pickBorrowed(location(values))).y()[1]", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("assign(y(location(pickBorrowed(location(values))))[0]", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find(".y", mainPos) != std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic rewrites borrowed experimental soa_vector reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

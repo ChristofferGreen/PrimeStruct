@@ -925,11 +925,14 @@ and helper-return plus inline location-wrapped borrowed helper-return forms such
 local persistence plus direct and helper-return call-argument/return escapes now likewise keep the
 shared borrowed-view pending diagnostic instead of degrading to generic inference, template-argument,
 or synthetic field-view fallback.
-Mutating standalone/indexed attempts such as `assign(value.field(), next)`,
-`assign(value.field()[i], next)`, `assign(ref(value, i).field, next)`, and
-`assign(value.ref(i).field, next)` now also keep that same pending field-view diagnostic on direct,
-borrowed helper-return, and inline location-wrapped borrowed helper-return receivers instead of
-degrading to the generic mutable-binding assignment contract, borrowed
+Mutating standalone method/call attempts such as `assign(value.field(), next)` now also keep that
+same pending field-view diagnostic on direct, borrowed helper-return, and inline
+location-wrapped borrowed helper-return receivers instead of degrading to the generic
+mutable-binding assignment contract, while indexed and explicit borrowed-slot writes such as
+`assign(value.field()[i], next)`, `assign(ref(value, i).field, next)`,
+`assign(value.ref(i).field, next)`, `assign(dereference(pickBorrowed(...)).field()[i], next)`,
+and `assign(field(location(pickBorrowed(...)))[i], next)` now clear semantics/runtime through the
+existing `soaVectorRef<T>(..., i).field` substrate. Borrowed
 `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
 `borrowed.ref(i)`, and `borrowed.to_aos()` plus bare helper forms
 `count(...)`, `get(...)`, `ref(...)`, and `to_aos(...)` now also validate on the existing wrapper
@@ -963,8 +966,8 @@ or same-path `/soa_vector/<field>` path instead of a dedicated
 `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback, and resolved helper-form
 field-view rejects now reuse the shared unavailable-method helper path there
 instead of an inline pending branch. The remaining live
-follow-ups are now split between richer borrowed-view semantics and richer
-mutating field-write semantics on top of that substrate.
+follow-ups are now reduced to richer borrowed-view semantics on top of that
+substrate.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,

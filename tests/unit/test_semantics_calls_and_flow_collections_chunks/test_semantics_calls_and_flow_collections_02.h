@@ -1674,7 +1674,7 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating dereferenced borrowed helper-return field-view index reports pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating dereferenced borrowed helper-return field-view index validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1695,12 +1695,12 @@ main() {
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
   assign(dereference(pickBorrowed(location(values))).y()[1i32], 17i32)
-  return(0i32)
+  return(dereference(pickBorrowed(location(values))).y()[1i32])
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: y") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa_vector mutating dereferenced borrowed helper-return field-view method reports pending diagnostic") {
@@ -1729,7 +1729,37 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view surfaces report pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view indexes validate") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  assign(location(pickBorrowed(location(values))).y()[0i32], 17i32)
+  assign(y(location(pickBorrowed(location(values))))[0i32], 17i32)
+  return(plus(location(pickBorrowed(location(values))).y()[0i32],
+              y(location(pickBorrowed(location(values))))[0i32]))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view methods report pending diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1750,8 +1780,6 @@ main() {
   values.push(Particle(7i32, 8i32))
   assign(location(pickBorrowed(location(values))).x(), 17i32)
   assign(dereference(location(pickBorrowed(location(values)))).x(), 17i32)
-  assign(location(pickBorrowed(location(values))).y()[0i32], 17i32)
-  assign(y(location(pickBorrowed(location(values))))[0i32], 17i32)
   return(0i32)
 }
 )";
