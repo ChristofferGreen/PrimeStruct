@@ -1403,7 +1403,8 @@ main() {
   CHECK(mainPos != std::string::npos);
   CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
         std::string::npos);
-  CHECK(ast.find("holder.cloneValues().to_aos()", mainPos) != std::string::npos);
+  CHECK(ast.find("/to_aos(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
+  CHECK(ast.find("holder.cloneValues().to_aos()", mainPos) == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic keeps helper-return builtin soa_vector to_aos with same-path helper") {

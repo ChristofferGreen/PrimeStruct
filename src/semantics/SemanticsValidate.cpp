@@ -2470,11 +2470,9 @@ void rewriteExperimentalSoaToAosMethodExpr(
   if (builtinSoaConversionMethodName(expr.name) != "to_aos") {
     return;
   }
-  if (hasVisibleToAosHelper) {
-    return;
-  }
 
   std::optional<semantics::BindingInfo> receiverBinding;
+  std::optional<Expr> canonicalReceiverExpr;
   auto tryReceiverBinding = [&](const semantics::BindingInfo &binding) {
     std::string ignoredElemType;
     return extractExperimentalSoaVectorElementTypeForToAosRewrite(binding, ignoredElemType);
@@ -2501,6 +2499,7 @@ void rewriteExperimentalSoaToAosMethodExpr(
         if (returnIt != soaVectorReturnDefinitions.end() &&
             tryReceiverBinding(returnIt->second)) {
           receiverBinding = returnIt->second;
+          canonicalReceiverExpr = canonicalizeResolvedCallPath(receiver, candidatePath);
           break;
         }
       }
@@ -2510,10 +2509,24 @@ void rewriteExperimentalSoaToAosMethodExpr(
     return;
   }
 
+  if (hasVisibleToAosHelper) {
+    expr.isMethodCall = false;
+    expr.isFieldAccess = false;
+    expr.name = "/to_aos";
+    expr.namespacePrefix.clear();
+    if (canonicalReceiverExpr.has_value()) {
+      expr.args.front() = *canonicalReceiverExpr;
+    }
+    return;
+  }
+
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
   expr.name = "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
   expr.namespacePrefix.clear();
+  if (canonicalReceiverExpr.has_value()) {
+    expr.args.front() = *canonicalReceiverExpr;
+  }
 }
 
 bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {

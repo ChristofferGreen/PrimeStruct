@@ -770,6 +770,51 @@ main() {
   CHECK(runCommand(exePath) == 131);
 }
 
+TEST_CASE("native runs explicit method-like helper-return experimental soa_vector to_aos shadow") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {}
+
+[return<SoaVector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soaVectorSingle<Particle>(Particle(7i32)))
+}
+
+[effects(heap_alloc), return<vector<Particle>>]
+/to_aos([SoaVector<Particle>] values) {
+  [vector<Particle>, mut] out{vector<Particle>()}
+  out.push(Particle(19i32))
+  return(out)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [vector<Particle>] values{holder.cloneValues().to_aos()}
+  return(count(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_soa_vector_explicit_method_like_to_aos_shadow.prime",
+                source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_native_experimental_soa_vector_explicit_method_like_to_aos_shadow")
+          .string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("native runs experimental soa_vector stdlib ref helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

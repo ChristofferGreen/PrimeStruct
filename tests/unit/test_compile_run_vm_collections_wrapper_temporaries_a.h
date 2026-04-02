@@ -676,6 +676,44 @@ main() {
   CHECK(runCommand(runCmd) == 131);
 }
 
+TEST_CASE("runs vm explicit method-like helper-return experimental soa_vector to_aos shadow") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {}
+
+[return<SoaVector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soaVectorSingle<Particle>(Particle(7i32)))
+}
+
+[effects(heap_alloc), return<vector<Particle>>]
+/to_aos([SoaVector<Particle>] values) {
+  [vector<Particle>, mut] out{vector<Particle>()}
+  out.push(Particle(19i32))
+  return(out)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [vector<Particle>] values{holder.cloneValues().to_aos()}
+  return(count(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_soa_vector_explicit_method_like_to_aos_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
 TEST_CASE("vm runs experimental soa_vector stdlib ref helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

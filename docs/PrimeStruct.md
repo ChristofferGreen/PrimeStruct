@@ -2527,7 +2527,9 @@ user-helper shadowing now also survives helper-return builtin `to_aos` bare, dir
 method, and infer fallback instead of canonicalizing early onto the canonical helper path.
 Experimental wrapper helper-return `to_aos()` method
 rewrites now also stop short of forcing `soaVectorToAos(...)` when a same-path `/to_aos` helper
-is visible. Lowerer-side count target classification now also
+is visible, and that helper-preserving rewrite now also covers explicit `/Type/helper`
+method-like wrapper receivers instead of leaving `holder.cloneValues().to_aos()` on the raw
+wrapper-method path. Lowerer-side count target classification now also
 treats direct canonical `/std/collections/soa_vector/to_aos` call results as vector targets for
 nested count dispatch instead of depending on the old raw `/to_aos` call shape. C++ emitter
 vector-target classification now also treats those same direct canonical
