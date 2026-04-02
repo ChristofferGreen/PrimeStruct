@@ -282,12 +282,11 @@ bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(
     const std::unordered_map<std::string, BindingInfo> &locals) {
   std::string fieldName;
   if (isBuiltinSoaFieldViewExpr(candidate, params, locals, &fieldName)) {
-    error_ = *soaPendingUnavailableMethodDiagnostic(
-        soaFieldViewHelperPath(fieldName), false);
+    error_ = soaDirectFieldViewPendingDiagnostic(fieldName);
     return true;
   }
   if (isBuiltinSoaRefExpr(candidate, params, locals)) {
-    error_ = *soaPendingUnavailableMethodDiagnostic("/soa_vector/ref", false);
+    error_ = soaDirectBorrowedViewPendingDiagnostic();
     return true;
   }
   return false;

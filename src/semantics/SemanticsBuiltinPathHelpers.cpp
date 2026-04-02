@@ -472,6 +472,15 @@ std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
   return std::nullopt;
 }
 
+std::string soaDirectFieldViewPendingDiagnostic(std::string_view fieldName) {
+  return *soaPendingUnavailableMethodDiagnostic(
+      soaFieldViewHelperPath(fieldName), false);
+}
+
+std::string soaDirectBorrowedViewPendingDiagnostic() {
+  return *soaPendingUnavailableMethodDiagnostic("/soa_vector/ref", false);
+}
+
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
                                            bool hasVisibleSoaRefHelper) {
   if (const auto pending = soaPendingUnavailableMethodDiagnostic(
