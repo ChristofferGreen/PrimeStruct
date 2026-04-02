@@ -2630,9 +2630,12 @@ gone too. The current successful read-only `value.field()[i]` path likewise no l
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
 both direct wrapper reads and borrowed local shorthand plus explicitly dereferenced borrowed local
 reads now run through the generic helper-call plus struct-field path end-to-end.
-The remaining pending-diagnostic cleanup is therefore reduced to
-deleting the direct compiler-owned unsupported field-view path itself once field-view indexing
-moves onto the experimental substrate. The broader experimental wrapper/helper surface through imported
+The remaining pending-diagnostic cleanup is therefore reduced to two explicit
+compiler-owned paths: the standalone builtin field-view pending path in
+`SemanticsValidatorExprMapSoaBuiltins.cpp` and the mutating field-write pending
+path in `SemanticsValidatorExprMutationBorrows.cpp`. Both remain until
+field-view indexing and mutating field writes move fully onto the experimental
+substrate. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and
 non-empty wrapper state, and stale post-semantics bare `to_aos(...)` target classification is
 now gone from the shared emitter/lowerer path as well. The remaining backend-side
