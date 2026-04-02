@@ -945,7 +945,9 @@ experimental `soaVectorRef<T>(..., i).field` substrate.
 Standalone builtin field-view call
 forms now route through the shared synthetic `/soa_vector/field_view/<field>`
 or same-path `/soa_vector/<field>` path instead of a dedicated
-`SemanticsValidatorExprMapSoaBuiltins.cpp` fallback. The remaining live
+`SemanticsValidatorExprMapSoaBuiltins.cpp` fallback, and resolved helper-form
+field-view rejects now reuse the shared unavailable-method helper path there
+instead of an inline pending branch. The remaining live
 follow-ups are now split between richer borrowed-view semantics and richer
 mutating field-write semantics on top of that substrate.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`

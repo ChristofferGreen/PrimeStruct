@@ -2641,7 +2641,9 @@ through the experimental `soaVectorRef<T>(..., i).field` substrate instead of
 staying on the old pending-only branch.
 Standalone builtin field-view call forms now route through the shared synthetic
 `/soa_vector/field_view/<field>` or same-path `/soa_vector/<field>` method-target
-path instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback.
+path instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback,
+and resolved helper-form field-view rejects now reuse the shared unavailable-method
+helper path instead of an inline pending-diagnostic branch there.
 The remaining follow-up is therefore richer borrowed-view and mutating write
 semantics on top of the experimental substrate rather than more compiler-owned
 pending plumbing. The broader experimental wrapper/helper surface through imported

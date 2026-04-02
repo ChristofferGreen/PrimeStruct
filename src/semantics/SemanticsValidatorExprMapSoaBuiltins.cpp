@@ -384,8 +384,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return true;
   }
 
-  std::string soaFieldViewName;
-  if (resolvedMethod && splitSoaFieldViewHelperPath(resolved, &soaFieldViewName)) {
+  if (resolvedMethod && splitSoaFieldViewHelperPath(resolved)) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
         !(context.isNamedArgsPackMethodAccessCall != nullptr &&
@@ -403,7 +402,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = expr.name + " does not accept block arguments";
       return false;
     }
-    error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
+    error_ = soaFieldViewOrUnknownMethodDiagnostic(resolved);
     return false;
   }
 
