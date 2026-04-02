@@ -944,7 +944,9 @@ follow-ups are assign-target method/call field-view writes and assign-target
 indexed field-view writes. Standalone builtin field-view call
 forms now route through the shared synthetic `/soa_vector/field_view/<field>`
 or same-path `/soa_vector/<field>` path instead of a dedicated
-`SemanticsValidatorExprMapSoaBuiltins.cpp` fallback.
+`SemanticsValidatorExprMapSoaBuiltins.cpp` fallback. The remaining live
+follow-ups are now split between richer borrowed-view semantics and richer
+mutating field-write semantics on top of that substrate.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,

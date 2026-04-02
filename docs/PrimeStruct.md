@@ -2642,8 +2642,8 @@ staying as a separate branch.
 Standalone builtin field-view call forms now route through the shared synthetic
 `/soa_vector/field_view/<field>` or same-path `/soa_vector/<field>` method-target
 path instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback.
-Those remaining mutating write paths stay in place until field-view indexing and
-borrowed element writes move fully onto the experimental substrate. The broader experimental wrapper/helper surface through imported
+Those remaining mutating write paths stay in place until richer borrowed-view
+and mutating write semantics move fully onto the experimental substrate. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and
 non-empty wrapper state, and stale post-semantics bare `to_aos(...)` target classification is
 now gone from the shared emitter/lowerer path as well. The remaining backend-side
