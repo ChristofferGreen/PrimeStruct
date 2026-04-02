@@ -426,6 +426,9 @@
             "soa_vector field views are not implemented yet: ") ==
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
+            "pendingExperimentalSoaFieldViewNameForAssignTarget") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
             "soaFieldViewPendingDiagnostic(pendingSoaFieldViewName)") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(

@@ -2632,8 +2632,9 @@ both direct wrapper reads and borrowed local shorthand plus explicitly dereferen
 reads now run through the generic helper-call plus struct-field path end-to-end.
 The remaining pending-diagnostic cleanup is therefore reduced to one compiler-owned
 area in `SemanticsValidatorExprMutationBorrows.cpp`, but that area is still split
-between two concrete follow-ups: assign-target field-view writes like
-`assign(values.x(), next)` / `assign(y(values)[i], next)`, and the separate
+between three concrete follow-ups: assign-target method/call field-view writes like
+`assign(values.x(), next)` / `assign(x(values), next)`, assign-target indexed
+field-view writes like `assign(y(values)[i], next)`, and the separate
 borrowed-element field-write path like `assign(ref(values, i).field, next)`.
 Standalone builtin field-view call forms now route through the shared synthetic
 `/soa_vector/field_view/<field>` or same-path `/soa_vector/<field>` method-target
