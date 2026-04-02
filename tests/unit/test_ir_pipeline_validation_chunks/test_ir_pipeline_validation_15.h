@@ -738,6 +738,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMapSoaBuiltinsSource.find(
             "hasVisibleDefinitionPathForCurrentImports(samePath)") !=
         std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find("auto hasVisibleSamePathSoaAccessHelper =") ==
+        std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
@@ -759,6 +761,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/count\")") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find("auto hasVisibleSamePathSoaCountHelper =") ==
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "hasDeclaredDefinitionPath(\"/soa_vector/count\") ||\n"

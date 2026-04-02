@@ -84,9 +84,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     return true;
   };
-  auto hasVisibleSamePathSoaCountHelper = [&]() {
-    return hasVisibleDefinitionPathForCurrentImports("/soa_vector/count");
-  };
   auto validateDirectVectorCountCapacityCall =
       [&](const char *helperName, const char *resolvedPath) {
         handledOut = true;
@@ -236,7 +233,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
                                                        elemType)) {
         if (logicalResolvedMethod == "/soa_vector/count" &&
-            hasVisibleSamePathSoaCountHelper()) {
+            hasVisibleDefinitionPathForCurrentImports("/soa_vector/count")) {
           handledOut = false;
           return true;
         }

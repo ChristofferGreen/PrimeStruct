@@ -95,11 +95,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     return true;
   };
-  auto hasVisibleSamePathSoaAccessHelper = [&](const std::string &helperName) {
-    const std::string samePath = "/soa_vector/" + helperName;
-    return hasVisibleDefinitionPathForCurrentImports(samePath);
-  };
-
   auto validateMapContainsKeyExpr = [&](const Expr &keyExpr,
                                         const std::string &mapKeyType) -> bool {
     if (mapKeyType.empty()) {
@@ -285,7 +280,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             resolveDirectSoaReceiver,
             elemType)) {
       if ((resolved == "/soa_vector/get" || resolved == "/soa_vector/ref") &&
-          hasVisibleSamePathSoaAccessHelper(helperName)) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
         handledOut = false;
         return true;
       }
