@@ -2354,7 +2354,8 @@ bad_use_after_take() {
     `/soa_vector/push|reserve` helpers instead of degrading to builtin
     statement-only semantics or synthetic template-argument errors. Vector-target
     wrong-receiver bare/method `count/get/ref` calls, plus old-explicit method
-    `get/ref`, now also preserve visible
+    `count/get/ref`,
+    now also preserve visible
     same-path `/soa_vector/count|get|ref` user helpers instead of being pinned to the builtin
     `soa_vector` target-mismatch path.
     Root/imported builtin bare/direct `to_aos` forms on raw `soa_vector<T>`

@@ -513,6 +513,16 @@ pickCount([vector<Particle>] values) {
 }
 
 [return<auto>]
+pickCountMethod([vector<Particle>] values) {
+  return(values.count())
+}
+
+[return<auto>]
+pickCountSlash([vector<Particle>] values) {
+  return(values./soa_vector/count())
+}
+
+[return<auto>]
 pickGet([vector<Particle>] values) {
   return(get(values, 0i32))
 }
@@ -546,15 +556,19 @@ pickRefSlash([vector<Particle>] values) {
 main() {
   [vector<Particle>] values{vector<Particle>(Particle(1i32))}
   return(plus(count(values),
-              plus(get(values, 0i32),
-                   plus(ref(values, 0i32),
-                        plus(pickCount(values),
-                             plus(pickGet(values),
-                                  plus(pickGetMethod(values),
-                                       plus(pickGetSlash(values),
-                                            plus(pickRef(values),
-                                                 plus(pickRefMethod(values),
-                                                      pickRefSlash(values)))))))))))
+              plus(values.count(),
+                   plus(values./soa_vector/count(),
+                        plus(get(values, 0i32),
+                             plus(ref(values, 0i32),
+                                  plus(pickCount(values),
+                                       plus(pickCountMethod(values),
+                                            plus(pickCountSlash(values),
+                                                 plus(pickGet(values),
+                                                      plus(pickGetMethod(values),
+                                                           plus(pickGetSlash(values),
+                                                                plus(pickRef(values),
+                                                                     plus(pickRefMethod(values),
+                                                                          pickRefSlash(values))))))))))))))
 }
 )";
   std::string error;
