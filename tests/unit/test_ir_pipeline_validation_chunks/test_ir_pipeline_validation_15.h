@@ -679,6 +679,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferDefinitionSource.find("reportBuiltinSoaPendingExprDiagnostic(*valueExpr, defParams, activeLocals)") ==
         std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(") !=
+        std::string::npos);
+  CHECK(inferDefinitionSource.find(
+            "reportBuiltinSoaDirectPendingExprDiagnostic(\n"
+            "            *valueExpr, defParams, activeLocals)") !=
+        std::string::npos);
   CHECK(exprCollectionAccessValidationSource.find(
             "reportBuiltinSoaPendingExprDiagnostic(expr.args.front(), params, locals)") ==
         std::string::npos);
@@ -688,6 +695,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "reportBuiltinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)") ==
         std::string::npos);
   CHECK(statementBindingsSource.find("builtinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)") ==
+        std::string::npos);
+  CHECK(statementBindingsSource.find(
+            "reportBuiltinSoaDirectPendingExprDiagnostic(initializer, params, locals)") !=
         std::string::npos);
   CHECK(statementReturnsSource.find("reportBuiltinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
         std::string::npos);
