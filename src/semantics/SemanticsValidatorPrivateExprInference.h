@@ -252,6 +252,12 @@
                                                std::string &elemTypeOut) const;
   bool resolveExperimentalBorrowedSoaTypeText(const std::string &typeText,
                                               std::string &elemTypeOut) const;
+  bool resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
+      const Expr &target,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::function<bool(const Expr &, std::string &)> &resolveDirectReceiver,
+      std::string &elemTypeOut);
   bool resolveSoaVectorOrExperimentalBorrowedReceiver(
       const Expr &target,
       const std::vector<ParameterInfo> &params,

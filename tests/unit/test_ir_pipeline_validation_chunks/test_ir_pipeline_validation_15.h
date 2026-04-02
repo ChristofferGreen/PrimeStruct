@@ -602,6 +602,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
       repoRoot / "src" / "semantics" / "SemanticsBuiltinPathHelpers.cpp";
   const std::filesystem::path buildInitializerInferencePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorBuildInitializerInference.cpp";
+  const std::filesystem::path exprArgumentValidationCollectionsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidationCollections.cpp";
   const std::filesystem::path exprMapSoaBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMapSoaBuiltins.cpp";
   const std::filesystem::path exprCountCapacityMapBuiltinsPath =
@@ -624,6 +626,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementReturns.cpp";
   REQUIRE(std::filesystem::exists(builtinPathHelpersPath));
   REQUIRE(std::filesystem::exists(buildInitializerInferencePath));
+  REQUIRE(std::filesystem::exists(exprArgumentValidationCollectionsPath));
   REQUIRE(std::filesystem::exists(exprMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(exprCountCapacityMapBuiltinsPath));
   REQUIRE(std::filesystem::exists(inferMethodResolutionPath));
@@ -637,6 +640,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
 
   const std::string builtinPathHelpersSource = readText(builtinPathHelpersPath);
   const std::string buildInitializerInferenceSource = readText(buildInitializerInferencePath);
+  const std::string exprArgumentValidationCollectionsSource =
+      readText(exprArgumentValidationCollectionsPath);
   const std::string exprMapSoaBuiltinsSource = readText(exprMapSoaBuiltinsPath);
   const std::string exprCountCapacityMapBuiltinsSource = readText(exprCountCapacityMapBuiltinsPath);
   const std::string inferMethodResolutionSource = readText(inferMethodResolutionPath);
@@ -681,6 +686,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find("soaBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "bool SemanticsValidator::resolveDirectSoaVectorOrExperimentalBorrowedReceiver(") !=
+        std::string::npos);
   CHECK(semanticsHelpersSource.find("std::string soaFieldViewPendingDiagnostic(") ==
         std::string::npos);
   CHECK(semanticsHelpersSource.find("std::string soaBorrowedViewPendingDiagnostic()") ==
@@ -717,12 +725,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "          candidate, params, locals, resolveDirectReceiver, elemType)") !=
         std::string::npos);
+  CHECK(inferMethodResolutionSource.find("auto extractBorrowedBinding =") ==
+        std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("resolvedOut = soaFieldViewHelperPath(normalizedMethodName);") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "        candidate, params, locals, resolveDirectReceiver, elemTypeOut)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find("auto extractBorrowedBinding =") ==
         std::string::npos);
   CHECK(exprCollectionAccessSource.find(
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"

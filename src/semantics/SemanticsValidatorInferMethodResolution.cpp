@@ -260,30 +260,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     auto resolveSoaVectorOrExperimentalBorrowedReceiver = [&](const Expr &candidate) -> bool {
       auto resolveDirectReceiver = [&](const Expr &directCandidate,
                                        std::string &directElemTypeOut) -> bool {
-        if (resolveSoaVectorTarget(directCandidate, directElemTypeOut)) {
-          return true;
-        }
-        if (directCandidate.kind != Expr::Kind::Name) {
-          return false;
-        }
-        auto extractBorrowedBinding = [&](const BindingInfo &binding) -> bool {
-          const std::string normalizedType =
-              normalizeBindingTypeName(binding.typeName);
-          if (normalizedType != "Reference" &&
-              normalizedType != "Pointer") {
-            return false;
-          }
-          return extractExperimentalSoaVectorElementType(binding,
-                                                         directElemTypeOut);
-        };
-        if (const BindingInfo *paramBinding =
-                findParamBinding(params, directCandidate.name)) {
-          return extractBorrowedBinding(*paramBinding);
-        }
-        if (auto it = locals.find(directCandidate.name); it != locals.end()) {
-          return extractBorrowedBinding(it->second);
-        }
-        return false;
+        return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
+            directCandidate, params, locals, resolveSoaVectorTarget,
+            directElemTypeOut);
       };
       return this->resolveSoaVectorOrExperimentalBorrowedReceiver(
           candidate, params, locals, resolveDirectReceiver, elemType);

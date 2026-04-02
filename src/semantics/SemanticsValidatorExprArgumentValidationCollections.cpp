@@ -377,7 +377,7 @@ bool SemanticsValidator::resolveExperimentalBorrowedSoaTypeText(
   return extractExperimentalSoaVectorElementType(inferredBinding, elemTypeOut);
 }
 
-bool SemanticsValidator::resolveSoaVectorOrExperimentalBorrowedReceiver(
+bool SemanticsValidator::resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
     const Expr &target,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -386,12 +386,46 @@ bool SemanticsValidator::resolveSoaVectorOrExperimentalBorrowedReceiver(
   if (resolveDirectReceiver(target, elemTypeOut)) {
     return true;
   }
+  if (target.kind != Expr::Kind::Name) {
+    return false;
+  }
+
+  auto extractBorrowedBinding = [&](const BindingInfo &binding) -> bool {
+    const std::string normalizedType =
+        normalizeBindingTypeName(binding.typeName);
+    if (normalizedType != "Reference" &&
+        normalizedType != "Pointer") {
+      return false;
+    }
+    return extractExperimentalSoaVectorElementType(binding, elemTypeOut);
+  };
+
+  if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+    return extractBorrowedBinding(*paramBinding);
+  }
+  if (auto it = locals.find(target.name); it != locals.end()) {
+    return extractBorrowedBinding(it->second);
+  }
+  return false;
+}
+
+bool SemanticsValidator::resolveSoaVectorOrExperimentalBorrowedReceiver(
+    const Expr &target,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::function<bool(const Expr &, std::string &)> &resolveDirectReceiver,
+    std::string &elemTypeOut) {
+  if (resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
+          target, params, locals, resolveDirectReceiver, elemTypeOut)) {
+    return true;
+  }
   if (target.kind != Expr::Kind::Call) {
     return false;
   }
 
   auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
-    if (resolveDirectReceiver(valueExpr, elemTypeOut)) {
+    if (resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
+            valueExpr, params, locals, resolveDirectReceiver, elemTypeOut)) {
       return true;
     }
     if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
