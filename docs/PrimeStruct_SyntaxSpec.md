@@ -969,9 +969,10 @@ directly instead of wrapping back through the full unavailable-method formatter,
 and the low-level field-view and borrowed-view pending string builders are now
 file-local to the shared helper implementation instead of part of the public
 semantics-helper surface, while direct collection-access, count/capacity
-builtin validation, SoA builtin validation, and method-target/infer borrowed
-experimental receiver handling now also share one borrowed experimental
-receiver probe instead of keeping duplicated inline lambdas.
+builtin validation, SoA builtin validation, collection dispatch inference, and
+method-target/infer borrowed experimental receiver handling now also share one
+borrowed experimental receiver probe instead of keeping duplicated inline
+lambdas.
 Standalone builtin field-view call
 forms now route through the shared synthetic `/soa_vector/field_view/<field>`
 or same-path `/soa_vector/<field>` path instead of a dedicated

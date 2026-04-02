@@ -428,6 +428,12 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("auto isDirectMapConstructorCall = [") !=
         std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "            target, params, locals, resolveDirectReceiver, elemType)") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find("auto resolveInlineBorrowedSoaBinding =") ==
+        std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("state->resolveSoaVectorTarget = [") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("state->resolveBufferTarget = [") !=

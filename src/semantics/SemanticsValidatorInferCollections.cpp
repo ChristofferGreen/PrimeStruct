@@ -595,48 +595,17 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         bindingOut.typeTemplateArg.clear();
       }
     };
-    auto resolveInlineBorrowedSoaBinding = [&](const Expr &candidate) -> bool {
-      auto resolveValueBinding = [&](const Expr &valueExpr) -> bool {
-        BindingInfo valueBinding;
-        if (resolveBindingTarget(valueExpr, valueBinding) &&
-            resolveSoaVectorBinding(valueBinding, elemType)) {
-          return true;
-        }
-        if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
-          return false;
-        }
-        std::string inferredTypeText;
-        if (!inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText)) {
-          return false;
-        }
-        extractBindingFromTypeText(inferredTypeText, valueBinding);
-        return resolveSoaVectorBinding(valueBinding, elemType);
-      };
-      if (!candidate.isBinding &&
-          isSimpleCallName(candidate, "location") &&
-          candidate.args.size() == 1) {
-        return resolveValueBinding(candidate.args.front());
-      }
-      if (!candidate.isBinding &&
-          isSimpleCallName(candidate, "dereference") &&
-          candidate.args.size() == 1) {
-        const Expr &borrowedExpr = candidate.args.front();
-        return borrowedExpr.kind == Expr::Kind::Call &&
-               !borrowedExpr.isBinding &&
-               isSimpleCallName(borrowedExpr, "location") &&
-               borrowedExpr.args.size() == 1 &&
-               resolveValueBinding(borrowedExpr.args.front());
-      }
-      return false;
+    auto resolveDirectReceiver = [&](const Expr &candidate,
+                                     std::string &elemTypeOut) -> bool {
+      BindingInfo binding;
+      return resolveBindingTarget(candidate, binding) &&
+             resolveSoaVectorBinding(binding, elemTypeOut);
     };
-    BindingInfo binding;
-    if (resolveBindingTarget(target, binding)) {
-      return resolveSoaVectorBinding(binding, elemType);
+    if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            target, params, locals, resolveDirectReceiver, elemType)) {
+      return true;
     }
     if (target.kind == Expr::Kind::Call) {
-      if (resolveInlineBorrowedSoaBinding(target)) {
-        return true;
-      }
       std::string indexedElemType;
       if (state->resolveIndexedArgsPackElementType(target, indexedElemType) &&
           extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
