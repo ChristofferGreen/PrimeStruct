@@ -104,6 +104,11 @@
       const Expr &expr,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals);
+  bool extractExperimentalSoaAssignFieldViewName(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      std::string *fieldNameOut = nullptr);
   bool graphBindingIsUsable(const BindingInfo &binding) const;
   bool shouldBypassGraphBindingLookup(const Expr &candidate) const;
   bool hasDirectExperimentalVectorImport() const;
