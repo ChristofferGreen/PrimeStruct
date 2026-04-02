@@ -938,10 +938,12 @@ helper/conversion path for local, parameter, helper-return, inline `location(...
 struct-helper return, and inline location-wrapped method-like struct-helper return receivers
 instead of stopping on raw builtin target mismatch or the old helper-return lowerer mismatch.
 The remaining compiler-owned pending cleanup is now narrowed to the mutating
-field-write path in `SemanticsValidatorExprMutationBorrows.cpp`. Standalone
-builtin field-view call forms now route through the shared synthetic
-`/soa_vector/field_view/<field>` or same-path `/soa_vector/<field>` path
-instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback.
+field-write area in `SemanticsValidatorExprMutationBorrows.cpp`, but that area
+still has two distinct follow-ups: assign-target field-view writes and
+`ref(...).field` borrowed-element writes. Standalone builtin field-view call
+forms now route through the shared synthetic `/soa_vector/field_view/<field>`
+or same-path `/soa_vector/<field>` path instead of a dedicated
+`SemanticsValidatorExprMapSoaBuiltins.cpp` fallback.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,

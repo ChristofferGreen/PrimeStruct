@@ -2630,14 +2630,16 @@ gone too. The current successful read-only `value.field()[i]` path likewise no l
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
 both direct wrapper reads and borrowed local shorthand plus explicitly dereferenced borrowed local
 reads now run through the generic helper-call plus struct-field path end-to-end.
-The remaining pending-diagnostic cleanup is therefore reduced to one explicit
-compiler-owned path: the mutating field-write pending path in
-`SemanticsValidatorExprMutationBorrows.cpp`. Standalone builtin field-view call
-forms now route through the shared synthetic `/soa_vector/field_view/<field>`
-or same-path `/soa_vector/<field>` method-target path instead of a dedicated
-`SemanticsValidatorExprMapSoaBuiltins.cpp` fallback. The remaining mutating
-field-write path stays in place until field-view indexing and mutating field
-writes move fully onto the experimental substrate. The broader experimental wrapper/helper surface through imported
+The remaining pending-diagnostic cleanup is therefore reduced to one compiler-owned
+area in `SemanticsValidatorExprMutationBorrows.cpp`, but that area is still split
+between two concrete follow-ups: assign-target field-view writes like
+`assign(values.x(), next)` / `assign(y(values)[i], next)`, and the separate
+borrowed-element field-write path like `assign(ref(values, i).field, next)`.
+Standalone builtin field-view call forms now route through the shared synthetic
+`/soa_vector/field_view/<field>` or same-path `/soa_vector/<field>` method-target
+path instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback.
+Those remaining mutating write paths stay in place until field-view indexing and
+borrowed element writes move fully onto the experimental substrate. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and
 non-empty wrapper state, and stale post-semantics bare `to_aos(...)` target classification is
 now gone from the shared emitter/lowerer path as well. The remaining backend-side
