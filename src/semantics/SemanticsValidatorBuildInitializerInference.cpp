@@ -119,7 +119,7 @@ bool SemanticsValidator::isBuiltinSoaRefExpr(
            builtinCollection == "soa_vector";
   };
 
-  if (hasVisibleSoaRefHelper()) {
+  if (hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")) {
     return false;
   }
 
@@ -275,10 +275,6 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   return false;
 }
 
-bool SemanticsValidator::hasVisibleSoaRefHelper() const {
-  return hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref");
-}
-
 bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
     std::string_view path) const {
   const std::string ownedPath(path);
@@ -289,7 +285,8 @@ bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
 std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(
     std::string_view resolvedPath) const {
   return soaUnavailableMethodDiagnostic(resolvedPath,
-                                        hasVisibleSoaRefHelper());
+                                        hasVisibleDefinitionPathForCurrentImports(
+                                            "/soa_vector/ref"));
 }
 
 bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(

@@ -674,10 +674,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "bool SemanticsValidator::hasVisibleSoaRefHelper() const {") !=
+            "bool SemanticsValidator::hasVisibleSoaRefHelper() const {") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "if (hasVisibleSoaRefHelper()) {") !=
+            "if (hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")) {") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "std::optional<std::string> SemanticsValidator::builtinSoaPendingExprDiagnostic(") ==
@@ -759,7 +759,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "            soaReceiver, params, locals, resolveDirectReceiver, elemType)") !=
         std::string::npos);
-  CHECK(inferMethodResolutionSource.find("this->hasVisibleSoaRefHelper()") !=
+  CHECK(inferMethodResolutionSource.find("this->hasVisibleSoaRefHelper()") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")") !=
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("hasVisibleDefinitionPathForCurrentImports(") !=
         std::string::npos);
@@ -775,7 +778,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "          receiver, params, locals, resolveDirectReceiver, elemType)") !=
         std::string::npos);
-  CHECK(exprMethodTargetResolutionSource.find("this->hasVisibleSoaRefHelper()") !=
+  CHECK(exprMethodTargetResolutionSource.find("this->hasVisibleSoaRefHelper()") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("hasVisibleDefinitionPathForCurrentImports(") !=
         std::string::npos);
