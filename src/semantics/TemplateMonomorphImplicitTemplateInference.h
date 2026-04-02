@@ -197,7 +197,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
     const bool isCanonicalBuiltinSoaRefCall =
         normalizedName == "std/collections/soa_vector/ref" ||
         resolvedPath == "/std/collections/soa_vector/ref";
-    if (normalizedName == "ref" || isCanonicalBuiltinSoaRefCall) {
+    const bool isOldSurfaceBuiltinSoaRefCall =
+        normalizedName == "soa_vector/ref" || resolvedPath == "/soa_vector/ref";
+    if (normalizedName == "ref" || isCanonicalBuiltinSoaRefCall ||
+        isOldSurfaceBuiltinSoaRefCall) {
       if (ctx.sourceDefs.count("/soa_vector/ref") > 0 ||
           ctx.helperOverloads.count("/soa_vector/ref") > 0) {
         return {};

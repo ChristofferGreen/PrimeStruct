@@ -2336,7 +2336,8 @@ bad_use_after_take() {
     `soa_vector<T>()` literals lower to header-only storage, and builtin `ref(...)` now rejects direct and helper-return
     local binding persistence plus direct and helper-return call-argument/return escapes with
     `soa_vector borrowed views are not implemented yet: ref`
-    until the borrowed-view substrate exists.
+    until the borrowed-view substrate exists, including old-explicit
+    `/soa_vector/ref(...)` call-argument escapes.
     Non-empty SoA literals still emit the deterministic unsupported diagnostic `native
     backend does not support non-empty soa_vector literals`. Root builtin `push(...)`,
     `reserve(...)`, `values.push(...)`, `values.reserve(...)`, and old explicit
