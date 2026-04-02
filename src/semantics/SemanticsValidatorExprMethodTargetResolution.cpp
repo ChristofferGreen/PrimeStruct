@@ -1494,6 +1494,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return canonical;
   };
+  auto preferredSoaMutatorMethodTarget = [&](std::string_view helperName) {
+    const std::string canonical = "/std/collections/soa_vector/" + std::string(helperName);
+    const std::string samePath = "/soa_vector/" + std::string(helperName);
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return samePath;
+    }
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   auto resolveSoaVectorOrExperimentalBorrowedReceiver = [&](const Expr &candidate,
                                                             std::string &elemTypeOut) -> bool {
     if (resolveSoaVectorTarget(candidate, elemTypeOut)) {
@@ -1715,6 +1726,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (normalizedMethodName == "ref" && collectionTypePath == "/soa_vector") {
       return setCollectionMethodTarget(preferredSoaRefMethodTarget());
+    }
+    if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
+        collectionTypePath == "/soa_vector") {
+      return setCollectionMethodTarget(preferredSoaMutatorMethodTarget(normalizedMethodName));
     }
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
       return setCollectionMethodTarget("/to_soa");

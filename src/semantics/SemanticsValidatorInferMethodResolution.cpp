@@ -96,6 +96,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return canonical;
   };
+  auto preferredSoaMutatorMethodTarget = [&](std::string_view helperName) {
+    const std::string canonical = "/std/collections/soa_vector/" + std::string(helperName);
+    const std::string samePath = "/soa_vector/" + std::string(helperName);
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return samePath;
+    }
+    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
       if (normalizedMethodName == "count" &&
@@ -209,6 +220,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (normalizedMethodName == "ref" && collectionTypePath == "/soa_vector") {
       resolvedOut = preferredSoaRefMethodTarget();
+      return true;
+    }
+    if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
+        collectionTypePath == "/soa_vector") {
+      resolvedOut = preferredSoaMutatorMethodTarget(normalizedMethodName);
       return true;
     }
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {

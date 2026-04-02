@@ -128,6 +128,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return canonical;
   };
+  auto preferredSoaMethodTarget = [&](std::string_view helperName) {
+    const std::string samePath = "/soa_vector/" + std::string(helperName);
+    const std::string canonical = "/std/collections/soa_vector/" + std::string(helperName);
+    if (hasDefinitionFamilyPath(samePath)) {
+      return samePath;
+    }
+    if (hasDefinitionFamilyPath(canonical)) {
+      return canonical;
+    }
+    return canonical;
+  };
   const Expr &receiver = expr.args.front();
   if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
     if (methodName == "result") {
@@ -252,6 +263,11 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   if (normalizedTypeName == "soa_vector" && normalizedMethodName == "to_aos") {
     pathOut = selectHelperOverloadPath(expr, preferredSoaToAosMethodTarget(), ctx);
+    return true;
+  }
+  if (normalizedTypeName == "soa_vector" &&
+      (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
+    pathOut = selectHelperOverloadPath(expr, preferredSoaMethodTarget(normalizedMethodName), ctx);
     return true;
   }
   std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);

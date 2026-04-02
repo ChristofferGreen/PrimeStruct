@@ -3507,6 +3507,75 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("push helper shadow works for helper-return bare and method expressions") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[return<int>]
+/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+  return(value.x)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [Particle] value{Particle(13i32)}
+  return(plus(push(holder.cloneValues(), value), holder.cloneValues().push(value)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reserve helper shadow works for helper-return bare and method expressions") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[return<int>]
+/soa_vector/reserve([SoaVector<Particle>] values, [int] count) {
+  return(count)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(plus(reserve(holder.cloneValues(), 7i32), holder.cloneValues().reserve(10i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("push and reserve bare and method forms validate on experimental soa_vector bindings") {
   const std::string source = R"(
 import /std/collections/*

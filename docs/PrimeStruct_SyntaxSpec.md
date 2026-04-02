@@ -833,7 +833,10 @@ canonical `/std/collections/soa_vector/count` helper path while still preserving
 helper names on helper-return builtin `soa_vector` receivers now also canonicalize from the
 receiver family before experimental wrapper rewriting, so `count(holder.cloneValues())` and
 `get(holder.cloneValues(), i).field` stay on the canonical helper surface instead of leaking
-through unresolved root helper names. The equivalent
+through unresolved root helper names. Helper-return expression-position bare and method
+`push(...)` / `reserve(...)` now also preserve same-path `/soa_vector/push` and
+`/soa_vector/reserve` user-helper shadowing instead of degrading to the old builtin
+statement-only mutator contract. The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now also prefers
 the canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
 `/soa_vector/get` user-helper shadowing. The equivalent helper-return method/infer fallback for

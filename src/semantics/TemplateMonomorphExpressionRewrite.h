@@ -407,6 +407,16 @@ bool rewriteExpr(Expr &expr,
         inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
       return std::string("/soa_vector/count");
     }
+    if (helperName == "push" &&
+        hasDefinitionFamilyPath("/soa_vector/push") &&
+        inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
+      return std::string("/soa_vector/push");
+    }
+    if (helperName == "reserve" &&
+        hasDefinitionFamilyPath("/soa_vector/reserve") &&
+        inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
+      return std::string("/soa_vector/reserve");
+    }
     if (helperName == "get" &&
         hasDefinitionFamilyPath("/soa_vector/get") &&
         inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
