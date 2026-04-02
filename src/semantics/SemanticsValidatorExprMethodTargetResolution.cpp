@@ -1453,10 +1453,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto preferredSoaCountMethodTarget = [&]() {
     const std::string canonical = "/std/collections/soa_vector/count";
     const std::string samePath = "/soa_vector/count";
-    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
       return samePath;
     }
-    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
       return canonical;
     }
     return canonical;
@@ -1464,10 +1464,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto preferredSoaGetMethodTarget = [&]() {
     const std::string canonical = "/std/collections/soa_vector/get";
     const std::string samePath = "/soa_vector/get";
-    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
       return samePath;
     }
-    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
       return canonical;
     }
     return canonical;
@@ -1475,10 +1475,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto preferredSoaRefMethodTarget = [&]() {
     const std::string canonical = "/std/collections/soa_vector/ref";
     const std::string samePath = "/soa_vector/ref";
-    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
       return samePath;
     }
-    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
       return canonical;
     }
     return canonical;
@@ -1486,10 +1486,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto preferredSoaToAosMethodTarget = [&]() {
     const std::string canonical = "/std/collections/soa_vector/to_aos";
     const std::string samePath = "/to_aos";
-    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
       return samePath;
     }
-    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
       return canonical;
     }
     return canonical;
@@ -1497,10 +1497,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto preferredSoaMutatorMethodTarget = [&](std::string_view helperName) {
     const std::string canonical = "/std/collections/soa_vector/" + std::string(helperName);
     const std::string samePath = "/soa_vector/" + std::string(helperName);
-    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
       return samePath;
     }
-    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
       return canonical;
     }
     return canonical;

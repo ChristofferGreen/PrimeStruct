@@ -528,6 +528,24 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(samePath)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(canonical)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(samePath)") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(canonical)") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
+        std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("size_t SemanticsValidator::mapHelperReceiverIndex") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::bareMapHelperOperandIndices") !=
