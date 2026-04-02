@@ -700,9 +700,17 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferMethodResolutionSource.find("resolvedOut = soaFieldViewHelperPath(normalizedMethodName);") !=
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "          candidate, params, locals, resolveDirectReceiver, elemType)") !=
+        std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("resolvedOut = soaFieldViewHelperPath(normalizedMethodName);") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "        candidate, params, locals, resolveDirectReceiver, elemTypeOut)") !=
+        std::string::npos);
   CHECK(exprCollectionAccessSource.find(
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "            receiverCandidate,") !=

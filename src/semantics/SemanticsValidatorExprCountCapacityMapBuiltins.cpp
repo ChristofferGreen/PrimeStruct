@@ -83,28 +83,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     return nullptr;
   };
-  auto resolveExperimentalBorrowedSoaTypeText = [&](const std::string &typeText,
-                                                    std::string &elemTypeOut) -> bool {
-    BindingInfo inferredBinding;
-    const std::string normalizedType = normalizeBindingTypeName(typeText);
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(normalizedType, base, argText)) {
-      inferredBinding.typeName = normalizeBindingTypeName(base);
-      inferredBinding.typeTemplateArg = argText;
-    } else {
-      inferredBinding.typeName = normalizedType;
-      inferredBinding.typeTemplateArg.clear();
-    }
-    const std::string normalizedBindingType =
-        normalizeBindingTypeName(inferredBinding.typeName);
-    if (normalizedBindingType != "Reference" &&
-        normalizedBindingType != "Pointer") {
-      return false;
-    }
-    return extractExperimentalSoaVectorElementType(inferredBinding,
-                                                   elemTypeOut);
-  };
   auto resolveSoaVectorOrExperimentalBorrowedTarget =
       [&](const Expr &target, std::string &elemTypeOut) -> bool {
     if ((*dispatchResolvers).resolveSoaVectorTarget(target, elemTypeOut)) {
@@ -124,8 +102,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
            !target.isBinding &&
            inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
            !inferredTypeText.empty() &&
-           resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
-                                                  elemTypeOut);
+           this->resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
+                                                        elemTypeOut);
   };
   auto validateSoaHelperReturnTemplateArgs =
       [&](const Expr &receiverExpr, const std::string &elemType, const char *helperName) {
