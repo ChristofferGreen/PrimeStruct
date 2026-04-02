@@ -204,8 +204,6 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (!resolvesBuiltinSoaReceiver(candidate.args.front())) {
       return {};
     }
-    const bool hasVisibleSoaRefHelper =
-        hasVisibleDefinitionPathForMonomorph(ctx, "/soa_vector/ref");
     if (candidate.isMethodCall) {
       if (const auto pending =
               soaPendingUnavailableMethodDiagnosticForMonomorph(
@@ -220,7 +218,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedName == "soa_vector/ref" || resolvedPath == "/soa_vector/ref";
     if (normalizedName == "ref" || isCanonicalBuiltinSoaRefCall ||
         isOldSurfaceBuiltinSoaRefCall) {
-      if (hasVisibleSoaRefHelper) {
+      if (hasVisibleDefinitionPathForMonomorph(ctx, "/soa_vector/ref")) {
         return {};
       }
       if (isCanonicalBuiltinSoaRefCall &&

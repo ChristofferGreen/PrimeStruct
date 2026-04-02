@@ -2662,8 +2662,8 @@ helper-shadow, vector-helper routing, preferred-target selection,
 return-inference paths, and builtin SoA access/count helper fallback
 validation,
 while monomorph-side visible `/soa_vector/ref` fallback detection now also
-uses that same shared definition-visibility helper instead of a dedicated
-ref-specific wrapper,
+uses that same shared definition-visibility helper directly instead of a
+dedicated ref-specific wrapper or local visibility cache,
 while monomorph-side visible same-path `/soa_vector/<field>` helper checks now
 also route through that same shared definition-visibility helper instead of
 probing `sourceDefs` and `helperOverloads` inline,
