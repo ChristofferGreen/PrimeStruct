@@ -429,6 +429,9 @@
             "pendingExperimentalSoaFieldViewNameForAssignTarget") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
+            "extractExperimentalSoaFieldViewName") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
             "soaFieldViewPendingDiagnostic(pendingSoaFieldViewName)") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(

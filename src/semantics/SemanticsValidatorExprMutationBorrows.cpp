@@ -217,57 +217,51 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
       return false;
     };
-    fieldNameOut.clear();
-    if (target.kind == Expr::Kind::Call && target.isFieldAccess &&
-        target.args.size() == 1) {
-      const Expr &receiver = target.args.front();
-      if (receiver.kind == Expr::Kind::Call &&
-          receiver.name.rfind("/std/collections/experimental_soa_vector/soaVectorGet", 0) == 0) {
-        fieldNameOut = target.name;
-        return !fieldNameOut.empty();
-      }
-      const Expr *soaRefReceiverTarget = nullptr;
-      if (resolveSoaRefReceiverTarget(receiver, soaRefReceiverTarget) &&
-          soaRefReceiverTarget != nullptr) {
-        std::string elemType;
-        if (resolveExperimentalSoaOrBorrowedReceiver(*soaRefReceiverTarget,
-                                                     elemType)) {
-          fieldNameOut = target.name;
-          return !fieldNameOut.empty();
+    std::function<bool(const Expr &, std::string &)>
+        extractExperimentalSoaFieldViewName;
+    extractExperimentalSoaFieldViewName =
+        [&](const Expr &candidate, std::string &candidateFieldNameOut) -> bool {
+      candidateFieldNameOut.clear();
+      if (candidate.kind == Expr::Kind::Call && candidate.isFieldAccess &&
+          candidate.args.size() == 1) {
+        const Expr &receiver = candidate.args.front();
+        if (receiver.kind == Expr::Kind::Call &&
+            receiver.name.rfind(
+                "/std/collections/experimental_soa_vector/soaVectorGet",
+                0) == 0) {
+          candidateFieldNameOut = candidate.name;
+          return !candidateFieldNameOut.empty();
+        }
+        const Expr *soaRefReceiverTarget = nullptr;
+        if (resolveSoaRefReceiverTarget(receiver, soaRefReceiverTarget) &&
+            soaRefReceiverTarget != nullptr &&
+            receiverHasExperimentalSoaField(*soaRefReceiverTarget,
+                                            candidate.name)) {
+          candidateFieldNameOut = candidate.name;
+          return !candidateFieldNameOut.empty();
         }
       }
-    }
-    if (target.kind == Expr::Kind::Call && !target.isBinding &&
-        !target.isFieldAccess &&
-        target.templateArgs.empty() && !target.hasBodyArguments &&
-        target.bodyArguments.empty() && !hasNamedArguments(target.argNames) &&
-        target.args.size() == 1 && !target.name.empty() &&
-        target.name.find('/') == std::string::npos) {
-      const Expr &receiver = target.args.front();
-      if (receiverHasExperimentalSoaField(receiver, target.name)) {
-        fieldNameOut = target.name;
-        return true;
+      if (candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
+          !candidate.isFieldAccess && candidate.templateArgs.empty() &&
+          !candidate.hasBodyArguments && candidate.bodyArguments.empty() &&
+          !hasNamedArguments(candidate.argNames) &&
+          candidate.args.size() == 1 && !candidate.name.empty() &&
+          candidate.name.find('/') == std::string::npos) {
+        const Expr &receiver = candidate.args.front();
+        if (receiverHasExperimentalSoaField(receiver, candidate.name)) {
+          candidateFieldNameOut = candidate.name;
+          return true;
+        }
       }
-    }
-    std::string accessName;
-    if (!getBuiltinArrayAccessName(target, accessName) || target.args.size() != 2) {
-      return false;
-    }
-    const Expr &fieldViewExpr = target.args.front();
-    if (fieldViewExpr.kind != Expr::Kind::Call || fieldViewExpr.isBinding ||
-        fieldViewExpr.name.empty() || fieldViewExpr.name.find('/') != std::string::npos ||
-        !fieldViewExpr.templateArgs.empty() || fieldViewExpr.hasBodyArguments ||
-        !fieldViewExpr.bodyArguments.empty() ||
-        hasNamedArguments(fieldViewExpr.argNames) ||
-        fieldViewExpr.args.size() != 1) {
-      return false;
-    }
-    if (!receiverHasExperimentalSoaField(fieldViewExpr.args.front(),
-                                         fieldViewExpr.name)) {
-      return false;
-    }
-    fieldNameOut = fieldViewExpr.name;
-    return true;
+      std::string accessName;
+      if (!getBuiltinArrayAccessName(candidate, accessName) ||
+          candidate.args.size() != 2) {
+        return false;
+      }
+      return extractExperimentalSoaFieldViewName(candidate.args.front(),
+                                                 candidateFieldNameOut);
+    };
+    return extractExperimentalSoaFieldViewName(target, fieldNameOut);
   };
   auto isVectorOrArrayIndexedTarget = [&](const Expr &target) -> bool {
     auto bindingTargetsVectorOrArray = [&](const BindingInfo &binding,
