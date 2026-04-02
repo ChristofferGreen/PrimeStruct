@@ -800,6 +800,26 @@ bool hasVisibleRootSoaHelper(const Program &program, std::string_view helperName
   return false;
 }
 
+bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
+                                             std::string_view helperName) {
+  const std::string samePath = "/soa_vector/" + std::string(helperName);
+  for (const Definition &def : program.definitions) {
+    if (def.fullPath != samePath || def.parameters.empty()) {
+      continue;
+    }
+    if (extractExperimentalSoaVectorBinding(def.parameters.front()).has_value()) {
+      return true;
+    }
+  }
+  const auto &importPaths = program.sourceImports.empty() ? program.imports : program.sourceImports;
+  for (const auto &importPath : importPaths) {
+    if (localImportPathCoversTarget(importPath, samePath)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::vector<std::string> candidateDefinitionPaths(const Expr &expr, const std::string &definitionNamespace) {
   std::vector<std::string> candidatePaths;
   if (!expr.name.empty() && expr.name.front() == '/') {
@@ -2205,6 +2225,187 @@ std::vector<std::string> candidatePathsForExprCall(
     const std::unordered_set<std::string> *structPaths);
 
 bool isStructLikeDefinition(const Definition &def);
+
+void rewriteExperimentalSoaSamePathHelperMethodExpr(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_set<std::string> &structPaths,
+    const std::string &definitionNamespace,
+    const std::unordered_set<std::string> &visibleSoaHelpers);
+
+void rewriteExperimentalSoaSamePathHelperMethodStatements(
+    std::vector<Expr> &statements,
+    std::unordered_map<std::string, semantics::BindingInfo> bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_set<std::string> &structPaths,
+    const std::string &definitionNamespace,
+    const std::unordered_set<std::string> &visibleSoaHelpers) {
+  for (Expr &stmt : statements) {
+    rewriteExperimentalSoaSamePathHelperMethodExpr(
+        stmt,
+        bindings,
+        soaVectorReturnDefinitions,
+        structPaths,
+        definitionNamespace,
+        visibleSoaHelpers);
+    if (!stmt.bodyArguments.empty()) {
+      auto bodyBindings = bindings;
+      rewriteExperimentalSoaSamePathHelperMethodStatements(
+          stmt.bodyArguments,
+          bodyBindings,
+          soaVectorReturnDefinitions,
+          structPaths,
+          definitionNamespace,
+          visibleSoaHelpers);
+    }
+    if (stmt.isBinding) {
+      if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths);
+          binding.has_value()) {
+        bindings[stmt.name] = *binding;
+      }
+    }
+  }
+}
+
+void rewriteExperimentalSoaSamePathHelperMethodExpr(
+    Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_set<std::string> &structPaths,
+    const std::string &definitionNamespace,
+    const std::unordered_set<std::string> &visibleSoaHelpers) {
+  for (Expr &arg : expr.args) {
+    rewriteExperimentalSoaSamePathHelperMethodExpr(
+        arg,
+        bindings,
+        soaVectorReturnDefinitions,
+        structPaths,
+        definitionNamespace,
+        visibleSoaHelpers);
+  }
+  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
+      expr.args.front().kind == Expr::Kind::Literal) {
+    return;
+  }
+
+  std::string helperName = expr.name;
+  if (!helperName.empty() && helperName.front() == '/') {
+    helperName.erase(helperName.begin());
+  }
+  if (helperName.rfind("std/collections/soa_vector/", 0) == 0) {
+    helperName = helperName.substr(std::string("std/collections/soa_vector/").size());
+  } else if (helperName.rfind("soa_vector/", 0) == 0) {
+    helperName = helperName.substr(std::string("soa_vector/").size());
+  }
+  if (helperName != "count" && helperName != "get" &&
+      helperName != "ref" && helperName != "push" &&
+      helperName != "reserve") {
+    return;
+  }
+  const std::string helperPath = "/soa_vector/" + helperName;
+
+  std::optional<semantics::BindingInfo> receiverBinding;
+  const Expr &receiver = expr.args.front();
+  if (visibleSoaHelpers.count(helperPath) > 0 && receiver.kind == Expr::Kind::Name) {
+    auto bindingIt = bindings.find(receiver.name);
+    if (bindingIt != bindings.end() && isExperimentalSoaVectorBinding(bindingIt->second)) {
+      receiverBinding = bindingIt->second;
+    }
+  } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
+    for (const std::string &candidatePath :
+         candidatePathsForExprCall(receiver, definitionNamespace, &bindings, &structPaths)) {
+      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+      if (returnIt != soaVectorReturnDefinitions.end() &&
+          isExperimentalSoaVectorBinding(returnIt->second)) {
+        receiverBinding = returnIt->second;
+        break;
+      }
+    }
+  }
+  if (!receiverBinding.has_value()) {
+    return;
+  }
+
+  expr.isMethodCall = false;
+  expr.isFieldAccess = false;
+  expr.name = visibleSoaHelpers.count(helperPath) > 0
+                  ? helperPath
+                  : "/std/collections/soa_vector/" + helperName;
+  expr.namespacePrefix.clear();
+}
+
+bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &error) {
+  error.clear();
+  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_set<std::string> structPaths;
+  std::unordered_set<std::string> visibleSoaHelpers;
+  for (const Definition &def : program.definitions) {
+    if (auto binding = extractExperimentalSoaVectorReturnBindingImpl(def, false);
+        binding.has_value()) {
+      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
+        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+      }
+    }
+    if (isStructLikeDefinition(def)) {
+      structPaths.insert(def.fullPath);
+    }
+  }
+  for (std::string_view helperName : {
+           std::string_view("count"),
+           std::string_view("get"),
+           std::string_view("ref"),
+           std::string_view("push"),
+           std::string_view("reserve")}) {
+    if (hasVisibleExperimentalSoaSamePathHelper(program, helperName)) {
+      visibleSoaHelpers.insert("/soa_vector/" + std::string(helperName));
+    }
+  }
+  for (Definition &def : program.definitions) {
+    if (def.fullPath.rfind("/soa_vector/", 0) == 0 ||
+        def.fullPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0) {
+      continue;
+    }
+    std::unordered_map<std::string, semantics::BindingInfo> bindings;
+    for (const Expr &param : def.parameters) {
+      if (auto binding = extractParsedOrExperimentalSoaBindingInfo(param, &structPaths);
+          binding.has_value()) {
+        bindings[param.name] = *binding;
+      }
+    }
+    std::string definitionNamespace;
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash != std::string::npos && slash > 0) {
+      definitionNamespace = def.fullPath.substr(0, slash);
+    }
+    rewriteExperimentalSoaSamePathHelperMethodStatements(
+        def.statements,
+        bindings,
+        soaVectorReturnDefinitions,
+        structPaths,
+        definitionNamespace,
+        visibleSoaHelpers);
+    if (def.returnExpr.has_value()) {
+      auto returnBindings = bindings;
+      for (const Expr &stmt : def.statements) {
+        if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths);
+            binding.has_value()) {
+          returnBindings[stmt.name] = *binding;
+        }
+      }
+      rewriteExperimentalSoaSamePathHelperMethodExpr(
+          *def.returnExpr,
+          returnBindings,
+          soaVectorReturnDefinitions,
+          structPaths,
+          definitionNamespace,
+          visibleSoaHelpers);
+    }
+  }
+  return true;
+}
 
 void rewriteExperimentalSoaToAosMethodStatements(
     std::vector<Expr> &statements,
@@ -3678,6 +3879,9 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (!rewriteExperimentalSoaInlineBorrowMethods(program, error)) {
+    return false;
+  }
+  if (!rewriteExperimentalSoaSamePathHelperMethods(program, error)) {
     return false;
   }
   if (!rewriteExperimentalSoaToAosMethods(program, error)) {

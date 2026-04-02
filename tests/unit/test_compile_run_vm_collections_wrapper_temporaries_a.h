@@ -560,6 +560,62 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
+TEST_CASE("runs vm global helper-return soa_vector method shadows") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<SoaVector<Particle>>]
+cloneValues() {
+  return(soaVectorSingle<Particle>(Particle(7i32)))
+}
+
+[return<int>]
+/soa_vector/count([SoaVector<Particle>] values) {
+  return(11i32)
+}
+
+[return<Particle>]
+/soa_vector/get([SoaVector<Particle>] values, [int] index) {
+  return(Particle(23i32))
+}
+
+[return<Particle>]
+/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+  return(Particle(29i32))
+}
+
+[return<int>]
+/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+  return(value.x)
+}
+
+[return<int>]
+/soa_vector/reserve([SoaVector<Particle>] values, [int] count) {
+  return(count)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Particle] value{Particle(31i32)}
+  return(plus(cloneValues().count(),
+              plus(cloneValues().get(0i32).x,
+                   plus(cloneValues().ref(0i32).x,
+                        plus(cloneValues().push(value),
+                             cloneValues().reserve(37i32))))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_soa_vector_method_shadow_global_helper_return.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 131);
+}
+
 TEST_CASE("vm runs experimental soa_vector stdlib ref helper") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

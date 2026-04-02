@@ -2506,7 +2506,11 @@ experimental wrapper rewrite so `count(holder.cloneValues())` and
 `get(holder.cloneValues(), i).field` stay on the same canonical helper surface. Helper-return
 expression-position bare and method `push(...)` / `reserve(...)` now also preserve same-path
 `/soa_vector/push` and `/soa_vector/reserve` user-helper shadowing instead of degrading to the
-old builtin statement-only mutator contract, and the equivalent
+old builtin statement-only mutator contract, and helper-return experimental-wrapper method
+`count/get/ref/push/reserve` now also rewrites to visible same-path `/soa_vector/*` helpers
+before validation/lowering on global helper-return receivers instead of leaking through wrapper
+methods in compile-run paths; method-like struct-helper return receivers remain follow-up work.
+The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now prefers the
 canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
 `/soa_vector/get` user-helper shadowing. The equivalent helper-return method/infer fallback for
