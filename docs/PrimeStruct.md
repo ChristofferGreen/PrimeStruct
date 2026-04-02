@@ -2656,8 +2656,8 @@ while validator-side visible same-path `/soa_vector/count|get|push|reserve`
 helper checks plus definition-return and collection-return same-path
 `/soa_vector/<field>` helper visibility now also route through that same
 shared definition-visibility helper instead of repeating import/declared
-probes across method-target, infer-time helper-shadow, and return-inference
-paths,
+probes across method-target, infer-time helper-shadow, vector-helper
+routing, and return-inference paths,
 while monomorph-side visible `/soa_vector/ref` fallback detection now also
 uses that same shared definition-visibility helper instead of a dedicated
 ref-specific wrapper,

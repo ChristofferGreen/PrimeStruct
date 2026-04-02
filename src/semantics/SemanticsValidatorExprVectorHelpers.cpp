@@ -114,14 +114,14 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   resolvedOut.clear();
   auto preferredSoaMutatorHelperTarget = [&](std::string_view resolvedHelperName) {
     const std::string samePath = "/soa_vector/" + std::string(resolvedHelperName);
-    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
       return samePath;
     }
     return "/std/collections/soa_vector/" + std::string(resolvedHelperName);
   };
   auto hasVisibleSoaMutatorShadow = [&](std::string_view resolvedHelperName) {
     const std::string samePath = "/soa_vector/" + std::string(resolvedHelperName);
-    return hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath);
+    return hasVisibleDefinitionPathForCurrentImports(samePath);
   };
   auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {

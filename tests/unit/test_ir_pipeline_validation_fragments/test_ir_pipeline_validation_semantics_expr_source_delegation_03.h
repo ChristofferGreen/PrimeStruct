@@ -522,6 +522,12 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::resolveExprVectorHelperCall") !=
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(samePath)") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
+        std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("size_t SemanticsValidator::mapHelperReceiverIndex") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::bareMapHelperOperandIndices") !=
