@@ -136,6 +136,7 @@ std::string soaFieldViewHelperPath(std::string_view fieldName);
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut = nullptr);
 std::string soaFieldViewPendingDiagnostic(std::string_view fieldName);
 std::string soaBorrowedViewPendingDiagnostic();
+std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath);
 bool isSoaVectorStructElementType(const std::string &typeArg,
                                   const std::string &namespacePrefix,
                                   const std::unordered_set<std::string> &structTypes,

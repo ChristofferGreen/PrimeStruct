@@ -509,12 +509,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           !hasDeclaredDefinitionPath(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&
           !resolveMapTarget(expr.args.front(), builtinMapKeyType, builtinMapValueType)) {
-        std::string soaFieldViewName;
-        if (splitSoaFieldViewHelperPath(methodResolved, &soaFieldViewName)) {
-          error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
-        } else {
-          error_ = "unknown method: " + methodResolved;
-        }
+        error_ = soaFieldViewOrUnknownMethodDiagnostic(methodResolved);
         return finish(ReturnKind::Unknown);
       }
       ReturnKind builtinMethodKind = ReturnKind::Unknown;
@@ -528,12 +523,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       }
       if (!hasDefinitionPath(methodResolved) &&
           !hasImportedDefinitionPath(methodResolved)) {
-        std::string soaFieldViewName;
-        if (splitSoaFieldViewHelperPath(methodResolved, &soaFieldViewName)) {
-          error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
-        } else {
-          error_ = "unknown method: " + methodResolved;
-        }
+        error_ = soaFieldViewOrUnknownMethodDiagnostic(methodResolved);
         return finish(ReturnKind::Unknown);
       }
       context.resolved = methodResolved;

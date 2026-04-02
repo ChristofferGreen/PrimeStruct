@@ -28,6 +28,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionDispatch.cpp";
   const std::filesystem::path semanticsInferCollectionDispatchSetupPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionDispatchSetup.cpp";
+  const std::filesystem::path semanticsBuiltinPathHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsBuiltinPathHelpers.cpp";
   const std::filesystem::path semanticsInferLateFallbackBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferLateFallbackBuiltins.cpp";
   const std::filesystem::path semanticsInferPreDispatchCallsPath =
@@ -69,6 +71,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDirectCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDispatchPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDispatchSetupPath));
+  REQUIRE(std::filesystem::exists(semanticsBuiltinPathHelpersPath));
   REQUIRE(std::filesystem::exists(semanticsInferLateFallbackBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsInferPreDispatchCallsPath));
   REQUIRE(std::filesystem::exists(semanticsInferScalarBuiltinsPath));
@@ -120,6 +123,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   const std::string semanticsInferCollectionDispatchSource = readText(semanticsInferCollectionDispatchPath);
   const std::string semanticsInferCollectionDispatchSetupSource =
       readText(semanticsInferCollectionDispatchSetupPath);
+  const std::string semanticsBuiltinPathHelpersSource =
+      readText(semanticsBuiltinPathHelpersPath);
   const std::string semanticsInferLateFallbackBuiltinsSource =
       readText(semanticsInferLateFallbackBuiltinsPath);
   const std::string semanticsInferMethodResolutionSource =
@@ -353,6 +358,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
             "if (!expr.isMethodCall && isSimpleCallName(expr, \"buffer_load\") &&") !=
         std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "error_ = soaFieldViewOrUnknownMethodDiagnostic(methodResolved);") !=
+        std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("std::function<ReturnKind(const Expr &)> pointerTargetKind =") !=
@@ -360,6 +368,12 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferPreDispatchCallsSource.find("const std::string directRemovedMapCompatibilityPath =") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find(
+            "error_ = soaFieldViewOrUnknownMethodDiagnostic(methodResolved);") !=
+        std::string::npos);
+  CHECK(semanticsBuiltinPathHelpersSource.find(
+            "std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath)") !=
         std::string::npos);
   CHECK(semanticsInferScalarBuiltinsSource.find("ReturnKind SemanticsValidator::inferScalarBuiltinReturnKind(") !=
         std::string::npos);

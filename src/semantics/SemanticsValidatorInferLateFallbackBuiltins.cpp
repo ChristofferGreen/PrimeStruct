@@ -500,12 +500,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       if (context.resolveMethodCallPath != nullptr &&
           context.resolveMethodCallPath(builtinAccessName, methodResolved) &&
           !methodResolved.empty()) {
-        std::string soaFieldViewName;
-        if (splitSoaFieldViewHelperPath(methodResolved, &soaFieldViewName)) {
-          error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
-        } else {
-          error_ = "unknown method: " + methodResolved;
-        }
+        error_ = soaFieldViewOrUnknownMethodDiagnostic(methodResolved);
       }
       return finish(ReturnKind::Unknown);
     }

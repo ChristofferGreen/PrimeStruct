@@ -453,6 +453,14 @@ std::string soaBorrowedViewPendingDiagnostic() {
   return "soa_vector borrowed views are not implemented yet: ref";
 }
 
+std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath) {
+  std::string fieldName;
+  if (splitSoaFieldViewHelperPath(resolvedPath, &fieldName)) {
+    return soaFieldViewPendingDiagnostic(fieldName);
+  }
+  return "unknown method: " + std::string(resolvedPath);
+}
+
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
