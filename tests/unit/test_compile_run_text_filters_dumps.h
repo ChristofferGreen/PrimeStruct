@@ -1377,6 +1377,46 @@ main() {
   CHECK(ast.find("values./to_aos()", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites vector-target helper-shadowed to_aos method forms to direct helper path") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/to_aos([vector<Particle>] values) {
+  return(9i32)
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>()}
+  [int] bare{to_aos(values)}
+  [int] direct{/to_aos(values)}
+  [int] method{values.to_aos()}
+  [int] slash{values./to_aos()}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_vector_target_to_aos_shadow.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_vector_target_to_aos_shadow.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("[int] bare{to_aos(values)}", mainPos) != std::string::npos);
+  CHECK(ast.find("[int] direct{/to_aos(values)}", mainPos) != std::string::npos);
+  CHECK(ast.find("[int] method{/to_aos(values)}", mainPos) != std::string::npos);
+  CHECK(ast.find("[int] slash{/to_aos(values)}", mainPos) != std::string::npos);
+  CHECK(ast.find("values.to_aos()", mainPos) == std::string::npos);
+  CHECK(ast.find("values./to_aos()", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic keeps direct canonical experimental soa_vector to_aos helper path") {
   const std::string source = R"(
 import /std/collections/*

@@ -1356,6 +1356,14 @@ void rewriteBuiltinSoaToAosCallExpr(
   if (!hasBuiltinSoaReceiver && !hasBuiltinVectorReceiver) {
     return;
   }
+  if (hasBuiltinVectorReceiver && preserveVisibleRootVectorHelper && expr.isMethodCall) {
+    expr.isMethodCall = false;
+    expr.isFieldAccess = false;
+    expr.name = "/to_aos";
+    expr.namespacePrefix.clear();
+    expr.templateArgs.clear();
+    return;
+  }
   if ((hasBuiltinSoaReceiver && preserveVisibleRootSoaHelper) ||
       (hasBuiltinVectorReceiver && preserveVisibleRootVectorHelper)) {
     return;
