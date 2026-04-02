@@ -671,9 +671,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           std::string soaElemType;
           if (resolveExperimentalSoaOrBorrowedReceiver(*soaRefReceiverTarget,
                                                        soaElemType)) {
-            error_ =
-                "soa_vector field views are not implemented yet: " +
-                fieldTarget.name;
+            error_ = soaFieldViewPendingDiagnostic(fieldTarget.name);
             return false;
           }
         }

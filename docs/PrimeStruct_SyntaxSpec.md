@@ -880,8 +880,9 @@ imported-helper experimental-wrapper `to_aos` forms to that same canonical helpe
 `ast-semantic`, so the remaining diagnostic/test cleanup is now field-view only.
 The current pending `soa_vector field views are not implemented yet: <field>` and
 `soa_vector borrowed views are not implemented yet: ref` diagnostics now come from shared
-semantics helpers rather than duplicated validator and monomorph string assembly, and the
-validator-side plus monomorph-side fallback probes are gone entirely. The compiler-owned
+semantics helpers rather than duplicated validator, mutation-borrow, and monomorph string
+assembly, and the validator-side plus monomorph-side fallback probes are gone entirely. The
+compiler-owned
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
 construction/parsing instead of open-coded literals, and the post-`validateExpr(...)`
 binding/return/call-argument plus return-inference reprobes are gone too. Read-only

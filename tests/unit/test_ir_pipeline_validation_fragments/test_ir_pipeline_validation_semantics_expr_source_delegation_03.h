@@ -422,6 +422,12 @@
   CHECK(semanticsExprMutationBorrowsSource.find(
             "if (getBuiltinMutationName(expr, mutateName)) {") !=
         std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "soa_vector field views are not implemented yet: ") ==
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "soaFieldViewPendingDiagnostic(fieldTarget.name)") !=
+        std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "bool SemanticsValidator::validateExprNamedArgumentBuiltins") !=
         std::string::npos);
