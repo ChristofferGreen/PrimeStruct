@@ -233,9 +233,17 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   }
 
   BindingInfo receiverBinding;
-  if (!inferSoaReceiverBinding(*receiver, receiverBinding) ||
-      normalizeBindingTypeName(receiverBinding.typeName) != "soa_vector" ||
-      receiverBinding.typeTemplateArg.empty()) {
+  if (!inferSoaReceiverBinding(*receiver, receiverBinding)) {
+    return false;
+  }
+
+  std::string receiverElemType;
+  if (normalizeBindingTypeName(receiverBinding.typeName) == "soa_vector" &&
+      !receiverBinding.typeTemplateArg.empty()) {
+    receiverElemType = receiverBinding.typeTemplateArg;
+  } else if (!extractExperimentalSoaVectorElementType(receiverBinding,
+                                                      receiverElemType) ||
+             receiverElemType.empty()) {
     return false;
   }
 
@@ -249,7 +257,7 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   const std::string lookupNamespace =
       !receiver->namespacePrefix.empty() ? receiver->namespacePrefix : currentNamespace;
   const std::string elementStructPath =
-      resolveStructTypePath(normalizeBindingTypeName(receiverBinding.typeTemplateArg),
+      resolveStructTypePath(normalizeBindingTypeName(receiverElemType),
                             lookupNamespace,
                             structNames_);
   auto structIt = defMap_.find(elementStructPath);
@@ -282,197 +290,6 @@ bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(
     return true;
   }
   return false;
-}
-
-bool SemanticsValidator::extractExperimentalSoaAssignFieldViewName(
-    const Expr &candidate,
-    const std::vector<ParameterInfo> &params,
-    const std::unordered_map<std::string, BindingInfo> &locals,
-    std::string *fieldNameOut) {
-  auto resolveExperimentalBorrowedSoaTypeText = [&](const std::string &typeText,
-                                                    std::string &elemTypeOut) -> bool {
-    BindingInfo inferredBinding;
-    const std::string normalizedType = normalizeBindingTypeName(typeText);
-    if (normalizedType.empty()) {
-      return false;
-    }
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(normalizedType, base, argText)) {
-      inferredBinding.typeName = normalizeBindingTypeName(base);
-      inferredBinding.typeTemplateArg = argText;
-    } else {
-      inferredBinding.typeName = normalizedType;
-      inferredBinding.typeTemplateArg.clear();
-    }
-    const std::string normalizedBindingType =
-        normalizeBindingTypeName(inferredBinding.typeName);
-    if (normalizedBindingType != "Reference" &&
-        normalizedBindingType != "Pointer") {
-      return false;
-    }
-    return extractExperimentalSoaVectorElementType(inferredBinding,
-                                                   elemTypeOut);
-  };
-  auto resolveExperimentalSoaOrBorrowedReceiver =
-      [&](const Expr &target, std::string &elemTypeOut) -> bool {
-    const BuiltinCollectionDispatchResolverAdapters resolverAdapters;
-    const BuiltinCollectionDispatchResolvers resolvers =
-        makeBuiltinCollectionDispatchResolvers(params, locals, resolverAdapters);
-    if (resolvers.resolveSoaVectorTarget(target, elemTypeOut)) {
-      return true;
-    }
-    if (target.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        if (extractExperimentalSoaVectorElementType(*paramBinding, elemTypeOut)) {
-          return true;
-        }
-      }
-      auto localIt = locals.find(target.name);
-      if (localIt != locals.end() &&
-          extractExperimentalSoaVectorElementType(localIt->second,
-                                                 elemTypeOut)) {
-        return true;
-      }
-    }
-    auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
-      if (resolvers.resolveSoaVectorTarget(valueExpr, elemTypeOut)) {
-        return true;
-      }
-      if (valueExpr.kind == Expr::Kind::Name) {
-        if (const BindingInfo *paramBinding = findParamBinding(params, valueExpr.name)) {
-          if (extractExperimentalSoaVectorElementType(*paramBinding,
-                                                      elemTypeOut)) {
-            return true;
-          }
-        }
-        auto localIt = locals.find(valueExpr.name);
-        if (localIt != locals.end() &&
-            extractExperimentalSoaVectorElementType(localIt->second,
-                                                   elemTypeOut)) {
-          return true;
-        }
-      }
-      if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
-        return false;
-      }
-      std::string inferredTypeText;
-      return inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText) &&
-             !inferredTypeText.empty() &&
-             resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
-                                                    elemTypeOut);
-    };
-    if (target.kind == Expr::Kind::Call && !target.isBinding &&
-        isSimpleCallName(target, "location") &&
-        target.args.size() == 1) {
-      return resolveValueExpr(target.args.front());
-    }
-    if (target.kind == Expr::Kind::Call && !target.isBinding &&
-        isSimpleCallName(target, "dereference") &&
-        target.args.size() == 1) {
-      const Expr &borrowedExpr = target.args.front();
-      return borrowedExpr.kind == Expr::Kind::Call &&
-             !borrowedExpr.isBinding &&
-             isSimpleCallName(borrowedExpr, "location") &&
-             borrowedExpr.args.size() == 1 &&
-             resolveValueExpr(borrowedExpr.args.front());
-    }
-    std::string inferredTypeText;
-    return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
-           !inferredTypeText.empty() &&
-           resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
-                                                  elemTypeOut);
-  };
-  auto receiverHasExperimentalSoaField =
-      [&](const Expr &receiver, const std::string &candidateFieldName) -> bool {
-    if (candidateFieldName.empty()) {
-      return false;
-    }
-    const std::string samePath = "/soa_vector/" + candidateFieldName;
-    if (hasDeclaredDefinitionPath(samePath) ||
-        hasImportedDefinitionPath(samePath)) {
-      return false;
-    }
-    std::string elemType;
-    if (!resolveExperimentalSoaOrBorrowedReceiver(receiver, elemType)) {
-      return false;
-    }
-    const std::string normalizedElemType =
-        normalizeBindingTypeName(elemType);
-    if (normalizedElemType.empty()) {
-      return false;
-    }
-    std::string currentNamespace;
-    if (!currentValidationContext_.definitionPath.empty()) {
-      const size_t slash =
-          currentValidationContext_.definitionPath.find_last_of('/');
-      if (slash != std::string::npos && slash > 0) {
-        currentNamespace =
-            currentValidationContext_.definitionPath.substr(0, slash);
-      }
-    }
-    const std::string lookupNamespace =
-        !receiver.namespacePrefix.empty() ? receiver.namespacePrefix
-                                          : currentNamespace;
-    const std::string elementStructPath =
-        resolveStructTypePath(normalizedElemType, lookupNamespace,
-                              structNames_);
-    auto structIt = defMap_.find(elementStructPath);
-    if (elementStructPath.empty() || structIt == defMap_.end() ||
-        structIt->second == nullptr) {
-      return false;
-    }
-    for (const auto &stmt : structIt->second->statements) {
-      if (stmt.isBinding && stmt.name == candidateFieldName) {
-        return true;
-      }
-    }
-    return false;
-  };
-  std::function<bool(const Expr &, std::string &)>
-      extractExperimentalSoaFieldViewName;
-  extractExperimentalSoaFieldViewName =
-      [&](const Expr &target, std::string &candidateFieldNameOut) -> bool {
-    candidateFieldNameOut.clear();
-    if (target.kind == Expr::Kind::Call && target.isFieldAccess &&
-        target.args.size() == 1) {
-      const Expr &receiver = target.args.front();
-      if (receiver.kind == Expr::Kind::Call &&
-          receiver.name.rfind(
-              "/std/collections/experimental_soa_vector/soaVectorGet",
-              0) == 0) {
-        candidateFieldNameOut = target.name;
-        return !candidateFieldNameOut.empty();
-      }
-    }
-    if (target.kind == Expr::Kind::Call && !target.isBinding &&
-        !target.isFieldAccess && target.templateArgs.empty() &&
-        !target.hasBodyArguments && target.bodyArguments.empty() &&
-        !hasNamedArguments(target.argNames) &&
-        target.args.size() == 1 && !target.name.empty() &&
-        target.name.find('/') == std::string::npos) {
-      const Expr &receiver = target.args.front();
-      if (receiverHasExperimentalSoaField(receiver, target.name)) {
-        candidateFieldNameOut = target.name;
-        return true;
-      }
-    }
-    std::string accessName;
-    if (!getBuiltinArrayAccessName(target, accessName) ||
-        target.args.size() != 2) {
-      return false;
-    }
-    return extractExperimentalSoaFieldViewName(target.args.front(),
-                                               candidateFieldNameOut);
-  };
-
-  std::string fieldName;
-  const bool matched =
-      extractExperimentalSoaFieldViewName(candidate, fieldName);
-  if (matched && fieldNameOut != nullptr) {
-    *fieldNameOut = fieldName;
-  }
-  return matched;
 }
 
 bool SemanticsValidator::hasDirectExperimentalVectorImport() const {

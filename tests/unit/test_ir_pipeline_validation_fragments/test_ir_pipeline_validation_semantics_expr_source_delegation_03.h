@@ -426,16 +426,16 @@
             "soa_vector field views are not implemented yet: ") ==
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
-            "extractExperimentalSoaAssignFieldViewName(") !=
+            "isBuiltinSoaFieldViewExpr(target, params, locals,") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
-            "soaFieldViewPendingDiagnostic(pendingSoaFieldViewName)") !=
+            "if (!validateExpr(params, locals, target)) {") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
             "pendingExperimentalSoaFieldViewNameForAssignTarget") ==
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
-            "extractExperimentalSoaFieldViewName") ==
+            "extractExperimentalSoaAssignFieldViewName(") ==
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
             "soaFieldViewPendingDiagnostic(fieldTarget.name)") ==

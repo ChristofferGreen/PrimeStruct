@@ -2631,20 +2631,20 @@ gone too. The current successful read-only `value.field()[i]` path likewise no l
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
 both direct wrapper reads and borrowed local shorthand plus explicitly dereferenced borrowed local
 reads now run through the generic helper-call plus struct-field path end-to-end.
-The remaining pending-diagnostic cleanup is therefore reduced to one compiler-owned
-area in `SemanticsValidatorExprMutationBorrows.cpp`, and that area is now concentrated
-in the shared assign-target helper path. Assign-target indexed field-view writes like
-`assign(y(values)[i], next)` and explicit borrowed-slot writes like
-`assign(ref(values, i).field, next)` now lower through the experimental
-`soaVectorRef<T>(..., i).field` substrate instead of staying on the old pending-only
-branch. The remaining concrete follow-up is therefore the standalone assign-target
-method/call field-view write surface like `assign(values.x(), next)` /
-`assign(x(values), next)`.
+The remaining pending-diagnostic cleanup for builtin SoA field views is now complete:
+standalone assign-target method/call writes like `assign(values.x(), next)` /
+`assign(x(values), next)` now reach the same pending field-view diagnostic through
+ordinary field-view validation instead of a MutationBorrows-only branch, while
+assign-target indexed field-view writes like `assign(y(values)[i], next)` and
+explicit borrowed-slot writes like `assign(ref(values, i).field, next)` lower
+through the experimental `soaVectorRef<T>(..., i).field` substrate instead of
+staying on the old pending-only branch.
 Standalone builtin field-view call forms now route through the shared synthetic
 `/soa_vector/field_view/<field>` or same-path `/soa_vector/<field>` method-target
 path instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback.
-That remaining standalone mutating write path stays in place until richer borrowed-view
-and mutating write semantics move fully onto the experimental substrate. The broader experimental wrapper/helper surface through imported
+The remaining follow-up is therefore richer borrowed-view and mutating write
+semantics on top of the experimental substrate rather than more compiler-owned
+pending plumbing. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and
 non-empty wrapper state, and stale post-semantics bare `to_aos(...)` target classification is
 now gone from the shared emitter/lowerer path as well. The remaining backend-side

@@ -506,11 +506,16 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       return false;
     }
     const Expr &target = expr.args.front();
-    std::string pendingSoaFieldViewName;
-    if (extractExperimentalSoaAssignFieldViewName(
-            target, params, locals, &pendingSoaFieldViewName)) {
-      error_ = soaFieldViewPendingDiagnostic(pendingSoaFieldViewName);
-      return false;
+    std::string standaloneSoaFieldViewName;
+    if (isBuiltinSoaFieldViewExpr(target, params, locals,
+                                  &standaloneSoaFieldViewName)) {
+      std::string accessName;
+      if (!(getBuiltinArrayAccessName(target, accessName) &&
+            target.args.size() == 2)) {
+        if (!validateExpr(params, locals, target)) {
+          return false;
+        }
+      }
     }
     const bool targetIsName = target.kind == Expr::Kind::Name;
     auto isLifecycleHelperPath = [](const std::string &fullPath) -> bool {
