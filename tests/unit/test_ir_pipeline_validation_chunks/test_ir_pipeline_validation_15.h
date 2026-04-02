@@ -661,6 +661,17 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("splitSoaFieldViewHelperPath(resolved, fieldNameOut)") !=
         std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "soaFieldViewOrUnknownMethodDiagnostic(\n"
+            "        soaFieldViewHelperPath(fieldName))") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "soaUnavailableMethodDiagnostic(\"/soa_vector/ref\", false)") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("soaFieldViewPendingDiagnostic(fieldName)") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("soaBorrowedViewPendingDiagnostic()") ==
+        std::string::npos);
   CHECK(buildInitializerInferenceSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("soa_vector field views are not implemented yet: ") ==
         std::string::npos);

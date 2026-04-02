@@ -943,7 +943,9 @@ pending diagnostic through ordinary field-view validation, while assign-target
 indexed field-view writes plus `ref(...).field` writes lower through the
 experimental `soaVectorRef<T>(..., i).field` substrate, and direct monomorph
 field-view fallback rejects now also reuse the shared helper-path
-unavailable-method diagnostic instead of building the pending string inline.
+unavailable-method diagnostic instead of building the pending string inline,
+while the shared direct pending reporter now routes both field-view and
+`ref(...)` rejects through those same helper-path/unavailable-method diagnostics.
 Standalone builtin field-view call
 forms now route through the shared synthetic `/soa_vector/field_view/<field>`
 or same-path `/soa_vector/<field>` path instead of a dedicated
