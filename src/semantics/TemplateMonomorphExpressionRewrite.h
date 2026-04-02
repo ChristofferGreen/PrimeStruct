@@ -769,6 +769,17 @@ bool rewriteExpr(Expr &expr,
       expr.name = resolvedPath;
       expr.namespacePrefix.clear();
     }
+    const Expr *resolvedReceiverExpr = mapHelperReceiverExpr(expr);
+    const bool isSyntheticSamePathSoaRefTemplateCarry =
+        resolvedPath == "/soa_vector/ref" &&
+        ctx.templateDefs.count(resolvedPath) == 0 &&
+        !expr.templateArgs.empty() &&
+        resolvedReceiverExpr != nullptr &&
+        resolvedReceiverExpr->kind == Expr::Kind::Call &&
+        !resolvedReceiverExpr->isBinding;
+    if (isSyntheticSamePathSoaRefTemplateCarry) {
+      expr.templateArgs.clear();
+    }
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
     if (isTemplateDef) {
       auto defIt = ctx.sourceDefs.find(resolvedPath);

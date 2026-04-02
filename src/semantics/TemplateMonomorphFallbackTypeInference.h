@@ -585,6 +585,9 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
     return path;
   }
+  if (path == "/soa_vector/ref") {
+    return path;
+  }
   const bool preserveCompatibilityTemplatePath = isCollectionCompatibilityTemplateFallbackPath(path);
   const bool preserveCanonicalMapTemplatePath = shouldPreserveCanonicalMapTemplatePath(path, ctx);
   const bool acceptsCallShape = definitionAcceptsCallShape(defIt->second, expr);
