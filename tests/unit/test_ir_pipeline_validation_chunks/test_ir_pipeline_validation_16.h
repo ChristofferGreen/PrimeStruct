@@ -443,6 +443,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "splitSoaFieldViewHelperPath(resolved, &fieldNameOut)") ==
         std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "splitSoaFieldViewHelperPath(resolvedPath, &fieldName)") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "soaPendingUnavailableMethodDiagnostic(\n"
+            "              resolvedPath, hasVisibleSoaRefHelper)") !=
+        std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find("\"/soa_vector/field_view/\"") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find("hasVisibleSoaRefHelperForMonomorph(") ==
