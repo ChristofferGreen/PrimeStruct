@@ -709,6 +709,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMapSoaBuiltinsSource.find("soaFieldViewPendingDiagnostic(expr.name)") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "        target, params, locals, context.resolveSoaVectorTarget, elemTypeOut)") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find("resolveSoaVectorOrExperimentalBorrowedTarget") ==
+        std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),") !=
         std::string::npos);
@@ -735,6 +741,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "        candidate, params, locals, resolveDirectReceiver, elemTypeOut)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("auto extractBorrowedBinding =") ==
+        std::string::npos);
+  CHECK(exprCollectionAccessSource.find(
+            "this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "        target, params, locals, context.resolveSoaVectorTarget, elemTypeOut)") !=
+        std::string::npos);
+  CHECK(exprCollectionAccessSource.find("resolveSoaVectorOrExperimentalBorrowedTarget") ==
         std::string::npos);
   CHECK(exprCollectionAccessSource.find(
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"

@@ -73,34 +73,13 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     return inferExprReturnKind(arg, params, locals) == ReturnKind::String;
   };
-  auto findNamedBinding = [&](const Expr &target) -> const BindingInfo * {
-    if (target.kind != Expr::Kind::Name) {
-      return nullptr;
-    }
-    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-      return paramBinding;
-    }
-    auto it = locals.find(target.name);
-    if (it != locals.end()) {
-      return &it->second;
-    }
-    return nullptr;
-  };
-  auto resolveSoaVectorOrExperimentalBorrowedTarget = [&](const Expr &target,
-                                                           std::string &elemTypeOut) -> bool {
-    if (context.resolveSoaVectorTarget != nullptr &&
-        context.resolveSoaVectorTarget(target, elemTypeOut)) {
-      return true;
-    }
-    const BindingInfo *binding = findNamedBinding(target);
-    if (binding == nullptr) {
+  auto resolveDirectSoaReceiver = [&](const Expr &target,
+                                      std::string &elemTypeOut) -> bool {
+    if (context.resolveSoaVectorTarget == nullptr) {
       return false;
     }
-    const std::string normalizedType = normalizeBindingTypeName(binding->typeName);
-    if (normalizedType != "Reference" && normalizedType != "Pointer") {
-      return false;
-    }
-    return extractExperimentalSoaVectorElementType(*binding, elemTypeOut);
+    return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
+        target, params, locals, context.resolveSoaVectorTarget, elemTypeOut);
   };
   auto validateSoaHelperReturnTemplateArgs =
       [&](const Expr &receiverExpr, const std::string &elemType, const std::string &helperName) {
@@ -252,7 +231,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                   expr.args.front(),
                   params,
                   locals,
-                  resolveSoaVectorOrExperimentalBorrowedTarget,
+                  resolveDirectSoaReceiver,
                   elemType);
     if (!targetValid) {
       if (helperName == "to_aos" && isCanonicalSoaToAosResolved) {
@@ -303,7 +282,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             expr.args.front(),
             params,
             locals,
-            resolveSoaVectorOrExperimentalBorrowedTarget,
+            resolveDirectSoaReceiver,
             elemType)) {
       if ((resolved == "/soa_vector/get" || resolved == "/soa_vector/ref") &&
           hasVisibleSamePathSoaAccessHelper(helperName)) {
@@ -374,7 +353,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             expr.args.front(),
             params,
             locals,
-            resolveSoaVectorOrExperimentalBorrowedTarget,
+            resolveDirectSoaReceiver,
             elemType)) {
       error_ = helperName + " requires soa_vector target";
       return false;

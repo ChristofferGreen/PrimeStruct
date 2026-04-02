@@ -2655,10 +2655,10 @@ and the low-level field-view and borrowed-view pending string builders are now
 file-local to the shared helper implementation instead of part of the public
 semantics-helper surface,
 while direct collection-access, count/capacity builtin validation, SoA builtin
-validation, collection dispatch inference, and method-target/infer borrowed
-experimental receiver handling now also share one borrowed experimental receiver
-probe end-to-end instead of keeping duplicated inline lambdas, direct receiver
-adapters, or
+validation, collection dispatch inference, direct access helper routing, and
+method-target/infer borrowed experimental receiver handling now also share one
+borrowed experimental receiver probe end-to-end instead of keeping duplicated
+inline lambdas, direct receiver adapters, or
 local borrowed-target wrappers,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on

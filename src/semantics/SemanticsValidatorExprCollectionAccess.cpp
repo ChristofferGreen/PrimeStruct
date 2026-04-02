@@ -107,33 +107,10 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   const bool preservesExplicitRemovedArrayAccessMethod =
       explicitRemovedMethodPath.rfind("/array/", 0) == 0 &&
       hasDefinitionPath(explicitRemovedMethodPath);
-  auto findNamedBinding = [&](const Expr &target) -> const BindingInfo * {
-    if (target.kind != Expr::Kind::Name) {
-      return nullptr;
-    }
-    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-      return paramBinding;
-    }
-    auto it = locals.find(target.name);
-    if (it != locals.end()) {
-      return &it->second;
-    }
-    return nullptr;
-  };
-  auto resolveSoaVectorOrExperimentalBorrowedTarget = [&](const Expr &target,
-                                                          std::string &elemTypeOut) -> bool {
-    if (context.resolveSoaVectorTarget(target, elemTypeOut)) {
-      return true;
-    }
-    const BindingInfo *binding = findNamedBinding(target);
-    if (binding == nullptr) {
-      return false;
-    }
-    const std::string normalizedType = normalizeBindingTypeName(binding->typeName);
-    if (normalizedType != "Reference" && normalizedType != "Pointer") {
-      return false;
-    }
-    return extractExperimentalSoaVectorElementType(*binding, elemTypeOut);
+  auto resolveDirectSoaReceiver = [&](const Expr &target,
+                                      std::string &elemTypeOut) -> bool {
+    return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
+        target, params, locals, context.resolveSoaVectorTarget, elemTypeOut);
   };
 
   if (isBuiltinAccessName &&
@@ -498,7 +475,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             receiverCandidate,
             params,
             locals,
-            resolveSoaVectorOrExperimentalBorrowedTarget,
+            resolveDirectSoaReceiver,
             elemType)) {
       usedMethodTarget = true;
       bool isBuiltinMethod = false;
