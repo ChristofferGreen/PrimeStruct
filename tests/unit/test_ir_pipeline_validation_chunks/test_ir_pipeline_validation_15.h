@@ -718,6 +718,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(statementBindingsSource.find("builtinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)") ==
         std::string::npos);
+  CHECK(statementBindingsSource.find("isHelperReturnBuiltinSoaRefExpr") ==
+        std::string::npos);
+  CHECK(statementBindingsSource.find(
+            "error_ == \"ref does not accept template arguments\"") ==
+        std::string::npos);
   CHECK(statementBindingsSource.find(
             "reportBuiltinSoaDirectPendingExprDiagnostic(initializer, params, locals)") !=
         std::string::npos);

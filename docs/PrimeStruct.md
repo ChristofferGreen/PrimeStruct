@@ -2630,6 +2630,8 @@ while direct monomorph field-view fallback rejects now also reuse the shared
 helper-path unavailable-method diagnostic instead of building the pending string inline,
 and the shared direct pending reporter now routes both field-view and `ref(...)`
 rejects through those same helper-path/unavailable-method diagnostics,
+with helper-return local-binding `ref(...)` fallback now reusing that same direct
+pending reporter instead of a local string-rewrite branch,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
