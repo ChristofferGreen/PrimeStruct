@@ -102,72 +102,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     return extractExperimentalSoaVectorElementType(*binding, elemTypeOut);
   };
-  auto resolveExperimentalBorrowedSoaTypeText = [&](const std::string &typeText,
-                                                    std::string &elemTypeOut) -> bool {
-    BindingInfo inferredBinding;
-    const std::string normalizedType = normalizeBindingTypeName(typeText);
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(normalizedType, base, argText)) {
-      inferredBinding.typeName = normalizeBindingTypeName(base);
-      inferredBinding.typeTemplateArg = argText;
-    } else {
-      inferredBinding.typeName = normalizedType;
-      inferredBinding.typeTemplateArg.clear();
-    }
-    const std::string normalizedBindingType = normalizeBindingTypeName(inferredBinding.typeName);
-    if (normalizedBindingType != "Reference" && normalizedBindingType != "Pointer") {
-      return false;
-    }
-    return extractExperimentalSoaVectorElementType(inferredBinding, elemTypeOut);
-  };
-  auto resolveInlineBorrowedExperimentalSoaReceiver = [&](const Expr &candidate,
-                                                          std::string &elemTypeOut) -> bool {
-    auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
-      if (resolveSoaVectorOrExperimentalBorrowedTarget(valueExpr, elemTypeOut)) {
-        return true;
-      }
-      if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
-        return false;
-      }
-      std::string inferredTypeText;
-      return inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText) &&
-             !inferredTypeText.empty() &&
-             resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
-    };
-    if (!candidate.isBinding &&
-        isSimpleCallName(candidate, "location") &&
-        candidate.args.size() == 1) {
-      return resolveValueExpr(candidate.args.front());
-    }
-    if (!candidate.isBinding &&
-        isSimpleCallName(candidate, "dereference") &&
-        candidate.args.size() == 1) {
-      const Expr &borrowedExpr = candidate.args.front();
-      return borrowedExpr.kind == Expr::Kind::Call &&
-             !borrowedExpr.isBinding &&
-             isSimpleCallName(borrowedExpr, "location") &&
-             borrowedExpr.args.size() == 1 &&
-             resolveValueExpr(borrowedExpr.args.front());
-    }
-    return false;
-  };
-  auto resolveSoaVectorOrExperimentalBorrowedReceiver = [&](const Expr &target,
-                                                            std::string &elemTypeOut) -> bool {
-    if (resolveSoaVectorOrExperimentalBorrowedTarget(target, elemTypeOut)) {
-      return true;
-    }
-    if (target.kind != Expr::Kind::Call) {
-      return false;
-    }
-    if (resolveInlineBorrowedExperimentalSoaReceiver(target, elemTypeOut)) {
-      return true;
-    }
-    std::string inferredTypeText;
-    return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
-           !inferredTypeText.empty() &&
-           resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
-  };
   auto validateSoaHelperReturnTemplateArgs =
       [&](const Expr &receiverExpr, const std::string &elemType, const std::string &helperName) {
     if (expr.templateArgs.empty()) {
@@ -314,7 +248,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         helperName == "to_soa"
             ? (context.resolveVectorTarget != nullptr &&
                context.resolveVectorTarget(expr.args.front(), elemType))
-            : resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType);
+            : this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+                  expr.args.front(),
+                  params,
+                  locals,
+                  resolveSoaVectorOrExperimentalBorrowedTarget,
+                  elemType);
     if (!targetValid) {
       if (helperName == "to_aos" && isCanonicalSoaToAosResolved) {
         error_ = "argument type mismatch for /std/collections/soa_vector/to_aos parameter values";
@@ -360,7 +299,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return false;
     }
     std::string elemType;
-    if (!resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
+    if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            expr.args.front(),
+            params,
+            locals,
+            resolveSoaVectorOrExperimentalBorrowedTarget,
+            elemType)) {
       if ((resolved == "/soa_vector/get" || resolved == "/soa_vector/ref") &&
           hasVisibleSamePathSoaAccessHelper(helperName)) {
         handledOut = false;
@@ -426,7 +370,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return false;
     }
     std::string elemType;
-    if (!resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
+    if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            expr.args.front(),
+            params,
+            locals,
+            resolveSoaVectorOrExperimentalBorrowedTarget,
+            elemType)) {
       error_ = helperName + " requires soa_vector target";
       return false;
     }

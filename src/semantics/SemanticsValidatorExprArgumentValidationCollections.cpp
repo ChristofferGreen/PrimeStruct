@@ -355,4 +355,71 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementType(const BindingIn
       normalizeBindingTypeName(binding.typeName + "<" + binding.typeTemplateArg + ">"));
 }
 
+bool SemanticsValidator::resolveExperimentalBorrowedSoaTypeText(
+    const std::string &typeText, std::string &elemTypeOut) const {
+  BindingInfo inferredBinding;
+  const std::string normalizedType = normalizeBindingTypeName(typeText);
+  std::string base;
+  std::string argText;
+  if (splitTemplateTypeName(normalizedType, base, argText)) {
+    inferredBinding.typeName = normalizeBindingTypeName(base);
+    inferredBinding.typeTemplateArg = argText;
+  } else {
+    inferredBinding.typeName = normalizedType;
+    inferredBinding.typeTemplateArg.clear();
+  }
+  const std::string normalizedBindingType =
+      normalizeBindingTypeName(inferredBinding.typeName);
+  if (normalizedBindingType != "Reference" &&
+      normalizedBindingType != "Pointer") {
+    return false;
+  }
+  return extractExperimentalSoaVectorElementType(inferredBinding, elemTypeOut);
+}
+
+bool SemanticsValidator::resolveSoaVectorOrExperimentalBorrowedReceiver(
+    const Expr &target,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::function<bool(const Expr &, std::string &)> &resolveDirectReceiver,
+    std::string &elemTypeOut) {
+  if (resolveDirectReceiver(target, elemTypeOut)) {
+    return true;
+  }
+  if (target.kind != Expr::Kind::Call) {
+    return false;
+  }
+
+  auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
+    if (resolveDirectReceiver(valueExpr, elemTypeOut)) {
+      return true;
+    }
+    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
+      return false;
+    }
+    std::string inferredTypeText;
+    return inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText) &&
+           !inferredTypeText.empty() &&
+           resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
+  };
+
+  if (!target.isBinding && isSimpleCallName(target, "location") &&
+      target.args.size() == 1) {
+    return resolveValueExpr(target.args.front());
+  }
+  if (!target.isBinding && isSimpleCallName(target, "dereference") &&
+      target.args.size() == 1) {
+    const Expr &borrowedExpr = target.args.front();
+    return borrowedExpr.kind == Expr::Kind::Call && !borrowedExpr.isBinding &&
+           isSimpleCallName(borrowedExpr, "location") &&
+           borrowedExpr.args.size() == 1 &&
+           resolveValueExpr(borrowedExpr.args.front());
+  }
+
+  std::string inferredTypeText;
+  return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
+         !inferredTypeText.empty() &&
+         resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
+}
+
 } // namespace primec::semantics

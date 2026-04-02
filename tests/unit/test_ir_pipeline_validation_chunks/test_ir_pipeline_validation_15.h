@@ -704,7 +704,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
   CHECK(exprCollectionAccessSource.find(
-            "resolveSoaVectorOrExperimentalBorrowedReceiver(receiverCandidate, elemType)") !=
+            "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "            receiverCandidate,") !=
         std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") != std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") != std::string::npos);

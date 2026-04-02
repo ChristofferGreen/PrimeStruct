@@ -2654,6 +2654,9 @@ helper directly instead of wrapping back through the full unavailable-method for
 and the low-level field-view and borrowed-view pending string builders are now
 file-local to the shared helper implementation instead of part of the public
 semantics-helper surface,
+while direct collection-access and SoA builtin validation now also share one
+borrowed experimental receiver probe instead of keeping duplicated inline
+lambdas,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
