@@ -119,10 +119,6 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     return "/std/collections/soa_vector/" + std::string(resolvedHelperName);
   };
-  auto hasVisibleSoaMutatorShadow = [&](std::string_view resolvedHelperName) {
-    const std::string samePath = "/soa_vector/" + std::string(resolvedHelperName);
-    return hasVisibleDefinitionPathForCurrentImports(samePath);
-  };
   auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
     BindingInfo inferredBinding;
@@ -257,7 +253,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
       if (collectionTypePath == "/vector" &&
           (helperName == "push" || helperName == "reserve") &&
-          hasVisibleSoaMutatorShadow(helperName)) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
         resolvedOut = preferredSoaMutatorHelperTarget(helperName);
         return true;
       }
@@ -321,7 +317,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     if ((resolvedType == "/vector" || normalizedTypeName == "vector") &&
         (helperName == "push" || helperName == "reserve") &&
-        hasVisibleSoaMutatorShadow(helperName)) {
+        hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
       resolvedOut = preferredSoaMutatorHelperTarget(helperName);
       return true;
     }
@@ -341,7 +337,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (!resolvedType.empty()) {
       if ((resolvedType == "/vector" || normalizeBindingTypeName(resolvedType) == "vector") &&
           (helperName == "push" || helperName == "reserve") &&
-          hasVisibleSoaMutatorShadow(helperName)) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
         resolvedOut = preferredSoaMutatorHelperTarget(helperName);
         return true;
       }
