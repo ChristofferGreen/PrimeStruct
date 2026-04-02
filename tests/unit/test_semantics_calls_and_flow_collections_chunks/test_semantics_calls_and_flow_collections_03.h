@@ -359,7 +359,7 @@ TEST_CASE("soa_vector builtin field views return escapes fail through inference"
   };
 
   checkReject("x(values)", "unable to infer return type on /pick");
-  checkReject("values.x()", "unknown method: /soa_vector/field_view/x");
+  checkReject("values.x()", "soa_vector field views are not implemented yet: x");
 }
 
 TEST_CASE("soa_vector field-view helper still accepts call and return escapes through same-path helper") {

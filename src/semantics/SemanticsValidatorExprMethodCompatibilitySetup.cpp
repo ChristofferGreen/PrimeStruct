@@ -134,6 +134,10 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
   };
   setupOut.unavailableMethodDiagnostic =
       [](const std::string &resolvedPath) -> std::string {
+    std::string soaFieldViewName;
+    if (splitSoaFieldViewHelperPath(resolvedPath, &soaFieldViewName)) {
+      return soaFieldViewPendingDiagnostic(soaFieldViewName);
+    }
     if (resolvedPath == "/std/gfx/experimental/Device/create_pipeline") {
       return "experimental gfx entry point not implemented yet: "
              "Device.create_pipeline([vertex_type] type, ...)";
