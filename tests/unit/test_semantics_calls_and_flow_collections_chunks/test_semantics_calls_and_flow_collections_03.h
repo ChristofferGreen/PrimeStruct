@@ -257,6 +257,35 @@ TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic")
   checkReject("/soa_vector/ref(values, 0i32)", "soa_vector field views are not implemented yet: soa_vector/ref");
 }
 
+TEST_CASE("soa_vector helper-return ref call argument escapes use borrowed-view diagnostic") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[return<soa_vector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soa_vector<Particle>())
+}
+
+[return<int>]
+consume<T>([T] value) {
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(consume(ref(holder.cloneValues(), 0i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+}
+
 TEST_CASE("soa_vector builtin ref return escapes use pending diagnostic") {
   const auto checkReject = [](const std::string &expr) {
     const std::string source =

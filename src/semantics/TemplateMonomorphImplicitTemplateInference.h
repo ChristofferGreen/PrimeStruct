@@ -194,10 +194,18 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (!resolvesBuiltinSoaReceiver(candidate.args.front())) {
       return {};
     }
-    if (normalizedName == "ref") {
+    const bool isCanonicalBuiltinSoaRefCall =
+        normalizedName == "std/collections/soa_vector/ref" ||
+        resolvedPath == "/std/collections/soa_vector/ref";
+    if (normalizedName == "ref" || isCanonicalBuiltinSoaRefCall) {
       if (ctx.sourceDefs.count("/soa_vector/ref") > 0 ||
           ctx.helperOverloads.count("/soa_vector/ref") > 0) {
         return {};
+      }
+      if (isCanonicalBuiltinSoaRefCall &&
+          !candidate.args.empty() &&
+          candidate.args.front().kind == Expr::Kind::Call) {
+        return soaBorrowedViewPendingDiagnostic();
       }
       const bool isExplicitSoaRefCall =
           (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&

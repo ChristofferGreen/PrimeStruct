@@ -2334,7 +2334,7 @@ bad_use_after_take() {
     present, including explicit `value.field(i)` / `field(value, i)` index-like spellings, and builtin field-view call-argument/return escapes now reject with that same diagnostic until
     the field-view substrate exists. `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, empty
     `soa_vector<T>()` literals lower to header-only storage, and builtin `ref(...)` now rejects local binding
-    persistence plus call-argument/return escapes with `soa_vector borrowed views are not implemented yet: ref`
+    persistence plus direct and helper-return call-argument/return escapes with `soa_vector borrowed views are not implemented yet: ref`
     until the borrowed-view substrate exists.
     Non-empty SoA literals still emit the deterministic unsupported diagnostic `native
     backend does not support non-empty soa_vector literals`. Root builtin `push(...)`,
