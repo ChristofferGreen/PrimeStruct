@@ -800,6 +800,30 @@ bool hasVisibleRootSoaHelper(const Program &program, std::string_view helperName
   return false;
 }
 
+bool hasVisibleRootSoaHelperForReceiverType(const Program &program,
+                                            std::string_view helperName,
+                                            std::string_view receiverTypeName) {
+  const std::string rootPath = "/" + std::string(helperName);
+  const std::string samePath = "/soa_vector/" + std::string(helperName);
+  auto matchesReceiverType = [&](const Expr &parameter) {
+    if (receiverTypeName == "soa_vector") {
+      return extractBuiltinSoaVectorBinding(parameter).has_value();
+    }
+    if (receiverTypeName == "vector") {
+      return extractBuiltinVectorBinding(parameter).has_value();
+    }
+    return false;
+  };
+  for (const Definition &def : program.definitions) {
+    if ((def.fullPath == rootPath || def.fullPath == samePath) &&
+        !def.parameters.empty() &&
+        matchesReceiverType(def.parameters.front())) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
                                              std::string_view helperName) {
   const std::string samePath = "/soa_vector/" + std::string(helperName);
@@ -1961,7 +1985,9 @@ void rewriteBuiltinSoaMutatorExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     bool preservePushHelper,
-    bool preserveReserveHelper);
+    bool preserveReserveHelper,
+    bool preserveVectorPushHelper,
+    bool preserveVectorReserveHelper);
 
 void rewriteBuiltinSoaMutatorStatements(
     std::vector<Expr> &statements,
@@ -1970,7 +1996,9 @@ void rewriteBuiltinSoaMutatorStatements(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     bool preservePushHelper,
-    bool preserveReserveHelper) {
+    bool preserveReserveHelper,
+    bool preserveVectorPushHelper,
+    bool preserveVectorReserveHelper) {
   for (Expr &stmt : statements) {
     rewriteBuiltinSoaMutatorExpr(
         stmt,
@@ -1979,7 +2007,9 @@ void rewriteBuiltinSoaMutatorStatements(
         soaVectorReturnDefinitions,
         definitionNamespace,
         preservePushHelper,
-        preserveReserveHelper);
+        preserveReserveHelper,
+        preserveVectorPushHelper,
+        preserveVectorReserveHelper);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteBuiltinSoaMutatorStatements(
@@ -1989,7 +2019,9 @@ void rewriteBuiltinSoaMutatorStatements(
           soaVectorReturnDefinitions,
           definitionNamespace,
           preservePushHelper,
-          preserveReserveHelper);
+          preserveReserveHelper,
+          preserveVectorPushHelper,
+          preserveVectorReserveHelper);
     }
     if (stmt.isBinding) {
       if (auto vectorBinding = extractBuiltinVectorBinding(stmt); vectorBinding.has_value()) {
@@ -2008,7 +2040,9 @@ void rewriteBuiltinSoaMutatorExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     bool preservePushHelper,
-    bool preserveReserveHelper) {
+    bool preserveReserveHelper,
+    bool preserveVectorPushHelper,
+    bool preserveVectorReserveHelper) {
   auto findBuiltinVectorValueBinding = [&](const Expr &candidate) -> std::optional<semantics::BindingInfo> {
     if (candidate.kind == Expr::Kind::Name) {
       auto bindingIt = bindings.find(candidate.name);
@@ -2118,7 +2152,9 @@ void rewriteBuiltinSoaMutatorExpr(
         soaVectorReturnDefinitions,
         definitionNamespace,
         preservePushHelper,
-        preserveReserveHelper);
+        preserveReserveHelper,
+        preserveVectorPushHelper,
+        preserveVectorReserveHelper);
   }
   if (expr.kind != Expr::Kind::Call || expr.args.size() != 2 ||
       !expr.templateArgs.empty() ||
@@ -2143,6 +2179,19 @@ void rewriteBuiltinSoaMutatorExpr(
       receiverBinding.has_value() || explicitOldHelperName.empty()
           ? std::optional<semantics::BindingInfo>{}
           : findBuiltinVectorValueBinding(expr.args.front());
+  const bool preserveVectorHelper =
+      (helperName == "push" && preserveVectorPushHelper) ||
+      (helperName == "reserve" && preserveVectorReserveHelper);
+  if (fallbackVectorBinding.has_value() && preserveVectorHelper) {
+    if (expr.isMethodCall) {
+      expr.isMethodCall = false;
+      expr.isFieldAccess = false;
+      expr.name = "/soa_vector/" + helperName;
+      expr.namespacePrefix.clear();
+      expr.templateArgs.clear();
+    }
+    return;
+  }
   if (!receiverBinding.has_value() && !fallbackVectorBinding.has_value()) {
     return;
   }
@@ -2182,6 +2231,10 @@ bool rewriteBuiltinSoaMutatorCalls(Program &program, std::string &error) {
   }
   const bool preservePushHelper = hasVisibleRootSoaHelper(program, "push");
   const bool preserveReserveHelper = hasVisibleRootSoaHelper(program, "reserve");
+  const bool preserveVectorPushHelper =
+      hasVisibleRootSoaHelperForReceiverType(program, "push", "vector");
+  const bool preserveVectorReserveHelper =
+      hasVisibleRootSoaHelperForReceiverType(program, "reserve", "vector");
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
@@ -2203,7 +2256,9 @@ bool rewriteBuiltinSoaMutatorCalls(Program &program, std::string &error) {
         soaVectorReturnDefinitions,
         definitionNamespace,
         preservePushHelper,
-        preserveReserveHelper);
+        preserveReserveHelper,
+        preserveVectorPushHelper,
+        preserveVectorReserveHelper);
     if (def.returnExpr.has_value()) {
       rewriteBuiltinSoaMutatorExpr(
           *def.returnExpr,
@@ -2212,7 +2267,9 @@ bool rewriteBuiltinSoaMutatorCalls(Program &program, std::string &error) {
           soaVectorReturnDefinitions,
           definitionNamespace,
           preservePushHelper,
-          preserveReserveHelper);
+          preserveReserveHelper,
+          preserveVectorPushHelper,
+          preserveVectorReserveHelper);
     }
   }
   return true;

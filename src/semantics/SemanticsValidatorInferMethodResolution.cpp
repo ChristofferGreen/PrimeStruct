@@ -237,7 +237,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
-        collectionTypePath == "/soa_vector") {
+        (collectionTypePath == "/soa_vector" ||
+         (collectionTypePath == "/vector" &&
+          (hasDeclaredDefinitionPath("/soa_vector/" + normalizedMethodName) ||
+           hasImportedDefinitionPath("/soa_vector/" + normalizedMethodName))))) {
       resolvedOut = preferredSoaMutatorMethodTarget(normalizedMethodName);
       return true;
     }

@@ -788,7 +788,8 @@ bool rewriteExpr(Expr &expr,
         ((resolvedReceiverExpr->kind == Expr::Kind::Call &&
           !resolvedReceiverExpr->isBinding) ||
          ((resolvedPath == "/soa_vector/count" || resolvedPath == "/soa_vector/get" ||
-           resolvedPath == "/soa_vector/ref") &&
+           resolvedPath == "/soa_vector/ref" || resolvedPath == "/soa_vector/push" ||
+           resolvedPath == "/soa_vector/reserve") &&
           resolvedReceiverFamily == "vector"));
     if (isSyntheticSamePathSoaHelperTemplateCarry) {
       expr.templateArgs.clear();
@@ -1045,7 +1046,8 @@ bool rewriteExpr(Expr &expr,
           ((resolvedReceiverExpr->kind == Expr::Kind::Call &&
             !resolvedReceiverExpr->isBinding) ||
            ((methodPath == "/soa_vector/count" || methodPath == "/soa_vector/get" ||
-             methodPath == "/soa_vector/ref") &&
+             methodPath == "/soa_vector/ref" || methodPath == "/soa_vector/push" ||
+             methodPath == "/soa_vector/reserve") &&
             resolvedReceiverFamily == "vector"));
       if (isSyntheticSamePathSoaHelperTemplateCarry) {
         expr.templateArgs.clear();

@@ -1741,7 +1741,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredSoaRefMethodTarget());
     }
     if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
-        collectionTypePath == "/soa_vector") {
+        (collectionTypePath == "/soa_vector" ||
+         (collectionTypePath == "/vector" &&
+          (hasDeclaredDefinitionPath("/soa_vector/" + normalizedMethodName) ||
+           hasImportedDefinitionPath("/soa_vector/" + normalizedMethodName))))) {
       return setCollectionMethodTarget(preferredSoaMutatorMethodTarget(normalizedMethodName));
     }
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {

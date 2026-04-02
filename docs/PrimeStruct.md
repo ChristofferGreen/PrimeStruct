@@ -2493,6 +2493,10 @@ Vector-target root bare/method/old-explicit `get` and `ref` misuses now also kee
 canonical `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject
 contracts instead of the old builtin `get requires soa_vector target` / `ref requires
 soa_vector target` diagnostics.
+Old-explicit vector-target same-path `/soa_vector/push` / `/soa_vector/reserve` helper shadows
+now also rewrite method/slash-method forms to direct `/soa_vector/push(values, ...)` /
+`/soa_vector/reserve(values, ...)` calls instead of degrading to `unknown call target:
+/std/collections/soa_vector/push`.
 Vector-target root bare/direct/method `to_aos` misuses now also preserve visible same-path
 `/to_aos` user helpers through semantics and dump rewriting and otherwise keep that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin

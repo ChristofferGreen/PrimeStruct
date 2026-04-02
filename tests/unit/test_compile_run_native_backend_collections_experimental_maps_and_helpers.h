@@ -770,6 +770,34 @@ main() {
   CHECK(runCommand(exePath) == 131);
 }
 
+TEST_CASE("native runs vector-target old-explicit soa mutator shadows") {
+  const std::string source = R"(
+[return<int>]
+/soa_vector/push([vector<i32>] values, [i32] value) {
+  return(value)
+}
+
+[return<int>]
+/soa_vector/reserve([vector<i32>] values, [i32] count) {
+  return(count)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(plus(values./soa_vector/push(4i32), values./soa_vector/reserve(6i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_vector_target_old_explicit_soa_mutator_shadow.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_vector_target_old_explicit_soa_mutator_shadow").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+}
+
 TEST_CASE("native compiles nested struct-body soa_vector constructor-bearing helper returns") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

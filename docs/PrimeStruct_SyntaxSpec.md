@@ -827,6 +827,9 @@ target-mismatch path.
 Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
 `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject contracts instead of the old builtin
 `get requires soa_vector target` / `ref requires soa_vector target` diagnostics. Vector-target root bare/direct/method
+old-explicit same-path `/soa_vector/push|reserve` helper shadows now also rewrite method/slash-method forms to direct
+`/soa_vector/push(values, ...)` / `/soa_vector/reserve(values, ...)` calls instead of degrading to
+`unknown call target: /std/collections/soa_vector/push`. Vector-target root bare/direct/method
 `to_aos` misuses now also keep that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin `to_aos requires soa_vector target`
 diagnostic, while visible same-path `/to_aos` user helpers now still win on vector-target wrong-receiver forms

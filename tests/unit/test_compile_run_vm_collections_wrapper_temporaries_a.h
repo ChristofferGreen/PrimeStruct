@@ -676,6 +676,30 @@ main() {
   CHECK(runCommand(runCmd) == 131);
 }
 
+TEST_CASE("runs vm vector-target old-explicit soa mutator shadows") {
+  const std::string source = R"(
+[return<int>]
+/soa_vector/push([vector<i32>] values, [i32] value) {
+  return(value)
+}
+
+[return<int>]
+/soa_vector/reserve([vector<i32>] values, [i32] count) {
+  return(count)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(plus(values./soa_vector/push(4i32), values./soa_vector/reserve(6i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_target_old_explicit_soa_mutator_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 10);
+}
+
 TEST_CASE("runs vm nested struct-body soa_vector constructor-bearing helper returns") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
