@@ -859,9 +859,10 @@ classifier now does the same for nested backend helper dispatch. Those backend-s
 checks now share one generic AST call-path helper instead of each backend file carrying its own
 `soa_vector/to_aos` matcher. Imported and no-import root bare/direct/method/slash-method
 builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the same canonical
-semantic rewrite, materialize `/std/collections/soa_vector/to_aos__...`, and clear lowering plus C++/VM execution
-while the native runtime still traps on that bridged conversion path. The remaining raw-builtin
-conversion-specific compiler-owned gap is now that native runtime trap. The diagnostic harness now also locks both direct-canonical and
+semantic rewrite, materialize `/std/collections/soa_vector/to_aos__...`, and clear lowering plus
+C++/VM/native execution on that bridged conversion path. The remaining raw-builtin
+conversion-specific compiler-owned code is now reduced to invalid-target/user-shadow fallback
+handling instead of a native runtime trap. The diagnostic harness now also locks both direct-canonical and
 imported-helper experimental-wrapper `to_aos` forms to that same canonical helper path at
 `ast-semantic`, so the remaining diagnostic/test cleanup is now field-view only.
 The current pending `soa_vector field views are not implemented yet: <field>` and

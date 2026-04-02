@@ -474,7 +474,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native no-import root soa_vector to_aos helper forms still trap after canonical lowering") {
+TEST_CASE("native no-import root soa_vector to_aos helper forms run after canonical lowering") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -498,7 +498,7 @@ main() {
       (testScratchPath("") / "primec_native_root_soa_vector_to_aos_forms_exe").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("native runs experimental soa_vector stdlib non-empty to-aos helper") {

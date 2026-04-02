@@ -5,6 +5,7 @@
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -24,6 +25,53 @@ bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
   }
   return normalizeCollectionBindingTypeName(expectedStruct) == "soa_vector" &&
          normalizeCollectionBindingTypeName(argStruct) == "soa_vector";
+}
+
+bool resolveBuiltinSoaToAosStorageField(const StructSlotLayoutInfo &layout,
+                                        StructSlotFieldInfo &fieldOut) {
+  if (resolveStructSlotFieldByName(layout.fields, "storage", fieldOut)) {
+    return true;
+  }
+  if (layout.fields.size() == 1 && layout.fields.front().slotCount >= 4) {
+    fieldOut = layout.fields.front();
+    return true;
+  }
+  return false;
+}
+
+void emitCopyBuiltinSoaToAosSlotToLocal(
+    int32_t destLocal,
+    int32_t srcPtrLocal,
+    int32_t srcSlotOffset,
+    const EmitInlineParameterInstructionFn &emitInstruction) {
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal));
+  if (srcSlotOffset != 0) {
+    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(srcSlotOffset) * IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+  }
+  emitInstruction(IrOpcode::LoadIndirect, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destLocal));
+}
+
+bool emitBuiltinSoaToAosStructBridge(
+    int32_t destBaseLocal,
+    int32_t srcPtrLocal,
+    const StructSlotLayoutInfo &layout,
+    const EmitInlineParameterInstructionFn &emitInstruction,
+    std::string &error) {
+  StructSlotFieldInfo storageField;
+  if (!resolveBuiltinSoaToAosStorageField(layout, storageField) || storageField.slotCount < 4) {
+    error = "internal error: builtin soa_vector to_aos bridge requires SoaVector storage layout";
+    return false;
+  }
+
+  const int32_t storageBaseLocal = destBaseLocal + storageField.slotOffset;
+  emitCopyBuiltinSoaToAosSlotToLocal(storageBaseLocal, srcPtrLocal, 0, emitInstruction);
+  emitCopyBuiltinSoaToAosSlotToLocal(storageBaseLocal + 1, srcPtrLocal, 1, emitInstruction);
+  emitCopyBuiltinSoaToAosSlotToLocal(storageBaseLocal + 2, srcPtrLocal, 2, emitInstruction);
+  emitInstruction(IrOpcode::PushI32, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(storageBaseLocal + 3));
+  return true;
 }
 
 bool isBuiltinMapConstructorExpr(const Expr &callExpr) {
@@ -473,9 +521,10 @@ bool emitInlineDefinitionCallParameters(
         return false;
       }
       std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
+      const bool builtinSoaToAosStructBridge =
+          isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct);
       if (argStruct.empty() ||
-          (argStruct != paramInfo.structTypeName &&
-           !isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct))) {
+          (argStruct != paramInfo.structTypeName && !builtinSoaToAosStructBridge)) {
         error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
@@ -504,10 +553,18 @@ bool emitInlineDefinitionCallParameters(
       }
       const int32_t srcPtrLocal = allocTempLocal();
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
-      if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
+      if (builtinSoaToAosStructBridge) {
+        if (!emitBuiltinSoaToAosStructBridge(baseLocal,
+                                             srcPtrLocal,
+                                             layout,
+                                             emitInstruction,
+                                             error)) {
+          return false;
+        }
+      } else if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
         return false;
       }
-      if (orderedArg->kind == Expr::Kind::Call) {
+      if (!builtinSoaToAosStructBridge && orderedArg->kind == Expr::Kind::Call) {
         emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, paramInfo.structTypeName);
       }
       calleeLocals.emplace(param.name, paramInfo);

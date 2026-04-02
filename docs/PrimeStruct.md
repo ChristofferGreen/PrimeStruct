@@ -2348,7 +2348,7 @@ bad_use_after_take() {
     bindings now also clear the old builtin-versus-wrapper lowering mismatch through the
     canonical stdlib shim, and imported plus no-import root builtin bare/direct/method/slash-method
     `to_aos` forms now also materialize the canonical `/std/collections/soa_vector/to_aos__...`
-    helper path. The bridged raw-builtin native runtime path still needs a follow-up. These compiler-owned
+    helper path and run through that same bridged substrate on native instead of trapping. These compiler-owned
     `soa_vector` paths are
     not the intended end-state and are now tracked as separate cleanup follow-ups for the remaining semantics
     method/builtin fallbacks, IR-lowerer special cases, emitter/backend special cases, and runtime/diagnostic
@@ -2531,8 +2531,8 @@ builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the s
 semantic rewrite and lower past the old builtin-versus-wrapper parameter mismatch instead of
 failing earlier against the experimental wrapper helper, and imported plus no-import root
 bare/direct/method/slash-method `to_aos` now materialize
-`/std/collections/soa_vector/to_aos__...` before lowering. The bridged native runtime path
-remains a follow-up.
+`/std/collections/soa_vector/to_aos__...` before lowering and now run on native through that same
+bridged shim path.
 Imported raw-builtin bare/method canonical `count/get/ref/push/reserve` forms now also clear
 semantics on that same canonical helper surface, imported method `get(...).field` /
 `ref(...).field` now resolves the element struct before lowering, and imported method
@@ -2540,8 +2540,7 @@ semantics on that same canonical helper surface, imported method `get(...).field
 older mutable-vector-binding gap. Those raw-builtin imported helper forms still stop later on
 the remaining lowering bridge from builtin `/soa_vector` values to experimental wrapper
 `SoaVector<T>` parameters instead of on the older imported method `get/ref` unknown-target gap.
-Conversion cleanup itself is now reduced to the remaining raw-builtin native runtime follow-up on
-the bridged bare/direct/method/slash-method path, while
+Conversion cleanup itself is now complete on that bridged bare/direct/method/slash-method path, while
 field-view cleanup is now reduced to the remaining
 direct pending-diagnostic path plus future richer borrowed/mutating behavior because the
 current successful read-only indexing surface no longer depends on backend-local
@@ -2599,8 +2598,9 @@ either, instead using one shared AST call-path helper for canonical
 `/std/collections/soa_vector/to_aos...` matching. The remaining conversion-specific
 compiler-owned code is therefore narrowed to that shared helper plus invalid-target/user-shadow
 `to_aos` fallbacks rather than old root-builtin direct-call routing outside the stdlib helper
-path. The remaining raw-builtin conversion-specific compiler-owned gap is now the native runtime trap on
-already-canonicalized imported and no-import root bare/direct/method/slash-method `to_aos` calls.
+path. The remaining raw-builtin conversion-specific compiler-owned code is now reduced to the
+shared canonical `to_aos` matcher plus invalid-target/user-shadow fallbacks rather than any native
+runtime trap on already-canonicalized bare/direct/method/slash-method calls.
 That single-column borrowed-slot substrate is the current completed foothold; the remaining
 borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
 then richer borrowed field-view semantics on top of that substrate. Successful experimental
