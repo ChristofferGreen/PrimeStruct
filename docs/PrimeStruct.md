@@ -2652,6 +2652,9 @@ which is now gone entirely,
 while validator-side fixed unavailable-method rejects now also route through one
 shared visibility-aware helper instead of recomputing the `/soa_vector/ref`
 visibility and pending/unavailable split inline,
+while monomorph-side fixed method pending rejects now also route through one
+shared visibility-aware helper instead of open-coding the optional pending
+lookup around that same visibility probe,
 and the low-level field-view and borrowed-view pending string builders are now
 file-local to the shared helper implementation instead of part of the public
 semantics-helper surface,
