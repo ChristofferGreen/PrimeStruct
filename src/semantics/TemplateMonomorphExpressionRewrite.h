@@ -307,6 +307,21 @@ bool rewriteExpr(Expr &expr,
     if (receiverExpr == nullptr) {
       return path;
     }
+    auto hasDefinitionFamilyPath = [&](std::string_view candidatePath) {
+      const std::string ownedPath(candidatePath);
+      if (ctx.sourceDefs.count(ownedPath) > 0 || ctx.helperOverloads.count(ownedPath) > 0) {
+        return true;
+      }
+      const std::string templatedPrefix = ownedPath + "<";
+      const std::string specializedPrefix = ownedPath + "__t";
+      for (const auto &[defPath, _] : ctx.sourceDefs) {
+        if (defPath == ownedPath || defPath.rfind(templatedPrefix, 0) == 0 ||
+            defPath.rfind(specializedPrefix, 0) == 0) {
+          return true;
+        }
+      }
+      return false;
+    };
     auto hasVisibleRootBuiltinSoaToAosHelper = [&]() {
       auto matchesBuiltinSoaHelper = [&](const std::string &helperPath) {
         auto defIt = ctx.sourceDefs.find(helperPath);
@@ -386,6 +401,11 @@ bool rewriteExpr(Expr &expr,
         helperName != "get" && helperName != "ref" &&
         helperName != "to_aos") {
       return path;
+    }
+    if (helperName == "ref" &&
+        hasDefinitionFamilyPath("/soa_vector/ref") &&
+        inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
+      return std::string("/soa_vector/ref");
     }
     if (helperName == "to_aos" &&
         hasVisibleRootBuiltinSoaToAosHelper() &&

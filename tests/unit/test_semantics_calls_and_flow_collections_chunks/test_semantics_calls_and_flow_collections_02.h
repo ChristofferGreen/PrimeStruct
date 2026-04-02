@@ -3300,6 +3300,75 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("ref call fallback keeps same-path helper shadow for auto inference through struct helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[return<int>]
+/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [auto] item{ref(holder.cloneValues(), 0i32)}
+  return(item)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("ref call fallback keeps same-path helper shadow for direct returns through struct helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorNew<Particle>())
+  }
+}
+
+[return<int>]
+/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(ref(holder.cloneValues(), 0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("push and reserve bare and method forms validate on experimental soa_vector bindings") {
   const std::string source = R"(
 import /std/collections/*
