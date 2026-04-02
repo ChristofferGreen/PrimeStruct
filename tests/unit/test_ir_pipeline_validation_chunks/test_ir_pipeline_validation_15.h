@@ -735,6 +735,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMapSoaBuiltinsSource.find(
             "soaDirectPendingUnavailableMethodDiagnostic(resolved)") !=
         std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(samePath)") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
+        std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("soaUnavailableMethodDiagnostic(resolved, false)") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("soaFieldViewPendingDiagnostic(soaFieldViewName)") ==

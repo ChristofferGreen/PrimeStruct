@@ -97,7 +97,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   };
   auto hasVisibleSamePathSoaAccessHelper = [&](const std::string &helperName) {
     const std::string samePath = "/soa_vector/" + helperName;
-    return hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath);
+    return hasVisibleDefinitionPathForCurrentImports(samePath);
   };
 
   auto validateMapContainsKeyExpr = [&](const Expr &keyExpr,
