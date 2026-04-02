@@ -183,8 +183,8 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector builtin ref local bindings validate before lowering") {
-  const auto checkAccept = [](const std::string &bindingInit) {
+TEST_CASE("soa_vector builtin ref local bindings use pending diagnostic") {
+  const auto checkReject = [](const std::string &bindingType, const std::string &bindingInit) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -192,17 +192,20 @@ TEST_CASE("soa_vector builtin ref local bindings validate before lowering") {
         "[return<int>]\n"
         "main() {\n"
         "  [soa_vector<Particle>] values{soa_vector<Particle>()}\n"
-        "  [auto] item{" + bindingInit + "}\n"
+        "  [" + bindingType + "] item{" + bindingInit + "}\n"
         "  return(0i32)\n"
         "}\n";
     std::string error;
-    CHECK(validateProgram(source, "/main", error));
-    CHECK(error.empty());
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
   };
 
-  checkAccept("ref(values, 0i32)");
-  checkAccept("values.ref(0i32)");
-  checkAccept("/soa_vector/ref(values, 0i32)");
+  checkReject("auto", "ref(values, 0i32)");
+  checkReject("auto", "values.ref(0i32)");
+  checkReject("auto", "/soa_vector/ref(values, 0i32)");
+  checkReject("Particle", "ref(values, 0i32)");
+  checkReject("Particle", "values.ref(0i32)");
+  checkReject("Particle", "/soa_vector/ref(values, 0i32)");
 }
 
 TEST_CASE("soa_vector ref helper binding keeps same-path user helper for auto inference") {

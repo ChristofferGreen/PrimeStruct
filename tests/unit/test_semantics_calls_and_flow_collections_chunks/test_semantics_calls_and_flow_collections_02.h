@@ -3085,7 +3085,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("imported ref forms validate on builtin soa_vector binding") {
+TEST_CASE("imported ref local bindings reject builtin soa_vector persistence") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -3103,8 +3103,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
 }
 
 TEST_CASE("explicit soa_vector ref validates on soa_vector binding") {

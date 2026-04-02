@@ -197,6 +197,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return false;
   }
+  if (isBuiltinSoaRefExpr(initializer, params, locals)) {
+    error_ = soaBorrowedViewPendingDiagnostic();
+    return false;
+  }
 
   ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
   if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(initializer)) {
