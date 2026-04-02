@@ -141,6 +141,10 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     return true;
   };
+  auto hasVisibleSamePathSoaCountHelper = [&]() {
+    return hasDeclaredDefinitionPath("/soa_vector/count") ||
+           hasImportedDefinitionPath("/soa_vector/count");
+  };
   auto validateDirectVectorCountCapacityCall =
       [&](const char *helperName, const char *resolvedPath) {
         handledOut = true;
@@ -288,6 +292,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
                logicalResolvedMethod == "/std/collections/soa_vector/count") {
       std::string elemType;
       if (!resolveSoaVectorOrExperimentalBorrowedTarget(expr.args.front(), elemType)) {
+        if (logicalResolvedMethod == "/soa_vector/count" &&
+            hasVisibleSamePathSoaCountHelper()) {
+          handledOut = false;
+          return true;
+        }
         if (!validateExpr(params, locals, expr.args.front())) {
           return false;
         }

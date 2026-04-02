@@ -409,7 +409,8 @@ bool rewriteExpr(Expr &expr,
     }
     if (helperName == "count" &&
         hasDefinitionFamilyPath("/soa_vector/count") &&
-        inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
+        (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
+         inferCollectionReceiverFamily(receiverExpr) == "vector")) {
       return std::string("/soa_vector/count");
     }
     if (helperName == "push" &&

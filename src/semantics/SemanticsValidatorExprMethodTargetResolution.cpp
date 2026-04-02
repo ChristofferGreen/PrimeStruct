@@ -1673,6 +1673,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (collectionTypePath == "/array") {
         return setCollectionMethodTarget("/array/count");
       }
+      if (collectionTypePath == "/vector" &&
+          (hasDeclaredDefinitionPath("/soa_vector/count") ||
+           hasImportedDefinitionPath("/soa_vector/count"))) {
+        return setCollectionMethodTarget(preferredSoaCountMethodTarget());
+      }
       if (collectionTypePath == "/vector") {
         return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
       }
@@ -1892,7 +1897,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
            normalizedMethodName == "at_unsafe")) {
         return setCollectionMethodTarget("/array/" + normalizedMethodName);
       }
-      if (base == "soa_vector" && normalizedMethodName == "count") {
+      if ((base == "soa_vector" ||
+           (base == "vector" &&
+            (hasDeclaredDefinitionPath("/soa_vector/count") ||
+             hasImportedDefinitionPath("/soa_vector/count")))) &&
+          normalizedMethodName == "count") {
         return setCollectionMethodTarget(preferredSoaCountMethodTarget());
       }
       if ((base == "soa_vector" ||
@@ -1987,6 +1996,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (normalizedMethodName == "count") {
     if (resolveArgsPackCountTarget(receiver, elemType)) {
       return setCollectionMethodTarget("/array/count");
+    }
+    if (resolveVectorTarget(receiver, elemType) &&
+        (hasDeclaredDefinitionPath("/soa_vector/count") ||
+         hasImportedDefinitionPath("/soa_vector/count"))) {
+      return setCollectionMethodTarget(preferredSoaCountMethodTarget());
     }
     if (resolveVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));

@@ -479,10 +479,15 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector-target get and ref keep same-path soa helpers") {
+TEST_CASE("vector-target count get and ref keep same-path soa helpers") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
+}
+
+[return<int>]
+/soa_vector/count([vector<Particle>] values) {
+  return(6i32)
 }
 
 [return<int>]
@@ -501,6 +506,11 @@ consume([int] value) {
 }
 
 [return<auto>]
+pickCount([vector<Particle>] values) {
+  return(count(values))
+}
+
+[return<auto>]
 pickGet([vector<Particle>] values) {
   return(get(values, 0i32))
 }
@@ -513,17 +523,24 @@ pickRef([vector<Particle>] values) {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Particle>] values{vector<Particle>(Particle(1i32))}
+  [auto] bareCount{count(values)}
+  [auto] methodCount{values.count()}
   [auto] bareGet{get(values, 0i32)}
   [auto] methodGet{values.get(0i32)}
   [auto] bareRef{ref(values, 0i32)}
   [auto] methodRef{values.ref(0i32)}
-  return(plus(bareGet,
-              plus(methodGet,
-                   plus(bareRef,
-                        plus(methodRef,
-                             plus(consume(get(values, 0i32)),
-                                  plus(consume(values.ref(0i32)),
-                                       plus(pickGet(values), pickRef(values)))))))))
+  return(plus(bareCount,
+              plus(methodCount,
+                   plus(bareGet,
+                        plus(methodGet,
+                             plus(bareRef,
+                                  plus(methodRef,
+                                       plus(consume(count(values)),
+                                            plus(consume(get(values, 0i32)),
+                                                 plus(consume(values.ref(0i32)),
+                                                      plus(pickCount(values),
+                                                           plus(pickGet(values),
+                                                                pickRef(values))))))))))))
 }
 )";
   std::string error;

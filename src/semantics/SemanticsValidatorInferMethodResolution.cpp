@@ -132,6 +132,12 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = preferVectorStdlibHelperPath("/array/count");
         return true;
       }
+      if (collectionTypePath == "/vector" &&
+          (hasDeclaredDefinitionPath("/soa_vector/count") ||
+           hasImportedDefinitionPath("/soa_vector/count"))) {
+        resolvedOut = preferredSoaCountMethodTarget();
+        return true;
+      }
       if (collectionTypePath == "/vector") {
         resolvedOut = preferredBareVectorHelperTarget("count");
         return true;
@@ -534,6 +540,12 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (normalizedMethodName == "count") {
       if (resolveArgsPackCountTarget(receiver, elemType)) {
         resolvedOut = preferVectorStdlibHelperPath("/array/count");
+        return true;
+      }
+      if (resolveVectorTarget(receiver, elemType) &&
+          (hasDeclaredDefinitionPath("/soa_vector/count") ||
+           hasImportedDefinitionPath("/soa_vector/count"))) {
+        resolvedOut = preferredSoaCountMethodTarget();
         return true;
       }
       if (resolveVectorTarget(receiver, elemType)) {
