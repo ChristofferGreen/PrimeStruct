@@ -127,6 +127,20 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
            resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
                                                   elemTypeOut);
   };
+  auto validateSoaHelperReturnTemplateArgs =
+      [&](const Expr &receiverExpr, const std::string &elemType, const char *helperName) {
+    if (expr.templateArgs.empty()) {
+      return true;
+    }
+    if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding ||
+        expr.templateArgs.size() != 1 ||
+        normalizeBindingTypeName(expr.templateArgs.front()) !=
+            normalizeBindingTypeName(elemType)) {
+      error_ = std::string(helperName) + " does not accept template arguments";
+      return false;
+    }
+    return true;
+  };
   auto validateDirectVectorCountCapacityCall =
       [&](const char *helperName, const char *resolvedPath) {
         handledOut = true;
@@ -197,10 +211,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
   if (isDirectStdNamespacedSoaCountBuiltinCall) {
     handledOut = true;
-    if (!expr.templateArgs.empty()) {
-      error_ = "count does not accept template arguments";
-      return false;
-    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "count does not accept block arguments";
       return false;
@@ -216,6 +226,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         return false;
       }
       error_ = "count requires soa_vector target";
+      return false;
+    }
+    if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, "count")) {
       return false;
     }
     return validateExpr(params, locals, expr.args.front());
@@ -254,10 +267,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       error_ = "unknown call target: /std/collections/map/count";
       return false;
     }
-    if (!expr.templateArgs.empty()) {
-      error_ = "count does not accept template arguments";
-      return false;
-    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "count does not accept block arguments";
       return false;
@@ -275,6 +284,22 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         error_ = "count requires map target";
         return false;
       }
+    } else if (logicalResolvedMethod == "/soa_vector/count" ||
+               logicalResolvedMethod == "/std/collections/soa_vector/count") {
+      std::string elemType;
+      if (!resolveSoaVectorOrExperimentalBorrowedTarget(expr.args.front(), elemType)) {
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        error_ = "count requires soa_vector target";
+        return false;
+      }
+      if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, "count")) {
+        return false;
+      }
+    } else if (!expr.templateArgs.empty()) {
+      error_ = "count does not accept template arguments";
+      return false;
     }
     return validateExpr(params, locals, expr.args.front());
   }

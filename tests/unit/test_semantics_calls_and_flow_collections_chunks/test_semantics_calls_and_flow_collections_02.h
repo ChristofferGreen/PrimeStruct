@@ -4145,6 +4145,75 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin soa_vector global helper-return read helpers validate without same-path shadow") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<soa_vector<Particle>>]
+cloneValues() {
+  [soa_vector<Particle>, mut] values{soa_vector<Particle>()}
+  values.push(Particle(7i32))
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [i32] countBare{count(cloneValues())}
+  [i32] countMethod{cloneValues().count()}
+  [i32] getBare{get(cloneValues(), 0i32).x}
+  [i32] getMethod{cloneValues().get(0i32).x}
+  [i32] refBare{ref(cloneValues(), 0i32).x}
+  [i32] refMethod{cloneValues().ref(0i32).x}
+  return(plus(countBare,
+              plus(countMethod,
+                   plus(getBare,
+                        plus(getMethod,
+                             plus(refBare, refMethod))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("builtin soa_vector method-like helper-return read helpers validate without same-path shadow") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[effects(heap_alloc), return<soa_vector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  [soa_vector<Particle>, mut] values{soa_vector<Particle>()}
+  values.push(Particle(7i32))
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [i32] countBare{count(holder.cloneValues())}
+  [i32] countMethod{holder.cloneValues().count()}
+  [i32] getBare{get(holder.cloneValues(), 0i32).x}
+  [i32] getMethod{holder.cloneValues().get(0i32).x}
+  [i32] refBare{ref(holder.cloneValues(), 0i32).x}
+  [i32] refMethod{holder.cloneValues().ref(0i32).x}
+  return(plus(countBare,
+              plus(countMethod,
+                   plus(getBare,
+                        plus(getMethod,
+                             plus(refBare, refMethod))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("aos and soa containers do not implicitly convert") {
   const std::string source = R"(
 Particle() {

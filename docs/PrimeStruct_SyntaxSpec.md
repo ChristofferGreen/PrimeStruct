@@ -850,12 +850,16 @@ helper/conversion substrate plus same-path `/soa_vector/*` and `/to_aos` helper-
 surfaces instead of failing during specialization or later expression lowering. The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now also prefers
 the canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
-`/soa_vector/get` user-helper shadowing, and bare helper-return `get(...)` local binding,
-call-argument, and direct return escapes now also preserve that same-path helper shadow instead
-of degrading to a synthetic template-argument error. The equivalent helper-return method/infer fallback for
+`/soa_vector/get` user-helper shadowing, helper-return builtin bare/method `get(...)` reads on
+global and explicit `/Type/helper` receivers now also clear semantics on that same canonical
+surface instead of degrading to `get does not accept template arguments`, and bare helper-return
+`get(...)` local binding, call-argument, and direct return escapes now also preserve that
+same-path helper shadow instead of degrading to a synthetic template-argument error. The equivalent helper-return method/infer fallback for
 builtin `soa_vector` `ref` receivers now also prefers the canonical
 `/std/collections/soa_vector/ref` helper path while still preserving same-path
-`/soa_vector/ref` user-helper shadowing. Local `auto` inference on builtin and helper-return
+`/soa_vector/ref` user-helper shadowing. Read-only helper-return builtin `ref(...).field`
+reads on global and explicit `/Type/helper` receivers now also clear semantics on that same
+canonical surface instead of degrading to `ref does not accept template arguments`. Local `auto` inference on builtin and helper-return
 `ref(...)` method sugar now also respects that same-path helper return type instead of collapsing
 to the builtin element type, bare helper-return `ref(...)` local binding, call-argument, and
 direct return escapes now also preserve that same-path helper shadow instead of degrading to a

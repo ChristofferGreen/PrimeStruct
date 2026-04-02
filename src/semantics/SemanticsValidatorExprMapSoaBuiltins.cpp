@@ -168,6 +168,20 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
            !inferredTypeText.empty() &&
            resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
   };
+  auto validateSoaHelperReturnTemplateArgs =
+      [&](const Expr &receiverExpr, const std::string &elemType, const std::string &helperName) {
+    if (expr.templateArgs.empty()) {
+      return true;
+    }
+    if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding ||
+        expr.templateArgs.size() != 1 ||
+        normalizeBindingTypeName(expr.templateArgs.front()) !=
+            normalizeBindingTypeName(elemType)) {
+      error_ = helperName + " does not accept template arguments";
+      return false;
+    }
+    return true;
+  };
 
   auto validateMapContainsKeyExpr = [&](const Expr &keyExpr,
                                         const std::string &mapKeyType) -> bool {
@@ -333,10 +347,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     const std::string helperName =
         (resolved == "/soa_vector/ref" || resolved == "/std/collections/soa_vector/ref") ? "ref"
                                                                                           : "get";
-    if (!expr.templateArgs.empty()) {
-      error_ = helperName + " does not accept template arguments";
-      return false;
-    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = helperName + " does not accept block arguments";
       return false;
@@ -348,6 +358,9 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     std::string elemType;
     if (!resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
       error_ = helperName + " requires soa_vector target";
+      return false;
+    }
+    if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, helperName)) {
       return false;
     }
     if (!isIntegerExpr(expr.args[1])) {
@@ -396,10 +409,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return false;
     }
     const std::string helperName = expr.name;
-    if (!expr.templateArgs.empty()) {
-      error_ = helperName + " does not accept template arguments";
-      return false;
-    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = helperName + " does not accept block arguments";
       return false;
@@ -411,6 +420,9 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     std::string elemType;
     if (!resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
       error_ = helperName + " requires soa_vector target";
+      return false;
+    }
+    if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, helperName)) {
       return false;
     }
     if (!isIntegerExpr(expr.args[1])) {

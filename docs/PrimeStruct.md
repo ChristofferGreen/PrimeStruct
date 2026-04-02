@@ -2346,7 +2346,10 @@ bad_use_after_take() {
     diagnostics, and imported raw-builtin bare/method `count/get/ref/push/reserve`
     forms now also clear semantics on that canonical surface while imported method
     `get(...).field` / `ref(...).field` now resolves the element struct during
-    semantics. Root/imported builtin bare/direct `to_aos` forms on raw `soa_vector<T>`
+    semantics. Helper-return builtin bare/method `count/get/ref` reads on global and
+    explicit `/Type/helper` receivers now also clear semantics on that same canonical
+    surface instead of degrading to `does not accept template arguments`.
+    Root/imported builtin bare/direct `to_aos` forms on raw `soa_vector<T>`
     bindings now also clear the old builtin-versus-wrapper lowering mismatch through the
     canonical stdlib shim, and imported plus no-import root builtin bare/direct/method/slash-method
     `to_aos` forms now also materialize the canonical `/std/collections/soa_vector/to_aos__...`
