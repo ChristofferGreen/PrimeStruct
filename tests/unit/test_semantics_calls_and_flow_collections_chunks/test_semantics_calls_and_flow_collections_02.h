@@ -1759,6 +1759,47 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector mutating method-like borrowed helper-return field-view indexes validate") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  assign(holder.pickBorrowed(location(values)).y()[1i32], 17i32)
+  assign(y(holder.pickBorrowed(location(values)))[0i32], 19i32)
+  assign(location(holder.pickBorrowed(location(values))).y()[0i32], 23i32)
+  assign(y(dereference(location(holder.pickBorrowed(location(values)))))[1i32], 29i32)
+  return(
+    plus(holder.pickBorrowed(location(values)).y()[0i32],
+         plus(y(holder.pickBorrowed(location(values)))[1i32],
+              plus(location(holder.pickBorrowed(location(values))).y()[0i32],
+                   y(dereference(location(holder.pickBorrowed(location(values)))))[1i32])))
+  )
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view methods report pending diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

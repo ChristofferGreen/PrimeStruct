@@ -931,8 +931,10 @@ location-wrapped borrowed helper-return receivers instead of degrading to the ge
 mutable-binding assignment contract, while indexed and explicit borrowed-slot writes such as
 `assign(value.field()[i], next)`, `assign(ref(value, i).field, next)`,
 `assign(value.ref(i).field, next)`, `assign(dereference(pickBorrowed(...)).field()[i], next)`,
-and `assign(field(location(pickBorrowed(...)))[i], next)` now clear semantics/runtime through the
-existing `soaVectorRef<T>(..., i).field` substrate. Borrowed
+`assign(field(location(pickBorrowed(...)))[i], next)`,
+`assign(holder.pickBorrowed(...).field()[i], next)`, and
+`assign(field(location(holder.pickBorrowed(...)))[i], next)` now clear semantics/runtime through
+the existing `soaVectorRef<T>(..., i).field` substrate. Borrowed
 `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
 `borrowed.ref(i)`, and `borrowed.to_aos()` plus bare helper forms
 `count(...)`, `get(...)`, `ref(...)`, and `to_aos(...)` now also validate on the existing wrapper

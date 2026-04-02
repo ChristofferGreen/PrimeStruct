@@ -1114,6 +1114,49 @@ main() {
   CHECK(runCommand(runCmd) == 36);
 }
 
+TEST_CASE("vm runs method-like borrowed experimental soa_vector mutating indexed field writes") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  assign(holder.pickBorrowed(location(values)).y()[1i32], 17i32)
+  assign(y(holder.pickBorrowed(location(values)))[0i32], 19i32)
+  assign(location(holder.pickBorrowed(location(values))).y()[0i32], 23i32)
+  assign(y(dereference(location(holder.pickBorrowed(location(values)))))[1i32], 29i32)
+  return(
+    plus(holder.pickBorrowed(location(values)).y()[0i32],
+         plus(y(holder.pickBorrowed(location(values)))[1i32],
+              plus(location(holder.pickBorrowed(location(values))).y()[0i32],
+                   y(dereference(location(holder.pickBorrowed(location(values)))))[1i32])))
+  )
+}
+)";
+  const std::string srcPath = writeTemp(
+      "vm_experimental_soa_vector_method_like_borrowed_mutating_indexed_field_writes.prime",
+      source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 104);
+}
+
 TEST_CASE("vm runs borrowed experimental soa_vector reflected index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

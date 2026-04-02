@@ -2400,9 +2400,13 @@ bad_use_after_take() {
     while indexed and explicit borrowed-slot writes such as `assign(values.y()[i], next)`,
     `assign(dereference(pickBorrowed(...)).y()[i], next)`,
     `assign(location(pickBorrowed(...)).y()[i], next)`,
-    `assign(y(location(pickBorrowed(...)))[i], next)`, `assign(ref(values, i).y, next)`, and
-    `assign(values.ref(i).y, next)` now clear semantics/runtime through the existing
-    `soaVectorRef<T>(..., i).field` substrate, and borrowed
+    `assign(y(location(pickBorrowed(...)))[i], next)`,
+    `assign(holder.pickBorrowed(...).y()[i], next)`,
+    `assign(y(holder.pickBorrowed(...)))[i]`,
+    `assign(location(holder.pickBorrowed(...)).y()[i], next)`,
+    `assign(y(dereference(location(holder.pickBorrowed(...))))[i], next)`,
+    `assign(ref(values, i).y, next)`, and `assign(values.ref(i).y, next)` now clear
+    semantics/runtime through the existing `soaVectorRef<T>(..., i).field` substrate, and borrowed
     `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`, `borrowed.ref(i)`, and
     `borrowed.to_aos()` plus bare helper forms `count(...)`, `get(...)`, `ref(...)`, and
     `to_aos(...)` now also ride on the existing helper/conversion substrate for local,
