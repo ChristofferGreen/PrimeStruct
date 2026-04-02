@@ -473,12 +473,17 @@ std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
 }
 
 std::string soaDirectFieldViewPendingDiagnostic(std::string_view fieldName) {
-  return *soaPendingUnavailableMethodDiagnostic(
-      soaFieldViewHelperPath(fieldName), false);
+  return soaDirectPendingUnavailableMethodDiagnostic(
+      soaFieldViewHelperPath(fieldName));
 }
 
 std::string soaDirectBorrowedViewPendingDiagnostic() {
-  return *soaPendingUnavailableMethodDiagnostic("/soa_vector/ref", false);
+  return soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
+}
+
+std::string soaDirectPendingUnavailableMethodDiagnostic(
+    std::string_view resolvedPath) {
+  return *soaPendingUnavailableMethodDiagnostic(resolvedPath, false);
 }
 
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,

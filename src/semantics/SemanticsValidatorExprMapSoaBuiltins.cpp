@@ -325,7 +325,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = expr.name + " does not accept block arguments";
       return false;
     }
-    error_ = *soaPendingUnavailableMethodDiagnostic(resolved, false);
+    error_ = soaDirectPendingUnavailableMethodDiagnostic(resolved);
     return false;
   }
 

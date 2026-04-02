@@ -492,7 +492,7 @@
             "soa_vector field views are not implemented yet: ") ==
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
-            "soaPendingUnavailableMethodDiagnostic(resolved, false)") !=
+            "soaDirectPendingUnavailableMethodDiagnostic(resolved)") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "soaUnavailableMethodDiagnostic(resolved, false)") ==
