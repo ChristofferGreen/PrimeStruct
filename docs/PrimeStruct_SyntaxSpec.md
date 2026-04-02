@@ -952,7 +952,8 @@ monomorph-side builtin `ref(...)` fallback now also reuses the shared
 unavailable-method helper instead of returning the borrowed-view pending
 string directly, while the shared direct pending reporter now also uses that
 same optional unavailable-method helper for both field-view and `ref(...)`
-rejects.
+rejects, and infer pre-dispatch plus late-fallback unavailable-method sites now
+also use that same shared helper instead of the older field-view-only wrapper.
 Standalone builtin field-view call
 forms now route through the shared synthetic `/soa_vector/field_view/<field>`
 or same-path `/soa_vector/<field>` path instead of a dedicated

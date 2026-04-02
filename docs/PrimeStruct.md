@@ -2636,6 +2636,8 @@ and monomorph-side builtin `ref(...)` fallback now also reusing the shared
 unavailable-method helper instead of returning the borrowed-view pending string directly,
 while the shared direct pending reporter now likewise uses that same optional
 unavailable-method helper for both field-view and `ref(...)` rejects,
+and infer pre-dispatch plus late-fallback unavailable-method sites now also use
+that same shared helper instead of the older field-view-only wrapper,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since

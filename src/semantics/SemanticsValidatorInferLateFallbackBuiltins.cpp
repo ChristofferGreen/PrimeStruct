@@ -500,7 +500,10 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       if (context.resolveMethodCallPath != nullptr &&
           context.resolveMethodCallPath(builtinAccessName, methodResolved) &&
           !methodResolved.empty()) {
-        error_ = soaFieldViewOrUnknownMethodDiagnostic(methodResolved);
+        error_ = soaUnavailableMethodDiagnostic(
+            methodResolved,
+            hasDeclaredDefinitionPath("/soa_vector/ref") ||
+                hasImportedDefinitionPath("/soa_vector/ref"));
       }
       return finish(ReturnKind::Unknown);
     }
