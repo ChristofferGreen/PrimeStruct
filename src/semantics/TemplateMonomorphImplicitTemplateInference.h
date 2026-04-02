@@ -212,7 +212,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       if (isCanonicalBuiltinSoaRefCall &&
           !candidate.args.empty() &&
           candidate.args.front().kind == Expr::Kind::Call) {
-        return soaBorrowedViewPendingDiagnostic();
+        return soaUnavailableMethodDiagnostic("/soa_vector/ref", false);
       }
       const bool isExplicitSoaRefCall =
           (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
@@ -224,7 +224,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
           isExplicitSoaRefCall ||
           isBuiltinSoaRefMethod ||
           (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"))) {
-        return soaBorrowedViewPendingDiagnostic();
+        return soaUnavailableMethodDiagnostic("/soa_vector/ref", false);
       }
       return {};
     }

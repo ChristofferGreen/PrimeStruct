@@ -947,7 +947,10 @@ unavailable-method diagnostic instead of building the pending string inline,
 while the shared direct pending reporter now routes both field-view and
 `ref(...)` rejects through those same helper-path/unavailable-method diagnostics,
 with helper-return local-binding `ref(...)` fallback now reusing that same
-direct pending reporter instead of a local string-rewrite branch.
+direct pending reporter instead of a local string-rewrite branch, and
+monomorph-side builtin `ref(...)` fallback now also reuses the shared
+unavailable-method helper instead of returning the borrowed-view pending
+string directly.
 Standalone builtin field-view call
 forms now route through the shared synthetic `/soa_vector/field_view/<field>`
 or same-path `/soa_vector/<field>` path instead of a dedicated
