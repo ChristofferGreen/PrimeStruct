@@ -972,7 +972,7 @@ semantics-helper surface, while direct collection-access, count/capacity
 builtin validation, SoA builtin validation, collection dispatch inference,
 direct access helper routing, and method-target/infer borrowed experimental
 receiver handling now also share one borrowed experimental receiver probe
-end-to-end instead of keeping duplicated inline lambdas, direct receiver
+end-to-end instead of keeping duplicated inline lambdas, wrapper lambdas, direct receiver
 adapters, or local borrowed-target wrappers.
 Standalone builtin field-view call
 forms now route through the shared synthetic `/soa_vector/field_view/<field>`

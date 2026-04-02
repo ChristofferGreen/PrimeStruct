@@ -1505,16 +1505,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return canonical;
   };
-  auto resolveSoaVectorOrExperimentalBorrowedReceiver = [&](const Expr &candidate,
-                                                            std::string &elemTypeOut) -> bool {
-    auto resolveDirectReceiver = [&](const Expr &directCandidate,
-                                     std::string &directElemTypeOut) -> bool {
-      return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
-          directCandidate, params, locals, resolveSoaVectorTarget,
-          directElemTypeOut);
-    };
-    return this->resolveSoaVectorOrExperimentalBorrowedReceiver(
-        candidate, params, locals, resolveDirectReceiver, elemTypeOut);
+  auto resolveDirectReceiver = [&](const Expr &directCandidate,
+                                   std::string &directElemTypeOut) -> bool {
+    return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
+        directCandidate, params, locals, resolveSoaVectorTarget,
+        directElemTypeOut);
   };
   auto preferredBufferMethodTarget = [&](const std::string &helperName) {
     const std::string canonical = "/std/gfx/Buffer/" + helperName;
@@ -2066,7 +2061,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredSoaToAosMethodTarget());
     }
   }
-  if (resolveSoaVectorOrExperimentalBorrowedReceiver(receiver, elemType)) {
+  if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+          receiver, params, locals, resolveDirectReceiver, elemType)) {
     const std::string normalizedElemType = normalizeBindingTypeName(elemType);
     std::string currentNamespace;
     if (!currentValidationContext_.definitionPath.empty()) {

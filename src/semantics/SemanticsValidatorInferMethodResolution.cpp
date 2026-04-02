@@ -257,17 +257,14 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   };
   auto resolveSoaFieldViewMethodTarget = [&](const Expr &soaReceiver) -> bool {
     std::string elemType;
-    auto resolveSoaVectorOrExperimentalBorrowedReceiver = [&](const Expr &candidate) -> bool {
-      auto resolveDirectReceiver = [&](const Expr &directCandidate,
-                                       std::string &directElemTypeOut) -> bool {
-        return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
-            directCandidate, params, locals, resolveSoaVectorTarget,
-            directElemTypeOut);
-      };
-      return this->resolveSoaVectorOrExperimentalBorrowedReceiver(
-          candidate, params, locals, resolveDirectReceiver, elemType);
+    auto resolveDirectReceiver = [&](const Expr &directCandidate,
+                                     std::string &directElemTypeOut) -> bool {
+      return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
+          directCandidate, params, locals, resolveSoaVectorTarget,
+          directElemTypeOut);
     };
-    if (!resolveSoaVectorOrExperimentalBorrowedReceiver(soaReceiver)) {
+    if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            soaReceiver, params, locals, resolveDirectReceiver, elemType)) {
       return false;
     }
     const std::string normalizedElemType = normalizeBindingTypeName(elemType);
