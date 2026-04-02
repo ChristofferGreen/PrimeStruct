@@ -941,7 +941,9 @@ The remaining compiler-owned pending cleanup for builtin SoA field views is now
 complete: standalone assign-target method/call writes now reach the shared
 pending diagnostic through ordinary field-view validation, while assign-target
 indexed field-view writes plus `ref(...).field` writes lower through the
-experimental `soaVectorRef<T>(..., i).field` substrate.
+experimental `soaVectorRef<T>(..., i).field` substrate, and direct monomorph
+field-view fallback rejects now also reuse the shared helper-path
+unavailable-method diagnostic instead of building the pending string inline.
 Standalone builtin field-view call
 forms now route through the shared synthetic `/soa_vector/field_view/<field>`
 or same-path `/soa_vector/<field>` path instead of a dedicated

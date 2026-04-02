@@ -2626,6 +2626,8 @@ probes are gone entirely. The remaining compiler-owned
 construction/parsing instead of open-coded literals across validator and monomorph fallback logic,
 and the old resolved-helper `soa_vector field view requires soa_vector target` fallback is gone
 too,
+while direct monomorph field-view fallback rejects now also reuse the shared
+helper-path unavailable-method diagnostic instead of building the pending string inline,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
