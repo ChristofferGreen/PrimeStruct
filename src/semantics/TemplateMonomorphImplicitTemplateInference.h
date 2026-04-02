@@ -237,8 +237,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (ctx.sourceDefs.count(helperPath) > 0 || ctx.helperOverloads.count(helperPath) > 0) {
       return {};
     }
-    return soaFieldViewOrUnknownMethodDiagnostic(
-        soaFieldViewHelperPath(normalizedName));
+    return soaUnavailableMethodDiagnostic(
+        soaFieldViewHelperPath(normalizedName), false);
   };
   const bool hasLeadingReceiverParam = [&]() {
     if (callParams.empty()) {

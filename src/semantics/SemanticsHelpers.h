@@ -138,7 +138,6 @@ std::string soaFieldViewPendingDiagnostic(std::string_view fieldName);
 std::string soaBorrowedViewPendingDiagnostic();
 std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
     std::string_view resolvedPath, bool hasVisibleSoaRefHelper);
-std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath);
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
                                            bool hasVisibleSoaRefHelper);
 bool isSoaVectorStructElementType(const std::string &typeArg,

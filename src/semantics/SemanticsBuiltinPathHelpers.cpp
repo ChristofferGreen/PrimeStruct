@@ -467,14 +467,6 @@ std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
   return std::nullopt;
 }
 
-std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath) {
-  std::string fieldName;
-  if (splitSoaFieldViewHelperPath(resolvedPath, &fieldName)) {
-    return soaFieldViewPendingDiagnostic(fieldName);
-  }
-  return "unknown method: " + std::string(resolvedPath);
-}
-
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
                                            bool hasVisibleSoaRefHelper) {
   if (const auto pending = soaPendingUnavailableMethodDiagnostic(

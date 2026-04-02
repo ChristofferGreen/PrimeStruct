@@ -402,7 +402,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = expr.name + " does not accept block arguments";
       return false;
     }
-    error_ = soaFieldViewOrUnknownMethodDiagnostic(resolved);
+    error_ = soaUnavailableMethodDiagnostic(resolved, false);
     return false;
   }
 

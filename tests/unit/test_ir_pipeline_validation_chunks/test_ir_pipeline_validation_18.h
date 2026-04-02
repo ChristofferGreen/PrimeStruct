@@ -379,7 +379,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "                hasImportedDefinitionPath(\"/soa_vector/ref\"));") !=
         std::string::npos);
   CHECK(semanticsBuiltinPathHelpersSource.find(
-            "std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath)") !=
+            "std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath)") ==
         std::string::npos);
   CHECK(semanticsInferScalarBuiltinsSource.find("ReturnKind SemanticsValidator::inferScalarBuiltinReturnKind(") !=
         std::string::npos);

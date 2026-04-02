@@ -2638,6 +2638,7 @@ while the shared direct pending reporter now likewise uses that same optional
 unavailable-method helper for both field-view and `ref(...)` rejects,
 and infer pre-dispatch plus late-fallback unavailable-method sites now also use
 that same shared helper instead of the older field-view-only wrapper,
+which is now gone entirely,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
