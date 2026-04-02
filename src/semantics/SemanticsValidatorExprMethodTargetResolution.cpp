@@ -1747,7 +1747,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
       return setCollectionMethodTarget("/to_soa");
     }
-    if (normalizedMethodName == "to_aos" && collectionTypePath == "/soa_vector") {
+    if (normalizedMethodName == "to_aos" &&
+        (collectionTypePath == "/soa_vector" || collectionTypePath == "/vector")) {
       return setCollectionMethodTarget(preferredSoaToAosMethodTarget());
     }
     return false;
@@ -2079,6 +2080,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (normalizedMethodName == "to_aos") {
+    if (resolveVectorTarget(receiver, elemType)) {
+      return setCollectionMethodTarget(preferredSoaToAosMethodTarget());
+    }
     if (resolveSoaVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(preferredSoaToAosMethodTarget());
     }
@@ -2553,7 +2557,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (normalizedMethodName == "to_soa" && normalizedTypeName == "vector") {
     return setCollectionMethodTarget("/to_soa");
   }
-  if (normalizedMethodName == "to_aos" && normalizedTypeName == "soa_vector") {
+  if (normalizedMethodName == "to_aos" &&
+      (normalizedTypeName == "soa_vector" || normalizedTypeName == "vector")) {
     return setCollectionMethodTarget(preferredSoaToAosMethodTarget());
   }
   if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&

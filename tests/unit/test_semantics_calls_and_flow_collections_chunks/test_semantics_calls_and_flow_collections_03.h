@@ -548,6 +548,47 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector-target to_aos keeps same-path helper shadow") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/to_aos([vector<Particle>] values) {
+  return(9i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pick([vector<Particle>] values) {
+  return(values.to_aos())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>(Particle(1i32))}
+  [auto] bare{to_aos(values)}
+  [auto] direct{/to_aos(values)}
+  [auto] method{values.to_aos()}
+  [auto] slash{values./to_aos()}
+  return(plus(bare,
+              plus(direct,
+                   plus(method,
+                        plus(slash,
+                             plus(consume(values.to_aos()),
+                                  pick(values)))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector helper-return push and reserve keep same-path helper across escapes") {
   const std::string source = R"(
 Particle() {

@@ -245,7 +245,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = "/to_soa";
       return true;
     }
-    if (normalizedMethodName == "to_aos" && collectionTypePath == "/soa_vector") {
+    if (normalizedMethodName == "to_aos" &&
+        (collectionTypePath == "/soa_vector" || collectionTypePath == "/vector")) {
       resolvedOut = preferredSoaToAosMethodTarget();
       return true;
     }
@@ -620,6 +621,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (normalizedMethodName == "ref" &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut = preferredSoaRefMethodTarget();
+      return true;
+    }
+    if (normalizedMethodName == "to_aos" &&
+        resolveVectorTarget(receiver, elemType)) {
+      resolvedOut = preferredSoaToAosMethodTarget();
       return true;
     }
     if (normalizedMethodName == "to_aos" &&
