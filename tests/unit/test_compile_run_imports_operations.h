@@ -796,6 +796,34 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
+TEST_CASE("compiles and runs vector-target method soa mutator shadows in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+/soa_vector/push([vector<i32>] values, [i32] value) {
+  return(value)
+}
+
+[return<int>]
+/soa_vector/reserve([vector<i32>] values, [i32] count) {
+  return(count)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(plus(values.push(4i32), values.reserve(6i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_vector_target_method_soa_mutator_shadow_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_vector_target_method_soa_mutator_shadow_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+}
+
 TEST_CASE("compiles nested struct-body soa_vector constructor-bearing helper returns in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

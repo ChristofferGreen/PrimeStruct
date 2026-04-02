@@ -1026,21 +1026,6 @@ std::string builtinSoaMutatorHelperName(std::string_view rawName) {
   return {};
 }
 
-std::string oldExplicitSoaMutatorHelperName(std::string_view rawName) {
-  std::string normalized(rawName);
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  if (normalized.rfind("soa_vector/", 0) != 0) {
-    return {};
-  }
-  normalized = normalized.substr(std::string("soa_vector/").size());
-  if (normalized == "push" || normalized == "reserve") {
-    return normalized;
-  }
-  return {};
-}
-
 void rewriteBuiltinSoaConversionMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
@@ -2174,9 +2159,8 @@ void rewriteBuiltinSoaMutatorExpr(
     return;
   }
   const auto receiverBinding = findBuiltinSoaValueBinding(expr.args.front());
-  const std::string explicitOldHelperName = oldExplicitSoaMutatorHelperName(rawHelperName);
   const auto fallbackVectorBinding =
-      receiverBinding.has_value() || explicitOldHelperName.empty()
+      receiverBinding.has_value()
           ? std::optional<semantics::BindingInfo>{}
           : findBuiltinVectorValueBinding(expr.args.front());
   const bool preserveVectorHelper =

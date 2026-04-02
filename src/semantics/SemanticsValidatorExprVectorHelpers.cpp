@@ -119,6 +119,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     return "/std/collections/soa_vector/" + std::string(resolvedHelperName);
   };
+  auto hasVisibleSoaMutatorShadow = [&](std::string_view resolvedHelperName) {
+    const std::string samePath = "/soa_vector/" + std::string(resolvedHelperName);
+    return hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath);
+  };
   auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
     BindingInfo inferredBinding;
@@ -251,6 +255,12 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
        helperName == "push" || helperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
+      if (collectionTypePath == "/vector" &&
+          (helperName == "push" || helperName == "reserve") &&
+          hasVisibleSoaMutatorShadow(helperName)) {
+        resolvedOut = preferredSoaMutatorHelperTarget(helperName);
+        return true;
+      }
       if (collectionTypePath == "/vector") {
         resolvedOut = preferredBareVectorHelperTarget(helperName);
         return true;
@@ -309,6 +319,12 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       resolvedOut = preferredBareMapHelperTarget(helperName);
       return true;
     }
+    if ((resolvedType == "/vector" || normalizedTypeName == "vector") &&
+        (helperName == "push" || helperName == "reserve") &&
+        hasVisibleSoaMutatorShadow(helperName)) {
+      resolvedOut = preferredSoaMutatorHelperTarget(helperName);
+      return true;
+    }
     if ((resolvedType == "/soa_vector" || normalizedTypeName == "soa_vector") &&
         (helperName == "push" || helperName == "reserve")) {
       resolvedOut = preferredSoaMutatorHelperTarget(helperName);
@@ -323,6 +339,12 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       resolvedType = inferStructReturnPath(receiver, params, locals);
     }
     if (!resolvedType.empty()) {
+      if ((resolvedType == "/vector" || normalizeBindingTypeName(resolvedType) == "vector") &&
+          (helperName == "push" || helperName == "reserve") &&
+          hasVisibleSoaMutatorShadow(helperName)) {
+        resolvedOut = preferredSoaMutatorHelperTarget(helperName);
+        return true;
+      }
       if (isVectorCompatibilityHelperName(helperName)) {
         BindingInfo receiverBinding;
         receiverBinding.typeName = resolvedType;

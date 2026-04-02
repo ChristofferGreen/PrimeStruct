@@ -652,6 +652,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector-target method push and reserve keep same-path soa helpers") {
+  const std::string source = R"(
+[return<int>]
+/soa_vector/push([vector<i32>] values, [i32] value) {
+  return(value)
+}
+
+[return<int>]
+/soa_vector/reserve([vector<i32>] values, [i32] count) {
+  return(count)
+}
+
+[return<auto>]
+pickPush([vector<i32>] values) {
+  return(values.push(4i32))
+}
+
+[return<auto>]
+pickReserve([vector<i32>] values) {
+  return(values.reserve(6i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(plus(values.push(4i32),
+              plus(values.reserve(6i32),
+                   plus(pickPush(values), pickReserve(values)))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector helper-return push and reserve keep same-path helper across escapes") {
   const std::string source = R"(
 Particle() {
