@@ -446,21 +446,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return true;
   }
 
-  if (!resolvedMethod && !expr.isMethodCall && resolvedMissing && !expr.args.empty()) {
-    const bool handledBuiltinName = isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref") ||
-                                    isSimpleCallName(expr, "to_soa") ||
-                                    isSimpleCallName(expr, "to_aos") ||
-                                    isSimpleCallName(expr, "contains");
-    if (!handledBuiltinName) {
-      std::string elemType;
-      if (resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
-        handledOut = true;
-        error_ = soaFieldViewPendingDiagnostic(expr.name);
-        return false;
-      }
-    }
-  }
-
   return true;
 }
 

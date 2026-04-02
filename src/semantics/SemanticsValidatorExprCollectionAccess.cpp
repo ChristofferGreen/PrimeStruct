@@ -107,6 +107,100 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   const bool preservesExplicitRemovedArrayAccessMethod =
       explicitRemovedMethodPath.rfind("/array/", 0) == 0 &&
       hasDefinitionPath(explicitRemovedMethodPath);
+  auto findNamedBinding = [&](const Expr &target) -> const BindingInfo * {
+    if (target.kind != Expr::Kind::Name) {
+      return nullptr;
+    }
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      return paramBinding;
+    }
+    auto it = locals.find(target.name);
+    if (it != locals.end()) {
+      return &it->second;
+    }
+    return nullptr;
+  };
+  auto resolveSoaVectorOrExperimentalBorrowedTarget = [&](const Expr &target,
+                                                          std::string &elemTypeOut) -> bool {
+    if (context.resolveSoaVectorTarget(target, elemTypeOut)) {
+      return true;
+    }
+    const BindingInfo *binding = findNamedBinding(target);
+    if (binding == nullptr) {
+      return false;
+    }
+    const std::string normalizedType = normalizeBindingTypeName(binding->typeName);
+    if (normalizedType != "Reference" && normalizedType != "Pointer") {
+      return false;
+    }
+    return extractExperimentalSoaVectorElementType(*binding, elemTypeOut);
+  };
+  auto resolveExperimentalBorrowedSoaTypeText = [&](const std::string &typeText,
+                                                    std::string &elemTypeOut) -> bool {
+    BindingInfo inferredBinding;
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      inferredBinding.typeName = normalizeBindingTypeName(base);
+      inferredBinding.typeTemplateArg = argText;
+    } else {
+      inferredBinding.typeName = normalizedType;
+      inferredBinding.typeTemplateArg.clear();
+    }
+    const std::string normalizedBindingType = normalizeBindingTypeName(inferredBinding.typeName);
+    if (normalizedBindingType != "Reference" && normalizedBindingType != "Pointer") {
+      return false;
+    }
+    return extractExperimentalSoaVectorElementType(inferredBinding, elemTypeOut);
+  };
+  auto resolveInlineBorrowedExperimentalSoaReceiver = [&](const Expr &candidate,
+                                                          std::string &elemTypeOut) -> bool {
+    auto resolveValueExpr = [&](const Expr &valueExpr) -> bool {
+      if (resolveSoaVectorOrExperimentalBorrowedTarget(valueExpr, elemTypeOut)) {
+        return true;
+      }
+      if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding) {
+        return false;
+      }
+      std::string inferredTypeText;
+      return inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText) &&
+             !inferredTypeText.empty() &&
+             resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
+    };
+    if (!candidate.isBinding &&
+        isSimpleCallName(candidate, "location") &&
+        candidate.args.size() == 1) {
+      return resolveValueExpr(candidate.args.front());
+    }
+    if (!candidate.isBinding &&
+        isSimpleCallName(candidate, "dereference") &&
+        candidate.args.size() == 1) {
+      const Expr &borrowedExpr = candidate.args.front();
+      return borrowedExpr.kind == Expr::Kind::Call &&
+             !borrowedExpr.isBinding &&
+             isSimpleCallName(borrowedExpr, "location") &&
+             borrowedExpr.args.size() == 1 &&
+             resolveValueExpr(borrowedExpr.args.front());
+    }
+    return false;
+  };
+  auto resolveSoaVectorOrExperimentalBorrowedReceiver = [&](const Expr &target,
+                                                            std::string &elemTypeOut) -> bool {
+    if (resolveSoaVectorOrExperimentalBorrowedTarget(target, elemTypeOut)) {
+      return true;
+    }
+    if (target.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (resolveInlineBorrowedExperimentalSoaReceiver(target, elemTypeOut)) {
+      return true;
+    }
+    std::string inferredTypeText;
+    return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
+           !inferredTypeText.empty() &&
+           resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
+  };
 
   if (isBuiltinAccessName &&
       !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames)) &&
@@ -458,12 +552,15 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     return true;
   }
 
-  if (expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end() &&
-      !isSimpleCallName(expr, "to_soa") && !isSimpleCallName(expr, "to_aos")) {
+  if (!expr.isMethodCall && !expr.args.empty() &&
+      defMap_.find(resolved) == defMap_.end() &&
+      !isSimpleCallName(expr, "to_soa") && !isSimpleCallName(expr, "to_aos") &&
+      !isSimpleCallName(expr, "contains") &&
+      !getBuiltinArrayAccessName(expr, accessHelperName)) {
     handledOut = true;
     const Expr &receiverCandidate = expr.args.front();
     std::string elemType;
-    if (context.resolveSoaVectorTarget(receiverCandidate, elemType)) {
+    if (resolveSoaVectorOrExperimentalBorrowedReceiver(receiverCandidate, elemType)) {
       usedMethodTarget = true;
       bool isBuiltinMethod = false;
       std::string methodResolved;
