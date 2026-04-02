@@ -145,6 +145,10 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
       return false;
     }
+    if (valueExpr != nullptr && isBuiltinSoaRefExpr(*valueExpr, defParams, activeLocals)) {
+      error_ = soaBorrowedViewPendingDiagnostic();
+      return false;
+    }
     if (deferUnknownReturnInferenceErrors_) {
       const bool shouldDeferExplicitMapAliasDiagnostic =
           valueExpr != nullptr &&

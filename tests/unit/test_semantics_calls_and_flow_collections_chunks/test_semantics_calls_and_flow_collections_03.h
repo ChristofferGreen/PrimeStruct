@@ -229,7 +229,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector builtin ref call argument escapes fail through inference") {
+TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic") {
   const auto checkReject = [](const std::string &expr) {
     const std::string source =
         "Particle() {\n"
@@ -246,7 +246,7 @@ TEST_CASE("soa_vector builtin ref call argument escapes fail through inference")
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("unable to infer implicit template arguments for /consume") != std::string::npos);
+    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
   };
 
   checkReject("ref(values, 0i32)");
@@ -254,8 +254,8 @@ TEST_CASE("soa_vector builtin ref call argument escapes fail through inference")
   checkReject("/soa_vector/ref(values, 0i32)");
 }
 
-TEST_CASE("soa_vector builtin ref return escapes fail through inference") {
-  const auto checkReject = [](const std::string &expr, const std::string &expected) {
+TEST_CASE("soa_vector builtin ref return escapes use pending diagnostic") {
+  const auto checkReject = [](const std::string &expr) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -272,12 +272,12 @@ TEST_CASE("soa_vector builtin ref return escapes fail through inference") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/pick", error));
-    CHECK(error.find(expected) != std::string::npos);
+    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
   };
 
-  checkReject("ref(values, 0i32)", "unable to infer return type on /pick");
-  checkReject("values.ref(0i32)", "unknown method: /std/collections/soa_vector/ref");
-  checkReject("/soa_vector/ref(values, 0i32)", "unable to infer return type on /pick");
+  checkReject("ref(values, 0i32)");
+  checkReject("values.ref(0i32)");
+  checkReject("/soa_vector/ref(values, 0i32)");
 }
 
 TEST_CASE("soa_vector ref helper still accepts call and return escapes through same-path helper") {
@@ -298,14 +298,14 @@ consume([int] value) {
 
 [return<auto>]
 pick([soa_vector<Particle>] values, [vector<i32>] idx) {
-  return(values.ref(idx))
+  return(ref(values, idx))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<i32>] idx{vector<i32>(0i32)}
-  return(plus(consume(values.ref(idx)), pick(values, idx)))
+  return(plus(consume(ref(values, idx)), plus(consume(values.ref(idx)), pick(values, idx))))
 }
 )";
   std::string error;
