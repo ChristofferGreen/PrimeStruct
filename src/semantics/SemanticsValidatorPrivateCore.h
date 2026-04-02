@@ -102,6 +102,9 @@
                                  std::string *fieldNameOut = nullptr) const;
   bool hasVisibleDefinitionPathForCurrentImports(
       std::string_view path) const;
+  std::string preferredVisibleDefinitionPathForCurrentImports(
+      std::string_view samePath,
+      std::string_view canonicalPath) const;
   std::string soaUnavailableMethodDiagnosticForCurrentImports(
       std::string_view resolvedPath) const;
   bool reportBuiltinSoaDirectPendingExprDiagnostic(

@@ -53,59 +53,25 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   const std::string explicitRemovedMethodPath =
       explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
   auto preferredSoaCountMethodTarget = [&]() {
-    const std::string canonical = "/std/collections/soa_vector/count";
-    const std::string samePath = "/soa_vector/count";
-    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
-      return samePath;
-    }
-    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
-      return canonical;
-    }
-    return canonical;
+    return preferredVisibleDefinitionPathForCurrentImports(
+        "/soa_vector/count", "/std/collections/soa_vector/count");
   };
   auto preferredSoaGetMethodTarget = [&]() {
-    const std::string canonical = "/std/collections/soa_vector/get";
-    const std::string samePath = "/soa_vector/get";
-    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
-      return samePath;
-    }
-    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
-      return canonical;
-    }
-    return canonical;
+    return preferredVisibleDefinitionPathForCurrentImports(
+        "/soa_vector/get", "/std/collections/soa_vector/get");
   };
   auto preferredSoaRefMethodTarget = [&]() {
-    const std::string canonical = "/std/collections/soa_vector/ref";
-    const std::string samePath = "/soa_vector/ref";
-    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
-      return samePath;
-    }
-    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
-      return canonical;
-    }
-    return canonical;
+    return preferredVisibleDefinitionPathForCurrentImports(
+        "/soa_vector/ref", "/std/collections/soa_vector/ref");
   };
   auto preferredSoaToAosMethodTarget = [&]() {
-    const std::string canonical = "/std/collections/soa_vector/to_aos";
-    const std::string samePath = "/to_aos";
-    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
-      return samePath;
-    }
-    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
-      return canonical;
-    }
-    return canonical;
+    return preferredVisibleDefinitionPathForCurrentImports(
+        "/to_aos", "/std/collections/soa_vector/to_aos");
   };
   auto preferredSoaMutatorMethodTarget = [&](std::string_view helperName) {
-    const std::string canonical = "/std/collections/soa_vector/" + std::string(helperName);
-    const std::string samePath = "/soa_vector/" + std::string(helperName);
-    if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
-      return samePath;
-    }
-    if (hasVisibleDefinitionPathForCurrentImports(canonical)) {
-      return canonical;
-    }
-    return canonical;
+    return preferredVisibleDefinitionPathForCurrentImports(
+        "/soa_vector/" + std::string(helperName),
+        "/std/collections/soa_vector/" + std::string(helperName));
   };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {

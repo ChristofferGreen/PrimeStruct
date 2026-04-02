@@ -282,6 +282,15 @@ bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
          hasDeclaredDefinitionPath(ownedPath);
 }
 
+std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(
+    std::string_view samePath,
+    std::string_view canonicalPath) const {
+  if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
+    return std::string(samePath);
+  }
+  return std::string(canonicalPath);
+}
+
 std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(
     std::string_view resolvedPath) const {
   return soaUnavailableMethodDiagnostic(resolvedPath,

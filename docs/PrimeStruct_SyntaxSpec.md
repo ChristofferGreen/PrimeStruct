@@ -974,7 +974,8 @@ definition-visibility helper instead of repeating import/declared probes
 or local same-path wrappers across count/capacity builtin validation,
 SoA builtin validation, method-target, infer-time helper-shadow,
 vector-helper routing, vector-helper same-path `/soa_vector/push|reserve`
-mutator-shadow checks, preferred-target selection, return-inference
+mutator-shadow checks, preferred same-path versus canonical target
+selection in method-target and infer-time files, return-inference
 paths, and builtin SoA access/count helper fallback validation,
 while monomorph-side visible `/soa_vector/ref` fallback detection now also
 uses that same shared definition-visibility helper directly instead of a
