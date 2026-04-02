@@ -297,6 +297,86 @@ main() {
   CHECK(ast.find(".reserve(", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites method-like helper-return soa_vector method shadows to same-path helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {}
+
+[return<SoaVector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soaVectorSingle<Particle>(Particle(7i32)))
+}
+
+[return<int>]
+/soa_vector/count([SoaVector<Particle>] values) {
+  return(11i32)
+}
+
+[return<Particle>]
+/soa_vector/get([SoaVector<Particle>] values, [int] index) {
+  return(Particle(23i32))
+}
+
+[return<Particle>]
+/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+  return(Particle(29i32))
+}
+
+[return<int>]
+/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+  return(value.x)
+}
+
+[return<int>]
+/soa_vector/reserve([SoaVector<Particle>] values, [int] count) {
+  return(count)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [Particle] value{Particle(31i32)}
+  return(plus(holder.cloneValues().count(),
+              plus(holder.cloneValues().get(0i32).x,
+                   plus(holder.cloneValues().ref(0i32).x,
+                        plus(holder.cloneValues().push(value),
+                             holder.cloneValues().reserve(37i32))))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_experimental_soa_vector_method_shadow_method_like_helper_return.prime",
+                source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_experimental_soa_vector_method_shadow_method_like_helper_return.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/soa_vector/count(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa_vector/get(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa_vector/ref(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa_vector/push(/Holder/cloneValues(holder), value)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa_vector/reserve(/Holder/cloneValues(holder), 37)", mainPos) != std::string::npos);
+  CHECK(ast.find(".count(", mainPos) == std::string::npos);
+  CHECK(ast.find(".get(", mainPos) == std::string::npos);
+  CHECK(ast.find(".ref(", mainPos) == std::string::npos);
+  CHECK(ast.find(".push(", mainPos) == std::string::npos);
+  CHECK(ast.find(".reserve(", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic rewrites experimental soa_vector reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

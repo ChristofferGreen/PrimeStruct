@@ -2224,6 +2224,8 @@ std::vector<std::string> candidatePathsForExprCall(
     const std::unordered_map<std::string, semantics::BindingInfo> *bindings,
     const std::unordered_set<std::string> *structPaths);
 
+Expr canonicalizeResolvedCallPath(const Expr &callExpr, const std::string &resolvedPath);
+
 bool isStructLikeDefinition(const Definition &def);
 
 void rewriteExperimentalSoaSamePathHelperMethodExpr(
@@ -2306,6 +2308,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
   const std::string helperPath = "/soa_vector/" + helperName;
 
   std::optional<semantics::BindingInfo> receiverBinding;
+  std::optional<Expr> canonicalReceiverExpr;
   const Expr &receiver = expr.args.front();
   if (visibleSoaHelpers.count(helperPath) > 0 && receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
@@ -2319,6 +2322,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
       if (returnIt != soaVectorReturnDefinitions.end() &&
           isExperimentalSoaVectorBinding(returnIt->second)) {
         receiverBinding = returnIt->second;
+        canonicalReceiverExpr = canonicalizeResolvedCallPath(receiver, candidatePath);
         break;
       }
     }
@@ -2333,6 +2337,9 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
                   ? helperPath
                   : "/std/collections/soa_vector/" + helperName;
   expr.namespacePrefix.clear();
+  if (canonicalReceiverExpr.has_value()) {
+    expr.args.front() = *canonicalReceiverExpr;
+  }
 }
 
 bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &error) {
