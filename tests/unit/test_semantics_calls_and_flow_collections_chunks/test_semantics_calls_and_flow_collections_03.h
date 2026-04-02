@@ -314,7 +314,7 @@ main() {
 }
 
 TEST_CASE("soa_vector builtin field views call argument escapes fail through inference") {
-  const auto checkReject = [](const std::string &expr) {
+  const auto checkReject = [](const std::string &expr, const std::string &expected) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -330,11 +330,11 @@ TEST_CASE("soa_vector builtin field views call argument escapes fail through inf
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("unable to infer implicit template arguments for /consume") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("x(values)");
-  checkReject("values.x()");
+  checkReject("x(values)", "soa_vector field views are not implemented yet: x");
+  checkReject("values.x()", "soa_vector field views are not implemented yet: x");
 }
 
 TEST_CASE("soa_vector builtin field views return escapes fail through inference") {

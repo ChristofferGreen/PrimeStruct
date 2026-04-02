@@ -123,6 +123,81 @@ bool inferImplicitTemplateArgs(const Definition &def,
     bindingOut.typeTemplateArg.clear();
     return true;
   };
+  auto unsupportedBuiltinSoaFieldViewDiagnostic = [&](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.name.empty()) {
+      return {};
+    }
+    const auto normalizeCallName = [](std::string name) {
+      if (!name.empty() && name.front() == '/') {
+        name.erase(name.begin());
+      }
+      if (const size_t suffix = name.find("__t"); suffix != std::string::npos) {
+        name.erase(suffix);
+      }
+      return name;
+    };
+    std::string resolvedPath;
+    if (candidate.isMethodCall) {
+      if (!resolveMethodCallTemplateTarget(candidate, locals, ctx, resolvedPath)) {
+        resolvedPath.clear();
+      }
+      std::string fieldName;
+      if (splitSoaFieldViewHelperPath(resolvedPath, &fieldName)) {
+        return soaFieldViewPendingDiagnostic(fieldName);
+      }
+    }
+    if (candidate.args.empty()) {
+      return {};
+    }
+    const std::string normalizedName = normalizeCallName(candidate.name);
+    if (normalizedName.empty() || normalizedName == "count" || normalizedName == "get" ||
+        normalizedName == "ref" || normalizedName == "to_soa" ||
+        normalizedName == "to_aos" || normalizedName == "contains") {
+      return {};
+    }
+    const std::string helperPath = "/soa_vector/" + normalizedName;
+    if (ctx.sourceDefs.count(helperPath) > 0 || ctx.helperOverloads.count(helperPath) > 0) {
+      return {};
+    }
+    auto resolvesBuiltinSoaReceiver = [&](const Expr &receiverExpr) {
+      auto matchesTypeText = [&](std::string typeText) {
+        typeText = normalizeBindingTypeName(typeText);
+        if (typeText.empty()) {
+          return false;
+        }
+        while (true) {
+          std::string base;
+          std::string argText;
+          if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+            return normalizeCollectionReceiverTypeName(typeText) == "soa_vector";
+          }
+          const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+          if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
+              !argText.empty()) {
+            std::vector<std::string> wrappedArgs;
+            if (!splitTopLevelTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
+              return false;
+            }
+            typeText = normalizeBindingTypeName(wrappedArgs.front());
+            continue;
+          }
+          return normalizedBase == "soa_vector";
+        }
+      };
+      BindingInfo receiverInfo;
+      if (inferBindingTypeForMonomorph(receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
+          matchesTypeText(bindingTypeToString(receiverInfo))) {
+        return true;
+      }
+      return matchesTypeText(
+          inferExprTypeTextForTemplatedVectorFallback(
+              receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
+    };
+    if (resolvesBuiltinSoaReceiver(candidate.args.front())) {
+      return soaFieldViewPendingDiagnostic(normalizedName);
+    }
+    return {};
+  };
   const bool hasLeadingReceiverParam = [&]() {
     if (callParams.empty()) {
       return false;
@@ -298,6 +373,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
                 ? std::string{}
                 : inferExprTypeTextForTemplatedVectorFallback(*argExpr, locals, namespacePrefix, ctx, allowMathBare);
         if (!inferredFromRewrittenArg && !assignBindingFromTypeText(fallbackTypeText, argInfo)) {
+          if (const std::string diagnostic = unsupportedBuiltinSoaFieldViewDiagnostic(*argExpr);
+              !diagnostic.empty()) {
+            error = diagnostic;
+            return false;
+          }
           if (isStdlibCollectionHelper) {
             return false;
           }
