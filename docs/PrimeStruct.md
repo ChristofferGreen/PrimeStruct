@@ -2510,12 +2510,10 @@ old builtin statement-only mutator contract, and helper-return experimental-wrap
 `count/get/ref/push/reserve` now also rewrites to visible same-path `/soa_vector/*` helpers
 before validation/lowering on both global helper-return and explicit `/Type/helper`
 method-like struct-helper return receivers instead of leaking through wrapper methods in
-compile-run paths. Nested struct-body helper returns remain narrower: the current working
-foothold is constructor-light bodies such as `return(soaVectorNew<T>())`, while
-value-materializing bodies such as `return(soaVectorSingle<Particle>(Particle(...)))` now also
-clear specialization and unused-module compilation, but direct expression uses of those nested
-helper calls still remain a separate follow-up before the same helper-shadow surface can be
-claimed. The equivalent
+compile-run paths. Nested struct-body helper returns that materialize wrapper values through
+`return(soaVectorSingle<Particle>(Particle(...)))` now also clear that same direct/bound
+helper/conversion substrate plus same-path `/soa_vector/*` and `/to_aos` helper-shadow method
+surfaces instead of failing during specialization or later expression lowering. The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now prefers the
 canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
 `/soa_vector/get` user-helper shadowing. The equivalent helper-return method/infer fallback for

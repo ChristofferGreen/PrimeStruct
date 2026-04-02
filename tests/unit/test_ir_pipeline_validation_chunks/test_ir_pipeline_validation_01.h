@@ -401,6 +401,44 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("nested struct-body soa_vector constructor-bearing helper returns lower through direct and bound expressions") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorSingle<Particle>(Particle(7i32)))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [SoaVector<Particle>] values{holder.cloneValues()}
+  return(plus(plus(plus(holder.cloneValues().count(), holder.cloneValues().get(0i32).x),
+                    values.ref(0i32).x),
+              count(values.to_aos())))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("bare soa_vector get helper lowers through wrapper return routing") {
   const std::string source = R"(
 import /std/collections/*

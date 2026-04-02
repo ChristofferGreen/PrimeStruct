@@ -417,6 +417,95 @@ main() {
   CHECK(ast.find("Particle(7)") != std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites nested struct-body soa_vector method shadows to same-path helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorSingle<Particle>(Particle(7i32)))
+  }
+}
+
+[return<i32>]
+/soa_vector/count([SoaVector<Particle>] values) {
+  return(13i32)
+}
+
+[return<Particle>]
+/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(23i32))
+}
+
+[return<Particle>]
+/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(29i32))
+}
+
+[return<i32>]
+/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+  return(31i32)
+}
+
+[return<i32>]
+/soa_vector/reserve([SoaVector<Particle>] values, [i32] capacity) {
+  return(37i32)
+}
+
+[effects(heap_alloc), return<vector<Particle>>]
+/to_aos([SoaVector<Particle>] values) {
+  [vector<Particle>, mut] out{vector<Particle>()}
+  out.push(Particle(19i32))
+  return(out)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(plus(plus(plus(plus(plus(holder.cloneValues().count(),
+                                  holder.cloneValues().get(0i32).x),
+                             holder.cloneValues().ref(0i32).x),
+                        holder.cloneValues().push(Particle(1i32))),
+                   holder.cloneValues().reserve(4i32)),
+              count(holder.cloneValues().to_aos())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_nested_struct_body_soa_vector_method_shadows.prime",
+                source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_nested_struct_body_soa_vector_method_shadows.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/soa_vector/count(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa_vector/get(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa_vector/ref(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa_vector/push(/Holder/cloneValues(holder), Particle(1))", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa_vector/reserve(/Holder/cloneValues(holder), 4)", mainPos) != std::string::npos);
+  CHECK(ast.find("/to_aos(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
+  CHECK(ast.find(".count(", mainPos) == std::string::npos);
+  CHECK(ast.find(".get(", mainPos) == std::string::npos);
+  CHECK(ast.find(".ref(", mainPos) == std::string::npos);
+  CHECK(ast.find(".push(", mainPos) == std::string::npos);
+  CHECK(ast.find(".reserve(", mainPos) == std::string::npos);
+  CHECK(ast.find(".to_aos(", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic rewrites experimental soa_vector reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

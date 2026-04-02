@@ -704,6 +704,106 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
+TEST_CASE("runs vm nested struct-body soa_vector direct and bound helper expressions") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorSingle<Particle>(Particle(7i32)))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [SoaVector<Particle>] values{holder.cloneValues()}
+  return(plus(plus(plus(holder.cloneValues().count(), holder.cloneValues().get(0i32).x),
+                    values.ref(0i32).x),
+              count(values.to_aos())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_nested_struct_body_soa_vector_direct_bound_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 16);
+}
+
+TEST_CASE("runs vm nested struct-body soa_vector method shadows") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorSingle<Particle>(Particle(7i32)))
+  }
+}
+
+[return<i32>]
+/soa_vector/count([SoaVector<Particle>] values) {
+  return(13i32)
+}
+
+[return<Particle>]
+/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(23i32))
+}
+
+[return<Particle>]
+/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(29i32))
+}
+
+[return<i32>]
+/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+  return(31i32)
+}
+
+[return<i32>]
+/soa_vector/reserve([SoaVector<Particle>] values, [i32] capacity) {
+  return(37i32)
+}
+
+[effects(heap_alloc), return<vector<Particle>>]
+/to_aos([SoaVector<Particle>] values) {
+  [vector<Particle>, mut] out{vector<Particle>()}
+  out.push(Particle(19i32))
+  return(out)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  return(plus(plus(plus(plus(plus(holder.cloneValues().count(),
+                                  holder.cloneValues().get(0i32).x),
+                             holder.cloneValues().ref(0i32).x),
+                        holder.cloneValues().push(Particle(1i32))),
+                   holder.cloneValues().reserve(4i32)),
+              count(holder.cloneValues().to_aos())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_nested_struct_body_soa_vector_method_shadows.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 134);
+}
+
 TEST_CASE("runs vm explicit method-like helper-return experimental soa_vector to_aos shadow") {
   const std::string source = R"(
 import /std/collections/*

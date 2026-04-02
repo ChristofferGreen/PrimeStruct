@@ -150,6 +150,10 @@ std::string resolveCallPathFromScope(
     if (importIt != importAliases.end()) {
       return normalizeMapImportAliasPath(importIt->second);
     }
+    const std::string root = "/" + expr.name;
+    if (defMap.count(root) > 0) {
+      return root;
+    }
     return scoped;
   }
   auto importIt = importAliases.find(expr.name);
