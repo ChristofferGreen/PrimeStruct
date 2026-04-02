@@ -461,6 +461,20 @@ std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath)
   return "unknown method: " + std::string(resolvedPath);
 }
 
+std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
+                                           bool hasVisibleSoaRefHelper) {
+  std::string fieldName;
+  if (splitSoaFieldViewHelperPath(resolvedPath, &fieldName)) {
+    return soaFieldViewPendingDiagnostic(fieldName);
+  }
+  if ((resolvedPath == "/soa_vector/ref" ||
+       resolvedPath == "/std/collections/soa_vector/ref") &&
+      !hasVisibleSoaRefHelper) {
+    return soaBorrowedViewPendingDiagnostic();
+  }
+  return "unknown method: " + std::string(resolvedPath);
+}
+
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;

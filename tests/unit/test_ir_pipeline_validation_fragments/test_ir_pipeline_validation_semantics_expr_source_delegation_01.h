@@ -251,6 +251,12 @@
             "            expr,\n"
             "            dispatchBootstrap,") !=
         std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find("splitSoaFieldViewHelperPath(") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find("soaBorrowedViewPendingDiagnostic()") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find("return soaUnavailableMethodDiagnostic(") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find(
             "prepareExprCollectionDispatchSetup(\n"
             "            params,\n"

@@ -134,21 +134,14 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
   };
   setupOut.unavailableMethodDiagnostic =
       [this](const std::string &resolvedPath) -> std::string {
-    std::string soaFieldViewName;
-    if (splitSoaFieldViewHelperPath(resolvedPath, &soaFieldViewName)) {
-      return soaFieldViewPendingDiagnostic(soaFieldViewName);
-    }
-    if ((resolvedPath == "/soa_vector/ref" ||
-         resolvedPath == "/std/collections/soa_vector/ref") &&
-        !hasDeclaredDefinitionPath("/soa_vector/ref") &&
-        !hasImportedDefinitionPath("/soa_vector/ref")) {
-      return soaBorrowedViewPendingDiagnostic();
-    }
     if (resolvedPath == "/std/gfx/experimental/Device/create_pipeline") {
       return "experimental gfx entry point not implemented yet: "
              "Device.create_pipeline([vertex_type] type, ...)";
     }
-    return "";
+    return soaUnavailableMethodDiagnostic(
+        resolvedPath,
+        hasDeclaredDefinitionPath("/soa_vector/ref") ||
+            hasImportedDefinitionPath("/soa_vector/ref"));
   };
   return true;
 }
