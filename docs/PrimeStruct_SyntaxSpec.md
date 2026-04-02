@@ -967,11 +967,13 @@ which is now gone entirely.
 Validator-side fixed unavailable-method rejects now also route through one
 shared visibility-aware helper instead of recomputing the `/soa_vector/ref`
 visibility and pending/unavailable split inline, while validator-side visible
-same-path `/soa_vector/count|get|push|reserve` helper checks now also route
-through that same shared definition-visibility helper instead of repeating
-import/declared probes across method-target and infer-time helper-shadow
-paths, while monomorph-side visible `/soa_vector/ref` fallback detection now
-also uses that same shared definition-visibility helper instead of a dedicated
+same-path `/soa_vector/count|get|push|reserve` helper checks plus
+definition-return and collection-return same-path `/soa_vector/<field>`
+helper visibility now also route through that same shared
+definition-visibility helper instead of repeating import/declared probes
+across method-target, infer-time helper-shadow, and return-inference paths,
+while monomorph-side visible `/soa_vector/ref` fallback detection now also
+uses that same shared definition-visibility helper instead of a dedicated
 ref-specific wrapper, while monomorph-side visible same-path
 `/soa_vector/<field>` helper checks now also route through that same shared
 definition-visibility helper instead of probing `sourceDefs` and

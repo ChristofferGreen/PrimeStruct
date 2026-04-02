@@ -317,12 +317,8 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return !currentTypeTextOut.empty();
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
-    auto hasVisibleSamePathSoaHelper = [&](const std::string &helperName) {
-      const std::string samePath = "/soa_vector/" + helperName;
-      return hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath);
-    };
     auto candidateUsesVisibleSamePathSoaHelper = [&](const std::string &helperName) {
-      if (!hasVisibleSamePathSoaHelper(helperName)) {
+      if (!hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
         return false;
       }
       if (isSimpleCallName(candidate, helperName.c_str())) {
