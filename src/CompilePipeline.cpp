@@ -120,6 +120,33 @@ std::vector<std::string> collectSourceImportPaths(const std::string &source) {
   return collectImportPaths(source, false);
 }
 
+std::vector<std::string> collectImplicitStdlibAutoIncludeKeys(const std::string &source) {
+  std::vector<std::string> keys;
+  Lexer lexer(source);
+  const std::vector<Token> tokens = lexer.tokenize();
+  bool sawBuiltinSoaVector = false;
+  bool sawBuiltinSoaToAos = false;
+  for (const Token &token : tokens) {
+    if (token.kind != TokenKind::Identifier) {
+      continue;
+    }
+    if (token.text == "soa_vector" || token.text == "/soa_vector") {
+      sawBuiltinSoaVector = true;
+      continue;
+    }
+    if (token.text == "to_aos" ||
+        token.text == "/to_aos" ||
+        token.text == "/std/collections/soa_vector/to_aos") {
+      sawBuiltinSoaToAos = true;
+      continue;
+    }
+  }
+  if (sawBuiltinSoaVector && sawBuiltinSoaToAos) {
+    keys.push_back("/std/collections/soa_vector_conversions");
+  }
+  return keys;
+}
+
 std::vector<std::string> collectStdlibAutoIncludeKeys(const std::string &importPath) {
   std::vector<std::string> keys;
   if (importPath.rfind("/std/", 0) != 0) {
@@ -148,6 +175,7 @@ std::vector<std::string> collectStdlibAutoIncludeKeys(const std::string &importP
 
 bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                const std::vector<std::string> &sourceImports,
+                               const std::vector<std::string> &implicitKeys,
                                std::string &source,
                                std::string &error) {
   std::error_code ec;
@@ -158,6 +186,11 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
       if (queuedKeys.insert(key).second) {
         pendingKeys.push_back(key);
       }
+    }
+  }
+  for (const auto &key : implicitKeys) {
+    if (queuedKeys.insert(key).second) {
+      pendingKeys.push_back(key);
     }
   }
   if (pendingKeys.empty()) {
@@ -415,10 +448,11 @@ bool runCompilePipeline(const Options &options,
 
   const std::vector<std::string> sourceImports = collectSourceImportPaths(source);
   const std::vector<std::string> sourceStdImports = collectStdImportPaths(source);
+  const std::vector<std::string> implicitStdlibKeys = collectImplicitStdlibAutoIncludeKeys(source);
   output.program.sourceImports = sourceImports;
 
-  if (shouldAutoIncludeStdlib(source)) {
-    if (!appendStdlibModuleSources(options.importPaths, sourceStdImports, source, error)) {
+  if (shouldAutoIncludeStdlib(source) || !implicitStdlibKeys.empty()) {
+    if (!appendStdlibModuleSources(options.importPaths, sourceStdImports, implicitStdlibKeys, source, error)) {
       errorStage = CompilePipelineErrorStage::Import;
       diagnosticSink.setSummary(error);
       return false;

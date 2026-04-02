@@ -1055,6 +1055,43 @@ main() {
   CHECK(ast.find("values./to_aos()", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites no-import builtin soa_vector to_aos forms to canonical helper path") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<Particle>] unpackedA{to_aos(values)}
+  [vector<Particle>] unpackedB{/to_aos(values)}
+  [vector<Particle>] unpackedC{values.to_aos()}
+  [vector<Particle>] unpackedD{values./to_aos()}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_root_builtin_soa_vector_to_aos.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_root_builtin_soa_vector_to_aos.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/to_aos__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("to_aos(values)", mainPos) == std::string::npos);
+  CHECK(ast.find("/to_aos(values)", mainPos) == std::string::npos);
+  CHECK(ast.find("values.to_aos()", mainPos) == std::string::npos);
+  CHECK(ast.find("values./to_aos()", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic keeps direct canonical experimental soa_vector to_aos helper path") {
   const std::string source = R"(
 import /std/collections/*

@@ -809,8 +809,9 @@ canonical helper surface, imported method `get(...).field` / `ref(...).field` no
 lowering, and imported method `push/reserve` now also reaches the same canonical wrapper-mismatch boundary instead of
 the older mutable-vector-binding gap. Root and imported builtin bare/direct `to_aos` forms on raw `soa_vector<T>`
 bindings now also lower through the canonical stdlib shim instead of stopping on the earlier builtin-to-wrapper
-parameter mismatch, while old builtin method/slash-method `to_aos` still stop on the current canonical lowerer
-`struct parameter type mismatch` boundary and the bridged native runtime path remains a follow-up.
+parameter mismatch, and imported plus no-import root builtin bare/direct/method/slash-method `to_aos` now
+materialize `/std/collections/soa_vector/to_aos__...` before lowering. The bridged native runtime path remains a
+follow-up.
 Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
 `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject contracts instead of the old builtin
 `get requires soa_vector target` / `ref requires soa_vector target` diagnostics. Vector-target root bare/direct/method
@@ -856,13 +857,11 @@ vector-target classification now also treats those same direct canonical
 instead of depending on bound vector temporaries, and the shared native/VM vector-capacity
 classifier now does the same for nested backend helper dispatch. Those backend-side classifier
 checks now share one generic AST call-path helper instead of each backend file carrying its own
-`soa_vector/to_aos` matcher. Imported root bare/direct/method/slash-method
+`soa_vector/to_aos` matcher. Imported and no-import root bare/direct/method/slash-method
 builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the same canonical
-semantic rewrite, with the method/slash-method surface materializing
-`/std/collections/soa_vector/to_aos__...` and clearing lowering plus C++/VM execution while the
-native runtime still traps on that bridged conversion path. The remaining raw-builtin
-conversion-specific compiler-owned gap is now the no-import root method/slash-method
-instantiation follow-up plus that native runtime trap. The diagnostic harness now also locks both direct-canonical and
+semantic rewrite, materialize `/std/collections/soa_vector/to_aos__...`, and clear lowering plus C++/VM execution
+while the native runtime still traps on that bridged conversion path. The remaining raw-builtin
+conversion-specific compiler-owned gap is now that native runtime trap. The diagnostic harness now also locks both direct-canonical and
 imported-helper experimental-wrapper `to_aos` forms to that same canonical helper path at
 `ast-semantic`, so the remaining diagnostic/test cleanup is now field-view only.
 The current pending `soa_vector field views are not implemented yet: <field>` and

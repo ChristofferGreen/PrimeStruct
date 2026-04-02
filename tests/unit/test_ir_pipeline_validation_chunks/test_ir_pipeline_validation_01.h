@@ -709,7 +709,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("root to_aos method helper forms still reach canonical lowerer mismatch") {
+TEST_CASE("root to_aos method helper forms lower through canonical helper routing") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -730,9 +730,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values") !=
-        std::string::npos);
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("imported root to_aos method helper forms lower through canonical helper routing") {

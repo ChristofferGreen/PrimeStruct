@@ -460,10 +460,8 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("root soa_vector to_aos bare and direct helper forms run in C++ emitter") {
+TEST_CASE("no-import root soa_vector to_aos bare and direct helper forms run in C++ emitter") {
   const std::string source = R"(
-import /std/collections/*
-
 [struct reflect]
 Particle() {
   [i32] x{1i32}
@@ -485,10 +483,8 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("root soa_vector to_aos method helper forms run in C++ emitter") {
+TEST_CASE("no-import root soa_vector to_aos method helper forms run in C++ emitter") {
   const std::string source = R"(
-import /std/collections/*
-
 [struct reflect]
 Particle() {
   [i32] x{1i32}

@@ -405,10 +405,8 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm root soa_vector to_aos bare and direct helper forms run") {
+TEST_CASE("vm no-import root soa_vector to_aos bare and direct helper forms run") {
   const std::string source = R"(
-import /std/collections/*
-
 [struct reflect]
 Particle() {
   [i32] x{1i32}
@@ -427,10 +425,8 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm root soa_vector to_aos method helper forms run") {
+TEST_CASE("vm no-import root soa_vector to_aos method helper forms run") {
   const std::string source = R"(
-import /std/collections/*
-
 [struct reflect]
 Particle() {
   [i32] x{1i32}

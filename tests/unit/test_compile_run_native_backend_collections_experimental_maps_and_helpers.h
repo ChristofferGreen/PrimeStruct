@@ -474,10 +474,8 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native root soa_vector to_aos method helper forms still trap after canonical lowering") {
+TEST_CASE("native no-import root soa_vector to_aos helper forms still trap after canonical lowering") {
   const std::string source = R"(
-import /std/collections/*
-
 [struct reflect]
 Particle() {
   [i32] x{1i32}
@@ -486,9 +484,12 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
-  [vector<Particle>] unpackedA{values.to_aos()}
-  [vector<Particle>] unpackedB{values./to_aos()}
-  return(plus(count(unpackedA), count(unpackedB)))
+  [vector<Particle>] unpackedA{to_aos(values)}
+  [vector<Particle>] unpackedB{/to_aos(values)}
+  [vector<Particle>] unpackedC{values.to_aos()}
+  [vector<Particle>] unpackedD{values./to_aos()}
+  return(plus(plus(count(unpackedA), count(unpackedB)),
+              plus(count(unpackedC), count(unpackedD))))
 }
 )";
   const std::string srcPath =
