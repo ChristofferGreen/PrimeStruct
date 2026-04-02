@@ -509,10 +509,16 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           !hasDeclaredDefinitionPath(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&
           !resolveMapTarget(expr.args.front(), builtinMapKeyType, builtinMapValueType)) {
-        error_ = soaUnavailableMethodDiagnostic(
-            methodResolved,
+        const bool hasVisibleSoaRefHelper =
             hasDeclaredDefinitionPath("/soa_vector/ref") ||
-                hasImportedDefinitionPath("/soa_vector/ref"));
+            hasImportedDefinitionPath("/soa_vector/ref");
+        if (const auto pending = soaPendingUnavailableMethodDiagnostic(
+                methodResolved, hasVisibleSoaRefHelper)) {
+          error_ = *pending;
+        } else {
+          error_ = soaUnavailableMethodDiagnostic(
+              methodResolved, hasVisibleSoaRefHelper);
+        }
         return finish(ReturnKind::Unknown);
       }
       ReturnKind builtinMethodKind = ReturnKind::Unknown;
@@ -526,10 +532,16 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       }
       if (!hasDefinitionPath(methodResolved) &&
           !hasImportedDefinitionPath(methodResolved)) {
-        error_ = soaUnavailableMethodDiagnostic(
-            methodResolved,
+        const bool hasVisibleSoaRefHelper =
             hasDeclaredDefinitionPath("/soa_vector/ref") ||
-                hasImportedDefinitionPath("/soa_vector/ref"));
+            hasImportedDefinitionPath("/soa_vector/ref");
+        if (const auto pending = soaPendingUnavailableMethodDiagnostic(
+                methodResolved, hasVisibleSoaRefHelper)) {
+          error_ = *pending;
+        } else {
+          error_ = soaUnavailableMethodDiagnostic(
+              methodResolved, hasVisibleSoaRefHelper);
+        }
         return finish(ReturnKind::Unknown);
       }
       context.resolved = methodResolved;

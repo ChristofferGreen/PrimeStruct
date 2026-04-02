@@ -255,7 +255,11 @@
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find("soaBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
-  CHECK(semanticsExprMethodCompatibilitySetupSource.find("return soaUnavailableMethodDiagnostic(") !=
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "if (const auto pending = soaPendingUnavailableMethodDiagnostic(") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "return soaUnavailableMethodDiagnostic(resolvedPath, hasVisibleSoaRefHelper);") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "prepareExprCollectionDispatchSetup(\n"

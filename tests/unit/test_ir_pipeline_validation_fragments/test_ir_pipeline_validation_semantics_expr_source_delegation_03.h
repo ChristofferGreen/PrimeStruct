@@ -492,7 +492,10 @@
             "soa_vector field views are not implemented yet: ") ==
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
-            "soaUnavailableMethodDiagnostic(resolved, false)") !=
+            "soaPendingUnavailableMethodDiagnostic(resolved, false)") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find(
+            "soaUnavailableMethodDiagnostic(resolved, false)") ==
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "soaFieldViewPendingDiagnostic(soaFieldViewName)") ==
