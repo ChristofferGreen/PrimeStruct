@@ -402,6 +402,11 @@ bool rewriteExpr(Expr &expr,
         helperName != "to_aos") {
       return path;
     }
+    if (helperName == "count" &&
+        hasDefinitionFamilyPath("/soa_vector/count") &&
+        inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
+      return std::string("/soa_vector/count");
+    }
     if (helperName == "get" &&
         hasDefinitionFamilyPath("/soa_vector/get") &&
         inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
