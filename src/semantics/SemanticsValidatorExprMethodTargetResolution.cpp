@@ -2070,11 +2070,21 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (normalizedMethodName == "get") {
+    if (resolveVectorTarget(receiver, elemType) &&
+        (hasDeclaredDefinitionPath("/soa_vector/get") ||
+         hasImportedDefinitionPath("/soa_vector/get"))) {
+      return setCollectionMethodTarget(preferredSoaGetMethodTarget());
+    }
     if (resolveSoaVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(preferredSoaGetMethodTarget());
     }
   }
   if (normalizedMethodName == "ref") {
+    if (resolveVectorTarget(receiver, elemType) &&
+        (hasDeclaredDefinitionPath("/soa_vector/ref") ||
+         hasImportedDefinitionPath("/soa_vector/ref"))) {
+      return setCollectionMethodTarget(preferredSoaRefMethodTarget());
+    }
     if (resolveSoaVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(preferredSoaRefMethodTarget());
     }

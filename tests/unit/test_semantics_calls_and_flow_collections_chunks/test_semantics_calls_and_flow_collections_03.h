@@ -518,8 +518,28 @@ pickGet([vector<Particle>] values) {
 }
 
 [return<auto>]
+pickGetMethod([vector<Particle>] values) {
+  return(values.get(0i32))
+}
+
+[return<auto>]
+pickGetSlash([vector<Particle>] values) {
+  return(values./soa_vector/get(0i32))
+}
+
+[return<auto>]
 pickRef([vector<Particle>] values) {
   return(ref(values, 0i32))
+}
+
+[return<auto>]
+pickRefMethod([vector<Particle>] values) {
+  return(values.ref(0i32))
+}
+
+[return<auto>]
+pickRefSlash([vector<Particle>] values) {
+  return(values./soa_vector/ref(0i32))
 }
 
 [effects(heap_alloc), return<int>]
@@ -530,7 +550,11 @@ main() {
                    plus(ref(values, 0i32),
                         plus(pickCount(values),
                              plus(pickGet(values),
-                                  pickRef(values)))))))
+                                  plus(pickGetMethod(values),
+                                       plus(pickGetSlash(values),
+                                            plus(pickRef(values),
+                                                 plus(pickRefMethod(values),
+                                                      pickRefSlash(values)))))))))))
 }
 )";
   std::string error;

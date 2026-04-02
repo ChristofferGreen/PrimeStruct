@@ -614,8 +614,22 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if (normalizedMethodName == "get" &&
+        resolveVectorTarget(receiver, elemType) &&
+        (hasDeclaredDefinitionPath("/soa_vector/get") ||
+         hasImportedDefinitionPath("/soa_vector/get"))) {
+      resolvedOut = preferredSoaGetMethodTarget();
+      return true;
+    }
+    if (normalizedMethodName == "get" &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut = preferredSoaGetMethodTarget();
+      return true;
+    }
+    if (normalizedMethodName == "ref" &&
+        resolveVectorTarget(receiver, elemType) &&
+        (hasDeclaredDefinitionPath("/soa_vector/ref") ||
+         hasImportedDefinitionPath("/soa_vector/ref"))) {
+      resolvedOut = preferredSoaRefMethodTarget();
       return true;
     }
     if (normalizedMethodName == "ref" &&
