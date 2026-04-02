@@ -965,7 +965,10 @@ rejects, and infer pre-dispatch plus late-fallback unavailable-method sites now
 also use that same shared helper instead of the older field-view-only wrapper,
 which is now gone entirely.
 The remaining fixed pending-path sites now call the optional pending helper
-directly instead of wrapping back through the full unavailable-method formatter.
+directly instead of wrapping back through the full unavailable-method formatter,
+and the low-level field-view and borrowed-view pending string builders are now
+file-local to the shared helper implementation instead of part of the public
+semantics-helper surface.
 Standalone builtin field-view call
 forms now route through the shared synthetic `/soa_vector/field_view/<field>`
 or same-path `/soa_vector/<field>` path instead of a dedicated

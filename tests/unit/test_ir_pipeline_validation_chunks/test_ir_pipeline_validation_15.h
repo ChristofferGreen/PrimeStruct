@@ -649,7 +649,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(builtinPathHelpersSource.find(
             "bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut)") !=
         std::string::npos);
-  CHECK(builtinPathHelpersSource.find("std::string soaFieldViewPendingDiagnostic(std::string_view fieldName)") !=
+  CHECK(builtinPathHelpersSource.find("namespace {\n\nstd::string soaFieldViewPendingDiagnostic(") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("std::string soaBorrowedViewPendingDiagnostic()") !=
         std::string::npos);
@@ -677,6 +677,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find("soaBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
+  CHECK(semanticsHelpersSource.find("std::string soaFieldViewPendingDiagnostic(") ==
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find("std::string soaBorrowedViewPendingDiagnostic()") ==
+        std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("soa_vector field views are not implemented yet: ") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("soa_vector field view requires soa_vector target") ==
