@@ -182,6 +182,10 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     return true;
   };
+  auto hasVisibleSamePathSoaAccessHelper = [&](const std::string &helperName) {
+    const std::string samePath = "/soa_vector/" + helperName;
+    return hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath);
+  };
 
   auto validateMapContainsKeyExpr = [&](const Expr &keyExpr,
                                         const std::string &mapKeyType) -> bool {
@@ -357,6 +361,11 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     std::string elemType;
     if (!resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
+      if ((resolved == "/soa_vector/get" || resolved == "/soa_vector/ref") &&
+          hasVisibleSamePathSoaAccessHelper(helperName)) {
+        handledOut = false;
+        return true;
+      }
       error_ = helperName + " requires soa_vector target";
       return false;
     }

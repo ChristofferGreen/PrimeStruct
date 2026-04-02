@@ -1721,10 +1721,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setPreferredMapMethodTarget(receiver, normalizedMethodName);
       }
     }
-    if (normalizedMethodName == "get" && collectionTypePath == "/soa_vector") {
+    if (normalizedMethodName == "get" &&
+        (collectionTypePath == "/soa_vector" ||
+         (collectionTypePath == "/vector" &&
+          (hasDeclaredDefinitionPath("/soa_vector/get") ||
+           hasImportedDefinitionPath("/soa_vector/get"))))) {
       return setCollectionMethodTarget(preferredSoaGetMethodTarget());
     }
-    if (normalizedMethodName == "ref" && collectionTypePath == "/soa_vector") {
+    if (normalizedMethodName == "ref" &&
+        (collectionTypePath == "/soa_vector" ||
+         (collectionTypePath == "/vector" &&
+          (hasDeclaredDefinitionPath("/soa_vector/ref") ||
+           hasImportedDefinitionPath("/soa_vector/ref"))))) {
       return setCollectionMethodTarget(preferredSoaRefMethodTarget());
     }
     if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
@@ -1887,10 +1895,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (base == "soa_vector" && normalizedMethodName == "count") {
         return setCollectionMethodTarget(preferredSoaCountMethodTarget());
       }
-      if (base == "soa_vector" && normalizedMethodName == "get") {
+      if ((base == "soa_vector" ||
+           (base == "vector" &&
+            (hasDeclaredDefinitionPath("/soa_vector/get") ||
+             hasImportedDefinitionPath("/soa_vector/get")))) &&
+          normalizedMethodName == "get") {
         return setCollectionMethodTarget(preferredSoaGetMethodTarget());
       }
-      if (base == "soa_vector" && normalizedMethodName == "ref") {
+      if ((base == "soa_vector" ||
+           (base == "vector" &&
+            (hasDeclaredDefinitionPath("/soa_vector/ref") ||
+             hasImportedDefinitionPath("/soa_vector/ref")))) &&
+          normalizedMethodName == "ref") {
         return setCollectionMethodTarget(preferredSoaRefMethodTarget());
       }
       if (base == "Buffer" &&

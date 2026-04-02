@@ -2352,7 +2352,10 @@ bad_use_after_take() {
     helper-return bare/method `push/reserve` local binding plus call-argument and
     direct-return escapes on those same receivers now preserve same-path
     `/soa_vector/push|reserve` helpers instead of degrading to builtin
-    statement-only semantics or synthetic template-argument errors.
+    statement-only semantics or synthetic template-argument errors. Vector-target
+    wrong-receiver bare/method `get/ref` calls now also preserve visible same-path
+    `/soa_vector/get|ref` user helpers instead of being pinned to the builtin
+    `soa_vector` target-mismatch path.
     Root/imported builtin bare/direct `to_aos` forms on raw `soa_vector<T>`
     bindings now also clear the old builtin-versus-wrapper lowering mismatch through the
     canonical stdlib shim, and imported plus no-import root builtin bare/direct/method/slash-method

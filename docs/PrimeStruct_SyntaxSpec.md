@@ -820,6 +820,9 @@ semantics on that same canonical surface instead of degrading to `does not accep
 helper-return bare/method `push/reserve` local binding plus call-argument and direct-return escapes on those same
 receivers now preserve same-path `/soa_vector/push|reserve` helpers instead of degrading to builtin statement-only
 semantics or synthetic non-templated-definition template-argument errors.
+Vector-target wrong-receiver bare/method `get/ref` calls now also preserve visible same-path
+`/soa_vector/get|ref` user helpers instead of being pinned to the builtin `soa_vector`
+target-mismatch path.
 Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
 `/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject contracts instead of the old builtin
 `get requires soa_vector target` / `ref requires soa_vector target` diagnostics. Vector-target root bare/direct/method

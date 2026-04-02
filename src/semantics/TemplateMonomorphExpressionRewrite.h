@@ -424,12 +424,14 @@ bool rewriteExpr(Expr &expr,
     }
     if (helperName == "get" &&
         hasDefinitionFamilyPath("/soa_vector/get") &&
-        inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
+        (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
+         inferCollectionReceiverFamily(receiverExpr) == "vector")) {
       return std::string("/soa_vector/get");
     }
     if (helperName == "ref" &&
         hasDefinitionFamilyPath("/soa_vector/ref") &&
-        inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
+        (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
+         inferCollectionReceiverFamily(receiverExpr) == "vector")) {
       return std::string("/soa_vector/ref");
     }
     if (helperName == "to_aos" &&
@@ -775,13 +777,17 @@ bool rewriteExpr(Expr &expr,
       expr.namespacePrefix.clear();
     }
     const Expr *resolvedReceiverExpr = mapHelperReceiverExpr(expr);
+    const std::string resolvedReceiverFamily =
+        inferCollectionReceiverFamily(resolvedReceiverExpr);
     const bool isSyntheticSamePathSoaHelperTemplateCarry =
         isSyntheticSamePathSoaHelperTemplateCarryPath(resolvedPath) &&
         ctx.templateDefs.count(resolvedPath) == 0 &&
         !expr.templateArgs.empty() &&
         resolvedReceiverExpr != nullptr &&
-        resolvedReceiverExpr->kind == Expr::Kind::Call &&
-        !resolvedReceiverExpr->isBinding;
+        ((resolvedReceiverExpr->kind == Expr::Kind::Call &&
+          !resolvedReceiverExpr->isBinding) ||
+         ((resolvedPath == "/soa_vector/get" || resolvedPath == "/soa_vector/ref") &&
+          resolvedReceiverFamily == "vector"));
     if (isSyntheticSamePathSoaHelperTemplateCarry) {
       expr.templateArgs.clear();
     }
@@ -1027,13 +1033,17 @@ bool rewriteExpr(Expr &expr,
         expr.namespacePrefix.clear();
       }
       const Expr *resolvedReceiverExpr = mapHelperReceiverExpr(expr);
+      const std::string resolvedReceiverFamily =
+          inferCollectionReceiverFamily(resolvedReceiverExpr);
       const bool isSyntheticSamePathSoaHelperTemplateCarry =
           isSyntheticSamePathSoaHelperTemplateCarryPath(methodPath) &&
           ctx.templateDefs.count(methodPath) == 0 &&
           !expr.templateArgs.empty() &&
           resolvedReceiverExpr != nullptr &&
-          resolvedReceiverExpr->kind == Expr::Kind::Call &&
-          !resolvedReceiverExpr->isBinding;
+          ((resolvedReceiverExpr->kind == Expr::Kind::Call &&
+            !resolvedReceiverExpr->isBinding) ||
+           ((methodPath == "/soa_vector/get" || methodPath == "/soa_vector/ref") &&
+            resolvedReceiverFamily == "vector"));
       if (isSyntheticSamePathSoaHelperTemplateCarry) {
         expr.templateArgs.clear();
       }

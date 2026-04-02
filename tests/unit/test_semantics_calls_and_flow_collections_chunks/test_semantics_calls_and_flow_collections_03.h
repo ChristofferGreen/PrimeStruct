@@ -479,6 +479,58 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector-target get and ref keep same-path soa helpers") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/soa_vector/get([vector<Particle>] values, [int] index) {
+  return(7i32)
+}
+
+[return<int>]
+/soa_vector/ref([vector<Particle>] values, [int] index) {
+  return(8i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pickGet([vector<Particle>] values) {
+  return(get(values, 0i32))
+}
+
+[return<auto>]
+pickRef([vector<Particle>] values) {
+  return(values.ref(0i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle>] values{vector<Particle>(Particle(1i32))}
+  [auto] bareGet{get(values, 0i32)}
+  [auto] methodGet{values.get(0i32)}
+  [auto] bareRef{ref(values, 0i32)}
+  [auto] methodRef{values.ref(0i32)}
+  return(plus(bareGet,
+              plus(methodGet,
+                   plus(bareRef,
+                        plus(methodRef,
+                             plus(consume(get(values, 0i32)),
+                                  plus(consume(values.ref(0i32)),
+                                       plus(pickGet(values), pickRef(values)))))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector helper-return push and reserve keep same-path helper across escapes") {
   const std::string source = R"(
 Particle() {

@@ -214,11 +214,19 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredBufferMethodTargetForCall(params, locals, receiver, "store");
       return !resolvedOut.empty();
     }
-    if (normalizedMethodName == "get" && collectionTypePath == "/soa_vector") {
+    if (normalizedMethodName == "get" &&
+        (collectionTypePath == "/soa_vector" ||
+         (collectionTypePath == "/vector" &&
+          (hasDeclaredDefinitionPath("/soa_vector/get") ||
+           hasImportedDefinitionPath("/soa_vector/get"))))) {
       resolvedOut = preferredSoaGetMethodTarget();
       return true;
     }
-    if (normalizedMethodName == "ref" && collectionTypePath == "/soa_vector") {
+    if (normalizedMethodName == "ref" &&
+        (collectionTypePath == "/soa_vector" ||
+         (collectionTypePath == "/vector" &&
+          (hasDeclaredDefinitionPath("/soa_vector/ref") ||
+           hasImportedDefinitionPath("/soa_vector/ref"))))) {
       resolvedOut = preferredSoaRefMethodTarget();
       return true;
     }
