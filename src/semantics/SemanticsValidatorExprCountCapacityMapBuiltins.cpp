@@ -70,41 +70,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     return context.resolveVectorTarget(target, elemTypeOut);
   };
-  auto findNamedBinding = [&](const Expr &target) -> const BindingInfo * {
-    if (target.kind != Expr::Kind::Name) {
-      return nullptr;
-    }
-    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-      return paramBinding;
-    }
-    auto localIt = locals.find(target.name);
-    if (localIt != locals.end()) {
-      return &localIt->second;
-    }
-    return nullptr;
-  };
-  auto resolveSoaVectorOrExperimentalBorrowedTarget =
-      [&](const Expr &target, std::string &elemTypeOut) -> bool {
-    if ((*dispatchResolvers).resolveSoaVectorTarget(target, elemTypeOut)) {
-      return true;
-    }
-    const BindingInfo *binding = findNamedBinding(target);
-    if (binding != nullptr) {
-      const std::string normalizedType =
-          normalizeBindingTypeName(binding->typeName);
-      if ((normalizedType == "Reference" || normalizedType == "Pointer") &&
-          extractExperimentalSoaVectorElementType(*binding, elemTypeOut)) {
-        return true;
-      }
-    }
-    std::string inferredTypeText;
-    return target.kind == Expr::Kind::Call &&
-           !target.isBinding &&
-           inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
-           !inferredTypeText.empty() &&
-           this->resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
-                                                        elemTypeOut);
-  };
   auto validateSoaHelperReturnTemplateArgs =
       [&](const Expr &receiverExpr, const std::string &elemType, const char *helperName) {
     if (expr.templateArgs.empty()) {
@@ -202,8 +167,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       return false;
     }
     std::string elemType;
-    if (!resolveSoaVectorOrExperimentalBorrowedTarget(expr.args.front(),
-                                                      elemType)) {
+    if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
+                                                     elemType)) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
@@ -269,7 +234,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     } else if (logicalResolvedMethod == "/soa_vector/count" ||
                logicalResolvedMethod == "/std/collections/soa_vector/count") {
       std::string elemType;
-      if (!resolveSoaVectorOrExperimentalBorrowedTarget(expr.args.front(), elemType)) {
+      if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
+                                                       elemType)) {
         if (logicalResolvedMethod == "/soa_vector/count" &&
             hasVisibleSamePathSoaCountHelper()) {
           handledOut = false;

@@ -2657,7 +2657,7 @@ semantics-helper surface,
 while direct collection-access, count/capacity builtin validation, SoA builtin
 validation, collection dispatch inference, and method-target/infer borrowed
 experimental receiver handling now also share one borrowed experimental receiver
-probe instead of keeping
+probe end-to-end instead of keeping
 duplicated inline lambdas,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
