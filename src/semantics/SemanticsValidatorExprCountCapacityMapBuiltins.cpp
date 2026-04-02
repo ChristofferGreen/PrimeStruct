@@ -85,8 +85,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return true;
   };
   auto hasVisibleSamePathSoaCountHelper = [&]() {
-    return hasDeclaredDefinitionPath("/soa_vector/count") ||
-           hasImportedDefinitionPath("/soa_vector/count");
+    return hasVisibleDefinitionPathForCurrentImports("/soa_vector/count");
   };
   auto validateDirectVectorCountCapacityCall =
       [&](const char *helperName, const char *resolvedPath) {
