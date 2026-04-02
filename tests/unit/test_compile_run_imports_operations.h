@@ -167,7 +167,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("canonical soa_vector to_aos slash-method keeps canonical reject in C++ emitter") {
+TEST_CASE("canonical soa_vector to_aos slash-method runs in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -186,14 +186,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_canonical_soa_vector_to_aos_slash_method_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_canonical_soa_vector_to_aos_slash_method_exe_err.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_canonical_soa_vector_to_aos_slash_method_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
-  CHECK(readFile(errPath).find("/std/collections/experimental_soa_vector/SoaVector__") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs canonical soa_vector ref helper in C++ emitter") {

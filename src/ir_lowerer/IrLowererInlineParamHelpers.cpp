@@ -17,14 +17,21 @@ bool isCanonicalBuiltinSoaToAosPath(const std::string &calleePath) {
          calleePath.rfind("/std/collections/soa_vector/to_aos__", 0) == 0;
 }
 
+bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
+  return structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
 bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
                                   const std::string &expectedStruct,
                                   const std::string &argStruct) {
   if (!isCanonicalBuiltinSoaToAosPath(calleePath)) {
     return false;
   }
-  return normalizeCollectionBindingTypeName(expectedStruct) == "soa_vector" &&
-         normalizeCollectionBindingTypeName(argStruct) == "soa_vector";
+  if (!isExperimentalSoaVectorStructPath(expectedStruct) ||
+      isExperimentalSoaVectorStructPath(argStruct)) {
+    return false;
+  }
+  return normalizeCollectionBindingTypeName(argStruct) == "soa_vector";
 }
 
 bool resolveBuiltinSoaToAosStorageField(const StructSlotLayoutInfo &layout,

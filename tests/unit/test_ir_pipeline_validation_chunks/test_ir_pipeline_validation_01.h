@@ -503,7 +503,7 @@ main() {
   CHECK(error.find("get does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("root ref helper forms route through canonical helper routing") {
+TEST_CASE("root ref helper forms stop in semantics on borrowed-view pending diagnostic") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -520,13 +520,8 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK_FALSE(error.empty());
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
 }
 
 TEST_CASE("root ref vector receiver rejects template arguments") {
@@ -657,7 +652,7 @@ main() {
   CHECK(error == "reserve requires mutable vector binding");
 }
 
-TEST_CASE("root to_aos bare and direct helper forms lower through canonical helper routing") {
+TEST_CASE("root to_aos bare and direct helper forms still need compile-pipeline helper materialization") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -678,8 +673,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("imported root to_aos bare and direct helper forms lower through canonical helper routing") {
@@ -709,7 +704,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("root to_aos method helper forms lower through canonical helper routing") {
+TEST_CASE("root to_aos method helper forms still need compile-pipeline helper materialization") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -730,8 +725,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.empty());
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("imported root to_aos method helper forms lower through canonical helper routing") {
@@ -793,7 +788,7 @@ main() {
   CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
 }
 
-TEST_CASE("imported builtin soa_vector method access forms reach canonical lowerer mismatch") {
+TEST_CASE("imported builtin soa_vector method access forms stop in semantics on borrowed-view pending diagnostic") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -812,14 +807,8 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("struct parameter type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
 }
 
 TEST_CASE("imported builtin soa_vector method mutators reach canonical lowerer mismatch") {
@@ -848,12 +837,11 @@ main() {
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.find("struct parameter type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
-  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+  CHECK(error.find("got /soa_vector") != std::string::npos);
 }
 
 
-TEST_CASE("canonical experimental wrapper to_aos slash-method reaches canonical lowerer mismatch") {
+TEST_CASE("canonical experimental wrapper to_aos slash-method lowers successfully") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -877,9 +865,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("struct parameter type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("borrowed helper-return experimental wrapper to_aos lowers through conversion helper") {

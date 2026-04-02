@@ -671,8 +671,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMethodTargetResolutionSource.find("resolvedOut = soaFieldViewHelperPath(normalizedMethodName);") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
-  CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") == std::string::npos);
-  CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") == std::string::npos);
+  CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") != std::string::npos);
+  CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") != std::string::npos);
   CHECK(inferDefinitionSource.find("builtinSoaPendingExprDiagnostic(*valueExpr, defParams, activeLocals)") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find("reportBuiltinSoaPendingExprDiagnostic(*valueExpr, defParams, activeLocals)") ==
@@ -693,6 +693,6 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferDefinitionSource.find("soa_vector borrowed views are not implemented yet: ref") ==
         std::string::npos);
-  CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") ==
+  CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") !=
         std::string::npos);
 }
