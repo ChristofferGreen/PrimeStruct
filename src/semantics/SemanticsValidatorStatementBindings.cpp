@@ -151,6 +151,16 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   Expr initializerForValidation = initializer;
   const Expr *initializerExprForValidation = &initializer;
+  auto isHelperReturnBuiltinSoaRefExpr = [&](const Expr &candidate) {
+    if (!isBuiltinSoaRefExpr(candidate, params, locals) || candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (candidate.args.empty()) {
+      return false;
+    }
+    const Expr &receiver = candidate.args.front();
+    return receiver.kind == Expr::Kind::Call && !receiver.isBinding;
+  };
   if (!hasExplicitType || explicitAutoType) {
     std::string namespacedCollection;
     std::string namespacedHelper;
@@ -192,6 +202,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   }
 
   if (!validateExpr(params, locals, *initializerExprForValidation)) {
+    if (error_ == "ref does not accept template arguments" &&
+        isHelperReturnBuiltinSoaRefExpr(initializer)) {
+      error_ = soaBorrowedViewPendingDiagnostic();
+    }
     if (error_.empty()) {
       error_ = "binding initializer validateExpr failed";
     }

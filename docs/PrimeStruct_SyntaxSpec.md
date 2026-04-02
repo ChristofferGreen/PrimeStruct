@@ -893,9 +893,10 @@ borrowed call-form attempts such as `field(borrowed)` plus inline borrow forms s
 `soa_vector field views are not implemented yet: <field>` diagnostic as direct wrapper attempts,
 and helper-return plus inline location-wrapped borrowed helper-return forms such as
 `field(pickBorrowed(...))`, `location(pickBorrowed(...)).field()`, and
-`field(location(pickBorrowed(...)))` now keep it too. Builtin `ref(...)` local persistence plus
-direct and helper-return call-argument/return escapes now likewise keep the shared borrowed-view
-pending diagnostic instead of degrading to generic inference or synthetic field-view fallback.
+`field(location(pickBorrowed(...)))` now keep it too. Builtin `ref(...)` direct and helper-return
+local persistence plus direct and helper-return call-argument/return escapes now likewise keep the
+shared borrowed-view pending diagnostic instead of degrading to generic inference, template-argument,
+or synthetic field-view fallback.
 Mutating standalone/indexed attempts such as `assign(value.field(), next)`,
 `assign(value.field()[i], next)`, `assign(ref(value, i).field, next)`, and
 `assign(value.ref(i).field, next)` now also keep that same pending field-view diagnostic on direct,

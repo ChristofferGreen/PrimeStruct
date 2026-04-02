@@ -208,6 +208,32 @@ TEST_CASE("soa_vector builtin ref local bindings use pending diagnostic") {
   checkReject("Particle", "/soa_vector/ref(values, 0i32)");
 }
 
+TEST_CASE("soa_vector helper-return ref local bindings use pending diagnostic") {
+  const auto checkReject = [](const std::string &bindingType, const std::string &bindingInit) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<soa_vector<Particle>>]\n"
+        "cloneValues() {\n"
+        "  return(soa_vector<Particle>())\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [" + bindingType + "] item{" + bindingInit + "}\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+  };
+
+  checkReject("auto", "ref(cloneValues(), 0i32)");
+  checkReject("auto", "cloneValues().ref(0i32)");
+  checkReject("Particle", "ref(cloneValues(), 0i32)");
+  checkReject("Particle", "cloneValues().ref(0i32)");
+}
+
 TEST_CASE("soa_vector ref helper binding keeps same-path user helper for auto inference") {
   const std::string source = R"(
 Particle() {
