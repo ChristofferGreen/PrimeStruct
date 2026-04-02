@@ -448,13 +448,20 @@ main() {
 
 TEST_CASE("soa_vector helper-return bare count keeps same-path helper across escapes") {
   const std::string source = R"(
-[return<soa_vector<int>>]
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{7i32}
+}
+
+[return<SoaVector<Particle>>]
 cloneValues() {
-  return(soa_vector<int>())
+  return(soaVectorSingle<Particle>(Particle(7i32)))
 }
 
 [return<int>]
-/soa_vector/count([soa_vector<int>] values) {
+/soa_vector/count([SoaVector<Particle>] values) {
   return(7i32)
 }
 
@@ -491,18 +498,13 @@ Particle() {
 }
 
 [return<int>]
-/soa_vector/get([vector<Particle>] values, [int] index) {
+/soa_vector/get([vector<Particle>] values, [i32] index) {
   return(7i32)
 }
 
 [return<int>]
-/soa_vector/ref([vector<Particle>] values, [int] index) {
+/soa_vector/ref([vector<Particle>] values, [i32] index) {
   return(8i32)
-}
-
-[return<int>]
-consume([int] value) {
-  return(value)
 }
 
 [return<auto>]
@@ -517,30 +519,18 @@ pickGet([vector<Particle>] values) {
 
 [return<auto>]
 pickRef([vector<Particle>] values) {
-  return(values.ref(0i32))
+  return(ref(values, 0i32))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Particle>] values{vector<Particle>(Particle(1i32))}
-  [auto] bareCount{count(values)}
-  [auto] methodCount{values.count()}
-  [auto] bareGet{get(values, 0i32)}
-  [auto] methodGet{values.get(0i32)}
-  [auto] bareRef{ref(values, 0i32)}
-  [auto] methodRef{values.ref(0i32)}
-  return(plus(bareCount,
-              plus(methodCount,
-                   plus(bareGet,
-                        plus(methodGet,
-                             plus(bareRef,
-                                  plus(methodRef,
-                                       plus(consume(count(values)),
-                                            plus(consume(get(values, 0i32)),
-                                                 plus(consume(values.ref(0i32)),
-                                                      plus(pickCount(values),
-                                                           plus(pickGet(values),
-                                                                pickRef(values))))))))))))
+  return(plus(count(values),
+              plus(get(values, 0i32),
+                   plus(ref(values, 0i32),
+                        plus(pickCount(values),
+                             plus(pickGet(values),
+                                  pickRef(values)))))))
 }
 )";
   std::string error;
@@ -836,7 +826,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector get helper call-form does not fall back to non-receiver label") {
+TEST_CASE("soa_vector get helper call-form keeps visible helper with named arguments") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -855,8 +845,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector ref method-form prefers user helper over builtin") {

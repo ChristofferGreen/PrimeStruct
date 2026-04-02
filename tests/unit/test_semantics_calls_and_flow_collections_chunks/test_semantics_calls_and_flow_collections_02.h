@@ -357,7 +357,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit soa_vector count forms reject vector target") {
+TEST_CASE("explicit soa_vector count forms reject non-soa target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -369,7 +369,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+  CHECK(error.find("count requires soa_vector target") != std::string::npos);
 }
 
 TEST_CASE("canonical soa_vector count helper validates through struct helper return receivers") {
@@ -597,7 +597,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("get does not accept template arguments") != std::string::npos);
+  CHECK(error.find("get requires soa_vector target") != std::string::npos);
 }
 
 TEST_CASE("canonical soa_vector get slash-method validates on experimental wrapper") {
@@ -2925,7 +2925,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("get does not accept template arguments") != std::string::npos);
+  CHECK(error.find("get requires soa_vector target") != std::string::npos);
 }
 
 TEST_CASE("canonical get helper validates through struct helper return receivers") {

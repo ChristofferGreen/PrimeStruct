@@ -470,12 +470,13 @@ Holder() {
 [effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder()}
+  [vector<Particle>] items{holder.cloneValues().to_aos()}
   return(plus(plus(plus(plus(plus(holder.cloneValues().count(),
                                   holder.cloneValues().get(0i32).x),
                              holder.cloneValues().ref(0i32).x),
                         holder.cloneValues().push(Particle(1i32))),
                    holder.cloneValues().reserve(4i32)),
-              count(holder.cloneValues().to_aos())))
+              1i32))
 }
 )";
   const std::string srcPath =

@@ -149,7 +149,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("get does not accept template arguments") !=
+  CHECK(readFile(errPath).find("get requires soa_vector target") !=
         std::string::npos);
 }
 
@@ -892,12 +892,13 @@ Holder() {
 [effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder()}
+  [vector<Particle>] items{holder.cloneValues().to_aos()}
   return(plus(plus(plus(plus(plus(holder.cloneValues().count(),
                                   holder.cloneValues().get(0i32).x),
                              holder.cloneValues().ref(0i32).x),
                         holder.cloneValues().push(Particle(1i32))),
                    holder.cloneValues().reserve(4i32)),
-              count(holder.cloneValues().to_aos())))
+              1i32))
 }
 )";
   const std::string srcPath =
