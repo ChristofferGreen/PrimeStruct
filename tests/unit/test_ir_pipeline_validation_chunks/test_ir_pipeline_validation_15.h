@@ -668,6 +668,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(builtinPathHelpersSource.find("std::string soaDirectBorrowedViewPendingDiagnostic()") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "bool SemanticsValidator::hasVisibleSoaRefHelper() const {") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "if (hasVisibleSoaRefHelper()) {") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "std::optional<std::string> SemanticsValidator::builtinSoaPendingExprDiagnostic(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -740,6 +746,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "            soaReceiver, params, locals, resolveDirectReceiver, elemType)") !=
         std::string::npos);
+  CHECK(inferMethodResolutionSource.find("this->hasVisibleSoaRefHelper()") !=
+        std::string::npos);
   CHECK(inferMethodResolutionSource.find("auto extractBorrowedBinding =") ==
         std::string::npos);
   CHECK(inferMethodResolutionSource.find(
@@ -751,6 +759,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMethodTargetResolutionSource.find(
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "          receiver, params, locals, resolveDirectReceiver, elemType)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find("this->hasVisibleSoaRefHelper()") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("auto extractBorrowedBinding =") ==
         std::string::npos);

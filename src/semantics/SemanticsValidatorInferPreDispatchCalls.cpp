@@ -509,9 +509,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           !hasDeclaredDefinitionPath(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&
           !resolveMapTarget(expr.args.front(), builtinMapKeyType, builtinMapValueType)) {
-        const bool hasVisibleSoaRefHelper =
-            hasDeclaredDefinitionPath("/soa_vector/ref") ||
-            hasImportedDefinitionPath("/soa_vector/ref");
+        const bool hasVisibleSoaRefHelper = this->hasVisibleSoaRefHelper();
         if (const auto pending = soaPendingUnavailableMethodDiagnostic(
                 methodResolved, hasVisibleSoaRefHelper)) {
           error_ = *pending;
@@ -532,9 +530,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       }
       if (!hasDefinitionPath(methodResolved) &&
           !hasImportedDefinitionPath(methodResolved)) {
-        const bool hasVisibleSoaRefHelper =
-            hasDeclaredDefinitionPath("/soa_vector/ref") ||
-            hasImportedDefinitionPath("/soa_vector/ref");
+        const bool hasVisibleSoaRefHelper = this->hasVisibleSoaRefHelper();
         if (const auto pending = soaPendingUnavailableMethodDiagnostic(
                 methodResolved, hasVisibleSoaRefHelper)) {
           error_ = *pending;

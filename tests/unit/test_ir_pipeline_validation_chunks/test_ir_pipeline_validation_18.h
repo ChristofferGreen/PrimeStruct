@@ -360,11 +360,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
             "if (const auto pending = soaPendingUnavailableMethodDiagnostic(\n"
-            "                methodResolved, hasVisibleSoaRefHelper)) {") !=
+                "                methodResolved, hasVisibleSoaRefHelper)) {") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "const bool hasVisibleSoaRefHelper = this->hasVisibleSoaRefHelper();") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
             "error_ = soaUnavailableMethodDiagnostic(\n"
-            "              methodResolved, hasVisibleSoaRefHelper);") !=
+              "              methodResolved, hasVisibleSoaRefHelper);") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(") !=
         std::string::npos);
@@ -376,11 +379,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find(
             "if (const auto pending = soaPendingUnavailableMethodDiagnostic(\n"
-            "                methodResolved, hasVisibleSoaRefHelper)) {") !=
+                "                methodResolved, hasVisibleSoaRefHelper)) {") !=
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find(
+            "const bool hasVisibleSoaRefHelper = this->hasVisibleSoaRefHelper();") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find(
             "error_ = soaUnavailableMethodDiagnostic(\n"
-            "              methodResolved, hasVisibleSoaRefHelper);") !=
+              "              methodResolved, hasVisibleSoaRefHelper);") !=
         std::string::npos);
   CHECK(semanticsBuiltinPathHelpersSource.find(
             "std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath)") ==

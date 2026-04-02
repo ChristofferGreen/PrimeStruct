@@ -500,9 +500,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       if (context.resolveMethodCallPath != nullptr &&
           context.resolveMethodCallPath(builtinAccessName, methodResolved) &&
           !methodResolved.empty()) {
-        const bool hasVisibleSoaRefHelper =
-            hasDeclaredDefinitionPath("/soa_vector/ref") ||
-            hasImportedDefinitionPath("/soa_vector/ref");
+        const bool hasVisibleSoaRefHelper = this->hasVisibleSoaRefHelper();
         if (const auto pending = soaPendingUnavailableMethodDiagnostic(
                 methodResolved, hasVisibleSoaRefHelper)) {
           error_ = *pending;

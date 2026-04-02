@@ -1697,8 +1697,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (normalizedMethodName == "ref" &&
         (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
-          (hasDeclaredDefinitionPath("/soa_vector/ref") ||
-           hasImportedDefinitionPath("/soa_vector/ref"))))) {
+          this->hasVisibleSoaRefHelper()))) {
       return setCollectionMethodTarget(preferredSoaRefMethodTarget());
     }
     if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
@@ -1878,8 +1877,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       if ((base == "soa_vector" ||
            (base == "vector" &&
-            (hasDeclaredDefinitionPath("/soa_vector/ref") ||
-             hasImportedDefinitionPath("/soa_vector/ref")))) &&
+            this->hasVisibleSoaRefHelper())) &&
           normalizedMethodName == "ref") {
         return setCollectionMethodTarget(preferredSoaRefMethodTarget());
       }
@@ -2045,8 +2043,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (normalizedMethodName == "ref") {
     if (resolveVectorTarget(receiver, elemType) &&
-        (hasDeclaredDefinitionPath("/soa_vector/ref") ||
-         hasImportedDefinitionPath("/soa_vector/ref"))) {
+        this->hasVisibleSoaRefHelper()) {
       return setCollectionMethodTarget(preferredSoaRefMethodTarget());
     }
     if (resolveSoaVectorTarget(receiver, elemType)) {

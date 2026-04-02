@@ -119,8 +119,7 @@ bool SemanticsValidator::isBuiltinSoaRefExpr(
            builtinCollection == "soa_vector";
   };
 
-  if (hasImportedDefinitionPath("/soa_vector/ref") ||
-      hasDeclaredDefinitionPath("/soa_vector/ref")) {
+  if (hasVisibleSoaRefHelper()) {
     return false;
   }
 
@@ -274,6 +273,11 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     }
   }
   return false;
+}
+
+bool SemanticsValidator::hasVisibleSoaRefHelper() const {
+  return hasImportedDefinitionPath("/soa_vector/ref") ||
+         hasDeclaredDefinitionPath("/soa_vector/ref");
 }
 
 bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(
