@@ -381,11 +381,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = expr.name + " does not accept block arguments";
       return false;
     }
-    std::string elemType;
-    if (!resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
-      error_ = "soa_vector field view requires soa_vector target";
-      return false;
-    }
     error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
     return false;
   }

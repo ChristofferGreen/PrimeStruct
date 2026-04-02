@@ -884,7 +884,8 @@ semantics helpers rather than duplicated validator, mutation-borrow, and monomor
 assembly, and the validator-side plus monomorph-side fallback probes are gone entirely. The
 compiler-owned
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
-construction/parsing instead of open-coded literals, and the post-`validateExpr(...)`
+construction/parsing instead of open-coded literals, the old resolved-helper
+`soa_vector field view requires soa_vector target` fallback is gone too, and the post-`validateExpr(...)`
 binding/return/call-argument plus return-inference reprobes are gone too. Read-only
 experimental wrapper standalone borrowed field-view attempts such as `borrowed.field()` plus
 borrowed call-form attempts such as `field(borrowed)` plus inline borrow forms such as

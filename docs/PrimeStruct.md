@@ -2595,6 +2595,8 @@ mutation-borrow, and monomorph entrypoints, and the validator-side plus monomorp
 probes are gone entirely. The remaining compiler-owned
 `/soa_vector/field_view/...` helper path now also routes through shared semantics helper
 construction/parsing instead of open-coded literals across validator and monomorph fallback logic,
+and the old resolved-helper `soa_vector field view requires soa_vector target` fallback is gone
+too,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
