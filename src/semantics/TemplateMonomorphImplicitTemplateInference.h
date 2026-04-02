@@ -27,6 +27,11 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
   return inferBlockBodyBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut);
 }
 
+bool hasVisibleSoaRefHelperForMonomorph(const Context &ctx) {
+  return ctx.sourceDefs.count("/soa_vector/ref") > 0 ||
+         ctx.helperOverloads.count("/soa_vector/ref") > 0;
+}
+
 bool inferImplicitTemplateArgs(const Definition &def,
                                const Expr &callExpr,
                                const LocalTypeMap &locals,
@@ -191,8 +196,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return {};
     }
     const bool hasVisibleSoaRefHelper =
-        ctx.sourceDefs.count("/soa_vector/ref") > 0 ||
-        ctx.helperOverloads.count("/soa_vector/ref") > 0;
+        hasVisibleSoaRefHelperForMonomorph(ctx);
     if (candidate.isMethodCall) {
       if (const auto pending = soaPendingUnavailableMethodDiagnostic(
               resolvedPath, hasVisibleSoaRefHelper)) {
