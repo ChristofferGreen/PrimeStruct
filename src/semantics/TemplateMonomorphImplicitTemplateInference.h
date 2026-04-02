@@ -27,9 +27,15 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
   return inferBlockBodyBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut);
 }
 
+bool hasVisibleDefinitionPathForMonomorph(const Context &ctx,
+                                          std::string_view path) {
+  const std::string ownedPath(path);
+  return ctx.sourceDefs.count(ownedPath) > 0 ||
+         ctx.helperOverloads.count(ownedPath) > 0;
+}
+
 bool hasVisibleSoaRefHelperForMonomorph(const Context &ctx) {
-  return ctx.sourceDefs.count("/soa_vector/ref") > 0 ||
-         ctx.helperOverloads.count("/soa_vector/ref") > 0;
+  return hasVisibleDefinitionPathForMonomorph(ctx, "/soa_vector/ref");
 }
 
 std::optional<std::string> soaPendingUnavailableMethodDiagnosticForMonomorph(
@@ -245,7 +251,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return {};
     }
     const std::string helperPath = "/soa_vector/" + normalizedName;
-    if (ctx.sourceDefs.count(helperPath) > 0 || ctx.helperOverloads.count(helperPath) > 0) {
+    if (hasVisibleDefinitionPathForMonomorph(ctx, helperPath)) {
       return {};
     }
     return soaDirectFieldViewPendingDiagnostic(normalizedName);
