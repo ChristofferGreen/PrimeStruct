@@ -2437,9 +2437,10 @@ bad_use_after_take() {
     `return(holder.pickBorrowed(...).y()[i])`, `return(get(holder.pickBorrowed(...), i).y)`,
     `return(holder.pickBorrowed(...).get(i).y)`, `return(holder.pickBorrowed(...).ref(i).y)`,
     and inline `location(...)`-wrapped variants now ride that same helper/field-access flow too,
-    so those read-only surfaces run across
-    C++/native/VM for both single-field and multi-field wrappers while standalone borrowed or
-    mutating field-view surfaces still keep the pending contract.
+    so those read-only surfaces run across C++/native/VM for both single-field and multi-field
+    wrappers while the remaining pending field-view surfaces are now narrowed to standalone
+    borrowed reads plus the still-unimplemented mutating method/call and indexed field-view
+    writes.
     `soaVectorFromAos<T>()`
     already targets the same substrate semantically, but backend lowering still stops on the current `* backend
     requires typed bindings` boundary.

@@ -974,8 +974,8 @@ helper-return reads such as `return(holder.pickBorrowed(...).count())`,
 `return(holder.pickBorrowed(...).get(i).field)`, `return(holder.pickBorrowed(...).ref(i).field)`,
 and inline `location(...)`-wrapped variants now route through that same helper/indexing
 substrate. The compiler-owned direct unsupported field-view path still remains only for
-standalone borrowed or mutating field-view surfaces until indexing moves fully onto the
-experimental substrate.
+standalone borrowed reads plus the still-unimplemented mutating method/call and indexed
+field-view write surfaces until indexing moves fully onto the experimental substrate.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
