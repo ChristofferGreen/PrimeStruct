@@ -14,6 +14,22 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     }
     return binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
+  auto assignBindingFromTypeText = [](const std::string &typeText, BindingInfo &bindingOut) -> bool {
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    if (normalizedType.empty()) {
+      return false;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+      bindingOut.typeName = normalizeBindingTypeName(base);
+      bindingOut.typeTemplateArg = argText;
+      return true;
+    }
+    bindingOut.typeName = normalizedType;
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  };
   auto normalizedBindingTypeText = [&](const BindingInfo &binding) {
     const std::string normalizedCollectionType = normalizeCollectionTypePath(binding.typeName);
     const std::string normalizedBase =
@@ -22,6 +38,38 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       return normalizedBase;
     }
     return normalizedBase + "<" + normalizeBindingTypeName(binding.typeTemplateArg) + ">";
+  };
+  auto inferSamePathSoaFieldViewHelperBinding = [&](const Expr &candidate, BindingInfo &bindingOut) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall ||
+        !candidate.namespacePrefix.empty() || candidate.args.size() != 1 || candidate.name.empty()) {
+      return false;
+    }
+    std::string helperName = candidate.name;
+    if (!helperName.empty() && helperName.front() == '/') {
+      helperName.erase(helperName.begin());
+    }
+    if (helperName.empty() || helperName == "count" || helperName == "get" ||
+        helperName == "ref" || helperName == "to_soa" || helperName == "to_aos") {
+      return false;
+    }
+    const std::string helperPath = "/soa_vector/" + helperName;
+    if (!hasDeclaredDefinitionPath(helperPath) && !hasImportedDefinitionPath(helperPath)) {
+      return false;
+    }
+    BindingInfo receiverBinding;
+    const Expr &receiver = candidate.args.front();
+    if (!inferBindingTypeFromInitializer(receiver, defParams, activeLocals, receiverBinding)) {
+      std::string receiverTypeText;
+      if (!inferQueryExprTypeText(receiver, defParams, activeLocals, receiverTypeText) ||
+          !assignBindingFromTypeText(receiverTypeText, receiverBinding)) {
+        return false;
+      }
+    }
+    if (normalizeBindingTypeName(receiverBinding.typeName) != "soa_vector" ||
+        receiverBinding.typeTemplateArg.empty()) {
+      return false;
+    }
+    return inferResolvedDirectCallBindingType(helperPath, bindingOut);
   };
   auto containsDeferredMapAliasInference = [&](const Expr &candidate, auto &&containsDeferredMapAliasInferenceRef)
       -> bool {
@@ -62,6 +110,15 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     const std::string previousError = error_;
     error_.clear();
     hasExprBinding = inferBindingTypeFromInitializer(*valueExpr, defParams, activeLocals, exprBinding);
+    if (!hasExprBinding) {
+      std::string inferredTypeText;
+      hasExprBinding =
+          inferQueryExprTypeText(*valueExpr, defParams, activeLocals, inferredTypeText) &&
+          assignBindingFromTypeText(inferredTypeText, exprBinding);
+    }
+    if (!hasExprBinding) {
+      hasExprBinding = inferSamePathSoaFieldViewHelperBinding(*valueExpr, exprBinding);
+    }
     error_.clear();
     error_ = previousError;
     if (exprKind == ReturnKind::Unknown && hasExprBinding) {
@@ -82,6 +139,12 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     }
   }
   if (exprKind == ReturnKind::Unknown) {
+    std::string soaFieldViewName;
+    if (valueExpr != nullptr &&
+        isBuiltinSoaFieldViewExpr(*valueExpr, defParams, activeLocals, &soaFieldViewName)) {
+      error_ = soaFieldViewPendingDiagnostic(soaFieldViewName);
+      return false;
+    }
     if (deferUnknownReturnInferenceErrors_) {
       const bool shouldDeferExplicitMapAliasDiagnostic =
           valueExpr != nullptr &&

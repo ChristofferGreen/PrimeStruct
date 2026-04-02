@@ -358,7 +358,7 @@ TEST_CASE("soa_vector builtin field views return escapes fail through inference"
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("x(values)", "unable to infer return type on /pick");
+  checkReject("x(values)", "soa_vector field views are not implemented yet: x");
   checkReject("values.x()", "soa_vector field views are not implemented yet: x");
 }
 
@@ -383,10 +383,15 @@ pick([soa_vector<Particle>] values) {
   return(values.x())
 }
 
+[return<auto>]
+pick_call([soa_vector<Particle>] values) {
+  return(x(values))
+}
+
 [return<int>]
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
-  return(plus(consume(values.x()), pick(values)))
+  return(plus(plus(consume(values.x()), consume(x(values))), plus(pick(values), pick_call(values))))
 }
 )";
   std::string error;
