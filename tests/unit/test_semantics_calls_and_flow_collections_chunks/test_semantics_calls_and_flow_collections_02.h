@@ -1584,6 +1584,39 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
 }
 
+TEST_CASE("experimental soa_vector method-like borrowed helper-return field-view methods report pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  [Holder] holder{Holder()}
+  holder.pickBorrowed(location(values)).x()
+  x(holder.pickBorrowed(location(values)))
+  location(holder.pickBorrowed(location(values))).x()
+  x(location(holder.pickBorrowed(location(values))))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
 TEST_CASE("experimental soa_vector mutating field-view index validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
@@ -1821,6 +1854,39 @@ main() {
   values.push(Particle(7i32, 8i32))
   assign(location(pickBorrowed(location(values))).x(), 17i32)
   assign(dereference(location(pickBorrowed(location(values)))).x(), 17i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+}
+
+TEST_CASE("experimental soa_vector mutating method-like borrowed helper-return field-view methods report pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  [Holder] holder{Holder()}
+  assign(holder.pickBorrowed(location(values)).x(), 17i32)
+  assign(x(holder.pickBorrowed(location(values))), 17i32)
+  assign(location(holder.pickBorrowed(location(values))).x(), 17i32)
+  assign(x(location(holder.pickBorrowed(location(values)))), 17i32)
   return(0i32)
 }
 )";

@@ -921,13 +921,17 @@ borrowed call-form attempts such as `field(borrowed)` plus inline borrow forms s
 `soa_vector field views are not implemented yet: <field>` diagnostic as direct wrapper attempts,
 and helper-return plus inline location-wrapped borrowed helper-return forms such as
 `field(pickBorrowed(...))`, `location(pickBorrowed(...)).field()`, and
-`field(location(pickBorrowed(...)))` now keep it too. Builtin `ref(...)` direct and helper-return
+`field(location(pickBorrowed(...)))` now keep it too, and method-like struct-helper return plus
+inline location-wrapped method-like forms such as `holder.pickBorrowed(...).field()`,
+`field(holder.pickBorrowed(...))`, `location(holder.pickBorrowed(...)).field()`, and
+`field(location(holder.pickBorrowed(...)))` now keep it too. Builtin `ref(...)` direct and helper-return
 local persistence plus direct and helper-return call-argument/return escapes now likewise keep the
 shared borrowed-view pending diagnostic instead of degrading to generic inference, template-argument,
 or synthetic field-view fallback.
 Mutating standalone method/call attempts such as `assign(value.field(), next)` now also keep that
 same pending field-view diagnostic on direct, borrowed helper-return, and inline
-location-wrapped borrowed helper-return receivers instead of degrading to the generic
+location-wrapped borrowed helper-return, method-like struct-helper return, and inline
+location-wrapped method-like struct-helper return receivers instead of degrading to the generic
 mutable-binding assignment contract, while indexed and explicit borrowed-slot writes such as
 `assign(value.field()[i], next)`, `assign(ref(value, i).field, next)`,
 `assign(value.ref(i).field, next)`, `assign(dereference(pickBorrowed(...)).field()[i], next)`,

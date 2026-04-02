@@ -2394,9 +2394,13 @@ bad_use_after_take() {
     deterministic pending contract instead of degrading to a target-shape error, and
     inline location-wrapped borrowed helper-return forms such as
     `pickBorrowed(...).x()`, `x(pickBorrowed(...))`, `location(pickBorrowed(...)).x()`, and
-    `x(location(pickBorrowed(...)))` now keep it too. Mutating standalone method/call attempts
-    such as `assign(values.x(), next)` and `assign(x(values), next)` now keep that same pending
-    field-view contract instead of degrading to the generic mutable-binding assignment error,
+    `x(location(pickBorrowed(...)))` now keep it too, and method-like struct-helper return plus
+    inline location-wrapped method-like forms such as `holder.pickBorrowed(...).x()`,
+    `x(holder.pickBorrowed(...))`, `location(holder.pickBorrowed(...)).x()`, and
+    `x(location(holder.pickBorrowed(...)))` now keep it too. Mutating standalone method/call
+    attempts such as `assign(values.x(), next)` and `assign(x(values), next)` now keep that same
+    pending field-view contract on those receiver families too instead of degrading to the generic
+    mutable-binding assignment error,
     while indexed and explicit borrowed-slot writes such as `assign(values.y()[i], next)`,
     `assign(dereference(pickBorrowed(...)).y()[i], next)`,
     `assign(location(pickBorrowed(...)).y()[i], next)`,
