@@ -105,6 +105,9 @@
   std::string preferredVisibleDefinitionPathForCurrentImports(
       std::string_view samePath,
       std::string_view canonicalPath) const;
+  bool usesVisibleSamePathSoaHelper(const Expr &expr,
+                                    std::string_view resolvedPath,
+                                    std::string_view helperName) const;
   std::string soaUnavailableMethodDiagnosticForCurrentImports(
       std::string_view resolvedPath) const;
   bool reportBuiltinSoaDirectPendingExprDiagnostic(

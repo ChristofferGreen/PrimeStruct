@@ -291,6 +291,24 @@ std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(
   return std::string(canonicalPath);
 }
 
+bool SemanticsValidator::usesVisibleSamePathSoaHelper(
+    const Expr &expr,
+    std::string_view resolvedPath,
+    std::string_view helperName) const {
+  const std::string helper(helperName);
+  const std::string samePath = "/soa_vector/" + helper;
+  if (!hasVisibleDefinitionPathForCurrentImports(samePath)) {
+    return false;
+  }
+  if (isSimpleCallName(expr, helper.c_str())) {
+    return true;
+  }
+  if (expr.isMethodCall && expr.name == helper) {
+    return true;
+  }
+  return resolvedPath == samePath;
+}
+
 std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(
     std::string_view resolvedPath) const {
   return soaUnavailableMethodDiagnostic(resolvedPath,

@@ -2664,6 +2664,9 @@ versus canonical target selection in method-target, infer-time, and
 vector-helper mutator routing, return-inference paths, and builtin SoA
 access/count helper fallback
 validation,
+while collection-return visible same-path `/soa_vector/get|ref` helper
+detection now also routes through one shared validator helper instead of
+a local matcher lambda,
 while monomorph-side visible `/soa_vector/ref` fallback detection now also
 uses that same shared definition-visibility helper directly instead of a
 dedicated ref-specific wrapper or local visibility cache,

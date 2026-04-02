@@ -679,6 +679,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "bool SemanticsValidator::usesVisibleSamePathSoaHelper(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -871,7 +874,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
-            "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" + helperName)") !=
+            "usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, \"get\")") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find("auto hasVisibleSamePathSoaHelper =") ==
         std::string::npos);
