@@ -842,9 +842,10 @@ before validation/lowering on both global helper-return and explicit `/Type/help
 method-like struct-helper return receivers instead of leaking through wrapper methods in
 compile-run paths. Nested struct-body helper returns remain narrower: constructor-light bodies
 such as `return(soaVectorNew<T>())` provide the current foothold, while value-materializing
-bodies such as `return(soaVectorSingle<Particle>(Particle(...)))` still fail during
-specialization even when unused, so the remaining nested helper-return work is broader than
-helper-shadow parity alone. The equivalent
+bodies such as `return(soaVectorSingle<Particle>(Particle(...)))` now also clear
+specialization and unused-module compilation, but direct expression uses of those nested helper
+calls still remain a separate follow-up before the same helper-shadow surface can be claimed.
+The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now also prefers
 the canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
 `/soa_vector/get` user-helper shadowing. The equivalent helper-return method/infer fallback for

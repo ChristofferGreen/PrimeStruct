@@ -377,6 +377,46 @@ main() {
   CHECK(ast.find(".reserve(", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic accepts nested struct-body soa_vector constructor-bearing helper returns") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorSingle<Particle>(Particle(7i32)))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_nested_struct_body_soa_vector_constructor_helper.prime",
+                source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_nested_struct_body_soa_vector_constructor_helper.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  CHECK(ast.find("[return</std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+  CHECK(ast.find("/Holder/cloneValues()") != std::string::npos);
+  CHECK(ast.find("return /std/collections/experimental_soa_vector/soaVectorSingle__") != std::string::npos);
+  CHECK(ast.find("Particle(7)") != std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic rewrites experimental soa_vector reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

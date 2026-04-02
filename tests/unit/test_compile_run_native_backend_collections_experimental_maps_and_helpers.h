@@ -770,6 +770,38 @@ main() {
   CHECK(runCommand(exePath) == 131);
 }
 
+TEST_CASE("native compiles nested struct-body soa_vector constructor-bearing helper returns") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<SoaVector<Particle>>]
+  cloneValues() {
+    return(soaVectorSingle<Particle>(Particle(7i32)))
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_nested_struct_body_soa_vector_constructor_helper.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_nested_struct_body_soa_vector_constructor_helper").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("native runs explicit method-like helper-return experimental soa_vector to_aos shadow") {
   const std::string source = R"(
 import /std/collections/*

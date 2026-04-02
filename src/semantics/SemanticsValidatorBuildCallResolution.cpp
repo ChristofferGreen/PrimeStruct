@@ -349,6 +349,10 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     if (it != importAliases_.end()) {
       return rewriteCanonicalCollectionConstructorPath(it->second);
     }
+    std::string root = "/" + expr.name;
+    if (defMap_.count(root) > 0) {
+      return rewriteCanonicalCollectionConstructorPath(root);
+    }
     return rewriteCanonicalCollectionConstructorPath(normalizedPrefix + "/" + expr.name);
   }
 

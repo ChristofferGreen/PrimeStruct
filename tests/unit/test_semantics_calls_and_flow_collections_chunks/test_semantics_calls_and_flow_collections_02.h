@@ -386,7 +386,7 @@ Particle() {
 Holder() {
   [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soaVectorNew<Particle>())
+    return(soaVectorSingle<Particle>(Particle(7i32)))
   }
 }
 
@@ -415,7 +415,7 @@ Particle() {
 Holder() {
   [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soaVectorNew<Particle>())
+    return(soaVectorSingle<Particle>(Particle(7i32)))
   }
 }
 
@@ -444,7 +444,7 @@ Particle() {
 Holder() {
   [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soaVectorNew<Particle>())
+    return(soaVectorSingle<Particle>(Particle(7i32)))
   }
 }
 
@@ -473,7 +473,7 @@ Particle() {
 Holder() {
   [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soaVectorNew<Particle>())
+    return(soaVectorSingle<Particle>(Particle(7i32)))
   }
 }
 
@@ -507,7 +507,7 @@ Particle() {
 Holder() {
   [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soaVectorNew<Particle>())
+    return(soaVectorSingle<Particle>(Particle(7i32)))
   }
 }
 
@@ -2942,7 +2942,7 @@ Particle() {
 Holder() {
   [return<SoaVector<Particle>>]
   cloneValues() {
-    return(soaVectorNew<Particle>())
+    return(soaVectorSingle<Particle>(Particle(7i32)))
   }
 }
 
