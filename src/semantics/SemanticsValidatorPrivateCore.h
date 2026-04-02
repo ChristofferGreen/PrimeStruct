@@ -100,6 +100,8 @@
                                  const std::vector<ParameterInfo> &params,
                                  const std::unordered_map<std::string, BindingInfo> &locals,
                                  std::string *fieldNameOut = nullptr) const;
+  bool hasVisibleDefinitionPathForCurrentImports(
+      std::string_view path) const;
   bool hasVisibleSoaRefHelper() const;
   std::string soaUnavailableMethodDiagnosticForCurrentImports(
       std::string_view resolvedPath) const;

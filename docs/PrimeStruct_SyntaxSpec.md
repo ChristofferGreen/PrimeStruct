@@ -966,11 +966,14 @@ also use that same shared helper instead of the older field-view-only wrapper,
 which is now gone entirely.
 Validator-side fixed unavailable-method rejects now also route through one
 shared visibility-aware helper instead of recomputing the `/soa_vector/ref`
-visibility and pending/unavailable split inline, while monomorph-side fixed
-method pending rejects now also route through one shared visibility-aware
-helper instead of open-coding the optional pending lookup around that same
-visibility probe, and the low-level field-view and borrowed-view pending
-string builders are now
+visibility and pending/unavailable split inline, while validator-side visible
+same-path `/soa_vector/count|get|push|reserve` helper checks now also route
+through that same shared definition-visibility helper instead of repeating
+import/declared probes across method-target and infer-time helper-shadow
+paths, while monomorph-side fixed method pending rejects now also route
+through one shared visibility-aware helper instead of open-coding the optional
+pending lookup around that same visibility probe, and the low-level field-view
+and borrowed-view pending string builders are now
 file-local to the shared helper implementation instead of part of the public
 semantics-helper surface, while direct collection-access, count/capacity
 builtin validation, SoA builtin validation, collection dispatch inference,

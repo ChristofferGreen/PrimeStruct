@@ -133,8 +133,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (collectionTypePath == "/vector" &&
-          (hasDeclaredDefinitionPath("/soa_vector/count") ||
-           hasImportedDefinitionPath("/soa_vector/count"))) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/count")) {
         resolvedOut = preferredSoaCountMethodTarget();
         return true;
       }
@@ -223,8 +222,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (normalizedMethodName == "get" &&
         (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
-          (hasDeclaredDefinitionPath("/soa_vector/get") ||
-           hasImportedDefinitionPath("/soa_vector/get"))))) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/get")))) {
       resolvedOut = preferredSoaGetMethodTarget();
       return true;
     }
@@ -238,8 +236,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
         (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
-          (hasDeclaredDefinitionPath("/soa_vector/" + normalizedMethodName) ||
-           hasImportedDefinitionPath("/soa_vector/" + normalizedMethodName))))) {
+          hasVisibleDefinitionPathForCurrentImports(
+              "/soa_vector/" + normalizedMethodName)))) {
       resolvedOut = preferredSoaMutatorMethodTarget(normalizedMethodName);
       return true;
     }
@@ -509,8 +507,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (resolveVectorTarget(receiver, elemType) &&
-          (hasDeclaredDefinitionPath("/soa_vector/count") ||
-           hasImportedDefinitionPath("/soa_vector/count"))) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/count")) {
         resolvedOut = preferredSoaCountMethodTarget();
         return true;
       }
@@ -580,8 +577,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (normalizedMethodName == "get" &&
         resolveVectorTarget(receiver, elemType) &&
-        (hasDeclaredDefinitionPath("/soa_vector/get") ||
-         hasImportedDefinitionPath("/soa_vector/get"))) {
+        hasVisibleDefinitionPathForCurrentImports("/soa_vector/get")) {
       resolvedOut = preferredSoaGetMethodTarget();
       return true;
     }

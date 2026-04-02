@@ -668,6 +668,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(builtinPathHelpersSource.find("std::string soaDirectBorrowedViewPendingDiagnostic()") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -758,6 +761,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("this->hasVisibleSoaRefHelper()") !=
         std::string::npos);
+  CHECK(inferMethodResolutionSource.find("hasVisibleDefinitionPathForCurrentImports(") !=
+        std::string::npos);
   CHECK(inferMethodResolutionSource.find("auto extractBorrowedBinding =") ==
         std::string::npos);
   CHECK(inferMethodResolutionSource.find(
@@ -771,6 +776,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "          receiver, params, locals, resolveDirectReceiver, elemType)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("this->hasVisibleSoaRefHelper()") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find("hasVisibleDefinitionPathForCurrentImports(") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("auto extractBorrowedBinding =") ==
         std::string::npos);

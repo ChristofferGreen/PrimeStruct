@@ -214,7 +214,7 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   }
 
   const std::string helperPath = "/soa_vector/" + normalizedName;
-  if (hasImportedDefinitionPath(helperPath) || hasDeclaredDefinitionPath(helperPath)) {
+  if (hasVisibleDefinitionPathForCurrentImports(helperPath)) {
     return false;
   }
 
@@ -276,8 +276,14 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
 }
 
 bool SemanticsValidator::hasVisibleSoaRefHelper() const {
-  return hasImportedDefinitionPath("/soa_vector/ref") ||
-         hasDeclaredDefinitionPath("/soa_vector/ref");
+  return hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref");
+}
+
+bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
+    std::string_view path) const {
+  const std::string ownedPath(path);
+  return hasImportedDefinitionPath(ownedPath) ||
+         hasDeclaredDefinitionPath(ownedPath);
 }
 
 std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(
