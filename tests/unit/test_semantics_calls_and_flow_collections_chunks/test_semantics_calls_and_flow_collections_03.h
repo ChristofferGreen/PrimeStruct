@@ -507,68 +507,18 @@ Particle() {
   return(8i32)
 }
 
-[return<auto>]
-pickCount([vector<Particle>] values) {
-  return(count(values))
-}
-
-[return<auto>]
-pickCountMethod([vector<Particle>] values) {
-  return(values.count())
-}
-
-[return<auto>]
-pickCountSlash([vector<Particle>] values) {
-  return(values./soa_vector/count())
-}
-
-[return<auto>]
-pickGet([vector<Particle>] values) {
-  return(get(values, 0i32))
-}
-
-[return<auto>]
-pickGetMethod([vector<Particle>] values) {
-  return(values.get(0i32))
-}
-
-[return<auto>]
-pickGetSlash([vector<Particle>] values) {
-  return(values./soa_vector/get(0i32))
-}
-
-[return<auto>]
-pickRef([vector<Particle>] values) {
-  return(ref(values, 0i32))
-}
-
-[return<auto>]
-pickRefMethod([vector<Particle>] values) {
-  return(values.ref(0i32))
-}
-
-[return<auto>]
-pickRefSlash([vector<Particle>] values) {
-  return(values./soa_vector/ref(0i32))
-}
-
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Particle>] values{vector<Particle>(Particle(1i32))}
-  return(plus(count(values),
-              plus(values.count(),
-                   plus(values./soa_vector/count(),
-                        plus(get(values, 0i32),
-                             plus(ref(values, 0i32),
-                                  plus(pickCount(values),
-                                       plus(pickCountMethod(values),
-                                            plus(pickCountSlash(values),
-                                                 plus(pickGet(values),
-                                                      plus(pickGetMethod(values),
-                                                           plus(pickGetSlash(values),
-                                                                plus(pickRef(values),
-                                                                     plus(pickRefMethod(values),
-                                                                          pickRefSlash(values))))))))))))))
+  [int mut] total{plus(count(values), values.count())}
+  assign(total, plus(total, values./soa_vector/count()))
+  assign(total, plus(total, get(values, 0i32)))
+  assign(total, plus(total, ref(values, 0i32)))
+  assign(total, plus(total, values.get(0i32)))
+  assign(total, plus(total, values./soa_vector/get(0i32)))
+  assign(total, plus(total, values.ref(0i32)))
+  assign(total, plus(total, values./soa_vector/ref(0i32)))
+  return(total)
 }
 )";
   std::string error;

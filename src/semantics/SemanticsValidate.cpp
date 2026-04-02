@@ -1026,6 +1026,21 @@ std::string builtinSoaMutatorHelperName(std::string_view rawName) {
   return {};
 }
 
+std::string oldExplicitSoaMutatorHelperName(std::string_view rawName) {
+  std::string normalized(rawName);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  if (normalized.rfind("soa_vector/", 0) != 0) {
+    return {};
+  }
+  normalized = normalized.substr(std::string("soa_vector/").size());
+  if (normalized == "push" || normalized == "reserve") {
+    return normalized;
+  }
+  return {};
+}
+
 void rewriteBuiltinSoaConversionMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
@@ -2163,6 +2178,7 @@ void rewriteBuiltinSoaMutatorExpr(
       receiverBinding.has_value()
           ? std::optional<semantics::BindingInfo>{}
           : findBuiltinVectorValueBinding(expr.args.front());
+  const std::string explicitOldHelperName = oldExplicitSoaMutatorHelperName(rawHelperName);
   const bool preserveVectorHelper =
       (helperName == "push" && preserveVectorPushHelper) ||
       (helperName == "reserve" && preserveVectorReserveHelper);
@@ -2174,6 +2190,9 @@ void rewriteBuiltinSoaMutatorExpr(
       expr.namespacePrefix.clear();
       expr.templateArgs.clear();
     }
+    return;
+  }
+  if (fallbackVectorBinding.has_value() && explicitOldHelperName.empty()) {
     return;
   }
   if (!receiverBinding.has_value() && !fallbackVectorBinding.has_value()) {
