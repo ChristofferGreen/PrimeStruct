@@ -2639,6 +2639,8 @@ unavailable-method helper for both field-view and `ref(...)` rejects,
 and infer pre-dispatch plus late-fallback unavailable-method sites now also use
 that same shared helper instead of the older field-view-only wrapper,
 which is now gone entirely,
+while the remaining fixed pending-path sites now call the optional pending
+helper directly instead of wrapping back through the full unavailable-method formatter,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
