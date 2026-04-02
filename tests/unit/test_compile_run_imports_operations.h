@@ -824,6 +824,35 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
+TEST_CASE("compiles and runs vector-target to_aos helper shadows in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+/to_aos([vector<i32>] values) {
+  return(9i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorSingle<i32>(1i32)}
+  [int] direct{/to_aos(values)}
+  [int] method{values.to_aos()}
+  [int] slash{values./to_aos()}
+  return(plus(direct, plus(method, slash)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_vector_target_to_aos_shadow_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_vector_target_to_aos_shadow_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 27);
+}
+
 TEST_CASE("compiles nested struct-body soa_vector constructor-bearing helper returns in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

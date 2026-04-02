@@ -724,6 +724,30 @@ main() {
   CHECK(runCommand(runCmd) == 10);
 }
 
+TEST_CASE("runs vm vector-target to_aos helper shadows") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+/to_aos([vector<i32>] values) {
+  return(9i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorSingle<i32>(1i32)}
+  [int] direct{/to_aos(values)}
+  [int] method{values.to_aos()}
+  [int] slash{values./to_aos()}
+  return(plus(direct, plus(method, slash)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_vector_target_to_aos_shadow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 27);
+}
+
 TEST_CASE("runs vm nested struct-body soa_vector constructor-bearing helper returns") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

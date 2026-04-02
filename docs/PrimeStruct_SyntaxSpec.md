@@ -833,7 +833,9 @@ rewrite to direct `/soa_vector/push(values, ...)` / `/soa_vector/reserve(values,
 `to_aos` misuses now also keep that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin `to_aos requires soa_vector target`
 diagnostic, while visible same-path `/to_aos` user helpers now still win on vector-target wrong-receiver forms
-through semantics and dump rewriting, so those paths no longer depend on the old builtin conversion scaffolding.
+through semantics and dump rewriting. Numeric builtin-vector helper-shadow cases also clear lowering and run across
+C++/native/VM now, so those paths no longer depend on the old builtin conversion scaffolding even though the separate
+struct-vector literal/runtime boundary still remains outside that helper-routing slice.
 Explicit canonical
 experimental-wrapper slash-method `values./std/collections/soa_vector/to_aos()` now also validates on that same
 canonical helper path and reaches the current lowerer `struct parameter type mismatch` boundary instead of

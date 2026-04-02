@@ -2498,9 +2498,12 @@ also preserve plain method forms, and old-explicit slash-method forms rewrite to
 `/soa_vector/push(values, ...)` / `/soa_vector/reserve(values, ...)` calls instead of degrading
 to `unknown call target: /std/collections/soa_vector/push`.
 Vector-target root bare/direct/method `to_aos` misuses now also preserve visible same-path
-`/to_aos` user helpers through semantics and dump rewriting and otherwise keep that same canonical
+`/to_aos` user helpers through semantics and dump rewriting, and numeric builtin-vector
+helper-shadow cases now also clear lowering and run across C++/native/VM instead of stopping
+after rewrite. The no-shadow path still keeps that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin
-`to_aos requires soa_vector target` diagnostic.
+`to_aos requires soa_vector target` diagnostic, while struct-vector literal/runtime limits remain
+tracked separately from that helper-routing boundary.
 The remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for root
 `get`, root `ref`, root `to_aos`, and field-view diagnostics
 instead of one mixed fallback bucket, the remaining lowering cleanup is now tracked as explicit
