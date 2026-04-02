@@ -381,10 +381,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       error_ = expr.name + " does not accept block arguments";
       return false;
     }
-    if (expr.args.size() != 1) {
-      error_ = "soa_vector field views require value.<field>()[index] syntax: " + expr.name;
-      return false;
-    }
     std::string elemType;
     if (!resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
       error_ = "soa_vector field view requires soa_vector target";
@@ -443,10 +439,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       std::string elemType;
       if (resolveSoaVectorOrExperimentalBorrowedReceiver(expr.args.front(), elemType)) {
         handledOut = true;
-        if (expr.args.size() != 1) {
-          error_ = "soa_vector field views require value.<field>()[index] syntax: " + expr.name;
-          return false;
-        }
         error_ = soaFieldViewPendingDiagnostic(expr.name);
         return false;
       }

@@ -792,7 +792,7 @@ element-field envelopes in literal, binding, and return validation paths). Built
 current lowering behavior are temporary scaffolding while the language grows the generic SoA substrate needed for a
 real stdlib-owned implementation. Method-form/call-form field-view names now emit
 `soa_vector field views are not implemented yet: <field>` unless a user-defined `/soa_vector/<field>` helper exists,
-and current IR lowering routes `count(...)` on `soa_vector` through the native count path for current SoA bindings
+including explicit `value.field(i)` / `field(value, i)` index-like spellings, and current IR lowering routes `count(...)` on `soa_vector` through the native count path for current SoA bindings
 while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
 direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
 across C++/native/VM, and valid root bare/method/old-explicit `count`/`get`/`ref` plus bare/direct/method `to_aos`

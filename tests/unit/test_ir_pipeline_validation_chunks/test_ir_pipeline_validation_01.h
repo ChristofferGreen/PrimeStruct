@@ -1013,7 +1013,7 @@ Particle() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error == "soa_vector field views require value.<field>()[index] syntax: x");
+  CHECK(error == "soa_vector field views are not implemented yet: x");
 }
 
 TEST_CASE("semantics rejects soa_vector field-view call-form index shape before lowerer") {
@@ -1030,7 +1030,7 @@ Particle() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error == "soa_vector field views require value.<field>()[index] syntax: x");
+  CHECK(error == "soa_vector field views are not implemented yet: x");
 }
 
 TEST_CASE("semantics rejects soa_vector get method named args before lowerer") {
