@@ -172,6 +172,51 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   };
   auto pendingExperimentalSoaFieldViewNameForAssignTarget =
       [&](const Expr &target, std::string &fieldNameOut) -> bool {
+    auto receiverHasExperimentalSoaField =
+        [&](const Expr &receiver, const std::string &candidateFieldName) -> bool {
+      if (candidateFieldName.empty()) {
+        return false;
+      }
+      const std::string samePath = "/soa_vector/" + candidateFieldName;
+      if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+        return false;
+      }
+      std::string elemType;
+      if (!resolveExperimentalSoaOrBorrowedReceiver(receiver, elemType)) {
+        return false;
+      }
+      const std::string normalizedElemType =
+          normalizeBindingTypeName(elemType);
+      if (normalizedElemType.empty()) {
+        return false;
+      }
+      std::string currentNamespace;
+      if (!currentValidationContext_.definitionPath.empty()) {
+        const size_t slash =
+            currentValidationContext_.definitionPath.find_last_of('/');
+        if (slash != std::string::npos && slash > 0) {
+          currentNamespace =
+              currentValidationContext_.definitionPath.substr(0, slash);
+        }
+      }
+      const std::string lookupNamespace =
+          !receiver.namespacePrefix.empty() ? receiver.namespacePrefix
+                                            : currentNamespace;
+      const std::string elementStructPath =
+          resolveStructTypePath(normalizedElemType, lookupNamespace,
+                                structNames_);
+      auto structIt = defMap_.find(elementStructPath);
+      if (elementStructPath.empty() || structIt == defMap_.end() ||
+          structIt->second == nullptr) {
+        return false;
+      }
+      for (const auto &stmt : structIt->second->statements) {
+        if (stmt.isBinding && stmt.name == candidateFieldName) {
+          return true;
+        }
+      }
+      return false;
+    };
     fieldNameOut.clear();
     if (target.kind == Expr::Kind::Call && target.isFieldAccess &&
         target.args.size() == 1) {
@@ -198,15 +243,10 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         target.bodyArguments.empty() && !hasNamedArguments(target.argNames) &&
         target.args.size() == 1 && !target.name.empty() &&
         target.name.find('/') == std::string::npos) {
-      const std::string helperPath = "/soa_vector/" + target.name;
-      if (!hasDeclaredDefinitionPath(helperPath) &&
-          !hasImportedDefinitionPath(helperPath)) {
-        const Expr &receiver = target.args.front();
-        std::string elemType;
-        if (resolveExperimentalSoaOrBorrowedReceiver(receiver, elemType)) {
-          fieldNameOut = target.name;
-          return true;
-        }
+      const Expr &receiver = target.args.front();
+      if (receiverHasExperimentalSoaField(receiver, target.name)) {
+        fieldNameOut = target.name;
+        return true;
       }
     }
     std::string accessName;
@@ -215,21 +255,15 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     const Expr &fieldViewExpr = target.args.front();
     if (fieldViewExpr.kind != Expr::Kind::Call || fieldViewExpr.isBinding ||
-        !fieldViewExpr.isMethodCall || fieldViewExpr.name.empty() ||
-        fieldViewExpr.name.find('/') != std::string::npos ||
+        fieldViewExpr.name.empty() || fieldViewExpr.name.find('/') != std::string::npos ||
         !fieldViewExpr.templateArgs.empty() || fieldViewExpr.hasBodyArguments ||
         !fieldViewExpr.bodyArguments.empty() ||
         hasNamedArguments(fieldViewExpr.argNames) ||
         fieldViewExpr.args.size() != 1) {
       return false;
     }
-    const std::string samePath = "/soa_vector/" + fieldViewExpr.name;
-    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
-      return false;
-    }
-    std::string elemType;
-    if (!resolveExperimentalSoaOrBorrowedReceiver(fieldViewExpr.args.front(),
-                                                  elemType)) {
+    if (!receiverHasExperimentalSoaField(fieldViewExpr.args.front(),
+                                         fieldViewExpr.name)) {
       return false;
     }
     fieldNameOut = fieldViewExpr.name;

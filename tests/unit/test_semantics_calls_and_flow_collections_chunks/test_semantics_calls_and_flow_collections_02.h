@@ -1608,6 +1608,30 @@ main() {
   CHECK(error.find("soa_vector field views are not implemented yet: y") != std::string::npos);
 }
 
+TEST_CASE("experimental soa_vector mutating field-view call-form index reports pending diagnostic") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  assign(y(values)[1i32], 17i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector field views are not implemented yet: y") != std::string::npos);
+}
+
 TEST_CASE("experimental soa_vector mutating field-view method reports pending diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
