@@ -831,7 +831,9 @@ count/access classifier fallback also no longer treats raw `/soa_vector/count` a
 semantics has canonicalized those old-surface forms earlier in validation, and the remaining
 inferred/method fallback resolution for builtin `soa_vector` count receivers now prefers the
 canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
-`/soa_vector/count` user-helper shadowing on helper-return receivers. Bare wildcard-imported
+`/soa_vector/count` user-helper shadowing on helper-return receivers, and bare helper-return
+`count(...)` local binding, call-argument, and direct return escapes now also preserve that
+same-path helper shadow instead of degrading to a synthetic template-argument error. Bare wildcard-imported
 helper names on helper-return builtin `soa_vector` receivers now also canonicalize from the
 receiver family before experimental wrapper rewriting, so `count(holder.cloneValues())` and
 `get(holder.cloneValues(), i).field` stay on the canonical helper surface instead of leaking
@@ -848,7 +850,9 @@ helper/conversion substrate plus same-path `/soa_vector/*` and `/to_aos` helper-
 surfaces instead of failing during specialization or later expression lowering. The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now also prefers
 the canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
-`/soa_vector/get` user-helper shadowing. The equivalent helper-return method/infer fallback for
+`/soa_vector/get` user-helper shadowing, and bare helper-return `get(...)` local binding,
+call-argument, and direct return escapes now also preserve that same-path helper shadow instead
+of degrading to a synthetic template-argument error. The equivalent helper-return method/infer fallback for
 builtin `soa_vector` `ref` receivers now also prefers the canonical
 `/std/collections/soa_vector/ref` helper path while still preserving same-path
 `/soa_vector/ref` user-helper shadowing. Local `auto` inference on builtin and helper-return

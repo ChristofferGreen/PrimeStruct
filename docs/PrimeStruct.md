@@ -2502,7 +2502,9 @@ boundary as their bare imported counterparts, so the remaining helper-call clean
 blocked on wildcard-imported access-method parity. The remaining inferred and
 method-target fallback resolution for builtin `soa_vector` count receivers now also prefers the
 canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
-`/soa_vector/count` user-helper shadowing on helper-return receivers, helper-return bare
+`/soa_vector/count` user-helper shadowing on helper-return receivers, and bare helper-return
+`count(...)` local binding, call-argument, and direct return escapes now also preserve that
+same-path helper shadow instead of degrading to a synthetic template-argument error. Helper-return bare
 wildcard-imported helper names now also canonicalize from the receiver family before the
 experimental wrapper rewrite so `count(holder.cloneValues())` and
 `get(holder.cloneValues(), i).field` stay on the same canonical helper surface. Helper-return
@@ -2518,7 +2520,9 @@ helper/conversion substrate plus same-path `/soa_vector/*` and `/to_aos` helper-
 surfaces instead of failing during specialization or later expression lowering. The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now prefers the
 canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
-`/soa_vector/get` user-helper shadowing. The equivalent helper-return method/infer fallback for
+`/soa_vector/get` user-helper shadowing, and bare helper-return `get(...)` local binding,
+call-argument, and direct return escapes now also preserve that same-path helper shadow instead
+of degrading to a synthetic template-argument error. The equivalent helper-return method/infer fallback for
 builtin `soa_vector` `ref` receivers now also prefers the canonical
 `/std/collections/soa_vector/ref` helper path while still preserving same-path
 `/soa_vector/ref` user-helper shadowing. Local `auto` inference on builtin and helper-return

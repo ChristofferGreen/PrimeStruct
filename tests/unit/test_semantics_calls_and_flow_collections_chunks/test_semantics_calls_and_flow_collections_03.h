@@ -409,6 +409,76 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("soa_vector helper-return bare get keeps same-path helper across escapes") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[return<int>]
+/soa_vector/get([soa_vector<Particle>] values, [int] index) {
+  return(7i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pick() {
+  return(get(cloneValues(), 0i32))
+}
+
+[return<int>]
+main() {
+  [auto] item{get(cloneValues(), 0i32)}
+  return(plus(item, plus(consume(get(cloneValues(), 0i32)), pick())))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector helper-return bare count keeps same-path helper across escapes") {
+  const std::string source = R"(
+[return<soa_vector<int>>]
+cloneValues() {
+  return(soa_vector<int>())
+}
+
+[return<int>]
+/soa_vector/count([soa_vector<int>] values) {
+  return(7i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pick() {
+  return(count(cloneValues()))
+}
+
+[return<int>]
+main() {
+  [auto] item{count(cloneValues())}
+  return(plus(item, plus(consume(count(cloneValues())), pick())))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector builtin field views call argument escapes fail through inference") {
   const auto checkReject = [](const std::string &expr, const std::string &expected) {
     const std::string source =

@@ -770,14 +770,16 @@ bool rewriteExpr(Expr &expr,
       expr.namespacePrefix.clear();
     }
     const Expr *resolvedReceiverExpr = mapHelperReceiverExpr(expr);
-    const bool isSyntheticSamePathSoaRefTemplateCarry =
-        resolvedPath == "/soa_vector/ref" &&
+    const bool isSyntheticSamePathSoaHelperTemplateCarry =
+        (resolvedPath == "/soa_vector/count" ||
+         resolvedPath == "/soa_vector/get" ||
+         resolvedPath == "/soa_vector/ref") &&
         ctx.templateDefs.count(resolvedPath) == 0 &&
         !expr.templateArgs.empty() &&
         resolvedReceiverExpr != nullptr &&
         resolvedReceiverExpr->kind == Expr::Kind::Call &&
         !resolvedReceiverExpr->isBinding;
-    if (isSyntheticSamePathSoaRefTemplateCarry) {
+    if (isSyntheticSamePathSoaHelperTemplateCarry) {
       expr.templateArgs.clear();
     }
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
