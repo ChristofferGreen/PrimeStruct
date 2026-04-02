@@ -359,15 +359,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "if (!expr.isMethodCall && isSimpleCallName(expr, \"buffer_load\") &&") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
-            "if (const auto pending = soaPendingUnavailableMethodDiagnostic(\n"
-                "                methodResolved, hasVisibleSoaRefHelper)) {") !=
-        std::string::npos);
-  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
-            "const bool hasVisibleSoaRefHelper = this->hasVisibleSoaRefHelper();") !=
-        std::string::npos);
-  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
-            "error_ = soaUnavailableMethodDiagnostic(\n"
-              "              methodResolved, hasVisibleSoaRefHelper);") !=
+            "error_ =\n"
+            "            this->soaUnavailableMethodDiagnosticForCurrentImports(\n"
+            "                methodResolved);") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(") !=
         std::string::npos);
@@ -378,15 +372,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferPreDispatchCallsSource.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find(
-            "if (const auto pending = soaPendingUnavailableMethodDiagnostic(\n"
-                "                methodResolved, hasVisibleSoaRefHelper)) {") !=
-        std::string::npos);
-  CHECK(semanticsInferPreDispatchCallsSource.find(
-            "const bool hasVisibleSoaRefHelper = this->hasVisibleSoaRefHelper();") !=
-        std::string::npos);
-  CHECK(semanticsInferPreDispatchCallsSource.find(
-            "error_ = soaUnavailableMethodDiagnostic(\n"
-              "              methodResolved, hasVisibleSoaRefHelper);") !=
+            "error_ =\n"
+            "            this->soaUnavailableMethodDiagnosticForCurrentImports(\n"
+            "                methodResolved);") !=
         std::string::npos);
   CHECK(semanticsBuiltinPathHelpersSource.find(
             "std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath)") ==

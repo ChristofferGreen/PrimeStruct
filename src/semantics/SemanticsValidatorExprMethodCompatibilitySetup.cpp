@@ -138,12 +138,8 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
       return "experimental gfx entry point not implemented yet: "
              "Device.create_pipeline([vertex_type] type, ...)";
     }
-    const bool hasVisibleSoaRefHelper = this->hasVisibleSoaRefHelper();
-    if (const auto pending = soaPendingUnavailableMethodDiagnostic(
-            resolvedPath, hasVisibleSoaRefHelper)) {
-      return *pending;
-    }
-    return soaUnavailableMethodDiagnostic(resolvedPath, hasVisibleSoaRefHelper);
+    return this->soaUnavailableMethodDiagnosticForCurrentImports(
+        resolvedPath);
   };
   return true;
 }

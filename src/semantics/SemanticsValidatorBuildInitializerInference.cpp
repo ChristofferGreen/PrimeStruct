@@ -280,6 +280,12 @@ bool SemanticsValidator::hasVisibleSoaRefHelper() const {
          hasDeclaredDefinitionPath("/soa_vector/ref");
 }
 
+std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(
+    std::string_view resolvedPath) const {
+  return soaUnavailableMethodDiagnostic(resolvedPath,
+                                        hasVisibleSoaRefHelper());
+}
+
 bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,

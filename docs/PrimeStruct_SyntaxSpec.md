@@ -964,9 +964,10 @@ same optional unavailable-method helper for both field-view and `ref(...)`
 rejects, and infer pre-dispatch plus late-fallback unavailable-method sites now
 also use that same shared helper instead of the older field-view-only wrapper,
 which is now gone entirely.
-The remaining fixed pending-path sites now call the optional pending helper
-directly instead of wrapping back through the full unavailable-method formatter,
-and the low-level field-view and borrowed-view pending string builders are now
+Validator-side fixed unavailable-method rejects now also route through one
+shared visibility-aware helper instead of recomputing the `/soa_vector/ref`
+visibility and pending/unavailable split inline, and the low-level field-view
+and borrowed-view pending string builders are now
 file-local to the shared helper implementation instead of part of the public
 semantics-helper surface, while direct collection-access, count/capacity
 builtin validation, SoA builtin validation, collection dispatch inference,
