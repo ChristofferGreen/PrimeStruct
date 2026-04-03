@@ -336,6 +336,34 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
+TEST_CASE("compiles and runs graph-solved direct local-auto vector helper shadows in C++ emitter") {
+  const std::string source = R"(
+/vector/count([vector<i32>] values) {
+  return(17i32)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+makeValues() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [auto] values{makeValues()}
+  return(plus(/vector/count(values), values./vector/count()))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_graph_direct_local_auto_vector_helper_shadows_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_graph_direct_local_auto_vector_helper_shadows_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 34);
+}
+
 TEST_CASE("rejects experimental soa_vector stdlib wide structs on pending width boundary in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
