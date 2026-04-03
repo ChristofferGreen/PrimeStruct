@@ -486,6 +486,14 @@
             "bool SemanticsValidator::validateExprGpuBufferBuiltins") !=
         std::string::npos);
   CHECK(semanticsExprGpuBufferSource.find(
+            "auto publishGpuBufferDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprGpuBufferSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprGpuBufferSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprGpuBufferSource.find(
             "dispatch requires kernel and three dimension arguments") !=
         std::string::npos);
   CHECK(semanticsExprScalarPointerMemorySource.find(
