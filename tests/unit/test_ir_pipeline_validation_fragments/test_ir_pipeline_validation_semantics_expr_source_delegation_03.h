@@ -329,6 +329,14 @@
   CHECK(semanticsExprCollectionLiteralsSource.find(
             "bool SemanticsValidator::validateExprCollectionLiteralBuiltins") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find(
+            "auto publishCollectionLiteralDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsExprCollectionLiteralsSource.find("validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionLiteralsSource.find("this->validateCollectionElementType(") !=
