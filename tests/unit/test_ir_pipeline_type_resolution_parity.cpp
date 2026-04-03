@@ -99,6 +99,48 @@ main() {
           false,
       },
       {
+          "direct_local_auto_vector_helper_call_success",
+          R"(
+/vector/count([vector<i32>] values) {
+  return(17i32)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+makeValues() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values)
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  [auto] values{makeValues()}
+  return(/vector/count(values))
+}
+)",
+          true,
+      },
+      {
+          "direct_local_auto_vector_helper_method_success",
+          R"(
+/vector/count([vector<i32>] values) {
+  return(17i32)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+makeValues() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values)
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  [auto] values{makeValues()}
+  return(values./vector/count())
+}
+)",
+          true,
+      },
+      {
           "query_local_auto_scalar_success",
           R"(
 [return<int>]
