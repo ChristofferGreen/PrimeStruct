@@ -912,7 +912,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "            usesSamePathSoaHelperTargetForCurrentImports(\"ref\"))") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
+            "usesSamePathSoaHelperTargetForCurrentImports(\"count\")") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "usesSamePathSoaHelperTargetForCurrentImports(\"get\")") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "usesSamePathSoaHelperTargetForCurrentImports(\"count\")") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "usesSamePathSoaHelperTargetForCurrentImports(\"get\")") !=
         std::string::npos);
   CHECK(inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")") !=
