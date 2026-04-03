@@ -520,6 +520,10 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
 
   CHECK(semanticsPassesCombinedSource.find("bool SemanticsValidator::validateDefinitions()") != std::string::npos);
   CHECK(semanticsPassesCombinedSource.find("bool SemanticsValidator::validateExecutions()") != std::string::npos);
+  CHECK(semanticsPassesSource.find("auto failEntryDiagnostic = [&](std::string message,") !=
+        std::string::npos);
+  CHECK(semanticsPassesSource.find("return failEntryDiagnostic(\"missing entry definition ") !=
+        std::string::npos);
   CHECK(semanticsPassesSource.find("bool SemanticsValidator::resolveExecutionEffects(") == std::string::npos);
   CHECK(semanticsPassesSource.find("bool SemanticsValidator::validateCapabilitiesSubset(") == std::string::npos);
   CHECK(semanticsPassesSource.find("std::unordered_set<std::string> SemanticsValidator::resolveEffects(") ==
@@ -538,6 +542,8 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::validateCapabilitiesSubset(") !=
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::publishPassesEffectsDiagnostic(") !=
+        std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find("auto failPassesEffectsDiagnostic = [&](std::string message)") !=
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::resolveExecutionEffects(") !=
         std::string::npos);
@@ -564,6 +570,9 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "bool SemanticsValidator::publishPassesStructLayoutsDiagnostic()") !=
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find(
+            "auto failPassesStructLayoutsDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsPassesStructLayoutsSource.find(
             "return publishPassesStructLayoutsDiagnostic();") !=
         std::string::npos);
   CHECK(semanticsTraitsSource.find(
@@ -579,6 +588,9 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   const std::string semanticsPassesExecutionsSource = readText(semanticsPassesExecutionsPath);
   CHECK(semanticsPassesExecutionsSource.find("bool SemanticsValidator::publishPassesExecutionsDiagnostic()") !=
+        std::string::npos);
+  CHECK(semanticsPassesExecutionsSource.find(
+            "auto failPassesExecutionsDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsPassesExecutionsSource.find("return publishPassesExecutionsDiagnostic();") !=
         std::string::npos);
@@ -906,6 +918,12 @@ TEST_CASE("semantics validator build return-kind publication stays stable") {
             "bool SemanticsValidator::buildDefinitionReturnKinds(") !=
         std::string::npos);
   CHECK(buildReturnKindsSource.find(
+            "auto publishReturnKindDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(buildReturnKindsSource.find(
+            "auto failReturnKindDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(buildReturnKindsSource.find(
             "auto addReturnKindDiagnostic = [&](const std::string &message) -> bool {") !=
         std::string::npos);
   CHECK(buildReturnKindsSource.find("captureDefinitionContext(def);") !=
@@ -917,6 +935,39 @@ TEST_CASE("semantics validator build return-kind publication stays stable") {
         std::string::npos);
   CHECK(buildReturnKindsSource.find(
             "if (!addReturnKindDiagnostic(returnKindError)) {") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantics validator build import publication stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path buildImportsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildImports.cpp";
+  REQUIRE(std::filesystem::exists(buildImportsPath));
+
+  const std::string buildImportsSource = readText(buildImportsPath);
+  CHECK(buildImportsSource.find("bool SemanticsValidator::buildImportAliases()") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "auto publishImportDiagnostic = [&](const Definition *relatedDef = nullptr) -> bool {") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "auto failImportDiagnostic = [&](std::string message, const Definition *relatedDef = nullptr) -> bool {") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "auto addImportDiagnostic = [&](const std::string &message, const Definition *relatedDef = nullptr) {") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find("return failImportDiagnostic(message, relatedDef);") !=
         std::string::npos);
 }
 

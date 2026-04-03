@@ -16,47 +16,43 @@ bool SemanticsValidator::validateExecutions() {
   std::vector<SemanticDiagnosticRecord> collectedRecords;
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
   auto validateExecution = [&](const Execution &exec) -> bool {
+    auto failPassesExecutionsDiagnostic = [&](std::string message) -> bool {
+      error_ = std::move(message);
+      return publishPassesExecutionsDiagnostic();
+    };
     ExecutionContextScope executionScope(*this, exec);
     ValidationContextScope validationContextScope(*this, buildExecutionValidationContext(exec));
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : exec.transforms) {
       if (transform.name == "return") {
-        error_ = "return transform not allowed on executions: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("return transform not allowed on executions: " + exec.fullPath);
       }
       if (transform.name == "mut") {
-        error_ = "mut transform is not allowed on executions: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("mut transform is not allowed on executions: " + exec.fullPath);
       }
       if (transform.name == "unsafe") {
-        error_ = "unsafe transform is not allowed on executions: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("unsafe transform is not allowed on executions: " + exec.fullPath);
       }
       if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
-        error_ = "layout transforms are not supported on executions: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("layout transforms are not supported on executions: " + exec.fullPath);
       }
       if (isBindingQualifierName(transform.name)) {
-        error_ = "binding visibility/static transforms are only valid on bindings: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("binding visibility/static transforms are only valid on bindings: " +
+                                              exec.fullPath);
       }
       if (transform.name == "copy") {
-        error_ = "copy transform is not allowed on executions: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("copy transform is not allowed on executions: " + exec.fullPath);
       }
       if (transform.name == "restrict") {
-        error_ = "restrict transform is not allowed on executions: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("restrict transform is not allowed on executions: " + exec.fullPath);
       }
       if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
-        error_ = "placement transforms are not supported: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("placement transforms are not supported: " + exec.fullPath);
       }
       if (transform.name == "effects") {
         if (sawEffects) {
-          error_ = "duplicate effects transform on " + exec.fullPath;
-          return publishPassesExecutionsDiagnostic();
+          return failPassesExecutionsDiagnostic("duplicate effects transform on " + exec.fullPath);
         }
         sawEffects = true;
         if (!validateEffectsTransform(transform, exec.fullPath, error_)) {
@@ -64,22 +60,19 @@ bool SemanticsValidator::validateExecutions() {
         }
       } else if (transform.name == "capabilities") {
         if (sawCapabilities) {
-          error_ = "duplicate capabilities transform on " + exec.fullPath;
-          return publishPassesExecutionsDiagnostic();
+          return failPassesExecutionsDiagnostic("duplicate capabilities transform on " + exec.fullPath);
         }
         sawCapabilities = true;
         if (!validateCapabilitiesTransform(transform, exec.fullPath, error_)) {
           return publishPassesExecutionsDiagnostic();
         }
       } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
-        error_ = "alignment transforms are not supported on executions: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("alignment transforms are not supported on executions: " + exec.fullPath);
       } else if (isReflectionTransformName(transform.name)) {
-        error_ = "reflection transforms are only valid on struct definitions: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("reflection transforms are only valid on struct definitions: " +
+                                              exec.fullPath);
       } else if (isStructTransformName(transform.name)) {
-        error_ = "struct transforms are not allowed on executions: " + exec.fullPath;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("struct transforms are not allowed on executions: " + exec.fullPath);
       }
     }
     if (!validateCapabilitiesSubset(exec.transforms, exec.fullPath)) {
@@ -95,15 +88,14 @@ bool SemanticsValidator::validateExecutions() {
     const std::string resolvedPath = resolveCalleePath(execTarget);
     auto it = defMap_.find(resolvedPath);
     if (it == defMap_.end()) {
-      error_ = "unknown execution target: " + resolvedPath;
-      return publishPassesExecutionsDiagnostic();
+      return failPassesExecutionsDiagnostic("unknown execution target: " + resolvedPath);
     }
     const std::unordered_set<std::string> targetEffects =
         resolveEffects(it->second->transforms, it->second->fullPath == entryPath_);
     for (const auto &effect : currentValidationContext_.activeEffects) {
       if (targetEffects.count(effect) == 0) {
-        error_ = "execution effects must be a subset of enclosing effects on " + resolvedPath + ": " + effect;
-        return publishPassesExecutionsDiagnostic();
+        return failPassesExecutionsDiagnostic("execution effects must be a subset of enclosing effects on " +
+                                              resolvedPath + ": " + effect);
       }
     }
     if (!validateNamedArguments(exec.arguments, exec.argumentNames, resolvedPath, error_)) {

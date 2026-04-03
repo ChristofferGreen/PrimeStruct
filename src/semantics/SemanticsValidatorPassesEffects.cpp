@@ -45,6 +45,10 @@ std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::ve
 
 bool SemanticsValidator::validateCapabilitiesSubset(const std::vector<Transform> &transforms,
                                                     const std::string &context) {
+  auto failPassesEffectsDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishPassesEffectsDiagnostic();
+  };
   bool sawCapabilities = false;
   std::unordered_set<std::string> capabilities;
   for (const auto &transform : transforms) {
@@ -62,14 +66,17 @@ bool SemanticsValidator::validateCapabilitiesSubset(const std::vector<Transform>
   }
   for (const auto &capability : capabilities) {
     if (currentValidationContext_.activeEffects.count(capability) == 0) {
-      error_ = "capability requires matching effect on " + context + ": " + capability;
-      return publishPassesEffectsDiagnostic();
+      return failPassesEffectsDiagnostic("capability requires matching effect on " + context + ": " + capability);
     }
   }
   return true;
 }
 
 bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut) {
+  auto failPassesEffectsDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishPassesEffectsDiagnostic(&expr);
+  };
   effectsOut = currentValidationContext_.activeEffects;
   bool sawEffects = false;
   bool sawCapabilities = false;
@@ -81,8 +88,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
   for (const auto &transform : expr.transforms) {
     if (transform.name == "effects") {
       if (sawEffects) {
-        error_ = "duplicate effects transform on " + context;
-        return publishPassesEffectsDiagnostic(&expr);
+        return failPassesEffectsDiagnostic("duplicate effects transform on " + context);
       }
       sawEffects = true;
       if (!validateEffectsTransform(transform, context, error_)) {
@@ -95,8 +101,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
       expandEffectImplications(effectsOut);
     } else if (transform.name == "capabilities") {
       if (sawCapabilities) {
-        error_ = "duplicate capabilities transform on " + context;
-        return publishPassesEffectsDiagnostic(&expr);
+        return failPassesEffectsDiagnostic("duplicate capabilities transform on " + context);
       }
       sawCapabilities = true;
       if (!validateCapabilitiesTransform(transform, context, error_)) {
@@ -107,56 +112,43 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
         capabilities.insert(arg);
       }
     } else if (transform.name == "return") {
-      error_ = "return transform not allowed on executions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("return transform not allowed on executions: " + context);
     } else if (transform.name == "on_error") {
-      error_ = "on_error transform is not allowed on executions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("on_error transform is not allowed on executions: " + context);
     } else if (transform.name == "mut") {
-      error_ = "mut transform is not allowed on executions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("mut transform is not allowed on executions: " + context);
     } else if (transform.name == "unsafe") {
-      error_ = "unsafe transform is not allowed on executions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("unsafe transform is not allowed on executions: " + context);
     } else if (transform.name == "copy") {
-      error_ = "copy transform is not allowed on executions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("copy transform is not allowed on executions: " + context);
     } else if (transform.name == "restrict") {
-      error_ = "restrict transform is not allowed on executions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("restrict transform is not allowed on executions: " + context);
     } else if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
-      error_ = "placement transforms are not supported: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("placement transforms are not supported: " + context);
     } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
-      error_ = "alignment transforms are not supported on executions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("alignment transforms are not supported on executions: " + context);
     } else if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
-      error_ = "layout transforms are not supported on executions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("layout transforms are not supported on executions: " + context);
     } else if (isBindingQualifierName(transform.name)) {
-      error_ = "binding visibility/static transforms are only valid on bindings: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("binding visibility/static transforms are only valid on bindings: " + context);
     } else if (isReflectionTransformName(transform.name)) {
-      error_ = "reflection transforms are only valid on struct definitions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("reflection transforms are only valid on struct definitions: " + context);
     } else if (isStructTransformName(transform.name)) {
-      error_ = "struct transforms are not allowed on executions: " + context;
-      return publishPassesEffectsDiagnostic(&expr);
+      return failPassesEffectsDiagnostic("struct transforms are not allowed on executions: " + context);
     }
   }
   if (sawEffects) {
     for (const auto &effect : effectsOut) {
       if (currentValidationContext_.activeEffects.count(effect) == 0) {
-        error_ = "execution effects must be a subset of enclosing effects on " + context + ": " + effect;
-        return publishPassesEffectsDiagnostic(&expr);
+        return failPassesEffectsDiagnostic("execution effects must be a subset of enclosing effects on " + context +
+                                           ": " + effect);
       }
     }
   }
   if (sawCapabilities) {
     for (const auto &capability : capabilities) {
       if (effectsOut.count(capability) == 0) {
-        error_ = "capability requires matching effect on " + context + ": " + capability;
-        return publishPassesEffectsDiagnostic(&expr);
+        return failPassesEffectsDiagnostic("capability requires matching effect on " + context + ": " + capability);
       }
     }
   }

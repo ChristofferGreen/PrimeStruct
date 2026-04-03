@@ -11,28 +11,30 @@
 namespace primec::semantics {
 
 bool SemanticsValidator::validateEntry() {
+  auto failEntryDiagnostic = [&](std::string message, const Definition *def = nullptr) -> bool {
+    error_ = std::move(message);
+    if (def != nullptr) {
+      captureDefinitionContext(*def);
+    }
+    return publishCurrentStructuredDiagnosticNow();
+  };
   auto entryIt = defMap_.find(entryPath_);
   if (entryIt == defMap_.end()) {
-    error_ = "missing entry definition " + entryPath_;
-    return publishCurrentStructuredDiagnosticNow();
+    return failEntryDiagnostic("missing entry definition " + entryPath_);
   }
   const auto &entryParams = paramsByDef_[entryPath_];
   if (!entryParams.empty()) {
     if (entryParams.size() != 1) {
-      error_ = "entry definition must take a single array<string> parameter: " + entryPath_;
-      captureDefinitionContext(*entryIt->second);
-      return publishCurrentStructuredDiagnosticNow();
+      return failEntryDiagnostic("entry definition must take a single array<string> parameter: " + entryPath_,
+                                 entryIt->second);
     }
     const ParameterInfo &param = entryParams.front();
     if (param.binding.typeName != "array" || param.binding.typeTemplateArg != "string") {
-      error_ = "entry definition must take a single array<string> parameter: " + entryPath_;
-      captureDefinitionContext(*entryIt->second);
-      return publishCurrentStructuredDiagnosticNow();
+      return failEntryDiagnostic("entry definition must take a single array<string> parameter: " + entryPath_,
+                                 entryIt->second);
     }
     if (param.defaultExpr != nullptr) {
-      error_ = "entry parameter does not allow a default value: " + entryPath_;
-      captureDefinitionContext(*entryIt->second);
-      return publishCurrentStructuredDiagnosticNow();
+      return failEntryDiagnostic("entry parameter does not allow a default value: " + entryPath_, entryIt->second);
     }
   }
   return true;
