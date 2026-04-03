@@ -25,7 +25,10 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   - ◐ Implement builtin `vector` `remove_at` survivor compaction semantics so `remove_at` can stop requiring relocation-trivial elements on the fixed-capacity runtime path. Progress: the remaining work is now split into an explicit lowered survivor-compaction primitive plus the final `remove_at` wiring/semantics relaxation step, because the current fixed-capacity helper path still left-shifts survivors through raw copies.
     - ○ Add a reusable builtin fixed-capacity vector survivor-compaction primitive that can shift survivors left without depending on relocation-trivial raw copies.
     - ○ Wire builtin `vector` `remove_at` onto that survivor-compaction primitive and relax the current relocation-trivial guard once the lowered motion path exists.
-  - ○ Extend builtin canonical `map<K, V>` growth/drop beyond the current owning local numeric-map path once the remaining ownership-sensitive runtime substrate is defined.
+  - ◐ Extend builtin canonical `map<K, V>` growth/drop beyond the current owning local numeric-map path once the remaining ownership-sensitive runtime substrate is defined. Progress: the remaining work is now split into explicit write-back/repoint follow-ups, because the lowered builtin insert growth path only stores the grown pointer back when it has an owning local `valuesLocal`, and otherwise still falls through the `builtin canonical map insert pending` runtime path.
+    - ○ Add a reusable builtin canonical map grown-pointer write-back/repoint primitive for non-local mutation targets, so growth can update the caller-visible map slot instead of only local owning bindings.
+    - ○ Wire builtin canonical `map<K, V>` insert growth on borrowed/pointer mutation surfaces onto that write-back/repoint primitive and retire the current pending runtime path for those targets.
+    - ○ Wire builtin canonical `map<K, V>` insert growth on the remaining non-local direct lvalue mutation surfaces onto that write-back/repoint primitive and retire the current pending runtime path for those targets.
 
 
 **Group 8 - SoA de-builtinization**
