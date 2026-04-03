@@ -92,6 +92,23 @@ deterministic dependency model without changing the public language surface.
   diagnostics must not depend on hash iteration order, parallel scheduling, or unrelated definitions elsewhere in the
   program.
 
+Planned graph performance guardrails:
+- The single-threaded graph path must establish a stable regression budget before optional parallel solve work starts.
+- Performance tracking should pin at least these facts on representative corpora:
+  - node and edge counts
+  - SCC counts and largest SCC size
+  - invalidation fan-out for local-binding, control-flow, initializer-shape, definition-signature, import-alias, and
+    receiver-type edits
+  - solve/revisit counts for local `auto`, query, `try(...)`, and `on_error` consumers
+  - wall-clock solve time and peak graph memory for clean builds and incremental invalidation rebuilds
+- Sustained perf coverage should include both micro cases (small focused invalidation/query scenarios) and larger
+  end-to-end compile-pipeline corpora so the graph budget is not tuned only to toy cases.
+- New graph consumers such as CT-eval, template inference, broader omitted-envelope inference, or parallel solve should
+  not land without either fitting inside the existing regression budget or explicitly revising that budget in docs and
+  perf coverage together.
+- Parallel solve remains blocked until the single-threaded graph path has deterministic perf baselines, reproducible
+  invalidation measurements, and coverage that can distinguish correctness regressions from acceptable budget updates.
+
 ### Planned semantics-to-lowering boundary
 PrimeStruct is migrating toward an explicit post-semantics product that sits between the syntax-faithful AST and IR
 lowering. The goal is to stop re-deriving lowering facts from mutated AST state and instead hand IR preparation one

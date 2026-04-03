@@ -39,7 +39,7 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
 - ○ Define and validate graph interaction with CT-eval consumers so compile-time evaluation either consumes the shared dependency state directly or keeps one explicit boundary instead of implicit drift.
 - ○ Migrate explicit and implicit template inference dependencies onto the graph-backed path once the non-template inference islands and invalidation rules are pinned, so template solving stops being a deferred side-system.
 - ○ Broaden omitted-envelope and local-auto inference beyond the current first-step slices only after the next inference-island migrations prove stable on the graph path.
-- ○ Add graph performance guardrails and sustained perf coverage before optional parallel solve work so future graph expansion has a deterministic regression budget.
+- ○ Implement graph performance guardrails and sustained perf coverage now that the regression-budget contract is documented, before optional parallel solve work broadens the graph surface further.
 - ○ Prototype optional parallel solve only after the single-threaded graph path, invalidation rules, CT-eval boundary, and performance guardrails are all stable.
 
 
