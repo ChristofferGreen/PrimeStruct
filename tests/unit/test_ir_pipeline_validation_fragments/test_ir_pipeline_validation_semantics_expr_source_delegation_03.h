@@ -47,6 +47,12 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "auto publishCollectionDispatchDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "auto publishCollectionCountCapacityDiagnostic = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "auto publishCollectionCountCapacityDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(

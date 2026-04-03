@@ -19,6 +19,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     size_t &methodReceiverIndex) {
   handledOut = false;
   rewrittenExprOut.reset();
+  auto publishCollectionCountCapacityDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   auto hasResolvableDefinitionPath = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
   };
@@ -64,7 +68,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       !hasDeclaredDefinitionPath("/std/collections/vector/count")) {
     handledOut = true;
     error_ = "unknown call target: /std/collections/vector/count";
-    return false;
+    return publishCollectionCountCapacityDiagnostic();
   }
 
   Expr rewrittenVectorHelperCall;
@@ -83,7 +87,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.hasStdNamespacedVectorCountAliasDefinition) {
     handledOut = true;
     error_ = "count requires vector target";
-    return false;
+    return publishCollectionCountCapacityDiagnostic();
   }
 
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
@@ -213,18 +217,18 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         !hasImportedDefinitionPath("/std/collections/map/count") &&
         !hasDeclaredDefinitionPath("/std/collections/map/count")) {
       error_ = "unknown call target: /std/collections/map/count";
-      return false;
+      return publishCollectionCountCapacityDiagnostic();
     }
     if (isBuiltinMethod && methodResolved == "/std/collections/map/count" &&
         !hasImportedDefinitionPath("/std/collections/map/count") &&
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
         !context.shouldBuiltinValidateBareMapCountCall) {
       error_ = "unknown call target: /std/collections/map/count";
-      return false;
+      return publishCollectionCountCapacityDiagnostic();
     }
     if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       error_ = "unknown method: " + methodResolved;
-      return false;
+      return publishCollectionCountCapacityDiagnostic();
     }
     resolved = methodResolved;
     resolvedMethod = isBuiltinMethod;
@@ -302,7 +306,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       error_ = "unknown method: " + methodResolved;
-      return false;
+      return publishCollectionCountCapacityDiagnostic();
     }
     resolved = methodResolved;
     resolvedMethod = isBuiltinMethod;
