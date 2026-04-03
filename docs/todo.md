@@ -52,7 +52,7 @@ Semantic product creation:
 - ○ Add a second semantic-product builder slice that moves graph-backed local `auto`, query, `try(...)`, and `on_error` metadata out of test-only snapshot plumbing and into the semantic product.
 
 Pipeline plumbing:
-- ○ Thread the semantic product through CLI/runtime plumbing (`primec`, `primevm`, dump-stage handling, and failure/report paths) so the new semantics boundary is carried end-to-end outside the core compile/lower APIs.
+- ○ Implement the CLI/runtime plumbing cutover for the semantic product now that the end-to-end handoff contract is documented.
 - ○ Implement the temporary migration adapter now that its cutover/removal contract is documented.
 - ○ Implement semantic-product publication through `CompilePipelineOutput` and `Semantics::validate` now that the success-artifact contract is documented.
 - ○ Implement the deterministic semantic-product dump/formatter plus golden coverage now that its inspection contract is documented.

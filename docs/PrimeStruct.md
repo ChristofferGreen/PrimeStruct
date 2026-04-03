@@ -206,6 +206,18 @@ Compile-pipeline publication contract:
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather
   than rebuilding semantic facts ad hoc from the raw `Program`.
 
+CLI/runtime plumbing contract:
+- `primec` and `primevm` should receive the semantic product only through compile-pipeline success artifacts, not
+  through direct validator internals or separate semantic side channels.
+- Dump-stage handling should treat the semantic product as a first-class inspectable result once that stage exists,
+  while keeping existing `pre_ast`, `ast`, `ast-semantic`, `type-graph`, and `ir` behavior deterministic.
+- Failure/report paths should continue to anchor diagnostics to AST-backed provenance, but any lowering-facing notes
+  emitted after semantic success should refer to semantic-product facts rather than re-derived AST semantics.
+- Backend dispatch, VM execution, and future debugger/runtime entrypoints should consume the same published
+  semantic-product artifact so CLI/runtime code does not grow parallel semantic caches.
+- The CLI/runtime handoff should stay one-way: once compile-pipeline success is produced, downstream consumers read the
+  semantic product and provenance handles, but do not mutate semantic state in place.
+
 Exit criteria for removing AST-dependent lowerer logic:
 - `Semantics::validate` or `CompilePipelineOutput` publishes the semantic product as the canonical post-semantics
   success artifact.
