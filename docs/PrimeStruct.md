@@ -2676,7 +2676,8 @@ while the remaining validator-side fixed unavailable-method rejects now call
 `soaUnavailableMethodDiagnostic(...)` directly instead of a validator-local
 wrapper around that shared helper path,
 while collection-return visible same-path `/soa_vector/get|ref` helper
-detection now uses the shared visibility helper directly, while preferred
+detection now uses one shared helper-name path instead of split `get` / `ref`
+branches, while preferred
 same-path-versus-canonical `soa_vector`
 helper target selection in method-target, infer-time, vector-helper
 mutator routing, plus builtin `get/ref` call-shape detection in direct
@@ -2693,8 +2694,8 @@ inside monomorph implicit-template fallback instead of a local helper-target
 probe or a monomorph-local visible-path wrapper,
 while monomorph-side fixed method pending rejects now call the shared pending
 helper directly instead of a monomorph-local wrapper,
-while direct builtin field-view/ref pending reporters now also call that same
-shared direct pending helper directly and the validator-local direct pending
+while direct builtin field-view/ref pending reporters now also route through
+one shared expr-to-path helper and the validator-local direct pending
 reporter wrapper plus the thin `isBuiltinSoaRefExpr(...)` wrapper are gone,
 while monomorph-side visible same-path `/soa_vector/<field>` helper checks now
 also route through that same shared definition-visibility helper instead of

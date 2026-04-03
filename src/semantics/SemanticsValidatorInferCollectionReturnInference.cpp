@@ -321,26 +321,24 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         candidate.args.size() == 2
             ? builtinSoaAccessHelperName(candidate, params, locals)
             : std::nullopt;
-    if (soaAccessHelper.has_value() && *soaAccessHelper == "get" &&
-        !(hasVisibleDefinitionPathForCurrentImports("/soa_vector/get") &&
-          (isSimpleCallName(candidate, "get") ||
-           (candidate.isMethodCall && candidate.name == "get") ||
-           resolvedCandidate == "/soa_vector/get"))) {
+    if (soaAccessHelper.has_value()) {
+      const std::string samePath = "/soa_vector/" + *soaAccessHelper;
+      const bool oldSurfaceCallShape =
+          (*soaAccessHelper == "get" &&
+           (isSimpleCallName(candidate, "get") ||
+            (candidate.isMethodCall && candidate.name == "get") ||
+            resolvedCandidate == "/soa_vector/get")) ||
+          (*soaAccessHelper == "ref" &&
+           (isSimpleCallName(candidate, "ref") ||
+            (candidate.isMethodCall && candidate.name == "ref") ||
+            resolvedCandidate == "/soa_vector/ref"));
+      if (!(hasVisibleDefinitionPathForCurrentImports(samePath) &&
+            oldSurfaceCallShape)) {
       std::string elemType;
       if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
         currentTypeTextOut = normalizeBindingTypeName(elemType);
         return !currentTypeTextOut.empty();
       }
-    }
-    if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
-        !(hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref") &&
-          (isSimpleCallName(candidate, "ref") ||
-           (candidate.isMethodCall && candidate.name == "ref") ||
-           resolvedCandidate == "/soa_vector/ref"))) {
-      std::string elemType;
-      if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
-        currentTypeTextOut = normalizeBindingTypeName(elemType);
-        return !currentTypeTextOut.empty();
       }
     }
     std::string builtinAccessName;

@@ -140,17 +140,10 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
   }
   if (exprKind == ReturnKind::Unknown) {
     if (valueExpr != nullptr) {
-      std::string fieldName;
-      if (isBuiltinSoaFieldViewExpr(*valueExpr, defParams, activeLocals, &fieldName)) {
-        error_ = soaDirectPendingUnavailableMethodDiagnostic(
-            soaFieldViewHelperPath(fieldName));
-        return false;
-      }
-      const auto soaAccessHelper =
-          builtinSoaAccessHelperName(*valueExpr, defParams, activeLocals);
-      if (!hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref") &&
-          soaAccessHelper.has_value() && *soaAccessHelper == "ref") {
-        error_ = soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
+      if (const auto pendingPath =
+              builtinSoaDirectPendingHelperPath(*valueExpr, defParams,
+                                                activeLocals)) {
+        error_ = soaDirectPendingUnavailableMethodDiagnostic(*pendingPath);
         return false;
       }
     }

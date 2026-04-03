@@ -939,6 +939,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(statementBindingsSource.find(
             "soaDirectPendingUnavailableMethodDiagnostic(") !=
         std::string::npos);
+  CHECK(statementBindingsSource.find(
+            "builtinSoaDirectPendingHelperPath(initializer, params, locals)") !=
+        std::string::npos);
   CHECK(statementReturnsSource.find("reportBuiltinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
         std::string::npos);
   CHECK(statementReturnsSource.find("builtinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
@@ -947,14 +950,20 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") !=
         std::string::npos);
+  CHECK(inferDefinitionSource.find(
+            "builtinSoaDirectPendingHelperPath(*valueExpr, defParams,") !=
+        std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "auto usesVisibleSamePathSoaAccessHelper =") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
-            "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/get\")") !=
+            "const std::string samePath = \"/soa_vector/\" + *soaAccessHelper;") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
-            "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")") !=
+            "hasVisibleDefinitionPathForCurrentImports(samePath)") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "const bool oldSurfaceCallShape =") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, \"get\")") ==

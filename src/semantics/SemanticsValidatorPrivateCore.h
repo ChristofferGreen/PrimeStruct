@@ -101,6 +101,10 @@
                                  const std::vector<ParameterInfo> &params,
                                  const std::unordered_map<std::string, BindingInfo> &locals,
                                  std::string *fieldNameOut = nullptr) const;
+  std::optional<std::string> builtinSoaDirectPendingHelperPath(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals) const;
   bool hasVisibleDefinitionPathForCurrentImports(
       std::string_view path) const;
   std::string preferredSoaHelperTargetForCurrentImports(

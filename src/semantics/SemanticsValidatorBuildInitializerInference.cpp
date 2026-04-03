@@ -289,6 +289,23 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   return false;
 }
 
+std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath(
+    const Expr &candidate,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) const {
+  std::string fieldName;
+  if (isBuiltinSoaFieldViewExpr(candidate, params, locals, &fieldName)) {
+    return soaFieldViewHelperPath(fieldName);
+  }
+  const auto soaAccessHelper =
+      builtinSoaAccessHelperName(candidate, params, locals);
+  if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
+      !hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")) {
+    return std::string("/soa_vector/ref");
+  }
+  return std::nullopt;
+}
+
 bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
     std::string_view path) const {
   const std::string ownedPath(path);
