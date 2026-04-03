@@ -730,6 +730,9 @@
             "bool SemanticsValidator::validateExprMapSoaBuiltins") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
+            "auto publishMapSoaBuiltinDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "context.bareMapHelperOperandIndices != nullptr") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
