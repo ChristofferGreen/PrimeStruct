@@ -566,6 +566,14 @@
             "bool SemanticsValidator::validateExprResolvedStructConstructorCall") !=
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(
+            "auto publishStructConstructorDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprStructConstructorsSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprStructConstructorsSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprStructConstructorsSource.find(
             "fieldParams.reserve(context.resolvedDefinition->statements.size());") !=
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(

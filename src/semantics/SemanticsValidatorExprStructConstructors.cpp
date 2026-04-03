@@ -21,10 +21,14 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
       context.zeroArgDiagnostic == nullptr) {
     return true;
   }
+  auto publishStructConstructorDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
 
   if (!context.zeroArgDiagnostic->empty()) {
     error_ = *context.zeroArgDiagnostic;
-    return false;
+    return publishStructConstructorDiagnostic();
   }
 
   std::vector<ParameterInfo> fieldParams;
@@ -42,7 +46,7 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
   for (const auto &stmt : context.resolvedDefinition->statements) {
     if (!stmt.isBinding) {
       error_ = "struct definitions may only contain field bindings: " + resolved;
-      return false;
+      return publishStructConstructorDiagnostic();
     }
     if (isStaticField(stmt)) {
       continue;
@@ -72,7 +76,7 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
     if (error_.find("argument count mismatch") != std::string::npos) {
       error_ = "argument count mismatch for " + *context.diagnosticResolved;
     }
-    return false;
+    return publishStructConstructorDiagnostic();
   }
 
   std::vector<const Expr *> orderedArgs;
@@ -84,7 +88,7 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
     } else {
       error_ = orderError;
     }
-    return false;
+    return publishStructConstructorDiagnostic();
   }
 
   std::unordered_set<const Expr *> explicitArgs;
