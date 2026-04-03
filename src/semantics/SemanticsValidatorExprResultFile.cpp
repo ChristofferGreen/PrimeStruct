@@ -16,6 +16,10 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failResultFileDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishResultFileDiagnostic();
+  };
   handledOut = false;
   auto isMutableBinding = [&](const std::string &name) -> bool {
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
@@ -92,38 +96,31 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }
     if (expr.templateArgs.size() != 1) {
-      error_ = "File requires exactly one template argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("File requires exactly one template argument");
     }
     const std::string &mode = expr.templateArgs.front();
     if (mode != "Read" && mode != "Write" && mode != "Append") {
-      error_ = "File requires Read, Write, or Append mode";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("File requires Read, Write, or Append mode");
     }
     if (expr.args.size() != 1) {
-      error_ = "File requires exactly one path argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("File requires exactly one path argument");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "File does not accept block arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("File does not accept block arguments");
     }
     const bool requiresWrite = mode == "Write" || mode == "Append";
     const char *requiredEffect = requiresWrite ? "file_write" : "file_read";
     if (currentValidationContext_.activeEffects.count(requiredEffect) == 0) {
-      error_ = std::string("File requires ") + requiredEffect + " effect";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic(std::string("File requires ") + requiredEffect + " effect");
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
     }
     if (!isStringExpr(expr.args.front())) {
-      error_ = "File requires string path argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("File requires string path argument");
     }
     return true;
   }
@@ -131,20 +128,16 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   if (resolvedMethod && resolved == "/result/ok") {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "Result.ok does not accept template arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.ok does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "Result.ok does not accept block arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.ok does not accept block arguments");
     }
     if (expr.args.size() > 2) {
-      error_ = "Result.ok accepts at most one value argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.ok accepts at most one value argument");
     }
     for (size_t i = 1; i < expr.args.size(); ++i) {
       if (!validateExpr(params, locals, expr.args[i])) {
@@ -157,28 +150,23 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   if (resolvedMethod && resolved == "/result/error") {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "Result.error does not accept template arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.error does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "Result.error does not accept block arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.error does not accept block arguments");
     }
     if (expr.args.size() != 2) {
-      error_ = "Result.error requires exactly one argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.error requires exactly one argument");
     }
     if (!validateExpr(params, locals, expr.args[1])) {
       return false;
     }
     ResultTypeInfo argResult;
     if (!resolveResultTypeForExpr(expr.args[1], params, locals, argResult) || !argResult.isResult) {
-      error_ = "Result.error requires Result argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.error requires Result argument");
     }
     return true;
   }
@@ -186,28 +174,23 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   if (resolvedMethod && resolved == "/result/why") {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "Result.why does not accept template arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.why does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "Result.why does not accept block arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.why does not accept block arguments");
     }
     if (expr.args.size() != 2) {
-      error_ = "Result.why requires exactly one argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.why requires exactly one argument");
     }
     if (!validateExpr(params, locals, expr.args[1])) {
       return false;
     }
     ResultTypeInfo argResult;
     if (!resolveResultTypeForExpr(expr.args[1], params, locals, argResult) || !argResult.isResult) {
-      error_ = "Result.why requires Result argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.why requires Result argument");
     }
     return true;
   }
@@ -215,40 +198,32 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   if (resolvedMethod && (resolved == "/result/map" || resolved == "/result/and_then")) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "Result." + expr.name + " does not accept template arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result." + expr.name + " does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "Result." + expr.name + " does not accept block arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result." + expr.name + " does not accept block arguments");
     }
     if (expr.args.size() != 3) {
-      error_ = "Result." + expr.name + " requires exactly two arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result." + expr.name + " requires exactly two arguments");
     }
     if (!validateExpr(params, locals, expr.args[1])) {
       return false;
     }
     ResultTypeInfo argResult;
     if (!resolveResultTypeForExpr(expr.args[1], params, locals, argResult) || !argResult.isResult) {
-      error_ = "Result." + expr.name + " requires Result argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result." + expr.name + " requires Result argument");
     }
     if (!argResult.hasValue) {
-      error_ = "Result." + expr.name + " requires value Result";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result." + expr.name + " requires value Result");
     }
     if (!expr.args[2].isLambda) {
-      error_ = "Result." + expr.name + " requires a lambda argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result." + expr.name + " requires a lambda argument");
     }
     if (expr.args[2].args.size() != 1) {
-      error_ = "Result." + expr.name + " requires a single-parameter lambda";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result." + expr.name + " requires a single-parameter lambda");
     }
     if (!validateExpr(params, locals, expr.args[2])) {
       return false;
@@ -259,20 +234,16 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   if (resolvedMethod && resolved == "/result/map2") {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "Result.map2 does not accept template arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.map2 does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "Result.map2 does not accept block arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.map2 does not accept block arguments");
     }
     if (expr.args.size() != 4) {
-      error_ = "Result.map2 requires exactly three arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.map2 requires exactly three arguments");
     }
     if (!validateExpr(params, locals, expr.args[1]) || !validateExpr(params, locals, expr.args[2])) {
       return false;
@@ -281,24 +252,19 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     ResultTypeInfo rightResult;
     if (!resolveResultTypeForExpr(expr.args[1], params, locals, leftResult) || !leftResult.isResult ||
         !resolveResultTypeForExpr(expr.args[2], params, locals, rightResult) || !rightResult.isResult) {
-      error_ = "Result.map2 requires Result arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.map2 requires Result arguments");
     }
     if (!leftResult.hasValue || !rightResult.hasValue) {
-      error_ = "Result.map2 requires value Results";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.map2 requires value Results");
     }
     if (!errorTypesMatch(leftResult.errorType, rightResult.errorType, expr.namespacePrefix)) {
-      error_ = "Result.map2 requires matching error types";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.map2 requires matching error types");
     }
     if (!expr.args[3].isLambda) {
-      error_ = "Result.map2 requires a lambda argument";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.map2 requires a lambda argument");
     }
     if (expr.args[3].args.size() != 2) {
-      error_ = "Result.map2 requires a two-parameter lambda";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("Result.map2 requires a two-parameter lambda");
     }
     if (!validateExpr(params, locals, expr.args[3])) {
       return false;
@@ -309,20 +275,16 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   if (resolvedMethod && resolved == "/file_error/why") {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "why does not accept template arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("why does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "why does not accept block arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("why does not accept block arguments");
     }
     if (expr.args.size() != 1) {
-      error_ = "why does not accept arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("why does not accept arguments");
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
@@ -332,42 +294,35 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
 
   if (resolvedMethod && resolved.rfind("/file/", 0) == 0) {
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "file methods do not accept template arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("file methods do not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "file methods do not accept block arguments";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("file methods do not accept block arguments");
     }
     if (expr.args.empty()) {
-      error_ = "file method missing receiver";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic("file method missing receiver");
     }
     const bool requiresRead = expr.name == "read_byte" || expr.name == "close";
     const char *requiredEffect = requiresRead ? "file_read" : "file_write";
     if (currentValidationContext_.activeEffects.count(requiredEffect) == 0) {
-      error_ = std::string("file operations require ") + requiredEffect + " effect";
-      return publishResultFileDiagnostic();
+      return failResultFileDiagnostic(std::string("file operations require ") + requiredEffect +
+                                      " effect");
     }
 
     const Expr &receiverExpr = expr.args.front();
     if (context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
         context.isNamedArgsPackWrappedFileBuiltinAccessCall(receiverExpr)) {
       if (!receiverExpr.templateArgs.empty()) {
-        error_ = "at does not accept template arguments";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("at does not accept template arguments");
       }
       if (receiverExpr.hasBodyArguments || !receiverExpr.bodyArguments.empty()) {
-        error_ = "at does not accept block arguments";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("at does not accept block arguments");
       }
       if (!isIntegerExpr(receiverExpr.args[1])) {
-        error_ = "at requires integer index";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("at requires integer index");
       }
       if (!validateExpr(params, locals, receiverExpr.args[0]) ||
           !validateExpr(params, locals, receiverExpr.args[1])) {
@@ -455,8 +410,8 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
           return false;
         }
         if (!isFilePrintableExpr(expr.args[i])) {
-          error_ = "file write requires integer/bool or string arguments";
-          return publishResultFileDiagnostic();
+          return failResultFileDiagnostic(
+              "file write requires integer/bool or string arguments");
         }
       }
       return true;
@@ -464,30 +419,26 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     if (expr.name == "write_byte") {
       handledOut = true;
       if (expr.args.size() != 2) {
-        error_ = "write_byte requires exactly one argument";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("write_byte requires exactly one argument");
       }
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
       }
       if (!isIntegerOrBoolExpr(expr.args[1])) {
-        error_ = "write_byte requires integer argument";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("write_byte requires integer argument");
       }
       return true;
     }
     if (expr.name == "read_byte") {
       handledOut = true;
       if (expr.args.size() != 2) {
-        error_ = "read_byte requires exactly one argument";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("read_byte requires exactly one argument");
       }
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
       }
       if (expr.args[1].kind != Expr::Kind::Name || !isMutableBinding(expr.args[1].name)) {
-        error_ = "read_byte requires mutable integer binding";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("read_byte requires mutable integer binding");
       }
       ReturnKind kind = ReturnKind::Unknown;
       if (const BindingInfo *paramBinding = findParamBinding(params, expr.args[1].name)) {
@@ -499,16 +450,14 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
         }
       }
       if (kind != ReturnKind::Int && kind != ReturnKind::Int64 && kind != ReturnKind::UInt64) {
-        error_ = "read_byte requires mutable integer binding";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("read_byte requires mutable integer binding");
       }
       return true;
     }
     if (expr.name == "write_bytes") {
       handledOut = true;
       if (expr.args.size() != 2) {
-        error_ = "write_bytes requires exactly one argument";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("write_bytes requires exactly one argument");
       }
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
@@ -530,16 +479,14 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
         }
       }
       if (!ok) {
-        error_ = "write_bytes requires array argument";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic("write_bytes requires array argument");
       }
       return true;
     }
     if (expr.name == "flush" || expr.name == "close") {
       handledOut = true;
       if (expr.args.size() != 1) {
-        error_ = expr.name + " does not accept arguments";
-        return publishResultFileDiagnostic();
+        return failResultFileDiagnostic(expr.name + " does not accept arguments");
       }
       return true;
     }

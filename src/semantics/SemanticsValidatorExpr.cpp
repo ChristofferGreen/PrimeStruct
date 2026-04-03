@@ -22,13 +22,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failExprRootDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishExprRootDiagnostic();
+  };
   if (expr.isLambda) {
     return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);
   }
   if (!allowEntryArgStringUse_) {
     if (isEntryArgsAccess(expr) || isEntryArgStringBinding(locals, expr)) {
-      error_ = "entry argument strings are only supported in print calls or string bindings";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic(
+          "entry argument strings are only supported in print calls or string bindings");
     }
   }
   std::optional<EffectScope> effectScope;
@@ -54,34 +58,30 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return publishExprRootDiagnostic();
     }
     if (parsed.encoding == StringEncoding::Ascii && !isAsciiText(parsed.decoded)) {
-      error_ = "ascii string literal contains non-ASCII characters";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("ascii string literal contains non-ASCII characters");
     }
     return true;
   }
   if (expr.kind == Expr::Kind::Name) {
     if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
       if (currentValidationContext_.movedBindings.count(expr.name) > 0) {
-        error_ = "use-after-move: " + expr.name;
-        return publishExprRootDiagnostic();
+        return failExprRootDiagnostic("use-after-move: " + expr.name);
       }
       return true;
     }
     if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos &&
         isBuiltinMathConstant(expr.name, true)) {
-      error_ = "math constant requires import /std/math/* or /std/math/<name>: " + expr.name;
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic(
+          "math constant requires import /std/math/* or /std/math/<name>: " + expr.name);
     }
     if (isBuiltinMathConstant(expr.name, allowMathBareName(expr.name))) {
       return true;
     }
-    error_ = "unknown identifier: " + expr.name;
-    return publishExprRootDiagnostic();
+    return failExprRootDiagnostic("unknown identifier: " + expr.name);
   }
   if (expr.kind == Expr::Kind::Call) {
     if (expr.isBinding) {
-      error_ = "binding not allowed in expression context";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("binding not allowed in expression context");
     }
     std::optional<EffectScope> effectScope;
     if (!expr.transforms.empty()) {
@@ -103,20 +103,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     if (!expr.isMethodCall && isSimpleCallName(expr, "uninitialized")) {
       if (hasNamedArguments(expr.argNames)) {
-        error_ = "named arguments not supported for builtin calls";
-        return publishExprRootDiagnostic();
+        return failExprRootDiagnostic("named arguments not supported for builtin calls");
       }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error_ = "uninitialized does not accept block arguments";
-        return publishExprRootDiagnostic();
+        return failExprRootDiagnostic("uninitialized does not accept block arguments");
       }
       if (!expr.args.empty()) {
-        error_ = "uninitialized does not accept arguments";
-        return publishExprRootDiagnostic();
+        return failExprRootDiagnostic("uninitialized does not accept arguments");
       }
       if (expr.templateArgs.size() != 1) {
-        error_ = "uninitialized requires exactly one template argument";
-        return publishExprRootDiagnostic();
+        return failExprRootDiagnostic("uninitialized requires exactly one template argument");
       }
       return true;
     }
@@ -140,26 +136,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           (name != "take") || (!expr.args.empty() && isUninitializedStorage(expr.args.front()));
       if (treatAsUninitializedHelper) {
         if (hasNamedArguments(expr.argNames)) {
-          error_ = "named arguments not supported for builtin calls";
-          return publishExprRootDiagnostic();
+          return failExprRootDiagnostic("named arguments not supported for builtin calls");
         }
         if (!expr.templateArgs.empty()) {
-          error_ = name + " does not accept template arguments";
-          return publishExprRootDiagnostic();
+          return failExprRootDiagnostic(name + " does not accept template arguments");
         }
         if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          error_ = name + " does not accept block arguments";
-          return publishExprRootDiagnostic();
+          return failExprRootDiagnostic(name + " does not accept block arguments");
         }
         const size_t expectedArgs = (name == "init") ? 2 : 1;
         if (expr.args.size() != expectedArgs) {
-          error_ = name + " requires exactly " + std::to_string(expectedArgs) + " argument" +
-                   (expectedArgs == 1 ? "" : "s");
-          return publishExprRootDiagnostic();
+          return failExprRootDiagnostic(
+              name + " requires exactly " + std::to_string(expectedArgs) + " argument" +
+              (expectedArgs == 1 ? "" : "s"));
         }
         if (name == "init" || name == "drop") {
-          error_ = name + " is only supported as a statement";
-          return publishExprRootDiagnostic();
+          return failExprRootDiagnostic(name + " is only supported as a statement");
         }
         for (const auto &arg : expr.args) {
           if (!validateExpr(params, locals, arg)) {
@@ -167,8 +159,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
         }
         if (!isUninitializedStorage(expr.args.front())) {
-          error_ = name + " requires uninitialized<T> storage";
-          return publishExprRootDiagnostic();
+          return failExprRootDiagnostic(name + " requires uninitialized<T> storage");
         }
         return true;
       }
@@ -177,32 +168,25 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return validateBlockExpr(params, locals, expr);
     }
     if (isBuiltinBlockCall(expr)) {
-      error_ = "block requires block arguments";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("block requires block arguments");
     }
     if (isLoopCall(expr)) {
-      error_ = "loop is only supported as a statement";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("loop is only supported as a statement");
     }
     if (isWhileCall(expr)) {
-      error_ = "while is only supported as a statement";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("while is only supported as a statement");
     }
     if (isForCall(expr)) {
-      error_ = "for is only supported as a statement";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("for is only supported as a statement");
     }
     if (isRepeatCall(expr)) {
-      error_ = "repeat is only supported as a statement";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("repeat is only supported as a statement");
     }
     if (isSimpleCallName(expr, "dispatch")) {
-      error_ = "dispatch is only supported as a statement";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("dispatch is only supported as a statement");
     }
     if (isSimpleCallName(expr, "buffer_store")) {
-      error_ = "buffer_store is only supported as a statement";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("buffer_store is only supported as a statement");
     }
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
@@ -216,8 +200,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     if (isReturnCall(expr)) {
-      error_ = "return not allowed in expression context";
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("return not allowed in expression context");
     }
     auto isNonCtorWrapperReturnedBareVectorMethodWithoutHelper = [&]() {
       if (!expr.isMethodCall || expr.args.empty() ||
@@ -266,8 +249,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
              !hasImportedDefinitionPath(methodPath);
     };
     if (isNonCtorWrapperReturnedBareVectorMethodWithoutHelper()) {
-      error_ = "unknown method: /vector/" + expr.name;
-      return publishExprRootDiagnostic();
+      return failExprRootDiagnostic("unknown method: /vector/" + expr.name);
     }
     ExprDispatchBootstrap dispatchBootstrap;
     prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);

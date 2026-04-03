@@ -82,6 +82,9 @@
             "auto publishExprRootDiagnostic = [&]() -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "auto failExprRootDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "entry argument strings are only supported in print calls or string bindings") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("unknown identifier: ") !=
@@ -838,10 +841,15 @@
   CHECK(semanticsExprNumericSource.find(
             "auto publishNumericDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprNumericSource.find(
+            "auto failNumericDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprNumericSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprNumericSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprNumericSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprNumericSource.find(
             "argument count mismatch for builtin ") !=
@@ -904,10 +912,15 @@
   CHECK(semanticsExprResultFileSource.find(
             "auto publishResultFileDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprResultFileSource.find(
+            "auto failResultFileDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprResultFileSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprResultFileSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprResultFileSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprResultFileSource.find(
             "file methods do not accept template arguments") !=
