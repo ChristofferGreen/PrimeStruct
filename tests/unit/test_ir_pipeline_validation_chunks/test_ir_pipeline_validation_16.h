@@ -447,7 +447,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "splitSoaFieldViewHelperPath(resolvedPath, &fieldName)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "std::optional<std::string> soaPendingUnavailableMethodDiagnosticForMonomorph(") !=
+            "std::optional<std::string> soaPendingUnavailableMethodDiagnosticForMonomorph(") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaPendingUnavailableMethodDiagnostic(\n"
@@ -471,7 +471,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaPendingUnavailableMethodDiagnosticForMonomorph(\n"
-            "                  ctx, resolvedPath)") !=
+            "                  ctx, resolvedPath)") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "soaPendingUnavailableMethodDiagnostic(\n"
+            "              resolvedPath,\n"
+            "              hasVisibleSoaHelperTargetForMonomorph(ctx, \"ref\"))") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaDirectFieldViewPendingDiagnostic(normalizedName)") !=

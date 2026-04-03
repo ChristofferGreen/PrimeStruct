@@ -40,12 +40,6 @@ bool hasVisibleSoaHelperTargetForMonomorph(const Context &ctx,
       ctx, "/soa_vector/" + std::string(helperName));
 }
 
-std::optional<std::string> soaPendingUnavailableMethodDiagnosticForMonomorph(
-    const Context &ctx, std::string_view resolvedPath) {
-  return soaPendingUnavailableMethodDiagnostic(
-      resolvedPath, hasVisibleSoaHelperTargetForMonomorph(ctx, "ref"));
-}
-
 bool inferImplicitTemplateArgs(const Definition &def,
                                const Expr &callExpr,
                                const LocalTypeMap &locals,
@@ -210,9 +204,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return {};
     }
     if (candidate.isMethodCall) {
-      if (const auto pending =
-              soaPendingUnavailableMethodDiagnosticForMonomorph(
-                  ctx, resolvedPath)) {
+      if (const auto pending = soaPendingUnavailableMethodDiagnostic(
+              resolvedPath,
+              hasVisibleSoaHelperTargetForMonomorph(ctx, "ref"))) {
         return *pending;
       }
     }
