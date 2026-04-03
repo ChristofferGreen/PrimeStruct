@@ -139,10 +139,17 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     }
   }
   if (exprKind == ReturnKind::Unknown) {
-    if (valueExpr != nullptr &&
-        reportBuiltinSoaDirectPendingExprDiagnostic(
-            *valueExpr, defParams, activeLocals)) {
-      return false;
+    if (valueExpr != nullptr) {
+      std::string fieldName;
+      if (isBuiltinSoaFieldViewExpr(*valueExpr, defParams, activeLocals, &fieldName)) {
+        error_ = soaDirectPendingUnavailableMethodDiagnostic(
+            soaFieldViewHelperPath(fieldName));
+        return false;
+      }
+      if (isBuiltinSoaRefExpr(*valueExpr, defParams, activeLocals)) {
+        error_ = soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
+        return false;
+      }
     }
     if (deferUnknownReturnInferenceErrors_) {
       const bool shouldDeferExplicitMapAliasDiagnostic =

@@ -323,23 +323,6 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(
   return "/std/collections/soa_vector/" + helper;
 }
 
-bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(
-    const Expr &candidate,
-    const std::vector<ParameterInfo> &params,
-    const std::unordered_map<std::string, BindingInfo> &locals) {
-  std::string fieldName;
-  if (isBuiltinSoaFieldViewExpr(candidate, params, locals, &fieldName)) {
-    error_ = soaDirectPendingUnavailableMethodDiagnostic(
-        soaFieldViewHelperPath(fieldName));
-    return true;
-  }
-  if (isBuiltinSoaRefExpr(candidate, params, locals)) {
-    error_ = soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
-    return true;
-  }
-  return false;
-}
-
 bool SemanticsValidator::hasDirectExperimentalVectorImport() const {
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {

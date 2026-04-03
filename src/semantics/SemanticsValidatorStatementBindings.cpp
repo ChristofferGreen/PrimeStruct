@@ -192,7 +192,14 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   }
 
   if (!validateExpr(params, locals, *initializerExprForValidation)) {
-    if (reportBuiltinSoaDirectPendingExprDiagnostic(initializer, params, locals)) {
+    std::string fieldName;
+    if (isBuiltinSoaFieldViewExpr(initializer, params, locals, &fieldName)) {
+      error_ = soaDirectPendingUnavailableMethodDiagnostic(
+          soaFieldViewHelperPath(fieldName));
+      return false;
+    }
+    if (isBuiltinSoaRefExpr(initializer, params, locals)) {
+      error_ = soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
       return false;
     }
     if (error_.empty()) {
@@ -200,7 +207,14 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return false;
   }
-  if (reportBuiltinSoaDirectPendingExprDiagnostic(initializer, params, locals)) {
+  std::string directSoaFieldName;
+  if (isBuiltinSoaFieldViewExpr(initializer, params, locals, &directSoaFieldName)) {
+    error_ = soaDirectPendingUnavailableMethodDiagnostic(
+        soaFieldViewHelperPath(directSoaFieldName));
+    return false;
+  }
+  if (isBuiltinSoaRefExpr(initializer, params, locals)) {
+    error_ = soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
     return false;
   }
 

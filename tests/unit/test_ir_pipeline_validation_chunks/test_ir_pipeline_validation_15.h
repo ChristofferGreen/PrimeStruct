@@ -897,11 +897,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferDefinitionSource.find("reportBuiltinSoaPendingExprDiagnostic(*valueExpr, defParams, activeLocals)") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(") !=
+            "bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find(
-            "reportBuiltinSoaDirectPendingExprDiagnostic(\n"
-            "            *valueExpr, defParams, activeLocals)") !=
+            "soaDirectPendingUnavailableMethodDiagnostic(") !=
         std::string::npos);
   CHECK(exprCollectionAccessValidationSource.find(
             "reportBuiltinSoaPendingExprDiagnostic(expr.args.front(), params, locals)") ==
@@ -919,7 +918,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "error_ == \"ref does not accept template arguments\"") ==
         std::string::npos);
   CHECK(statementBindingsSource.find(
-            "reportBuiltinSoaDirectPendingExprDiagnostic(initializer, params, locals)") !=
+            "reportBuiltinSoaDirectPendingExprDiagnostic(initializer, params, locals)") ==
+        std::string::npos);
+  CHECK(statementBindingsSource.find(
+            "soaDirectPendingUnavailableMethodDiagnostic(") !=
         std::string::npos);
   CHECK(statementReturnsSource.find("reportBuiltinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
         std::string::npos);

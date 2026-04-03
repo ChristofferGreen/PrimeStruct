@@ -110,10 +110,6 @@
       std::string_view helperName) const;
   std::string preferredSoaHelperTargetForCurrentImports(
       std::string_view helperName) const;
-  bool reportBuiltinSoaDirectPendingExprDiagnostic(
-      const Expr &expr,
-      const std::vector<ParameterInfo> &params,
-      const std::unordered_map<std::string, BindingInfo> &locals);
   bool graphBindingIsUsable(const BindingInfo &binding) const;
   bool shouldBypassGraphBindingLookup(const Expr &candidate) const;
   bool hasDirectExperimentalVectorImport() const;
