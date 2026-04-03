@@ -7,6 +7,10 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+**Architecture / Type-resolution graph**
+**Group 12 - Semantics/lowering boundary**
+- ✓ Add the next structured diagnostic-sink implementation slice by sharing direct return-statement shape diagnostic publication. Completed: named-argument, execution-body, block-argument, void-return-value, and arity failures in `src/semantics/SemanticsValidatorStatementReturns.cpp` now capture the return statement context and publish through the shared structured-diagnostic helper instead of only assigning `error_` and returning.
+
 **Types & Semantics**
 **Group 8 - SoA de-builtinization**
 - ✓ Document the borrowed-view invalidation contract on top of the current single-column borrowed-slot substrate. Completed: `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` now define the intended non-owning borrowed-view boundary for `ref(...)`, field-view borrows, `location(...)`, helper-return receivers, and method-like helper-return receivers, plus the structural mutations that invalidate those views. The live TODO now tracks only implementing those invalidation rules.

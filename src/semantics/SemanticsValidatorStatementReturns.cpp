@@ -55,27 +55,31 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                                                  bool allowReturn,
                                                  bool *sawReturn,
                                                  const std::string &namespacePrefix) {
+  auto publishReturnDiagnostic = [&]() -> bool {
+    captureExprContext(stmt);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   if (hasNamedArguments(stmt.argNames)) {
     error_ = "named arguments not supported for builtin calls";
-    return false;
+    return publishReturnDiagnostic();
   }
   if (!allowReturn) {
     error_ = "return not allowed in execution body";
-    return false;
+    return publishReturnDiagnostic();
   }
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
     error_ = "return does not accept block arguments";
-    return false;
+    return publishReturnDiagnostic();
   }
   if (returnKind == ReturnKind::Void) {
     if (!stmt.args.empty()) {
       error_ = "return value not allowed for void definition";
-      return false;
+      return publishReturnDiagnostic();
     }
   } else {
     if (stmt.args.size() != 1) {
       error_ = "return requires exactly one argument";
-      return false;
+      return publishReturnDiagnostic();
     }
     auto declaresAutoReturn = [&]() {
       auto defIt = defMap_.find(currentValidationContext_.definitionPath);
