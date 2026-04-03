@@ -8,6 +8,12 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     const std::vector<ParameterInfo> &defParams,
     const std::unordered_map<std::string, BindingInfo> &activeLocals,
     DefinitionReturnInferenceState &state) {
+  auto failInferDefinitionDiagnostic = [&](std::string message) -> bool {
+    if (error_.empty()) {
+      error_ = std::move(message);
+    }
+    return false;
+  };
   auto bindingTypeText = [](const BindingInfo &binding) {
     if (binding.typeTemplateArg.empty()) {
       return binding.typeName;
@@ -143,8 +149,8 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       if (const auto pendingPath =
               builtinSoaDirectPendingHelperPath(*valueExpr, defParams,
                                                 activeLocals)) {
-        error_ = soaDirectPendingUnavailableMethodDiagnostic(*pendingPath);
-        return false;
+        return failInferDefinitionDiagnostic(
+            soaDirectPendingUnavailableMethodDiagnostic(*pendingPath));
       }
     }
     if (deferUnknownReturnInferenceErrors_) {
@@ -157,10 +163,8 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       state.sawUnresolvedReturnDependency = true;
       return true;
     }
-    if (error_.empty()) {
-      error_ = "unable to infer return type on " + def.fullPath;
-    }
-    return false;
+    return failInferDefinitionDiagnostic("unable to infer return type on " +
+                                         def.fullPath);
   }
   if (state.inferred == ReturnKind::Unknown) {
     state.inferred = exprKind;
@@ -174,26 +178,20 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     return true;
   }
   if (state.inferred != exprKind) {
-    if (error_.empty()) {
-      error_ = "conflicting return types on " + def.fullPath;
-    }
-    return false;
+    return failInferDefinitionDiagnostic("conflicting return types on " +
+                                         def.fullPath);
   }
   if (state.inferred == ReturnKind::Array) {
     if (!exprStructPath.empty()) {
       if (state.inferredStructPath.empty()) {
         state.inferredStructPath = exprStructPath;
       } else if (state.inferredStructPath != exprStructPath) {
-        if (error_.empty()) {
-          error_ = "conflicting return types on " + def.fullPath;
-        }
-        return false;
+        return failInferDefinitionDiagnostic("conflicting return types on " +
+                                             def.fullPath);
       }
     } else if (!state.inferredStructPath.empty()) {
-      if (error_.empty()) {
-        error_ = "conflicting return types on " + def.fullPath;
-      }
-      return false;
+      return failInferDefinitionDiagnostic("conflicting return types on " +
+                                           def.fullPath);
     }
   }
   if (hasExprBinding) {
@@ -202,10 +200,8 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       state.hasInferredBinding = true;
     } else if (normalizedBindingTypeText(state.inferredBinding) !=
                normalizedBindingTypeText(exprBinding)) {
-      if (error_.empty()) {
-        error_ = "conflicting return types on " + def.fullPath;
-      }
-      return false;
+      return failInferDefinitionDiagnostic("conflicting return types on " +
+                                           def.fullPath);
     }
   }
   return true;
@@ -217,6 +213,10 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     const Expr &stmt,
     std::unordered_map<std::string, BindingInfo> &activeLocals,
     DefinitionReturnInferenceState &state) {
+  auto failInferDefinitionStatementDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return false;
+  };
   if (stmt.isBinding) {
     BindingInfo info;
     std::optional<std::string> restrictType;
@@ -231,8 +231,8 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     if (restrictType.has_value()) {
       const bool hasTemplate = !info.typeTemplateArg.empty();
       if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, def.namespacePrefix)) {
-        error_ = "restrict type does not match binding type";
-        return false;
+        return failInferDefinitionStatementDiagnostic(
+            "restrict type does not match binding type");
       }
     }
     activeLocals.emplace(stmt.name, std::move(info));
@@ -292,6 +292,12 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
 }
 
 bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
+  auto failInferDefinitionDiagnostic = [&](std::string message) -> bool {
+    if (error_.empty()) {
+      error_ = std::move(message);
+    }
+    return false;
+  };
   auto kindIt = returnKinds_.find(def.fullPath);
   if (kindIt == returnKinds_.end()) {
     return false;
@@ -311,8 +317,9 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
     return true;
   }
   if (!inferenceStack_.insert(def.fullPath).second) {
-    error_ = "return type inference requires explicit annotation on " + def.fullPath;
-    return false;
+    return failInferDefinitionDiagnostic(
+        "return type inference requires explicit annotation on " +
+        def.fullPath);
   }
   DefinitionReturnInferenceState inferenceState;
   bool sawExplicitReturnStmt = false;
@@ -347,18 +354,14 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
   }
   if (!inferenceState.sawReturn) {
     if (hasReturnTransform && hasReturnAuto) {
-      if (error_.empty()) {
-        error_ = "unable to infer return type on " + def.fullPath;
-      }
-      return false;
+      return failInferDefinitionDiagnostic("unable to infer return type on " +
+                                           def.fullPath);
     }
     kindIt->second = ReturnKind::Void;
     returnBindings_.erase(def.fullPath);
   } else if (inferenceState.inferred == ReturnKind::Unknown) {
-    if (error_.empty()) {
-      error_ = "unable to infer return type on " + def.fullPath;
-    }
-    return false;
+    return failInferDefinitionDiagnostic("unable to infer return type on " +
+                                         def.fullPath);
   } else {
     kindIt->second = inferenceState.inferred;
     if (inferenceState.hasInferredBinding) {

@@ -17,6 +17,11 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
   }
 
   handled = true;
+  auto failInferDirectCountCapacityDiagnostic =
+      [&](std::string message) -> ReturnKind {
+    error_ = std::move(message);
+    return ReturnKind::Unknown;
+  };
   const auto inferHelperReturnKind = [&](const std::string &helperName,
                                          const Expr &receiverExpr,
                                          bool allowBuiltinFallback) -> ReturnKind {
@@ -33,8 +38,8 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
         !hasImportedDefinitionPath("/std/collections/map/count") &&
         !context.hasDeclaredDefinitionPath("/std/collections/map/count") &&
         !context.shouldInferBuiltinBareMapCountCall) {
-      error_ = "unknown call target: /std/collections/map/count";
-      return ReturnKind::Unknown;
+      return failInferDirectCountCapacityDiagnostic(
+          "unknown call target: /std/collections/map/count");
     }
     if (allowBuiltinFallback && context.dispatchResolvers != nullptr &&
         defMap_.find(methodResolved) == defMap_.end()) {

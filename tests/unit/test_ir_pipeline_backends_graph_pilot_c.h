@@ -265,6 +265,8 @@
         std::string::npos);
   CHECK(validatorInfer.find("ReturnKind SemanticsValidator::inferLateFallbackReturnKind(") !=
         std::string::npos);
+  CHECK(validatorInfer.find("auto failInferLateFallbackDiagnostic = [&](std::string message) -> ReturnKind {") !=
+        std::string::npos);
   CHECK(validatorInfer.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
         std::string::npos);
   CHECK(validatorInfer.find("isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")") !=
@@ -272,6 +274,8 @@
   CHECK(validatorInfer.find("if (getBuiltinGpuName(expr, builtinName)) {") !=
         std::string::npos);
   CHECK(validatorInfer.find("ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("auto failInferPreDispatchDiagnostic = [&](std::string message) -> ReturnKind {") !=
         std::string::npos);
   CHECK(validatorInfer.find("std::function<ReturnKind(const Expr &)> pointerTargetKind =") !=
         std::string::npos);
@@ -293,6 +297,8 @@
         std::string::npos);
   CHECK(validatorInfer.find("ReturnKind SemanticsValidator::inferResolvedCallReturnKind(") !=
         std::string::npos);
+  CHECK(validatorInfer.find("auto failInferResolvedCallDiagnostic = [&](std::string message) -> ReturnKind {") !=
+        std::string::npos);
   CHECK(validatorInfer.find("auto isTypeNamespaceMethodCall = [&](const Expr &callExpr,") !=
         std::string::npos);
   CHECK(validatorInfer.find("validateNamedArgumentsAgainstParams(") !=
@@ -308,6 +314,10 @@
   CHECK(validatorInferMain.find("auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,") ==
         std::string::npos);
   CHECK(validatorInfer.find("formatReturnInferenceCycleDiagnostic(") != std::string::npos);
+  CHECK(validatorInfer.find("auto failInferDefinitionDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("auto failInferGraphDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(validatorInfer.find("cycle member: ") != std::string::npos);
   CHECK(validatorInfer.find("allowRecursiveReturnInference_ = false;") != std::string::npos);
   CHECK(validatorInfer.find("ensureDefinitionReturnKindReady(*defIt->second)") != std::string::npos);

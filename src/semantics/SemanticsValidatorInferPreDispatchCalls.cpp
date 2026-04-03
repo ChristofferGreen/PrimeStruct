@@ -44,6 +44,10 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     handled = true;
     return kind;
   };
+  auto failInferPreDispatchDiagnostic = [&](std::string message) -> ReturnKind {
+    error_ = std::move(message);
+    return finish(ReturnKind::Unknown);
+  };
 
   Expr rewrittenCanonicalExperimentalVectorHelperCall;
   if (tryRewriteCanonicalExperimentalVectorHelperCall(
@@ -389,8 +393,8 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
         methodRemovedCollectionCompatibilityPath(
             expr, params, locals, builtinCollectionDispatchResolverAdapters);
     if (!removedCollectionMethodPath.empty()) {
-      error_ = "unknown method: " + removedCollectionMethodPath;
-      return finish(ReturnKind::Unknown);
+      return failInferPreDispatchDiagnostic(
+          "unknown method: " + removedCollectionMethodPath);
     }
   }
   if (expr.isMethodCall && isVectorBuiltinName(expr, "count") &&
@@ -509,10 +513,10 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           !hasDeclaredDefinitionPath(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&
           !resolveMapTarget(expr.args.front(), builtinMapKeyType, builtinMapValueType)) {
-        error_ = soaUnavailableMethodDiagnostic(
-            methodResolved,
-            usesSamePathSoaHelperTargetForCurrentImports("ref"));
-        return finish(ReturnKind::Unknown);
+        return failInferPreDispatchDiagnostic(
+            soaUnavailableMethodDiagnostic(
+                methodResolved,
+                usesSamePathSoaHelperTargetForCurrentImports("ref")));
       }
       ReturnKind builtinMethodKind = ReturnKind::Unknown;
       if (!hasDefinitionPath(logicalMethodResolved) &&
@@ -525,10 +529,10 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       }
       if (!hasDefinitionPath(methodResolved) &&
           !hasImportedDefinitionPath(methodResolved)) {
-        error_ = soaUnavailableMethodDiagnostic(
-            methodResolved,
-            usesSamePathSoaHelperTargetForCurrentImports("ref"));
-        return finish(ReturnKind::Unknown);
+        return failInferPreDispatchDiagnostic(
+            soaUnavailableMethodDiagnostic(
+                methodResolved,
+                usesSamePathSoaHelperTargetForCurrentImports("ref")));
       }
       context.resolved = methodResolved;
       hasResolvedPath = true;

@@ -480,6 +480,10 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
                                                            bool componentHasCycle,
                                                            bool &changed) {
   changed = false;
+  auto failInferGraphDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return false;
+  };
   auto kindIt = returnKinds_.find(def.fullPath);
   if (kindIt == returnKinds_.end()) {
     return false;
@@ -595,8 +599,8 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
       if (!finalize) {
         return true;
       }
-      error_ = "unable to infer return type on " + def.fullPath;
-      return false;
+      return failInferGraphDiagnostic("unable to infer return type on " +
+                                      def.fullPath);
     }
     applyKnownReturn(ReturnKind::Void, {}, nullptr);
     return true;
@@ -611,9 +615,11 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
       }
       return true;
     }
-    error_ = componentHasCycle ? "return type inference requires explicit annotation on " + def.fullPath
-                               : "unable to infer return type on " + def.fullPath;
-    return false;
+    return failInferGraphDiagnostic(
+        componentHasCycle
+            ? "return type inference requires explicit annotation on " +
+                  def.fullPath
+            : "unable to infer return type on " + def.fullPath);
   }
 
   applyKnownReturn(inferenceState.inferred,

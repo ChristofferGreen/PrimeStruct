@@ -19,22 +19,30 @@ bool SemanticsValidator::publishPassesOmittedInitializersDiagnostic(const Expr *
 bool SemanticsValidator::validateOmittedBindingInitializer(const Expr &binding,
                                                            const BindingInfo &info,
                                                            const std::string &namespacePrefix) {
+  auto failPassesOmittedInitializersDiagnostic =
+      [&](const Expr *expr, std::string message) -> bool {
+    error_ = std::move(message);
+    return publishPassesOmittedInitializersDiagnostic(expr);
+  };
   if (!hasExplicitBindingTypeTransform(binding)) {
-    error_ = "omitted initializer requires explicit struct type: " + binding.name;
-    return publishPassesOmittedInitializersDiagnostic(&binding);
+    return failPassesOmittedInitializersDiagnostic(
+        &binding,
+        "omitted initializer requires explicit struct type: " + binding.name);
   }
   const std::string normalizedType = normalizeBindingTypeName(info.typeName);
   if (normalizedType == "vector" || normalizedType == "soa_vector") {
     std::vector<std::string> args;
     if (!splitTopLevelTemplateArgs(info.typeTemplateArg, args) || args.size() != 1) {
-      error_ = normalizedType + " requires exactly one template argument";
-      return publishPassesOmittedInitializersDiagnostic(&binding);
+      return failPassesOmittedInitializersDiagnostic(
+          &binding,
+          normalizedType + " requires exactly one template argument");
     }
     return true;
   }
   if (!info.typeTemplateArg.empty()) {
-    error_ = "omitted initializer requires struct type: " + info.typeName;
-    return publishPassesOmittedInitializersDiagnostic(&binding);
+    return failPassesOmittedInitializersDiagnostic(
+        &binding,
+        "omitted initializer requires struct type: " + info.typeName);
   }
   std::string structPath = resolveStructTypePath(info.typeName, namespacePrefix, structNames_);
   if (structPath.empty()) {
@@ -44,16 +52,20 @@ bool SemanticsValidator::validateOmittedBindingInitializer(const Expr &binding,
     }
   }
   if (structPath.empty()) {
-    error_ = "omitted initializer requires struct type: " + info.typeName;
-    return publishPassesOmittedInitializersDiagnostic(&binding);
+    return failPassesOmittedInitializersDiagnostic(
+        &binding,
+        "omitted initializer requires struct type: " + info.typeName);
   }
   if (!hasStructZeroArgConstructor(structPath)) {
-    error_ = "omitted initializer requires zero-arg constructor: " + structPath;
-    return publishPassesOmittedInitializersDiagnostic(&binding);
+    return failPassesOmittedInitializersDiagnostic(
+        &binding,
+        "omitted initializer requires zero-arg constructor: " + structPath);
   }
   if (!isOutsideEffectFreeStructConstructor(structPath)) {
-    error_ = "omitted initializer requires effect-free zero-arg constructor: " + structPath;
-    return publishPassesOmittedInitializersDiagnostic(&binding);
+    return failPassesOmittedInitializersDiagnostic(
+        &binding,
+        "omitted initializer requires effect-free zero-arg constructor: " +
+            structPath);
   }
   return true;
 }

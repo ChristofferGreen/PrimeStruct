@@ -325,7 +325,13 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionCountCapacitySource.find("bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind") !=
         std::string::npos);
+  CHECK(semanticsInferCollectionCountCapacitySource.find(
+            "auto failInferCountCapacityDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKind") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDirectCountCapacitySource.find(
+            "auto failInferDirectCountCapacityDiagnostic =") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("const auto inferHelperReturnKind = [&](const std::string &helperName,") !=
         std::string::npos);
@@ -352,6 +358,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("ReturnKind SemanticsValidator::inferLateFallbackReturnKind(") !=
         std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "auto failInferLateFallbackDiagnostic = [&](std::string message) -> ReturnKind {") !=
+        std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
@@ -368,6 +377,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "            usesSamePathSoaHelperTargetForCurrentImports(\"ref\"));") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(") !=
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find(
+            "auto failInferPreDispatchDiagnostic = [&](std::string message) -> ReturnKind {") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("std::function<ReturnKind(const Expr &)> pointerTargetKind =") !=
         std::string::npos);
@@ -396,6 +408,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferScalarBuiltinsSource.find("if (isAssignCall(expr)) {") !=
         std::string::npos);
   CHECK(semanticsInferResolvedCallsSource.find("ReturnKind SemanticsValidator::inferResolvedCallReturnKind(") !=
+        std::string::npos);
+  CHECK(semanticsInferResolvedCallsSource.find(
+            "auto failInferResolvedCallDiagnostic = [&](std::string message) -> ReturnKind {") !=
         std::string::npos);
   CHECK(semanticsInferResolvedCallsSource.find(
             "auto isTypeNamespaceMethodCall = [&](const Expr &callExpr,") !=
@@ -449,9 +464,21 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferDefinitionSource.find("bool SemanticsValidator::recordDefinitionInferredReturn") !=
         std::string::npos);
+  CHECK(semanticsInferDefinitionSource.find(
+            "auto failInferDefinitionDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsInferDefinitionSource.find("bool SemanticsValidator::inferDefinitionStatementReturns") !=
         std::string::npos);
+  CHECK(semanticsInferDefinitionSource.find(
+            "auto failInferDefinitionStatementDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsInferDefinitionSource.find("if (isForCall(stmt) && stmt.args.size() == 4)") != std::string::npos);
+  CHECK(semanticsInferGraphPath.string().find("SemanticsValidatorInferGraph.cpp") !=
+        std::string::npos);
+  const std::string semanticsInferGraphSource = readText(semanticsInferGraphPath);
+  CHECK(semanticsInferGraphSource.find(
+            "auto failInferGraphDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator passes source delegation stays stable") {
@@ -479,6 +506,8 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorPasses.cpp";
   const std::filesystem::path semanticsPassesDefinitionsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesDefinitions.cpp";
+  const std::filesystem::path semanticsBuildPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuild.cpp";
   const std::filesystem::path semanticsPassesEffectsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesEffects.cpp";
   const std::filesystem::path semanticsPassesOmittedInitializersPath =
@@ -495,6 +524,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesExecutions.cpp";
   REQUIRE(std::filesystem::exists(semanticsPassesPath));
   REQUIRE(std::filesystem::exists(semanticsPassesDefinitionsPath));
+  REQUIRE(std::filesystem::exists(semanticsBuildPath));
   REQUIRE(std::filesystem::exists(semanticsPassesEffectsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesOmittedInitializersPath));
   REQUIRE(std::filesystem::exists(semanticsPassesStructLayoutsPath));
@@ -503,6 +533,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExecutionDiagnosticsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesExecutionsPath));
   const std::string semanticsPassesSource = readText(semanticsPassesPath);
+  const std::string semanticsBuildSource = readText(semanticsBuildPath);
   const std::string semanticsPassesCombinedSource = readTexts({
       semanticsPassesPath,
       semanticsPassesDefinitionsPath,
@@ -555,6 +586,9 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "bool SemanticsValidator::publishPassesDefinitionsDiagnostic(") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
+            "auto failPassesDefinitionsDiagnostic =") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
             "return publishPassesDefinitionsDiagnostic();") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
@@ -564,7 +598,13 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "bool SemanticsValidator::publishPassesOmittedInitializersDiagnostic(") !=
         std::string::npos);
   CHECK(semanticsPassesOmittedInitializersSource.find(
+            "auto failPassesOmittedInitializersDiagnostic =") !=
+        std::string::npos);
+  CHECK(semanticsPassesOmittedInitializersSource.find(
             "return publishPassesOmittedInitializersDiagnostic(&binding);") !=
+        std::string::npos);
+  CHECK(semanticsBuildSource.find(
+            "auto failBuildDefinitionMapDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find(
             "bool SemanticsValidator::publishPassesStructLayoutsDiagnostic()") !=

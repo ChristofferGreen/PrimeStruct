@@ -20,6 +20,11 @@ bool SemanticsValidator::validateDefinitions() {
   std::vector<SemanticDiagnosticRecord> collectedRecords;
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
   auto validateDefinition = [&](const Definition &def) -> bool {
+    auto failPassesDefinitionsDiagnostic =
+        [&](const Expr *expr, std::string message) -> bool {
+      error_ = std::move(message);
+      return publishPassesDefinitionsDiagnostic(expr);
+    };
     DefinitionContextScope definitionScope(*this, def);
     ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
     auto isStructDefinition = [&](const Definition &candidate) {
@@ -31,12 +36,13 @@ bool SemanticsValidator::validateDefinitions() {
       return false;
     };
     if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
-      if (error_.empty()) {
-        error_ = "validateCapabilitiesSubset failed on " + def.fullPath;
-        return publishPassesDefinitionsDiagnostic();
+        if (error_.empty()) {
+          return failPassesDefinitionsDiagnostic(
+              nullptr,
+              "validateCapabilitiesSubset failed on " + def.fullPath);
+        }
+        return false;
       }
-      return false;
-    }
     std::unordered_map<std::string, BindingInfo> locals;
     const auto &defParams = paramsByDef_[def.fullPath];
     for (const auto &param : defParams) {
@@ -48,8 +54,9 @@ bool SemanticsValidator::validateDefinitions() {
       }
       if (!validateExpr(defParams, locals, *param.defaultExpr)) {
         if (error_.empty()) {
-          error_ = "default expression validation failed on " + def.fullPath;
-          return publishPassesDefinitionsDiagnostic(param.defaultExpr);
+          return failPassesDefinitionsDiagnostic(
+              param.defaultExpr,
+              "default expression validation failed on " + def.fullPath);
         }
         return false;
       }
@@ -60,16 +67,18 @@ bool SemanticsValidator::validateDefinitions() {
       kind = kindIt->second;
     }
     if (isLifecycleHelperName(def.fullPath) && kind != ReturnKind::Void) {
-      error_ = "lifecycle helpers must return void: " + def.fullPath;
-      return publishPassesDefinitionsDiagnostic();
+      return failPassesDefinitionsDiagnostic(
+          nullptr,
+          "lifecycle helpers must return void: " + def.fullPath);
     }
     const std::optional<OnErrorHandler> &onErrorHandler = currentValidationContext_.onError;
     if (onErrorHandler.has_value() &&
         (!currentValidationContext_.resultType.has_value() ||
          !currentValidationContext_.resultType->isResult) &&
         kind != ReturnKind::Int) {
-      error_ = "on_error requires Result or int return type on " + def.fullPath;
-      return publishPassesDefinitionsDiagnostic();
+      return failPassesDefinitionsDiagnostic(
+          nullptr,
+          "on_error requires Result or int return type on " + def.fullPath);
     }
     if (onErrorHandler.has_value() &&
         currentValidationContext_.resultType.has_value() &&
@@ -77,16 +86,18 @@ bool SemanticsValidator::validateDefinitions() {
         !errorTypesMatch(onErrorHandler->errorType,
                          currentValidationContext_.resultType->errorType,
                          def.namespacePrefix)) {
-      error_ = "on_error error type mismatch on " + def.fullPath;
-      return publishPassesDefinitionsDiagnostic();
+      return failPassesDefinitionsDiagnostic(
+          nullptr,
+          "on_error error type mismatch on " + def.fullPath);
     }
     if (onErrorHandler.has_value()) {
       OnErrorScope onErrorScope(*this, std::nullopt);
       for (const auto &arg : currentValidationContext_.onError->boundArgs) {
         if (!validateExpr(defParams, locals, arg)) {
           if (error_.empty()) {
-            error_ = "on_error bound-arg validation failed on " + def.fullPath;
-            return publishPassesDefinitionsDiagnostic(&arg);
+            return failPassesDefinitionsDiagnostic(
+                &arg,
+                "on_error bound-arg validation failed on " + def.fullPath);
           }
           return false;
         }
@@ -107,8 +118,9 @@ bool SemanticsValidator::validateDefinitions() {
                              &def.statements,
                              stmtIndex)) {
         if (error_.empty()) {
-          error_ = "statement validation failed on " + def.fullPath;
-          return publishPassesDefinitionsDiagnostic(&stmt);
+          return failPassesDefinitionsDiagnostic(
+              &stmt,
+              "statement validation failed on " + def.fullPath);
         }
         return false;
       }
@@ -117,8 +129,9 @@ bool SemanticsValidator::validateDefinitions() {
     if (def.returnExpr.has_value()) {
       if (!validateExpr(defParams, locals, *def.returnExpr)) {
         if (error_.empty()) {
-          error_ = "return expression validation failed on " + def.fullPath;
-          return publishPassesDefinitionsDiagnostic(&*def.returnExpr);
+          return failPassesDefinitionsDiagnostic(
+              &*def.returnExpr,
+              "return expression validation failed on " + def.fullPath);
         }
         return false;
       }
@@ -127,12 +140,12 @@ bool SemanticsValidator::validateDefinitions() {
     if (kind != ReturnKind::Void && !isStructDefinition(def)) {
       bool allPathsReturn = def.returnExpr.has_value() || blockAlwaysReturns(def.statements);
       if (!allPathsReturn) {
-        if (sawReturn) {
-          error_ = "not all control paths return in " + def.fullPath + " (missing return statement)";
-        } else {
-          error_ = "missing return statement in " + def.fullPath;
-        }
-        return publishPassesDefinitionsDiagnostic();
+        return failPassesDefinitionsDiagnostic(
+            nullptr,
+            sawReturn
+                ? "not all control paths return in " + def.fullPath +
+                      " (missing return statement)"
+                : "missing return statement in " + def.fullPath);
       }
     }
     bool shouldCheckUninitialized = (kind == ReturnKind::Void);
@@ -143,8 +156,8 @@ bool SemanticsValidator::validateDefinitions() {
       std::optional<std::string> uninitError =
           validateUninitializedDefiniteState(defParams, def.statements);
       if (uninitError.has_value()) {
-        error_ = *uninitError;
-        return publishPassesDefinitionsDiagnostic();
+        return failPassesDefinitionsDiagnostic(nullptr,
+                                              *std::move(uninitError));
       }
     }
     return true;

@@ -32,6 +32,10 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     handled = true;
     return kind;
   };
+  auto failInferLateFallbackDiagnostic = [&](std::string message) -> ReturnKind {
+    error_ = std::move(message);
+    return finish(ReturnKind::Unknown);
+  };
 
   const auto resolvedIt = defMap_.find(context.resolved);
   if (!expr.isMethodCall &&
@@ -341,8 +345,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
                 receiverExpr) &&
             !hasImportedDefinitionPath("/std/collections/map/contains") &&
             !hasDeclaredDefinitionPath("/std/collections/map/contains")) {
-          error_ = "unknown call target: /std/collections/map/contains";
-          return finish(ReturnKind::Unknown);
+          return failInferLateFallbackDiagnostic(
+              "unknown call target: /std/collections/map/contains");
         }
         if (methodResolved == "/std/collections/map/tryAt" &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall &&
@@ -350,8 +354,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
                 receiverExpr) &&
             !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
             !hasDeclaredDefinitionPath("/std/collections/map/tryAt")) {
-          error_ = "unknown call target: /std/collections/map/tryAt";
-          return finish(ReturnKind::Unknown);
+          return failInferLateFallbackDiagnostic(
+              "unknown call target: /std/collections/map/tryAt");
         }
         if ((methodResolved == "/map/at" ||
              methodResolved == "/map/at_unsafe" ||
@@ -364,8 +368,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
                                        builtinAccessName) &&
             !hasDeclaredDefinitionPath("/std/collections/map/" +
                                        builtinAccessName)) {
-          error_ = "unknown call target: /std/collections/map/" + builtinAccessName;
-          return finish(ReturnKind::Unknown);
+          return failInferLateFallbackDiagnostic(
+              "unknown call target: /std/collections/map/" + builtinAccessName);
         }
         auto methodIt = defMap_.find(methodResolved);
         if (methodIt != defMap_.end()) {
@@ -495,17 +499,18 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
          resolveMapTarget(receiver, keyType, valueType)) ||
         (resolveExperimentalMapTarget != nullptr &&
          resolveExperimentalMapTarget(receiver, keyType, valueType));
-    if (!hasCollectionReceiver) {
-      std::string methodResolved;
-      if (context.resolveMethodCallPath != nullptr &&
-          context.resolveMethodCallPath(builtinAccessName, methodResolved) &&
-          !methodResolved.empty()) {
-        error_ = soaUnavailableMethodDiagnostic(
-            methodResolved,
-            usesSamePathSoaHelperTargetForCurrentImports("ref"));
+      if (!hasCollectionReceiver) {
+        std::string methodResolved;
+        if (context.resolveMethodCallPath != nullptr &&
+            context.resolveMethodCallPath(builtinAccessName, methodResolved) &&
+            !methodResolved.empty()) {
+          return failInferLateFallbackDiagnostic(
+              soaUnavailableMethodDiagnostic(
+                  methodResolved,
+                  usesSamePathSoaHelperTargetForCurrentImports("ref")));
+        }
+        return finish(ReturnKind::Unknown);
       }
-      return finish(ReturnKind::Unknown);
-    }
   }
 
   return ReturnKind::Unknown;

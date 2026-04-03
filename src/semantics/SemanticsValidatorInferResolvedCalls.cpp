@@ -24,6 +24,10 @@ ReturnKind SemanticsValidator::inferResolvedCallReturnKind(
   }
 
   handled = true;
+  auto failInferResolvedCallDiagnostic = [&](std::string message) -> ReturnKind {
+    error_ = std::move(message);
+    return ReturnKind::Unknown;
+  };
   if (inferCollectionDispatchSetup.hasPreferredBuiltinAccessKind &&
       expr.isMethodCall) {
     return inferCollectionDispatchSetup.preferredBuiltinAccessKind;
@@ -76,11 +80,10 @@ ReturnKind SemanticsValidator::inferResolvedCallReturnKind(
     std::string orderedArgError;
     if (!validateNamedArgumentsAgainstParams(
             calleeParams, *orderedCallArgNames, orderedArgError)) {
-      error_ = orderedArgError.find("argument count mismatch") !=
-                       std::string::npos
-                   ? "argument count mismatch for " + context.resolved
-                   : orderedArgError;
-      return ReturnKind::Unknown;
+      return failInferResolvedCallDiagnostic(
+          orderedArgError.find("argument count mismatch") != std::string::npos
+              ? "argument count mismatch for " + context.resolved
+              : orderedArgError);
     }
 
     std::vector<const Expr *> orderedArgs;
@@ -89,11 +92,10 @@ ReturnKind SemanticsValidator::inferResolvedCallReturnKind(
                                *orderedCallArgNames,
                                orderedArgs,
                                orderedArgError)) {
-      error_ = orderedArgError.find("argument count mismatch") !=
-                       std::string::npos
-                   ? "argument count mismatch for " + context.resolved
-                   : orderedArgError;
-      return ReturnKind::Unknown;
+      return failInferResolvedCallDiagnostic(
+          orderedArgError.find("argument count mismatch") != std::string::npos
+              ? "argument count mismatch for " + context.resolved
+              : orderedArgError);
     }
 
     for (size_t paramIndex = 0;
@@ -125,9 +127,9 @@ ReturnKind SemanticsValidator::inferResolvedCallReturnKind(
         continue;
       }
       if (actualKind != expectedKind) {
-        error_ = "argument type mismatch for " + context.resolved +
-                 " parameter " + param.name;
-        return ReturnKind::Unknown;
+        return failInferResolvedCallDiagnostic(
+            "argument type mismatch for " + context.resolved +
+            " parameter " + param.name);
       }
     }
   }

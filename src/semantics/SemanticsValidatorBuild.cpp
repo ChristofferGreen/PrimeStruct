@@ -7,6 +7,10 @@
 namespace primec::semantics {
 
 bool SemanticsValidator::buildDefinitionMaps() {
+  auto failBuildDefinitionMapDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   defaultEffectSet_.clear();
   entryDefaultEffectSet_.clear();
   defMap_.clear();
@@ -28,15 +32,15 @@ bool SemanticsValidator::buildDefinitionMaps() {
 
   for (const auto &effect : defaultEffects_) {
     if (!isEffectName(effect)) {
-      error_ = "invalid default effect: " + effect;
-      return publishCurrentStructuredDiagnosticNow();
+      return failBuildDefinitionMapDiagnostic("invalid default effect: " +
+                                              effect);
     }
     defaultEffectSet_.insert(effect);
   }
   for (const auto &effect : entryDefaultEffects_) {
     if (!isEffectName(effect)) {
-      error_ = "invalid entry default effect: " + effect;
-      return publishCurrentStructuredDiagnosticNow();
+      return failBuildDefinitionMapDiagnostic(
+          "invalid entry default effect: " + effect);
     }
     entryDefaultEffectSet_.insert(effect);
   }
@@ -131,16 +135,16 @@ bool SemanticsValidator::buildDefinitionMaps() {
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
     if (defMap_.count(def.fullPath) > 0) {
-      error_ = "duplicate definition: " + def.fullPath;
       captureDefinitionContext(def);
-      return publishCurrentStructuredDiagnosticNow();
+      return failBuildDefinitionMapDiagnostic("duplicate definition: " +
+                                              def.fullPath);
     }
     if (def.fullPath.find('/', 1) == std::string::npos) {
       const std::string rootName = def.fullPath.substr(1);
       if ((mathImportAll_ || mathImports_.count(rootName) > 0) && isMathBuiltinName(rootName)) {
-        error_ = "import creates name conflict: " + rootName;
         captureDefinitionContext(def);
-        return publishCurrentStructuredDiagnosticNow();
+        return failBuildDefinitionMapDiagnostic(
+            "import creates name conflict: " + rootName);
       }
     }
     const bool isStructHelper = isStructHelperDefinition(def);

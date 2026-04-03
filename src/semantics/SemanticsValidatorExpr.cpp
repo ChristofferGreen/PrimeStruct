@@ -368,12 +368,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                             ":" + receiver.name +
                             " ns=" + receiver.namespacePrefix;
         }
-        error_ = "validateExprMethodCallTarget failed name=" + expr.name +
-                 " ns=" + expr.namespacePrefix +
-                 " resolved=" + resolved +
-                 " templateArgs=" + std::to_string(expr.templateArgs.size()) +
-                 " args=" + std::to_string(expr.args.size()) +
-                 " receiver=" + receiverSummary;
+        return failExprRootDiagnostic(
+            "validateExprMethodCallTarget failed name=" + expr.name +
+            " ns=" + expr.namespacePrefix +
+            " resolved=" + resolved +
+            " templateArgs=" + std::to_string(expr.templateArgs.size()) +
+            " args=" + std::to_string(expr.args.size()) +
+            " receiver=" + receiverSummary);
       }
       return false;
     }
@@ -515,7 +516,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                     resolvedMethod,
                                     namedArgumentBuiltinContext)) {
       if (error_.empty()) {
-        error_ = "validateExprNamedArguments failed";
+        return failExprRootDiagnostic("validateExprNamedArguments failed");
       }
       return false;
     }
@@ -639,7 +640,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               params, locals, expr, lateUnknownTargetFallbackContext,
               handledLateUnknownTargetFallback)) {
         if (error_.empty()) {
-          error_ = "validateExprLateUnknownTargetFallbacks failed";
+          return failExprRootDiagnostic(
+              "validateExprLateUnknownTargetFallbacks failed");
         }
         return false;
       }
@@ -676,7 +678,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             resolvedCallSetup.resolvedCallArgumentContext,
             handledResolvedCallArguments)) {
       if (error_.empty()) {
-        error_ = "validateExprResolvedCallArguments failed";
+        return failExprRootDiagnostic(
+            "validateExprResolvedCallArguments failed");
       }
       return false;
     }

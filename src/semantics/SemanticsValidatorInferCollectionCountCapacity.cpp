@@ -7,6 +7,10 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
     const BuiltinCollectionCountCapacityDispatchContext &context,
     ReturnKind &kindOut) {
   kindOut = ReturnKind::Unknown;
+  auto failInferCountCapacityDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return false;
+  };
   if (callExpr.isMethodCall || callExpr.args.empty()) {
     return false;
   }
@@ -42,8 +46,8 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
       !hasImportedDefinitionPath("/std/collections/map/count") &&
       !context.hasDeclaredDefinitionPath("/std/collections/map/count") &&
       !context.shouldInferBuiltinBareMapCountCall) {
-    error_ = "unknown call target: /std/collections/map/count";
-    return false;
+    return failInferCountCapacityDiagnostic(
+        "unknown call target: /std/collections/map/count");
   }
 
   auto methodIt = defMap_.find(methodResolved);
