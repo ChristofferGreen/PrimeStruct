@@ -2622,26 +2622,10 @@ semantics on that same canonical helper surface, imported method `get(...).field
 older mutable-vector-binding gap. Those raw-builtin imported helper forms still stop later on
 the remaining lowering bridge from builtin `/soa_vector` values to experimental wrapper
 `SoaVector<T>` parameters instead of on the older imported method `get/ref` unknown-target gap.
-Conversion cleanup itself is now complete on that bridged bare/direct/method/slash-method path, while
-field-view cleanup is now reduced to the remaining
-direct pending-diagnostic path plus future richer borrowed/mutating behavior because the
-current successful read-only indexing surface no longer depends on backend-local
-field-view routing. The remaining backend
-cleanup is tracked as explicit C++, native, and VM follow-ups instead of one combined
-emitter/runtime note, with the C++, native, and VM backend cleanup themselves staged as
-helper-call, conversion, and field-view follow-ups, with the C++ helper cleanup itself staged as
-direct-call versus wildcard-imported follow-ups, the C++ conversion cleanup itself staged as
-direct-canonical versus imported-helper follow-ups, the C++ field-view cleanup itself now reduced
-to the pending-diagnostic path only, the native
-helper cleanup itself staged as direct-call versus wildcard-imported follow-ups, the native
-conversion cleanup itself staged as direct-canonical versus imported-helper follow-ups, the
-native field-view cleanup itself now reduced to the pending-diagnostic path only, the VM helper cleanup itself staged as direct-call versus
-wildcard-imported follow-ups, the VM conversion cleanup itself staged as direct-canonical versus
-imported-helper follow-ups, and the VM field-view cleanup itself now reduced to the
-pending-diagnostic path only. The remaining runtime
-cleanup is now tracked separately as runtime-code versus diagnostic/test follow-ups, with both
-the runtime-code and diagnostic/test cleanup themselves staged as helper-call, conversion, and
-field-view follow-ups. Runtime-code helper-call cleanup is now complete because no production
+Conversion cleanup itself is now complete on that bridged bare/direct/method/slash-method path. Lowerer,
+backend, runtime-code, and diagnostic/test helper-call/conversion/successful-field-view cleanup are also complete,
+so the remaining SoA work is richer borrowed/mutating field-view behavior rather than more layer-local routing
+removal. Runtime-code helper-call cleanup is now complete because no production
 runtime-side helper routing remains outside the semantics/lowering/emitter/backend layers, and
 diagnostic/test helper-call cleanup is now complete as well because direct canonical helper
 coverage plus helper-return bare `get(...)` dump coverage now lock those routing paths in the
