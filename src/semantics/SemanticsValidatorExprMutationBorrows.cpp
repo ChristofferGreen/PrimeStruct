@@ -788,14 +788,14 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     handledOut = true;
     if (expr.args.size() != 1) {
       error_ = mutateName + " requires exactly one argument";
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     const Expr &target = expr.args.front();
     if (target.kind == Expr::Kind::Name) {
       if (!isMutableBinding(target.name)) {
         error_ = mutateName + " target must be a mutable binding: " +
                  target.name;
-        return false;
+        return publishMutationBorrowDiagnostic();
       }
       if (hasActiveBorrowForBinding(target.name)) {
         formatBorrowedBindingError(target.name, target.name);
@@ -816,17 +816,17 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         if (pointerExpr.kind == Expr::Kind::Name &&
             !isMutableBinding(pointerExpr.name)) {
           error_ = mutateName + " target must be a mutable binding";
-          return false;
+          return publishMutationBorrowDiagnostic();
         }
         std::string locationRootName;
         if (resolveLocationRootBindingName(pointerExpr, locationRootName) &&
             !isMutableBinding(locationRootName)) {
           error_ = mutateName + " target must be a mutable binding: " +
                    locationRootName;
-          return false;
+          return publishMutationBorrowDiagnostic();
         }
         error_ = mutateName + " target must be a mutable pointer binding";
-        return false;
+        return publishMutationBorrowDiagnostic();
       }
       if (!pointerBorrowRoot.empty() &&
           hasActiveBorrowForBinding(pointerBorrowRoot, ignoreBorrowName)) {
@@ -840,11 +840,11 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
     } else {
       error_ = mutateName + " target must be a mutable binding";
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     if (!isNumericExpr(params, locals, target)) {
       error_ = mutateName + " requires numeric operand";
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     return true;
   }
