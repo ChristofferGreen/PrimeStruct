@@ -370,6 +370,19 @@
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find("error_ = errorPrefix + typeName;") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "bool SemanticsValidator::resolveExprCollectionAccessTarget") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "auto publishCollectionAccessTargetDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find("unknown method: ") !=
+        std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
             "bool SemanticsValidator::validateExprCollectionAccessFallbacks") !=
         std::string::npos);
