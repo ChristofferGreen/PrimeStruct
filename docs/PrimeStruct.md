@@ -2873,14 +2873,16 @@ bad_use_after_take() {
     `Pointer<T>`, `Reference<T>`, arrays of drop-trivial elements, and concrete structs that do not define `Destroy*`
     helpers and whose fields are also drop-trivial. Builtin `vector`/`map`/`soa_vector` elements and structs with
     `Destroy` hooks are rejected for builtin `pop`/`clear`.
-  - Current indexed-removal contract: builtin `remove_at` and `remove_swap` are only defined for element types that are
-    both drop-trivial and relocation-trivial while removed-element destruction plus survivor compaction/swap semantics
-    for non-trivial types are still being specified. Canonical `/std/collections/vector/*` indexed-removal helpers on
-    explicit experimental `Vector<T>` bindings are exempt from that builtin restriction because they route onto the
-    experimental `.prime` implementation instead.
-  - Remaining live ownership/runtime migration work is therefore split into three explicit follow-ups: lift the
-    builtin `pop` / `clear` discard restriction, lift the builtin indexed-removal restriction, and extend builtin
-    canonical `map<K, V>` growth/drop beyond the current owning local numeric-map path.
+  - Current indexed-removal contract: builtin `vector` `remove_at` and `remove_swap` are only defined for element types
+    that are both drop-trivial and relocation-trivial while removed-element destruction plus survivor compaction/swap
+    semantics for non-trivial types are still being specified on the fixed-capacity builtin vector runtime path.
+    Canonical `/std/collections/vector/*` indexed-removal helpers on explicit experimental `Vector<T>` bindings are
+    exempt from that builtin restriction because they route onto the experimental `.prime` implementation instead.
+    There is no corresponding builtin `soa_vector` indexed-removal surface yet.
+  - Remaining live ownership/runtime migration work is therefore split into three explicit follow-ups: implement
+    builtin vector removed-element destruction for indexed removal, implement builtin vector survivor compaction/swap
+    semantics for indexed removal, and extend builtin canonical `map<K, V>` growth/drop beyond the current owning local
+    numeric-map path.
   - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types
     while container move/reallocation semantics are still being specified. Relocation-trivial currently includes scalar
     primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of relocation-trivial elements, and concrete structs that
