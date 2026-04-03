@@ -920,14 +920,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "        this->usesSamePathSoaHelperTargetForCurrentImports(\"ref\"))") !=
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
-            "soaUnavailableMethodDiagnostic(\n"
-            "            methodResolved,\n"
-            "            usesSamePathSoaHelperTargetForCurrentImports(\"ref\"))") !=
+            "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")))") !=
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
-            "soaUnavailableMethodDiagnostic(\n"
-            "            methodResolved,\n"
-            "            usesSamePathSoaHelperTargetForCurrentImports(\"ref\"))") !=
+            "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")))") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCurrentImports(\"count\")") !=

@@ -162,7 +162,7 @@
   CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, binding);") !=
         std::string::npos);
   CHECK(validatorInfer.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
-  CHECK(validatorInfer.find("std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);") !=
+  CHECK(validatorInfer.find("sortTypeResolutionNodesForDiagnosticOrder(unresolvedNodes);") !=
         std::string::npos);
   CHECK(validatorInfer.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);

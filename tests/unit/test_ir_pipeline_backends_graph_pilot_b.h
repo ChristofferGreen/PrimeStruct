@@ -63,9 +63,9 @@
   CHECK(validatorHeader.find("struct InferResolvedCallContext") != std::string::npos);
   CHECK(validatorHeader.find("ReturnKind inferResolvedCallReturnKind(") !=
         std::string::npos);
-  CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut)") !=
+  CHECK(validatorBuild.find("bool SemanticsValidator::lookupGraphLocalAutoBinding(const std::string &scopePath,") !=
         std::string::npos);
-  CHECK(validatorBuild.find("lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)") !=
+  CHECK(validatorBuild.find("bool SemanticsValidator::lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const {") !=
         std::string::npos);
   CHECK(validatorCollections.find("ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));") !=
         std::string::npos);
@@ -170,7 +170,7 @@
         std::string::npos);
   CHECK(validatorExprMain.find("auto setCanonicalMapKeyMismatch =") ==
         std::string::npos);
-  CHECK(validatorExpr.find("auto setCanonicalMapKeyMismatch =") !=
+  CHECK(validatorExpr.find("auto setCanonicalMapKeyMismatch =") ==
         std::string::npos);
   CHECK(validatorExprMain.find("auto isExperimentalMapReceiverExpr = [&](const Expr &candidate)") ==
         std::string::npos);

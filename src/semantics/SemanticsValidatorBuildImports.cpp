@@ -102,13 +102,13 @@ bool SemanticsValidator::buildImportAliases() {
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
     if (importPath == "/std/math") {
-      if (addImportDiagnostic("import /std/math is not supported; use import /std/math/* or /std/math/<name>")) {
+      if (!addImportDiagnostic("import /std/math is not supported; use import /std/math/* or /std/math/<name>")) {
         return false;
       }
       continue;
     }
     if (importPath.empty() || importPath[0] != '/') {
-      if (addImportDiagnostic("import path must be a slash path")) {
+      if (!addImportDiagnostic("import path must be a slash path")) {
         return false;
       }
       continue;
@@ -156,14 +156,14 @@ bool SemanticsValidator::buildImportAliases() {
           continue;
         }
         if (isRootBuiltinName(remainder)) {
-          if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
+          if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
             return false;
           }
           importError = true;
           break;
         }
         if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
-          if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
+          if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
             return false;
           }
           importError = true;
@@ -172,7 +172,7 @@ bool SemanticsValidator::buildImportAliases() {
         const std::string rootPath = "/" + remainder;
         auto rootIt = defMap_.find(rootPath);
         if (rootIt != defMap_.end()) {
-          if (addImportDiagnostic("import creates name conflict: " + remainder, rootIt->second)) {
+          if (!addImportDiagnostic("import creates name conflict: " + remainder, rootIt->second)) {
             return false;
           }
           importError = true;
@@ -180,7 +180,7 @@ bool SemanticsValidator::buildImportAliases() {
         }
         auto [it, inserted] = importAliases_.emplace(remainder, path);
         if (!inserted && it->second != path) {
-          if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
+          if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
             return false;
           }
           importError = true;
@@ -194,7 +194,7 @@ bool SemanticsValidator::buildImportAliases() {
         if (hasCoveringStdlibWildcardImport(importPath)) {
           continue;
         }
-        if (addImportDiagnostic("unknown import path: " + importPath)) {
+        if (!addImportDiagnostic("unknown import path: " + importPath)) {
           return false;
         }
         continue;
@@ -211,14 +211,14 @@ bool SemanticsValidator::buildImportAliases() {
     auto defIt = defMap_.find(importPath);
     if (defIt == defMap_.end()) {
       if (!isMathBuiltinImport) {
-        if (addImportDiagnostic("unknown import path: " + importPath)) {
+        if (!addImportDiagnostic("unknown import path: " + importPath)) {
           return false;
         }
       }
       continue;
     }
     if (publicDefinitions_.count(importPath) == 0) {
-      if (addImportDiagnostic("import path refers to private definition: " + importPath, defIt->second)) {
+      if (!addImportDiagnostic("import path refers to private definition: " + importPath, defIt->second)) {
         return false;
       }
       continue;
@@ -228,13 +228,13 @@ bool SemanticsValidator::buildImportAliases() {
       continue;
     }
     if (isRootBuiltinName(remainder)) {
-      if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
+      if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
         return false;
       }
       continue;
     }
     if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
-      if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
+      if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
         return false;
       }
       continue;
@@ -242,14 +242,14 @@ bool SemanticsValidator::buildImportAliases() {
     const std::string rootPath = "/" + remainder;
     auto rootIt = defMap_.find(rootPath);
     if (rootIt != defMap_.end()) {
-      if (addImportDiagnostic("import creates name conflict: " + remainder, rootIt->second)) {
+      if (!addImportDiagnostic("import creates name conflict: " + remainder, rootIt->second)) {
         return false;
       }
       continue;
     }
     auto [it, inserted] = importAliases_.emplace(remainder, importPath);
     if (!inserted && it->second != importPath) {
-      if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
+      if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
         return false;
       }
       continue;

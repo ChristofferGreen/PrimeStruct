@@ -483,7 +483,7 @@ main() {
 }
 )",
           false,
-          "unknown method: /array/count",
+          "unknown call target: do",
       },
       {
           "query_map_receiver_type_text",

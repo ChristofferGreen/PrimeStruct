@@ -220,11 +220,13 @@ bool SemanticsValidator::reportReferenceAssignmentEscape(
   const std::string sink = sinkName.empty() ? "<unknown>" : sinkName;
   if (currentValidationContext_.definitionIsUnsafe &&
       isUnsafeReferenceExpr(params, locals, rhsExpr)) {
-    return failReferenceEscapeDiagnostic("unsafe reference escapes via assignment to " + sink +
-                                         " (root: " + sourceRoot + ", sink: " + sink + ")");
+    failReferenceEscapeDiagnostic("unsafe reference escapes via assignment to " + sink +
+                                  " (root: " + sourceRoot + ", sink: " + sink + ")");
+    return true;
   }
-  return failReferenceEscapeDiagnostic("reference escapes via assignment to " + sink +
-                                       " (root: " + sourceRoot + ", sink: " + sink + ")");
+  failReferenceEscapeDiagnostic("reference escapes via assignment to " + sink +
+                                " (root: " + sourceRoot + ", sink: " + sink + ")");
+  return true;
 }
 
 bool SemanticsValidator::resolveReferenceEscapeSink(
