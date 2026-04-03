@@ -278,6 +278,14 @@
   CHECK(semanticsExprMethodCompatibilitySetupSource.find("soaBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "auto publishMethodCompatibilityDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(\n"
             "        resolvedPath,\n"
             "        this->usesSamePathSoaHelperTargetForCurrentImports(\"ref\"));") !=
