@@ -523,7 +523,7 @@
   CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::resolveExprVectorHelperCall") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "hasVisibleSoaHelperTargetForCurrentImports(") !=
+            "usesSamePathSoaHelperTargetForCurrentImports(helperName)") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "preferredSoaHelperTargetForCurrentImports(") !=
@@ -536,7 +536,7 @@
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "hasVisibleSoaHelperTargetForCurrentImports(") !=
+            "usesSamePathSoaHelperTargetForCurrentImports(\"count\")") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(canonical)") !=
@@ -545,7 +545,7 @@
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "hasVisibleSoaHelperTargetForCurrentImports(") !=
+            "usesSamePathSoaHelperTargetForCurrentImports(\"count\")") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(canonical)") !=
