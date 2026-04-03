@@ -3348,6 +3348,22 @@ read-only path.
     `location(...)`, helper-return receivers, and method-like helper-return receivers. The
     implementation target is explicit validation and runtime/provenance rules for that
     invalidation boundary, not another compiler-owned pending-diagnostic special case.
+  - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
+    standalone field-view expressions as first-class non-owning column views rather than
+    keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic
+    path. The intended contract is: direct borrowed locals, explicit `dereference(...)`
+    receivers, borrowed helper-return receivers, method-like struct-helper-return receivers,
+    and inline `location(...)`-wrapped borrowed receivers should all expose the same
+    column-view surface that the current successful `value.field()[i]` rewrite already uses;
+    those standalone field-view values remain borrowed projections over wrapper-owned SoA
+    storage, so they inherit the same invalidation rules as `ref(...)`; read-only receivers
+    should expose read-only field-view values, while mutable borrowed receivers may later
+    grow into mutable field-view values that authorize indexed writes through that same
+    column-view substrate; and passing, returning, or locally binding a field-view value
+    should preserve borrowed-view semantics instead of silently materializing an owning
+    vector copy. The remaining implementation work is to thread that contract through the
+    existing experimental wrapper helper/indexing substrate, not to add more builtin-only
+    fallback diagnostics.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,

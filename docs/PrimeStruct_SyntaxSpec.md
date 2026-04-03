@@ -1088,6 +1088,16 @@ and inline `location(...)`-wrapped variants now route through that same helper/i
 substrate. The compiler-owned direct unsupported field-view path still remains only for
 standalone borrowed reads plus the still-unimplemented mutating method/call and indexed
 field-view write surfaces until indexing moves fully onto the experimental substrate.
+The intended next borrowed-view step is that standalone borrowed field-view values such as
+`borrowed.field()` / `field(borrowed)` become non-owning column views over the same wrapper
+storage instead of remaining on the pending-diagnostic path. That richer borrowed-view
+surface is meant to cover the same receiver families that already succeed for
+`value.field()[i]`: direct borrowed locals, explicit dereference, borrowed helper returns,
+method-like helper returns, and inline `location(...)`-wrapped borrowed receivers. Those
+field-view values inherit the same invalidation contract as `ref(...)`, stay borrowed rather
+than materializing owning vectors, and may later distinguish read-only versus mutable
+borrowed receivers on top of the current `soaVectorGet(...)` / `soaVectorRef(...)`
+substrate.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
