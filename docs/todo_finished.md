@@ -7,6 +7,8 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the remaining oversized Group 11 and Group 12 graph/semantic-product umbrella items in `docs/todo.md` into explicit compile-pipeline/backend, invalidation, inference, CT-eval, template, widening, perf, parallel-solve, plumbing, adapter, lowerer-cutover, and backend-conformance slices, so the live queue now tracks concrete implementable seams instead of broad multi-surface bullets.
+
 **Architecture / Type-resolution graph**
 **Group 4 - Ownership and lifetime substrate**
 - ✓ Add the reusable lowered lifecycle-aware destroy-at-pointer helper for fixed-capacity slot storage and build the shared builtin `vector` removed-slot destruction primitive on top of it, so indexed-removal lowering now has one reusable `Destroy*`-from-slot-pointer path ready for `remove_swap` / `remove_at` wiring.

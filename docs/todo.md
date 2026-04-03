@@ -99,15 +99,44 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
 **Architecture / Type-resolution graph**
 **Group 11 - Near-term graph queue**
 Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.
-- ○ Expand positive end-to-end graph conformance coverage for backend dispatch on C++/VM/native once the still-open query-shaped canonical helper/method resolution path moves past the current compile-pipeline `if branches must return compatible types` boundary.
-- ○ Implement graph-backed query invalidation rules and coverage for local-binding, control-flow, and initializer-shape edits now that the intra-definition invalidation contract is documented.
-- ○ Implement graph-backed query invalidation rules and coverage for definition-signature, import-alias, and receiver-type edits now that the cross-definition invalidation contract is documented.
-- ○ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented, so mixed ad hoc inference paths stop surrounding the stabilized return/query/local pilot.
-- ○ Implement the graph/CT-eval interaction contract now that the boundary is documented, so compile-time evaluation either consumes shared dependency state directly or goes through one explicit tested adapter.
-- ○ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented, once the non-template inference islands and invalidation rules are pinned.
-- ○ Implement the next omitted-envelope and local-`auto` graph expansions now that the widening contract is documented, after the next inference-island migrations prove stable on the graph path.
-- ○ Implement graph performance guardrails and sustained perf coverage now that the regression-budget contract is documented, before optional parallel solve work broadens the graph surface further.
-- ○ Prototype optional parallel solve now that its execution and merge contract is documented, once the single-threaded graph path, invalidation rules, CT-eval boundary, and performance guardrails are stable.
+- ◐ Expand positive end-to-end graph conformance coverage for backend dispatch on C++/VM/native once the still-open query-shaped canonical helper/method resolution path moves past the current compile-pipeline `if branches must return compatible types` boundary. Progress: this backend-dispatch umbrella is now split into explicit compile-pipeline boundary lifts plus per-backend dispatch slices, so graph conformance can land incrementally once query-shaped canonical helper resolution clears the current branch-compatibility failure.
+  - ○ Add positive compile-pipeline parity for query-shaped canonical helper direct-call forms once they move past the current `if branches must return compatible types` boundary.
+  - ○ Add positive compile-pipeline parity for query-shaped canonical helper slash-method forms once they move past the current `if branches must return compatible types` boundary.
+  - ○ Add C++ backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
+  - ○ Add VM backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
+  - ○ Add native backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
+- ◐ Implement graph-backed query invalidation rules and coverage for intra-definition edits now that the intra-definition invalidation contract is documented. Progress: this invalidation surface is now split by edit family so local dataflow, control-flow, and initializer-shape invalidation can be implemented and pinned separately.
+  - ○ Implement graph-backed query invalidation rules and coverage for local-binding edits.
+  - ○ Implement graph-backed query invalidation rules and coverage for control-flow edits.
+  - ○ Implement graph-backed query invalidation rules and coverage for initializer-shape edits.
+- ◐ Implement graph-backed query invalidation rules and coverage for cross-definition edits now that the cross-definition invalidation contract is documented. Progress: this invalidation surface is now split by dependency family so signature, import-alias, and receiver-type invalidation can be implemented and pinned separately.
+  - ○ Implement graph-backed query invalidation rules and coverage for definition-signature edits.
+  - ○ Implement graph-backed query invalidation rules and coverage for import-alias edits.
+  - ○ Implement graph-backed query invalidation rules and coverage for receiver-type edits.
+- ◐ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented. Progress: the remaining non-template cutover is now split into direct-call, receiver-call, and collection bridge inference seams instead of one umbrella migration bullet.
+  - ○ Migrate the next direct-call/callee non-template inference island onto the graph path.
+  - ○ Migrate the next receiver/method-call non-template inference island onto the graph path.
+  - ○ Migrate the next collection helper/access fallback non-template inference island onto the graph path.
+- ◐ Implement the graph/CT-eval interaction contract now that the boundary is documented. Progress: the remaining work is now split into shared dependency-state consumption, explicit adapter seams, and conformance coverage instead of one broad CT-eval handoff item.
+  - ○ Route graph-backed consumers onto shared dependency-state consumption where CT-eval and graph validation overlap.
+  - ○ Add one explicit adapter for the remaining CT-eval-only paths that still cannot consume shared graph dependency state directly.
+  - ○ Add conformance coverage for the graph/CT-eval handoff boundary.
+- ◐ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented. Progress: the remaining template cutover is now split into explicit template-argument, implicit inference, and revalidation/monomorph follow-up slices instead of one umbrella migration bullet.
+  - ○ Migrate the next explicit template-argument inference surface onto the graph path.
+  - ○ Migrate the next implicit template-inference surface onto the graph path.
+  - ○ Migrate the matching revalidation/monomorph follow-up for those template-inference surfaces onto the graph path.
+- ◐ Implement the next omitted-envelope and local-`auto` graph expansions now that the widening contract is documented. Progress: the widening work is now split into omitted-envelope facts, new initializer families, and control-flow join widening slices instead of one umbrella expansion bullet.
+  - ○ Materialize omitted-envelope graph facts for the next widening slice.
+  - ○ Expand local-`auto` graph support across the next initializer-family surface.
+  - ○ Expand local-`auto` graph support across the next control-flow join surface.
+- ◐ Implement graph performance guardrails and sustained perf coverage now that the regression-budget contract is documented. Progress: the performance work is now split into baseline metrics, regression thresholds/reporting, and sustained perf coverage instead of one umbrella guardrail bullet.
+  - ○ Add baseline graph timing and invalidation metrics for the current stabilized graph surface.
+  - ○ Add regression thresholds and reporting for those graph metrics.
+  - ○ Add sustained graph performance coverage over the stabilized graph surface.
+- ◐ Prototype optional parallel solve now that its execution and merge contract is documented. Progress: the parallel-solve work is now split into execution partitioning, deterministic merge ordering, and parity coverage instead of one umbrella prototype bullet.
+  - ○ Prototype the partition/execution layer for optional parallel solve.
+  - ○ Implement deterministic merge ordering for optional parallel solve results.
+  - ○ Add parity coverage between optional parallel solve and the existing single-threaded graph solve.
 
 
 **Group 12 - Semantics/lowering boundary**
@@ -129,8 +158,13 @@ Semantic product creation:
   - ○ Materialize graph-backed `on_error` metadata into the semantic product.
 
 Pipeline plumbing:
-- ○ Implement the CLI/runtime plumbing cutover for the semantic product now that the end-to-end handoff contract is documented.
-- ○ Implement the temporary migration adapter now that its cutover/removal contract is documented.
+- ◐ Implement the CLI/runtime plumbing cutover for the semantic product now that the end-to-end handoff contract is documented. Progress: this plumbing cut is now split into explicit CLI, runtime/backend, and failure/report seams instead of one umbrella handoff item.
+  - ○ Thread the semantic product through `primec` CLI and dump-stage entrypoints.
+  - ○ Thread the semantic product through runtime/backend consumer entrypoints (`primevm`, backend dispatch, and related handoff glue).
+  - ○ Thread the semantic product through failure/report plumbing without creating parallel semantic state.
+- ◐ Implement the temporary migration adapter now that its cutover/removal contract is documented. Progress: the remaining adapter work is now split into lowering-facing fact families instead of one umbrella shim item.
+  - ○ Implement the migration adapter for lowering-facing resolved target, binding, effect, and layout facts.
+  - ○ Implement the migration adapter for graph-backed query/local-`auto`/`try(...)`/`on_error` facts that are still read from legacy validator state.
 - ◐ Implement semantic-product publication through `CompilePipelineOutput` and `Semantics::validate` now that the success-artifact contract is documented. Progress: this publication cut is now split into explicit producer and pipeline-surface slices instead of one mixed handoff item.
   - ○ Make `Semantics::validate` produce the semantic product as its canonical successful post-semantics result.
   - ○ Publish that semantic product on successful compile-pipeline results through `CompilePipelineOutput`.
@@ -145,9 +179,17 @@ Pipeline plumbing:
 
 Lowering cutover:
 - ○ Implement the `prepareIrModule` / `IrLowerer::lower` entrypoint cutover now that the handoff contract is documented, so IR preparation consumes the semantic product directly and the raw-`Program` lowering path can be retired once the temporary adapter is removed.
-- ○ Implement the `IrLowerer` entry-setup cutover now that the handoff contract is documented, consuming resolved call targets from the semantic product instead of re-deriving them from AST state.
-- ○ Implement the lowerer type/binding setup cutover now that the handoff contract is documented, consuming semantic-product binding metadata instead of repeating helper/type inference logic.
-- ○ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented, consuming semantic-product metadata instead of re-reading AST/transforms for those facts.
+- ◐ Implement the `IrLowerer` entry-setup cutover now that the handoff contract is documented. Progress: the lowering entry setup is now split into explicit direct-call target, receiver-call target, and helper-routing slices instead of one umbrella target handoff item.
+  - ○ Consume semantic-product direct-call targets in lowerer entry setup instead of re-deriving canonical callees from AST state.
+  - ○ Consume semantic-product receiver/method-call targets in lowerer entry setup instead of re-deriving them from AST state.
+  - ○ Consume semantic-product helper-routing choices in lowerer entry setup instead of re-deriving helper-vs-canonical paths from AST state.
+- ◐ Implement the lowerer type/binding setup cutover now that the handoff contract is documented. Progress: the lowerer binding cutover is now split into parameters/locals, temporaries/returns, and helper-owned binding metadata instead of one umbrella type handoff item.
+  - ○ Consume semantic-product parameter and local binding metadata in lowerer setup.
+  - ○ Consume semantic-product temporary and return binding metadata in lowerer setup.
+  - ○ Consume semantic-product helper-owned binding/type metadata in lowerer setup.
+- ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: the remaining lowerer metadata handoff is now split into effect/capability facts and struct/layout facts instead of one umbrella setup item.
+  - ○ Consume semantic-product effect/capability summaries in lowerer setup.
+  - ○ Consume semantic-product struct/enum/layout metadata in lowerer setup.
 
 Coverage and migration cleanup:
 - ◐ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented. Progress: the documented fact families are now split into explicit suite slices so the semantic-product inspection surface can be pinned incrementally.
@@ -155,7 +197,10 @@ Coverage and migration cleanup:
   - ○ Add narrow semantic-product golden coverage for binding/result type facts.
   - ○ Add narrow semantic-product golden coverage for effect/capability summaries and struct/layout metadata.
   - ○ Add narrow semantic-product golden coverage for provenance handles back to AST-owned ids/spans.
-- ○ Add end-to-end compile-pipeline conformance cases that exercise the semantic-product boundary through C++/VM/native lowering paths.
+- ◐ Add end-to-end compile-pipeline conformance cases that exercise the semantic-product boundary through C++/VM/native lowering paths. Progress: this conformance surface is now split into per-backend lowering consumers instead of one umbrella pipeline item.
+  - ○ Add end-to-end semantic-product boundary conformance for the C++ lowering path.
+  - ○ Add end-to-end semantic-product boundary conformance for the VM lowering path.
+  - ○ Add end-to-end semantic-product boundary conformance for the native lowering path.
 - ◐ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` now that their boundary/migration contract is documented, moving lowering-facing assertions onto the semantic-product inspection surface. Progress: this migration is now split into explicit helper-surface and assertion-migration slices instead of one broad cleanup item.
   - ○ Move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers.
   - ○ Narrow `primec/testing/SemanticsValidationHelpers.h` to syntax-owned and provenance-owned assertions only.
