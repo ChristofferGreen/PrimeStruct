@@ -93,6 +93,12 @@ Planned dump-stage evolution for the semantics/lowering boundary:
   resolved facts without requiring tooling to infer them from the canonicalized AST.
 - `ir` remains the first backend-facing dump after that future semantic-product boundary.
 
+Planned semantic-product dump requirements:
+- Deterministic ordering for modules, definitions, bindings, and diagnostics.
+- Direct exposure of lowering-facing facts such as resolved call targets, binding/result types, effects/capabilities,
+  struct/layout metadata, and provenance handles.
+- No attempt to replace syntax-oriented dumps; syntax-faithful structure remains owned by `ast` / `ast-semantic`.
+
 Use `--emit=ir` to write serialized PSIR bytecode to the output path after semantic validation.
 
 ## 2. Lexical Structure

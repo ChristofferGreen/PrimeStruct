@@ -177,6 +177,19 @@ Planned inspection-surface relationship:
 Until the semantic-product dump lands, `ast-semantic` remains the nearest public inspection surface for post-semantics
 state, but it should be treated as a syntax-faithful canonical tree rather than the long-term lowering contract.
 
+Planned semantic-product dump contract:
+- One deterministic module/program view per compile pipeline success, positioned after `ast-semantic` and before `ir`.
+- The dump should expose lowering-facing facts directly: resolved call targets, binding/result types, effects or
+  capability summaries, struct/layout metadata, and stable provenance handles back to AST-owned spans/ids.
+- The dump should not duplicate full syntax trees. Raw source text, token order, and syntax-only transforms stay in
+  `pre_ast` / `ast` / `ast-semantic`.
+- Ordering must be stable across runs: modules, definitions, bindings, and diagnostics should be emitted in one
+  canonical order so golden files do not depend on hash iteration or incidental traversal order.
+- The text form should be concise enough for golden tests and human inspection, but complete enough that lowering
+  tests can assert semantic facts without falling back to AST snapshots.
+- Once this dump exists, lowering-facing tests should prefer it over `ast-semantic` whenever they are asserting
+  resolved targets, inferred types, effects, or helper-routing facts.
+
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
 - **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions,
