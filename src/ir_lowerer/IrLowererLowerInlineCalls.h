@@ -189,8 +189,9 @@
         inlineStack.erase(callee.fullPath);
         return false;
       }
-      int32_t ptrLocal = valuesIt->second.index;
       int32_t valuesLocal = -1;
+      int32_t valuesWrapperLocal = -1;
+      int32_t ptrLocal = valuesIt->second.index;
       if (!orderedArgs.empty() && orderedArgs.front() != nullptr && orderedArgs.front()->kind == Expr::Kind::Name) {
         auto callerValuesIt = callerLocals.find(orderedArgs.front()->name);
         if (callerValuesIt != callerLocals.end() && callerValuesIt->second.kind == LocalInfo::Kind::Map) {
@@ -199,6 +200,7 @@
       }
       if (valuesIt->second.kind == LocalInfo::Kind::Reference ||
           valuesIt->second.kind == LocalInfo::Kind::Pointer) {
+        valuesWrapperLocal = valuesIt->second.index;
         ptrLocal = allocTempLocal();
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesIt->second.index)});
         function.instructions.push_back({IrOpcode::LoadIndirect, 0});
@@ -206,6 +208,7 @@
       }
       if (!ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrPending(
               valuesLocal,
+              valuesWrapperLocal,
               ptrLocal,
               keyIt->second.index,
               valueIt->second.index,

@@ -550,6 +550,7 @@ bool emitMapLookupContains(
     std::string &error);
 bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     int32_t valuesLocal,
+    int32_t valuesWrapperLocal,
     int32_t ptrLocal,
     int32_t keyLocal,
     int32_t valueLocal,

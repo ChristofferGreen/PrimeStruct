@@ -249,6 +249,47 @@ TEST_CASE("ir lowerer result helpers emit resolved Result.why calls") {
   CHECK(fileErrorCalls == 1);
 }
 
+TEST_CASE("ir lowerer map insert helper writes grown pointers back through wrapper locals") {
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextLocal = 30;
+  bool pendingCalled = false;
+
+  CHECK(primec::ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrPending(
+      -1,
+      9,
+      3,
+      4,
+      5,
+      primec::ir_lowerer::LocalInfo::ValueKind::Int32,
+      [&]() { return nextLocal++; },
+      [&]() { pendingCalled = true; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t indexToPatch, uint64_t target) { instructions[indexToPatch].imm = target; }));
+
+  CHECK_FALSE(pendingCalled);
+
+  bool sawWrapperWriteBack = false;
+  for (size_t i = 0; i + 3 < instructions.size(); ++i) {
+    if (instructions[i].op != primec::IrOpcode::LoadLocal || instructions[i].imm != 9u) {
+      continue;
+    }
+    if (instructions[i + 1].op != primec::IrOpcode::LoadLocal || instructions[i + 1].imm == 9u) {
+      continue;
+    }
+    if (instructions[i + 2].op != primec::IrOpcode::StoreIndirect) {
+      continue;
+    }
+    if (instructions[i + 3].op != primec::IrOpcode::Pop) {
+      continue;
+    }
+    sawWrapperWriteBack = true;
+    break;
+  }
+
+  CHECK(sawWrapperWriteBack);
+}
+
 TEST_CASE("ir lowerer flow helpers restore scoped state") {
   std::optional<primec::ir_lowerer::OnErrorHandler> onError;
   primec::ir_lowerer::OnErrorHandler initialHandler;

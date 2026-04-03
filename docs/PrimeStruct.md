@@ -2885,7 +2885,10 @@ bad_use_after_take() {
     onto the experimental `.prime` implementation instead. There is no corresponding builtin `soa_vector`
     indexed-removal surface yet.
   - Remaining live ownership/runtime migration work is now the builtin canonical `map<K, V>` growth
-    write-back/repoint follow-up beyond the current owning local numeric-map path.
+    surface follow-up beyond the current owning local numeric-map path. The lowerer now has a shared
+    non-local grown-pointer write-back/repoint primitive for wrapper targets, but the remaining public
+    builtin borrowed/non-local mutation surfaces still need to route onto that path instead of the
+    current pending runtime boundary.
   - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types
     while container move/reallocation semantics are still being specified. Relocation-trivial currently includes scalar
     primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of relocation-trivial elements, and concrete structs that

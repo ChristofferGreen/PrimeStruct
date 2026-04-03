@@ -341,6 +341,7 @@ bool emitMapLookupTryAt(
 
 bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     int32_t valuesLocal,
+    int32_t valuesWrapperLocal,
     int32_t ptrLocal,
     int32_t keyLocal,
     int32_t valueLocal,
@@ -361,7 +362,7 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
 
   size_t jumpAfterGenericGrow = 0;
   bool hasGenericGrowJump = false;
-  if (valuesLocal >= 0) {
+  if (valuesLocal >= 0 || valuesWrapperLocal >= 0) {
     constexpr uint64_t kHeapAddressTag = 1ull << 63;
 
     const int32_t genericNewCountLocal = allocTempLocal();
@@ -491,8 +492,15 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     emitInstruction(IrOpcode::StoreIndirect, 0);
     emitInstruction(IrOpcode::Pop, 0);
 
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+    if (valuesLocal >= 0) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+    } else {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valuesWrapperLocal));
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
+      emitInstruction(IrOpcode::StoreIndirect, 0);
+      emitInstruction(IrOpcode::Pop, 0);
+    }
     jumpAfterGenericGrow = instructionCount();
     emitInstruction(IrOpcode::Jump, 0);
     hasGenericGrowJump = true;

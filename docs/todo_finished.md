@@ -216,6 +216,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 - ✓ Split the remaining builtin ownership/drop substrate into explicit vector discard, vector indexed-removal, and wider builtin-map growth/drop slices.
 - ✓ Split the remaining builtin `vector` indexed-removal runtime items into explicit lowered primitive and final wiring/guard-relaxation slices, so the live Group 4 queue now names `remove_at` destruction, `remove_swap` survivor swap, and `remove_at` survivor compaction prerequisites directly instead of hiding each under one oversized runtime bullet.
 - ✓ Split the remaining builtin canonical `map<K, V>` growth/drop item into explicit write-back/repoint follow-ups, because the current lowered growth path only stores the grown pointer back when it has an owning local `valuesLocal` and otherwise still falls through the `builtin canonical map insert pending` runtime path.
+- ✓ Add a shared builtin canonical `map<K, V>` grown-pointer write-back/repoint primitive for non-local wrapper targets, so lowered growth no longer depends on an owning local `valuesLocal` just to publish the grown pointer.
 - ✓ Replace the temporary builtin canonical `map<K, V>` insert staircase with one generic arbitrary-`n` growth/drop implementation.
 - ✓ Delete the remaining dead count-by-count builtin-map growth branches after the generic lowerer path landed.
 
