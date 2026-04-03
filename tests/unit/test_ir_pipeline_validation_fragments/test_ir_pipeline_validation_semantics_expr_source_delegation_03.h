@@ -461,6 +461,14 @@
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "bool SemanticsValidator::validateExprNamedArgumentBuiltins") !=
         std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "auto publishNamedArgumentDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find("getBuiltinGpuName(expr, builtinName)") !=
         std::string::npos);
   CHECK(semanticsExprTrySource.find("bool SemanticsValidator::validateExprTryBuiltin") !=
