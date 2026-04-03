@@ -5,6 +5,12 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 3, 2026, continued)**
+
+**Types & Semantics**
+**Group 8 - SoA de-builtinization**
+- ✓ Document the borrowed-view invalidation contract on top of the current single-column borrowed-slot substrate. Completed: `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` now define the intended non-owning borrowed-view boundary for `ref(...)`, field-view borrows, `location(...)`, helper-return receivers, and method-like helper-return receivers, plus the structural mutations that invalidate those views. The live TODO now tracks only implementing those invalidation rules.
+
 **Todo Cleanup (April 3, 2026)**
 
 **Types & Semantics**

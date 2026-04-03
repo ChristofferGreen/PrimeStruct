@@ -3336,6 +3336,18 @@ receivers now also share the completed read-only method surface for `get`, `ref`
 `to_aos` with the other borrowed wrapper receivers. The remaining
 field-view work is richer borrowed/mutating behavior rather than backend cleanup for that
 read-only path.
+  - **Borrowed-view invalidation contract:** the next language-level substrate slice should treat
+    `ref(...)` and future field-view borrows as ephemeral views over wrapper-owned SoA column
+    storage rather than as independently owning proxies. The intended contract is:
+    `get(...)` remains value-style and never carries invalidation state; `ref(...)`,
+    `value.field()[i]`, and future borrowed field-view helpers remain valid only while the
+    underlying wrapper stays at a stable layout and stable element count; any structural
+    mutation (`push`, `reserve`, future remove/clear growth-shrinking helpers, direct AoS/SoA
+    conversion that reallocates, or wrapper destruction) invalidates all outstanding borrowed
+    SoA views derived from that wrapper, including borrows reached through
+    `location(...)`, helper-return receivers, and method-like helper-return receivers. The
+    implementation target is explicit validation and runtime/provenance rules for that
+    invalidation boundary, not another compiler-owned pending-diagnostic special case.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,

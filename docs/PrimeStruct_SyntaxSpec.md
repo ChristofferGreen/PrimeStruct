@@ -802,6 +802,9 @@ Draft constraints:
   - `get(...)` is value-style element access.
   - `ref(...)` and future field views are borrowed SoA views and are invalid after structural mutation.
   - Structural mutation boundaries are `push`, `reserve`, `to_soa`, and `to_aos`.
+  - The same invalidation rule should apply to borrowed wrapper receivers reached through
+    `location(...)`, helper-return receivers, and method-like helper-return receivers; those
+    surfaces do not create a new ownership domain.
   - ECS-style updates should use a two-phase loop: stable-size read/update pass, then deferred structural writes.
 
 Current implementation status: parser/text-transform support accepts surface `soa_vector<T>{...}`/`soa_vector<T>[...]`,
