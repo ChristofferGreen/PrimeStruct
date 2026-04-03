@@ -45,6 +45,10 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   rewrittenExprOut.reset();
   handledOut = false;
   resolvedOut = resolveCalleePath(expr);
+  auto publishPreDispatchDirectCallDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   if (context.dispatchBootstrap == nullptr) {
     return true;
   }
@@ -103,7 +107,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           expr, dispatchBootstrap.dispatchResolvers,
           borrowedCanonicalExperimentalMapHelperPath)) {
     error_ = "unknown call target: " + borrowedCanonicalExperimentalMapHelperPath;
-    return false;
+    return publishPreDispatchDirectCallDiagnostic();
   }
 
   if (!expr.isMethodCall &&
@@ -132,7 +136,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
               receiverExpr, keyType, valueType);
       if (isBuiltinMapTarget && !isExperimentalMapTarget) {
         error_ = "unknown call target: " + resolvedOut;
-        return false;
+        return publishPreDispatchDirectCallDiagnostic();
       }
     }
   }
@@ -200,7 +204,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
             if (!this->isStringExprForArgumentValidation(
                     keyExpr, dispatchBootstrap.dispatchResolvers)) {
               setCanonicalMapKeyMismatch(mapKeyType);
-              return false;
+              return publishPreDispatchDirectCallDiagnostic();
             }
           } else {
             ReturnKind keyKind =
@@ -209,13 +213,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
               if (dispatchBootstrap.dispatchResolvers.resolveStringTarget(
                       keyExpr)) {
                 setCanonicalMapKeyMismatch(mapKeyType);
-                return false;
+                return publishPreDispatchDirectCallDiagnostic();
               }
               ReturnKind indexKind =
                   inferExprReturnKind(keyExpr, params, locals);
               if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
                 setCanonicalMapKeyMismatch(mapKeyType);
-                return false;
+                return publishPreDispatchDirectCallDiagnostic();
               }
             }
           }
@@ -245,7 +249,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
          isExperimentalMapReceiverExpr(expr.args.front()) ||
          isExperimentalMapReceiverExpr(expr.args[1]))) {
       error_ = "unknown call target: /std/collections/map/" + builtinAccessName;
-      return false;
+      return publishPreDispatchDirectCallDiagnostic();
     }
   }
 
