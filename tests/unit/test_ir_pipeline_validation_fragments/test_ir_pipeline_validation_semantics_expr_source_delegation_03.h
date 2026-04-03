@@ -528,7 +528,7 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "preferredSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
-  CHECK(semanticsExprVectorHelpersSource.find("auto preferredSoaMutatorHelperTarget =") !=
+  CHECK(semanticsExprVectorHelpersSource.find("auto preferredSoaMutatorHelperTarget =") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("auto hasVisibleSoaMutatorShadow =") ==
         std::string::npos);
