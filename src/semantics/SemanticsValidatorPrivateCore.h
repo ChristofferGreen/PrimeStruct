@@ -108,9 +108,6 @@
       std::string_view path) const;
   bool hasVisibleSoaHelperTargetForCurrentImports(
       std::string_view helperName) const;
-  std::string preferredVisibleDefinitionPathForCurrentImports(
-      std::string_view samePath,
-      std::string_view canonicalPath) const;
   std::string preferredSoaHelperTargetForCurrentImports(
       std::string_view helperName) const;
   bool usesVisibleSamePathSoaHelper(const Expr &expr,

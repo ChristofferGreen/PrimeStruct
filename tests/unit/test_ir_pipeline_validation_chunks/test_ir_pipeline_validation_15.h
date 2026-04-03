@@ -679,10 +679,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool SemanticsValidator::hasVisibleSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(") !=
+            "std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(") !=
+            "std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(") !=
