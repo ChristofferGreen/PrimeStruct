@@ -127,15 +127,31 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
 Boundary note: this group is now split into semantic-product creation, pipeline plumbing, lowering cutover, and cleanup so it can be worked incrementally instead of as one flat migration queue.
 
 Semantic product creation:
-- ○ Implement the first semantic-product builder slice now that its scope is documented, materializing resolved call targets, binding types, effects/capabilities, and struct metadata from `SemanticsValidator`.
-- ○ Implement the second semantic-product builder slice now that its scope is documented, moving graph-backed local `auto`, query, `try(...)`, and `on_error` metadata out of test-only snapshot plumbing and into the semantic product.
+- ◐ Implement the first semantic-product builder slice now that its scope is documented. Progress: the documented scope is now split into explicit fact-family slices so the initial publication pass can land incrementally without mixing unrelated lowering facts into one change.
+  - ○ Materialize resolved call targets and helper-vs-canonical path choices into the semantic product.
+  - ○ Materialize final binding/result type facts for parameters, locals, temporaries, and returns into the semantic product.
+  - ○ Materialize effect/capability summaries needed by IR preparation into the semantic product.
+  - ○ Materialize struct/enum/layout metadata already computed during semantic validation into the semantic product.
+- ◐ Implement the second semantic-product builder slice now that its scope is documented. Progress: the documented graph-backed snapshot surface is now split into explicit fact-family slices so test-only metadata can move over incrementally instead of as one broad builder cut.
+  - ○ Materialize graph-backed local `auto` facts into the semantic product.
+  - ○ Materialize graph-backed query metadata into the semantic product.
+  - ○ Materialize graph-backed `try(...)` metadata into the semantic product.
+  - ○ Materialize graph-backed `on_error` metadata into the semantic product.
 
 Pipeline plumbing:
 - ○ Implement the CLI/runtime plumbing cutover for the semantic product now that the end-to-end handoff contract is documented.
 - ○ Implement the temporary migration adapter now that its cutover/removal contract is documented.
-- ○ Implement semantic-product publication through `CompilePipelineOutput` and `Semantics::validate` now that the success-artifact contract is documented.
-- ○ Implement the deterministic semantic-product dump/formatter plus golden coverage now that its inspection contract is documented.
-- ○ Implement ownership-split tests for source spans, debug/source-map provenance, and syntax-faithful data using the documented test matrix.
+- ◐ Implement semantic-product publication through `CompilePipelineOutput` and `Semantics::validate` now that the success-artifact contract is documented. Progress: this publication cut is now split into explicit producer and pipeline-surface slices instead of one mixed handoff item.
+  - ○ Make `Semantics::validate` produce the semantic product as its canonical successful post-semantics result.
+  - ○ Publish that semantic product on successful compile-pipeline results through `CompilePipelineOutput`.
+- ◐ Implement the deterministic semantic-product dump/formatter plus golden coverage now that its inspection contract is documented. Progress: the inspection-surface work is now split into formatter and coverage slices instead of one mixed dump item.
+  - ○ Implement the deterministic semantic-product dump stage and text formatter.
+  - ○ Add golden coverage for the semantic-product dump surface.
+- ◐ Implement ownership-split tests for source spans, debug/source-map provenance, and syntax-faithful data using the documented test matrix. Progress: the documented matrix is now split into explicit ownership/parity slices so provenance coverage can land incrementally.
+  - ○ Add source-span parity tests for semantic-product entries that feed lowering-facing facts.
+  - ○ Add debug/source-map provenance parity tests for semantic-product-backed lowering/debug entrypoints.
+  - ○ Add syntax-reproduction boundary tests that keep syntax-owned data on AST dumps and lowering-owned data on the semantic-product surface.
+  - ○ Add deterministic ordering tests for semantic-product ownership/provenance surfaces.
 
 Lowering cutover:
 - ○ Implement the `prepareIrModule` / `IrLowerer::lower` entrypoint cutover now that the handoff contract is documented, so IR preparation consumes the semantic product directly and the raw-`Program` lowering path can be retired once the temporary adapter is removed.
@@ -144,9 +160,20 @@ Lowering cutover:
 - ○ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented, consuming semantic-product metadata instead of re-reading AST/transforms for those facts.
 
 Coverage and migration cleanup:
-- ○ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented.
+- ◐ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented. Progress: the documented fact families are now split into explicit suite slices so the semantic-product inspection surface can be pinned incrementally.
+  - ○ Add narrow semantic-product golden coverage for resolved call/helper targets.
+  - ○ Add narrow semantic-product golden coverage for binding/result type facts.
+  - ○ Add narrow semantic-product golden coverage for effect/capability summaries and struct/layout metadata.
+  - ○ Add narrow semantic-product golden coverage for provenance handles back to AST-owned ids/spans.
 - ○ Add end-to-end compile-pipeline conformance cases that exercise the semantic-product boundary through C++/VM/native lowering paths.
-- ○ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` now that their boundary/migration contract is documented, moving lowering-facing assertions onto the semantic-product inspection surface.
-- ○ Delete redundant testing-only semantic snapshot plumbing now that its migration/removal contract is documented, leaving one canonical lowering-facing inspection surface once equivalent semantic-product dumps and conformance coverage exist.
+- ◐ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` now that their boundary/migration contract is documented, moving lowering-facing assertions onto the semantic-product inspection surface. Progress: this migration is now split into explicit helper-surface and assertion-migration slices instead of one broad cleanup item.
+  - ○ Move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers.
+  - ○ Narrow `primec/testing/SemanticsValidationHelpers.h` to syntax-owned and provenance-owned assertions only.
+  - ○ Delete redundant lowering-facing public testing helper entrypoints once the semantic-product replacements exist.
+- ◐ Delete redundant testing-only semantic snapshot plumbing now that its migration/removal contract is documented, leaving one canonical lowering-facing inspection surface once equivalent semantic-product dumps and conformance coverage exist. Progress: this removal is now split into explicit snapshot-transport and compatibility-helper cleanup slices instead of one broad deletion item.
+  - ○ Delete redundant testing-only semantic snapshot transport/plumbing once no lowering-facing test depends on it.
+  - ○ Delete compatibility helpers that only existed to expose lowering facts before the semantic product surface existed.
 - ○ Delete lowerer-side stdlib/helper alias fallback paths now that their semantic-product removal contract is documented, once equivalent canonical resolution is provided by the semantic product.
-- ○ Implement pipeline-facing tests that exercise the semantic-product inspection surface and its relation to existing AST/IR dumps once that stage exists, now that the test matrix is documented.
+- ◐ Implement pipeline-facing tests that exercise the semantic-product inspection surface and its relation to existing AST/IR dumps once that stage exists, now that the test matrix is documented. Progress: the documented conformance matrix is now split into explicit inspection-order and backend-consumer slices instead of one broad pipeline test item.
+  - ○ Add pipeline-facing tests that pin inspection-surface order and consistency across `ast-semantic`, semantic-product dump, and `ir`.
+  - ○ Add pipeline-facing tests that pin lowering consumption of semantic-product facts across C++/VM/native.
