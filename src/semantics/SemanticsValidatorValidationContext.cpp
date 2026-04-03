@@ -38,24 +38,18 @@ SemanticsValidator::makeExecutionValidationContext(const Execution &exec) const 
   return context;
 }
 
-const SemanticsValidator::ValidationContext &
+SemanticsValidator::ValidationContext
 SemanticsValidator::buildDefinitionValidationContext(const Definition &def) const {
-  auto it = definitionValidationContexts_.find(def.fullPath);
-  if (it != definitionValidationContexts_.end()) {
-    return it->second;
+  ValidationContext context;
+  if (!const_cast<SemanticsValidator *>(this)->makeDefinitionValidationContext(def, context)) {
+    return {};
   }
-  static const ValidationContext EmptyContext;
-  return EmptyContext;
+  return context;
 }
 
-const SemanticsValidator::ValidationContext &
+SemanticsValidator::ValidationContext
 SemanticsValidator::buildExecutionValidationContext(const Execution &exec) const {
-  auto it = executionValidationContexts_.find(exec.fullPath);
-  if (it != executionValidationContexts_.end()) {
-    return it->second;
-  }
-  static const ValidationContext EmptyContext;
-  return EmptyContext;
+  return makeExecutionValidationContext(exec);
 }
 
 } // namespace primec::semantics

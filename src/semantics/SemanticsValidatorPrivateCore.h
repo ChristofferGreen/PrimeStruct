@@ -199,8 +199,8 @@
   struct ValidationContext;
   bool makeDefinitionValidationContext(const Definition &def, ValidationContext &out);
   ValidationContext makeExecutionValidationContext(const Execution &exec) const;
-  const ValidationContext &buildDefinitionValidationContext(const Definition &def) const;
-  const ValidationContext &buildExecutionValidationContext(const Execution &exec) const;
+  ValidationContext buildDefinitionValidationContext(const Definition &def) const;
+  ValidationContext buildExecutionValidationContext(const Execution &exec) const;
   void capturePrimarySpanIfUnset(int line, int column);
   void captureRelatedSpan(int line, int column, const std::string &label);
   void captureExprContext(const Expr &expr);

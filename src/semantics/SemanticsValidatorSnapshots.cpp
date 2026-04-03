@@ -420,7 +420,7 @@ SemanticsValidator::onErrorSnapshotForTesting() {
   std::vector<OnErrorSnapshotEntry> entries;
   entries.reserve(program_.definitions.size());
   for (const auto &def : program_.definitions) {
-    const auto &context = buildDefinitionValidationContext(def);
+    const auto context = buildDefinitionValidationContext(def);
     if (!context.onError.has_value()) {
       continue;
     }
@@ -452,7 +452,7 @@ SemanticsValidator::validationContextSnapshotForTesting() const {
   std::vector<ValidationContextSnapshotEntry> entries;
   entries.reserve(program_.definitions.size());
   for (const auto &def : program_.definitions) {
-    const auto &context = buildDefinitionValidationContext(def);
+    const auto context = buildDefinitionValidationContext(def);
     ReturnKind returnKind = ReturnKind::Unknown;
     if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
       returnKind = returnKindIt->second;

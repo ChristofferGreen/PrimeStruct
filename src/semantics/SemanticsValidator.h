@@ -340,8 +340,6 @@ private:
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
-  std::unordered_map<std::string, ValidationContext> definitionValidationContexts_;
-  std::unordered_map<std::string, ValidationContext> executionValidationContexts_;
   ValidationContext currentValidationContext_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_set<std::string> returnBindingInferenceStack_;

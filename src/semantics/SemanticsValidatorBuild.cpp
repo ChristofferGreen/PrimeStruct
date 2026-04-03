@@ -29,8 +29,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
   graphLocalAutoTryValues_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();
-  definitionValidationContexts_.clear();
-  executionValidationContexts_.clear();
   currentValidationContext_ = {};
 
   for (const auto &effect : defaultEffects_) {
@@ -186,19 +184,12 @@ bool SemanticsValidator::buildDefinitionMaps() {
     return false;
   }
 
-  definitionValidationContexts_.clear();
-  definitionValidationContexts_.reserve(program_.definitions.size());
   for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionContextScope(*this, def);
     ValidationContext context;
     if (!makeDefinitionValidationContext(def, context)) {
       return false;
     }
-    definitionValidationContexts_.try_emplace(def.fullPath, std::move(context));
-  }
-  executionValidationContexts_.clear();
-  executionValidationContexts_.reserve(program_.executions.size());
-  for (const auto &exec : program_.executions) {
-    executionValidationContexts_.try_emplace(exec.fullPath, makeExecutionValidationContext(exec));
   }
 
   return true;

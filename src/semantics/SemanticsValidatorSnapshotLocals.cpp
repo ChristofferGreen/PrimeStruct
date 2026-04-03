@@ -124,7 +124,7 @@ bool SemanticsValidator::inferTrySnapshotData(const Definition &def,
   if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
     out.contextReturnKind = returnKindIt->second;
   }
-  const auto &context = buildDefinitionValidationContext(def);
+  const auto context = buildDefinitionValidationContext(def);
   if (context.onError.has_value()) {
     out.onErrorHandlerPath = context.onError->handlerPath;
     out.onErrorErrorType = context.onError->errorType;
