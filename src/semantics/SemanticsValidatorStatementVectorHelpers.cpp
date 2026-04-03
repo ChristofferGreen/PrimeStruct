@@ -139,6 +139,12 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     captureExprContext(stmt);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto publishExistingStatementDiagnostic = [&]() -> bool {
+    if (error_.empty()) {
+      return false;
+    }
+    return publishStatementDiagnostic();
+  };
   std::string vectorHelper;
   if (!getVectorStatementHelperName(stmt, vectorHelper)) {
     return true;
@@ -710,8 +716,11 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return false;
     }
     BindingInfo binding;
-    return validateVectorStatementHelperTarget(
-        params, locals, stmt.args[receiverIndex], helperName.c_str(), binding);
+    if (!validateVectorStatementHelperTarget(
+            params, locals, stmt.args[receiverIndex], helperName.c_str(), binding)) {
+      return publishExistingStatementDiagnostic();
+    }
+    return true;
   };
   auto findCanonicalBuiltinCompatibilityOperandIndex = [&](std::string_view namedArg) -> size_t {
     if (!shouldUseCanonicalBuiltinCompatibilityFallback || stmt.args.empty()) {
@@ -773,7 +782,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     BindingInfo binding;
     if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "push", binding)) {
-      return false;
+      return publishExistingStatementDiagnostic();
     }
     if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
       error_ = "push requires heap_alloc effect";
@@ -783,10 +792,10 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return false;
     }
     if (!validateVectorStatementElementType(params, locals, stmt.args[valueIndex], binding.typeTemplateArg)) {
-      return false;
+      return publishExistingStatementDiagnostic();
     }
     if (!validateVectorRelocationHelperElementType(binding, "push", namespacePrefix, definitionTemplateArgs)) {
-      return false;
+      return publishExistingStatementDiagnostic();
     }
     return true;
   }
@@ -810,7 +819,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     BindingInfo binding;
     if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "reserve", binding)) {
-      return false;
+      return publishExistingStatementDiagnostic();
     }
     if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
       error_ = "reserve requires heap_alloc effect";
@@ -824,7 +833,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return publishStatementDiagnostic();
     }
     if (!validateVectorRelocationHelperElementType(binding, "reserve", namespacePrefix, definitionTemplateArgs)) {
-      return false;
+      return publishExistingStatementDiagnostic();
     }
     return true;
   }
@@ -849,7 +858,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     BindingInfo binding;
     if (!validateVectorStatementHelperTarget(
             params, locals, stmt.args[receiverIndex], vectorHelper.c_str(), binding)) {
-      return false;
+      return publishExistingStatementDiagnostic();
     }
     if (!validateExpr(params, locals, stmt.args[indexArgIndex])) {
       return false;
@@ -859,7 +868,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return publishStatementDiagnostic();
     }
     if (!validateVectorIndexedRemovalHelperElementType(binding, vectorHelper, namespacePrefix, definitionTemplateArgs)) {
-      return false;
+      return publishExistingStatementDiagnostic();
     }
     return true;
   }
@@ -881,7 +890,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     BindingInfo binding;
     if (!validateVectorStatementHelperTarget(
             params, locals, stmt.args[receiverIndex], vectorHelper.c_str(), binding)) {
-      return false;
+      return publishExistingStatementDiagnostic();
     }
     return true;
   }
