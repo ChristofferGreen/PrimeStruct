@@ -300,7 +300,8 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
   const auto soaAccessHelper =
       builtinSoaAccessHelperName(candidate, params, locals);
   if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
-      !hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")) {
+      preferredSoaHelperTargetForCurrentImports("ref") !=
+          "/soa_vector/ref") {
     return std::string("/soa_vector/ref");
   }
   return std::nullopt;

@@ -140,7 +140,8 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
     }
     return soaUnavailableMethodDiagnostic(
         resolvedPath,
-        this->hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref"));
+        this->preferredSoaHelperTargetForCurrentImports("ref") ==
+            "/soa_vector/ref");
   };
   return true;
 }

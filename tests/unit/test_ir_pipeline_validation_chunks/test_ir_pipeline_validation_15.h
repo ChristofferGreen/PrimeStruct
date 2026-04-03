@@ -898,17 +898,20 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMethodCompatibilitySetupSource.find(
             "soaUnavailableMethodDiagnostic(\n"
             "        resolvedPath,\n"
-            "        this->hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\"))") !=
+            "        this->preferredSoaHelperTargetForCurrentImports(\"ref\") ==\n"
+            "            \"/soa_vector/ref\")") !=
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
             "soaUnavailableMethodDiagnostic(\n"
             "            methodResolved,\n"
-            "            hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\"))") !=
+            "            preferredSoaHelperTargetForCurrentImports(\"ref\") ==\n"
+            "                \"/soa_vector/ref\")") !=
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
             "soaUnavailableMethodDiagnostic(\n"
             "            methodResolved,\n"
-            "            hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\"))") !=
+            "            preferredSoaHelperTargetForCurrentImports(\"ref\") ==\n"
+            "                \"/soa_vector/ref\")") !=
         std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") != std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") == std::string::npos);
