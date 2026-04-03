@@ -162,17 +162,6 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   return std::nullopt;
 }
 
-bool SemanticsValidator::isBuiltinSoaRefExpr(
-    const Expr &candidate,
-    const std::vector<ParameterInfo> &params,
-    const std::unordered_map<std::string, BindingInfo> &locals) const {
-  if (hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")) {
-    return false;
-  }
-  const auto helperName = builtinSoaAccessHelperName(candidate, params, locals);
-  return helperName.has_value() && *helperName == "ref";
-}
-
 bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,

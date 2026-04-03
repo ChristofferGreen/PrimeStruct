@@ -50,7 +50,8 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   the shared pending helper directly instead of a monomorph-local wrapper,
   while direct builtin field-view/ref pending reporters now also call that
   same shared direct pending helper directly and the validator-local direct
-  pending reporter wrapper is gone,
+  pending reporter wrapper plus the thin `isBuiltinSoaRefExpr(...)` wrapper are
+  gone,
   while the remaining preferred same-path-versus-canonical SoA target chooser
   now uses its shared helper directly instead of a generic visible-path wrapper,
   and the remaining validator-side fixed unavailable-method rejects now call the

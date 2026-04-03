@@ -688,6 +688,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "bool SemanticsValidator::isBuiltinSoaRefExpr(") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "bool SemanticsValidator::usesVisibleSamePathSoaHelper(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -727,6 +730,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "return soaUnavailableMethodDiagnostic(resolvedPath,") !=
+        std::string::npos);
+  CHECK(statementBindingsSource.find("isBuiltinSoaRefExpr(") ==
+        std::string::npos);
+  CHECK(statementBindingsSource.find("builtinSoaAccessHelperName(") !=
+        std::string::npos);
+  CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") ==
+        std::string::npos);
+  CHECK(inferDefinitionSource.find("builtinSoaAccessHelperName(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("soaFieldViewPendingDiagnostic(fieldName)") ==
         std::string::npos);
@@ -888,7 +899,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "            hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\"))") !=
         std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") != std::string::npos);
-  CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") != std::string::npos);
+  CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") == std::string::npos);
+  CHECK(inferDefinitionSource.find("builtinSoaAccessHelperName(") !=
+        std::string::npos);
   CHECK(inferDefinitionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" + helperName)") !=
         std::string::npos);

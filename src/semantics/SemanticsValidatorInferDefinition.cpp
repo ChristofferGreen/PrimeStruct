@@ -146,7 +146,10 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
             soaFieldViewHelperPath(fieldName));
         return false;
       }
-      if (isBuiltinSoaRefExpr(*valueExpr, defParams, activeLocals)) {
+      const auto soaAccessHelper =
+          builtinSoaAccessHelperName(*valueExpr, defParams, activeLocals);
+      if (!hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref") &&
+          soaAccessHelper.has_value() && *soaAccessHelper == "ref") {
         error_ = soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
         return false;
       }
