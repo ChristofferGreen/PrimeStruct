@@ -69,7 +69,7 @@ Coverage and migration cleanup:
 - ○ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` snapshot surfaces onto the semantic-product inspection surface where they are asserting lowering-facing facts.
 - ○ Delete redundant testing-only semantic snapshot plumbing once equivalent semantic-product dumps and conformance coverage exist, leaving one canonical inspection surface for lowering-facing semantic facts.
 - ○ Delete lowerer-side stdlib/helper alias fallback paths once equivalent canonical resolution is provided by the semantic product.
-- ○ Replace `SemanticsValidator`'s shared mutable `error_` flow with a structured diagnostic sink in the current single-threaded path while preserving deterministic first-error behavior.
+- ○ Implement the structured diagnostic sink now that its single-threaded first-error contract is documented, replacing `SemanticsValidator`'s shared mutable `error_` flow without changing current failure policy.
 - ○ Implement stable semantic-product node identities or sort keys for diagnostics now that the merge-order contract is documented, so later parallel validation can publish deterministic diagnostic order.
 - ○ Implement the per-definition validation-state split now that the context/caching contract is documented, so semantic-product construction can use explicit contexts instead of validator-global mutable fields.
 - ○ Implement pipeline-facing tests that exercise the semantic-product inspection surface and its relation to existing AST/IR dumps once that stage exists, now that the test matrix is documented.

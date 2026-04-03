@@ -489,6 +489,29 @@ Planned validation-context split contract:
 - This split is a prerequisite for later parallel validation because worker tasks need isolated validation state and one
   deterministic merge surface for published semantic facts and diagnostics.
 
+Planned structured diagnostic-sink contract:
+- `SemanticsValidator` should publish diagnostics through one structured sink instead of relying on a shared mutable
+  `error_` field as semantic truth.
+- The sink should carry enough structure for later semantic-product publication and deterministic merging:
+  - severity
+  - stable diagnostic code/category
+  - primary message
+  - optional notes
+  - AST-backed provenance handles/spans
+  - stable semantic node identity or sort key when the diagnostic is attached to lowering-facing facts
+- In the current single-threaded path, the first-error rule remains unchanged:
+  - validation still stops at the first emitted fatal diagnostic for the active entrypoint
+  - replacing `error_` must not broaden validation into multi-error mode unless that is an explicit later design change
+- The sink should separate production from policy:
+  - validators emit structured diagnostics into the sink
+  - the compile pipeline decides whether to stop immediately, buffer, dump, or publish them
+- Temporary adapters are acceptable during migration, but they must convert from structured diagnostics to the old
+  single-error surface at the boundary rather than reintroducing string-only validator state internally.
+- Completion criteria:
+  - validator code no longer depends on shared mutable string/error slots as the source of semantic failure state
+  - deterministic first-error behavior is preserved on existing entrypoints
+  - the same structured diagnostic records can later participate in semantic-product dumps and parallel merge ordering
+
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
 - **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions,
