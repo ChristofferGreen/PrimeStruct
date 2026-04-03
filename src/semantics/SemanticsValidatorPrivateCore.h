@@ -214,4 +214,5 @@
   bool shouldCollectStructuredDiagnostics() const;
   void clearStructuredDiagnosticContext();
   void moveCurrentStructuredDiagnosticTo(std::vector<SemanticDiagnosticRecord> &out);
+  bool publishCurrentStructuredDiagnosticNow();
   bool finalizeCollectedStructuredDiagnostics(std::vector<SemanticDiagnosticRecord> &records);

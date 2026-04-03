@@ -167,6 +167,14 @@ void SemanticsValidator::moveCurrentStructuredDiagnosticTo(std::vector<SemanticD
   clearStructuredDiagnosticContext();
 }
 
+bool SemanticsValidator::publishCurrentStructuredDiagnosticNow() {
+  if (!shouldCollectStructuredDiagnostics() || error_.empty()) {
+    return false;
+  }
+  diagnosticSink_.setRecords({diagnosticSink_.makeRecord(error_)});
+  return false;
+}
+
 bool SemanticsValidator::finalizeCollectedStructuredDiagnostics(
     std::vector<SemanticDiagnosticRecord> &records) {
   if (!shouldCollectStructuredDiagnostics() || records.empty()) {

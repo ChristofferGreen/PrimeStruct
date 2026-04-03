@@ -29,14 +29,14 @@ bool SemanticsValidator::buildDefinitionMaps() {
   for (const auto &effect : defaultEffects_) {
     if (!isEffectName(effect)) {
       error_ = "invalid default effect: " + effect;
-      return false;
+      return publishCurrentStructuredDiagnosticNow();
     }
     defaultEffectSet_.insert(effect);
   }
   for (const auto &effect : entryDefaultEffects_) {
     if (!isEffectName(effect)) {
       error_ = "invalid entry default effect: " + effect;
-      return false;
+      return publishCurrentStructuredDiagnosticNow();
     }
     entryDefaultEffectSet_.insert(effect);
   }
@@ -132,13 +132,15 @@ bool SemanticsValidator::buildDefinitionMaps() {
     DefinitionContextScope definitionScope(*this, def);
     if (defMap_.count(def.fullPath) > 0) {
       error_ = "duplicate definition: " + def.fullPath;
-      return false;
+      captureDefinitionContext(def);
+      return publishCurrentStructuredDiagnosticNow();
     }
     if (def.fullPath.find('/', 1) == std::string::npos) {
       const std::string rootName = def.fullPath.substr(1);
       if ((mathImportAll_ || mathImports_.count(rootName) > 0) && isMathBuiltinName(rootName)) {
         error_ = "import creates name conflict: " + rootName;
-        return false;
+        captureDefinitionContext(def);
+        return publishCurrentStructuredDiagnosticNow();
       }
     }
     const bool isStructHelper = isStructHelperDefinition(def);

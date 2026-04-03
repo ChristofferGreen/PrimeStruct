@@ -14,22 +14,25 @@ bool SemanticsValidator::validateEntry() {
   auto entryIt = defMap_.find(entryPath_);
   if (entryIt == defMap_.end()) {
     error_ = "missing entry definition " + entryPath_;
-    return false;
+    return publishCurrentStructuredDiagnosticNow();
   }
   const auto &entryParams = paramsByDef_[entryPath_];
   if (!entryParams.empty()) {
     if (entryParams.size() != 1) {
       error_ = "entry definition must take a single array<string> parameter: " + entryPath_;
-      return false;
+      captureDefinitionContext(*entryIt->second);
+      return publishCurrentStructuredDiagnosticNow();
     }
     const ParameterInfo &param = entryParams.front();
     if (param.binding.typeName != "array" || param.binding.typeTemplateArg != "string") {
       error_ = "entry definition must take a single array<string> parameter: " + entryPath_;
-      return false;
+      captureDefinitionContext(*entryIt->second);
+      return publishCurrentStructuredDiagnosticNow();
     }
     if (param.defaultExpr != nullptr) {
       error_ = "entry parameter does not allow a default value: " + entryPath_;
-      return false;
+      captureDefinitionContext(*entryIt->second);
+      return publishCurrentStructuredDiagnosticNow();
     }
   }
   return true;
