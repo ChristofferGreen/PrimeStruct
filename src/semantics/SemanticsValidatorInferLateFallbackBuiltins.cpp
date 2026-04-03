@@ -500,9 +500,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       if (context.resolveMethodCallPath != nullptr &&
           context.resolveMethodCallPath(builtinAccessName, methodResolved) &&
           !methodResolved.empty()) {
-        error_ =
-            this->soaUnavailableMethodDiagnosticForCurrentImports(
-                methodResolved);
+        error_ = soaUnavailableMethodDiagnostic(
+            methodResolved, hasVisibleSoaHelperTargetForCurrentImports("ref"));
       }
       return finish(ReturnKind::Unknown);
     }

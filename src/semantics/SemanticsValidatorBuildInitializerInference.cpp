@@ -341,12 +341,6 @@ bool SemanticsValidator::usesVisibleSamePathSoaHelper(
   return resolvedPath == samePath;
 }
 
-std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(
-    std::string_view resolvedPath) const {
-  return soaUnavailableMethodDiagnostic(
-      resolvedPath, hasVisibleSoaHelperTargetForCurrentImports("ref"));
-}
-
 bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,

@@ -2672,6 +2672,9 @@ probes now also using that shared helper instead of a direct
 while the remaining preferred same-path-versus-canonical SoA target chooser now
 also uses that shared helper directly instead of a generic visible-path
 wrapper,
+while the remaining validator-side fixed unavailable-method rejects now call
+`soaUnavailableMethodDiagnostic(...)` directly instead of a validator-local
+wrapper around that shared helper path,
 while collection-return visible same-path `/soa_vector/get|ref` helper
 detection plus preferred same-path-versus-canonical `soa_vector`
 helper target selection in method-target, infer-time, vector-helper
