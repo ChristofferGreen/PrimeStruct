@@ -14,6 +14,10 @@ bool SemanticsValidator::validateExprBodyArguments(
     const BuiltinCollectionDispatchResolverAdapters &builtinCollectionDispatchResolverAdapters,
     const std::vector<Expr> *enclosingStatements,
     size_t statementIndex) {
+  auto publishExprBodyArgumentDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
+    captureExprContext(diagnosticExpr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
       isBuiltinBlockCall(expr)) {
     return true;
@@ -37,7 +41,7 @@ bool SemanticsValidator::validateExprBodyArguments(
       (!hasDeclaredDefinitionPath(resolved) &&
        !hasImportedDefinitionPath(resolved))) {
     error_ = "block arguments require a definition target: " + resolved;
-    return false;
+    return publishExprBodyArgumentDiagnostic(expr);
   }
 
   std::unordered_map<std::string, BindingInfo> blockLocals = locals;

@@ -272,6 +272,17 @@
   CHECK(semanticsExprControlFlowSource.find("if condition requires bool") != std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("if branches must return compatible types") !=
         std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find("bool SemanticsValidator::validateExprBodyArguments") !=
+        std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find(
+            "auto publishExprBodyArgumentDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find("captureExprContext(diagnosticExpr);") !=
+        std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find("block arguments require a definition target") !=
+        std::string::npos);
   CHECK(semanticsExprLambdaSource.find("bool SemanticsValidator::validateLambdaExpr") != std::string::npos);
   CHECK(semanticsExprLambdaSource.find("auto publishLambdaDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
         std::string::npos);
