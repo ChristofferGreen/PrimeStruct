@@ -5,29 +5,33 @@ namespace primec::semantics {
 bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
                                                    const Expr &fieldStmt,
                                                    BindingInfo &bindingOut) {
+  auto publishStructFieldDiagnostic = [&]() -> bool {
+    captureExprContext(fieldStmt);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   std::optional<std::string> restrictType;
   std::string parseError;
   if (!parseBindingInfo(fieldStmt, structDef.namespacePrefix, structNames_, importAliases_, bindingOut, restrictType,
                         parseError)) {
     error_ = parseError;
-    return false;
+    return publishStructFieldDiagnostic();
   }
   if (hasExplicitBindingTypeTransform(fieldStmt)) {
     if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
-      return false;
+      return publishStructFieldDiagnostic();
     }
     return true;
   }
   if (lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)) {
     if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
-      return false;
+      return publishStructFieldDiagnostic();
     }
     return true;
   }
   const std::string fieldPath = structDef.fullPath + "/" + fieldStmt.name;
   if (fieldStmt.args.size() != 1) {
     error_ = "omitted struct field envelope requires exactly one initializer: " + fieldPath;
-    return false;
+    return publishStructFieldDiagnostic();
   }
   const std::vector<ParameterInfo> noParams;
   const std::unordered_map<std::string, BindingInfo> noLocals;
@@ -36,7 +40,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
       bindingOut = std::move(inferred);
       if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
-        return false;
+        return publishStructFieldDiagnostic();
       }
       return true;
     }
@@ -47,13 +51,13 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
       bindingOut.typeName = std::move(structPath);
       bindingOut.typeTemplateArg.clear();
       if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
-        return false;
+        return publishStructFieldDiagnostic();
       }
       return true;
     }
   }
   error_ = "unresolved or ambiguous omitted struct field envelope: " + fieldPath;
-  return false;
+  return publishStructFieldDiagnostic();
 }
 
 bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::string &typeArg,
@@ -96,6 +100,10 @@ bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::strin
       if (!fieldStmt.isBinding || hasStaticTransform(fieldStmt)) {
         continue;
       }
+      auto publishSoaFieldEnvelopeDiagnostic = [&]() -> bool {
+        captureExprContext(fieldStmt);
+        return publishCurrentStructuredDiagnosticNow();
+      };
       BindingInfo fieldBinding;
       if (!resolveStructFieldBinding(structDef, fieldStmt, fieldBinding)) {
         activeStructs.erase(structDef.fullPath);
@@ -111,7 +119,7 @@ bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::strin
         }
         error_ = "soa_vector field envelope is unsupported on " + fieldPath + ": " + fieldType;
         activeStructs.erase(structDef.fullPath);
-        return false;
+        return publishSoaFieldEnvelopeDiagnostic();
       }
       if (fieldBinding.typeTemplateArg.empty() && !isPrimitiveBindingTypeName(normalizedFieldType)) {
         const std::string nestedStructPath = resolveStructPath(fieldBinding.typeName, structDef.namespacePrefix);

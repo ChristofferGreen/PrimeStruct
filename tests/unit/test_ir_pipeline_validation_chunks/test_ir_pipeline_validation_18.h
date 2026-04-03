@@ -719,3 +719,44 @@ TEST_CASE("semantics validator build lifecycle publication stays stable") {
   CHECK(buildLifecycleSource.find("return publishLifecycleDiagnostic();") !=
         std::string::npos);
 }
+
+TEST_CASE("semantics validator build struct-field publication stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path buildStructFieldsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildStructFields.cpp";
+  REQUIRE(std::filesystem::exists(buildStructFieldsPath));
+
+  const std::string buildStructFieldsSource = readText(buildStructFieldsPath);
+  CHECK(buildStructFieldsSource.find(
+            "bool SemanticsValidator::resolveStructFieldBinding(") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find(
+            "auto publishStructFieldDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find(
+            "auto publishSoaFieldEnvelopeDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find("captureExprContext(fieldStmt);") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find(
+            "omitted struct field envelope requires exactly one initializer: ") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find(
+            "soa_vector field envelope is unsupported on ") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find("return publishStructFieldDiagnostic();") !=
+        std::string::npos);
+}
