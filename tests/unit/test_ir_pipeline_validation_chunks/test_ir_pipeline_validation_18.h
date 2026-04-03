@@ -485,6 +485,8 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesOmittedInitializers.cpp";
   const std::filesystem::path semanticsPassesStructLayoutsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesStructLayouts.cpp";
+  const std::filesystem::path semanticsTraitsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorTraits.cpp";
   const std::filesystem::path semanticsPassesDiagnosticsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesDiagnostics.cpp";
   const std::filesystem::path semanticsExecutionDiagnosticsPath =
@@ -496,6 +498,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsPassesEffectsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesOmittedInitializersPath));
   REQUIRE(std::filesystem::exists(semanticsPassesStructLayoutsPath));
+  REQUIRE(std::filesystem::exists(semanticsTraitsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesDiagnosticsPath));
   REQUIRE(std::filesystem::exists(semanticsExecutionDiagnosticsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesExecutionsPath));
@@ -511,6 +514,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
       readText(semanticsPassesOmittedInitializersPath);
   const std::string semanticsPassesDefinitionsSource = readText(semanticsPassesDefinitionsPath);
   const std::string semanticsPassesStructLayoutsSource = readText(semanticsPassesStructLayoutsPath);
+  const std::string semanticsTraitsSource = readText(semanticsTraitsPath);
   const std::string semanticsPassesDiagnosticsSource = readText(semanticsPassesDiagnosticsPath);
   const std::string semanticsExecutionDiagnosticsSource = readText(semanticsExecutionDiagnosticsPath);
 
@@ -561,6 +565,15 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find(
             "return publishPassesStructLayoutsDiagnostic();") !=
+        std::string::npos);
+  CHECK(semanticsTraitsSource.find(
+            "auto publishTraitDiagnostic = [&](const Definition *defContext = nullptr) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsTraitsSource.find(
+            "auto failTraitDiagnostic = [&](const Definition &defContext,") !=
+        std::string::npos);
+  CHECK(semanticsTraitsSource.find(
+            "return publishTraitDiagnostic(&defContext);") !=
         std::string::npos);
   CHECK(semanticsPassesExecutionsPath.string().find("SemanticsValidatorPassesExecutions.cpp") !=
         std::string::npos);

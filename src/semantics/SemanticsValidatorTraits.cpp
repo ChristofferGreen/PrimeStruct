@@ -3,6 +3,7 @@
 #include <cctype>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace primec::semantics {
@@ -57,6 +58,17 @@ bool typeKeysMatch(const TypeKey &left, const TypeKey &right) {
 } // namespace
 
 bool SemanticsValidator::validateTraitConstraints() {
+  auto publishTraitDiagnostic = [&](const Definition *defContext = nullptr) -> bool {
+    if (defContext != nullptr) {
+      captureDefinitionContext(*defContext);
+    }
+    return publishCurrentStructuredDiagnosticNow();
+  };
+  auto failTraitDiagnostic = [&](const Definition &defContext,
+                                 std::string message) -> bool {
+    error_ = std::move(message);
+    return publishTraitDiagnostic(&defContext);
+  };
   auto resolveStructPath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
     if (typeName.empty()) {
       return {};
@@ -293,9 +305,10 @@ bool SemanticsValidator::validateTraitConstraints() {
   auto makeTraitError = [&](const Definition &contextDef,
                             const std::string &traitDisplay,
                             const std::string &requirementText) -> bool {
-    error_ = "trait constraint not satisfied on " + contextDef.fullPath + ": " + traitDisplay +
-             " requires " + requirementText;
-    return false;
+    return failTraitDiagnostic(contextDef,
+                               "trait constraint not satisfied on " +
+                                   contextDef.fullPath + ": " + traitDisplay +
+                                   " requires " + requirementText);
   };
 
   auto validateTraitFunction = [&](const Definition &contextDef,
@@ -321,8 +334,9 @@ bool SemanticsValidator::validateTraitConstraints() {
       TypeKey actualParam;
       std::string typeError;
       if (!buildTypeKeyFromBinding(params[i].binding, def.namespacePrefix, actualParam, typeError)) {
-        error_ = "trait constraint type error on " + contextDef.fullPath + ": " + typeError;
-        return false;
+        return failTraitDiagnostic(contextDef,
+                                   "trait constraint type error on " +
+                                       contextDef.fullPath + ": " + typeError);
       }
       if (!typeKeysMatch(actualParam, expectedParams[i])) {
         return makeTraitError(contextDef, traitDisplay, requirementText);
@@ -331,8 +345,9 @@ bool SemanticsValidator::validateTraitConstraints() {
     TypeKey actualReturn;
     std::string returnError;
     if (!resolveReturnTypeKey(def, actualReturn, returnError)) {
-      error_ = "trait constraint type error on " + contextDef.fullPath + ": " + returnError;
-      return false;
+      return failTraitDiagnostic(contextDef,
+                                 "trait constraint type error on " +
+                                     contextDef.fullPath + ": " + returnError);
     }
     if (!typeKeysMatch(actualReturn, expectedReturn)) {
       return makeTraitError(contextDef, traitDisplay, requirementText);
@@ -353,24 +368,26 @@ bool SemanticsValidator::validateTraitConstraints() {
         continue;
       }
       if (!transform.arguments.empty()) {
-        error_ = "trait transforms do not accept arguments on " + def.fullPath;
-        return false;
+        return failTraitDiagnostic(def, "trait transforms do not accept arguments on " +
+                                            def.fullPath);
       }
       if (isIndexable) {
         if (transform.templateArgs.size() != 2) {
-          error_ = "Indexable requires exactly two template arguments on " + def.fullPath;
-          return false;
+          return failTraitDiagnostic(
+              def, "Indexable requires exactly two template arguments on " +
+                       def.fullPath);
         }
       } else if (transform.templateArgs.size() != 1) {
-        error_ = transform.name + " requires exactly one template argument on " + def.fullPath;
-        return false;
+        return failTraitDiagnostic(
+            def, transform.name + " requires exactly one template argument on " +
+                     def.fullPath);
       }
 
       TypeKey typeKey;
       std::string typeError;
       if (!buildTypeKey(transform.templateArgs.front(), def.namespacePrefix, typeKey, typeError)) {
-        error_ = "trait constraint type error on " + def.fullPath + ": " + typeError;
-        return false;
+        return failTraitDiagnostic(def, "trait constraint type error on " +
+                                            def.fullPath + ": " + typeError);
       }
       if (isAdditive) {
         if (isNumericType(typeKey)) {
@@ -422,8 +439,8 @@ bool SemanticsValidator::validateTraitConstraints() {
       if (isIndexable) {
         TypeKey elemKey;
         if (!buildTypeKey(transform.templateArgs[1], def.namespacePrefix, elemKey, typeError)) {
-          error_ = "trait constraint type error on " + def.fullPath + ": " + typeError;
-          return false;
+          return failTraitDiagnostic(def, "trait constraint type error on " +
+                                              def.fullPath + ": " + typeError);
         }
         if (isIndexableBuiltin(typeKey, elemKey)) {
           continue;
