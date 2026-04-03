@@ -157,8 +157,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     defMap_[def.fullPath] = &def;
   }
-  if (collectDiagnostics_ && diagnosticInfo_ != nullptr && !transformDiagnosticRecords.empty()) {
-    diagnosticSink_.setRecords(std::move(transformDiagnosticRecords));
+  if (!finalizeCollectedStructuredDiagnostics(transformDiagnosticRecords)) {
     return false;
   }
 

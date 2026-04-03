@@ -118,7 +118,7 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
   }
 
   std::vector<SemanticDiagnosticRecord> returnKindDiagnosticRecords;
-  const bool collectReturnKindDiagnostics = collectDiagnostics_ && diagnosticInfo_ != nullptr;
+  const bool collectReturnKindDiagnostics = shouldCollectStructuredDiagnostics();
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
     ReturnKind kind = ReturnKind::Void;
@@ -182,8 +182,7 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
     returnKinds_[def.fullPath] = kind;
   }
 
-  if (collectReturnKindDiagnostics && !returnKindDiagnosticRecords.empty()) {
-    diagnosticSink_.setRecords(std::move(returnKindDiagnosticRecords));
+  if (!finalizeCollectedStructuredDiagnostics(returnKindDiagnosticRecords)) {
     return false;
   }
   return true;

@@ -9,7 +9,7 @@ namespace primec::semantics {
 bool SemanticsValidator::buildImportAliases() {
   importAliases_.clear();
   std::vector<SemanticDiagnosticRecord> importDiagnosticRecords;
-  const bool collectImportDiagnostics = collectDiagnostics_ && diagnosticInfo_ != nullptr;
+  const bool collectImportDiagnostics = shouldCollectStructuredDiagnostics();
 
   auto addImportDiagnostic = [&](const std::string &message, const Definition *relatedDef = nullptr) {
     if (!collectImportDiagnostics) {
@@ -321,8 +321,7 @@ bool SemanticsValidator::buildImportAliases() {
     }
   }
 
-  if (collectImportDiagnostics && !importDiagnosticRecords.empty()) {
-    diagnosticSink_.setRecords(std::move(importDiagnosticRecords));
+  if (!finalizeCollectedStructuredDiagnostics(importDiagnosticRecords)) {
     return false;
   }
   return true;
