@@ -445,6 +445,27 @@ Planned pipeline-facing semantic-product conformance matrix:
   - `primec/testing/SemanticsValidationHelpers.h` snapshot assertions for lowering-facing facts are reduced to syntax-
     owned cases only.
 
+Planned diagnostic ordering contract for semantic-product identities:
+- Diagnostics that survive semantic validation should be attachable to stable semantic-product node identities or
+  deterministic sort keys before any later parallel validation work begins.
+- The ordering contract should not depend on emission time alone. Each lowering-facing diagnostic should carry enough
+  ordering data to be merged deterministically after parallel or staged validation.
+- A complete ordering key should be able to distinguish at least:
+  - owning module/import order
+  - owning definition order within that module
+  - semantic node identity or local sort key within that definition
+  - diagnostic class/phase tie-breakers when multiple diagnostics attach to the same semantic node
+- Provenance remains syntax-owned:
+  - source spans and syntax-faithful reproduction still come from AST-backed ids/spans
+  - semantic-product node ids/sort keys provide merge order and stable semantic attachment, not replacement source
+    locations
+- The contract should allow deterministic merging across:
+  - single-threaded staged validation passes
+  - future parallel validation tasks
+  - semantic-product dump generation and golden output
+- Implementation is complete only when diagnostics emitted from equivalent semantic facts retain the same order across
+  repeated runs and across future parallel merge boundaries, without depending on hash iteration or worker scheduling.
+
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
 - **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions,
