@@ -621,6 +621,11 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   const std::string semanticsStatementReturnsSource = readText(semanticsStatementReturnsPath);
   CHECK(semanticsStatementBindingsSource.find("bool SemanticsValidator::validateBindingStatement(") !=
         std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("auto publishBindingDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("captureExprContext(stmt);") != std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("duplicate binding name: ") != std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("binding initializer requires a value") != std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("entry argument strings require string bindings") !=

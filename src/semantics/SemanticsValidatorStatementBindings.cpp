@@ -84,7 +84,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         const bool hasTemplate = !info.typeTemplateArg.empty();
         if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
           error_ = "restrict type does not match binding type";
-          return false;
+          return publishBindingDiagnostic();
         }
       }
       if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
@@ -100,7 +100,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       const bool hasTemplate = !info.typeTemplateArg.empty();
       if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
         error_ = "restrict type does not match binding type";
-        return false;
+        return publishBindingDiagnostic();
       }
     }
     if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
@@ -136,7 +136,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       const bool hasTemplate = !info.typeTemplateArg.empty();
       if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
         error_ = "restrict type does not match binding type";
-        return false;
+        return publishBindingDiagnostic();
       }
     }
     if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
@@ -308,19 +308,19 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         isExplicitCanonicalVectorConstructor(initializer) &&
         hasImportedDefinitionPath("/std/collections/vector/vector")) {
         error_ = "binding initializer type mismatch";
-        return false;
+        return publishBindingDiagnostic();
     }
     ResultTypeInfo resultInfo;
     if (expectedType != "Result" &&
         resolveResultTypeForExpr(initializer, params, locals, resultInfo) &&
         resultInfo.isResult) {
       error_ = "binding initializer type mismatch";
-      return false;
+      return publishBindingDiagnostic();
     }
     if (expectedType == "string") {
       if (!isStringExpr(initializer, params, locals)) {
         error_ = "binding initializer type mismatch";
-        return false;
+        return publishBindingDiagnostic();
       }
     } else {
       BindingInfo initializerBindingInfo;
@@ -347,7 +347,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             !actualRepresentation.empty() &&
             expectedRepresentation != actualRepresentation) {
           error_ = "binding initializer type mismatch";
-          return false;
+          return publishBindingDiagnostic();
         }
       } else if (hasInitializerBindingInfo) {
         const std::string actualRepresentation =
@@ -356,7 +356,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             !actualRepresentation.empty() &&
             expectedRepresentation != actualRepresentation) {
           error_ = "binding initializer type mismatch";
-          return false;
+          return publishBindingDiagnostic();
         }
       }
       const ReturnKind expectedKind = returnKindForTypeName(expectedType);
@@ -365,7 +365,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             !isFloatBindingCompatible(expectedKind, initKind) &&
             initKind != expectedKind) {
           error_ = "binding initializer type mismatch";
-          return false;
+          return publishBindingDiagnostic();
         }
       }
     }
@@ -374,24 +374,24 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   if (info.typeName == "uninitialized") {
     if (info.typeTemplateArg.empty()) {
       error_ = "uninitialized requires exactly one template argument";
-      return false;
+      return publishBindingDiagnostic();
     }
     if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall || initializer.isBinding) {
       error_ = "uninitialized bindings require uninitialized<T>() initializer";
-      return false;
+      return publishBindingDiagnostic();
     }
     if (initializer.name != "uninitialized" && initializer.name != "/uninitialized") {
       error_ = "uninitialized bindings require uninitialized<T>() initializer";
-      return false;
+      return publishBindingDiagnostic();
     }
     if (initializer.hasBodyArguments || !initializer.bodyArguments.empty() || !initializer.args.empty()) {
       error_ = "uninitialized does not accept arguments";
-      return false;
+      return publishBindingDiagnostic();
     }
     if (initializer.templateArgs.size() != 1 ||
         !errorTypesMatch(info.typeTemplateArg, initializer.templateArgs.front(), namespacePrefix)) {
       error_ = "uninitialized initializer type mismatch";
-      return false;
+      return publishBindingDiagnostic();
     }
   }
 
@@ -399,14 +399,14 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     const bool hasTemplate = !info.typeTemplateArg.empty();
     if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
       error_ = "restrict type does not match binding type";
-      return false;
+      return publishBindingDiagnostic();
     }
   }
 
   if (entryArgInit || entryArgStringInit) {
     if (normalizeBindingTypeName(info.typeName) != "string") {
       error_ = "entry argument strings require string bindings";
-      return false;
+      return publishBindingDiagnostic();
     }
     info.isEntryArgString = true;
   }
@@ -570,12 +570,12 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     const bool initIsPointerLike = resolvePointerTargetType(init, safeTargetType);
     if (!initIsLocation && !initIsPointerLike && !currentValidationContext_.definitionIsUnsafe) {
       error_ = "Reference bindings require location(...)";
-      return false;
+      return publishBindingDiagnostic();
     }
     if (initIsLocation || (!currentValidationContext_.definitionIsUnsafe && initIsPointerLike)) {
       if (!initIsPointerLike || !errorTypesMatch(safeTargetType, info.typeTemplateArg, namespacePrefix)) {
         error_ = "Reference binding type mismatch";
-        return false;
+        return publishBindingDiagnostic();
       }
     }
     if (!initIsLocation && !currentValidationContext_.definitionIsUnsafe) {
@@ -589,11 +589,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       std::string pointerTargetType;
       if (!resolvePointerTargetType(init, pointerTargetType)) {
         error_ = "unsafe Reference bindings require pointer-like initializer";
-        return false;
+        return publishBindingDiagnostic();
       }
       if (!errorTypesMatch(pointerTargetType, info.typeTemplateArg, namespacePrefix)) {
         error_ = "unsafe Reference binding type mismatch";
-        return false;
+        return publishBindingDiagnostic();
       }
       std::string borrowRoot;
       if (resolvePointerRoot(init, borrowRoot)) {
@@ -632,7 +632,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     std::string borrowRoot;
     if (!resolveBorrowRoot(target.name, borrowRoot) || borrowRoot.empty()) {
       error_ = "Reference bindings require location(...)";
-      return false;
+      return publishBindingDiagnostic();
     }
     bool sawMutableBorrow = false;
     bool sawImmutableBorrow = false;
@@ -659,7 +659,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     const bool conflict = info.isMutable ? (sawMutableBorrow || sawImmutableBorrow) : sawMutableBorrow;
     if (conflict && !currentValidationContext_.definitionIsUnsafe) {
       error_ = "borrow conflict: " + borrowRoot + " (root: " + borrowRoot + ", sink: " + stmt.name + ")";
-      return false;
+      return publishBindingDiagnostic();
     }
     info.referenceRoot = std::move(borrowRoot);
     info.isUnsafeReference = currentValidationContext_.definitionIsUnsafe;
