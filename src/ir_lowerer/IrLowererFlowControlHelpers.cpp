@@ -74,6 +74,67 @@ bool emitDestroyHelperFromPtr(
   return emitInlineDefinitionCall(destroyCallExpr, *destroyHelper, destroyLocals, false);
 }
 
+bool emitMoveHelperFromPtrs(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const std::string &structPath,
+    const Definition *moveHelper,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::string &error) {
+  if (moveHelper == nullptr) {
+    error = "internal error: move helper requires concrete helper definition";
+    return false;
+  }
+  if (structPath.empty()) {
+    error = "internal error: move helper requires concrete struct path";
+    return false;
+  }
+
+  LocalMap moveLocals = localsIn;
+  std::string receiverName = "__primec_move_dest";
+  while (moveLocals.count(receiverName) > 0) {
+    receiverName += "_";
+  }
+  std::string sourceName = "__primec_move_src";
+  while (moveLocals.count(sourceName) > 0 || sourceName == receiverName) {
+    sourceName += "_";
+  }
+
+  LocalInfo receiverInfo;
+  receiverInfo.index = destPtrLocal;
+  receiverInfo.kind = LocalInfo::Kind::Reference;
+  receiverInfo.isMutable = true;
+  receiverInfo.structTypeName = structPath;
+  moveLocals.emplace(receiverName, receiverInfo);
+
+  LocalInfo sourceInfo;
+  sourceInfo.index = srcPtrLocal;
+  sourceInfo.kind = LocalInfo::Kind::Reference;
+  sourceInfo.isMutable = true;
+  sourceInfo.structTypeName = structPath;
+  moveLocals.emplace(sourceName, sourceInfo);
+
+  Expr receiverExpr;
+  receiverExpr.kind = Expr::Kind::Name;
+  receiverExpr.name = receiverName;
+
+  Expr sourceExpr;
+  sourceExpr.kind = Expr::Kind::Name;
+  sourceExpr.name = sourceName;
+
+  Expr moveCallExpr;
+  moveCallExpr.kind = Expr::Kind::Call;
+  moveCallExpr.isMethodCall = true;
+  const size_t slash = moveHelper->fullPath.find_last_of('/');
+  moveCallExpr.name = slash == std::string::npos ? moveHelper->fullPath : moveHelper->fullPath.substr(slash + 1);
+  moveCallExpr.args.push_back(receiverExpr);
+  moveCallExpr.args.push_back(sourceExpr);
+  moveCallExpr.argNames.resize(2);
+
+  return emitInlineDefinitionCall(moveCallExpr, *moveHelper, moveLocals, false);
+}
+
 bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
                             int32_t destPtrLocal,
                             int32_t srcPtrLocal,

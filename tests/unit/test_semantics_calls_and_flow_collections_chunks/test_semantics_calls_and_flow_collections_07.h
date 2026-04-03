@@ -284,13 +284,13 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("remove_at rejects non-relocation-trivial vector element types even after removed-slot destruction") {
+TEST_CASE("remove_at accepts ownership-sensitive vector element types once survivor motion is wired") {
   const std::string source = R"(
 import /std/collections/*
 
 [struct]
 Owned() {
-  [i32] value{1i32}
+  [i32] value{4i32}
 
   Destroy() {
   }
@@ -298,20 +298,17 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Owned> mut] values{vector<Owned>()}
+  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned(9i32))}
   remove_at(values, 0i32)
-  return(0i32)
+  return(plus(count(values), at(values, 0i32).value))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find(
-            "remove_at requires relocation-trivial vector element type until container move/reallocation semantics "
-            "are implemented: "
-            "Owned") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("remove_at rejects nested non-relocation-trivial vector element types") {
+TEST_CASE("remove_at accepts nested ownership-sensitive vector element types once survivor motion is wired") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -332,16 +329,14 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>()}
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(Mover(1i32)), Wrapper(Mover(7i32)))}
   remove_at(values, 0i32)
-  return(0i32)
+  return(plus(count(values), at_unsafe(values, 0i32).value.value))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find(
-            "remove_at requires relocation-trivial vector element type until container move/reallocation semantics "
-            "are implemented: Wrapper") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("remove_at call keeps user-defined vector helper precedence") {
@@ -460,13 +455,13 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("remove_swap rejects non-relocation-trivial vector element types even after removed-slot destruction") {
+TEST_CASE("remove_swap accepts ownership-sensitive vector element types once survivor motion is wired") {
   const std::string source = R"(
 import /std/collections/*
 
 [struct]
 Owned() {
-  [i32] value{1i32}
+  [i32] value{4i32}
 
   Destroy() {
   }
@@ -474,20 +469,17 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Owned> mut] values{vector<Owned>()}
+  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned(9i32))}
   remove_swap(values, 0i32)
-  return(0i32)
+  return(plus(count(values), at(values, 0i32).value))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find(
-            "remove_swap requires relocation-trivial vector element type until container move/reallocation semantics "
-            "are implemented: "
-            "Owned") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("remove_swap rejects nested non-relocation-trivial vector element types") {
+TEST_CASE("remove_swap accepts nested ownership-sensitive vector element types once survivor motion is wired") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -508,16 +500,14 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>()}
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(Mover(1i32)), Wrapper(Mover(7i32)))}
   remove_swap(values, 0i32)
-  return(0i32)
+  return(plus(count(values), at_unsafe(values, 0i32).value.value))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find(
-            "remove_swap requires relocation-trivial vector element type until container move/reallocation semantics "
-            "are implemented: Wrapper") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare vector remove_swap validates through imported stdlib helper") {

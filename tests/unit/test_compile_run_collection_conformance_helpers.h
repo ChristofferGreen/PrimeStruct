@@ -109,14 +109,7 @@ inline void expectExperimentalVectorOwnershipContracts(const std::string &emitMo
   expectExperimentalVectorOwnershipConformance(emitMode);
 }
 
-inline void expectVectorIndexedRemovalOwnershipRejects(const std::string &emitMode) {
-  expectVectorIndexedRemovalOwnershipReject(
-      emitMode,
-      "remove_at_drop",
-      "remove_at requires drop-trivial vector element type until container drop semantics are implemented: Owned");
-  expectVectorIndexedRemovalOwnershipReject(
-      emitMode,
-      "remove_swap_relocation",
-      "remove_swap requires relocation-trivial vector element type until container move/reallocation semantics are "
-      "implemented: Wrapper");
+inline void expectVectorIndexedRemovalOwnershipConformance(const std::string &emitMode) {
+  expectVectorIndexedRemovalOwnershipConformance(emitMode, "remove_at_drop", 10);
+  expectVectorIndexedRemovalOwnershipConformance(emitMode, "remove_swap_relocation", 8);
 }

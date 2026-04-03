@@ -44,6 +44,87 @@ bool emitVectorDestroySlot(
       slotPtrLocal, structPath, destroyHelper, localsIn, emitInlineDefinitionCall, error);
 }
 
+bool emitVectorMoveSlot(
+    std::vector<IrInstruction> &instructions,
+    int32_t dataPtrLocal,
+    int32_t destIndexLocal,
+    int32_t srcIndexLocal,
+    LocalInfo::ValueKind indexKind,
+    const std::string &structPath,
+    const Definition *moveHelper,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::string &error) {
+  if (indexKind != LocalInfo::ValueKind::Int32 &&
+      indexKind != LocalInfo::ValueKind::Int64 &&
+      indexKind != LocalInfo::ValueKind::UInt64) {
+    error = "internal error: vector survivor motion requires integer index kind";
+    return false;
+  }
+
+  const int32_t destPtrLocal = allocTempLocal();
+  const int32_t srcPtrLocal = allocTempLocal();
+
+  auto emitStoreSlotPtr = [&](int32_t indexLocal, int32_t ptrLocal) {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+    if (indexKind == LocalInfo::ValueKind::Int32) {
+      instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
+      instructions.push_back({IrOpcode::MulI32, 0});
+    } else {
+      instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+      instructions.push_back({IrOpcode::MulI64, 0});
+    }
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+  };
+
+  emitStoreSlotPtr(destIndexLocal, destPtrLocal);
+  emitStoreSlotPtr(srcIndexLocal, srcPtrLocal);
+
+  if (moveHelper != nullptr) {
+    return emitMoveHelperFromPtrs(
+        destPtrLocal, srcPtrLocal, structPath, moveHelper, localsIn, emitInlineDefinitionCall, error);
+  }
+  return emitStructCopyFromPtrs(instructions, destPtrLocal, srcPtrLocal, 1);
+}
+
+VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
+    const std::function<void()> &emitVectorCapacityExceeded,
+    const std::function<void()> &emitVectorPopOnEmpty,
+    const std::function<void()> &emitVectorIndexOutOfBounds,
+    const std::function<void()> &emitVectorReserveNegative,
+    const std::function<void()> &emitVectorReserveExceeded,
+    std::string &error) {
+  return tryEmitVectorStatementHelper(
+      stmt,
+      localsIn,
+      instructions,
+      allocTempLocal,
+      inferExprKind,
+      inferStructExprPath,
+      emitExpr,
+      [](const std::string &) -> const Definition * { return nullptr; },
+      [](const std::string &) -> const Definition * { return nullptr; },
+      [](const Expr &, const Definition &, const LocalMap &, bool) { return false; },
+      isUserDefinedVectorHelperCall,
+      emitVectorCapacityExceeded,
+      emitVectorPopOnEmpty,
+      emitVectorIndexOutOfBounds,
+      emitVectorReserveNegative,
+      emitVectorReserveExceeded,
+      error);
+}
+
 VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const Expr &stmt,
     const LocalMap &localsIn,
@@ -53,6 +134,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<const Definition *(const std::string &)> &resolveDestroyHelperForStruct,
+    const std::function<const Definition *(const std::string &)> &resolveMoveHelperForStruct,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
     const std::function<void()> &emitVectorCapacityExceeded,
@@ -413,8 +495,6 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
                                                               : IrOpcode::AddI64;
   IrOpcode subOp = (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::SubI32
                                                               : IrOpcode::SubI64;
-  IrOpcode mulOp = (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::MulI32
-                                                              : IrOpcode::MulI64;
 
   const int32_t indexLocal = allocTempLocal();
   if (!emitExpr(callStmt.args[1], localsIn)) {
@@ -453,13 +533,11 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   const Definition *destroyHelper = removedStructPath.empty()
                                         ? nullptr
                                         : resolveDestroyHelperForStruct(removedStructPath);
+  const Definition *moveHelper = removedStructPath.empty() ? nullptr : resolveMoveHelperForStruct(removedStructPath);
 
   if (vectorHelper == "remove_swap") {
     const int32_t dataPtrLocal = allocTempLocal();
     emitLoadVectorDataPtr(dataPtrLocal);
-    const int32_t destPtrLocal = allocTempLocal();
-    const int32_t srcPtrLocal = allocTempLocal();
-    const int32_t tempValueLocal = allocTempLocal();
 
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
@@ -480,28 +558,19 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       return VectorStatementHelperEmitResult::Error;
     }
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-    pushIndexConst(indexKind, IrSlotBytesI32);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({IrOpcode::AddI64, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
-
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
-    pushIndexConst(indexKind, IrSlotBytesI32);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({IrOpcode::AddI64, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
-    instructions.push_back({IrOpcode::LoadIndirect, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValueLocal)});
-
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValueLocal)});
-    instructions.push_back({IrOpcode::StoreIndirect, 0});
-    instructions.push_back({IrOpcode::Pop, 0});
+    if (!emitVectorMoveSlot(instructions,
+                            dataPtrLocal,
+                            indexLocal,
+                            lastIndexLocal,
+                            indexKind,
+                            removedStructPath,
+                            moveHelper,
+                            localsIn,
+                            allocTempLocal,
+                            emitInlineDefinitionCall,
+                            error)) {
+      return VectorStatementHelperEmitResult::Error;
+    }
     const size_t jumpAfterRemoveSwapDestroy = instructions.size();
     instructions.push_back({IrOpcode::Jump, 0});
 
@@ -536,9 +605,6 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     return VectorStatementHelperEmitResult::Emitted;
   }
 
-  const int32_t destPtrLocal = allocTempLocal();
-  const int32_t srcPtrLocal = allocTempLocal();
-  const int32_t tempValueLocal = allocTempLocal();
   const int32_t dataPtrLocal = allocTempLocal();
   emitLoadVectorDataPtr(dataPtrLocal);
 
@@ -562,30 +628,25 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   size_t jumpLoopEnd = instructions.size();
   instructions.push_back({IrOpcode::JumpIfZero, 0});
 
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-  pushIndexConst(indexKind, IrSlotBytesI32);
-  instructions.push_back({mulOp, 0});
-  instructions.push_back({IrOpcode::AddI64, 0});
-  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
-
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
+  const int32_t nextIndexLocal = allocTempLocal();
   instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
   pushIndexConst(indexKind, 1);
   instructions.push_back({addOp, 0});
-  pushIndexConst(indexKind, IrSlotBytesI32);
-  instructions.push_back({mulOp, 0});
-  instructions.push_back({IrOpcode::AddI64, 0});
-  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(nextIndexLocal)});
 
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
-  instructions.push_back({IrOpcode::LoadIndirect, 0});
-  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValueLocal)});
-
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValueLocal)});
-  instructions.push_back({IrOpcode::StoreIndirect, 0});
-  instructions.push_back({IrOpcode::Pop, 0});
+  if (!emitVectorMoveSlot(instructions,
+                          dataPtrLocal,
+                          indexLocal,
+                          nextIndexLocal,
+                          indexKind,
+                          removedStructPath,
+                          moveHelper,
+                          localsIn,
+                          allocTempLocal,
+                          emitInlineDefinitionCall,
+                          error)) {
+    return VectorStatementHelperEmitResult::Error;
+  }
 
   instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
   pushIndexConst(indexKind, 1);
@@ -630,6 +691,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       inferExprKind,
       [](const Expr &, const LocalMap &) { return std::string(); },
       emitExpr,
+      [](const std::string &) -> const Definition * { return nullptr; },
       [](const std::string &) -> const Definition * { return nullptr; },
       [](const Expr &, const Definition &, const LocalMap &, bool) { return false; },
       isUserDefinedVectorHelperCall,

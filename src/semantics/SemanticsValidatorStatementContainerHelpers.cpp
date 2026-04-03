@@ -251,6 +251,9 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
     }
     return failUncontextualizedDiagnostic(std::move(message));
   };
+  if (helperName == "remove_swap" || helperName == "remove_at") {
+    return true;
+  }
   std::string experimentalElemType;
   if (extractExperimentalVectorElementType(binding, experimentalElemType)) {
     return true;

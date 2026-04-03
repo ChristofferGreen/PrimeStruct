@@ -2876,20 +2876,16 @@ bad_use_after_take() {
     `Pointer<T>`, `Reference<T>`, arrays of drop-trivial elements, and concrete structs that do not define `Destroy*`
     helpers and whose fields are also drop-trivial. Builtin `vector`/`map`/`soa_vector` elements and structs with
     `Destroy` hooks are rejected for builtin `pop`/`clear`.
-  - Current indexed-removal contract: builtin `vector` `remove_swap` and builtin `vector` `remove_at` are now only
-    defined for relocation-trivial element types on the fixed-capacity builtin runtime path. The lowerer now has a
-    reusable lifecycle-aware destroy-at-pointer helper plus the shared vector destroy-at-slot primitive, and both
-    builtin indexed-removal helpers now invoke that removed-slot destruction path before decrementing count or
-    compacting survivors. The remaining runtime gaps are now the separate survivor-motion primitives for
-    relocation-sensitive elements. After that, `remove_swap` still needs a real survivor swap path and `remove_at`
-    still needs real survivor compaction. Canonical
-    `/std/collections/vector/*` indexed-removal helpers on explicit experimental `Vector<T>` bindings are exempt from
-    that builtin restriction because they route onto the experimental `.prime` implementation instead. There is no
-    corresponding builtin `soa_vector` indexed-removal surface yet.
-  - Remaining live ownership/runtime migration work is therefore split into one shared builtin `vector`
-    indexed-removal destruction wiring/guard-relaxation follow-up, explicit builtin `vector` survivor-motion
-    primitive/wiring follow-ups, and builtin canonical `map<K, V>` growth write-back/repoint follow-ups beyond the
-    current owning local numeric-map path.
+  - Current indexed-removal contract: builtin `vector` `remove_swap` and builtin `vector` `remove_at` now support
+    ownership-sensitive and relocation-sensitive element types on the fixed-capacity builtin runtime path. The lowerer
+    has a reusable lifecycle-aware destroy-at-pointer helper, a shared vector destroy-at-slot primitive, and shared
+    survivor-motion helpers, so both builtin indexed-removal helpers now destroy the removed slot and move survivors
+    without depending on relocation-trivial raw copies. Canonical `/std/collections/vector/*` indexed-removal helpers
+    on explicit experimental `Vector<T>` bindings remain exempt from builtin-runtime constraints because they route
+    onto the experimental `.prime` implementation instead. There is no corresponding builtin `soa_vector`
+    indexed-removal surface yet.
+  - Remaining live ownership/runtime migration work is now the builtin canonical `map<K, V>` growth
+    write-back/repoint follow-up beyond the current owning local numeric-map path.
   - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types
     while container move/reallocation semantics are still being specified. Relocation-trivial currently includes scalar
     primitives, `string`, `Pointer<T>`, `Reference<T>`, arrays of relocation-trivial elements, and concrete structs that

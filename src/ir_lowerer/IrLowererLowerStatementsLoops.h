@@ -346,6 +346,17 @@
             }
             return nullptr;
           },
+          [&](const std::string &structPath) -> const Definition * {
+            auto moveIt = defMap.find(structPath + "/Move");
+            if (moveIt != defMap.end()) {
+              return moveIt->second;
+            }
+            moveIt = defMap.find(structPath + "/Copy");
+            if (moveIt != defMap.end()) {
+              return moveIt->second;
+            }
+            return nullptr;
+          },
           [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool requireValue) {
             return emitInlineDefinitionCall(callExpr, callee, callLocals, requireValue);
           },

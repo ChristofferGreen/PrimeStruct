@@ -643,6 +643,6 @@ main() {
             "semantics are implemented: Mover") != std::string::npos);
 }
 
-TEST_CASE("rejects indexed vector removals with unsupported ownership semantics in C++ emitter") {
-  expectVectorIndexedRemovalOwnershipRejects("exe");
+TEST_CASE("supports indexed vector removals with ownership semantics in C++ emitter") {
+  expectVectorIndexedRemovalOwnershipConformance("exe");
 }

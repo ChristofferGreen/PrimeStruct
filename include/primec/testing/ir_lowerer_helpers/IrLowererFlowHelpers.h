@@ -41,11 +41,37 @@ bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
                             int32_t destPtrLocal,
                             int32_t srcPtrLocal,
                             int32_t slotCount);
+bool emitDestroyHelperFromPtr(
+    int32_t ptrLocal,
+    const std::string &structPath,
+    const Definition *destroyHelper,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::string &error);
+bool emitMoveHelperFromPtrs(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const std::string &structPath,
+    const Definition *moveHelper,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::string &error);
 bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
                          int32_t destBaseLocal,
                          int32_t srcPtrLocal,
                          int32_t slotCount,
                          const std::function<int32_t()> &allocTempLocal);
+bool emitVectorDestroySlot(
+    std::vector<IrInstruction> &instructions,
+    int32_t dataPtrLocal,
+    int32_t indexLocal,
+    LocalInfo::ValueKind indexKind,
+    const std::string &structPath,
+    const Definition *destroyHelper,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::string &error);
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        LocalInfo::ValueKind kind,
                        bool equals,
@@ -146,6 +172,24 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<const Definition *(const std::string &)> &resolveDestroyHelperForStruct,
+    const std::function<const Definition *(const std::string &)> &resolveMoveHelperForStruct,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
+    const std::function<void()> &emitVectorCapacityExceeded,
+    const std::function<void()> &emitVectorPopOnEmpty,
+    const std::function<void()> &emitVectorIndexOutOfBounds,
+    const std::function<void()> &emitVectorReserveNegative,
+    const std::function<void()> &emitVectorReserveExceeded,
+    std::string &error);
+VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
     const std::function<void()> &emitVectorCapacityExceeded,
     const std::function<void()> &emitVectorPopOnEmpty,
@@ -202,4 +246,3 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error);
-

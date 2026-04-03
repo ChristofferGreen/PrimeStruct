@@ -333,8 +333,8 @@ main() {
             "semantics are implemented: Mover") != std::string::npos);
 }
 
-TEST_CASE("rejects native indexed vector removals with unsupported ownership semantics") {
-  expectVectorIndexedRemovalOwnershipRejects("native");
+TEST_CASE("runs native indexed vector removals with ownership semantics") {
+  expectVectorIndexedRemovalOwnershipConformance("native");
 }
 
 TEST_CASE("compiles and runs native named vector at expression receiver precedence") {

@@ -444,6 +444,59 @@ TEST_CASE("ir lowerer flow helpers emit destroy helper calls from ptr locals") {
   CHECK(capturedCallee == nullptr);
 }
 
+TEST_CASE("ir lowerer flow helpers emit move helper calls from ptr locals") {
+  const primec::Definition moveHelper = [] {
+    primec::Definition def;
+    def.fullPath = "/thing/Move";
+    return def;
+  }();
+
+  primec::ir_lowerer::LocalMap localsIn;
+  primec::Expr capturedExpr;
+  primec::ir_lowerer::LocalMap capturedLocals;
+  const primec::Definition *capturedCallee = nullptr;
+  bool capturedRequireValue = true;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::emitMoveHelperFromPtrs(
+      9,
+      13,
+      "/thing",
+      &moveHelper,
+      localsIn,
+      [&](const primec::Expr &expr,
+          const primec::Definition &callee,
+          const primec::ir_lowerer::LocalMap &callLocals,
+          bool requireValue) {
+        capturedExpr = expr;
+        capturedLocals = callLocals;
+        capturedCallee = &callee;
+        capturedRequireValue = requireValue;
+        return true;
+      },
+      error));
+  CHECK(error.empty());
+  REQUIRE(capturedCallee == &moveHelper);
+  CHECK_FALSE(capturedRequireValue);
+  CHECK(capturedExpr.kind == primec::Expr::Kind::Call);
+  CHECK(capturedExpr.isMethodCall);
+  CHECK(capturedExpr.name == "Move");
+  REQUIRE(capturedExpr.args.size() == 2u);
+  CHECK(capturedExpr.args.front().kind == primec::Expr::Kind::Name);
+  CHECK(capturedExpr.args[1].kind == primec::Expr::Kind::Name);
+
+  const std::string receiverName = capturedExpr.args.front().name;
+  const std::string sourceName = capturedExpr.args[1].name;
+  REQUIRE(capturedLocals.count(receiverName) == 1u);
+  REQUIRE(capturedLocals.count(sourceName) == 1u);
+  CHECK(capturedLocals.at(receiverName).index == 9);
+  CHECK(capturedLocals.at(receiverName).kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(capturedLocals.at(receiverName).structTypeName == "/thing");
+  CHECK(capturedLocals.at(sourceName).index == 13);
+  CHECK(capturedLocals.at(sourceName).kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(capturedLocals.at(sourceName).structTypeName == "/thing");
+}
+
 TEST_CASE("ir lowerer flow helpers emit vector removed-slot destruction sequences") {
   const primec::Definition destroyHelper = [] {
     primec::Definition def;
@@ -526,7 +579,7 @@ TEST_CASE("ir lowerer flow helpers emit vector removed-slot destruction sequence
   CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruction") {
+TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruction and survivor motion") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 
   primec::Expr stmt;
@@ -541,7 +594,7 @@ TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruc
 
   primec::Expr indexExpr;
   indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.intValue = "0";
+  indexExpr.literalValue = 0;
   stmt.args.push_back(indexExpr);
   stmt.argNames.resize(2);
 
@@ -556,12 +609,17 @@ TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruc
 
   primec::Definition destroyHelper;
   destroyHelper.fullPath = "/thing/DestroyStack";
+  primec::Definition moveHelper;
+  moveHelper.fullPath = "/thing/Move";
 
   std::vector<primec::IrInstruction> instructions;
   int32_t nextTemp = 10;
   primec::Expr capturedDestroyExpr;
   primec::ir_lowerer::LocalMap capturedDestroyLocals;
   const primec::Definition *capturedDestroyCallee = nullptr;
+  primec::Expr capturedMoveExpr;
+  primec::ir_lowerer::LocalMap capturedMoveLocals;
+  const primec::Definition *capturedMoveCallee = nullptr;
   std::string error;
 
   const auto result = primec::ir_lowerer::tryEmitVectorStatementHelper(
@@ -593,13 +651,25 @@ TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruc
         }
         return nullptr;
       },
+      [&](const std::string &structPath) -> const primec::Definition * {
+        if (structPath == "/thing") {
+          return &moveHelper;
+        }
+        return nullptr;
+      },
       [&](const primec::Expr &expr,
           const primec::Definition &callee,
           const primec::ir_lowerer::LocalMap &callLocals,
           bool requireValue) {
-        capturedDestroyExpr = expr;
-        capturedDestroyLocals = callLocals;
-        capturedDestroyCallee = &callee;
+        if (callee.fullPath == moveHelper.fullPath) {
+          capturedMoveExpr = expr;
+          capturedMoveLocals = callLocals;
+          capturedMoveCallee = &callee;
+        } else {
+          capturedDestroyExpr = expr;
+          capturedDestroyLocals = callLocals;
+          capturedDestroyCallee = &callee;
+        }
         CHECK_FALSE(requireValue);
         return true;
       },
@@ -614,6 +684,7 @@ TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruc
   CHECK(result == primec::ir_lowerer::VectorStatementHelperEmitResult::Emitted);
   CHECK(error.empty());
   REQUIRE(capturedDestroyCallee == &destroyHelper);
+  REQUIRE(capturedMoveCallee == &moveHelper);
   CHECK(capturedDestroyExpr.kind == primec::Expr::Kind::Call);
   CHECK(capturedDestroyExpr.isMethodCall);
   CHECK(capturedDestroyExpr.name == "DestroyStack");
@@ -622,20 +693,33 @@ TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruc
   const std::string receiverName = capturedDestroyExpr.args.front().name;
   REQUIRE(capturedDestroyLocals.count(receiverName) == 1u);
   CHECK(capturedDestroyLocals.at(receiverName).kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(capturedDestroyLocals.at(receiverName).index == 18);
+  CHECK(capturedDestroyLocals.at(receiverName).index == 15);
   CHECK(capturedDestroyLocals.at(receiverName).structTypeName == "/thing");
+  CHECK(capturedMoveExpr.kind == primec::Expr::Kind::Call);
+  CHECK(capturedMoveExpr.isMethodCall);
+  CHECK(capturedMoveExpr.name == "Move");
+  REQUIRE(capturedMoveExpr.args.size() == 2u);
+  REQUIRE(capturedMoveLocals.count(capturedMoveExpr.args.front().name) == 1u);
+  REQUIRE(capturedMoveLocals.count(capturedMoveExpr.args[1].name) == 1u);
+  CHECK(capturedMoveLocals.at(capturedMoveExpr.args.front().name).index == 16);
+  CHECK(capturedMoveLocals.at(capturedMoveExpr.args[1].name).index == 17);
 
   const auto destroyPtrStoreIt = std::find_if(
       instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
-        return inst.op == primec::IrOpcode::StoreLocal && inst.imm == 18u;
+        return inst.op == primec::IrOpcode::StoreLocal && inst.imm == 15u;
       });
   REQUIRE(destroyPtrStoreIt != instructions.end());
+  const auto moveDestPtrStoreIt = std::find_if(
+      instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
+        return inst.op == primec::IrOpcode::StoreLocal && inst.imm == 16u;
+      });
+  REQUIRE(moveDestPtrStoreIt != instructions.end());
   CHECK(std::find_if(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
           return inst.op == primec::IrOpcode::JumpIfZero;
         }) != instructions.end());
 }
 
-TEST_CASE("ir lowerer flow helpers wire remove_at through removed-slot destruction") {
+TEST_CASE("ir lowerer flow helpers wire remove_at through removed-slot destruction and survivor motion") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 
   primec::Expr stmt;
@@ -650,7 +734,7 @@ TEST_CASE("ir lowerer flow helpers wire remove_at through removed-slot destructi
 
   primec::Expr indexExpr;
   indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.intValue = "0";
+  indexExpr.literalValue = 0;
   stmt.args.push_back(indexExpr);
   stmt.argNames.resize(2);
 
@@ -665,12 +749,17 @@ TEST_CASE("ir lowerer flow helpers wire remove_at through removed-slot destructi
 
   primec::Definition destroyHelper;
   destroyHelper.fullPath = "/thing/DestroyStack";
+  primec::Definition moveHelper;
+  moveHelper.fullPath = "/thing/Move";
 
   std::vector<primec::IrInstruction> instructions;
   int32_t nextTemp = 10;
   primec::Expr capturedDestroyExpr;
   primec::ir_lowerer::LocalMap capturedDestroyLocals;
   const primec::Definition *capturedDestroyCallee = nullptr;
+  primec::Expr capturedMoveExpr;
+  primec::ir_lowerer::LocalMap capturedMoveLocals;
+  const primec::Definition *capturedMoveCallee = nullptr;
   std::string error;
 
   const auto result = primec::ir_lowerer::tryEmitVectorStatementHelper(
@@ -702,13 +791,25 @@ TEST_CASE("ir lowerer flow helpers wire remove_at through removed-slot destructi
         }
         return nullptr;
       },
+      [&](const std::string &structPath) -> const primec::Definition * {
+        if (structPath == "/thing") {
+          return &moveHelper;
+        }
+        return nullptr;
+      },
       [&](const primec::Expr &expr,
           const primec::Definition &callee,
           const primec::ir_lowerer::LocalMap &callLocals,
           bool requireValue) {
-        capturedDestroyExpr = expr;
-        capturedDestroyLocals = callLocals;
-        capturedDestroyCallee = &callee;
+        if (callee.fullPath == moveHelper.fullPath) {
+          capturedMoveExpr = expr;
+          capturedMoveLocals = callLocals;
+          capturedMoveCallee = &callee;
+        } else {
+          capturedDestroyExpr = expr;
+          capturedDestroyLocals = callLocals;
+          capturedDestroyCallee = &callee;
+        }
         CHECK_FALSE(requireValue);
         return true;
       },
@@ -723,6 +824,7 @@ TEST_CASE("ir lowerer flow helpers wire remove_at through removed-slot destructi
   CHECK(result == primec::ir_lowerer::VectorStatementHelperEmitResult::Emitted);
   CHECK(error.empty());
   REQUIRE(capturedDestroyCallee == &destroyHelper);
+  REQUIRE(capturedMoveCallee == &moveHelper);
   CHECK(capturedDestroyExpr.kind == primec::Expr::Kind::Call);
   CHECK(capturedDestroyExpr.isMethodCall);
   CHECK(capturedDestroyExpr.name == "DestroyStack");
@@ -731,14 +833,27 @@ TEST_CASE("ir lowerer flow helpers wire remove_at through removed-slot destructi
   const std::string receiverName = capturedDestroyExpr.args.front().name;
   REQUIRE(capturedDestroyLocals.count(receiverName) == 1u);
   CHECK(capturedDestroyLocals.at(receiverName).kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(capturedDestroyLocals.at(receiverName).index == 18);
+  CHECK(capturedDestroyLocals.at(receiverName).index == 15);
   CHECK(capturedDestroyLocals.at(receiverName).structTypeName == "/thing");
+  CHECK(capturedMoveExpr.kind == primec::Expr::Kind::Call);
+  CHECK(capturedMoveExpr.isMethodCall);
+  CHECK(capturedMoveExpr.name == "Move");
+  REQUIRE(capturedMoveExpr.args.size() == 2u);
+  REQUIRE(capturedMoveLocals.count(capturedMoveExpr.args.front().name) == 1u);
+  REQUIRE(capturedMoveLocals.count(capturedMoveExpr.args[1].name) == 1u);
+  CHECK(capturedMoveLocals.at(capturedMoveExpr.args.front().name).index == 17);
+  CHECK(capturedMoveLocals.at(capturedMoveExpr.args[1].name).index == 18);
 
   const auto destroyPtrStoreIt = std::find_if(
       instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
-        return inst.op == primec::IrOpcode::StoreLocal && inst.imm == 18u;
+        return inst.op == primec::IrOpcode::StoreLocal && inst.imm == 15u;
       });
   REQUIRE(destroyPtrStoreIt != instructions.end());
+  const auto moveDestPtrStoreIt = std::find_if(
+      instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
+        return inst.op == primec::IrOpcode::StoreLocal && inst.imm == 17u;
+      });
+  REQUIRE(moveDestPtrStoreIt != instructions.end());
   CHECK(std::find_if(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
           return inst.op == primec::IrOpcode::JumpIfZero;
         }) != instructions.end());
