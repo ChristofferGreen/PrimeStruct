@@ -320,6 +320,24 @@ Planned first semantic-product builder slice:
   - existing graph-backed inference/testing-only metadata remains outside this first slice until the second builder
     stage is ready
 
+Planned second semantic-product builder slice:
+- The second builder slice should move the currently test-only graph-backed inference metadata onto the semantic
+  product once the first builder slice is stable.
+- That second slice should own:
+  - graph-backed local `auto` facts
+  - graph-backed query metadata
+  - graph-backed `try(...)` metadata
+  - graph-backed `on_error` metadata
+- The goal is to replace testing-only snapshot plumbing for lowering-facing semantic facts with one published semantic
+  product rather than a parallel testing surface.
+- This second slice should reuse already-stabilized graph facts instead of recomputing them from the AST or validator
+  scratch state after validation.
+- Completion criteria:
+  - the listed graph-backed inference facts are published on the semantic product in deterministic order
+  - tests that currently need snapshot-only access to those facts can migrate to the semantic-product inspection surface
+  - the first builder slice remains unchanged in scope, and this second slice is the only step that adds graph-backed
+    local/query/`try(...)`/`on_error` metadata to the published product
+
 Planned ownership-split test matrix:
 - Source-span parity:
   semantic-product entries that represent lowered calls, bindings, and control-flow facts should still reference the
